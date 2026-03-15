@@ -240,31 +240,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   const blankEdu = () => ({ school: '', degree: '', field: '', startYear: '', endYear: '', notes: '' });
   const [eduDraft, setEduDraft] = useState(blankEdu());
 
-  const [resumeModalOpen,  setResumeModalOpen]  = useState(false);
-  const [allResumes,       setAllResumes]        = useState([]);
-  const [resumesLoading,   setResumesLoading]    = useState(false);
-
-  const openResumeModal = async () => {
-    setResumeModalOpen(true);
-    setResumesLoading(true);
-    try {
-      const res  = await fetch('/api/profile/resume');
-      const json = await res.json();
-      setAllResumes(Array.isArray(json?.resumes) ? json.resumes : []);
-    } catch { setAllResumes([]); }
-    finally  { setResumesLoading(false); }
-  };
-
-  const setPrimaryResumeFn = async (resumeId) => {
-    try {
-      await fetch('/api/profile/resume', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeId, isPrimary: true }),
-      });
-      setAllResumes(prev => prev.map(r => ({ ...r, isPrimary: r.id === resumeId })));
-    } catch { /* silent */ }
-  };
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const fileInputRef = useRef(null);
   const [saveState,  setSaveState]  = useState('idle');
   const saveTimerRef = useRef(null);
@@ -411,8 +387,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   return (
     <InternalLayout
       title={`${fullName} — ForgeTomorrow`} activeNav="profile" header={null}
-      right={editMode ? <ProfileStrengthRail /> : <RightRailPlacementManager />}
-      rightVariant="dark"
+      right={!editMode ? <RightRailPlacementManager /> : null} rightVariant="dark"
       backgroundOverrideUrl={effectiveWallpaper}
       collapseSiderails={siderailsCollapsed}
       onToggleSiderails={() => setSiderailsCollapsed(s => !s)}
@@ -466,41 +441,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
           .ft-page { min-height:100vh; width:100%; position:relative; border-radius:18px; overflow:hidden; }
           .ft-page-overlay { min-height:100vh; background:linear-gradient(180deg, rgba(17,32,51,0.62) 0%, rgba(17,32,51,0.18) 55%, rgba(17,32,51,0.30) 100%); padding:18px 0 28px; }
           .ft-edit-mode .ft-page-overlay { background:linear-gradient(180deg, rgba(17,32,51,0.72) 0%, rgba(17,32,51,0.35) 55%, rgba(17,32,51,0.50) 100%); }
-          .ft-container { max-width:${siderailsCollapsed ? '100%' : '1160px'}; margin:0 auto; padding:0 ${siderailsCollapsed ? '40px' : '28px'} 40px; transition:max-width 0.3s ease, padding 0.3s ease; }
-
-          /* ─── Resume modal ─── */
-          .ft-modal-backdrop { position:fixed; inset:0; z-index:300; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:grid; place-items:center; padding:20px; }
-          .ft-modal { width:min(560px,96vw); background:rgba(10,18,30,0.98); border:1px solid rgba(255,255,255,0.14); border-radius:20px; overflow:hidden; box-shadow:0 32px 80px rgba(0,0,0,0.60); animation:scaleIn 0.2s ease both; }
-          .ft-modal-head { display:flex; align-items:center; justify-content:space-between; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); }
-          .ft-modal-title { font-size:16px; font-weight:800; color:var(--white); }
-          .ft-modal-close { background:rgba(255,255,255,0.08); border:none; color:rgba(255,255,255,0.55); width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-family:inherit; transition:background 0.15s; }
-          .ft-modal-close:hover { background:rgba(255,255,255,0.15); color:white; }
-          .ft-modal-body { padding:20px; max-height:60vh; overflow-y:auto; display:grid; gap:10px; scrollbar-width:thin; scrollbar-color:rgba(255,112,67,0.3) transparent; }
-          .ft-resume-row { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04); transition:border-color 0.15s, background 0.15s; cursor:pointer; }
-          .ft-resume-row:hover { border-color:rgba(255,112,67,0.35); background:rgba(255,112,67,0.06); }
-          .ft-resume-row.primary { border-color:rgba(255,112,67,0.45); background:rgba(255,112,67,0.10); }
-          .ft-resume-name { font-size:14px; font-weight:700; color:var(--white); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-          .ft-resume-date { font-size:11px; color:var(--muted); margin-top:2px; }
-          .ft-resume-primary-badge { font-size:10px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; padding:3px 9px; border-radius:999px; background:rgba(255,112,67,0.20); border:1px solid rgba(255,112,67,0.40); color:${ORANGE}; flex-shrink:0; }
-          .ft-resume-set-btn { padding:6px 12px; border-radius:999px; background:transparent; border:1px solid rgba(255,255,255,0.20); color:rgba(255,255,255,0.60); font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; flex-shrink:0; transition:all 0.15s; }
-          .ft-resume-set-btn:hover { border-color:${ORANGE}; color:${ORANGE}; }
-          .ft-modal-foot { padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; gap:12px; }
-
-          /* ─── AI strength rail ─── */
-          .ft-ai-rail { display:grid; gap:12px; }
-          .ft-ai-rail-head { font-size:10px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:${ORANGE}; display:flex; align-items:center; gap:8px; }
-          .ft-ai-rail-head::after { content:''; flex:1; height:1px; background:linear-gradient(to right, rgba(255,112,67,0.30), transparent); }
-          .ft-ai-progress-bar { height:5px; border-radius:999px; background:rgba(255,255,255,0.10); overflow:hidden; }
-          .ft-ai-progress-fill { height:100%; border-radius:999px; background:linear-gradient(to right, ${ORANGE}, #FF8A65); transition:width 0.4s ease; }
-          .ft-ai-item { padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); display:grid; gap:8px; transition:border-color 0.15s; }
-          .ft-ai-item.complete { border-color:rgba(34,197,94,0.20); background:rgba(34,197,94,0.05); }
-          .ft-ai-item-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-          .ft-ai-item-title { font-size:12px; font-weight:700; color:var(--white); }
-          .ft-ai-item-status { font-size:10px; font-weight:800; padding:2px 8px; border-radius:999px; flex-shrink:0; }
-          .ft-ai-item-status.ok { background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.25); color:#4ade80; }
-          .ft-ai-item-status.gap { background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.25); color:#fbbf24; }
-          .ft-ai-assist-btn { padding:6px 12px; border-radius:999px; background:rgba(255,112,67,0.16); border:1px solid rgba(255,112,67,0.35); color:${ORANGE}; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:background 0.15s; display:inline-flex; align-items:center; gap:5px; }
-          .ft-ai-assist-btn:hover { background:rgba(255,112,67,0.28); }
+          .ft-container { max-width:1160px; margin:0 auto; padding:0 28px 40px; }
 
           /* ─── Edit toolbar ─── */
           .ft-edit-toolbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:rgba(13,27,42,0.88); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-bottom:1px solid rgba(255,255,255,0.12); margin-bottom:18px; gap:12px; flex-wrap:wrap; }
@@ -848,7 +789,6 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                   fileInputRef={fileInputRef} handleAvatarFileChange={handleAvatarFileChange}
                   handleAvatarRemove={handleAvatarRemove} setAvatarUrl={setAvatarUrl}
                   AvatarWrap={AvatarWrap} socialLinks={socialLinks} updateSocial={updateSocial}
-                  openResumeModal={openResumeModal}
                 />
 
                 {/* ── SIGNALS BAR ── */}
@@ -1425,144 +1365,12 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
             </div>
           </>
         )}
-
-        {/* ══ RESUME SELECTOR MODAL ══ */}
-        {resumeModalOpen && (
-          <div className="ft-modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setResumeModalOpen(false); }}>
-            <div className="ft-modal">
-              <div className="ft-modal-head">
-                <div>
-                  <div className="ft-modal-title">Select Primary Resume</div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-                    Recruiters see your primary resume on your public portfolio
-                  </div>
-                </div>
-                <button type="button" className="ft-modal-close" onClick={() => setResumeModalOpen(false)}>✕</button>
-              </div>
-
-              <div className="ft-modal-body">
-                {resumesLoading ? (
-                  <div style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 600, padding: '8px 0' }}>Loading your resumes…</div>
-                ) : allResumes.length === 0 ? (
-                  <div style={{ color: 'var(--muted)', fontSize: 13, fontStyle: 'italic', padding: '8px 0' }}>
-                    No resumes found. Upload one in the resume builder.
-                  </div>
-                ) : allResumes.map(resume => (
-                  <div key={resume.id} className={`ft-resume-row${resume.isPrimary ? ' primary' : ''}`}
-                    onClick={() => !resume.isPrimary && setPrimaryResumeFn(resume.id)}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="ft-resume-name">{resume.name || 'Untitled Resume'}</div>
-                      <div className="ft-resume-date">Updated {new Date(resume.updatedAt).toLocaleDateString()}</div>
-                    </div>
-                    {resume.isPrimary
-                      ? <span className="ft-resume-primary-badge">Primary</span>
-                      : <button type="button" className="ft-resume-set-btn" onClick={e => { e.stopPropagation(); setPrimaryResumeFn(resume.id); }}>Set Primary</button>
-                    }
-                  </div>
-                ))}
-              </div>
-
-              <div className="ft-modal-foot">
-                <a href="/resume/create" style={{ fontSize: 12, color: ORANGE, fontWeight: 700, textDecoration: 'none' }}>
-                  + Upload new resume
-                </a>
-                <button type="button" className="ft-done-btn" onClick={() => setResumeModalOpen(false)}>Done</button>
-              </div>
-            </div>
-          </div>
-        )}
       </>
     </InternalLayout>
   );
 }
 
-// ─── ProfileStrengthRail — condensed dark-glass version of ProfileDevelopment ──
-// Shows in the right rail during edit mode. Same logic, native dark skin.
-function ProfileStrengthRail() {
-  const [data,    setData]    = useState(null);
-  const [loading, setLoading] = useState(true);
-  const ORANGE = '#FF7043';
-
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/profile/details').then(r => r.json()).catch(() => ({})),
-      fetch('/api/profile/primaries').then(r => r.json()).catch(() => ({})),
-    ]).then(([dJson, pJson]) => {
-      const details      = dJson?.details || dJson || {};
-      const primaryResume = pJson?.primaryResume || null;
-      const headline     = String(details?.headline || '').trim();
-      const aboutMe      = String(details?.aboutMe  || '').trim();
-      const skills       = (Array.isArray(details?.skillsJson) ? details.skillsJson : []).filter(Boolean);
-      const languages    = (Array.isArray(details?.languagesJson) ? details.languagesJson : []).filter(Boolean);
-
-      const items = [
-        { key: 'headline',  label: 'Headline',        done: headline.length >= 8   },
-        { key: 'aboutMe',   label: 'Summary',         done: aboutMe.length >= 120  },
-        { key: 'skills',    label: 'Skills (8+)',      done: skills.length >= 8     },
-        { key: 'languages', label: 'Languages',        done: languages.length >= 1  },
-        { key: 'resume',    label: 'Primary resume',   done: Boolean(primaryResume) },
-      ];
-
-      const completed = items.filter(i => i.done).length;
-      setData({ items, completed, total: items.length });
-    }).finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return (
-    <div style={{ padding: '16px', color: 'rgba(255,255,255,0.35)', fontSize: 12, fontWeight: 600 }}>
-      Checking profile strength…
-    </div>
-  );
-
-  if (!data) return null;
-
-  const pct = Math.round((data.completed / data.total) * 100);
-
-  return (
-    <div className="ft-ai-rail" style={{ padding: '0 2px' }}>
-      <div className="ft-ai-rail-head">Profile Strength</div>
-
-      {/* Progress */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>
-            {data.completed} of {data.total} complete
-          </span>
-          <span style={{ fontSize: 11, color: ORANGE, fontWeight: 800 }}>{pct}%</span>
-        </div>
-        <div className="ft-ai-progress-bar">
-          <div className="ft-ai-progress-fill" style={{ width: `${pct}%` }} />
-        </div>
-      </div>
-
-      {/* Checklist items */}
-      {data.items.map(item => (
-        <div key={item.key} className={`ft-ai-item${item.done ? ' complete' : ''}`}>
-          <div className="ft-ai-item-top">
-            <span className="ft-ai-item-title">{item.label}</span>
-            <span className={`ft-ai-item-status ${item.done ? 'ok' : 'gap'}`}>
-              {item.done ? '✓ Done' : 'Gap'}
-            </span>
-          </div>
-          {!item.done && (
-            <a href="/profile/edit" style={{ textDecoration: 'none' }}>
-              <button type="button" className="ft-ai-assist-btn">
-                <svg width="11" height="11" fill="none" viewBox="0 0 12 12">
-                  <path d="M6 1l1.2 3.6H11L8.4 6.8l1 3.2L6 8l-3.4 2 1-3.2L1 4.6h3.8L6 1z" fill="currentColor"/>
-                </svg>
-                AI Assist
-              </button>
-            </a>
-          )}
-        </div>
-      ))}
-
-      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', lineHeight: 1.55, paddingTop: 4 }}>
-        AI suggestions are based on your stored profile and primary resume. For deeper strategy, work with a coach in Spotlight.
-      </div>
-    </div>
-  );
-}
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SkillsViewCard({ skills }) {
   return (
@@ -1753,7 +1561,7 @@ function BannerSection({ editMode, bannerImage, bannerPos, resolvedBannerHeight,
   );
 }
 
-function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullName, pronouns, setPronouns, headline, setHeadline, location, setLocation, status, setStatus, slug, profileUrl, copied, handleCopyProfileUrl, primaryResume, effectiveVisibility, isOwner, onEditClick, fileInputRef, handleAvatarFileChange, handleAvatarRemove, setAvatarUrl, AvatarWrap, socialLinks, updateSocial, openResumeModal }) {
+function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullName, pronouns, setPronouns, headline, setHeadline, location, setLocation, status, setStatus, slug, profileUrl, copied, handleCopyProfileUrl, primaryResume, effectiveVisibility, isOwner, onEditClick, fileInputRef, handleAvatarFileChange, handleAvatarRemove, setAvatarUrl, AvatarWrap, socialLinks, updateSocial }) {
   const [showAvatarPanel, setShowAvatarPanel] = useState(false);
   useEffect(() => { if (!editMode) setShowAvatarPanel(false); }, [editMode]);
   return (
@@ -1834,10 +1642,10 @@ function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullN
 
           {/* Edit mode: Select Resume CTA */}
           {editMode && (
-            <button type="button" className="ft-resume-top-btn" onClick={openResumeModal} style={{ flexShrink: 0 }}>
+            <a href="/profile/edit#resume" className="ft-resume-top-btn" style={{ flexShrink: 0 }}>
               <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M2 4h10M2 7h7M2 10h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
               Select Resume
-            </button>
+            </a>
           )}
 
           {/* View mode owner: Edit Portfolio */}
