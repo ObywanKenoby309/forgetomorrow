@@ -1406,30 +1406,124 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
               )}
 
               {mobileSheet === 'prefs' && (
-                <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">Work Preferences</div></div>
-                <div className="ft-sheet-body">
-                  <div style={{ display:'grid', gap:14 }}>
-                    <div className="ft-dark-field"><label className="ft-dark-label">Work Status</label><select className="ft-dark-select" value={prefWorkStatus} onChange={e => setPrefWorkStatus(e.target.value)}><option value="">Select…</option><option>Actively Looking</option><option>Open to Offers</option><option>Not Looking</option></select></div>
-                    <div className="ft-dark-field"><label className="ft-dark-label">Work Type</label><select className="ft-dark-select" value={prefWorkType} onChange={e => setPrefWorkType(e.target.value)}><option value="">Select…</option><option>Remote</option><option>Hybrid</option><option>On-site</option></select></div>
-                    <div className="ft-dark-field"><label className="ft-dark-label">Schedule</label><select className="ft-dark-select" value={prefSchedule} onChange={e => setPrefSchedule(e.target.value)}><option value="">Select…</option><option>Full-time</option><option>Part-time</option><option>Contract</option><option>Freelance</option></select></div>
-                    <div className="ft-dark-field"><label className="ft-dark-label">Willing to Relocate</label><select className="ft-dark-select" value={prefWillingToRelocate} onChange={e => setPrefWillingToRelocate(e.target.value)}><option value="">Select…</option><option value="Yes">Yes</option><option value="No">No</option><option value="Maybe">Maybe</option></select></div>
-                    <div className="ft-dark-field"><label className="ft-dark-label">Earliest Start Date</label><input className="ft-dark-input" type="date" value={prefStartDate} onChange={e => setPrefStartDate(e.target.value)} /></div>
-                    <div className="ft-dark-field"><label className="ft-dark-label">Schedule Availability</label><select className="ft-dark-select" value={prefScheduleAvailability} onChange={e => setPrefScheduleAvailability(e.target.value)}><option value="">Select…</option><option>Any</option><option>Weekdays</option><option>Weekends</option><option>Flexible</option></select></div>
-                    <div className="ft-dark-field">
-                      <label className="ft-dark-label">Preferred Locations</label>
-                      <div className="ft-chip-input-row" style={{ marginTop:6 }}>
-                        <input className="ft-dark-input" value={prefLocationInput} onChange={e => setPrefLocationInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && prefLocationInput.trim()) { setPrefLocations(p => [...p, prefLocationInput.trim()]); setPrefLocationInput(''); e.preventDefault(); }}} placeholder="e.g. Nashville, TN" />
-                        <button type="button" className="ft-add-btn" onClick={() => { if (prefLocationInput.trim()) { setPrefLocations(p => [...p, prefLocationInput.trim()]); setPrefLocationInput(''); }}}>Add</button>
-                      </div>
-                      <div className="ft-dark-chips">{prefLocations.map((loc,i) => <span key={loc+i} className="ft-dark-chip">{loc}<button type="button" className="ft-dark-chip-x" onClick={() => setPrefLocations(p => p.filter((_,idx) => idx !== i))}>×</button></span>)}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
-              )}
-            </div>
-          </>
-        )}
+  <>
+    <div style={{ padding:'0 20px 14px', flexShrink:0 }}>
+      <div className="ft-sheet-title">Work Preferences</div>
+    </div>
+    <div className="ft-sheet-body">
+      <div style={{ display:'grid', gap:14 }}>
+        <div className="ft-dark-field">
+          <label className="ft-dark-label">Work Status</label>
+          <select className="ft-dark-select" value={prefWorkStatus} onChange={e => setPrefWorkStatus(e.target.value)}>
+            <option value="">Select…</option>
+            <option>Actively Looking</option>
+            <option>Open to Offers</option>
+            <option>Not Looking</option>
+          </select>
+        </div>
+
+        <div className="ft-dark-field">
+          <label className="ft-dark-label">Work Type</label>
+          <select className="ft-dark-select" value={prefWorkType} onChange={e => setPrefWorkType(e.target.value)}>
+            <option value="">Select…</option>
+            <option>Remote</option>
+            <option>Hybrid</option>
+            <option>On-site</option>
+          </select>
+        </div>
+
+        <div className="ft-dark-field">
+          <label className="ft-dark-label">Schedule</label>
+          <select className="ft-dark-select" value={prefSchedule} onChange={e => setPrefSchedule(e.target.value)}>
+            <option value="">Select…</option>
+            <option>Full-time</option>
+            <option>Part-time</option>
+            <option>Contract</option>
+            <option>Freelance</option>
+          </select>
+        </div>
+
+        <div className="ft-dark-field">
+          <label className="ft-dark-label">Willing to Relocate</label>
+          <select className="ft-dark-select" value={prefWillingToRelocate} onChange={e => setPrefWillingToRelocate(e.target.value)}>
+            <option value="">Select…</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+            <option value="Maybe">Maybe</option>
+          </select>
+        </div>
+
+        <div className="ft-dark-field">
+          <label className="ft-dark-label">Earliest Start Date</label>
+          <input className="ft-dark-input" type="date" value={prefStartDate} onChange={e => setPrefStartDate(e.target.value)} />
+        </div>
+
+        <div className="ft-dark-field">
+          <label className="ft-dark-label">Schedule Availability</label>
+          <select className="ft-dark-select" value={prefScheduleAvailability} onChange={e => setPrefScheduleAvailability(e.target.value)}>
+            <option value="">Select…</option>
+            <option>Any</option>
+            <option>Weekdays</option>
+            <option>Weekends</option>
+            <option>Flexible</option>
+          </select>
+        </div>
+
+        <div className="ft-dark-field">
+          <label className="ft-dark-label">Preferred Locations</label>
+          <div className="ft-chip-input-row" style={{ marginTop:6 }}>
+            <input
+              className="ft-dark-input"
+              value={prefLocationInput}
+              onChange={e => setPrefLocationInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && prefLocationInput.trim()) {
+                  setPrefLocations(p => [...p, prefLocationInput.trim()]);
+                  setPrefLocationInput('');
+                  e.preventDefault();
+                }
+              }}
+              placeholder="e.g. Nashville, TN"
+            />
+            <button
+              type="button"
+              className="ft-add-btn"
+              onClick={() => {
+                if (prefLocationInput.trim()) {
+                  setPrefLocations(p => [...p, prefLocationInput.trim()]);
+                  setPrefLocationInput('');
+                }
+              }}
+            >
+              Add
+            </button>
+          </div>
+
+          <div className="ft-dark-chips">
+            {prefLocations.map((loc, i) => (
+              <span key={loc + i} className="ft-dark-chip">
+                {loc}
+                <button
+                  type="button"
+                  className="ft-dark-chip-x"
+                  onClick={() => setPrefLocations(p => p.filter((_, idx) => idx !== i))}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div className="ft-sheet-save-row">
+      <button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>
+        Done
+      </button>
+    </div>
+  </>
+)}
 
         {/* ══ RESUME SELECTOR MODAL ══ */}
         {resumeModalOpen && (
