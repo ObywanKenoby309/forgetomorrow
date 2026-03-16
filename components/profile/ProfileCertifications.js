@@ -1,126 +1,276 @@
-// components/profile/ProfileCertifications.js
 import React, { useState } from 'react';
 
 const ORANGE = '#FF7043';
 
-export default function ProfileCertifications({ certifications, setCertifications }) {
+export default function ProfileCertifications({
+  certifications = [],
+  setCertifications,
+  editMode = false,
+}) {
   const empty = { name: '', issuer: '', year: '' };
   const [draft, setDraft] = useState(empty);
 
   const add = () => {
     if (!draft.name.trim()) return;
-    setCertifications((prev) => [...prev, { ...draft }]);
+    const entry = {
+      id: `${Date.now()}`,
+      name: draft.name.trim(),
+      issuer: draft.issuer.trim(),
+      year: draft.year.trim(),
+    };
+    setCertifications((prev) => [entry, ...(Array.isArray(prev) ? prev : [])]);
     setDraft(empty);
   };
 
-  const remove = (idx) => {
-    setCertifications((prev) => prev.filter((_, i) => i !== idx));
+  const remove = (targetId, idx) => {
+    setCertifications((prev) =>
+      Array.isArray(prev)
+        ? prev.filter((c, i) => (c?.id ? c.id !== targetId : i !== idx))
+        : []
+    );
   };
 
-  return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      {certifications.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {certifications.map((c, i) => (
+  if (!editMode) {
+    if (!certifications.length) {
+      return (
+        <div
+          style={{
+            fontSize: 13,
+            color: 'rgba(248,244,239,0.35)',
+            fontStyle: 'italic',
+          }}
+        >
+          No certifications added yet.
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ display: 'grid', gap: 10 }}>
+        {certifications.map((c, i) => (
+          <div
+            key={c?.id || i}
+            style={{
+              border: '1px solid rgba(255,255,255,0.10)',
+              borderRadius: 12,
+              padding: 12,
+              background: 'rgba(255,255,255,0.04)',
+            }}
+          >
+            <div style={{ fontWeight: 900, color: '#F8F4EF' }}>
+              {c.name}
+            </div>
             <div
-              key={i}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 12px',
-                borderRadius: 999,
-                background: 'rgba(255,112,67,0.08)',
-                border: '1px solid rgba(255,112,67,0.25)',
+                fontSize: 13,
+                color: 'rgba(248,244,239,0.68)',
+                marginTop: 3,
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#1F2A33' }}>{c.name}</span>
-              {c.issuer && <span style={{ fontSize: 11, color: '#546E7A' }}>· {c.issuer}</span>}
-              {c.year && <span style={{ fontSize: 11, color: '#546E7A' }}>· {c.year}</span>}
+              {[c.issuer, c.year].filter(Boolean).join(' • ')}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <section
+      style={{
+        display: 'grid',
+        gap: 12,
+      }}
+    >
+      {certifications.length === 0 ? (
+        <div
+          style={{
+            color: 'rgba(255,255,255,0.35)',
+            fontSize: 13,
+            fontStyle: 'italic',
+          }}
+        >
+          No certifications added yet.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 10 }}>
+          {certifications.map((c, i) => (
+            <div
+              key={c?.id || i}
+              style={{
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: 12,
+                padding: 12,
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 12,
+                background: 'rgba(255,255,255,0.04)',
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontWeight: 900,
+                    color: '#F8F4EF',
+                    fontSize: 14,
+                  }}
+                >
+                  {c.name}
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: 'rgba(255,255,255,0.65)',
+                    marginTop: 3,
+                  }}
+                >
+                  {[c.issuer].filter(Boolean).join('')}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: 'rgba(255,255,255,0.38)',
+                    marginTop: 2,
+                  }}
+                >
+                  {c.year || ''}
+                </div>
+              </div>
+
               <button
                 type="button"
-                onClick={() => remove(i)}
+                onClick={() => remove(c?.id, i)}
                 style={{
-                  background: 'none',
-                  border: 'none',
+                  border: '1px solid #C62828',
+                  color: '#EF9A9A',
+                  background: 'transparent',
+                  borderRadius: 999,
+                  padding: '6px 10px',
+                  fontWeight: 800,
                   cursor: 'pointer',
-                  color: '#D32F2F',
-                  fontSize: 14,
-                  lineHeight: 1,
-                  padding: '0 2px',
+                  height: 'fit-content',
+                  whiteSpace: 'nowrap',
+                  fontFamily: 'inherit',
                 }}
               >
-                ×
+                Delete
               </button>
             </div>
           ))}
         </div>
       )}
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr 80px auto',
-          gap: 8,
-          alignItems: 'end',
-        }}
-      >
-        <div className="pe-field">
-          <label className="pe-label">Certification name</label>
+      <div style={{ display: 'grid', gap: 10 }}>
+        <div style={{ display: 'grid', gap: 6 }}>
+          <label
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              color: 'rgba(255,255,255,0.70)',
+            }}
+          >
+            Certification Name
+          </label>
           <input
-            className="pe-input"
             value={draft.name}
             onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
             placeholder="AWS Solutions Architect"
             onKeyDown={(e) => e.key === 'Enter' && add()}
+            style={{
+              background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.16)',
+              borderRadius: 10,
+              padding: '8px 10px',
+              outline: 'none',
+              color: '#F8F4EF',
+              width: '100%',
+              boxSizing: 'border-box',
+              fontFamily: 'inherit',
+            }}
           />
         </div>
 
-        <div className="pe-field">
-          <label className="pe-label">Issuer</label>
-          <input
-            className="pe-input"
-            value={draft.issuer}
-            onChange={(e) => setDraft((p) => ({ ...p, issuer: e.target.value }))}
-            placeholder="Amazon"
-            onKeyDown={(e) => e.key === 'Enter' && add()}
-          />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gap: 6 }}>
+            <label
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color: 'rgba(255,255,255,0.70)',
+              }}
+            >
+              Issuer
+            </label>
+            <input
+              value={draft.issuer}
+              onChange={(e) =>
+                setDraft((p) => ({ ...p, issuer: e.target.value }))
+              }
+              placeholder="Amazon"
+              onKeyDown={(e) => e.key === 'Enter' && add()}
+              style={{
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.16)',
+                borderRadius: 10,
+                padding: '8px 10px',
+                outline: 'none',
+                color: '#F8F4EF',
+                width: '100%',
+                boxSizing: 'border-box',
+                fontFamily: 'inherit',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gap: 6 }}>
+            <label
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color: 'rgba(255,255,255,0.70)',
+              }}
+            >
+              Year
+            </label>
+            <input
+              value={draft.year}
+              onChange={(e) => setDraft((p) => ({ ...p, year: e.target.value }))}
+              placeholder="2024"
+              onKeyDown={(e) => e.key === 'Enter' && add()}
+              style={{
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.16)',
+                borderRadius: 10,
+                padding: '8px 10px',
+                outline: 'none',
+                color: '#F8F4EF',
+                width: '100%',
+                boxSizing: 'border-box',
+                fontFamily: 'inherit',
+              }}
+            />
+          </div>
         </div>
 
-        <div className="pe-field">
-          <label className="pe-label">Year</label>
-          <input
-            className="pe-input"
-            value={draft.year}
-            onChange={(e) => setDraft((p) => ({ ...p, year: e.target.value }))}
-            placeholder="2024"
-            onKeyDown={(e) => e.key === 'Enter' && add()}
-          />
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={add}
+            style={{
+              background: 'white',
+              color: ORANGE,
+              border: `1px solid ${ORANGE}`,
+              borderRadius: 10,
+              padding: '8px 12px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            + Add
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={add}
-          style={{
-            padding: '9px 16px',
-            borderRadius: 8,
-            background: ORANGE,
-            color: '#fff',
-            border: 'none',
-            fontWeight: 700,
-            fontSize: 13,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          + Add
-        </button>
       </div>
-
-      <div style={{ fontSize: 11, color: '#546E7A', fontWeight: 600 }}>
-        Press Enter or click Add. Name, issuer, and year all optional except the name.
-      </div>
-    </div>
+    </section>
   );
 }
