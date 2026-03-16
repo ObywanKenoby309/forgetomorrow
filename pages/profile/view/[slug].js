@@ -112,6 +112,15 @@ function parseEducationField(raw, fallback = []) {
   } catch { return fallback; }
 }
 
+function parseStructuredArrayField(raw, fallback = []) {
+  if (!raw) return fallback;
+  try {
+    if (Array.isArray(raw)) return raw;
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch { return fallback; }
+}
+
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 
 // ─── Data fetching ────────────────────────────────────────────────────────────
@@ -217,8 +226,8 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   const [languages,       setLanguages]       = useState(parseArrayField(languagesJson, []));
   const [hobbies,         setHobbies]         = useState(parseArrayField(hobbiesJson,   []));
   const [education,       setEducation]       = useState(parseEducationField(educationJson, []));
-  const [certifications,  setCertifications]  = useState(Array.isArray(user.certificationsJson) ? user.certificationsJson : []);
-  const [projects,        setProjects]        = useState(Array.isArray(user.projectsJson) ? user.projectsJson : []);
+  const [certifications,  setCertifications]  = useState(parseStructuredArrayField(user.certificationsJson, []));
+  const [projects,        setProjects]        = useState(parseStructuredArrayField(user.projectsJson, []));
   const [socialLinks,     setSocialLinks]     = useState({ github: '', x: '', youtube: '', instagram: '' });
   const [avatarUploading, setAvatarUploading] = useState(false);
   const updateSocial = (key, val) => setSocialLinks(p => ({ ...p, [key]: val }));
@@ -631,25 +640,6 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
           .ft-col-center { display: grid; gap: 18px; align-content: start; }
           .ft-col-right  { display: grid; gap: 18px; align-content: start; }
 
-          .ft-bottom-two {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 18px;
-            margin-top: 18px;
-            align-items: stretch;
-          }
-          .ft-equal-height-card {
-            height: 100%;
-          }
-          .ft-equal-height-card > div {
-            height: 100%;
-          }
-          @media (max-width: 900px) {
-            .ft-bottom-two {
-              grid-template-columns: 1fr;
-            }
-          }
-
           /* ─── Cards ─── */
           .ft-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-lg); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); box-shadow:var(--shadow-md); overflow:hidden; transition:box-shadow 0.2s, border-color 0.2s, transform 0.2s; }
           .ft-card:hover { box-shadow:var(--shadow-lg); border-color:rgba(255,255,255,0.18); transform:translateY(-1px); }
@@ -1056,10 +1046,10 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                     ) : null}
                   </div>
 
-                  {/* RIGHT — Education + Resume only (balanced with left col) */}
+                  {/* RIGHT — Education + Certifications */}
                   <div className="ft-col-right animate-fade-up delay-5">
 
-                    {/* Education — always show card in view mode */}
+                    {/* Education */}
                     {editMode ? (
                       <EducationEditCard
                         education={education} setEducation={setEducation}
@@ -1086,35 +1076,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                       </div>
                     )}
 
-                    {/* Resume — view shows primary resume card; edit mode uses "Select Resume" in header */}
-                    {!editMode && (
-                      <div className="ft-card" style={{ marginTop: 18 }}>
-                        <div className="ft-card-inner">
-                          <p className="ft-section-label">Resume</p>
-                          {primaryResume ? (
-                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
-                              <div style={{ minWidth:0 }}>
-                                <div style={{ fontSize:14, fontWeight:700, color:'var(--white)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                                  {primaryResume.name || 'Primary Resume'}
-                                </div>
-                                <div style={{ fontSize:11, color:'var(--muted)', marginTop:3 }}>
-                                  Primary · Updated {new Date(primaryResume.updatedAt).toLocaleDateString()}
-                                </div>
-                              </div>
-                              <a href={`/api/resume/public-download?resumeId=${encodeURIComponent(primaryResume.id)}&slug=${encodeURIComponent(slug)}`}
-                                target="_blank" rel="noopener noreferrer"
-                                style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:999, background:'rgba(255,112,67,0.14)', border:'1px solid rgba(255,112,67,0.35)', color:ORANGE, fontSize:12, fontWeight:700, textDecoration:'none', flexShrink:0 }}>
-                                <svg width="13" height="13" fill="none" viewBox="0 0 14 14"><path d="M7 1v8M4 7l3 3 3-3M2 11h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                Download
-                              </a>
-                            </div>
-                          ) : (
-                            <div style={{ fontSize:13, color:'rgba(248,244,239,0.35)', fontStyle:'italic' }}>No resume attached yet.</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
+                    {/* Certifications */}
                     <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
                       <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
                         {editMode
@@ -1123,9 +1085,11 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                         <ProfileCertifications certifications={certifications} setCertifications={setCertifications} />
                       </div>
                     </div>
+
                   </div>
                 </div>
 
+                {/* ══ BELOW-GRID FULL-WIDTH ROW — Projects + Custom ══ */}
                 <div className="ft-bottom-two">
 
                   <div className={`${editMode ? 'ft-dark-card' : 'ft-card'} ft-equal-height-card`}>
@@ -1613,12 +1577,14 @@ function SkillsEditCard({ skills, setSkills, skillInput, setSkillInput }) {
           <button type="button" className="ft-add-btn" onClick={() => { if (skillInput.trim()) { setSkills(p => [...p, skillInput.trim()]); setSkillInput(''); }}}>+ Add</button>
         </div>
         {skills.length > 0 && (
-          <div className="ft-dark-chips">
-            {skills.map((s, i) => (
-              <span key={s+i} className="ft-dark-chip">{s}
-                <button type="button" className="ft-dark-chip-x" onClick={() => setSkills(p => p.filter((_,idx) => idx !== i))}>×</button>
-              </span>
-            ))}
+          <div style={{ maxHeight: 220, overflowY: 'auto', paddingRight: 4, scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,112,67,0.3) transparent' }}>
+            <div className="ft-dark-chips">
+              {skills.map((s, i) => (
+                <span key={s+i} className="ft-dark-chip">{s}
+                  <button type="button" className="ft-dark-chip-x" onClick={() => setSkills(p => p.filter((_,idx) => idx !== i))}>×</button>
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
