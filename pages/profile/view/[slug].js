@@ -217,9 +217,10 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   const [languages,       setLanguages]       = useState(parseArrayField(languagesJson, []));
   const [hobbies,         setHobbies]         = useState(parseArrayField(hobbiesJson,   []));
   const [education,       setEducation]       = useState(parseEducationField(educationJson, []));
-  const [certifications,  setCertifications]  = useState(parseArrayField(user.certificationsJson, []));
-  const [projects,        setProjects]        = useState(parseArrayField(user.projectsJson,        []));
+  const [certifications,  setCertifications]  = useState(Array.isArray(user.certificationsJson) ? user.certificationsJson : []);
+  const [projects,        setProjects]        = useState(Array.isArray(user.projectsJson) ? user.projectsJson : []);
   const [socialLinks,     setSocialLinks]     = useState({ github: '', x: '', youtube: '', instagram: '' });
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const updateSocial = (key, val) => setSocialLinks(p => ({ ...p, [key]: val }));
 
   // Work preferences — expanded schema from Sora's card
