@@ -21,6 +21,7 @@ import MemberAvatarActions from '@/components/member/MemberAvatarActions';
 import ProfileResumeAttach    from '@/components/profile/ProfileResumeAttach';
 import ProfileCertifications  from '@/components/profile/ProfileCertifications';
 import ProfileProjects        from '@/components/profile/ProfileProjects';
+import ProfileCustomSection   from '@/components/profile/ProfileCustomSection';
 
 import { profileBanners    } from '@/lib/profileBanners';
 import { profileWallpapers } from '@/lib/profileWallpapers';
@@ -127,7 +128,7 @@ export async function getServerSideProps(context) {
       headline: true, pronouns: true, location: true, status: true,
       avatarUrl: true, coverUrl: true, aboutMe: true,
       skillsJson: true, languagesJson: true, educationJson: true, hobbiesJson: true,
-      certificationsJson: true, projectsJson: true,
+      certificationsJson: true, projectsJson: true, customSectionJson: true,
       bannerMode: true, bannerHeight: true, bannerFocalY: true,
       wallpaperUrl: true, corporateBannerKey: true, corporateBannerLocked: true,
       isProfilePublic: true, profileVisibility: true, role: true, email: true,
@@ -197,6 +198,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
     bannerMode: serverBannerMode, bannerHeight: serverBannerH, bannerFocalY: serverFocalY,
     corporateBannerKey, corporateBannerLocked,
     workPreferences: serverWorkPrefs,
+    customSectionJson: serverCustomSectionJson,
   } = user;
 
   const DEFAULT_WALLPAPER = '/images/profile-fallbacks/profile-default-wallpaper.png';
@@ -219,6 +221,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   const [education,       setEducation]       = useState(parseEducationField(educationJson, []));
   const [certifications,  setCertifications]  = useState(Array.isArray(user.certificationsJson) ? user.certificationsJson : []);
   const [projects,        setProjects]        = useState(Array.isArray(user.projectsJson) ? user.projectsJson : []);
+  const [customSection,   setCustomSection]   = useState(serverCustomSectionJson && typeof serverCustomSectionJson === 'object' ? serverCustomSectionJson : { name: '', organization: '', notes: '', startYear: '', endYear: '' });
   const [socialLinks,     setSocialLinks]     = useState({ github: '', x: '', youtube: '', instagram: '' });
   const [avatarUploading, setAvatarUploading] = useState(false);
   const updateSocial = (key, val) => setSocialLinks(p => ({ ...p, [key]: val }));
@@ -361,6 +364,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
               skillsJson: skills || [], languagesJson: languages || [],
               hobbiesJson: hobbies || [], educationJson: education || [],
               certificationsJson: certifications || [], projectsJson: projects || [],
+              customSectionJson: customSection || null,
             }),
             signal: controller.signal,
           }),
@@ -377,7 +381,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
     socialLinks, pronouns, headline, location, status, aboutMe,
     prefWorkStatus, prefWorkType, prefSchedule, prefWillingToRelocate,
     prefStartDate, prefScheduleAvailability, prefLocations,
-    skills, languages, hobbies, education, certifications, projects,
+    skills, languages, hobbies, education, certifications, projects, customSection,
   ]);
 
   const AvatarWrap = ({ children }) => {
@@ -1037,7 +1041,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                     ) : null}
                   </div>
 
-                  {/* RIGHT — Education + Resume only (balanced with left col) */}
+                  {/* RIGHT — Education + Certifications */}
                   <div className="ft-col-right animate-fade-up delay-5">
 
                     {/* Education — always show card in view mode */}
@@ -1067,50 +1071,24 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                       </div>
                     )}
 
-                    {/* Resume — view shows primary resume card; edit mode uses "Select Resume" in header */}
-                    {!editMode && (
-                      <div className="ft-card" style={{ marginTop: 18 }}>
-                        <div className="ft-card-inner">
-                          <p className="ft-section-label">Resume</p>
-                          {primaryResume ? (
-                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
-                              <div style={{ minWidth:0 }}>
-                                <div style={{ fontSize:14, fontWeight:700, color:'var(--white)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                                  {primaryResume.name || 'Primary Resume'}
-                                </div>
-                                <div style={{ fontSize:11, color:'var(--muted)', marginTop:3 }}>
-                                  Primary · Updated {new Date(primaryResume.updatedAt).toLocaleDateString()}
-                                </div>
-                              </div>
-                              <a href={`/api/resume/public-download?resumeId=${encodeURIComponent(primaryResume.id)}&slug=${encodeURIComponent(slug)}`}
-                                target="_blank" rel="noopener noreferrer"
-                                style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:999, background:'rgba(255,112,67,0.14)', border:'1px solid rgba(255,112,67,0.35)', color:ORANGE, fontSize:12, fontWeight:700, textDecoration:'none', flexShrink:0 }}>
-                                <svg width="13" height="13" fill="none" viewBox="0 0 14 14"><path d="M7 1v8M4 7l3 3 3-3M2 11h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                Download
-                              </a>
-                            </div>
-                          ) : (
-                            <div style={{ fontSize:13, color:'rgba(248,244,239,0.35)', fontStyle:'italic' }}>No resume attached yet.</div>
-                          )}
-                        </div>
+                    {/* Certifications — sits under Education in both view and edit */}
+                    <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
+                      <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
+                        {editMode
+                          ? <div className="ft-dark-section-label">Certifications</div>
+                          : <p className="ft-section-label">Certifications</p>}
+                        <ProfileCertifications
+                          certifications={certifications}
+                          setCertifications={setCertifications}
+                          editMode={editMode}
+                        />
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
 
-                {/* ══ BELOW-GRID FULL-WIDTH ROW — Certifications, Projects, Custom ══
-                    These span full width so neither column gets disproportionately long */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18, marginTop: 18 }}>
-
-                  {/* Certifications */}
-                  <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
-                    <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
-                      {editMode
-                        ? <div className="ft-dark-section-label">Certifications</div>
-                        : <p className="ft-section-label">Certifications</p>}
-                      <ProfileCertifications certifications={certifications} setCertifications={setCertifications} />
-                    </div>
-                  </div>
+                {/* ══ BELOW-GRID ROW — Projects + Custom ══ */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 18 }}>
 
                   {/* Projects */}
                   <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
@@ -1118,23 +1096,30 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                       {editMode
                         ? <div className="ft-dark-section-label">Projects</div>
                         : <p className="ft-section-label">Projects</p>}
-                      <ProfileProjects projects={projects} setProjects={setProjects} />
+                      <ProfileProjects
+                        projects={projects}
+                        setProjects={setProjects}
+                        editMode={editMode}
+                      />
                     </div>
                   </div>
 
-                  {/* Custom card stub */}
+                  {/* Custom */}
                   <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
                     <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
                       {editMode
                         ? <div className="ft-dark-section-label">Custom Section</div>
                         : <p className="ft-section-label">Custom Section</p>}
-                      <div style={{ fontSize: 13, color: 'rgba(248,244,239,0.30)', fontStyle: 'italic', lineHeight: 1.6 }}>
-                        Coming soon — add a portfolio spotlight, featured work, press mentions, or anything else that tells your story.
-                      </div>
+                      <ProfileCustomSection
+                        value={customSection}
+                        setValue={setCustomSection}
+                        editMode={editMode}
+                      />
                     </div>
                   </div>
 
                 </div>
+
 
               </div>
               {/* end desktop */}

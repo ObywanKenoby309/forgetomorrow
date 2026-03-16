@@ -2,6 +2,56 @@ import React, { useMemo, useState } from 'react';
 
 const ORANGE = '#FF7043';
 
+const inputStyle = {
+  background: 'rgba(255,255,255,0.07)',
+  border: '1px solid rgba(255,255,255,0.16)',
+  borderRadius: 10,
+  padding: '8px 10px',
+  outline: 'none',
+  color: '#F8F4EF',
+  width: '100%',
+  boxSizing: 'border-box',
+  fontFamily: 'inherit',
+};
+
+const labelStyle = {
+  fontSize: 12,
+  fontWeight: 800,
+  color: 'rgba(255,255,255,0.70)',
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+};
+
+function normalizeProject(project, index) {
+  if (!project) return null;
+
+  if (typeof project === 'string') {
+    return {
+      id: `project-${index}`,
+      name: project,
+      organization: '',
+      notes: '',
+      startYear: '',
+      endYear: '',
+      url: '',
+    };
+  }
+
+  if (typeof project === 'object') {
+    return {
+      id: project.id || `project-${index}`,
+      name: String(project.name || project.title || '').trim(),
+      organization: String(project.organization || project.company || '').trim(),
+      notes: String(project.notes || project.description || project.summary || '').trim(),
+      startYear: String(project.startYear || '').trim(),
+      endYear: String(project.endYear || '').trim(),
+      url: String(project.url || project.link || '').trim(),
+    };
+  }
+
+  return null;
+}
+
 export default function ProfileProjects({
   projects = [],
   setProjects,
@@ -20,38 +70,18 @@ export default function ProfileProjects({
 
   const normalizedProjects = useMemo(() => {
     if (!Array.isArray(projects)) return [];
-
     return projects
-      .map((p) => {
-        if (!p) return null;
-
-        if (typeof p === 'string') {
-          return {
-            id: `${p}-${Math.random()}`,
-            name: p,
-            organization: '',
-            notes: '',
-            startYear: '',
-            endYear: '',
-            url: '',
-          };
-        }
-
-        if (typeof p === 'object') {
-          return {
-            id: p.id || `${Date.now()}-${Math.random()}`,
-            name: String(p.name || p.title || '').trim(),
-            organization: String(p.organization || p.company || '').trim(),
-            notes: String(p.notes || p.description || p.summary || '').trim(),
-            startYear: String(p.startYear || '').trim(),
-            endYear: String(p.endYear || '').trim(),
-            url: String(p.url || p.link || '').trim(),
-          };
-        }
-
-        return null;
-      })
-      .filter((p) => p && (p.name || p.organization || p.notes || p.startYear || p.endYear || p.url));
+      .map((project, index) => normalizeProject(project, index))
+      .filter(
+        (project) =>
+          project &&
+          (project.name ||
+            project.organization ||
+            project.notes ||
+            project.startYear ||
+            project.endYear ||
+            project.url)
+      );
   }, [projects]);
 
   const canEdit = editMode && typeof setProjects === 'function';
@@ -70,14 +100,14 @@ export default function ProfileProjects({
       url: draft.url.trim(),
     };
 
-    setProjects((prev) => [entry, ...(Array.isArray(prev) ? prev : [])]);
+    setProjects((prev) => [...(Array.isArray(prev) ? prev : []), entry]);
     setDraft(empty);
   };
 
-  const removeProject = (id) => {
+  const removeProjectAtIndex = (indexToRemove) => {
     if (!canEdit) return;
     setProjects((prev) =>
-      Array.isArray(prev) ? prev.filter((item) => item?.id !== id) : []
+      Array.isArray(prev) ? prev.filter((_, index) => index !== indexToRemove) : []
     );
   };
 
@@ -98,11 +128,12 @@ export default function ProfileProjects({
 
     return (
       <div style={{ display: 'grid', gap: 10 }}>
-        {normalizedProjects.map((p) => {
-          const years = [p.startYear, p.endYear].filter(Boolean).join(' – ');
+        {normalizedProjects.map((project) => {
+          const years = [project.startYear, project.endYear].filter(Boolean).join(' – ');
+
           return (
             <div
-              key={p.id}
+              key={project.id}
               style={{
                 position: 'relative',
                 padding: '16px 14px 16px 18px',
@@ -122,6 +153,7 @@ export default function ProfileProjects({
                   borderRadius: '0 2px 2px 0',
                 }}
               />
+
               <div
                 style={{
                   fontFamily: "'Playfair Display', Georgia, serif",
@@ -130,10 +162,10 @@ export default function ProfileProjects({
                   color: '#F8F4EF',
                 }}
               >
-                {p.name || 'Project'}
+                {project.name || 'Project'}
               </div>
 
-              {(p.organization || years) && (
+              {(project.organization || years) && (
                 <div
                   style={{
                     fontSize: 12,
@@ -142,11 +174,11 @@ export default function ProfileProjects({
                     fontWeight: 500,
                   }}
                 >
-                  {[p.organization, years].filter(Boolean).join(' • ')}
+                  {[project.organization, years].filter(Boolean).join(' • ')}
                 </div>
               )}
 
-              {p.notes && (
+              {project.notes && (
                 <div
                   style={{
                     fontSize: 12,
@@ -156,13 +188,13 @@ export default function ProfileProjects({
                     whiteSpace: 'pre-line',
                   }}
                 >
-                  {p.notes}
+                  {project.notes}
                 </div>
               )}
 
-              {p.url && (
+              {project.url && (
                 <a
-                  href={p.url}
+                  href={project.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -175,7 +207,7 @@ export default function ProfileProjects({
                     wordBreak: 'break-word',
                   }}
                 >
-                  {p.url}
+                  {project.url}
                 </a>
               )}
             </div>
@@ -186,24 +218,15 @@ export default function ProfileProjects({
   }
 
   return (
-    <section style={{ display: 'grid', gap: 10 }}>
-      {normalizedProjects.length === 0 ? (
-        <div
-          style={{
-            color: 'rgba(255,255,255,0.35)',
-            fontSize: 13,
-            fontStyle: 'italic',
-          }}
-        >
-          No projects added yet.
-        </div>
-      ) : (
+    <section style={{ display: 'grid', gap: 12 }}>
+      {normalizedProjects.length > 0 && (
         <div style={{ display: 'grid', gap: 10 }}>
-          {normalizedProjects.map((p) => {
-            const years = [p.startYear, p.endYear].filter(Boolean).join(' – ');
+          {normalizedProjects.map((project, index) => {
+            const years = [project.startYear, project.endYear].filter(Boolean).join(' – ');
+
             return (
               <div
-                key={p.id}
+                key={project.id}
                 style={{
                   border: '1px solid rgba(255,255,255,0.10)',
                   borderRadius: 12,
@@ -222,10 +245,10 @@ export default function ProfileProjects({
                       fontSize: 14,
                     }}
                   >
-                    {p.name}
+                    {project.name}
                   </div>
 
-                  {(p.organization || years) && (
+                  {(project.organization || years) && (
                     <div
                       style={{
                         fontSize: 13,
@@ -233,11 +256,11 @@ export default function ProfileProjects({
                         marginTop: 3,
                       }}
                     >
-                      {[p.organization, years].filter(Boolean).join(' • ')}
+                      {[project.organization, years].filter(Boolean).join(' • ')}
                     </div>
                   )}
 
-                  {p.notes && (
+                  {project.notes && (
                     <div
                       style={{
                         fontSize: 12,
@@ -247,13 +270,13 @@ export default function ProfileProjects({
                         lineHeight: 1.55,
                       }}
                     >
-                      {p.notes}
+                      {project.notes}
                     </div>
                   )}
 
-                  {p.url && (
+                  {project.url && (
                     <a
-                      href={p.url}
+                      href={project.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -266,14 +289,14 @@ export default function ProfileProjects({
                         wordBreak: 'break-word',
                       }}
                     >
-                      {p.url}
+                      {project.url}
                     </a>
                   )}
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => removeProject(p.id)}
+                  onClick={() => removeProjectAtIndex(index)}
                   style={{
                     border: '1px solid #C62828',
                     color: '#EF9A9A',
@@ -296,178 +319,76 @@ export default function ProfileProjects({
       )}
 
       <div style={{ display: 'grid', gap: 10 }}>
-        <div style={{ display: 'grid', gap: 6 }}>
-          <label
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              color: 'rgba(255,255,255,0.70)',
-            }}
-          >
-            Name
-          </label>
-          <input
-            value={draft.name}
-            onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder="Project name"
-            style={{
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.16)',
-              borderRadius: 10,
-              padding: '8px 10px',
-              outline: 'none',
-              color: '#F8F4EF',
-              width: '100%',
-              boxSizing: 'border-box',
-              fontFamily: 'inherit',
-            }}
-          />
-        </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div style={{ display: 'grid', gap: 6 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: 'rgba(255,255,255,0.70)',
-              }}
-            >
-              Organization
-            </label>
+            <label style={labelStyle}>Name</label>
+            <input
+              value={draft.name}
+              onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder="Project name"
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gap: 6 }}>
+            <label style={labelStyle}>Organization</label>
             <input
               value={draft.organization}
-              onChange={(e) => setDraft((prev) => ({ ...prev, organization: e.target.value }))}
-              placeholder="Company / org / client"
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, organization: e.target.value }))
+              }
+              placeholder="Group/Org/Company"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gap: 6 }}>
+            <label style={labelStyle}>Notes</label>
+            <textarea
+              value={draft.notes}
+              onChange={(e) => setDraft((prev) => ({ ...prev, notes: e.target.value }))}
+              placeholder="Notes"
               style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 10,
-                padding: '8px 10px',
-                outline: 'none',
-                color: '#F8F4EF',
-                width: '100%',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
+                ...inputStyle,
+                minHeight: 56,
+                resize: 'vertical',
               }}
             />
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: 'rgba(255,255,255,0.70)',
-              }}
-            >
-              URL
-            </label>
-            <input
-              value={draft.url}
-              onChange={(e) => setDraft((prev) => ({ ...prev, url: e.target.value }))}
-              placeholder="https://..."
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 10,
-                padding: '8px 10px',
-                outline: 'none',
-                color: '#F8F4EF',
-                width: '100%',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-              }}
-            />
+            <label style={labelStyle}>Years</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <input
+                value={draft.startYear}
+                onChange={(e) =>
+                  setDraft((prev) => ({ ...prev, startYear: e.target.value }))
+                }
+                placeholder="2018"
+                style={inputStyle}
+              />
+              <input
+                value={draft.endYear}
+                onChange={(e) =>
+                  setDraft((prev) => ({ ...prev, endYear: e.target.value }))
+                }
+                placeholder="2022"
+                style={inputStyle}
+              />
+            </div>
           </div>
         </div>
 
         <div style={{ display: 'grid', gap: 6 }}>
-          <label
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              color: 'rgba(255,255,255,0.70)',
-            }}
-          >
-            Notes
-          </label>
-          <textarea
-            value={draft.notes}
-            onChange={(e) => setDraft((prev) => ({ ...prev, notes: e.target.value }))}
-            placeholder="What was built, delivered, improved, or achieved?"
-            style={{
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.16)',
-              borderRadius: 10,
-              padding: '8px 10px',
-              outline: 'none',
-              color: '#F8F4EF',
-              width: '100%',
-              minHeight: 78,
-              boxSizing: 'border-box',
-              fontFamily: 'inherit',
-              resize: 'vertical',
-            }}
+          <label style={labelStyle}>URL</label>
+          <input
+            value={draft.url}
+            onChange={(e) => setDraft((prev) => ({ ...prev, url: e.target.value }))}
+            placeholder="https://..."
+            style={inputStyle}
           />
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <div style={{ display: 'grid', gap: 6 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: 'rgba(255,255,255,0.70)',
-              }}
-            >
-              Start year
-            </label>
-            <input
-              value={draft.startYear}
-              onChange={(e) => setDraft((prev) => ({ ...prev, startYear: e.target.value }))}
-              placeholder="2018"
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 10,
-                padding: '8px 10px',
-                outline: 'none',
-                color: '#F8F4EF',
-                width: '100%',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-              }}
-            />
-          </div>
-
-          <div style={{ display: 'grid', gap: 6 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: 'rgba(255,255,255,0.70)',
-              }}
-            >
-              End year
-            </label>
-            <input
-              value={draft.endYear}
-              onChange={(e) => setDraft((prev) => ({ ...prev, endYear: e.target.value }))}
-              placeholder="2022"
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 10,
-                padding: '8px 10px',
-                outline: 'none',
-                color: '#F8F4EF',
-                width: '100%',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-              }}
-            />
-          </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
@@ -479,7 +400,7 @@ export default function ProfileProjects({
               color: ORANGE,
               border: `1px solid ${ORANGE}`,
               borderRadius: 999,
-              padding: '8px 12px',
+              padding: '8px 14px',
               fontWeight: 800,
               cursor: 'pointer',
               fontFamily: 'inherit',

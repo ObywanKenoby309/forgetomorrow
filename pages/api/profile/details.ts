@@ -34,6 +34,7 @@ type ProfileDetails = {
   educationJson: any | null;
   certificationsJson: any | null;
   projectsJson: any | null;
+  customSectionJson: any | null;
 
   // UI flags (DB-backed via UserDraft)
   welcomeDismissed: boolean;
@@ -117,6 +118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             educationJson: true,
             certificationsJson: true,
             projectsJson: true,
+            customSectionJson: true,
           },
         }),
         prisma.userDraft.findUnique({
@@ -152,6 +154,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             educationJson: record.educationJson ?? null,
             certificationsJson: (record as any).certificationsJson ?? null,
             projectsJson: (record as any).projectsJson ?? null,
+            customSectionJson: (record as any).customSectionJson ?? null,
 
             welcomeDismissed: dismissed,
           }
@@ -189,6 +192,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (body.certificationsJson !== undefined)
         data.certificationsJson = body.certificationsJson;
       if (body.projectsJson !== undefined) data.projectsJson = body.projectsJson;
+      if (body.customSectionJson !== undefined) data.customSectionJson = body.customSectionJson;
 
       const updatedUser =
         Object.keys(data).length > 0
@@ -214,6 +218,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 educationJson: true,
                 certificationsJson: true,
                 projectsJson: true,
+                customSectionJson: true,
               },
             })
           : await prisma.user.findUnique({
@@ -237,6 +242,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 educationJson: true,
                 certificationsJson: true,
                 projectsJson: true,
+                customSectionJson: true,
               },
             });
 
@@ -290,6 +296,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         educationJson: (updatedUser as any).educationJson ?? null,
         certificationsJson: (updatedUser as any).certificationsJson ?? null,
         projectsJson: (updatedUser as any).projectsJson ?? null,
+        customSectionJson: (updatedUser as any).customSectionJson ?? null,
 
         welcomeDismissed: Boolean((draft?.content as any)?.dismissed) === true,
       };

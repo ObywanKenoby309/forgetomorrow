@@ -734,6 +734,7 @@ model User {
   skillsJson                   Json?
   socialLinks				   Json?
   certificationsJson           Json?  
+  customSectionJson			   Json?
   projectsJson                 Json?
   slug                         String?                        @unique
   slugChangeCount              Int                            @default(0)

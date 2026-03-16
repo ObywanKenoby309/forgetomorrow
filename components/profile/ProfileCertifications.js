@@ -2,6 +2,52 @@ import React, { useMemo, useState } from 'react';
 
 const ORANGE = '#FF7043';
 
+const inputStyle = {
+  background: 'rgba(255,255,255,0.07)',
+  border: '1px solid rgba(255,255,255,0.16)',
+  borderRadius: 10,
+  padding: '8px 10px',
+  outline: 'none',
+  color: '#F8F4EF',
+  width: '100%',
+  boxSizing: 'border-box',
+  fontFamily: 'inherit',
+};
+
+const labelStyle = {
+  fontSize: 12,
+  fontWeight: 800,
+  color: 'rgba(255,255,255,0.70)',
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+};
+
+function normalizeCertification(certification, index) {
+  if (!certification) return null;
+
+  if (typeof certification === 'string') {
+    return {
+      id: `cert-${index}`,
+      name: certification,
+      issuer: '',
+      notes: '',
+      year: '',
+    };
+  }
+
+  if (typeof certification === 'object') {
+    return {
+      id: certification.id || `cert-${index}`,
+      name: String(certification.name || '').trim(),
+      issuer: String(certification.issuer || '').trim(),
+      notes: String(certification.notes || '').trim(),
+      year: String(certification.year || '').trim(),
+    };
+  }
+
+  return null;
+}
+
 export default function ProfileCertifications({
   certifications = [],
   setCertifications,
@@ -18,34 +64,16 @@ export default function ProfileCertifications({
 
   const normalizedCertifications = useMemo(() => {
     if (!Array.isArray(certifications)) return [];
-
     return certifications
-      .map((c) => {
-        if (!c) return null;
-
-        if (typeof c === 'string') {
-          return {
-            id: `${c}-${Math.random()}`,
-            name: c,
-            issuer: '',
-            notes: '',
-            year: '',
-          };
-        }
-
-        if (typeof c === 'object') {
-          return {
-            id: c.id || `${Date.now()}-${Math.random()}`,
-            name: String(c.name || '').trim(),
-            issuer: String(c.issuer || '').trim(),
-            notes: String(c.notes || '').trim(),
-            year: String(c.year || '').trim(),
-          };
-        }
-
-        return null;
-      })
-      .filter((c) => c && (c.name || c.issuer || c.notes || c.year));
+      .map((certification, index) => normalizeCertification(certification, index))
+      .filter(
+        (certification) =>
+          certification &&
+          (certification.name ||
+            certification.issuer ||
+            certification.notes ||
+            certification.year)
+      );
   }, [certifications]);
 
   const canEdit = editMode && typeof setCertifications === 'function';
@@ -62,14 +90,14 @@ export default function ProfileCertifications({
       year: draft.year.trim(),
     };
 
-    setCertifications((prev) => [entry, ...(Array.isArray(prev) ? prev : [])]);
+    setCertifications((prev) => [...(Array.isArray(prev) ? prev : []), entry]);
     setDraft(empty);
   };
 
-  const removeCertification = (id) => {
+  const removeCertificationAtIndex = (indexToRemove) => {
     if (!canEdit) return;
     setCertifications((prev) =>
-      Array.isArray(prev) ? prev.filter((item) => item?.id !== id) : []
+      Array.isArray(prev) ? prev.filter((_, index) => index !== indexToRemove) : []
     );
   };
 
@@ -90,9 +118,9 @@ export default function ProfileCertifications({
 
     return (
       <div style={{ display: 'grid', gap: 10 }}>
-        {normalizedCertifications.map((c) => (
+        {normalizedCertifications.map((certification) => (
           <div
-            key={c.id}
+            key={certification.id}
             style={{
               position: 'relative',
               padding: '16px 14px 16px 18px',
@@ -112,6 +140,7 @@ export default function ProfileCertifications({
                 borderRadius: '0 2px 2px 0',
               }}
             />
+
             <div
               style={{
                 fontFamily: "'Playfair Display', Georgia, serif",
@@ -120,10 +149,10 @@ export default function ProfileCertifications({
                 color: '#F8F4EF',
               }}
             >
-              {c.name}
+              {certification.name}
             </div>
 
-            {(c.issuer || c.year) && (
+            {(certification.issuer || certification.year) && (
               <div
                 style={{
                   fontSize: 12,
@@ -132,11 +161,11 @@ export default function ProfileCertifications({
                   fontWeight: 500,
                 }}
               >
-                {[c.issuer, c.year].filter(Boolean).join(' • ')}
+                {[certification.issuer, certification.year].filter(Boolean).join(' • ')}
               </div>
             )}
 
-            {c.notes && (
+            {certification.notes && (
               <div
                 style={{
                   fontSize: 12,
@@ -146,7 +175,7 @@ export default function ProfileCertifications({
                   whiteSpace: 'pre-line',
                 }}
               >
-                {c.notes}
+                {certification.notes}
               </div>
             )}
           </div>
@@ -156,22 +185,12 @@ export default function ProfileCertifications({
   }
 
   return (
-    <section style={{ display: 'grid', gap: 10 }}>
-      {normalizedCertifications.length === 0 ? (
-        <div
-          style={{
-            color: 'rgba(255,255,255,0.35)',
-            fontSize: 13,
-            fontStyle: 'italic',
-          }}
-        >
-          No certifications added yet.
-        </div>
-      ) : (
+    <section style={{ display: 'grid', gap: 12 }}>
+      {normalizedCertifications.length > 0 && (
         <div style={{ display: 'grid', gap: 10 }}>
-          {normalizedCertifications.map((c) => (
+          {normalizedCertifications.map((certification, index) => (
             <div
-              key={c.id}
+              key={certification.id}
               style={{
                 border: '1px solid rgba(255,255,255,0.10)',
                 borderRadius: 12,
@@ -190,10 +209,10 @@ export default function ProfileCertifications({
                     fontSize: 14,
                   }}
                 >
-                  {c.name}
+                  {certification.name}
                 </div>
 
-                {(c.issuer || c.year) && (
+                {(certification.issuer || certification.year) && (
                   <div
                     style={{
                       fontSize: 13,
@@ -201,11 +220,13 @@ export default function ProfileCertifications({
                       marginTop: 3,
                     }}
                   >
-                    {[c.issuer, c.year].filter(Boolean).join(' • ')}
+                    {[certification.issuer, certification.year]
+                      .filter(Boolean)
+                      .join(' • ')}
                   </div>
                 )}
 
-                {c.notes && (
+                {certification.notes && (
                   <div
                     style={{
                       fontSize: 12,
@@ -215,14 +236,14 @@ export default function ProfileCertifications({
                       lineHeight: 1.55,
                     }}
                   >
-                    {c.notes}
+                    {certification.notes}
                   </div>
                 )}
               </div>
 
               <button
                 type="button"
-                onClick={() => removeCertification(c.id)}
+                onClick={() => removeCertificationAtIndex(index)}
                 style={{
                   border: '1px solid #C62828',
                   color: '#EF9A9A',
@@ -246,118 +267,48 @@ export default function ProfileCertifications({
       <div style={{ display: 'grid', gap: 10 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div style={{ display: 'grid', gap: 6 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: 'rgba(255,255,255,0.70)',
-              }}
-            >
-              Name
-            </label>
+            <label style={labelStyle}>Name</label>
             <input
               value={draft.name}
               onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="AWS Solutions Architect"
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 10,
-                padding: '8px 10px',
-                outline: 'none',
-                color: '#F8F4EF',
-                width: '100%',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-              }}
+              placeholder="Certification name"
+              style={inputStyle}
             />
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: 'rgba(255,255,255,0.70)',
-              }}
-            >
-              Issued By
-            </label>
+            <label style={labelStyle}>Issued By</label>
             <input
               value={draft.issuer}
               onChange={(e) => setDraft((prev) => ({ ...prev, issuer: e.target.value }))}
-              placeholder="Amazon"
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 10,
-                padding: '8px 10px',
-                outline: 'none',
-                color: '#F8F4EF',
-                width: '100%',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-              }}
+              placeholder="Issuer"
+              style={inputStyle}
             />
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 110px', gap: 10 }}>
           <div style={{ display: 'grid', gap: 6 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: 'rgba(255,255,255,0.70)',
-              }}
-            >
-              Notes
-            </label>
+            <label style={labelStyle}>Notes</label>
             <textarea
               value={draft.notes}
               onChange={(e) => setDraft((prev) => ({ ...prev, notes: e.target.value }))}
-              placeholder="Optional details"
+              placeholder="Notes"
               style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 10,
-                padding: '8px 10px',
-                outline: 'none',
-                color: '#F8F4EF',
-                width: '100%',
+                ...inputStyle,
                 minHeight: 56,
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
                 resize: 'vertical',
               }}
             />
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: 'rgba(255,255,255,0.70)',
-              }}
-            >
-              Year
-            </label>
+            <label style={labelStyle}>Year</label>
             <input
               value={draft.year}
               onChange={(e) => setDraft((prev) => ({ ...prev, year: e.target.value }))}
-              placeholder="2024"
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 10,
-                padding: '8px 10px',
-                outline: 'none',
-                color: '#F8F4EF',
-                width: '100%',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-              }}
+              placeholder="2018"
+              style={inputStyle}
             />
           </div>
         </div>
@@ -371,7 +322,7 @@ export default function ProfileCertifications({
               color: ORANGE,
               border: `1px solid ${ORANGE}`,
               borderRadius: 999,
-              padding: '8px 12px',
+              padding: '8px 14px',
               fontWeight: 800,
               cursor: 'pointer',
               fontFamily: 'inherit',
