@@ -21,7 +21,6 @@ import MemberAvatarActions from '@/components/member/MemberAvatarActions';
 import ProfileResumeAttach    from '@/components/profile/ProfileResumeAttach';
 import ProfileCertifications  from '@/components/profile/ProfileCertifications';
 import ProfileProjects        from '@/components/profile/ProfileProjects';
-import ProfileCustomSection   from '@/components/profile/ProfileCustomSection';
 
 import { profileBanners    } from '@/lib/profileBanners';
 import { profileWallpapers } from '@/lib/profileWallpapers';
@@ -128,7 +127,7 @@ export async function getServerSideProps(context) {
       headline: true, pronouns: true, location: true, status: true,
       avatarUrl: true, coverUrl: true, aboutMe: true,
       skillsJson: true, languagesJson: true, educationJson: true, hobbiesJson: true,
-      certificationsJson: true, projectsJson: true, customSectionJson: true,
+      certificationsJson: true, projectsJson: true,
       bannerMode: true, bannerHeight: true, bannerFocalY: true,
       wallpaperUrl: true, corporateBannerKey: true, corporateBannerLocked: true,
       isProfilePublic: true, profileVisibility: true, role: true, email: true,
@@ -198,7 +197,6 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
     bannerMode: serverBannerMode, bannerHeight: serverBannerH, bannerFocalY: serverFocalY,
     corporateBannerKey, corporateBannerLocked,
     workPreferences: serverWorkPrefs,
-    customSectionJson: serverCustomSectionJson,
   } = user;
 
   const DEFAULT_WALLPAPER = '/images/profile-fallbacks/profile-default-wallpaper.png';
@@ -221,7 +219,6 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   const [education,       setEducation]       = useState(parseEducationField(educationJson, []));
   const [certifications,  setCertifications]  = useState(Array.isArray(user.certificationsJson) ? user.certificationsJson : []);
   const [projects,        setProjects]        = useState(Array.isArray(user.projectsJson) ? user.projectsJson : []);
-  const [customSection,   setCustomSection]   = useState(serverCustomSectionJson && typeof serverCustomSectionJson === 'object' ? serverCustomSectionJson : { name: '', organization: '', notes: '', startYear: '', endYear: '' });
   const [socialLinks,     setSocialLinks]     = useState({ github: '', x: '', youtube: '', instagram: '' });
   const [avatarUploading, setAvatarUploading] = useState(false);
   const updateSocial = (key, val) => setSocialLinks(p => ({ ...p, [key]: val }));
@@ -642,6 +639,12 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
           .ft-section-label { display:flex; align-items:center; gap:10px; font-size:10px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:var(--orange); margin-bottom:16px; }
           .ft-section-label::after { content:''; flex:1; height:1px; background:linear-gradient(to right, var(--orange-dim), transparent); border-radius:1px; }
           .ft-summary-text { font-size:15px; line-height:1.9; color:rgba(248,244,239,0.88); font-weight:400; white-space:pre-line; }
+          .ft-section-scroll { max-height:180px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:rgba(255,112,67,0.3) transparent; padding-right:4px; }
+          .ft-section-scroll::-webkit-scrollbar { width:6px; }
+          .ft-section-scroll::-webkit-scrollbar-thumb { background:rgba(255,112,67,0.3); border-radius:999px; }
+          .ft-summary-card { min-height:560px; }
+          .ft-summary-card .ft-card-inner, .ft-summary-card .ft-dark-card-inner { height:100%; display:flex; flex-direction:column; }
+          .ft-summary-textarea { flex:1; min-height:500px !important; }
 
           /* Skills — 2-col mini grid inside the card */
           .ft-skill-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
@@ -680,7 +683,8 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
           .ft-footer a:hover { opacity:1; }
 
           /* ─── Dark edit cards & inputs ─── */
-          .ft-dark-card { background:rgba(10,18,30,0.92); border:1px solid rgba(255,112,67,0.25); border-radius:var(--radius-lg); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); box-shadow:var(--shadow-md); overflow:hidden; }
+          .ft-dark-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-lg); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); box-shadow:var(--shadow-md); overflow:hidden; transition:box-shadow 0.2s, border-color 0.2s, transform 0.2s; }
+          .ft-dark-card:hover { box-shadow:var(--shadow-lg); border-color:rgba(255,255,255,0.18); transform:translateY(-1px); }
           .ft-dark-card-inner { padding:22px; }
           .ft-dark-section-label { display:flex; align-items:center; gap:10px; font-size:10px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:${ORANGE}; margin-bottom:16px; }
           .ft-dark-section-label::after { content:''; flex:1; height:1px; background:linear-gradient(to right, rgba(255,112,67,0.30), transparent); }
@@ -1022,17 +1026,17 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                   {/* CENTER — Summary (the user's story, owns this column) */}
                   <div className="ft-col-center animate-fade-up delay-4">
                     {editMode ? (
-                      <div className="ft-dark-card">
+                      <div className="ft-dark-card ft-summary-card">
                         <div className="ft-dark-card-inner">
-                          <div className="ft-dark-section-label">Professional Summary</div>
-                          <textarea className="ft-dark-textarea" value={aboutMe}
+                          <div className="ft-section-label">Professional Summary</div>
+                          <textarea className="ft-dark-textarea ft-summary-textarea" value={aboutMe}
                             onChange={e => setAboutMe(e.target.value)}
                             placeholder="Tell your professional story…"
-                            style={{ minHeight: 260, resize: 'vertical' }} />
+                            style={{ resize: 'vertical' }} />
                         </div>
                       </div>
                     ) : aboutMe ? (
-                      <div className="ft-card">
+                      <div className="ft-card ft-summary-card">
                         <div className="ft-card-inner">
                           <p className="ft-section-label">Professional Summary</p>
                           <p className="ft-summary-text">{aboutMe}</p>
@@ -1044,7 +1048,6 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                   {/* RIGHT — Education + Certifications */}
                   <div className="ft-col-right animate-fade-up delay-5">
 
-                    {/* Education — always show card in view mode */}
                     {editMode ? (
                       <EducationEditCard
                         education={education} setEducation={setEducation}
@@ -1071,12 +1074,9 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                       </div>
                     )}
 
-                    {/* Certifications — sits under Education in both view and edit */}
                     <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
                       <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
-                        {editMode
-                          ? <div className="ft-dark-section-label">Certifications</div>
-                          : <p className="ft-section-label">Certifications</p>}
+                        <p className="ft-section-label">Certifications</p>
                         <ProfileCertifications
                           certifications={certifications}
                           setCertifications={setCertifications}
@@ -1087,15 +1087,10 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                   </div>
                 </div>
 
-                {/* ══ BELOW-GRID ROW — Projects + Custom ══ */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 18 }}>
-
-                  {/* Projects */}
                   <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
                     <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
-                      {editMode
-                        ? <div className="ft-dark-section-label">Projects</div>
-                        : <p className="ft-section-label">Projects</p>}
+                      <p className="ft-section-label">Projects</p>
                       <ProfileProjects
                         projects={projects}
                         setProjects={setProjects}
@@ -1104,22 +1099,18 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                     </div>
                   </div>
 
-                  {/* Custom */}
                   <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
                     <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
-                      {editMode
-                        ? <div className="ft-dark-section-label">Custom Section</div>
-                        : <p className="ft-section-label">Custom Section</p>}
+                      <p className="ft-section-label">Custom Section</p>
                       <ProfileCustomSection
-                        value={customSection}
-                        setValue={setCustomSection}
+                        customSection={customSection}
+                        setCustomSection={setCustomSection}
                         editMode={editMode}
                       />
                     </div>
                   </div>
 
                 </div>
-
 
               </div>
               {/* end desktop */}
@@ -1555,7 +1546,7 @@ function SkillsViewCard({ skills }) {
     <div className="ft-card">
       <div className="ft-card-inner">
         <p className="ft-section-label">Skills</p>
-        <div style={{ maxHeight: 180, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,112,67,0.3) transparent' }}>
+        <div className="ft-section-scroll">
           <div className="ft-skill-grid">
             {skills.map((s, i) => (
               <div key={s} className={`ft-skill-item${i < 3 ? ' accent' : ''}`}>{s}</div>
@@ -1576,7 +1567,7 @@ function SkillsEditCard({ skills, setSkills, skillInput, setSkillInput }) {
   return (
     <div className="ft-dark-card">
       <div className="ft-dark-card-inner">
-        <div className="ft-dark-section-label">Skills</div>
+        <p className="ft-section-label">Skills</p>
         <div className="ft-chip-input-row">
           <input className="ft-dark-input" value={skillInput} onChange={e => setSkillInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && skillInput.trim()) { setSkills(p => [...p, skillInput.trim()]); setSkillInput(''); e.preventDefault(); }}}
@@ -1584,12 +1575,14 @@ function SkillsEditCard({ skills, setSkills, skillInput, setSkillInput }) {
           <button type="button" className="ft-add-btn" onClick={() => { if (skillInput.trim()) { setSkills(p => [...p, skillInput.trim()]); setSkillInput(''); }}}>+ Add</button>
         </div>
         {skills.length > 0 && (
-          <div className="ft-dark-chips">
-            {skills.map((s, i) => (
-              <span key={s+i} className="ft-dark-chip">{s}
-                <button type="button" className="ft-dark-chip-x" onClick={() => setSkills(p => p.filter((_,idx) => idx !== i))}>×</button>
-              </span>
-            ))}
+          <div className="ft-section-scroll" style={{ marginTop: 10 }}>
+            <div className="ft-dark-chips" style={{ marginTop: 0 }}>
+              {skills.map((s, i) => (
+                <span key={s+i} className="ft-dark-chip">{s}
+                  <button type="button" className="ft-dark-chip-x" onClick={() => setSkills(p => p.filter((_,idx) => idx !== i))}>×</button>
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -1601,7 +1594,7 @@ function LangEditCard({ languages, setLanguages, langInput, setLangInput }) {
   return (
     <div className="ft-dark-card">
       <div className="ft-dark-card-inner">
-        <div className="ft-dark-section-label">Languages</div>
+        <p className="ft-section-label">Languages</p>
         <div className="ft-chip-input-row">
           <input className="ft-dark-input" value={langInput} onChange={e => setLangInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && langInput.trim()) { setLanguages(p => [...p, langInput.trim()]); setLangInput(''); e.preventDefault(); }}}
@@ -1626,7 +1619,7 @@ function InterestsEditCard({ hobbies, setHobbies, hobbyInput, setHobbyInput }) {
   return (
     <div className="ft-dark-card">
       <div className="ft-dark-card-inner">
-        <div className="ft-dark-section-label">Interests</div>
+        <p className="ft-section-label">Interests</p>
         <div className="ft-chip-input-row">
           <input className="ft-dark-input" value={hobbyInput} onChange={e => setHobbyInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && hobbyInput.trim()) { setHobbies(p => [...p, hobbyInput.trim()]); setHobbyInput(''); e.preventDefault(); }}}
@@ -1651,7 +1644,7 @@ function EducationEditCard({ education, setEducation, eduDraft, setEduDraft, bla
   return (
     <div className="ft-dark-card">
       <div className="ft-dark-card-inner">
-        <div className="ft-dark-section-label">Education</div>
+        <p className="ft-section-label">Education</p>
         {education.map((edu, idx) => (
           <div key={idx} className="ft-edu-dark-item">
             <button type="button" className="ft-edu-dark-del" onClick={() => setEducation(p => p.filter((_,i) => i !== idx))}>Remove</button>
