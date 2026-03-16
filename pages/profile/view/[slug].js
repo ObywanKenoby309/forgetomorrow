@@ -631,6 +631,25 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
           .ft-col-center { display: grid; gap: 18px; align-content: start; }
           .ft-col-right  { display: grid; gap: 18px; align-content: start; }
 
+          .ft-bottom-two {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-top: 18px;
+            align-items: stretch;
+          }
+          .ft-equal-height-card {
+            height: 100%;
+          }
+          .ft-equal-height-card > div {
+            height: 100%;
+          }
+          @media (max-width: 900px) {
+            .ft-bottom-two {
+              grid-template-columns: 1fr;
+            }
+          }
+
           /* ─── Cards ─── */
           .ft-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-lg); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); box-shadow:var(--shadow-md); overflow:hidden; transition:box-shadow 0.2s, border-color 0.2s, transform 0.2s; }
           .ft-card:hover { box-shadow:var(--shadow-lg); border-color:rgba(255,255,255,0.18); transform:translateY(-1px); }
@@ -1095,25 +1114,21 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                         </div>
                       </div>
                     )}
+
+                    <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
+                      <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
+                        {editMode
+                          ? <div className="ft-dark-section-label">Certifications</div>
+                          : <p className="ft-section-label">Certifications</p>}
+                        <ProfileCertifications certifications={certifications} setCertifications={setCertifications} />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* ══ BELOW-GRID FULL-WIDTH ROW — Certifications, Projects, Custom ══
-                    These span full width so neither column gets disproportionately long */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18, marginTop: 18 }}>
+                <div className="ft-bottom-two">
 
-                  {/* Certifications */}
-                  <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
-                    <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
-                      {editMode
-                        ? <div className="ft-dark-section-label">Certifications</div>
-                        : <p className="ft-section-label">Certifications</p>}
-                      <ProfileCertifications certifications={certifications} setCertifications={setCertifications} />
-                    </div>
-                  </div>
-
-                  {/* Projects */}
-                  <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
+                  <div className={`${editMode ? 'ft-dark-card' : 'ft-card'} ft-equal-height-card`}>
                     <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
                       {editMode
                         ? <div className="ft-dark-section-label">Projects</div>
@@ -1122,8 +1137,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                     </div>
                   </div>
 
-                  {/* Custom card stub */}
-                  <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
+                  <div className={`${editMode ? 'ft-dark-card' : 'ft-card'} ft-equal-height-card`}>
                     <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
                       {editMode
                         ? <div className="ft-dark-section-label">Custom Section</div>
