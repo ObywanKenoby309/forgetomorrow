@@ -640,12 +640,13 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
           .ft-section-label { display:flex; align-items:center; gap:10px; font-size:10px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:var(--orange); margin-bottom:16px; }
           .ft-section-label::after { content:''; flex:1; height:1px; background:linear-gradient(to right, var(--orange-dim), transparent); border-radius:1px; }
           .ft-summary-text { font-size:15px; line-height:1.9; color:rgba(248,244,239,0.88); font-weight:400; white-space:pre-line; }
-          .ft-summary-card-tall { min-height:548px; }
+          .ft-summary-card-tall { height:548px; }
           .ft-summary-card-tall .ft-card-inner,
-          .ft-summary-card-tall .ft-dark-card-inner { height:100%; display:flex; flex-direction:column; }
-          .ft-summary-card-tall .ft-summary-text,
-          .ft-summary-card-tall .ft-dark-textarea { flex:1; }
-          .ft-summary-card-tall .ft-dark-textarea { min-height:470px; height:100%; }
+          .ft-summary-card-tall .ft-dark-card-inner { height:100%; display:flex; flex-direction:column; min-height:0; }
+          .ft-summary-scroll-wrap { flex:1; min-height:0; overflow-y:auto; padding-right:4px; scrollbar-width:thin; scrollbar-color:rgba(255,112,67,0.3) transparent; }
+          .ft-summary-scroll-wrap::-webkit-scrollbar { width:6px; }
+          .ft-summary-scroll-wrap::-webkit-scrollbar-thumb { background:rgba(255,112,67,0.3); border-radius:999px; }
+          .ft-summary-card-tall .ft-dark-textarea { flex:1; min-height:0; height:100%; resize:none; }
           .ft-skills-scroll-wrap { max-height:180px; overflow-y:auto; padding-right:4px; scrollbar-width:thin; scrollbar-color:rgba(255,112,67,0.3) transparent; }
           .ft-skills-scroll-wrap::-webkit-scrollbar { width:6px; }
           .ft-skills-scroll-wrap::-webkit-scrollbar-thumb { background:rgba(255,112,67,0.3); border-radius:999px; }
@@ -1032,17 +1033,20 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                       <div className="ft-dark-card ft-summary-card-tall">
                         <div className="ft-dark-card-inner">
                           <div className="ft-dark-section-label">Professional Summary</div>
-                          <textarea className="ft-dark-textarea" value={aboutMe}
-                            onChange={e => setAboutMe(e.target.value)}
-                            placeholder="Tell your professional story…"
-                            style={{ resize: 'vertical' }} />
+                          <div className="ft-summary-scroll-wrap">
+                            <textarea className="ft-dark-textarea" value={aboutMe}
+                              onChange={e => setAboutMe(e.target.value)}
+                              placeholder="Tell your professional story…" />
+                          </div>
                         </div>
                       </div>
                     ) : aboutMe ? (
                       <div className="ft-card ft-summary-card-tall">
                         <div className="ft-card-inner">
                           <p className="ft-section-label">Professional Summary</p>
-                          <p className="ft-summary-text">{aboutMe}</p>
+                          <div className="ft-summary-scroll-wrap">
+                            <p className="ft-summary-text">{aboutMe}</p>
+                          </div>
                         </div>
                       </div>
                     ) : null}
