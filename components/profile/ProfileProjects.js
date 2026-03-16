@@ -1,12 +1,9 @@
+// components/profile/ProfileProjects.js
 import React, { useState } from 'react';
 
 const ORANGE = '#FF7043';
 
-export default function ProfileProjects({
-  projects = [],
-  setProjects,
-  editMode = false,
-}) {
+export default function ProfileProjects({ projects, setProjects }) {
   const empty = { title: '', description: '', url: '' };
   const [draft, setDraft] = useState(empty);
   const [adding, setAdding] = useState(false);
@@ -22,290 +19,126 @@ export default function ProfileProjects({
     setProjects((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  if (!editMode) {
-    if (!projects.length) {
-      return (
-        <div
-          style={{
-            fontSize: 13,
-            color: 'rgba(248,244,239,0.35)',
-            fontStyle: 'italic',
-            lineHeight: 1.6,
-          }}
-        >
-          No projects added yet.
-        </div>
-      );
-    }
-
-    return (
-      <div style={{ display: 'grid', gap: 10 }}>
-        {projects.map((p, i) => (
-          <div
-            key={i}
-            style={{
-              border: '1px solid rgba(255,255,255,0.10)',
-              borderRadius: 12,
-              padding: 12,
-              background: 'rgba(255,255,255,0.04)',
-            }}
-          >
-            <div
-              style={{
-                fontWeight: 900,
-                fontSize: 14,
-                color: '#F8F4EF',
-                marginBottom: p.description || p.url ? 4 : 0,
-              }}
-            >
-              {p.title}
-            </div>
-
-            {p.description ? (
-              <div
-                style={{
-                  fontSize: 13,
-                  color: 'rgba(248,244,239,0.72)',
-                  lineHeight: 1.55,
-                  marginBottom: p.url ? 6 : 0,
-                }}
-              >
-                {p.description}
-              </div>
-            ) : null}
-
-            {p.url ? (
-              <a
-                href={p.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontSize: 12,
-                  color: ORANGE,
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  wordBreak: 'break-all',
-                }}
-              >
-                {p.url}
-              </a>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      {projects.length > 0 && (
-        <div style={{ display: 'grid', gap: 10 }}>
-          {projects.map((p, i) => (
-            <div
-              key={i}
+      {projects.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            padding: '14px 16px',
+            borderRadius: 10,
+            background: 'rgba(255,255,255,0.75)',
+            border: '1px solid rgba(0,0,0,0.09)',
+            position: 'relative',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => remove(i)}
+            style={{
+              position: 'absolute',
+              top: 10,
+              right: 10,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#D32F2F',
+              fontSize: 16,
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#1F2A33', marginBottom: 4 }}>
+            {p.title}
+          </div>
+
+          {p.description && (
+            <div style={{ fontSize: 13, color: '#37474F', lineHeight: 1.5, marginBottom: 4 }}>
+              {p.description}
+            </div>
+          )}
+
+          {p.url && (
+            <a
+              href={p.url}
+              target="_blank"
+              rel="noopener noreferrer"
               style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.10)',
-                borderRadius: 10,
-                padding: 14,
-                position: 'relative',
+                fontSize: 12,
+                color: ORANGE,
+                fontWeight: 700,
+                textDecoration: 'none',
               }}
             >
-              <button
-                type="button"
-                onClick={() => remove(i)}
-                style={{
-                  position: 'absolute',
-                  top: 10,
-                  right: 10,
-                  background: 'rgba(211,47,47,0.15)',
-                  border: '1px solid rgba(211,47,47,0.30)',
-                  color: '#EF9A9A',
-                  borderRadius: 6,
-                  padding: '3px 8px',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                }}
-              >
-                Remove
-              </button>
-
-              <div
-                style={{
-                  color: '#F8F4EF',
-                  fontWeight: 700,
-                  fontSize: 14,
-                  paddingRight: 72,
-                }}
-              >
-                {p.title}
-              </div>
-
-              {p.description ? (
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: 'rgba(255,255,255,0.60)',
-                    marginTop: 4,
-                    lineHeight: 1.55,
-                  }}
-                >
-                  {p.description}
-                </div>
-              ) : null}
-
-              {p.url ? (
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-block',
-                    marginTop: 6,
-                    fontSize: 12,
-                    color: ORANGE,
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    wordBreak: 'break-all',
-                  }}
-                >
-                  {p.url}
-                </a>
-              ) : null}
-            </div>
-          ))}
+              {p.url}
+            </a>
+          )}
         </div>
-      )}
+      ))}
 
       {adding ? (
         <div
           style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.10)',
+            padding: '14px 16px',
             borderRadius: 10,
-            padding: 14,
+            background: 'rgba(255,255,255,0.75)',
+            border: '1px solid rgba(255,112,67,0.30)',
             display: 'grid',
             gap: 10,
           }}
         >
-          <div style={{ display: 'grid', gap: 6 }}>
-            <label
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.07em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.55)',
-              }}
-            >
-              Project title
-            </label>
+          <div className="pe-field">
+            <label className="pe-label">Project title</label>
             <input
+              className="pe-input"
               value={draft.title}
               onChange={(e) => setDraft((p) => ({ ...p, title: e.target.value }))}
               placeholder="My awesome project"
               autoFocus
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 8,
-                color: '#F8F4EF',
-                fontFamily: 'inherit',
-                fontSize: 14,
-                outline: 'none',
-                padding: '9px 12px',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
             />
           </div>
 
-          <div style={{ display: 'grid', gap: 6 }}>
-            <label
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.07em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.55)',
-              }}
-            >
-              Description
-            </label>
+          <div className="pe-field">
+            <label className="pe-label">Description</label>
             <textarea
+              className="pe-textarea"
               value={draft.description}
-              onChange={(e) =>
-                setDraft((p) => ({ ...p, description: e.target.value }))
-              }
+              onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
               placeholder="What did you build? What was the impact?"
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 8,
-                color: '#F8F4EF',
-                fontFamily: 'inherit',
-                fontSize: 14,
-                lineHeight: 1.6,
-                outline: 'none',
-                padding: '10px 12px',
-                width: '100%',
-                minHeight: 84,
-                resize: 'vertical',
-                boxSizing: 'border-box',
-              }}
+              style={{ minHeight: 70 }}
             />
           </div>
 
-          <div style={{ display: 'grid', gap: 6 }}>
-            <label
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.07em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.55)',
-              }}
-            >
-              URL
-            </label>
+          <div className="pe-field">
+            <label className="pe-label">URL (optional)</label>
             <input
+              className="pe-input"
               type="url"
               value={draft.url}
               onChange={(e) => setDraft((p) => ({ ...p, url: e.target.value }))}
               placeholder="https://..."
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 8,
-                color: '#F8F4EF',
-                fontFamily: 'inherit',
-                fontSize: 14,
-                outline: 'none',
-                padding: '9px 12px',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
             />
           </div>
 
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
             <button
               type="button"
               onClick={add}
               style={{
-                background: 'white',
-                color: ORANGE,
-                border: `1px solid ${ORANGE}`,
-                borderRadius: 10,
-                padding: '8px 12px',
-                fontWeight: 800,
+                padding: '8px 20px',
+                borderRadius: 8,
+                background: ORANGE,
+                color: '#fff',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: 13,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
               }}
             >
-              + Add Project
+              Save project
             </button>
 
             <button
@@ -315,12 +148,13 @@ export default function ProfileProjects({
                 setDraft(empty);
               }}
               style={{
+                padding: '8px 14px',
+                borderRadius: 8,
                 background: 'transparent',
-                color: 'rgba(255,255,255,0.60)',
-                border: '1px solid rgba(255,255,255,0.14)',
-                borderRadius: 10,
-                padding: '8px 12px',
-                fontWeight: 800,
+                color: '#546E7A',
+                border: '1px solid rgba(0,0,0,0.12)',
+                fontWeight: 700,
+                fontSize: 13,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
               }}
@@ -334,32 +168,27 @@ export default function ProfileProjects({
           type="button"
           onClick={() => setAdding(true)}
           style={{
-            background: 'white',
-            color: ORANGE,
-            border: `1px solid ${ORANGE}`,
+            padding: '10px',
             borderRadius: 10,
-            padding: '8px 12px',
-            fontWeight: 800,
+            background: 'rgba(255,255,255,0.60)',
+            border: '2px dashed rgba(255,112,67,0.30)',
+            color: ORANGE,
+            fontWeight: 700,
+            fontSize: 13,
             cursor: 'pointer',
             fontFamily: 'inherit',
-            justifySelf: 'start',
+            textAlign: 'center',
+            transition: 'all 0.15s',
           }}
         >
-          + Add Project
+          + Add project
         </button>
       )}
 
       {projects.length === 0 && !adding && (
-        <div
-          style={{
-            fontSize: 12,
-            color: 'rgba(255,255,255,0.35)',
-            lineHeight: 1.6,
-            fontWeight: 600,
-          }}
-        >
-          Projects show recruiters what you&apos;ve shipped. Add side projects,
-          work samples, open source, or anything you&apos;re proud of.
+        <div style={{ fontSize: 12, color: '#546E7A', lineHeight: 1.6, fontWeight: 600 }}>
+          Projects show recruiters what you've shipped. Add anything you're proud of —
+          side projects, open source contributions, work samples.
         </div>
       )}
     </div>
