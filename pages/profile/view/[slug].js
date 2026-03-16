@@ -637,8 +637,26 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
           }
 
           .ft-col-left   { display: grid; gap: 18px; align-content: start; }
-          .ft-col-center { display: grid; gap: 18px; align-content: start; }
-          .ft-col-right  { display: grid; gap: 18px; align-content: start; }
+		  .ft-col-center { display: grid; gap: 18px; align-content: start; }
+		  .ft-col-right  { display: grid; gap: 18px; align-content: start; }
+
+.ft-bottom-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 18px;
+  align-items: stretch;
+}
+
+.ft-equal-height-card {
+  height: 100%;
+}
+
+@media (max-width: 760px) {
+  .ft-bottom-two {
+    grid-template-columns: 1fr;
+  }
+}
 
           /* ─── Cards ─── */
           .ft-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-lg); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); box-shadow:var(--shadow-md); overflow:hidden; transition:box-shadow 0.2s, border-color 0.2s, transform 0.2s; }
@@ -1082,39 +1100,47 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                         {editMode
                           ? <div className="ft-dark-section-label">Certifications</div>
                           : <p className="ft-section-label">Certifications</p>}
-                        <ProfileCertifications certifications={certifications} setCertifications={setCertifications} />
+                        <ProfileCertifications
+  certifications={certifications}
+  setCertifications={setCertifications}
+  editMode={editMode}
+/>
                       </div>
                     </div>
 
                   </div>
                 </div>
 
-                {/* ══ BELOW-GRID FULL-WIDTH ROW — Projects + Custom ══ */}
-                <div className="ft-bottom-two">
+{/* ══ BELOW-GRID FULL-WIDTH ROW — Projects + Custom ══ */}
+<div className="ft-bottom-two">
 
-                  <div className={`${editMode ? 'ft-dark-card' : 'ft-card'} ft-equal-height-card`}>
-                    <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
-                      {editMode
-                        ? <div className="ft-dark-section-label">Projects</div>
-                        : <p className="ft-section-label">Projects</p>}
-                      <ProfileProjects projects={projects} setProjects={setProjects} />
-                    </div>
-                  </div>
+  {/* Projects */}
+  <div className={`${editMode ? 'ft-dark-card' : 'ft-card'} ft-equal-height-card`}>
+    <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
+      {editMode
+        ? <div className="ft-dark-section-label">Projects</div>
+        : <p className="ft-section-label">Projects</p>}
+      <ProfileProjects
+        projects={projects}
+        setProjects={setProjects}
+        editMode={editMode}
+      />
+    </div>
+  </div>
 
-                  <div className={`${editMode ? 'ft-dark-card' : 'ft-card'} ft-equal-height-card`}>
-                    <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
-                      {editMode
-                        ? <div className="ft-dark-section-label">Custom Section</div>
-                        : <p className="ft-section-label">Custom Section</p>}
-                      <div style={{ fontSize: 13, color: 'rgba(248,244,239,0.30)', fontStyle: 'italic', lineHeight: 1.6 }}>
-                        Coming soon — add a portfolio spotlight, featured work, press mentions, or anything else that tells your story.
-                      </div>
-                    </div>
-                  </div>
+  {/* Custom card stub */}
+  <div className={`${editMode ? 'ft-dark-card' : 'ft-card'} ft-equal-height-card`}>
+    <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
+      {editMode
+        ? <div className="ft-dark-section-label">Custom Section</div>
+        : <p className="ft-section-label">Custom Section</p>}
+      <div style={{ fontSize: 13, color: 'rgba(248,244,239,0.30)', fontStyle: 'italic', lineHeight: 1.6 }}>
+        Coming soon — add a portfolio spotlight, featured work, press mentions, or anything else that tells your story.
+      </div>
+    </div>
+  </div>
 
-                </div>
-
-              </div>
+</div>
               {/* end desktop */}
 
               {/* ══════════════ MOBILE ══════════════ */}
