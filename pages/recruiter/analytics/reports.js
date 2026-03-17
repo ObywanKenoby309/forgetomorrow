@@ -440,7 +440,7 @@ function Body() {
 
   return (
     <RecruiterAnalyticsLayout
-      title="Report Details — ForgeTomorrow"
+      title="Recruiter Analytics — ForgeTomorrow"
       pageTitle="Report Details"
       pageSubtitle="Deep analysis and meeting-ready narrative context behind every metric on the analytics side."
       activeTab="reports"

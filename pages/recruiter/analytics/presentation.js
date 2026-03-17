@@ -157,7 +157,7 @@ function Body() {
 
   return (
     <RecruiterAnalyticsLayout
-      title="Presentation Visuals — ForgeTomorrow"
+      title="Recruiter Analytics — ForgeTomorrow"
       pageTitle="Presentation Visuals"
       pageSubtitle="Clean visual surfaces for screenshots, deck-building, and executive presentation prep."
       activeTab="presentation"
