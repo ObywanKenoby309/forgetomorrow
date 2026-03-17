@@ -195,7 +195,6 @@ export default function ProfileCustomSection({
           lineHeight: 1.6,
         }}
       >
-        UI is ready. Schema/API wiring is still needed before this section can persist to the database.
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
