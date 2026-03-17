@@ -758,6 +758,9 @@ const flushPendingSave = useCallback(async () => {
             margin-top: 18px;
             align-items: start;
           }
+          .ft-three-col.summary-extended-right {
+            grid-template-columns: minmax(0,1fr) minmax(0,2.5fr);
+          }
           /* When siderails are collapsed the grid expands naturally */
           @media (max-width: 1100px) {
             .ft-three-col {
@@ -1141,14 +1144,7 @@ const flushPendingSave = useCallback(async () => {
                 )}
 
                 {/* ══ 3-PANEL BODY ══ */}
-                <div
-                  className="ft-three-col"
-                  style={
-                    summaryShouldExtendRight
-                      ? { gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.5fr)' }
-                      : undefined
-                  }
-                >
+                <div className={`ft-three-col${summaryShouldExtendRight ? ' summary-extended-right' : ''}`}>
 
                   {/* LEFT — Skills + Languages + Interests */}
                   <div className="ft-col-left animate-fade-up delay-3">
@@ -1200,10 +1196,7 @@ const flushPendingSave = useCallback(async () => {
                   {/* end left col */}
 
                   {/* CENTER — Summary (the user's story, owns this column) */}
-                                    <div
-                    className="ft-col-center animate-fade-up delay-4"
-                    style={summaryShouldExtendRight ? { gridColumn: 'span 2' } : undefined}
-                  >
+                    <div className="ft-col-center animate-fade-up delay-4">
                     {editMode ? (
                       <div className={`ft-dark-card${useTallSummaryCard ? ' ft-summary-card-tall' : ''}`}>
                         <div className="ft-dark-card-inner">
