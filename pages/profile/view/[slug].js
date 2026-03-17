@@ -332,28 +332,6 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
     setAvatarUrl('');
   }, []);
 
-// ─────────────────────────────────────────────
-// FAILSAFE SAVE — ensures last edits are saved
-// when user exits edit mode
-// ─────────────────────────────────────────────
-const flushPendingSave = async () => {
-  try {
-    if (!profile) return;
-
-    await fetch(`/api/profile/update`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(profile),
-    });
-
-    console.log("Profile save flushed successfully");
-  } catch (err) {
-    console.error("Profile save flush failed:", err);
-  }
-};
-
   useEffect(() => {
     if (!editMode) return;
     if (avatarUrl.startsWith('data:')) return;
@@ -853,14 +831,7 @@ const flushPendingSave = async () => {
                       <div className="ft-edit-pill"><span className="ft-edit-pill-dot" />Editing portfolio</div>
                       <SaveStatusIndicator state={saveState} />
                     </div>
-                    <button
-  type="button"
-  className="ft-done-btn"
-  onClick={async () => {
-    await flushPendingSave();
-    setEditMode(false);
-  }}
->Done editing</button>
+                    <button type="button" className="ft-done-btn" onClick={() => setEditMode(false)}>Done editing</button>
                   </div>
                 )}
 
