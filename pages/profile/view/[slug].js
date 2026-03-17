@@ -465,6 +465,9 @@ const flushPendingSave = useCallback(async (force = false) => {
   customSection,
 ]);
 
+const flushPendingSaveRef = useRef(null);
+flushPendingSaveRef.current = flushPendingSave;
+
   useEffect(() => {
     if (!editMode) return;
     const controller = new AbortController();
@@ -985,17 +988,19 @@ const flushPendingSave = useCallback(async (force = false) => {
   type="button"
   className="ft-done-btn"
   onClick={async () => {
+  const { flushSync } = await import('react-dom');
+
+  flushSync(() => {
     projectsRef.current?.commitPending?.();
     customSectionRef.current?.commitPending?.();
+  });
 
-    await new Promise(resolve => setTimeout(resolve, 0));
-
-    const ok = await flushPendingSave();
-    if (ok) {
-      setShowPrefsEdit(false);
-      setEditMode(false);
-    }
-  }}
+  const ok = await flushPendingSaveRef.current(true);
+  if (ok) {
+    setShowPrefsEdit(false);
+    setEditMode(false);
+  }
+}}
 >
   Done editing
 </button>
