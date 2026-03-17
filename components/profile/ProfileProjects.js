@@ -68,6 +68,8 @@ export default function ProfileProjects({
   };
 
   const [draft, setDraft] = useState(empty);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingDraft, setEditingDraft] = useState(empty);
 
   const normalizedProjects = useMemo(() => {
     if (!Array.isArray(projects)) return [];
@@ -110,6 +112,57 @@ export default function ProfileProjects({
     setProjects((prev) =>
       Array.isArray(prev) ? prev.filter((_, index) => index !== indexToRemove) : []
     );
+
+    if (editingIndex === indexToRemove) {
+      setEditingIndex(null);
+      setEditingDraft(empty);
+    }
+  };
+
+  const beginEditProject = (project, index) => {
+    if (!canEdit) return;
+    setEditingIndex(index);
+    setEditingDraft({
+      name: project.name || '',
+      organization: project.organization || '',
+      notes: project.notes || '',
+      startYear: project.startYear || '',
+      endYear: project.endYear || '',
+      url: project.url || '',
+    });
+  };
+
+  const cancelEditProject = () => {
+    setEditingIndex(null);
+    setEditingDraft(empty);
+  };
+
+  const saveEditProject = (indexToSave) => {
+    if (!canEdit) return;
+
+    const name = editingDraft.name.trim();
+    if (!name) return;
+
+    const updatedEntry = {
+      ...(normalizedProjects[indexToSave] || {}),
+      name,
+      organization: editingDraft.organization.trim(),
+      notes: editingDraft.notes.trim(),
+      startYear: editingDraft.startYear.trim(),
+      endYear: editingDraft.endYear.trim(),
+      url: editingDraft.url.trim(),
+    };
+
+    setProjects((prev) =>
+      Array.isArray(prev)
+        ? prev.map((project, index) =>
+            index === indexToSave ? updatedEntry : project
+          )
+        : []
+    );
+
+    setEditingIndex(null);
+    setEditingDraft(empty);
   };
 
   if (!canEdit) {
@@ -224,6 +277,7 @@ export default function ProfileProjects({
         <div style={{ display: 'grid', gap: 10 }}>
           {normalizedProjects.map((project, index) => {
             const years = [project.startYear, project.endYear].filter(Boolean).join(' – ');
+            const isEditing = editingIndex === index;
 
             return (
               <div
@@ -232,87 +286,262 @@ export default function ProfileProjects({
                   border: '1px solid rgba(255,255,255,0.10)',
                   borderRadius: 12,
                   padding: 12,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: 12,
                   background: 'rgba(255,255,255,0.04)',
+                  display: 'grid',
+                  gap: 10,
                 }}
               >
-                <div style={{ minWidth: 0 }}>
+                {isEditing ? (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div style={{ display: 'grid', gap: 6 }}>
+                        <label style={labelStyle}>Name</label>
+                        <input
+                          value={editingDraft.name}
+                          onChange={(e) =>
+                            setEditingDraft((prev) => ({ ...prev, name: e.target.value }))
+                          }
+                          placeholder="Project name"
+                          style={inputStyle}
+                        />
+                      </div>
+
+                      <div style={{ display: 'grid', gap: 6 }}>
+                        <label style={labelStyle}>Organization</label>
+                        <input
+                          value={editingDraft.organization}
+                          onChange={(e) =>
+                            setEditingDraft((prev) => ({
+                              ...prev,
+                              organization: e.target.value,
+                            }))
+                          }
+                          placeholder="Group/Org/Company"
+                          style={inputStyle}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 10 }}>
+                      <div style={{ display: 'grid', gap: 6 }}>
+                        <label style={labelStyle}>Notes</label>
+                        <textarea
+                          value={editingDraft.notes}
+                          onChange={(e) =>
+                            setEditingDraft((prev) => ({ ...prev, notes: e.target.value }))
+                          }
+                          placeholder="Notes"
+                          style={{
+                            ...inputStyle,
+                            minHeight: 56,
+                            resize: 'vertical',
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'grid', gap: 6 }}>
+                        <label style={labelStyle}>Years</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <input
+                            value={editingDraft.startYear}
+                            onChange={(e) =>
+                              setEditingDraft((prev) => ({
+                                ...prev,
+                                startYear: e.target.value,
+                              }))
+                            }
+                            placeholder="2018"
+                            style={inputStyle}
+                          />
+                          <input
+                            value={editingDraft.endYear}
+                            onChange={(e) =>
+                              setEditingDraft((prev) => ({
+                                ...prev,
+                                endYear: e.target.value,
+                              }))
+                            }
+                            placeholder="2022"
+                            style={inputStyle}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      <label style={labelStyle}>URL</label>
+                      <input
+                        value={editingDraft.url}
+                        onChange={(e) =>
+                          setEditingDraft((prev) => ({ ...prev, url: e.target.value }))
+                        }
+                        placeholder="https://..."
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => saveEditProject(index)}
+                        style={{
+                          border: `1px solid ${ORANGE}`,
+                          color: ORANGE,
+                          background: 'transparent',
+                          borderRadius: 999,
+                          padding: '6px 12px',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        Save
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={cancelEditProject}
+                        style={{
+                          border: '1px solid rgba(255,255,255,0.20)',
+                          color: 'rgba(255,255,255,0.70)',
+                          background: 'transparent',
+                          borderRadius: 999,
+                          padding: '6px 12px',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => removeProjectAtIndex(index)}
+                        style={{
+                          border: '1px solid #C62828',
+                          color: '#EF9A9A',
+                          background: 'transparent',
+                          borderRadius: 999,
+                          padding: '6px 12px',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                ) : (
                   <div
                     style={{
-                      fontWeight: 900,
-                      color: '#F8F4EF',
-                      fontSize: 14,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: 12,
                     }}
                   >
-                    {project.name}
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontWeight: 900,
+                          color: '#F8F4EF',
+                          fontSize: 14,
+                        }}
+                      >
+                        {project.name}
+                      </div>
+
+                      {(project.organization || years) && (
+                        <div
+                          style={{
+                            fontSize: 13,
+                            color: 'rgba(255,255,255,0.65)',
+                            marginTop: 3,
+                          }}
+                        >
+                          {[project.organization, years].filter(Boolean).join(' • ')}
+                        </div>
+                      )}
+
+                      {project.notes && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: 'rgba(255,255,255,0.45)',
+                            marginTop: 4,
+                            whiteSpace: 'pre-line',
+                            lineHeight: 1.55,
+                          }}
+                        >
+                          {project.notes}
+                        </div>
+                      )}
+
+                      {project.url && (
+                        <a
+                          href={project.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-block',
+                            marginTop: 6,
+                            fontSize: 12,
+                            color: ORANGE,
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {project.url}
+                        </a>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => beginEditProject(project, index)}
+                        style={{
+                          border: `1px solid ${ORANGE}`,
+                          color: ORANGE,
+                          background: 'transparent',
+                          borderRadius: 999,
+                          padding: '6px 10px',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          height: 'fit-content',
+                          whiteSpace: 'nowrap',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => removeProjectAtIndex(index)}
+                        style={{
+                          border: '1px solid #C62828',
+                          color: '#EF9A9A',
+                          background: 'transparent',
+                          borderRadius: 999,
+                          padding: '6px 10px',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          height: 'fit-content',
+                          whiteSpace: 'nowrap',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-
-                  {(project.organization || years) && (
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: 'rgba(255,255,255,0.65)',
-                        marginTop: 3,
-                      }}
-                    >
-                      {[project.organization, years].filter(Boolean).join(' • ')}
-                    </div>
-                  )}
-
-                  {project.notes && (
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: 'rgba(255,255,255,0.45)',
-                        marginTop: 4,
-                        whiteSpace: 'pre-line',
-                        lineHeight: 1.55,
-                      }}
-                    >
-                      {project.notes}
-                    </div>
-                  )}
-
-                  {project.url && (
-                    <a
-                      href={project.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'inline-block',
-                        marginTop: 6,
-                        fontSize: 12,
-                        color: ORANGE,
-                        fontWeight: 700,
-                        textDecoration: 'none',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {project.url}
-                    </a>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => removeProjectAtIndex(index)}
-                  style={{
-                    border: '1px solid #C62828',
-                    color: '#EF9A9A',
-                    background: 'transparent',
-                    borderRadius: 999,
-                    padding: '6px 10px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    height: 'fit-content',
-                    whiteSpace: 'nowrap',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  Delete
-                </button>
+                )}
               </div>
             );
           })}
