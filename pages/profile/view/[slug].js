@@ -356,8 +356,8 @@ const [prefLocationInput,        setPrefLocationInput]        = useState('');
     setAvatarUrl('');
   }, []);
 
-const flushPendingSave = useCallback(async () => {
-  if (!editMode) return true;
+const flushPendingSave = useCallback(async (force = false) => {
+  if (!force && !editMode) return true;
 
   if (saveTimerRef.current) {
     clearTimeout(saveTimerRef.current);
@@ -983,10 +983,14 @@ const flushPendingSave = useCallback(async () => {
   type="button"
   className="ft-done-btn"
   onClick={async () => {
-    const ok = await flushPendingSave();
-    if (ok) {
-      setShowPrefsEdit(false);
-      setEditMode(false);
+    setShowPrefsEdit(false);
+    setEditMode(false);
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const ok = await flushPendingSave(true);
+    if (!ok) {
+      setEditMode(true);
     }
   }}
 >
