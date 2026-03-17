@@ -151,7 +151,7 @@ export async function getServerSideProps(context) {
       headline: true, pronouns: true, location: true, status: true,
       avatarUrl: true, coverUrl: true, aboutMe: true,
       skillsJson: true, languagesJson: true, educationJson: true, hobbiesJson: true,
-      certificationsJson: true, projectsJson: true,
+      certificationsJson: true, projectsJson: true, customSectionJson: true,
       bannerMode: true, bannerHeight: true, bannerFocalY: true,
       wallpaperUrl: true, corporateBannerKey: true, corporateBannerLocked: true,
       isProfilePublic: true, profileVisibility: true, role: true, email: true,
@@ -221,6 +221,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
     bannerMode: serverBannerMode, bannerHeight: serverBannerH, bannerFocalY: serverFocalY,
     corporateBannerKey, corporateBannerLocked,
     workPreferences: serverWorkPrefs,
+    customSectionJson: serverCustomSectionJson,
   } = user;
 
   const DEFAULT_WALLPAPER = '/images/profile-fallbacks/profile-default-wallpaper.png';
@@ -243,7 +244,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   const [education,       setEducation]       = useState(parseEducationField(educationJson, []));
   const [certifications,  setCertifications]  = useState(Array.isArray(user.certificationsJson) ? user.certificationsJson : []);
   const [projects,        setProjects]        = useState(Array.isArray(user.projectsJson) ? user.projectsJson : []);
-  const [customSection,   setCustomSection]   = useState({ name: '', organization: '', notes: '', startYear: '', endYear: '' });
+  const [customSection, setCustomSection]      = useState(Array.isArray(serverCustomSectionJson) ? serverCustomSectionJson : []);
   const [socialLinks,     setSocialLinks]     = useState({ github: '', x: '', youtube: '', instagram: '' });
   const [avatarUploading, setAvatarUploading] = useState(false);
   const updateSocial = (key, val) => setSocialLinks(p => ({ ...p, [key]: val }));
@@ -406,6 +407,7 @@ const flushPendingSave = useCallback(async () => {
           educationJson: education || [],
           certificationsJson: certifications || [],
           projectsJson: projects || [],
+          customSectionJson: customSection || [],
         }),
       }),
     ]);
@@ -458,6 +460,7 @@ const flushPendingSave = useCallback(async () => {
   education,
   certifications,
   projects,
+  customSection,
 ]);
 
   useEffect(() => {
@@ -490,6 +493,7 @@ const flushPendingSave = useCallback(async () => {
               skillsJson: skills || [], languagesJson: languages || [],
               hobbiesJson: hobbies || [], educationJson: education || [],
               certificationsJson: certifications || [], projectsJson: projects || [],
+			  customSectionJson: customSection || [],
             }),
             signal: controller.signal,
           }),
@@ -506,7 +510,7 @@ const flushPendingSave = useCallback(async () => {
     socialLinks, pronouns, headline, location, status, aboutMe,
     prefWorkStatus, prefWorkType, prefSchedule, prefWillingToRelocate,
     prefStartDate, prefScheduleAvailability, prefLocations,
-    skills, languages, hobbies, education, certifications, projects,
+    skills, languages, hobbies, education, certifications, projects, customSection,
   ]);
 
   const AvatarWrap = ({ children }) => {
@@ -541,13 +545,7 @@ const flushPendingSave = useCallback(async () => {
   const hasEducationContent = education.length > 0;
   const hasCertificationsContent = Array.isArray(certifications) && certifications.length > 0;
   const hasProjectsContent = Array.isArray(projects) && projects.length > 0;
-  const hasCustomSectionContent = Boolean(
-    customSection?.name ||
-    customSection?.organization ||
-    customSection?.notes ||
-    customSection?.startYear ||
-    customSection?.endYear
-  );
+  const hasCustomSectionContent = Array.isArray(customSection) && customSection.length > 0;
 
   const showRightColumn = editMode || hasEducationContent || hasCertificationsContent;
   const showProjectsCard = editMode || hasProjectsContent;
