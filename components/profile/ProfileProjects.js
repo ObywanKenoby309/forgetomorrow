@@ -1,5 +1,5 @@
 // components/profile/ProfileProjects.js
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const ORANGE = '#FF7043';
 
@@ -70,6 +70,7 @@ export default function ProfileProjects({
   const [draft, setDraft] = useState(empty);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editingDraft, setEditingDraft] = useState(empty);
+  const prevEditModeRef = useRef(editMode);
 
   const normalizedProjects = useMemo(() => {
     if (!Array.isArray(projects)) return [];
@@ -87,7 +88,51 @@ export default function ProfileProjects({
       );
   }, [projects]);
 
-  const canEdit = editMode && typeof setProjects === 'function';
+    const canEdit = editMode && typeof setProjects === 'function';
+
+  useEffect(() => {
+    const wasEditing = prevEditModeRef.current;
+
+    if (wasEditing && !editMode && typeof setProjects === 'function') {
+      if (editingIndex !== null && editingDraft.name.trim()) {
+        const updatedEntry = {
+          ...(normalizedProjects[editingIndex] || {}),
+          name: editingDraft.name.trim(),
+          organization: editingDraft.organization.trim(),
+          notes: editingDraft.notes.trim(),
+          startYear: editingDraft.startYear.trim(),
+          endYear: editingDraft.endYear.trim(),
+          url: editingDraft.url.trim(),
+        };
+
+        setProjects((prev) =>
+          Array.isArray(prev)
+            ? prev.map((project, index) =>
+                index === editingIndex ? updatedEntry : project
+              )
+            : []
+        );
+
+        setEditingIndex(null);
+        setEditingDraft(empty);
+      } else if (draft.name.trim()) {
+        const entry = {
+          id: `${Date.now()}`,
+          name: draft.name.trim(),
+          organization: draft.organization.trim(),
+          notes: draft.notes.trim(),
+          startYear: draft.startYear.trim(),
+          endYear: draft.endYear.trim(),
+          url: draft.url.trim(),
+        };
+
+        setProjects((prev) => [...(Array.isArray(prev) ? prev : []), entry]);
+        setDraft(empty);
+      }
+    }
+
+    prevEditModeRef.current = editMode;
+  }, [editMode, editingIndex, editingDraft, draft, normalizedProjects, setProjects]);
 
   const addProject = () => {
     const name = draft.name.trim();
