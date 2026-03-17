@@ -527,7 +527,7 @@ const flushPendingSave = useCallback(async () => {
   useEffect(() => { if (!editMode) { setShowPrefsEdit(false); } }, [editMode]);
 
   // Build signals for the signals bar
-  const signals = [
+    const signals = [
     prefWorkStatus && { key: 'status', label: prefWorkStatus, type: 'status' },
     prefWorkType   && { key: 'type',   label: prefWorkType,   type: 'neutral', icon: '◎' },
     prefSchedule   && { key: 'sched',  label: prefSchedule,   type: 'neutral', icon: '⏱' },
@@ -536,6 +536,26 @@ const flushPendingSave = useCallback(async () => {
     prefScheduleAvailability && { key: 'avail', label: prefScheduleAvailability, type: 'neutral', icon: '🗓' },
     ...prefLocations.map((loc, i) => ({ key: `loc-${i}`, label: loc, type: 'location', icon: '📍' })),
   ].filter(Boolean);
+
+  const hasInterestsContent = hobbies.length > 0;
+  const hasEducationContent = education.length > 0;
+  const hasCertificationsContent = Array.isArray(certifications) && certifications.length > 0;
+  const hasProjectsContent = Array.isArray(projects) && projects.length > 0;
+  const hasCustomSectionContent = Boolean(
+    customSection?.name ||
+    customSection?.organization ||
+    customSection?.notes ||
+    customSection?.startYear ||
+    customSection?.endYear
+  );
+
+  const showRightColumn = editMode || hasEducationContent || hasCertificationsContent;
+  const showProjectsCard = editMode || hasProjectsContent;
+  const showCustomCard = editMode || hasCustomSectionContent;
+  const showBottomRow = showProjectsCard || showCustomCard;
+
+  const summaryShouldExtendRight = !showRightColumn;
+  const useTallSummaryCard = editMode || hasInterestsContent || showBottomRow;
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -1121,7 +1141,14 @@ const flushPendingSave = useCallback(async () => {
                 )}
 
                 {/* ══ 3-PANEL BODY ══ */}
-                <div className="ft-three-col">
+                <div
+                  className="ft-three-col"
+                  style={
+                    summaryShouldExtendRight
+                      ? { gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.5fr)' }
+                      : undefined
+                  }
+                >
 
                   {/* LEFT — Skills + Languages + Interests */}
                   <div className="ft-col-left animate-fade-up delay-3">
@@ -1131,23 +1158,29 @@ const flushPendingSave = useCallback(async () => {
                       <SkillsEditCard
                         skills={skills} setSkills={setSkills}
                         skillInput={skillInput} setSkillInput={setSkillInput} />
-                    ) : skills.length > 0 ? (
+                    ) : (
                       <SkillsViewCard skills={skills} />
-                    ) : null}
+                    )}
 
                     {/* Languages card */}
                     {editMode ? (
                       <LangEditCard
                         languages={languages} setLanguages={setLanguages}
                         langInput={langInput} setLangInput={setLangInput} />
-                    ) : languages.length > 0 ? (
+                    ) : (
                       <div className="ft-card">
                         <div className="ft-card-inner">
                           <p className="ft-section-label">Languages</p>
-                          <ul className="ft-lang-list">{languages.map(l => <li key={l}>{l}</li>)}</ul>
+                          {languages.length > 0 ? (
+                            <ul className="ft-lang-list">{languages.map(l => <li key={l}>{l}</li>)}</ul>
+                          ) : (
+                            <div style={{ fontSize: 13, color: 'rgba(248,244,239,0.35)', fontStyle: 'italic' }}>
+                              No languages added yet.
+                            </div>
+                          )}
                         </div>
                       </div>
-                    ) : null}
+                    )}
 
                     {/* Interests card */}
                     {editMode ? (
@@ -1167,43 +1200,50 @@ const flushPendingSave = useCallback(async () => {
                   {/* end left col */}
 
                   {/* CENTER — Summary (the user's story, owns this column) */}
-                  <div className="ft-col-center animate-fade-up delay-4">
+                                    <div
+                    className="ft-col-center animate-fade-up delay-4"
+                    style={summaryShouldExtendRight ? { gridColumn: 'span 2' } : undefined}
+                  >
                     {editMode ? (
-                      <div className="ft-dark-card ft-summary-card-tall">
+                      <div className={`ft-dark-card${useTallSummaryCard ? ' ft-summary-card-tall' : ''}`}>
                         <div className="ft-dark-card-inner">
                           <div className="ft-dark-section-label">Professional Summary</div>
                           <div className="ft-summary-scroll-wrap">
-                            <textarea className="ft-dark-textarea" value={aboutMe}
+                            <textarea
+                              className="ft-dark-textarea"
+                              value={aboutMe}
                               onChange={e => setAboutMe(e.target.value)}
-                              placeholder="Tell your professional story…" />
+                              placeholder="Tell your professional story…"
+                            />
                           </div>
                         </div>
                       </div>
-                    ) : aboutMe ? (
-                      <div className="ft-card ft-summary-card-tall">
+                    ) : (
+                      <div className={`ft-card${useTallSummaryCard ? ' ft-summary-card-tall' : ''}`}>
                         <div className="ft-card-inner">
                           <p className="ft-section-label">Professional Summary</p>
-                          <div className="ft-summary-scroll-wrap">
-                            <p className="ft-summary-text">{aboutMe}</p>
+                          <div className="ft-summary-scroll-wrap" style={!useTallSummaryCard ? { overflowY: 'visible', paddingRight: 0 } : undefined}>
+                            <p className="ft-summary-text">{aboutMe || 'No professional summary added yet.'}</p>
                           </div>
                         </div>
                       </div>
-                    ) : null}
+                    )}
                   </div>
 
                   {/* RIGHT — Education + Certifications */}
-                  <div className="ft-col-right animate-fade-up delay-5">
+                  {showRightColumn && (
+                    <div className="ft-col-right animate-fade-up delay-5">
 
-                    {/* Education — always show card in view mode */}
+                    {/* Education */}
                     {editMode ? (
                       <EducationEditCard
                         education={education} setEducation={setEducation}
                         eduDraft={eduDraft} setEduDraft={setEduDraft} blankEdu={blankEdu} />
-                    ) : (
+                    ) : hasEducationContent ? (
                       <div className="ft-card">
                         <div className="ft-card-inner">
                           <p className="ft-section-label">Education</p>
-                          {education.length > 0 ? education.map((edu, idx) => {
+                          {education.map((edu, idx) => {
                             const line1 = [edu?.degree, edu?.field].filter(Boolean).join(' — ');
                             const years = [edu?.startYear, edu?.endYear].filter(Boolean).join(' – ');
                             return (
@@ -1214,12 +1254,10 @@ const flushPendingSave = useCallback(async () => {
                                 {edu?.notes && <div style={{ fontSize: 12, color: 'rgba(248,244,239,0.65)', marginTop: 6, lineHeight: 1.6 }}>{edu.notes}</div>}
                               </div>
                             );
-                          }) : (
-                            <div style={{ fontSize: 13, color: 'rgba(248,244,239,0.35)', fontStyle: 'italic' }}>No education added yet.</div>
-                          )}
+                          })}
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Certifications — sits under Education in both view and edit */}
                     <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
@@ -1234,41 +1272,56 @@ const flushPendingSave = useCallback(async () => {
                         />
                       </div>
                     </div>
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* ══ BELOW-GRID ROW — Projects + Custom ══ */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 18 }}>
+                {showBottomRow && (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns:
+                        showProjectsCard && showCustomCard ? '1fr 1fr' : '1fr',
+                      gap: 18,
+                      marginTop: 18,
+                    }}
+                  >
 
-                  {/* Projects */}
-                  <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
-                    <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
-                      {editMode
-                        ? <div className="ft-dark-section-label">Projects</div>
-                        : <p className="ft-section-label">Projects</p>}
-                      <ProfileProjects
-                        projects={projects}
-                        setProjects={setProjects}
-                        editMode={editMode}
-                      />
+                   {/* Projects */}
+                  {showProjectsCard && (
+                    <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
+                      <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
+                        {editMode
+                          ? <div className="ft-dark-section-label">Projects</div>
+                          : <p className="ft-section-label">Projects</p>}
+                        <ProfileProjects
+                          projects={projects}
+                          setProjects={setProjects}
+                          editMode={editMode}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Custom */}
-                  <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
-                    <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
-                      {editMode
-                        ? <div className="ft-dark-section-label">Custom Section</div>
-                        : <p className="ft-section-label">Custom Section</p>}
-                      <ProfileCustomSection
-                        value={customSection}
-                        setValue={setCustomSection}
-                        editMode={editMode}
-                      />
+                  {showCustomCard && (
+                    <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
+                      <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
+                        {editMode
+                          ? <div className="ft-dark-section-label">Custom Section</div>
+                          : <p className="ft-section-label">Custom Section</p>}
+                        <ProfileCustomSection
+                          value={customSection}
+                          setValue={setCustomSection}
+                          editMode={editMode}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                </div>
+                  </div>
+                )}
 
 
               </div>
