@@ -1,4 +1,5 @@
-// components/profile/ProfileProjects.JSONimport React, { useMemo, useState } from 'react';
+// components/profile/ProfileProjects.js
+import React, { useMemo, useState } from 'react';
 
 const ORANGE = '#FF7043';
 
@@ -67,8 +68,6 @@ export default function ProfileProjects({
   };
 
   const [draft, setDraft] = useState(empty);
-  const [editingId, setEditingId] = useState(null);
-  const [editDraft, setEditDraft] = useState(empty);
 
   const normalizedProjects = useMemo(() => {
     if (!Array.isArray(projects)) return [];
@@ -111,56 +110,6 @@ export default function ProfileProjects({
     setProjects((prev) =>
       Array.isArray(prev) ? prev.filter((_, index) => index !== indexToRemove) : []
     );
-    if (editingId && normalizedProjects[indexToRemove]?.id === editingId) {
-      setEditingId(null);
-      setEditDraft(empty);
-    }
-  };
-
-  const startEditingProject = (project) => {
-    if (!canEdit) return;
-    setEditingId(project.id);
-    setEditDraft({
-      name: project.name || '',
-      organization: project.organization || '',
-      notes: project.notes || '',
-      startYear: project.startYear || '',
-      endYear: project.endYear || '',
-      url: project.url || '',
-    });
-  };
-
-  const cancelEditingProject = () => {
-    setEditingId(null);
-    setEditDraft(empty);
-  };
-
-  const saveEditedProject = (indexToSave) => {
-    if (!canEdit || !editingId) return;
-
-    const name = editDraft.name.trim();
-    if (!name) return;
-
-    const updatedEntry = {
-      id: editingId,
-      name,
-      organization: editDraft.organization.trim(),
-      notes: editDraft.notes.trim(),
-      startYear: editDraft.startYear.trim(),
-      endYear: editDraft.endYear.trim(),
-      url: editDraft.url.trim(),
-    };
-
-    setProjects((prev) =>
-      Array.isArray(prev)
-        ? prev.map((project, index) =>
-            index === indexToSave ? updatedEntry : project
-          )
-        : []
-    );
-
-    setEditingId(null);
-    setEditDraft(empty);
   };
 
   if (!canEdit) {
@@ -275,163 +224,6 @@ export default function ProfileProjects({
         <div style={{ display: 'grid', gap: 10 }}>
           {normalizedProjects.map((project, index) => {
             const years = [project.startYear, project.endYear].filter(Boolean).join(' – ');
-            const isEditing = editingId === project.id;
-
-            if (isEditing) {
-              return (
-                <div
-                  key={project.id}
-                  style={{
-                    border: '1px solid rgba(255,112,67,0.30)',
-                    borderRadius: 12,
-                    padding: 12,
-                    background: 'rgba(255,255,255,0.04)',
-                    display: 'grid',
-                    gap: 10,
-                  }}
-                >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div style={{ display: 'grid', gap: 6 }}>
-                      <label style={labelStyle}>Name</label>
-                      <input
-                        value={editDraft.name}
-                        onChange={(e) =>
-                          setEditDraft((prev) => ({ ...prev, name: e.target.value }))
-                        }
-                        placeholder="Project name"
-                        style={inputStyle}
-                      />
-                    </div>
-
-                    <div style={{ display: 'grid', gap: 6 }}>
-                      <label style={labelStyle}>Organization</label>
-                      <input
-                        value={editDraft.organization}
-                        onChange={(e) =>
-                          setEditDraft((prev) => ({
-                            ...prev,
-                            organization: e.target.value,
-                          }))
-                        }
-                        placeholder="Group/Org/Company"
-                        style={inputStyle}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 10 }}>
-                    <div style={{ display: 'grid', gap: 6 }}>
-                      <label style={labelStyle}>Notes</label>
-                      <textarea
-                        value={editDraft.notes}
-                        onChange={(e) =>
-                          setEditDraft((prev) => ({ ...prev, notes: e.target.value }))
-                        }
-                        placeholder="Notes"
-                        style={{
-                          ...inputStyle,
-                          minHeight: 56,
-                          resize: 'vertical',
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'grid', gap: 6 }}>
-                      <label style={labelStyle}>Years</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                        <input
-                          value={editDraft.startYear}
-                          onChange={(e) =>
-                            setEditDraft((prev) => ({
-                              ...prev,
-                              startYear: e.target.value,
-                            }))
-                          }
-                          placeholder="2018"
-                          style={inputStyle}
-                        />
-                        <input
-                          value={editDraft.endYear}
-                          onChange={(e) =>
-                            setEditDraft((prev) => ({
-                              ...prev,
-                              endYear: e.target.value,
-                            }))
-                          }
-                          placeholder="2022"
-                          style={inputStyle}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gap: 6 }}>
-                    <label style={labelStyle}>URL</label>
-                    <input
-                      value={editDraft.url}
-                      onChange={(e) =>
-                        setEditDraft((prev) => ({ ...prev, url: e.target.value }))
-                      }
-                      placeholder="https://..."
-                      style={inputStyle}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      onClick={() => saveEditedProject(index)}
-                      style={{
-                        background: 'transparent',
-                        color: ORANGE,
-                        border: `1px solid ${ORANGE}`,
-                        borderRadius: 999,
-                        padding: '8px 14px',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                      }}
-                    >
-                      Save
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={cancelEditingProject}
-                      style={{
-                        background: 'transparent',
-                        color: 'rgba(255,255,255,0.65)',
-                        border: '1px solid rgba(255,255,255,0.20)',
-                        borderRadius: 999,
-                        padding: '8px 14px',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                      }}
-                    >
-                      Cancel
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => removeProjectAtIndex(index)}
-                      style={{
-                        background: 'transparent',
-                        color: '#EF9A9A',
-                        border: '1px solid #C62828',
-                        borderRadius: 999,
-                        padding: '8px 14px',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              );
-            }
 
             return (
               <div
@@ -503,45 +295,24 @@ export default function ProfileProjects({
                   )}
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-                  <button
-                    type="button"
-                    onClick={() => startEditingProject(project)}
-                    style={{
-                      border: `1px solid ${ORANGE}`,
-                      color: ORANGE,
-                      background: 'transparent',
-                      borderRadius: 999,
-                      padding: '6px 10px',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      height: 'fit-content',
-                      whiteSpace: 'nowrap',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => removeProjectAtIndex(index)}
-                    style={{
-                      border: '1px solid #C62828',
-                      color: '#EF9A9A',
-                      background: 'transparent',
-                      borderRadius: 999,
-                      padding: '6px 10px',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      height: 'fit-content',
-                      whiteSpace: 'nowrap',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => removeProjectAtIndex(index)}
+                  style={{
+                    border: '1px solid #C62828',
+                    color: '#EF9A9A',
+                    background: 'transparent',
+                    borderRadius: 999,
+                    padding: '6px 10px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    height: 'fit-content',
+                    whiteSpace: 'nowrap',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  Delete
+                </button>
               </div>
             );
           })}
