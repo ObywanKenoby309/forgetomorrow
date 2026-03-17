@@ -333,11 +333,17 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   }, []);
 
 const flushPendingSave = useCallback(async () => {
-  if (avatarUrl.startsWith('data:')) return;
+  if (!editMode) return true;
+  if (avatarUrl.startsWith('data:')) return true;
+
+  if (saveTimerRef.current) {
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = null;
+  }
+
+  setSaveState('saving');
 
   try {
-    setSaveState('saving');
-
     const [hRes, dRes] = await Promise.all([
       fetch('/api/profile/header', {
         method: 'PATCH',
@@ -385,6 +391,7 @@ const flushPendingSave = useCallback(async () => {
     if (hRes.ok && dRes.ok) {
       setSaveState('saved');
       setTimeout(() => setSaveState('idle'), 2500);
+
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
           new CustomEvent('profileHeaderUpdated', {
@@ -392,16 +399,18 @@ const flushPendingSave = useCallback(async () => {
           })
         );
       }
+
       return true;
-    } else {
-      setSaveState('error');
-      return false;
     }
+
+    setSaveState('error');
+    return false;
   } catch {
     setSaveState('error');
     return false;
   }
 }, [
+  editMode,
   avatarUrl,
   coverUrl,
   wallpaperUrl,
@@ -933,7 +942,10 @@ const flushPendingSave = useCallback(async () => {
   className="ft-done-btn"
   onClick={async () => {
     const ok = await flushPendingSave();
-    if (ok !== false) setEditMode(false);
+    if (ok) {
+      setShowPrefsEdit(false);
+      setEditMode(false);
+    }
   }}
 >
   Done editing
