@@ -115,6 +115,29 @@ function parseEducationField(raw, fallback = []) {
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 
+function normalizeWorkPreferences(raw) {
+  const wp = raw && typeof raw === 'object' ? raw : {};
+
+  const normalizeRelocate = (value) => {
+    if (value === true) return 'Yes';
+    if (value === false) return 'No';
+    if (value === 'Yes' || value === 'No' || value === 'Maybe') return value;
+    return '';
+  };
+
+  return {
+    workStatus: typeof wp.workStatus === 'string' ? wp.workStatus : '',
+    workType: typeof wp.workType === 'string' ? wp.workType : '',
+    schedule: typeof wp.schedule === 'string' ? wp.schedule : '',
+    willingToRelocate: normalizeRelocate(wp.willingToRelocate),
+    startDate: typeof wp.startDate === 'string' ? wp.startDate : '',
+    scheduleAvailability: typeof wp.scheduleAvailability === 'string' ? wp.scheduleAvailability : '',
+    locations: Array.isArray(wp.locations)
+      ? wp.locations.filter(v => typeof v === 'string')
+      : [],
+  };
+}
+
 // ─── Data fetching ────────────────────────────────────────────────────────────
 export async function getServerSideProps(context) {
   const { slug } = context.params;
@@ -225,16 +248,16 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   const [avatarUploading, setAvatarUploading] = useState(false);
   const updateSocial = (key, val) => setSocialLinks(p => ({ ...p, [key]: val }));
 
-  // Work preferences — expanded schema from Sora's card
-  const wp = serverWorkPrefs || {};
-  const [prefWorkStatus,          setPrefWorkStatus]          = useState(wp.workStatus            || '');
-  const [prefWorkType,            setPrefWorkType]            = useState(wp.workType              || '');
-  const [prefSchedule,            setPrefSchedule]            = useState(wp.schedule              || '');
-  const [prefWillingToRelocate,   setPrefWillingToRelocate]   = useState(wp.willingToRelocate     || '');
-  const [prefStartDate,           setPrefStartDate]           = useState(wp.startDate             || '');
-  const [prefScheduleAvailability,setPrefScheduleAvailability]= useState(wp.scheduleAvailability  || '');
-  const [prefLocations,           setPrefLocations]           = useState(Array.isArray(wp.locations) ? wp.locations : []);
-  const [prefLocationInput,       setPrefLocationInput]       = useState('');
+  // Work preferences — normalized on load
+const wp = normalizeWorkPreferences(serverWorkPrefs);
+const [prefWorkStatus,           setPrefWorkStatus]           = useState(wp.workStatus);
+const [prefWorkType,             setPrefWorkType]             = useState(wp.workType);
+const [prefSchedule,             setPrefSchedule]             = useState(wp.schedule);
+const [prefWillingToRelocate,    setPrefWillingToRelocate]    = useState(wp.willingToRelocate);
+const [prefStartDate,            setPrefStartDate]            = useState(wp.startDate);
+const [prefScheduleAvailability, setPrefScheduleAvailability] = useState(wp.scheduleAvailability);
+const [prefLocations,            setPrefLocations]            = useState(wp.locations);
+const [prefLocationInput,        setPrefLocationInput]        = useState('');
 
   // Chip/draft helpers
   const [skillInput,  setSkillInput]  = useState('');
