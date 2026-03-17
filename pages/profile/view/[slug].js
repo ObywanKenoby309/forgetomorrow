@@ -334,7 +334,6 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
 
 const flushPendingSave = useCallback(async () => {
   if (!editMode) return true;
-  if (avatarUrl.startsWith('data:')) return true;
 
   if (saveTimerRef.current) {
     clearTimeout(saveTimerRef.current);
@@ -440,7 +439,6 @@ const flushPendingSave = useCallback(async () => {
 
   useEffect(() => {
     if (!editMode) return;
-    if (avatarUrl.startsWith('data:')) return;
     const controller = new AbortController();
     setSaveState('saving');
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);

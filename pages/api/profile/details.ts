@@ -175,6 +175,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const body = (req.body || {}) as Partial<ProfileDetails>;
       const data: any = {};
 
+// Normalize workPreferences to a safe structure
+function normalizeWorkPreferences(input: any) {
+  if (!input || typeof input !== "object") {
+    return {
+      workStatus: "",
+      workType: "",
+      schedule: "",
+      willingToRelocate: "",
+      startDate: "",
+      scheduleAvailability: "",
+      locations: [],
+    };
+  }
+
+  const normalizeRelocate = (value: any) => {
+    if (value === true) return "Yes";
+    if (value === false) return "No";
+    if (value === "Yes" || value === "No" || value === "Maybe") return value;
+    return "";
+  };
+
+  return {
+    workStatus: typeof input.workStatus === "string" ? input.workStatus : "",
+    workType: typeof input.workType === "string" ? input.workType : "",
+    schedule: typeof input.schedule === "string" ? input.schedule : "",
+    willingToRelocate: normalizeRelocate(input.willingToRelocate),
+    startDate: typeof input.startDate === "string" ? input.startDate : "",
+    scheduleAvailability:
+      typeof input.scheduleAvailability === "string"
+        ? input.scheduleAvailability
+        : "",
+    locations: Array.isArray(input.locations)
+      ? input.locations.filter((v) => typeof v === "string")
+      : [],
+  };
+}
+
       if (body.name !== undefined) data.name = body.name;
       if (body.headline !== undefined) data.headline = body.headline;
       if (body.location !== undefined) data.location = body.location;
@@ -184,7 +221,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (body.coverUrl !== undefined) data.coverUrl = body.coverUrl;
 
       if (body.aboutMe !== undefined) data.aboutMe = body.aboutMe;
-      if (body.workPreferences !== undefined) data.workPreferences = body.workPreferences;
+      if (body.workPreferences !== undefined) {
+		data.workPreferences = normalizeWorkPreferences(body.workPreferences);
+	   } 
       if (body.skillsJson !== undefined) data.skillsJson = body.skillsJson;
       if (body.languagesJson !== undefined) data.languagesJson = body.languagesJson;
       if (body.hobbiesJson !== undefined) data.hobbiesJson = body.hobbiesJson;
