@@ -1,5 +1,5 @@
 // components/profile/ProfileProjects.js
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
 const ORANGE = '#FF7043';
 
@@ -53,11 +53,11 @@ function normalizeProject(project, index) {
   return null;
 }
 
-export default function ProfileProjects({
+const ProfileProjects = forwardRef(function ProfileProjects({
   projects = [],
   setProjects,
   editMode = false,
-}) {
+}, ref) {
   const empty = {
     name: '',
     organization: '',
@@ -88,7 +88,52 @@ export default function ProfileProjects({
       );
   }, [projects]);
 
-    const canEdit = editMode && typeof setProjects === 'function';
+      const canEdit = editMode && typeof setProjects === 'function';
+
+  useImperativeHandle(ref, () => ({
+    commitPending() {
+      if (typeof setProjects !== 'function') return;
+
+      if (editingIndex !== null && editingDraft.name.trim()) {
+        const updatedEntry = {
+          ...(normalizedProjects[editingIndex] || {}),
+          name: editingDraft.name.trim(),
+          organization: editingDraft.organization.trim(),
+          notes: editingDraft.notes.trim(),
+          startYear: editingDraft.startYear.trim(),
+          endYear: editingDraft.endYear.trim(),
+          url: editingDraft.url.trim(),
+        };
+
+        setProjects((prev) =>
+          Array.isArray(prev)
+            ? prev.map((project, index) =>
+                index === editingIndex ? updatedEntry : project
+              )
+            : []
+        );
+
+        setEditingIndex(null);
+        setEditingDraft(empty);
+        return;
+      }
+
+      if (draft.name.trim()) {
+        const entry = {
+          id: `${Date.now()}`,
+          name: draft.name.trim(),
+          organization: draft.organization.trim(),
+          notes: draft.notes.trim(),
+          startYear: draft.startYear.trim(),
+          endYear: draft.endYear.trim(),
+          url: draft.url.trim(),
+        };
+
+        setProjects((prev) => [...(Array.isArray(prev) ? prev : []), entry]);
+        setDraft(empty);
+      }
+    },
+  }), [draft, editingDraft, editingIndex, normalizedProjects, setProjects]);
 
   useEffect(() => {
     const wasEditing = prevEditModeRef.current;
@@ -687,4 +732,6 @@ export default function ProfileProjects({
       </div>
     </section>
   );
-}
+});
+
+export default ProfileProjects;

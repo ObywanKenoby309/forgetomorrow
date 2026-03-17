@@ -293,6 +293,8 @@ const [prefLocationInput,        setPrefLocationInput]        = useState('');
     } catch { /* silent */ }
   };
   const fileInputRef = useRef(null);
+  const projectsRef = useRef(null);
+  const customSectionRef = useRef(null);
   const [saveState,  setSaveState]  = useState('idle');
   const saveTimerRef = useRef(null);
 
@@ -983,14 +985,15 @@ const flushPendingSave = useCallback(async (force = false) => {
   type="button"
   className="ft-done-btn"
   onClick={async () => {
-    setShowPrefsEdit(false);
-    setEditMode(false);
+    projectsRef.current?.commitPending?.();
+    customSectionRef.current?.commitPending?.();
 
     await new Promise(resolve => setTimeout(resolve, 0));
 
-    const ok = await flushPendingSave(true);
-    if (!ok) {
-      setEditMode(true);
+    const ok = await flushPendingSave();
+    if (ok) {
+      setShowPrefsEdit(false);
+      setEditMode(false);
     }
   }}
 >
@@ -1291,6 +1294,7 @@ const flushPendingSave = useCallback(async (force = false) => {
                           ? <div className="ft-dark-section-label">Projects</div>
                           : <p className="ft-section-label">Projects</p>}
                         <ProfileProjects
+						  ref={projectsRef}
                           projects={projects}
                           setProjects={setProjects}
                           editMode={editMode}
@@ -1307,6 +1311,7 @@ const flushPendingSave = useCallback(async (force = false) => {
                           ? <div className="ft-dark-section-label">Custom Section</div>
                           : <p className="ft-section-label">Custom Section</p>}
                         <ProfileCustomSection
+						ref={customSectionRef}
                           value={customSection}
                           setValue={setCustomSection}
                           editMode={editMode}

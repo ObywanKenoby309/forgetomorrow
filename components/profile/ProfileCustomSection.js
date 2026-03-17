@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
 const ORANGE = '#FF7043';
 
@@ -50,11 +50,11 @@ function normalizeCustomEntry(entry, index) {
   return null;
 }
 
-export default function ProfileCustomSection({
+const ProfileCustomSection = forwardRef(function ProfileCustomSection({
   value,
   setValue,
   editMode = false,
-}) {
+}, ref) {
   const empty = {
     name: '',
     organization: '',
@@ -88,7 +88,50 @@ export default function ProfileCustomSection({
       );
   }, [value]);
 
-    const canEdit = editMode && typeof setValue === 'function';
+const canEdit = editMode && typeof setValue === 'function';
+
+  useImperativeHandle(ref, () => ({
+    commitPending() {
+      if (typeof setValue !== 'function') return;
+
+      if (editingIndex !== null && editingDraft.name.trim()) {
+        const updatedEntry = {
+          ...(normalizedEntries[editingIndex] || {}),
+          name: editingDraft.name.trim(),
+          organization: editingDraft.organization.trim(),
+          notes: editingDraft.notes.trim(),
+          startYear: editingDraft.startYear.trim(),
+          endYear: editingDraft.endYear.trim(),
+        };
+
+        setValue((prev) =>
+          Array.isArray(prev)
+            ? prev.map((entry, index) =>
+                index === editingIndex ? updatedEntry : entry
+              )
+            : []
+        );
+
+        setEditingIndex(null);
+        setEditingDraft(empty);
+        return;
+      }
+
+      if (draft.name.trim()) {
+        const entry = {
+          id: `${Date.now()}`,
+          name: draft.name.trim(),
+          organization: draft.organization.trim(),
+          notes: draft.notes.trim(),
+          startYear: draft.startYear.trim(),
+          endYear: draft.endYear.trim(),
+        };
+
+        setValue((prev) => [...(Array.isArray(prev) ? prev : []), entry]);
+        setDraft(empty);
+      }
+    },
+  }), [draft, editingDraft, editingIndex, normalizedEntries, setValue]);
 
   useEffect(() => {
     const wasEditing = prevEditModeRef.current;
@@ -622,4 +665,6 @@ export default function ProfileCustomSection({
       </div>
     </section>
   );
-}
+});
+
+export default ProfileCustomSection;
