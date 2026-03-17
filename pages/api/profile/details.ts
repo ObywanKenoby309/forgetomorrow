@@ -82,8 +82,8 @@ function normalizeWorkPreferences(input: any) {
     scheduleAvailability:
       typeof input.scheduleAvailability === "string" ? input.scheduleAvailability : "",
     locations: Array.isArray(input.locations)
-      ? input.locations.filter((v) => typeof v === "string")
-      : [],
+	  ? (input.locations as unknown[]).filter((v: unknown): v is string => typeof v === "string")
+	  : [],
   };
 }
 
