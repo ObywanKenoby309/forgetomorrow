@@ -332,6 +332,103 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
     setAvatarUrl('');
   }, []);
 
+const flushPendingSave = useCallback(async () => {
+  if (avatarUrl.startsWith('data:')) return;
+
+  try {
+    setSaveState('saving');
+
+    const [hRes, dRes] = await Promise.all([
+      fetch('/api/profile/header', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          avatarUrl: avatarUrl || null,
+          coverUrl: coverUrl || null,
+          wallpaperUrl: wallpaperUrl || null,
+          bannerMode,
+          bannerHeight: bannerH,
+          bannerFocalY: focalY,
+          socialLinks,
+        }),
+      }),
+      fetch('/api/profile/details', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pronouns,
+          headline,
+          location,
+          status,
+          avatarUrl: avatarUrl || null,
+          coverUrl: coverUrl || null,
+          aboutMe: aboutMe || '',
+          workPreferences: {
+            workStatus: prefWorkStatus || '',
+            workType: prefWorkType || '',
+            schedule: prefSchedule || '',
+            willingToRelocate: prefWillingToRelocate || '',
+            startDate: prefStartDate || '',
+            scheduleAvailability: prefScheduleAvailability || '',
+            locations: prefLocations || [],
+          },
+          skillsJson: skills || [],
+          languagesJson: languages || [],
+          hobbiesJson: hobbies || [],
+          educationJson: education || [],
+          certificationsJson: certifications || [],
+          projectsJson: projects || [],
+        }),
+      }),
+    ]);
+
+    if (hRes.ok && dRes.ok) {
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 2500);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('profileHeaderUpdated', {
+            detail: { wallpaperUrl: wallpaperUrl || null },
+          })
+        );
+      }
+      return true;
+    } else {
+      setSaveState('error');
+      return false;
+    }
+  } catch {
+    setSaveState('error');
+    return false;
+  }
+}, [
+  avatarUrl,
+  coverUrl,
+  wallpaperUrl,
+  bannerMode,
+  bannerH,
+  focalY,
+  socialLinks,
+  pronouns,
+  headline,
+  location,
+  status,
+  aboutMe,
+  prefWorkStatus,
+  prefWorkType,
+  prefSchedule,
+  prefWillingToRelocate,
+  prefStartDate,
+  prefScheduleAvailability,
+  prefLocations,
+  skills,
+  languages,
+  hobbies,
+  education,
+  certifications,
+  projects,
+]);
+
   useEffect(() => {
     if (!editMode) return;
     if (avatarUrl.startsWith('data:')) return;
@@ -831,7 +928,16 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                       <div className="ft-edit-pill"><span className="ft-edit-pill-dot" />Editing portfolio</div>
                       <SaveStatusIndicator state={saveState} />
                     </div>
-                    <button type="button" className="ft-done-btn" onClick={() => setEditMode(false)}>Done editing</button>
+                    <button
+  type="button"
+  className="ft-done-btn"
+  onClick={async () => {
+    const ok = await flushPendingSave();
+    if (ok !== false) setEditMode(false);
+  }}
+>
+  Done editing
+</button>
                   </div>
                 )}
 
