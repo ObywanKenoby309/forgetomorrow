@@ -436,24 +436,9 @@ export default function RecruiterAnalyticsLayout({
                     <option value="slee">S. Lee</option>
                   </select>
 
-                  <button
-  type="button"
-  style={EXPORT_STYLE}
-  onClick={() => {
-    const params = new URLSearchParams({
-      range: filters?.range || "30d",
-      jobId: filters?.jobId || "all",
-      recruiterId: filters?.recruiterId || "all",
-      companyId: filters?.companyId || "all",
-      ...(filters?.from ? { from: filters.from } : {}),
-      ...(filters?.to ? { to: filters.to } : {}),
-    });
-
-    window.open(`/api/analytics/export?${params.toString()}`, "_blank");
-  }}
->
-  Export CSV
-</button>
+                  <button type="button" style={EXPORT_STYLE}>
+                    Export CSV
+                  </button>
                 </div>
               </div>
 
