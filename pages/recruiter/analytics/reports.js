@@ -254,12 +254,51 @@ function Body() {
   const [filters, setFilters] = useState(getFiltersFromQuery(router.query));
   const [activeReport, setActiveReport] = useState(getReportFromQuery(router.query));
   const { data, error } = useAnalytics(filters);
+  const [leaderboardData, setLeaderboardData] = useState(null);
 
   useEffect(() => {
     if (!router.isReady) return;
     setFilters(getFiltersFromQuery(router.query));
     setActiveReport(getReportFromQuery(router.query));
   }, [router.isReady, router.query]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadLeaderboard = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set("range", filters.range);
+        params.set("jobId", filters.jobId);
+        params.set("recruiterId", filters.recruiterId);
+        params.set("companyId", filters.companyId);
+
+        if (filters.range === "custom") {
+          if (filters.from) params.set("from", filters.from);
+          if (filters.to) params.set("to", filters.to);
+        }
+
+        const res = await fetch(
+          `/api/analytics/recruiter/leaderboard?${params.toString()}`
+        );
+        const json = await res.json();
+
+        if (active) {
+          setLeaderboardData(json);
+        }
+      } catch {
+        if (active) {
+          setLeaderboardData({ recruiters: [] });
+        }
+      }
+    };
+
+    loadLeaderboard();
+
+    return () => {
+      active = false;
+    };
+  }, [filters]);
 
   const onFilterChange = (patch) => {
     const next = { ...filters, ...patch };
@@ -364,28 +403,108 @@ function Body() {
       );
     }
 
-    if (activeReport === "recruiters") {
+        if (activeReport === "recruiters") {
       return (
         <ReportShell
           title="Recruiter activity narrative"
-          subtitle="Recruiter-level performance belongs here once recruiter attribution and ranking are fully aggregated from live data."
+          subtitle="Recruiter performance below is ranked from live recruiter-owned jobs and their downstream pipeline outcomes for the selected filter window."
           visual={
-            <BuildingVisual
-              title="Recruiter activity report"
-              body="Recruiter-level analytics are being wired to live performance aggregation. This report will surface recruiter comparison, throughput, and consistency once the leaderboard and attribution logic are in place."
-            />
+            <div style={{ display: "grid", gap: 10 }}>
+              {(leaderboardData?.recruiters || []).length === 0 ? (
+                <BuildingVisual
+                  title="Recruiter activity report"
+                  body="No recruiter-attributed analytics are available for the selected period yet."
+                />
+              ) : (
+                leaderboardData.recruiters.map((recruiter, index) => (
+                  <div
+                    key={recruiter.recruiterId}
+                    style={{
+                      borderRadius: 14,
+                      background: "rgba(255,255,255,0.72)",
+                      border: "1px solid rgba(255,255,255,0.30)",
+                      padding: 14,
+                      display: "grid",
+                      gap: 8,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div style={{ fontSize: 16, fontWeight: 900, color: "#334155" }}>
+                        #{index + 1} {recruiter.recruiterName}
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#FF7043" }}>
+                        {recruiter.totalHires} hires
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                        gap: 10,
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 10, color: "#94A3B8" }}>Applications</div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                          {recruiter.totalApplications}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#94A3B8" }}>Interviews</div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                          {recruiter.totalInterviews}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#94A3B8" }}>Offers</div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                          {recruiter.totalOffers}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#94A3B8" }}>Apply-to-hire</div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                          {recruiter.conversionRatePct}%
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#94A3B8" }}>Avg. time-to-fill</div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                          {recruiter.avgTimeToFillDays} days
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#94A3B8" }}>Pipeline velocity</div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                          {recruiter.pipelineVelocity}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           }
           insights={
             <>
               <NarrativeCard
-                eyebrow="Status"
-                title="This report should never use fabricated rankings"
-                body="Recruiter comparison must be driven by real recruiter-level attribution data. Until that is available, this report should stay in a clearly marked Building state rather than imply accuracy that does not yet exist."
+                eyebrow="Key finding"
+                title="Recruiter comparison should be grounded in owned-job outcomes"
+                body="This report ranks recruiter performance using recruiter-owned jobs and their downstream application, interview, offer, and hire results for the selected period."
               />
               <NarrativeCard
-                eyebrow="Plan"
-                title="The finished version should compare throughput, consistency, and outcomes"
-                body="Once wired, this report should help leaders distinguish between recruiter execution issues, req mix difficulty, and process-level drag across the team."
+                eyebrow="Recommendation"
+                title="Use recruiter comparisons to separate process issues from ownership patterns"
+                body="When recruiter outcomes diverge under similar req mix, this view helps leadership identify whether the issue is execution, req complexity, or process drag."
                 accent="#0F766E"
               />
             </>
