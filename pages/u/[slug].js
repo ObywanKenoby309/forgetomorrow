@@ -1,6 +1,5 @@
 // pages/u/[slug].js — ForgeTomorrow Public Portfolio (read-only, no siderails)
 import PortfolioViewPage from '@/pages/profile/[slug]';
-export { getServerSideProps as _base } from '@/pages/profile/[slug]';
 import { getServerSideProps as baseGetSSP } from '@/pages/profile/[slug]';
 
 export async function getServerSideProps(context) {
