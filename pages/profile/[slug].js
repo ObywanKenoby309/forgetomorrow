@@ -1660,7 +1660,17 @@ flushPendingSaveRef.current = flushPendingSave;
       </>
 );
 
-  if (publicView) return pageContent;
+  if (publicView) return (
+    <div style={{
+      minHeight: '100vh',
+      backgroundImage: `url(${effectiveWallpaper})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundAttachment: 'fixed',
+    }}>
+      {pageContent}
+    </div>
+  );
 
   return (
     <InternalLayout
