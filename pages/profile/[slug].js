@@ -1,4 +1,4 @@
-// pages/profile/view/[slug].js  —  ForgeTomorrow Portfolio v3
+// pages/profile/[slug].js  —  ForgeTomorrow Portfolio v3
 // ─────────────────────────────────────────────────────────────────────────────
 // v3 layout changes:
 //   - Signals bar: full-width scannable strip below identity (availability, work type, relocation, locations)
@@ -203,7 +203,7 @@ export async function getServerSideProps(context) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
-export default function PortfolioViewPage({ user, primaryResume, effectiveVisibility, viewer, isOwner }) {
+export default function PortfolioViewPage({ user, primaryResume, effectiveVisibility, viewer, isOwner, publicView = false }) {
   const [editMode,           setEditMode]           = useState(false);
   const [mobileTab,          setMobileTab]          = useState('about');
   const [mobileSkillsReady,  setMobileSkillsReady]  = useState(false);
@@ -561,15 +561,7 @@ flushPendingSaveRef.current = flushPendingSave;
   const useTallSummaryCard = editMode || hasInterestsContent || showBottomRow;
 
   // ─────────────────────────────────────────────────────────────────────────
-  return (
-    <InternalLayout
-      title={`${fullName} — ForgeTomorrow`} activeNav="profile" header={null}
-      right={editMode ? <ProfileStrengthRail /> : <RightRailPlacementManager />}
-      rightVariant="dark"
-      backgroundOverrideUrl={effectiveWallpaper}
-      collapseSiderails={siderailsCollapsed}
-      onToggleSiderails={() => setSiderailsCollapsed(s => !s)}
-    >
+  const pageContent = (
       <>
         <Head>
           <meta name="description"        content={`Professional portfolio of ${fullName} on ForgeTomorrow.`} />
@@ -1666,6 +1658,20 @@ flushPendingSaveRef.current = flushPendingSave;
           </div>
         )}
       </>
+);
+
+  if (publicView) return pageContent;
+
+  return (
+    <InternalLayout
+      title={`${fullName} — ForgeTomorrow`} activeNav="profile" header={null}
+      right={editMode ? <ProfileStrengthRail /> : <RightRailPlacementManager />}
+      rightVariant="dark"
+      backgroundOverrideUrl={effectiveWallpaper}
+      collapseSiderails={siderailsCollapsed}
+      onToggleSiderails={() => setSiderailsCollapsed(s => !s)}
+    >
+      {pageContent}
     </InternalLayout>
   );
 }
