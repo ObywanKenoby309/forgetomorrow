@@ -255,6 +255,7 @@ function Body() {
   const [activeReport, setActiveReport] = useState(getReportFromQuery(router.query));
   const { data, error } = useAnalytics(filters);
   const [leaderboardData, setLeaderboardData] = useState(null);
+  const [timeToFillData, setTimeToFillData] = useState(null);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -294,6 +295,53 @@ function Body() {
     };
 
     loadLeaderboard();
+
+    return () => {
+      active = false;
+    };
+  }, [filters]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadTimeToFill = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set("range", filters.range);
+        params.set("jobId", filters.jobId);
+        params.set("recruiterId", filters.recruiterId);
+        params.set("companyId", filters.companyId);
+
+        if (filters.range === "custom") {
+          if (filters.from) params.set("from", filters.from);
+          if (filters.to) params.set("to", filters.to);
+        }
+
+        const res = await fetch(
+          `/api/analytics/recruiter/time-to-fill?${params.toString()}`
+        );
+        const json = await res.json();
+
+        if (active) {
+          setTimeToFillData(json);
+        }
+      } catch {
+        if (active) {
+          setTimeToFillData({
+            summary: {
+              avgTimeToFillDays: 0,
+              medianTimeToFillDays: 0,
+              fastestFillDays: 0,
+              slowestFillDays: 0,
+              filledJobs: 0,
+            },
+            jobs: [],
+          });
+        }
+      }
+    };
+
+    loadTimeToFill();
 
     return () => {
       active = false;
@@ -513,28 +561,155 @@ function Body() {
       );
     }
 
-    if (activeReport === "timeToFill") {
+        if (activeReport === "timeToFill") {
       return (
         <ReportShell
           title="Time-to-Fill narrative"
-          subtitle={`Current average time-to-fill is ${avgTimeToFill} days. This report should explain where delay is building and which roles need operational attention first.`}
+          subtitle={`Current average time-to-fill is ${timeToFillData?.summary?.avgTimeToFillDays ?? avgTimeToFill} days. This report highlights filled roles in the selected period and shows where close speed is strongest or slowest.`}
           visual={
-            <BuildingVisual
-              title="Time-to-Fill report"
-              body="The page currently has the overall time-to-fill metric, but the deeper role-level and stage-level breakdown is still being wired. This report should expand into a true delay analysis surface."
-            />
+            <div style={{ display: "grid", gap: 10 }}>
+              {(timeToFillData?.jobs || []).length === 0 ? (
+                <BuildingVisual
+                  title="Time-to-Fill report"
+                  body="No filled jobs were found for the selected period yet."
+                />
+              ) : (
+                <>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                      gap: 10,
+                    }}
+                  >
+                    <div
+                      style={{
+                        borderRadius: 14,
+                        background: "rgba(255,255,255,0.72)",
+                        border: "1px solid rgba(255,255,255,0.30)",
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 10, color: "#94A3B8" }}>Average</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                        {timeToFillData?.summary?.avgTimeToFillDays ?? 0}d
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        borderRadius: 14,
+                        background: "rgba(255,255,255,0.72)",
+                        border: "1px solid rgba(255,255,255,0.30)",
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 10, color: "#94A3B8" }}>Median</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                        {timeToFillData?.summary?.medianTimeToFillDays ?? 0}d
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        borderRadius: 14,
+                        background: "rgba(255,255,255,0.72)",
+                        border: "1px solid rgba(255,255,255,0.30)",
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 10, color: "#94A3B8" }}>Fastest</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                        {timeToFillData?.summary?.fastestFillDays ?? 0}d
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        borderRadius: 14,
+                        background: "rgba(255,255,255,0.72)",
+                        border: "1px solid rgba(255,255,255,0.30)",
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 10, color: "#94A3B8" }}>Slowest</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                        {timeToFillData?.summary?.slowestFillDays ?? 0}d
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {timeToFillData.jobs.map((job) => (
+                      <div
+                        key={job.jobId}
+                        style={{
+                          borderRadius: 14,
+                          background: "rgba(255,255,255,0.72)",
+                          border: "1px solid rgba(255,255,255,0.30)",
+                          padding: 14,
+                          display: "grid",
+                          gap: 8,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 12,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <div style={{ fontSize: 16, fontWeight: 900, color: "#334155" }}>
+                            {job.jobTitle}
+                          </div>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: "#FF7043" }}>
+                            {job.daysToFill} days
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                            gap: 10,
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: 10, color: "#94A3B8" }}>Recruiter</div>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}>
+                              {job.recruiterName}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: "#94A3B8" }}>Created</div>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}>
+                              {new Date(job.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: "#94A3B8" }}>Filled</div>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}>
+                              {new Date(job.filledAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           }
           insights={
             <>
               <NarrativeCard
                 eyebrow="Key finding"
-                title="A single average is not enough"
-                body="Average time-to-fill is useful for the headline, but the real value comes from seeing whether delay is concentrated by role family, by recruiter, or by a specific funnel stage."
+                title="Averages are useful, but spread matters just as much"
+                body="This report now shows average, median, fastest, and slowest close times so leaders can see whether speed is consistent or distorted by only a few reqs."
               />
               <NarrativeCard
                 eyebrow="Recommendation"
-                title="Build this report around where delay actually happens"
-                body="The finished report should explain whether the issue is sourcing difficulty, approval drag, scheduling slowdown, or offer-stage friction so the team knows where to intervene."
+                title="Use this view to identify which roles are dragging cycle time"
+                body="The strongest use of time-to-fill reporting is not just measuring duration, but identifying which job families and ownership patterns repeatedly slow hiring down."
                 accent="#0F766E"
               />
             </>
