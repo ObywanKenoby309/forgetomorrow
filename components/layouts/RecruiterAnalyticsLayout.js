@@ -116,7 +116,7 @@ function FilterPill({ active, onClick, children }) {
   );
 }
 
-function AnalyticsHeader({ title, subtitle, activeTab }) {
+function AnalyticsHeader({ subtitle, activeTab, suiteTitle = "Recruiter Analytics" }) {
   const activeLabel =
     activeTab === "command"
       ? "Command Center"
@@ -127,7 +127,7 @@ function AnalyticsHeader({ title, subtitle, activeTab }) {
   return (
     <div style={{ textAlign: "center" }}>
       <h1 style={{ fontSize: 28, fontWeight: 900, color: ORANGE, lineHeight: 1.05, margin: 0 }}>
-        {title}
+        {suiteTitle}
       </h1>
       <div style={{ fontSize: 22, fontWeight: 900, color: SLATE, lineHeight: 1.1, marginTop: 2 }}>
         {activeLabel}
@@ -263,7 +263,7 @@ const DATE_INPUT_STYLE = {
 
 export default function RecruiterAnalyticsLayout({
   title = "Recruiter Analytics — ForgeTomorrow",
-  pageTitle = "Recruiter Analytics",
+  suiteTitle = "Recruiter Analytics",
   pageSubtitle = "A recruiter analytics command center built for quick reads, deeper report details, and presentation-ready visuals.",
   activeTab = "command",
   filters,
@@ -295,7 +295,11 @@ export default function RecruiterAnalyticsLayout({
     <RecruiterLayout title={title} activeNav="analytics" right={rightRail} contentFullBleed>
       <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
         <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <AnalyticsHeader title={pageTitle} subtitle={pageSubtitle} activeTab={activeTab} />
+          <AnalyticsHeader
+            suiteTitle={suiteTitle}
+            subtitle={pageSubtitle}
+            activeTab={activeTab}
+          />
         </section>
 
         <section style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
