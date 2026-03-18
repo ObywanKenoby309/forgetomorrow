@@ -30,8 +30,7 @@
 // <main> sits in col 2 of the outer grid (between sidebar col and right col).
 // To span INTO right rail: marginRight: -(240 + 12) = -252
 // Bottom rows: marginLeft: 0 (already at left edge of content), marginRight: -252
-
-import React, { useMemo } from "react";
+import React from "react";
 import { useRouter } from "next/router";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 
@@ -55,9 +54,7 @@ const ORANGE = "#FF7043";
 const SLATE = "#334155";
 const MUTED = "#64748B";
 
-const GAP = 12; // matches RecruiterLayout GAP
-const RIGHT_W = 240; // matches RecruiterLayout RIGHT_W
-const BLEED_RIGHT = -(RIGHT_W + GAP); // -252: bottom rows extend into right rail column
+const GAP = 12;
 
 const MODE_TABS = [
   { key: "command", label: "Command Center", href: "/recruiter/analytics" },
@@ -66,12 +63,12 @@ const MODE_TABS = [
 ];
 
 const REPORT_LINKS = [
-  { label: "Funnel", href: "/recruiter/analytics/funnel" },
-  { label: "Sources", href: "/recruiter/analytics/sources" },
-  { label: "Recruiters", href: "/recruiter/analytics/recruiters" },
-  { label: "Time-to-Fill", href: "/recruiter/analytics/time-to-fill" },
-  { label: "Quality of Hire", href: "/recruiter/analytics/quality-of-hire" },
-  { label: "Talent Intel", href: "/recruiter/analytics/talent-intelligence" },
+  { key: "funnel", label: "Funnel" },
+  { key: "sources", label: "Sources" },
+  { key: "recruiters", label: "Recruiters" },
+  { key: "timeToFill", label: "Time-to-Fill" },
+  { key: "qualityOfHire", label: "Quality of Hire" },
+  { key: "talentIntel", label: "Talent Intel" },
 ];
 
 function TabButton({ active, onClick, children }) {
@@ -276,9 +273,9 @@ export default function RecruiterAnalyticsLayout({
 }) {
   const router = useRouter();
   const period = filters?.range || "30d";
-  const activePath = useMemo(() => router.pathname || "", [router.pathname]);
+  const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
 
-  const pushWithFilters = (href) => {
+  const pushWithFilters = (pathname, extraQuery = {}) => {
     const nextQuery = {
       ...(filters?.range ? { range: filters.range } : {}),
       ...(filters?.jobId ? { jobId: filters.jobId } : {}),
@@ -286,44 +283,23 @@ export default function RecruiterAnalyticsLayout({
       ...(filters?.companyId ? { companyId: filters.companyId } : {}),
       ...(filters?.from ? { from: filters.from } : {}),
       ...(filters?.to ? { to: filters.to } : {}),
+      ...extraQuery,
     };
-    router.push({ pathname: href, query: nextQuery }, undefined, { shallow: false });
+
+    router.push({ pathname, query: nextQuery }, undefined, { shallow: false });
   };
 
   const rightRail = right || <DefaultRightRail />;
 
-  // ✅ Pass right to RecruiterLayout — this makes the outer grid:
-  //    240px(sidebar) | 1fr(main/content) | 240px(right rail)
-  // ✅ contentFullBleed removes overflowX:hidden from <main> so bottom rows can bleed right
-  // ✅ NO header prop — page owns the internal layout
   return (
-    <RecruiterLayout
-      title={title}
-      activeNav="analytics"
-      right={rightRail}
-      contentFullBleed
-    >
-      {/* 
-        Everything here renders inside <main> which occupies the center 1fr column.
-        Rows 1-3 (header, filter bar, KPI) stay within <main> width — alongside right rail.
-        Bottom card rows bleed RIGHT by marginRight: BLEED_RIGHT to span into the right rail column.
-      */}
+    <RecruiterLayout title={title} activeNav="analytics" right={rightRail} contentFullBleed>
       <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
-
-        {/* Row 1: Analytics page header — stays within content column */}
         <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <AnalyticsHeader
-            title={pageTitle}
-            subtitle={pageSubtitle}
-            activeTab={activeTab}
-          />
+          <AnalyticsHeader title={pageTitle} subtitle={pageSubtitle} activeTab={activeTab} />
         </section>
 
-        {/* Row 2: Navigation + filter bar — stays within content column */}
         <section style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
           <div style={{ display: "grid", gap: 10 }}>
-
-            {/* View tabs + refresh */}
             <div
               style={{
                 display: "flex",
@@ -333,7 +309,16 @@ export default function RecruiterAnalyticsLayout({
                 flexWrap: "wrap",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0, flex: 1 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  minWidth: 0,
+                  flex: 1,
+                }}
+              >
                 <LabelCell>View:</LabelCell>
                 {MODE_TABS.map((tab) => (
                   <TabButton
@@ -345,7 +330,15 @@ export default function RecruiterAnalyticsLayout({
                   </TabButton>
                 ))}
               </div>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "flex-end", minWidth: 86 }}>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "flex-end",
+                  minWidth: 86,
+                }}
+              >
                 <div style={{ textAlign: "left" }}>
                   <div style={{ fontSize: 11, color: "#94A3B8" }}>Refresh</div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>30s live</div>
@@ -353,21 +346,29 @@ export default function RecruiterAnalyticsLayout({
               </div>
             </div>
 
-            {/* Report links */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+                minWidth: 0,
+              }}
+            >
               <LabelCell>Report:</LabelCell>
               {REPORT_LINKS.map((tab) => (
                 <TabButton
-                  key={tab.href}
-                  active={activePath === tab.href}
-                  onClick={() => pushWithFilters(tab.href)}
+                  key={tab.key}
+                  active={activeTab === "reports" && activeReport === tab.key}
+                  onClick={() =>
+                    pushWithFilters("/recruiter/analytics/reports", { report: tab.key })
+                  }
                 >
                   {tab.label}
                 </TabButton>
               ))}
             </div>
 
-            {/* Period + dropdowns */}
             <div style={{ ...SOFT_GLASS, borderRadius: 16, padding: 14, marginTop: 2 }}>
               <div
                 style={{
@@ -378,7 +379,16 @@ export default function RecruiterAnalyticsLayout({
                   flexWrap: "wrap",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    minWidth: 0,
+                    flex: 1,
+                  }}
+                >
                   <LabelCell>Period:</LabelCell>
                   {["7d", "30d", "90d", "ytd", "custom"].map((value) => (
                     <FilterPill
@@ -390,7 +400,16 @@ export default function RecruiterAnalyticsLayout({
                     </FilterPill>
                   ))}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    justifyContent: "flex-end",
+                  }}
+                >
                   <select
                     value={filters?.jobId || "all"}
                     onChange={(e) => onFilterChange?.({ jobId: e.target.value })}
@@ -401,6 +420,7 @@ export default function RecruiterAnalyticsLayout({
                     <option value="sales">Sales</option>
                     <option value="operations">Operations</option>
                   </select>
+
                   <select
                     value={filters?.recruiterId || "all"}
                     onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })}
@@ -411,7 +431,10 @@ export default function RecruiterAnalyticsLayout({
                     <option value="mchen">M. Chen</option>
                     <option value="slee">S. Lee</option>
                   </select>
-                  <button type="button" style={EXPORT_STYLE}>Export CSV</button>
+
+                  <button type="button" style={EXPORT_STYLE}>
+                    Export CSV
+                  </button>
                 </div>
               </div>
 
@@ -426,14 +449,33 @@ export default function RecruiterAnalyticsLayout({
                     paddingLeft: 54,
                   }}
                 >
-                  <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>From</div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: SLATE,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    From
+                  </div>
                   <input
                     type="date"
                     value={filters?.from || ""}
                     onChange={(e) => onFilterChange?.({ from: e.target.value })}
                     style={DATE_INPUT_STYLE}
                   />
-                  <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>To</div>
+
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: SLATE,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    To
+                  </div>
                   <input
                     type="date"
                     value={filters?.to || ""}
@@ -446,8 +488,6 @@ export default function RecruiterAnalyticsLayout({
           </div>
         </section>
 
-        {/* Row 3: KPI row — stays within content column, alongside right rail */}
-        {/* Row 4+: Page children — these get the bleed treatment in analytics/index.js */}
         {children}
       </div>
     </RecruiterLayout>

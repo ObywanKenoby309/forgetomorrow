@@ -26,10 +26,13 @@ function parseRange(range, fromStr, toStr) {
   let from = null;
   let to = now;
 
-  if (range === "custom" && fromStr && toStr) {
+    if (range === "custom" && fromStr && toStr) {
     const f = new Date(fromStr);
     const t = new Date(toStr);
+
     if (!Number.isNaN(f.getTime()) && !Number.isNaN(t.getTime())) {
+      f.setHours(0, 0, 0, 0);
+      t.setHours(23, 59, 59, 999);
       from = f;
       to = t;
     }
@@ -294,7 +297,7 @@ export default async function handler(req, res) {
     // Until we add that, all applies are treated as "Forge".
     const sources =
       totalApplies > 0
-        ? [{ name: "Forge", value: totalApplies }]
+        ? [{ name: "ForgeTomorrow", value: totalApplies }]
         : [];
 
     // ── Recruiter activity (weekly buckets) ────────────────────
