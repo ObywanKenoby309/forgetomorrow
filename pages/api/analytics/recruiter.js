@@ -176,11 +176,14 @@ export default async function handler(req, res) {
           refreshedAt: new Date().toISOString(),
           source: "SQL",
         },
-        kpis: {
+         kpis: {
           totalViews: 0,
           totalApplies: 0,
+          totalInterviews: 0,
+          totalHires: 0,
           avgTimeToFillDays: 0,
           conversionRatePct: 0,
+          offerAcceptanceRatePct: 0,
         },
         funnel: [
           { stage: "Views", value: 0 },
@@ -251,6 +254,11 @@ export default async function handler(req, res) {
     const conversionRatePct =
       totalViews > 0
         ? Number(((totalApplies / totalViews) * 100).toFixed(2))
+        : 0;
+		
+	const offerAcceptanceRatePct =
+      offers.length > 0
+        ? Number(((offersAccepted.length / offers.length) * 100).toFixed(2))
         : 0;
 
     // Average time-to-fill (in days) based on accepted offers
@@ -350,8 +358,11 @@ export default async function handler(req, res) {
       kpis: {
         totalViews,
         totalApplies,
+        totalInterviews: interviewsCount,
+        totalHires: hiresCount,
         avgTimeToFillDays,
         conversionRatePct,
+        offerAcceptanceRatePct,
       },
       funnel,
       sources,

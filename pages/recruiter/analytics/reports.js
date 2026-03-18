@@ -81,6 +81,12 @@ function getFiltersFromQuery(query) {
   };
 }
 
+function getReportFromQuery(query) {
+  const raw = typeof query.report === "string" ? query.report : "funnel";
+  const valid = REPORT_OPTIONS.some((option) => option.key === raw);
+  return valid ? raw : "funnel";
+}
+
 function NarrativeCard({ eyebrow, title, body, accent = "#FF7043" }) {
   return (
     <div
@@ -107,7 +113,9 @@ function NarrativeCard({ eyebrow, title, body, accent = "#FF7043" }) {
       >
         {eyebrow}
       </div>
-      <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginBottom: 6 }}>{title}</div>
+      <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginBottom: 6 }}>
+        {title}
+      </div>
       <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.7 }}>{body}</div>
     </div>
   );
@@ -134,7 +142,9 @@ function MethodCard({ eyebrow, title, body }) {
       >
         {eyebrow}
       </div>
-      <div style={{ fontSize: 16, fontWeight: 900, color: "#334155", marginTop: 8 }}>{title}</div>
+      <div style={{ fontSize: 16, fontWeight: 900, color: "#334155", marginTop: 8 }}>
+        {title}
+      </div>
       <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6, marginTop: 6 }}>{body}</div>
     </div>
   );
@@ -177,12 +187,8 @@ function ReportShell({ title, subtitle, visual, insights }) {
       <div style={{ fontSize: 14, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>{subtitle}</div>
 
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-          gap: 16,
-          marginTop: 16,
-        }}
+        className="grid grid-cols-1 xl:grid-cols-2 gap-4"
+        style={{ marginTop: 16, alignItems: "start" }}
       >
         <div style={{ ...GLASS, borderRadius: 16, padding: 16 }}>{visual}</div>
         <div style={{ display: "grid", gap: 12, alignContent: "start" }}>{insights}</div>
@@ -191,7 +197,7 @@ function ReportShell({ title, subtitle, visual, insights }) {
   );
 }
 
-function PlaceholderVisual({ title, lines = [] }) {
+function BuildingVisual({ title, body }) {
   return (
     <div
       style={{
@@ -199,7 +205,7 @@ function PlaceholderVisual({ title, lines = [] }) {
         borderRadius: 14,
         background: "rgba(255,255,255,0.58)",
         border: "1px solid rgba(255,255,255,0.24)",
-        padding: 16,
+        padding: 18,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
@@ -207,23 +213,37 @@ function PlaceholderVisual({ title, lines = [] }) {
     >
       <div>
         <div style={{ fontSize: 22, fontWeight: 900, color: "#334155" }}>{title}</div>
-        <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.7, marginTop: 8 }}>
-          Layout placeholder for this report. This panel is ready for chart or structured report content.
+        <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.7, marginTop: 10 }}>
+          {body}
         </div>
       </div>
 
-      <div style={{ display: "grid", gap: 10, marginTop: 18 }}>
-        {lines.map((line) => (
-          <div
-            key={line}
-            style={{
-              height: 14,
-              width: line,
-              borderRadius: 999,
-              background: "rgba(148,163,184,0.22)",
-            }}
-          />
-        ))}
+      <div
+        style={{
+          marginTop: 20,
+          borderRadius: 14,
+          padding: 14,
+          background: "rgba(255,255,255,0.72)",
+          border: "1px solid rgba(255,255,255,0.32)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#94A3B8",
+            marginBottom: 6,
+          }}
+        >
+          Status
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 900, color: "#334155" }}>Building</div>
+        <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6, marginTop: 6 }}>
+          This report is being wired to live analytics and will expand as the related endpoint and
+          aggregation logic come online.
+        </div>
       </div>
     </div>
   );
@@ -232,27 +252,52 @@ function PlaceholderVisual({ title, lines = [] }) {
 function Body() {
   const router = useRouter();
   const [filters, setFilters] = useState(getFiltersFromQuery(router.query));
-  const [activeReport, setActiveReport] = useState("funnel");
+  const [activeReport, setActiveReport] = useState(getReportFromQuery(router.query));
   const { data, error } = useAnalytics(filters);
 
   useEffect(() => {
     if (!router.isReady) return;
     setFilters(getFiltersFromQuery(router.query));
+    setActiveReport(getReportFromQuery(router.query));
   }, [router.isReady, router.query]);
 
   const onFilterChange = (patch) => {
     const next = { ...filters, ...patch };
     setFilters(next);
+
     router.replace(
       {
         pathname: router.pathname,
         query: {
+          ...router.query,
           range: next.range,
           jobId: next.jobId,
           recruiterId: next.recruiterId,
           companyId: next.companyId,
           ...(next.from ? { from: next.from } : {}),
           ...(next.to ? { to: next.to } : {}),
+        },
+      },
+      undefined,
+      { shallow: true, scroll: false }
+    );
+  };
+
+  const onReportChange = (reportKey) => {
+    setActiveReport(reportKey);
+
+    router.replace(
+      {
+        pathname: router.pathname,
+        query: {
+          ...router.query,
+          report: reportKey,
+          range: filters.range,
+          jobId: filters.jobId,
+          recruiterId: filters.recruiterId,
+          companyId: filters.companyId,
+          ...(filters.from ? { from: filters.from } : {}),
+          ...(filters.to ? { to: filters.to } : {}),
         },
       },
       undefined,
@@ -278,13 +323,13 @@ function Body() {
             <>
               <NarrativeCard
                 eyebrow="Key finding"
-                title="Your screening-to-interview transition is the main leverage point"
-                body="If application volume is healthy but interviews are lagging, the highest-value investigation is screening criteria, recruiter speed, and role-specific filtering friction."
+                title="Funnel drop-off should be diagnosed stage by stage"
+                body="A healthy top-of-funnel does not guarantee strong hiring efficiency. This report should help the team see where candidates are slowing, disappearing, or being filtered out too aggressively."
               />
               <NarrativeCard
                 eyebrow="Recommendation"
-                title="Use report pages to isolate which roles are suppressing conversion"
-                body="Engineering and specialist reqs often distort the combined funnel. Separate those reqs before making broad recruiting process changes."
+                title="Use this report to separate process drag from market difficulty"
+                body="If conversion weakness is concentrated at one stage, the team should inspect screening criteria, interview coordination, response timing, and role-specific qualification patterns before changing the broader recruiting strategy."
                 accent="#0F766E"
               />
             </>
@@ -297,20 +342,20 @@ function Body() {
       return (
         <ReportShell
           title="Source narrative"
-          subtitle="Source reporting should not stop at volume. The strongest recruiting teams compare which channels create interviews, hires, and strong downstream outcomes."
+          subtitle="Source reporting should not stop at volume. Recruiters need to understand which channels produce interviews, hires, and stronger downstream outcomes."
           visual={<SourceBreakdown data={data?.sources || []} />}
           insights={
             <>
               <NarrativeCard
                 eyebrow="Source quality"
                 title="High-volume sources are not always high-value sources"
-                body="This report should eventually compare source volume, source-to-interview, and source-to-hire so leadership can invest in the channels that actually produce outcomes."
+                body="This report should be used to compare source volume with downstream quality so the team can invest in channels that produce meaningful pipeline movement rather than surface-level traffic."
                 accent="#7C3AED"
               />
               <NarrativeCard
                 eyebrow="Meeting note"
-                title="Use this page to explain not just what changed, but where to act"
-                body="The purpose of Report Details is to prepare recruiters and leaders for discussion, not force them to interpret raw visuals alone."
+                title="Use this page to explain both performance and investment decisions"
+                body="The purpose of this report is not just to show what happened, but to support decisions about sourcing mix, recruiter effort, and where future recruiting energy should go."
                 accent="#D97706"
               />
             </>
@@ -323,24 +368,24 @@ function Body() {
       return (
         <ReportShell
           title="Recruiter activity narrative"
-          subtitle="Use this report to isolate how recruiter effort, response speed, and workflow consistency are affecting pipeline movement."
+          subtitle="Recruiter-level performance belongs here once recruiter attribution and ranking are fully aggregated from live data."
           visual={
-            <PlaceholderVisual
-              title="Recruiter Activity"
-              lines={["88%", "74%", "92%", "68%"]}
+            <BuildingVisual
+              title="Recruiter activity report"
+              body="Recruiter-level analytics are being wired to live performance aggregation. This report will surface recruiter comparison, throughput, and consistency once the leaderboard and attribution logic are in place."
             />
           }
           insights={
             <>
               <NarrativeCard
-                eyebrow="Key finding"
-                title="Recruiter-level variation is often hidden inside top-line funnel numbers"
-                body="A healthy combined funnel can still mask uneven recruiter throughput, inconsistent follow-up cadence, or response bottlenecks."
+                eyebrow="Status"
+                title="This report should never use fabricated rankings"
+                body="Recruiter comparison must be driven by real recruiter-level attribution data. Until that is available, this report should stay in a clearly marked Building state rather than imply accuracy that does not yet exist."
               />
               <NarrativeCard
-                eyebrow="Recommendation"
-                title="Use recruiter comparison to separate process issues from individual execution issues"
-                body="When one recruiter converts at a stronger rate with similar req mix, the team should inspect workflow timing, outreach habits, and qualification handling."
+                eyebrow="Plan"
+                title="The finished version should compare throughput, consistency, and outcomes"
+                body="Once wired, this report should help leaders distinguish between recruiter execution issues, req mix difficulty, and process-level drag across the team."
                 accent="#0F766E"
               />
             </>
@@ -353,24 +398,24 @@ function Body() {
       return (
         <ReportShell
           title="Time-to-Fill narrative"
-          subtitle={`Current average time-to-fill is ${avgTimeToFill} days. This report should help recruiters identify where delay is building and which roles need operational attention first.`}
+          subtitle={`Current average time-to-fill is ${avgTimeToFill} days. This report should explain where delay is building and which roles need operational attention first.`}
           visual={
-            <PlaceholderVisual
-              title="Time-to-Fill"
-              lines={["82%", "66%", "54%", "72%"]}
+            <BuildingVisual
+              title="Time-to-Fill report"
+              body="The page currently has the overall time-to-fill metric, but the deeper role-level and stage-level breakdown is still being wired. This report should expand into a true delay analysis surface."
             />
           }
           insights={
             <>
               <NarrativeCard
                 eyebrow="Key finding"
-                title="Time-to-fill should be explained by stage delay, not just final duration"
-                body="A single average hides whether the slowdown is happening at sourcing, screening, interview coordination, or offer close."
+                title="A single average is not enough"
+                body="Average time-to-fill is useful for the headline, but the real value comes from seeing whether delay is concentrated by role family, by recruiter, or by a specific funnel stage."
               />
               <NarrativeCard
                 eyebrow="Recommendation"
-                title="Break time-to-fill by role family and funnel stage"
-                body="This lets leadership see whether the issue is structural market difficulty, approval drag, or recruiter execution."
+                title="Build this report around where delay actually happens"
+                body="The finished report should explain whether the issue is sourcing difficulty, approval drag, scheduling slowdown, or offer-stage friction so the team knows where to intervene."
                 accent="#0F766E"
               />
             </>
@@ -383,11 +428,11 @@ function Body() {
       return (
         <ReportShell
           title="Quality of Hire narrative"
-          subtitle="Quality of Hire belongs in report detail and methodology context, not in the recruiter dashboard alone. It becomes meaningful once enough post-hire data exists to make the signal trustworthy."
+          subtitle="Quality of Hire belongs in report detail and methodology context. It activates once sufficient post-hire performance data exists for reliable scoring."
           visual={
-            <PlaceholderVisual
-              title="Quality of Hire"
-              lines={["76%", "64%", "58%"]}
+            <BuildingVisual
+              title="Quality of Hire report"
+              body="Quality of Hire is intentionally held in a Building state until the platform has enough post-hire data to produce a defensible composite score."
             />
           }
           insights={
@@ -395,12 +440,12 @@ function Body() {
               <NarrativeCard
                 eyebrow="Method note"
                 title="Quality of Hire should be grounded in transparent components"
-                body="Retention, manager scoring, and time-to-productivity should all contribute to the final signal so the model is explainable and defensible."
+                body="Retention, manager scoring, and time-to-productivity should all contribute to the final score so the metric is explainable, defensible, and useful in enterprise discussion."
               />
               <NarrativeCard
                 eyebrow="Recommendation"
-                title="Treat quality scoring as a cross-functional metric"
-                body="This report should eventually connect recruiting performance with hiring manager behavior and post-hire outcomes."
+                title="Treat this as a cross-functional metric"
+                body="The long-term value of Quality of Hire comes from connecting recruiting performance with hiring manager behavior and post-hire outcomes, not from a black-box score alone."
                 accent="#0F766E"
               />
             </>
@@ -414,9 +459,9 @@ function Body() {
         title="Talent Intelligence narrative"
         subtitle="Talent Intelligence should combine source quality, match reasoning, and role-specific signals so recruiters can explain not just outcomes, but the drivers behind them."
         visual={
-          <PlaceholderVisual
-            title="Talent Intelligence"
-            lines={["84%", "72%", "61%", "78%"]}
+          <BuildingVisual
+            title="Talent Intelligence report"
+            body="This report is being wired toward deeper recruiting intelligence such as match reasons, skills patterns, and role-specific signal comparison."
           />
         }
         insights={
@@ -424,12 +469,12 @@ function Body() {
             <NarrativeCard
               eyebrow="Key finding"
               title="The strongest recruiting intelligence connects source, fit, and conversion quality"
-              body="Recruiters need to understand not just where candidates came from, but why certain channels and profiles convert more efficiently for specific roles."
+              body="Recruiters need to understand not just where candidates came from, but why certain channels, profiles, and role patterns convert more efficiently than others."
             />
             <NarrativeCard
               eyebrow="Recommendation"
-              title="Use this report to compare channel quality and role-specific match strength"
-              body="The long-term goal is to help teams invest in the sources and candidate patterns that produce the strongest hiring outcomes."
+              title="Use this report to connect pattern recognition with action"
+              body="The finished version should help the team see which sources, candidate traits, and match signals repeatedly lead to stronger hiring outcomes for specific roles."
               accent="#0F766E"
             />
           </>
@@ -466,18 +511,11 @@ function Body() {
           Quality of Hire methodology
         </div>
         <div style={{ fontSize: 14, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>
-          Quality of Hire belongs here first, not on the recruiter dashboard. It becomes meaningful
-          once enough post-hire data exists to make the signal trustworthy.
+          Quality of Hire belongs here first, not on the recruiter dashboard. It activates once
+          sufficient post-hire performance data exists for reliable scoring.
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-            gap: 16,
-            marginTop: 16,
-          }}
-        >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
           <MethodCard
             eyebrow="Component 1 · 40%"
             title="90-Day Retention"
@@ -499,10 +537,11 @@ function Body() {
       <section style={{ ...GLASS, borderRadius: 18, padding: 18 }}>
         <div style={{ fontSize: 22, fontWeight: 900, color: "#334155" }}>Report explorer</div>
         <div style={{ fontSize: 14, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>
-          Choose one report at a time to review the visual, the key finding, and the recruiter-facing explanation.
+          Choose one report at a time to review the visual, the key finding, and the recruiter-facing
+          explanation.
         </div>
 
-        <ReportSelector activeReport={activeReport} onChange={setActiveReport} />
+        <ReportSelector activeReport={activeReport} onChange={onReportChange} />
 
         <div style={{ marginTop: 18 }}>{renderActiveReport()}</div>
       </section>
