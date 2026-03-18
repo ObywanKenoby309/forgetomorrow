@@ -98,8 +98,10 @@ function PresentationCard({ title, period, children }) {
           <div style={{ fontSize: 17, fontWeight: 900, color: "#334155" }}>{title}</div>
           <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{period}</div>
         </div>
+
         <button
           type="button"
+          disabled
           style={{
             borderRadius: 999,
             border: "1px solid rgba(255,112,67,0.20)",
@@ -109,12 +111,14 @@ function PresentationCard({ title, period, children }) {
             fontWeight: 800,
             padding: "7px 12px",
             cursor: "not-allowed",
+            opacity: 0.78,
           }}
-          title="Wire html2canvas next"
+          title="PNG export is being finalized"
         >
-          PNG next
+          Export PNG
         </button>
       </div>
+
       {children}
     </div>
   );
@@ -133,6 +137,7 @@ function Body() {
   const onFilterChange = (patch) => {
     const next = { ...filters, ...patch };
     setFilters(next);
+
     router.replace(
       {
         pathname: router.pathname,
@@ -196,6 +201,7 @@ function Body() {
               White-background cards for clean screenshots and slide-ready visuals.
             </div>
           </div>
+
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <select
               style={{
@@ -213,6 +219,7 @@ function Body() {
               <option value="png">PNG</option>
               <option value="svg">SVG</option>
             </select>
+
             <select
               style={{
                 borderRadius: 999,
@@ -229,8 +236,10 @@ function Body() {
               <option value="standard">Standard</option>
               <option value="high">High-res</option>
             </select>
+
             <button
               type="button"
+              disabled
               style={{
                 borderRadius: 999,
                 border: "none",
@@ -241,22 +250,19 @@ function Body() {
                 padding: "8px 14px",
                 cursor: "not-allowed",
                 boxShadow: "0 8px 18px rgba(255,112,67,0.20)",
+                opacity: 0.78,
               }}
-              title="Wire zip export next"
+              title="Bulk export is being finalized"
             >
-              Download All next
+              Download All
             </button>
           </div>
         </div>
       </section>
 
-      {/* ✅ 2-col presentation grid — inline, container-relative */}
       <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-          gap: 20,
-        }}
+        className="grid grid-cols-1 xl:grid-cols-2 gap-5"
+        style={{ alignItems: "start" }}
       >
         <PresentationCard title="Application Funnel" period={periodLabel}>
           <ApplicationFunnel data={data?.funnel || []} />
@@ -267,16 +273,12 @@ function Body() {
         </PresentationCard>
 
         <PresentationCard title="KPI Summary" period={periodLabel}>
-          {/* ✅ 3-col KPI grid inside card — inline */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-              gap: 16,
-            }}
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             <KPICard label="Job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
-            <KPICard label="Applications" value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)} />
+            <KPICard
+              label="Applications"
+              value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)}
+            />
             <KPICard
               label="Conversion"
               value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"}
@@ -285,7 +287,10 @@ function Body() {
               label="Time-to-fill"
               value={data ? `${data.kpis.avgTimeToFillDays} days` : loading ? "…" : "0 days"}
             />
-            <KPICard label="Interviews" value={data?.kpis?.totalInterviews ?? (loading ? "…" : 0)} />
+            <KPICard
+              label="Interviews"
+              value={data?.kpis?.totalInterviews ?? (loading ? "…" : 0)}
+            />
             <KPICard label="Hires" value={data?.kpis?.totalHires ?? (loading ? "…" : 0)} />
           </div>
         </PresentationCard>
