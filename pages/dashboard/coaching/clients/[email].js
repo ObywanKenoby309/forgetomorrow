@@ -408,7 +408,7 @@ export default function ClientProfilePage() {
             </div>
             <div>
               <label style={labelStyle}>External Profile URL <span style={{ color: '#B0BEC5', fontWeight: 400 }}>(optional)</span></label>
-              <input className="cp-input" value={form.profileUrl || ''} onChange={onChange('profileUrl')} placeholder="https://linkedin.com/in/…" />
+              <input className="cp-input" value={form.profileUrl || ''} onChange={onChange('profileUrl')} placeholder="https://…" />
             </div>
             <div>
               <label style={labelStyle}>Next Session</label>

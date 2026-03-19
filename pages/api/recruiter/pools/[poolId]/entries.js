@@ -94,7 +94,7 @@ function pickCandidateShape(e) {
     externalCandidateId: e.externalCandidateId || null,
     externalEmail: e.externalCandidate?.email || "",
     externalPhone: e.externalCandidate?.phone || "",
-    externalLinkedinUrl: e.externalCandidate?.linkedinUrl || "",
+    externalUrl: e.externalCandidate?.linkedinUrl || "",
 
     name: e.candidateName || "",
     headline: e.candidateHeadline || "",
@@ -262,7 +262,7 @@ export default async function handler(req, res) {
       }
 
       // ✅ NEW: allow creation of external candidate if provided as object
-      // body.externalCandidate = { email?, phone?, linkedinUrl?, company?, title? ... }
+      // body.externalCandidate = { email?, phone?, externalUrl?, company?, title? ... }
       if (!candidateUserId && !externalCandidateId && body.externalCandidate && typeof body.externalCandidate === "object") {
         const exObj = body.externalCandidate;
 

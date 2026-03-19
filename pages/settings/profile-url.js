@@ -88,7 +88,7 @@ export default function ProfileUrlSettings() {
 
       <p style={{ color: '#455A64', marginBottom: 20 }}>
         Choose a unique public URL for your ForgeTomorrow profile. This link can be
-        shared on resumes, LinkedIn, or with recruiters.
+        shared on resumes, external platforms, or with recruiters.
       </p>
 
       {/* Current URL (if any) */}

@@ -34,7 +34,7 @@ export default function ResumePreview() {
       email: formData.email || '',
       phone: formData.phone || '',
       location: formData.location || '',
-      linkedin: formData.linkedin || '',
+      externalurl: formData.externalurl || '',
       github: formData.github || '',
       portfolio: formData.portfolio || '',
     },

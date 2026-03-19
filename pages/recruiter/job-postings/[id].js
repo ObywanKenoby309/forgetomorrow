@@ -1074,7 +1074,7 @@ function AddCandidateModal({ jobId, onClose, onAdded }) {
   const [newName,     setNewName]     = useState("");
   const [newEmail,    setNewEmail]    = useState("");
   const [newPhone,    setNewPhone]    = useState("");
-  const [newLinkedin, setNewLinkedin] = useState("");
+  const [newExternalUrl, setNewExternalUrl] = useState("");
   const [newHeadline, setNewHeadline] = useState("");
   const [newLocation, setNewLocation] = useState("");
   const [newCompany,  setNewCompany]  = useState("");
@@ -1117,7 +1117,7 @@ function AddCandidateModal({ jobId, onClose, onAdded }) {
     setSearchResults([]);
     setExternalCandidateId("");
     setNewName(""); setNewEmail(""); setNewPhone("");
-    setNewLinkedin(""); setNewHeadline(""); setNewLocation(""); setNewCompany("");
+    setNewExternalUrl(""); setNewHeadline(""); setNewLocation(""); setNewCompany("");
     setNotes("");
     setSource("REFERRAL");
     setStatus("Applied");
@@ -1157,7 +1157,7 @@ function AddCandidateModal({ jobId, onClose, onAdded }) {
         name:        newName.trim(),
         email:       newEmail.trim()    || undefined,
         phone:       newPhone.trim()    || undefined,
-        linkedinUrl: newLinkedin.trim() || undefined,
+        linkedinUrl: newExternalUrl.trim() || undefined,
         headline:    newHeadline.trim() || undefined,
         location:    newLocation.trim() || undefined,
         company:     newCompany.trim()  || undefined,
@@ -1497,12 +1497,12 @@ function AddCandidateModal({ jobId, onClose, onAdded }) {
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>LinkedIn URL</label>
+                  <label style={labelStyle}>External URL</label>
                   <input
                     type="url"
-                    placeholder="linkedin.com/in/..."
+                    placeholder="https://..."
                     value={newLinkedin}
-                    onChange={(e) => setNewLinkedin(e.target.value)}
+                    onChange={(e) => setExternalUrl(e.target.value)}
                     style={inputStyle}
                   />
                 </div>

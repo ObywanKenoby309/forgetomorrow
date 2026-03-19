@@ -58,7 +58,7 @@ export default function ReverseResumeTemplatePDF({ data }) {
               personalInfo.email,
               personalInfo.phone,
               personalInfo.location,
-              personalInfo.linkedin && `LinkedIn: ${personalInfo.linkedin}`,
+              personalInfo.externalurl && `External URL: ${personalInfo.externalurl}`,
               personalInfo.github && `GitHub: ${personalInfo.github}`,
               personalInfo.portfolio && `Portfolio: ${personalInfo.portfolio}`,
               personalInfo.ftProfile && `FT Profile: ${personalInfo.ftProfile}`,

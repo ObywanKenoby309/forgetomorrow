@@ -522,7 +522,7 @@ export default function CreateResumePage() {
       (formData.email ||
         formData.phone ||
         formData.location ||
-        formData.linkedin ||
+        formData.externalurl ||
         formData.github ||
         formData.portfolio ||
         formData.targetedRole)) ||
@@ -715,7 +715,7 @@ export default function CreateResumePage() {
       email: formData.email || '',
       phone: formData.phone || '',
       location: formData.location || '',
-      linkedin: formData.linkedin || '',
+      externalurl: formData.externalurl || '',
       github: formData.github || '',
       portfolio: formData.portfolio || '',
       ftProfile: formData.forgeUrl || formData.ftProfile || '',

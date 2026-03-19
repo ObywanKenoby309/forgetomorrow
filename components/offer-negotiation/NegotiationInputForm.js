@@ -341,7 +341,7 @@ export default function NegotiationInputForm({ onSubmit }) {
               value={form.portfolioLinks}
               onChange={handleChange}
               className="w-full border rounded px-3 py-2 border-gray-300"
-              placeholder="GitHub, website, LinkedIn projects, etc."
+              placeholder="GitHub, website, other projects, etc."
             />
           </div>
         </div>

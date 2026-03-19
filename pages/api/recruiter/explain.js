@@ -160,7 +160,7 @@ const SPEC = {
     ],
   },
 
-  hard_excludes_sections: ["name", "email", "phone", "address", "linkedin", "contact", "header"],
+  hard_excludes_sections: ["name", "email", "phone", "address", "externalurl", "contact", "header"],
 
   // Style/context traits are preferences, not capabilities. Never penalize.
   style_context_terms: [

@@ -179,7 +179,7 @@ export default async function handler(req, res) {
         formDataRaw.forgeUrl ||
         formDataRaw.ftProfile ||
         `https://forgetomorrow.com/u/${slug}`,
-      linkedin: formDataRaw.linkedin || '',
+      externalurl: formDataRaw.externalurl || '',
       github: formDataRaw.github || '',
       role: formDataRaw.role || formDataRaw.targetedRole || '',
     };
