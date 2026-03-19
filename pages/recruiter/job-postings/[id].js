@@ -1034,6 +1034,603 @@ function ApplicationsList({
   );
 }
 
+const SOURCE_OPTIONS = [
+  { value: "FORGETOMORROW", label: "ForgeTomorrow" },
+  { value: "REFERRAL",      label: "Referral" },
+  { value: "CAREERS",       label: "Careers Page" },
+  { value: "EXTERNAL",      label: "External" },
+  { value: "OTHER",         label: "Other" },
+];
+ 
+const STATUS_OPTIONS = [
+  { value: "Applied",      label: "Applied" },
+  { value: "Interviewing", label: "Interviewing" },
+  { value: "Offers",       label: "Offers" },
+  { value: "ClosedOut",    label: "Closed Out" },
+];
+ 
+function AddCandidateModal({ jobId, onClose, onAdded }) {
+  // Tab: "search" | "known" | "new"
+  const [tab, setTab] = useState("search");
+ 
+  // Shared fields
+  const [source, setSource]   = useState("REFERRAL");
+  const [status, setStatus]   = useState("Applied");
+  const [notes, setNotes]     = useState("");
+  const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState(null);
+  const [success, setSuccess] = useState(null);
+ 
+  // Tab: search — find existing ForgeTomorrow user
+  const [searchQuery, setSearchQuery]   = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching]       = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+ 
+  // Tab: known — existing ExternalCandidate by ID
+  const [externalCandidateId, setExternalCandidateId] = useState("");
+ 
+  // Tab: new — brand new external candidate fields
+  const [newName,     setNewName]     = useState("");
+  const [newEmail,    setNewEmail]    = useState("");
+  const [newPhone,    setNewPhone]    = useState("");
+  const [newLinkedin, setNewLinkedin] = useState("");
+  const [newHeadline, setNewHeadline] = useState("");
+  const [newLocation, setNewLocation] = useState("");
+  const [newCompany,  setNewCompany]  = useState("");
+ 
+  // Close on Escape
+  useEffect(() => {
+    const fn = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [onClose]);
+ 
+  // Debounced user search
+  useEffect(() => {
+    if (tab !== "search") return;
+    if (!searchQuery.trim()) { setSearchResults([]); return; }
+ 
+    const timer = setTimeout(async () => {
+      try {
+        setSearching(true);
+        const res  = await fetch(
+          `/api/recruiter/candidates?q=${encodeURIComponent(searchQuery.trim())}&limit=8`
+        );
+        const json = await res.json().catch(() => ({}));
+        setSearchResults(Array.isArray(json?.candidates) ? json.candidates : []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 320);
+ 
+    return () => clearTimeout(timer);
+  }, [searchQuery, tab]);
+ 
+  function resetForm() {
+    setError(null);
+    setSuccess(null);
+    setSelectedUser(null);
+    setSearchQuery("");
+    setSearchResults([]);
+    setExternalCandidateId("");
+    setNewName(""); setNewEmail(""); setNewPhone("");
+    setNewLinkedin(""); setNewHeadline(""); setNewLocation(""); setNewCompany("");
+    setNotes("");
+    setSource("REFERRAL");
+    setStatus("Applied");
+  }
+ 
+  function switchTab(t) {
+    setTab(t);
+    setError(null);
+    setSuccess(null);
+  }
+ 
+  async function handleSubmit() {
+    setError(null);
+    setSuccess(null);
+ 
+    // Validate per tab
+    if (tab === "search" && !selectedUser) {
+      setError("Please select a candidate from the search results.");
+      return;
+    }
+    if (tab === "known" && !externalCandidateId.trim()) {
+      setError("Please enter an external candidate ID.");
+      return;
+    }
+    if (tab === "new" && !newName.trim()) {
+      setError("Candidate name is required.");
+      return;
+    }
+ 
+    const body = {
+      source,
+      status,
+      notes: notes.trim() || undefined,
+      ...(tab === "search" ? { userId: selectedUser.id } : {}),
+      ...(tab === "known"  ? { externalCandidateId: externalCandidateId.trim() } : {}),
+      ...(tab === "new"    ? {
+        name:        newName.trim(),
+        email:       newEmail.trim()    || undefined,
+        phone:       newPhone.trim()    || undefined,
+        linkedinUrl: newLinkedin.trim() || undefined,
+        headline:    newHeadline.trim() || undefined,
+        location:    newLocation.trim() || undefined,
+        company:     newCompany.trim()  || undefined,
+      } : {}),
+    };
+ 
+    try {
+      setSaving(true);
+      const res  = await fetch(
+        `/api/recruiter/job-postings/${jobId}/applications/create`,
+        {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify(body),
+        }
+      );
+      const json = await res.json().catch(() => ({}));
+ 
+      if (!res.ok) {
+        setError(json?.error || `Something went wrong (HTTP ${res.status})`);
+        return;
+      }
+ 
+      setSuccess(`${json.application?.candidate?.name || "Candidate"} added to pipeline.`);
+      onAdded(json.application);
+      resetForm();
+    } catch (e) {
+      setError(`Failed to add candidate. ${String(e?.message || "")}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+ 
+  const tabStyle = (active) => ({
+    padding:      "7px 14px",
+    borderRadius: 999,
+    border:       "none",
+    background:   active ? "rgba(255,112,67,0.12)" : "transparent",
+    color:        active ? "#9A3412" : "#64748B",
+    fontWeight:   active ? 800 : 600,
+    fontSize:     13,
+    cursor:       "pointer",
+    transition:   "all 130ms ease",
+  });
+ 
+  const inputStyle = {
+    width:        "100%",
+    padding:      "8px 12px",
+    borderRadius: 9,
+    border:       "1px solid rgba(51,65,85,0.18)",
+    background:   "rgba(255,255,255,0.92)",
+    fontSize:     13,
+    color:        "#334155",
+    outline:      "none",
+  };
+ 
+  const labelStyle = {
+    display:      "block",
+    fontSize:     11,
+    fontWeight:   700,
+    color:        "#64748B",
+    marginBottom: 5,
+    textTransform:"uppercase",
+    letterSpacing:"0.05em",
+  };
+ 
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position:       "fixed",
+        inset:          0,
+        zIndex:         60,
+        background:     "rgba(15,23,42,0.48)",
+        backdropFilter: "blur(5px)",
+        display:        "flex",
+        alignItems:     "center",
+        justifyContent: "center",
+        padding:        24,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background:    "#fff",
+          borderRadius:  18,
+          boxShadow:     "0 20px 60px rgba(15,23,42,0.20)",
+          width:         "100%",
+          maxWidth:      560,
+          maxHeight:     "90vh",
+          overflow:      "auto",
+          display:       "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding:      "16px 20px",
+          borderBottom: "1px solid rgba(226,232,240,0.7)",
+          display:      "flex",
+          alignItems:   "center",
+          justifyContent:"space-between",
+          flexShrink:   0,
+        }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 900, color: "#334155" }}>
+              Add Candidate to Pipeline
+            </div>
+            <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
+              Choose how this candidate is entering your pipeline
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: 32, height: 32, borderRadius: 999,
+              border: "1px solid rgba(51,65,85,0.14)",
+              background: "rgba(255,255,255,0.9)",
+              color: "#64748B", fontSize: 15, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+ 
+        {/* Tab strip */}
+        <div style={{
+          display:    "flex",
+          gap:        4,
+          padding:    "12px 20px 0",
+          borderBottom:"1px solid rgba(226,232,240,0.5)",
+          paddingBottom: 12,
+          flexShrink: 0,
+        }}>
+          <button type="button" style={tabStyle(tab === "search")} onClick={() => switchTab("search")}>
+            🔍 Search Users
+          </button>
+          <button type="button" style={tabStyle(tab === "known")} onClick={() => switchTab("known")}>
+            📋 Known External
+          </button>
+          <button type="button" style={tabStyle(tab === "new")} onClick={() => switchTab("new")}>
+            ➕ New External
+          </button>
+        </div>
+ 
+        {/* Body */}
+        <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+ 
+          {/* ── TAB: Search ForgeTomorrow users ── */}
+          {tab === "search" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6 }}>
+                Search for an existing ForgeTomorrow user and add them directly to this job's pipeline.
+              </div>
+ 
+              <div>
+                <label style={labelStyle}>Search by name or email</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Jamie Chen or jamie@email.com"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setSelectedUser(null); }}
+                  style={inputStyle}
+                  autoFocus
+                />
+              </div>
+ 
+              {searching && (
+                <div style={{ fontSize: 12, color: "#94A3B8" }}>Searching…</div>
+              )}
+ 
+              {!searching && searchResults.length > 0 && (
+                <div style={{
+                  border: "1px solid rgba(226,232,240,0.8)",
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  maxHeight: 220,
+                  overflowY: "auto",
+                }}>
+                  {searchResults.map((u) => {
+                    const isSelected = selectedUser?.id === u.id;
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => setSelectedUser(u)}
+                        style={{
+                          width:      "100%",
+                          textAlign:  "left",
+                          padding:    "10px 14px",
+                          borderBottom:"1px solid rgba(226,232,240,0.5)",
+                          background: isSelected ? "rgba(255,112,67,0.08)" : "#fff",
+                          cursor:     "pointer",
+                          display:    "flex",
+                          alignItems: "center",
+                          justifyContent:"space-between",
+                          gap: 8,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#334155" }}>
+                            {u.name || "Unnamed"}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#64748B", marginTop: 2 }}>
+                            {u.email || "—"}
+                            {u.title ? ` · ${u.title}` : ""}
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <span style={{ fontSize: 12, fontWeight: 800, color: "#FF7043" }}>
+                            ✓ Selected
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+ 
+              {!searching && searchQuery.trim() && searchResults.length === 0 && (
+                <div style={{ fontSize: 12, color: "#94A3B8" }}>
+                  No users found. Try a different name or email.
+                </div>
+              )}
+ 
+              {selectedUser && (
+                <div style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  background: "rgba(255,112,67,0.06)",
+                  border: "1px solid rgba(255,112,67,0.20)",
+                  fontSize: 13,
+                  color: "#334155",
+                }}>
+                  <span style={{ fontWeight: 800 }}>Adding:</span>{" "}
+                  {selectedUser.name || "Unnamed"}{" "}
+                  {selectedUser.email ? `(${selectedUser.email})` : ""}
+                </div>
+              )}
+            </div>
+          )}
+ 
+          {/* ── TAB: Known ExternalCandidate ── */}
+          {tab === "known" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6 }}>
+                Add a candidate who already exists in your organization's external candidate database.
+                Paste their External Candidate ID below.
+              </div>
+              <div>
+                <label style={labelStyle}>External Candidate ID</label>
+                <input
+                  type="text"
+                  placeholder="e.g. clx9a2b3c0000abc123def456"
+                  value={externalCandidateId}
+                  onChange={(e) => setExternalCandidateId(e.target.value)}
+                  style={inputStyle}
+                  autoFocus
+                />
+              </div>
+              <div style={{ fontSize: 11, color: "#94A3B8", lineHeight: 1.6 }}>
+                You can find External Candidate IDs in your Talent Pools or Candidate Center.
+              </div>
+            </div>
+          )}
+ 
+          {/* ── TAB: New external candidate ── */}
+          {tab === "new" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6 }}>
+                Add a candidate who came in through a referral, careers page, or external source.
+                This will create a new external candidate record in your organization's database.
+              </div>
+ 
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={labelStyle}>Full name <span style={{ color: "#FF7043" }}>*</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Jordan Smith"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    style={inputStyle}
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Email</label>
+                  <input
+                    type="email"
+                    placeholder="jordan@email.com"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Phone</label>
+                  <input
+                    type="tel"
+                    placeholder="+1 555 000 0000"
+                    value={newPhone}
+                    onChange={(e) => setNewPhone(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Current title / headline</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Senior Engineer"
+                    value={newHeadline}
+                    onChange={(e) => setNewHeadline(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Current company</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Acme Corp"
+                    value={newCompany}
+                    onChange={(e) => setNewCompany(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Location</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Austin, TX"
+                    value={newLocation}
+                    onChange={(e) => setNewLocation(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>LinkedIn URL</label>
+                  <input
+                    type="url"
+                    placeholder="linkedin.com/in/..."
+                    value={newLinkedin}
+                    onChange={(e) => setNewLinkedin(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+ 
+          {/* ── Shared fields — all tabs ── */}
+          <div style={{
+            borderTop:  "1px solid rgba(226,232,240,0.6)",
+            paddingTop: 14,
+            display:    "flex",
+            flexDirection:"column",
+            gap: 12,
+          }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <label style={labelStyle}>
+                  Source <span style={{ color: "#FF7043" }}>*</span>
+                </label>
+                <select
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  style={{ ...inputStyle, cursor: "pointer" }}
+                >
+                  {SOURCE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Pipeline stage</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  style={{ ...inputStyle, cursor: "pointer" }}
+                >
+                  {STATUS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+ 
+            <div>
+              <label style={labelStyle}>Recruiter note (optional)</label>
+              <textarea
+                rows={2}
+                placeholder="How did this candidate come to your attention? Any context for the team."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }}
+              />
+            </div>
+          </div>
+ 
+          {/* Error / success */}
+          {error && (
+            <div style={{
+              padding: "10px 14px", borderRadius: 10,
+              background: "rgba(254,242,242,0.9)",
+              border: "1px solid rgba(239,68,68,0.22)",
+              color: "#B91C1C", fontSize: 13,
+            }}>
+              {error}
+            </div>
+          )}
+ 
+          {success && (
+            <div style={{
+              padding: "10px 14px", borderRadius: 10,
+              background: "rgba(240,253,244,0.9)",
+              border: "1px solid rgba(22,163,74,0.22)",
+              color: "#15803D", fontSize: 13, fontWeight: 700,
+            }}>
+              ✓ {success}
+            </div>
+          )}
+        </div>
+ 
+        {/* Footer */}
+        <div style={{
+          padding:      "14px 20px",
+          borderTop:    "1px solid rgba(226,232,240,0.6)",
+          display:      "flex",
+          alignItems:   "center",
+          justifyContent:"flex-end",
+          gap:          10,
+          flexShrink:   0,
+        }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: "8px 16px", borderRadius: 999,
+              border: "1px solid rgba(51,65,85,0.16)",
+              background: "rgba(255,255,255,0.9)",
+              color: "#64748B", fontSize: 13, fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={saving}
+            style={{
+              padding:    "8px 20px",
+              borderRadius: 999,
+              border:     "none",
+              background: saving ? "#94A3B8" : "#FF7043",
+              color:      "#fff",
+              fontSize:   13,
+              fontWeight: 800,
+              cursor:     saving ? "default" : "pointer",
+              boxShadow:  saving ? "none" : "0 4px 12px rgba(255,112,67,0.28)",
+              transition: "all 130ms ease",
+            }}
+          >
+            {saving ? "Adding…" : "Add to Pipeline"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function RecruiterJobApplicantsPage() {
   const router = useRouter();
 
@@ -1068,6 +1665,9 @@ export default function RecruiterJobApplicantsPage() {
   // Small alignment modal state
   const [openAlignAppId, setOpenAlignAppId] = useState(null);
   const [openAlignCandidate, setOpenAlignCandidate] = useState(null);
+  
+  const [addCandidateOpen, setAddCandidateOpen] = useState(false);
+  const [addError, setAddError]                 = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -1344,6 +1944,19 @@ export default function RecruiterJobApplicantsPage() {
     setOpenAlignCandidate(app?.candidate || null);
     ensureWhy(app.id, app?.candidate?.id);
   }
+  
+  function handleCandidateAdded(newApplication) {
+  // Normalize the status to match what the pipeline UI expects
+  const normalized = {
+    ...newApplication,
+    status:    normalizeStatusForUi(newApplication.status),
+    appliedAt: newApplication.appliedAt || new Date().toISOString(),
+    candidate: newApplication.candidate || { id: null, name: "Candidate", email: null },
+  };
+ 
+  // Push into apps state — pipeline updates instantly, no reload needed
+  setApps((prev) => [normalized, ...prev]);
+}
 
   const headerRight = (
     <div className="flex items-center justify-center gap-2 flex-wrap">
@@ -1446,15 +2059,38 @@ export default function RecruiterJobApplicantsPage() {
             {/* Full-width pipeline under BOTH columns */}
             <div className="xl:col-span-2">
               <SectionCard
-                title={`Pipeline (${apps.length})`}
-                right={
-                  <div className="text-xs text-slate-500">
-                    {viewMode === "kanban"
-                      ? "Drag cards between columns or use the stage selector."
-                      : "Use the stage selector to move candidates."}
-                  </div>
-                }
-              >
+  title={`Pipeline (${apps.length})`}
+  right={
+    <div className="flex items-center gap-3 flex-wrap">
+      <div className="text-xs text-slate-500">
+        {viewMode === "kanban"
+          ? "Drag cards between columns or use the stage selector."
+          : "Use the stage selector to move candidates."}
+      </div>
+      <button
+        type="button"
+        onClick={() => setAddCandidateOpen(true)}
+        style={{
+          display:      "inline-flex",
+          alignItems:   "center",
+          gap:          5,
+          padding:      "6px 13px",
+          borderRadius: 999,
+          border:       "none",
+          background:   "#FF7043",
+          color:        "#fff",
+          fontSize:     12,
+          fontWeight:   800,
+          cursor:       "pointer",
+          boxShadow:    "0 3px 10px rgba(255,112,67,0.26)",
+          whiteSpace:   "nowrap",
+        }}
+      >
+        + Add Candidate
+      </button>
+    </div>
+  }
+>
                 {loading ? (
                   <div className="text-sm text-slate-500">Loading…</div>
                 ) : apps.length ? (
@@ -1591,6 +2227,21 @@ export default function RecruiterJobApplicantsPage() {
             }}
           />
         ) : null}
+		
+		{addCandidateOpen && jobId ? (
+  <AddCandidateModal
+    jobId={jobId}
+    onClose={() => {
+      setAddCandidateOpen(false);
+      setAddError(null);
+    }}
+    onAdded={(newApp) => {
+      handleCandidateAdded(newApp);
+      // Keep modal open so recruiter can add another if needed
+      // They can close manually when done
+    }}
+  />
+) : null}
       </RecruiterLayout>
     </PlanProvider>
   );

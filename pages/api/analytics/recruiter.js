@@ -284,10 +284,29 @@ export default async function handler(req, res) {
 
     // ── Source breakdown ───────────────────────────────────────
     // Application currently has no source field yet.
-    const sources =
-      totalApplies > 0
-        ? [{ name: "ForgeTomorrow", value: totalApplies }]
-        : [];
+    // ── Source breakdown ───────────────────────────────────────
+const sourceGroups = await prisma.application.groupBy({
+  by: ["source"],
+  where: {
+    jobId:     { in: jobIds },
+    appliedAt: dateFilter,
+  },
+  _count: { id: true },
+  orderBy: { _count: { id: "desc" } },
+});
+
+const SOURCE_LABELS = {
+  FORGETOMORROW: "ForgeTomorrow",
+  EXTERNAL:      "External",
+  REFERRAL:      "Referral",
+  CAREERS:       "Careers",
+  OTHER:         "Other",
+};
+
+const sources = sourceGroups.map((row) => ({
+  name:  SOURCE_LABELS[row.source] ?? row.source,
+  value: row._count.id,
+}));
 
     // ── Recruiter activity ─────────────────────────────────────
     // For now:

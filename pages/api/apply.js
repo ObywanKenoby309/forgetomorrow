@@ -33,6 +33,7 @@ export default async function handler(req, res) {
         jobId,
         resumeId: resumeId || null,
         coverId: coverId || null,
+		source: "FORGETOMORROW",
         // 🔹 NEW: ensure recruiter/org scoping
         accountKey: job?.accountKey || null,
       },

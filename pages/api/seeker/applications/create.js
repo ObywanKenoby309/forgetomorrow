@@ -77,6 +77,7 @@ export default async function handler(req, res) {
 
         // 🔹 explicit unscoped seeker application
         accountKey: null,
+		source: "EXTERNAL",
       },
       select: {
         id: true,
