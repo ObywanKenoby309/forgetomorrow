@@ -794,7 +794,34 @@ function Body() {
 
     if (activeReport === "qualityOfHire") {
       return (
-        <ReportShell
+        <>
+          <div style={{ ...GLASS, borderRadius: 16, padding: 18, marginBottom: 16 }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: "#334155" }}>
+              Quality of Hire methodology
+            </div>
+            <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>
+              Quality of Hire belongs here first, not on the recruiter dashboard. It activates once
+              sufficient post-hire performance data exists for reliable scoring.
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <MethodCard
+                eyebrow="Component 1 · 40%"
+                title="90-Day Retention"
+                body="Measures whether the hire stayed through the 90-day mark."
+              />
+              <MethodCard
+                eyebrow="Component 2 · 35%"
+                title="Manager Rating"
+                body="Uses hiring manager scoring across early performance windows."
+              />
+              <MethodCard
+                eyebrow="Component 3 · 25%"
+                title="Ramp Time"
+                body="Compares time-to-productivity against role-specific benchmarks."
+              />
+            </div>
+          </div>
+          <ReportShell
           title="Quality of Hire narrative"
           subtitle={
             (qohData?.recordsCount ?? 0) < (qohData?.minimumRequired ?? 5)
@@ -954,6 +981,7 @@ function Body() {
             </>
           }
         />
+        </>
       );
     }
 
@@ -1047,34 +1075,6 @@ function Body() {
           {String(error)}
         </div>
       ) : null}
-
-      <section style={{ ...GLASS, borderRadius: 18, padding: 18 }}>
-        <div style={{ fontSize: 22, fontWeight: 900, color: "#334155" }}>
-          Quality of Hire methodology
-        </div>
-        <div style={{ fontSize: 14, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>
-          Quality of Hire belongs here first, not on the recruiter dashboard. It activates once
-          sufficient post-hire performance data exists for reliable scoring.
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-          <MethodCard
-            eyebrow="Component 1 · 40%"
-            title="90-Day Retention"
-            body="Measures whether the hire stayed through the 90-day mark."
-          />
-          <MethodCard
-            eyebrow="Component 2 · 35%"
-            title="Manager Rating"
-            body="Uses hiring manager scoring across early performance windows."
-          />
-          <MethodCard
-            eyebrow="Component 3 · 25%"
-            title="Ramp Time"
-            body="Compares time-to-productivity against role-specific benchmarks."
-          />
-        </div>
-      </section>
 
       <section style={{ ...GLASS, borderRadius: 18, padding: 18 }}>
         <div style={{ fontSize: 22, fontWeight: 900, color: "#334155" }}>Report explorer</div>
