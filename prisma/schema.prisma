@@ -84,6 +84,9 @@ model Application {
   resume         Resume?                   @relation(fields: [resumeId], references: [id])
   template       ApplicationTemplate?      @relation(fields: [templateId], references: [id])
   user           User                      @relation(fields: [userId], references: [id])
+  source         ApplicationSource  	   @default(FORGETOMORROW)
+  externalCandidateId String?
+  externalCandidate   ExternalCandidate?   @relation(fields: [externalCandidateId], references: [id])
 
   @@unique([userId, jobId], name: "user_job_unique")
   @@index([accountKey])
@@ -909,6 +912,7 @@ model ExternalCandidate {
   organization    Organization      @relation("OrganizationExternalCandidates", fields: [accountKey], references: [accountKey], onDelete: Cascade)
   createdBy       User?             @relation("UserExternalCandidatesCreated", fields: [createdByUserId], references: [id])
   poolEntries     TalentPoolEntry[]
+  applications    Application[]
 
   @@index([accountKey])
   @@index([createdByUserId])
@@ -1704,6 +1708,14 @@ enum WorkflowTrigger {
   SLA_WARNING
   SLA_BREACHED
   COMMENT_ADDED
+}
+
+enum ApplicationSource {
+  FORGETOMORROW
+  EXTERNAL
+  REFERRAL
+  CAREERS
+  OTHER
 }
 
 model HireQuality {
