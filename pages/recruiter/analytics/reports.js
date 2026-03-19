@@ -256,6 +256,7 @@ function Body() {
   const { data, error } = useAnalytics(filters);
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [timeToFillData, setTimeToFillData] = useState(null);
+  const [qohData, setqohData] = useState(null);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -342,6 +343,55 @@ function Body() {
     };
 
     loadTimeToFill();
+
+    return () => {
+      active = false;
+    };
+  }, [filters]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadQoH = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set("range", filters.range);
+        params.set("jobId", filters.jobId);
+        params.set("recruiterId", filters.recruiterId);
+        params.set("companyId", filters.companyId);
+
+        if (filters.range === "custom") {
+          if (filters.from) params.set("from", filters.from);
+          if (filters.to) params.set("to", filters.to);
+        }
+
+        const res = await fetch(`/api/analytics/recruiter/qoh?${params.toString()}`);
+        const json = await res.json();
+
+        if (active) {
+          setQohData(json);
+        }
+      } catch {
+        if (active) {
+          setQohData({
+            building: true,
+            minimumRequired: 5,
+            recordsCount: 0,
+            composite: 0,
+            band: "Building",
+            components: {
+              retention90d: 0,
+              managerRating: 0,
+              rampDays: 0,
+              benchmarkDays: 0,
+            },
+            byRecruiter: [],
+          });
+        }
+      }
+    };
+
+    loadQoH();
 
     return () => {
       active = false;
@@ -722,24 +772,147 @@ function Body() {
       return (
         <ReportShell
           title="Quality of Hire narrative"
-          subtitle="Quality of Hire belongs in report detail and methodology context. It activates once sufficient post-hire performance data exists for reliable scoring."
+          subtitle={
+            qohData?.building
+              ? `Quality of Hire activates once sufficient post-hire performance data exists. Current records: ${qohData?.recordsCount ?? 0} of ${qohData?.minimumRequired ?? 5} required.`
+              : `Current composite Quality of Hire score is ${qohData?.composite ?? 0}, rated ${qohData?.band || "Building"} for the selected period.`
+          }
           visual={
-            <BuildingVisual
-              title="Quality of Hire report"
-              body="Quality of Hire is intentionally held in a Building state until the platform has enough post-hire data to produce a defensible composite score."
-            />
+            qohData?.building ? (
+              <BuildingVisual
+                title="Quality of Hire report"
+                body={`Quality of Hire remains in a Building state until at least ${qohData?.minimumRequired ?? 5} qualified post-hire records exist.`}
+              />
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                    gap: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      borderRadius: 14,
+                      background: "rgba(255,255,255,0.72)",
+                      border: "1px solid rgba(255,255,255,0.30)",
+                      padding: 14,
+                    }}
+                  >
+                    <div style={{ fontSize: 10, color: "#94A3B8" }}>Composite</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                      {qohData?.composite ?? 0}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      borderRadius: 14,
+                      background: "rgba(255,255,255,0.72)",
+                      border: "1px solid rgba(255,255,255,0.30)",
+                      padding: 14,
+                    }}
+                  >
+                    <div style={{ fontSize: 10, color: "#94A3B8" }}>Retention 90d</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                      {qohData?.components?.retention90d ?? 0}%
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      borderRadius: 14,
+                      background: "rgba(255,255,255,0.72)",
+                      border: "1px solid rgba(255,255,255,0.30)",
+                      padding: 14,
+                    }}
+                  >
+                    <div style={{ fontSize: 10, color: "#94A3B8" }}>Manager Rating</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                      {qohData?.components?.managerRating ?? 0}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      borderRadius: 14,
+                      background: "rgba(255,255,255,0.72)",
+                      border: "1px solid rgba(255,255,255,0.30)",
+                      padding: 14,
+                    }}
+                  >
+                    <div style={{ fontSize: 10, color: "#94A3B8" }}>Avg Ramp Days</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                      {qohData?.components?.rampDays ?? 0}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gap: 10 }}>
+                  {(qohData?.byRecruiter || []).map((recruiter, index) => (
+                    <div
+                      key={recruiter.recruiterId}
+                      style={{
+                        borderRadius: 14,
+                        background: "rgba(255,255,255,0.72)",
+                        border: "1px solid rgba(255,255,255,0.30)",
+                        padding: 14,
+                        display: "grid",
+                        gap: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div style={{ fontSize: 16, fontWeight: 900, color: "#334155" }}>
+                          #{index + 1} {recruiter.recruiterName}
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: "#FF7043" }}>
+                          {recruiter.score} • {recruiter.band}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                          gap: 10,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 10, color: "#94A3B8" }}>Records</div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}>
+                            {recruiter.recordsCount}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#94A3B8" }}>Band</div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}>
+                            {recruiter.band}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
           }
           insights={
             <>
               <NarrativeCard
                 eyebrow="Method note"
                 title="Quality of Hire should be grounded in transparent components"
-                body="Retention, manager scoring, and time-to-productivity should all contribute to the final score so the metric is explainable, defensible, and useful in enterprise discussion."
+                body="Retention, manager scoring, and time-to-productivity all contribute to the final score so the metric remains explainable, defensible, and useful in enterprise discussion."
               />
               <NarrativeCard
                 eyebrow="Recommendation"
-                title="Treat this as a cross-functional metric"
-                body="The long-term value of Quality of Hire comes from connecting recruiting performance with hiring manager behavior and post-hire outcomes, not from a black-box score alone."
+                title="Use QoH as an outcome metric, not just a recruiting vanity score"
+                body="The value of Quality of Hire comes from connecting recruiting performance with post-hire success signals over time."
                 accent="#0F766E"
               />
             </>

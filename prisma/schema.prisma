@@ -42,6 +42,7 @@ model Job {
   organization        Organization?            @relation("OrganizationJobs", fields: [accountKey], references: [accountKey])
   user                User                     @relation(fields: [userId], references: [id])
   offers              Offer[]
+  hireQualityRecords  HireQuality[]
   pinnedBy            PinnedJob[]
 
   @@index([accountKey])
@@ -732,9 +733,9 @@ model User {
   plan                         Tier                           @default(FREE)
   pronouns                     String?
   skillsJson                   Json?
-  socialLinks				   Json?
-  certificationsJson           Json?  
-  customSectionJson			   Json?
+  socialLinks                  Json?
+  certificationsJson           Json?
+  customSectionJson            Json?
   projectsJson                 Json?
   slug                         String?                        @unique
   slugChangeCount              Int                            @default(0)
@@ -813,6 +814,7 @@ model User {
   seekerCalendarItems          SeekerCalendarItem[]           @relation("UserSeekerCalendarItems")
   talentPoolEntriesAsCandidate TalentPoolEntry[]              @relation("TalentPoolEntryCandidate")
   createdTalentPools           TalentPool[]                   @relation("UserCreatedTalentPools")
+  hireQualityRecords           HireQuality[]                  @relation("RecruiterHireQuality")
   ticketAttachments            TicketAttachment[]             @relation("TicketAttachmentUploader")
   ticketComments               TicketComment[]                @relation("TicketCommentAuthor")
   ticketHistory                TicketHistory[]                @relation("TicketHistoryActor")
@@ -1702,4 +1704,26 @@ enum WorkflowTrigger {
   SLA_WARNING
   SLA_BREACHED
   COMMENT_ADDED
+}
+
+model HireQuality {
+  id String @id @default(cuid())
+
+  recruiterId String
+  recruiter   User   @relation("RecruiterHireQuality", fields: [recruiterId], references: [id])
+
+  jobId Int
+  job   Job @relation(fields: [jobId], references: [id])
+
+  retention90d  Boolean?
+  managerRating Float?
+  rampDays      Int?
+  benchmarkDays Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([recruiterId])
+  @@index([jobId])
+  @@map("hire_quality")
 }
