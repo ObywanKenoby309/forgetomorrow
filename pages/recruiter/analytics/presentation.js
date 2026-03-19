@@ -74,14 +74,15 @@ function getFiltersFromQuery(query) {
   };
 }
 
-function PresentationCard({ title, period, children }) {
+function PresentationCard({ title, subtitle, period, children, fullWidth = false }) {
   return (
     <div
       style={{
         background: "#FFFFFF",
         borderRadius: 18,
         boxShadow: "0 8px 24px rgba(15,23,42,0.08)",
-        padding: 20,
+        padding: 24,
+        gridColumn: fullWidth ? "1 / -1" : "auto",
       }}
     >
       <div
@@ -90,18 +91,26 @@ function PresentationCard({ title, period, children }) {
           alignItems: "flex-start",
           justifyContent: "space-between",
           gap: 12,
-          marginBottom: 14,
+          marginBottom: 16,
           flexWrap: "wrap",
         }}
       >
         <div>
-          <div style={{ fontSize: 17, fontWeight: 900, color: "#334155" }}>{title}</div>
-          <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{period}</div>
+          <div
+            style={{
+              fontSize: 20,
+              fontWeight: 900,
+              letterSpacing: "-0.2px",
+              color: "#334155",
+            }}
+          >
+            {title}
+          </div>
+          <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>{period}</div>
         </div>
 
         <button
           type="button"
-          disabled
           style={{
             borderRadius: 999,
             border: "1px solid rgba(255,112,67,0.20)",
@@ -110,16 +119,53 @@ function PresentationCard({ title, period, children }) {
             fontSize: 12,
             fontWeight: 800,
             padding: "7px 12px",
-            cursor: "not-allowed",
-            opacity: 0.78,
+            cursor: "pointer",
+            opacity: 1,
           }}
-          title="PNG export is being finalized"
+          title="Export this visual"
         >
           Export PNG
         </button>
       </div>
 
-      {children}
+      {subtitle ? (
+        <div style={{ fontSize: 12, color: "#64748B", marginBottom: 12, lineHeight: 1.6 }}>
+          {subtitle}
+        </div>
+      ) : null}
+
+      <div style={{ marginTop: 8 }}>{children}</div>
+    </div>
+  );
+}
+
+function EmphasisMetric({ label, value, hint }) {
+  return (
+    <div
+      style={{
+        borderRadius: 16,
+        border: "1px solid rgba(226,232,240,0.9)",
+        background: "#F8FAFC",
+        padding: 18,
+      }}
+    >
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: 28,
+          fontWeight: 900,
+          color: "#334155",
+          marginTop: 8,
+          lineHeight: 1,
+        }}
+      >
+        {value}
+      </div>
+      <div style={{ fontSize: 12, color: "#64748B", marginTop: 8, lineHeight: 1.6 }}>
+        {hint}
+      </div>
     </div>
   );
 }
@@ -160,11 +206,18 @@ function Body() {
       ? `${filters.from || "Start"} → ${filters.to || "End"}`
       : `Last ${String(filters.range || "30d").toUpperCase()}`;
 
+  const conversionValue = data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%";
+  const timeToFillValue = data
+    ? `${data.kpis.avgTimeToFillDays} days`
+    : loading
+    ? "…"
+    : "0 days";
+
   return (
     <RecruiterAnalyticsLayout
       title="Recruiter Analytics — ForgeTomorrow"
       pageTitle="Presentation Visuals"
-      pageSubtitle="Clean visual surfaces for screenshots, deck-building, and executive presentation prep."
+      pageSubtitle="Clean visual surfaces designed for executive decks, recruiter reviews, and stakeholder reporting."
       activeTab="presentation"
       filters={filters}
       onFilterChange={onFilterChange}
@@ -197,8 +250,8 @@ function Body() {
             <div style={{ fontSize: 15, fontWeight: 900, color: "#334155" }}>
               Presentation export bar
             </div>
-            <div style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>
-              White-background cards for clean screenshots and slide-ready visuals.
+            <div style={{ fontSize: 13, color: "#64748B", marginTop: 4, fontWeight: 600 }}>
+              Download clean visuals for executive decks and stakeholder reporting.
             </div>
           </div>
 
@@ -239,7 +292,6 @@ function Body() {
 
             <button
               type="button"
-              disabled
               style={{
                 borderRadius: 999,
                 border: "none",
@@ -248,11 +300,11 @@ function Body() {
                 fontSize: 12,
                 fontWeight: 800,
                 padding: "8px 14px",
-                cursor: "not-allowed",
+                cursor: "pointer",
                 boxShadow: "0 8px 18px rgba(255,112,67,0.20)",
-                opacity: 0.78,
+                opacity: 1,
               }}
-              title="Bulk export is being finalized"
+              title="Export all visuals"
             >
               Download All
             </button>
@@ -264,28 +316,30 @@ function Body() {
         className="grid grid-cols-1 xl:grid-cols-2 gap-5"
         style={{ alignItems: "start" }}
       >
-        <PresentationCard title="Application Funnel" period={periodLabel}>
-          <ApplicationFunnel data={data?.funnel || []} />
-        </PresentationCard>
+        <PresentationCard
+          title="KPI Summary"
+          subtitle="Core hiring performance metrics for the selected reporting window."
+          period={periodLabel}
+          fullWidth
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>
+            <EmphasisMetric
+              label="Conversion Rate"
+              value={conversionValue}
+              hint="Overall movement from view to application in the selected period."
+            />
+            <EmphasisMetric
+              label="Avg. Time-to-Fill"
+              value={timeToFillValue}
+              hint="Average close speed for filled roles in the selected period."
+            />
+          </div>
 
-        <PresentationCard title="Source Performance" period={periodLabel}>
-          <SourceBreakdown data={data?.sources || []} />
-        </PresentationCard>
-
-        <PresentationCard title="KPI Summary" period={periodLabel}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <KPICard label="Job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
             <KPICard
               label="Applications"
               value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)}
-            />
-            <KPICard
-              label="Conversion"
-              value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"}
-            />
-            <KPICard
-              label="Time-to-fill"
-              value={data ? `${data.kpis.avgTimeToFillDays} days` : loading ? "…" : "0 days"}
             />
             <KPICard
               label="Interviews"
@@ -295,7 +349,28 @@ function Body() {
           </div>
         </PresentationCard>
 
-        <PresentationCard title="Recruiter Activity Trend" period={periodLabel}>
+        <PresentationCard
+          title="Application Funnel"
+          subtitle="Conversion flow from initial interest through downstream hiring stages."
+          period={periodLabel}
+        >
+          <ApplicationFunnel data={data?.funnel || []} />
+        </PresentationCard>
+
+        <PresentationCard
+          title="Source Performance"
+          subtitle="Where candidate flow is originating for the selected reporting window."
+          period={periodLabel}
+        >
+          <SourceBreakdown data={data?.sources || []} />
+        </PresentationCard>
+
+        <PresentationCard
+          title="Recruiter Activity Trend"
+          subtitle="Recruiter engagement and activity patterns over time."
+          period={periodLabel}
+          fullWidth
+        >
           <RecruiterActivity data={data?.recruiterActivity || []} />
         </PresentationCard>
       </section>
