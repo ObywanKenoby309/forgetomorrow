@@ -13,50 +13,79 @@ import RecruiterActivity from "@/components/analytics/charts/RecruiterActivity";
 
 const GLASS = {
   border: "1px solid rgba(255,255,255,0.22)",
-  background: "rgba(255,255,255,0.58)",
-  boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
+  background: "rgba(255,255,255,0.68)",
+  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
 };
 
-const SOFT_GLASS = {
+const GLASS_SOFT = {
   border: "1px solid rgba(255,255,255,0.18)",
-  background: "rgba(255,255,255,0.46)",
-  boxShadow: "0 8px 18px rgba(0,0,0,0.09)",
+  background: "rgba(255,255,255,0.58)",
+  boxShadow: "0 8px 22px rgba(15,23,42,0.10)",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
 };
 
 const ORANGE = "#FF7043";
-const SLATE = "#334155";
-const MUTED = "#64748B";
+const SLATE  = "#334155";
+const MUTED  = "#64748B";
 
 // RIGHT_W(240) + GAP(12) from RecruiterLayout
-const BLEED_LEFT  = -(240 + 12); // -252
-const BLEED_RIGHT = -(240 + 12); // -252
+const BLEED_LEFT  = -(240 + 12);
+const BLEED_RIGHT = -(240 + 12);
 
-// Right rail approximate height: Intel card (~160) + gap(12) + Sponsored card (~220) + padding = ~420px
-// KPI row height: ~80px
-// So Row A needs marginTop of ~340px to sit cleanly below both rails
+// ─────────────────────────────────────────────────────────────────────────────
+// Insight type config
+// ─────────────────────────────────────────────────────────────────────────────
 
+const INSIGHT_CONFIG = {
+  live: {
+    color: ORANGE,
+    badge: "Live",
+    badgeBg: "rgba(255,112,67,0.12)",
+    badgeColor: ORANGE,
+    dot: ORANGE,
+  },
+  attention: {
+    color: "#DC2626",
+    badge: "Attention",
+    badgeBg: "rgba(220,38,38,0.10)",
+    badgeColor: "#DC2626",
+    dot: "#DC2626",
+  },
+  roadmap: {
+    color: "#0F766E",
+    badge: "Building",
+    badgeBg: "rgba(15,118,110,0.10)",
+    badgeColor: "#0F766E",
+    dot: "#0F766E",
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hooks
+// ─────────────────────────────────────────────────────────────────────────────
+
+function buildQS(state) {
+  const params = new URLSearchParams();
+  params.set("range", state.range);
+  params.set("jobId", state.jobId);
+  params.set("recruiterId", state.recruiterId);
+  params.set("companyId", state.companyId);
+  if (state.range === "custom") {
+    if (state.from) params.set("from", state.from);
+    if (state.to)   params.set("to", state.to);
+  }
+  return params.toString();
+}
 
 function useAnalytics(state) {
-  const [data, setData] = useState(null);
+  const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError]     = useState(null);
 
-  const qs = useMemo(() => {
-    const params = new URLSearchParams();
-    params.set("range", state.range);
-    params.set("jobId", state.jobId);
-    params.set("recruiterId", state.recruiterId);
-    params.set("companyId", state.companyId);
-    if (state.range === "custom") {
-      if (state.from) params.set("from", state.from);
-      if (state.to) params.set("to", state.to);
-    }
-    return params.toString();
-  }, [state]);
+  const qs = useMemo(() => buildQS(state), [state]);
 
   useEffect(() => {
     let active = true;
@@ -64,7 +93,7 @@ function useAnalytics(state) {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch(`/api/analytics/recruiter?${qs}`);
+        const res  = await fetch(`/api/analytics/recruiter?${qs}`);
         const json = await res.json();
         if (active) setData(json);
       } catch (e) {
@@ -81,20 +110,52 @@ function useAnalytics(state) {
   return { data, loading, error };
 }
 
+function useInsights(state) {
+  const [insights, setInsights] = useState(null);
+  const [loading, setLoading]   = useState(false);
+
+  const qs = useMemo(() => buildQS(state), [state]);
+
+  useEffect(() => {
+    let active = true;
+    const fetchInsights = async () => {
+      try {
+        setLoading(true);
+        const res  = await fetch(`/api/analytics/insights?${qs}`);
+        const json = await res.json();
+        if (active && Array.isArray(json.insights)) setInsights(json.insights);
+      } catch (_) {
+        // Insights are non-critical — fail silently so main dashboard still loads.
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    fetchInsights();
+    const id = setInterval(fetchInsights, 60000); // refresh every minute
+    return () => { active = false; clearInterval(id); };
+  }, [qs]);
+
+  return { insights, loading };
+}
+
 function getFiltersFromQuery(query) {
   return {
-    range: typeof query.range === "string" ? query.range : "30d",
-    jobId: typeof query.jobId === "string" ? query.jobId : "all",
+    range:       typeof query.range       === "string" ? query.range       : "30d",
+    jobId:       typeof query.jobId       === "string" ? query.jobId       : "all",
     recruiterId: typeof query.recruiterId === "string" ? query.recruiterId : "all",
-    companyId: typeof query.companyId === "string" ? query.companyId : "all",
-    from: typeof query.from === "string" ? query.from : "",
-    to: typeof query.to === "string" ? query.to : "",
+    companyId:   typeof query.companyId   === "string" ? query.companyId   : "all",
+    from:        typeof query.from        === "string" ? query.from        : "",
+    to:          typeof query.to          === "string" ? query.to          : "",
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// UI components
+// ─────────────────────────────────────────────────────────────────────────────
+
 function StatTile({ label, value, hint }) {
   return (
-    <div style={{ ...SOFT_GLASS, borderRadius: 14, padding: 14 }}>
+    <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
       <div style={{ fontSize: 11, color: MUTED }}>{label}</div>
       <div style={{ fontSize: 18, fontWeight: 900, color: SLATE, marginTop: 5, lineHeight: 1.2 }}>{value}</div>
       <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{hint}</div>
@@ -102,12 +163,60 @@ function StatTile({ label, value, hint }) {
   );
 }
 
-function InsightTile({ title, value, detail, color = ORANGE }) {
+function InsightTile({ insight }) {
+  const cfg = INSIGHT_CONFIG[insight.type] ?? INSIGHT_CONFIG.live;
   return (
-    <div style={{ ...SOFT_GLASS, borderRadius: 14, padding: 14 }}>
-      <div style={{ fontSize: 12, fontWeight: 800, color: SLATE }}>{title}</div>
-      <div style={{ fontSize: 24, fontWeight: 900, color, marginTop: 8, lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, marginTop: 8 }}>{detail}</div>
+    <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <span
+          style={{
+            display: "inline-block",
+            width: 7,
+            height: 7,
+            borderRadius: "50%",
+            background: cfg.dot,
+            flexShrink: 0,
+          }}
+        />
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.07em",
+            textTransform: "uppercase",
+            background: cfg.badgeBg,
+            color: cfg.badgeColor,
+            borderRadius: 6,
+            padding: "2px 7px",
+          }}
+        >
+          {cfg.badge}
+        </span>
+        <span style={{ fontSize: 12, fontWeight: 800, color: SLATE, flex: 1 }}>
+          {insight.title}
+        </span>
+      </div>
+      <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65 }}>{insight.body}</div>
+    </div>
+  );
+}
+
+function InsightsSkeleton() {
+  return (
+    <div style={{ display: "grid", gap: 10 }}>
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          style={{
+            ...GLASS_SOFT,
+            borderRadius: 12,
+            padding: 14,
+            height: 80,
+            opacity: 0.5,
+            background: "rgba(255,255,255,0.35)",
+          }}
+        />
+      ))}
     </div>
   );
 }
@@ -117,8 +226,8 @@ function ReportCard({ title, description, href, value }) {
     <Link href={href} style={{ textDecoration: "none" }}>
       <div
         style={{
-          ...SOFT_GLASS,
-          borderRadius: 14,
+          ...GLASS_SOFT,
+          borderRadius: 12,
           padding: 14,
           minHeight: 122,
           display: "flex",
@@ -142,10 +251,15 @@ function ReportCard({ title, description, href, value }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Page body
+// ─────────────────────────────────────────────────────────────────────────────
+
 function Body() {
-  const router = useRouter();
+  const router  = useRouter();
   const [filters, setFilters] = useState(getFiltersFromQuery(router.query));
   const { data, loading, error } = useAnalytics(filters);
+  const { insights, loading: insightsLoading } = useInsights(filters);
   const { isEnterprise } = usePlan();
 
   useEffect(() => {
@@ -160,12 +274,12 @@ function Body() {
       {
         pathname: router.pathname,
         query: {
-          range: next.range,
-          jobId: next.jobId,
+          range:       next.range,
+          jobId:       next.jobId,
           recruiterId: next.recruiterId,
-          companyId: next.companyId,
+          companyId:   next.companyId,
           ...(next.from ? { from: next.from } : {}),
-          ...(next.to ? { to: next.to } : {}),
+          ...(next.to   ? { to:   next.to   } : {}),
         },
       },
       undefined,
@@ -173,8 +287,8 @@ function Body() {
     );
   };
 
-  const totalInterviews = data?.kpis?.totalInterviews ?? 0;
-  const totalHires = data?.kpis?.totalHires ?? 0;
+  const totalInterviews    = data?.kpis?.totalInterviews      ?? 0;
+  const totalHires         = data?.kpis?.totalHires           ?? 0;
   const offerAcceptanceRate = data?.kpis?.offerAcceptanceRatePct ?? 0;
 
   const topSource =
@@ -192,11 +306,15 @@ function Body() {
     gap: 12,
   };
 
+  // Determine how many insight tiles to show — cap at 4 to avoid overflow.
+  const visibleInsights = Array.isArray(insights) ? insights.slice(0, 4) : [];
+
   const ChartsBlock = (
     <>
-      {/* Row A: Executive Snapshot | Recruiter Activity | Intelligence Panel
-          marginTop pushes this row below both right rail cards so it bleeds full width */}
+      {/* Row A: Executive Snapshot | Recruiter Activity | Forge Insights */}
       <div style={{ ...bleedRowStyle, marginTop: 68 }}>
+
+        {/* Executive Snapshot */}
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div>
@@ -233,12 +351,19 @@ function Body() {
             />
             <StatTile
               label="Apply-to-hire"
-              value={loading ? "…" : data?.kpis?.totalApplies ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%` : "0%"}
+              value={
+                loading
+                  ? "…"
+                  : data?.kpis?.totalApplies
+                  ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%`
+                  : "0%"
+              }
               hint="Applications converting into hires"
             />
           </div>
         </div>
 
+        {/* Recruiter Activity */}
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
             <div>
@@ -254,33 +379,49 @@ function Body() {
           <RecruiterActivity data={data?.recruiterActivity || []} />
         </div>
 
+        {/* Forge Insights — dynamic */}
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Intelligence Panel</div>
-          <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>What matters most right now.</div>
-          <div style={{ display: "grid", gap: 10 }}>
-            <InsightTile
-              title="Quality of Hire"
-              value="Building"
-              detail="Quality of Hire activates once sufficient post-hire performance data exists."
-            />
-            <InsightTile
-              title="Recruiter leaderboard"
-              value="Building"
-              detail="Leaderboard rankings will appear once recruiter performance data is available for the selected period."
-              color="#0F766E"
-            />
-            <InsightTile
-              title="Apply-to-hire"
-              value={loading ? "…" : data?.kpis?.totalApplies ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%` : "0%"}
-              detail="An executive signal for how efficiently your current hiring motion is converting."
-              color="#7C3AED"
-            />
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Forge Insights</div>
+              {/* Live pulse dot */}
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: ORANGE,
+                  boxShadow: `0 0 0 3px rgba(255,112,67,0.18)`,
+                }}
+              />
+            </div>
+            <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
+              What matters most right now.
+            </div>
           </div>
+
+          {insightsLoading && !insights ? (
+            <InsightsSkeleton />
+          ) : visibleInsights.length > 0 ? (
+            <div style={{ display: "grid", gap: 10 }}>
+              {visibleInsights.map((insight, i) => (
+                <InsightTile key={i} insight={insight} />
+              ))}
+            </div>
+          ) : (
+            <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+              <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
+                Insights will appear here as your pipeline data builds.
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Row B: Source Performance | Application Funnel | Report Gateways */}
       <div style={{ ...bleedRowStyle, marginTop: 12 }}>
+
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
             <div>
@@ -351,7 +492,7 @@ function Body() {
       onFilterChange={onFilterChange}
     >
       {error ? (
-        <div style={{ borderRadius: 16, border: "1px solid rgba(239,68,68,0.20)", background: "rgba(254,242,242,0.86)", color: "#B91C1C", padding: 16 }}>
+        <div style={{ borderRadius: 18, border: "1px solid rgba(239,68,68,0.20)", background: "rgba(254,242,242,0.86)", color: "#B91C1C", padding: 16 }}>
           {String(error)}
         </div>
       ) : null}
@@ -364,15 +505,15 @@ function Body() {
           gap: 12,
         }}
       >
-        <KPICard label="Total job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
-        <KPICard label="Total applies" value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)} />
-        <KPICard label="Conversion rate" value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"} />
+        <KPICard label="Total job views"   value={data?.kpis?.totalViews        ?? (loading ? "…" : 0)} />
+        <KPICard label="Total applies"     value={data?.kpis?.totalApplies      ?? (loading ? "…" : 0)} />
+        <KPICard label="Conversion rate"   value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"} />
         <KPICard label="Avg. time-to-fill" value={data ? `${data.kpis.avgTimeToFillDays} days` : loading ? "…" : "0 days"} />
-        <KPICard label="Interviews" value={loading ? "…" : totalInterviews} />
-        <KPICard label="Hires" value={loading ? "…" : totalHires} />
+        <KPICard label="Interviews"        value={loading ? "…" : totalInterviews} />
+        <KPICard label="Hires"             value={loading ? "…" : totalHires} />
       </section>
 
-      {/* Bleed rows — drop below rails, span full width */}
+      {/* Bleed rows */}
       {isEnterprise ? ChartsBlock : <FeatureLock label="Full Analytics">{ChartsBlock}</FeatureLock>}
 
       {data?.meta?.refreshedAt ? (
