@@ -256,7 +256,7 @@ function Body() {
   const { data, error } = useAnalytics(filters);
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [timeToFillData, setTimeToFillData] = useState(null);
-  const [qohData, setqohData] = useState(null);
+  const [qohData, setQohData] = useState(null);
 
   useEffect(() => {
     if (!router.isReady) return;
