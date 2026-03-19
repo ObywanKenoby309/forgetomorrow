@@ -1,5 +1,5 @@
 // pages/recruiter/analytics/presentation.js
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider } from "@/context/PlanContext";
 import RecruiterAnalyticsLayout from "@/components/layouts/RecruiterAnalyticsLayout";
@@ -14,6 +14,12 @@ const GLASS = {
   boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
+};
+
+const WHITE_CARD = {
+  background: "#FFFFFF",
+  borderRadius: 18,
+  boxShadow: "0 8px 24px rgba(15,23,42,0.08)",
 };
 
 function useAnalytics(state) {
@@ -74,15 +80,13 @@ function getFiltersFromQuery(query) {
   };
 }
 
-function PresentationCard({ title, subtitle, period, children, fullWidth = false }) {
+function PresentationCard({ title, subtitle, period, children, compact = false }) {
   return (
     <div
       style={{
-        background: "#FFFFFF",
-        borderRadius: 18,
-        boxShadow: "0 8px 24px rgba(15,23,42,0.08)",
-        padding: 24,
-        gridColumn: fullWidth ? "1 / -1" : "auto",
+        ...WHITE_CARD,
+        padding: compact ? 16 : 24,
+        height: "100%",
       }}
     >
       <div
@@ -91,50 +95,62 @@ function PresentationCard({ title, subtitle, period, children, fullWidth = false
           alignItems: "flex-start",
           justifyContent: "space-between",
           gap: 12,
-          marginBottom: 16,
+          marginBottom: compact ? 10 : 16,
           flexWrap: "wrap",
         }}
       >
         <div>
           <div
             style={{
-              fontSize: 20,
+              fontSize: compact ? 15 : 20,
               fontWeight: 900,
               letterSpacing: "-0.2px",
               color: "#334155",
+              lineHeight: 1.1,
             }}
           >
             {title}
           </div>
-          <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>{period}</div>
+          <div style={{ fontSize: compact ? 11 : 12, color: "#94A3B8", marginTop: 4 }}>
+            {period}
+          </div>
         </div>
 
-        <button
-          type="button"
-          style={{
-            borderRadius: 999,
-            border: "1px solid rgba(255,112,67,0.20)",
-            background: "rgba(255,112,67,0.10)",
-            color: "#FF7043",
-            fontSize: 12,
-            fontWeight: 800,
-            padding: "7px 12px",
-            cursor: "pointer",
-            opacity: 1,
-          }}
-          title="Export this visual"
-        >
-          Export PNG
-        </button>
+        {!compact ? (
+          <button
+            type="button"
+            style={{
+              borderRadius: 999,
+              border: "1px solid rgba(255,112,67,0.20)",
+              background: "rgba(255,112,67,0.10)",
+              color: "#FF7043",
+              fontSize: 12,
+              fontWeight: 800,
+              padding: "7px 12px",
+              cursor: "pointer",
+              opacity: 1,
+            }}
+            title="Export this visual"
+          >
+            Export PNG
+          </button>
+        ) : null}
       </div>
 
       {subtitle ? (
-        <div style={{ fontSize: 12, color: "#64748B", marginBottom: 12, lineHeight: 1.6 }}>
+        <div
+          style={{
+            fontSize: compact ? 11 : 12,
+            color: "#64748B",
+            marginBottom: compact ? 10 : 12,
+            lineHeight: 1.6,
+          }}
+        >
           {subtitle}
         </div>
       ) : null}
 
-      <div style={{ marginTop: 8 }}>{children}</div>
+      <div style={{ marginTop: 6 }}>{children}</div>
     </div>
   );
 }
@@ -149,7 +165,15 @@ function EmphasisMetric({ label, value, hint }) {
         padding: 18,
       }}
     >
-      <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: "#64748B",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}
+      >
         {label}
       </div>
       <div
@@ -170,15 +194,88 @@ function EmphasisMetric({ label, value, hint }) {
   );
 }
 
+function MiniPreviewCard({ title, active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        ...WHITE_CARD,
+        border: active ? "2px solid #FF7043" : "1px solid rgba(226,232,240,0.9)",
+        padding: 12,
+        textAlign: "left",
+        cursor: "pointer",
+        opacity: active ? 1 : 0.82,
+        transform: active ? "translateY(-1px)" : "none",
+        transition: "all 160ms ease",
+        minWidth: 0,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 800,
+          color: active ? "#FF7043" : "#334155",
+          marginBottom: 8,
+          lineHeight: 1.2,
+        }}
+      >
+        {title}
+      </div>
+      <div
+        style={{
+          borderRadius: 12,
+          overflow: "hidden",
+          background: "#FFFFFF",
+          minHeight: 130,
+        }}
+      >
+        {children}
+      </div>
+    </button>
+  );
+}
+
+function MobileCarouselCard({ active, children }) {
+  return (
+    <div
+      style={{
+        width: "84vw",
+        minWidth: "84vw",
+        scrollSnapAlign: "center",
+        opacity: active ? 1 : 0.58,
+        transform: active ? "scale(1)" : "scale(0.94)",
+        transition: "transform 160ms ease, opacity 160ms ease",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function Body() {
   const router = useRouter();
   const [filters, setFilters] = useState(getFiltersFromQuery(router.query));
   const { data, loading, error } = useAnalytics(filters);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const mobileRefs = useRef([]);
 
   useEffect(() => {
     if (!router.isReady) return;
     setFilters(getFiltersFromQuery(router.query));
   }, [router.isReady, router.query]);
+
+  useEffect(() => {
+    const onResize = () => {
+      if (typeof window !== "undefined") {
+        setIsMobile(window.innerWidth < 1024);
+      }
+    };
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const onFilterChange = (patch) => {
     const next = { ...filters, ...patch };
@@ -213,11 +310,152 @@ function Body() {
     ? "…"
     : "0 days";
 
+  const visualItems = [
+    {
+      key: "kpi",
+      title: "KPI Summary",
+      subtitle: "Core hiring performance metrics for the selected reporting window.",
+      render: () => (
+        <PresentationCard
+          title="KPI Summary"
+          subtitle="Core hiring performance metrics for the selected reporting window."
+          period={periodLabel}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>
+            <EmphasisMetric
+              label="Conversion Rate"
+              value={conversionValue}
+              hint="Overall movement from view to application in the selected period."
+            />
+            <EmphasisMetric
+              label="Avg. Time-to-Fill"
+              value={timeToFillValue}
+              hint="Average close speed for filled roles in the selected period."
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <KPICard label="Job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
+            <KPICard
+              label="Applications"
+              value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)}
+            />
+            <KPICard
+              label="Interviews"
+              value={data?.kpis?.totalInterviews ?? (loading ? "…" : 0)}
+            />
+            <KPICard label="Hires" value={data?.kpis?.totalHires ?? (loading ? "…" : 0)} />
+          </div>
+        </PresentationCard>
+      ),
+      mini: () => (
+        <PresentationCard title="KPI Summary" period={periodLabel} compact>
+          <div className="grid grid-cols-2 gap-2" style={{ marginBottom: 8 }}>
+            <div
+              style={{
+                borderRadius: 12,
+                border: "1px solid rgba(226,232,240,0.9)",
+                background: "#F8FAFC",
+                padding: 10,
+              }}
+            >
+              <div style={{ fontSize: 10, color: "#64748B", marginBottom: 4 }}>Conversion</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#334155" }}>{conversionValue}</div>
+            </div>
+            <div
+              style={{
+                borderRadius: 12,
+                border: "1px solid rgba(226,232,240,0.9)",
+                background: "#F8FAFC",
+                padding: 10,
+              }}
+            >
+              <div style={{ fontSize: 10, color: "#64748B", marginBottom: 4 }}>Time-to-Fill</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#334155" }}>{timeToFillValue}</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <KPICard label="Views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
+            <KPICard label="Hires" value={data?.kpis?.totalHires ?? (loading ? "…" : 0)} />
+          </div>
+        </PresentationCard>
+      ),
+    },
+    {
+      key: "funnel",
+      title: "Application Funnel",
+      subtitle: "Conversion flow from initial interest through downstream hiring stages.",
+      render: () => (
+        <PresentationCard
+          title="Application Funnel"
+          subtitle="Conversion flow from initial interest through downstream hiring stages."
+          period={periodLabel}
+        >
+          <ApplicationFunnel data={data?.funnel || []} />
+        </PresentationCard>
+      ),
+      mini: () => (
+        <PresentationCard title="Application Funnel" period={periodLabel} compact>
+          <ApplicationFunnel data={data?.funnel || []} />
+        </PresentationCard>
+      ),
+    },
+    {
+      key: "sources",
+      title: "Source Performance",
+      subtitle: "Where candidate flow is originating for the selected reporting window.",
+      render: () => (
+        <PresentationCard
+          title="Source Performance"
+          subtitle="Where candidate flow is originating for the selected reporting window."
+          period={periodLabel}
+        >
+          <SourceBreakdown data={data?.sources || []} />
+        </PresentationCard>
+      ),
+      mini: () => (
+        <PresentationCard title="Source Performance" period={periodLabel} compact>
+          <SourceBreakdown data={data?.sources || []} />
+        </PresentationCard>
+      ),
+    },
+    {
+      key: "activity",
+      title: "Recruiter Activity Trend",
+      subtitle: "Recruiter engagement and activity patterns over time.",
+      render: () => (
+        <PresentationCard
+          title="Recruiter Activity Trend"
+          subtitle="Recruiter engagement and activity patterns over time."
+          period={periodLabel}
+        >
+          <RecruiterActivity data={data?.recruiterActivity || []} />
+        </PresentationCard>
+      ),
+      mini: () => (
+        <PresentationCard title="Recruiter Activity Trend" period={periodLabel} compact>
+          <RecruiterActivity data={data?.recruiterActivity || []} />
+        </PresentationCard>
+      ),
+    },
+  ];
+
+  const selectedVisual = visualItems[selectedIndex] || visualItems[0];
+
+  const goToIndex = (nextIndex) => {
+    const bounded = Math.max(0, Math.min(nextIndex, visualItems.length - 1));
+    setSelectedIndex(bounded);
+    const node = mobileRefs.current[bounded];
+    if (node && typeof node.scrollIntoView === "function") {
+      node.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  };
+
   return (
     <RecruiterAnalyticsLayout
       title="Recruiter Analytics — ForgeTomorrow"
       pageTitle="Presentation Visuals"
-      pageSubtitle="Clean visual surfaces designed for executive decks, recruiter reviews, and stakeholder reporting."
+      pageSubtitle="Preview clean export-ready visuals for decks, recruiter reviews, and stakeholder reporting."
       activeTab="presentation"
       filters={filters}
       onFilterChange={onFilterChange}
@@ -251,7 +489,7 @@ function Body() {
               Presentation export bar
             </div>
             <div style={{ fontSize: 13, color: "#64748B", marginTop: 4, fontWeight: 600 }}>
-              Download clean visuals for executive decks and stakeholder reporting.
+              Browse visuals, preview the selected asset, and export a clean PNG for slides.
             </div>
           </div>
 
@@ -304,76 +542,153 @@ function Body() {
                 boxShadow: "0 8px 18px rgba(255,112,67,0.20)",
                 opacity: 1,
               }}
-              title="Export all visuals"
+              title="Export selected visual"
             >
-              Download All
+              Export Selected
             </button>
           </div>
         </div>
       </section>
 
-      <section
-        className="grid grid-cols-1 xl:grid-cols-2 gap-5"
-        style={{ alignItems: "start" }}
-      >
-        <PresentationCard
-          title="KPI Summary"
-          subtitle="Core hiring performance metrics for the selected reporting window."
-          period={periodLabel}
-          fullWidth
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>
-            <EmphasisMetric
-              label="Conversion Rate"
-              value={conversionValue}
-              hint="Overall movement from view to application in the selected period."
-            />
-            <EmphasisMetric
-              label="Avg. Time-to-Fill"
-              value={timeToFillValue}
-              hint="Average close speed for filled roles in the selected period."
-            />
+      {!isMobile ? (
+        <section style={{ display: "grid", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 16 }}>
+            {selectedVisual.render()}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <KPICard label="Job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
-            <KPICard
-              label="Applications"
-              value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)}
-            />
-            <KPICard
-              label="Interviews"
-              value={data?.kpis?.totalInterviews ?? (loading ? "…" : 0)}
-            />
-            <KPICard label="Hires" value={data?.kpis?.totalHires ?? (loading ? "…" : 0)} />
+          <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 900,
+                color: "#334155",
+                marginBottom: 12,
+              }}
+            >
+              Visual Browser
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              {visualItems.map((item, index) => (
+                <MiniPreviewCard
+                  key={item.key}
+                  title={item.title}
+                  active={selectedIndex === index}
+                  onClick={() => setSelectedIndex(index)}
+                >
+                  {item.mini()}
+                </MiniPreviewCard>
+              ))}
+            </div>
+          </section>
+        </section>
+      ) : (
+        <section style={{ display: "grid", gap: 14 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => goToIndex(selectedIndex - 1)}
+              disabled={selectedIndex === 0}
+              style={{
+                borderRadius: 999,
+                border: "1px solid rgba(51,65,85,0.14)",
+                background: "rgba(255,255,255,0.92)",
+                color: "#334155",
+                fontSize: 12,
+                fontWeight: 800,
+                padding: "8px 12px",
+                cursor: selectedIndex === 0 ? "default" : "pointer",
+                opacity: selectedIndex === 0 ? 0.5 : 1,
+              }}
+            >
+              ← Previous
+            </button>
+
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#334155" }}>
+              {selectedIndex + 1} / {visualItems.length}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => goToIndex(selectedIndex + 1)}
+              disabled={selectedIndex === visualItems.length - 1}
+              style={{
+                borderRadius: 999,
+                border: "1px solid rgba(51,65,85,0.14)",
+                background: "rgba(255,255,255,0.92)",
+                color: "#334155",
+                fontSize: 12,
+                fontWeight: 800,
+                padding: "8px 12px",
+                cursor: selectedIndex === visualItems.length - 1 ? "default" : "pointer",
+                opacity: selectedIndex === visualItems.length - 1 ? 0.5 : 1,
+              }}
+            >
+              Next →
+            </button>
           </div>
-        </PresentationCard>
 
-        <PresentationCard
-          title="Application Funnel"
-          subtitle="Conversion flow from initial interest through downstream hiring stages."
-          period={periodLabel}
-        >
-          <ApplicationFunnel data={data?.funnel || []} />
-        </PresentationCard>
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              overflowX: "auto",
+              scrollSnapType: "x mandatory",
+              padding: "4px 8vw 8px",
+              marginInline: "-8vw",
+              scrollbarWidth: "none",
+            }}
+          >
+            {visualItems.map((item, index) => (
+              <div
+                key={item.key}
+                ref={(node) => {
+                  mobileRefs.current[index] = node;
+                }}
+                onClick={() => goToIndex(index)}
+              >
+                <MobileCarouselCard active={selectedIndex === index}>
+                  {item.mini()}
+                </MobileCarouselCard>
+              </div>
+            ))}
+          </div>
 
-        <PresentationCard
-          title="Source Performance"
-          subtitle="Where candidate flow is originating for the selected reporting window."
-          period={periodLabel}
-        >
-          <SourceBreakdown data={data?.sources || []} />
-        </PresentationCard>
-
-        <PresentationCard
-          title="Recruiter Activity Trend"
-          subtitle="Recruiter engagement and activity patterns over time."
-          period={periodLabel}
-          fullWidth
-        >
-          <RecruiterActivity data={data?.recruiterActivity || []} />
-        </PresentationCard>
-      </section>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 8,
+              alignItems: "center",
+            }}
+          >
+            {visualItems.map((item, index) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => goToIndex(index)}
+                aria-label={`Go to ${item.title}`}
+                style={{
+                  width: index === selectedIndex ? 18 : 8,
+                  height: 8,
+                  borderRadius: 999,
+                  border: "none",
+                  background: index === selectedIndex ? "#334155" : "rgba(148,163,184,0.55)",
+                  cursor: "pointer",
+                  transition: "all 160ms ease",
+                }}
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </RecruiterAnalyticsLayout>
   );
 }
