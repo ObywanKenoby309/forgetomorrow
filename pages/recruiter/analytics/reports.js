@@ -145,7 +145,9 @@ function MethodCard({ eyebrow, title, body }) {
       <div style={{ fontSize: 16, fontWeight: 900, color: "#334155", marginTop: 8 }}>
         {title}
       </div>
-      <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6, marginTop: 6 }}>{body}</div>
+      <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6, marginTop: 6 }}>
+        {body}
+      </div>
     </div>
   );
 }
@@ -184,7 +186,9 @@ function ReportShell({ title, subtitle, visual, insights }) {
   return (
     <section style={{ ...GLASS, borderRadius: 18, padding: 18 }}>
       <div style={{ fontSize: 22, fontWeight: 900, color: "#334155" }}>{title}</div>
-      <div style={{ fontSize: 14, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>{subtitle}</div>
+      <div style={{ fontSize: 14, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>
+        {subtitle}
+      </div>
 
       <div
         className="grid grid-cols-1 xl:grid-cols-2 gap-4"
@@ -239,10 +243,9 @@ function BuildingVisual({ title, body }) {
         >
           Status
         </div>
-        <div style={{ fontSize: 18, fontWeight: 900, color: "#334155" }}>Building</div>
+        <div style={{ fontSize: 18, fontWeight: 900, color: "#16A34A" }}>Live</div>
         <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6, marginTop: 6 }}>
-          This report is being wired to live analytics and will expand as the related endpoint and
-          aggregation logic come online.
+          {body}
         </div>
       </div>
     </div>
@@ -280,9 +283,7 @@ function Body() {
           if (filters.to) params.set("to", filters.to);
         }
 
-        const res = await fetch(
-          `/api/analytics/recruiter/leaderboard?${params.toString()}`
-        );
+        const res = await fetch(`/api/analytics/recruiter/leaderboard?${params.toString()}`);
         const json = await res.json();
 
         if (active) {
@@ -318,9 +319,7 @@ function Body() {
           if (filters.to) params.set("to", filters.to);
         }
 
-        const res = await fetch(
-          `/api/analytics/recruiter/time-to-fill?${params.toString()}`
-        );
+        const res = await fetch(`/api/analytics/recruiter/time-to-fill?${params.toString()}`);
         const json = await res.json();
 
         if (active) {
@@ -374,11 +373,10 @@ function Body() {
       } catch {
         if (active) {
           setQohData({
-            building: true,
             minimumRequired: 5,
             recordsCount: 0,
             composite: 0,
-            band: "Building",
+            band: "Insufficient Data",
             components: {
               retention90d: 0,
               managerRating: 0,
@@ -501,7 +499,7 @@ function Body() {
       );
     }
 
-        if (activeReport === "recruiters") {
+    if (activeReport === "recruiters") {
       return (
         <ReportShell
           title="Recruiter activity narrative"
@@ -511,7 +509,7 @@ function Body() {
               {(leaderboardData?.recruiters || []).length === 0 ? (
                 <BuildingVisual
                   title="Recruiter activity report"
-                  body="No recruiter-attributed analytics are available for the selected period yet."
+                  body="No recruiter-attributed activity found for the selected period. Data will appear as recruiters generate pipeline."
                 />
               ) : (
                 leaderboardData.recruiters.map((recruiter, index) => (
@@ -552,37 +550,49 @@ function Body() {
                     >
                       <div>
                         <div style={{ fontSize: 10, color: "#94A3B8" }}>Applications</div>
-                        <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                        <div
+                          style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                        >
                           {recruiter.totalApplications}
                         </div>
                       </div>
                       <div>
                         <div style={{ fontSize: 10, color: "#94A3B8" }}>Interviews</div>
-                        <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                        <div
+                          style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                        >
                           {recruiter.totalInterviews}
                         </div>
                       </div>
                       <div>
                         <div style={{ fontSize: 10, color: "#94A3B8" }}>Offers</div>
-                        <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                        <div
+                          style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                        >
                           {recruiter.totalOffers}
                         </div>
                       </div>
                       <div>
                         <div style={{ fontSize: 10, color: "#94A3B8" }}>Apply-to-hire</div>
-                        <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                        <div
+                          style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                        >
                           {recruiter.conversionRatePct}%
                         </div>
                       </div>
                       <div>
                         <div style={{ fontSize: 10, color: "#94A3B8" }}>Avg. time-to-fill</div>
-                        <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                        <div
+                          style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                        >
                           {recruiter.avgTimeToFillDays} days
                         </div>
                       </div>
                       <div>
                         <div style={{ fontSize: 10, color: "#94A3B8" }}>Pipeline velocity</div>
-                        <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                        <div
+                          style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                        >
                           {recruiter.pipelineVelocity}
                         </div>
                       </div>
@@ -611,7 +621,7 @@ function Body() {
       );
     }
 
-        if (activeReport === "timeToFill") {
+    if (activeReport === "timeToFill") {
       return (
         <ReportShell
           title="Time-to-Fill narrative"
@@ -621,7 +631,7 @@ function Body() {
               {(timeToFillData?.jobs || []).length === 0 ? (
                 <BuildingVisual
                   title="Time-to-Fill report"
-                  body="No filled jobs were found for the selected period yet."
+                  body="No filled jobs found in the selected period. Time-to-fill metrics will populate once roles are closed."
                 />
               ) : (
                 <>
@@ -641,7 +651,9 @@ function Body() {
                       }}
                     >
                       <div style={{ fontSize: 10, color: "#94A3B8" }}>Average</div>
-                      <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                      <div
+                        style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                      >
                         {timeToFillData?.summary?.avgTimeToFillDays ?? 0}d
                       </div>
                     </div>
@@ -654,7 +666,9 @@ function Body() {
                       }}
                     >
                       <div style={{ fontSize: 10, color: "#94A3B8" }}>Median</div>
-                      <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                      <div
+                        style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                      >
                         {timeToFillData?.summary?.medianTimeToFillDays ?? 0}d
                       </div>
                     </div>
@@ -667,7 +681,9 @@ function Body() {
                       }}
                     >
                       <div style={{ fontSize: 10, color: "#94A3B8" }}>Fastest</div>
-                      <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                      <div
+                        style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                      >
                         {timeToFillData?.summary?.fastestFillDays ?? 0}d
                       </div>
                     </div>
@@ -680,7 +696,9 @@ function Body() {
                       }}
                     >
                       <div style={{ fontSize: 10, color: "#94A3B8" }}>Slowest</div>
-                      <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                      <div
+                        style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                      >
                         {timeToFillData?.summary?.slowestFillDays ?? 0}d
                       </div>
                     </div>
@@ -725,19 +743,25 @@ function Body() {
                         >
                           <div>
                             <div style={{ fontSize: 10, color: "#94A3B8" }}>Recruiter</div>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}>
+                            <div
+                              style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}
+                            >
                               {job.recruiterName}
                             </div>
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: "#94A3B8" }}>Created</div>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}>
+                            <div
+                              style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}
+                            >
                               {new Date(job.createdAt).toLocaleDateString()}
                             </div>
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: "#94A3B8" }}>Filled</div>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}>
+                            <div
+                              style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}
+                            >
                               {new Date(job.filledAt).toLocaleDateString()}
                             </div>
                           </div>
@@ -773,15 +797,15 @@ function Body() {
         <ReportShell
           title="Quality of Hire narrative"
           subtitle={
-            qohData?.building
-              ? `Quality of Hire activates once sufficient post-hire performance data exists. Current records: ${qohData?.recordsCount ?? 0} of ${qohData?.minimumRequired ?? 5} required.`
-              : `Current composite Quality of Hire score is ${qohData?.composite ?? 0}, rated ${qohData?.band || "Building"} for the selected period.`
+            (qohData?.recordsCount ?? 0) < (qohData?.minimumRequired ?? 5)
+              ? `Quality of Hire is live, but there is not enough post-hire data yet. Current records: ${qohData?.recordsCount ?? 0} of ${qohData?.minimumRequired ?? 5} required.`
+              : `Current composite Quality of Hire score is ${qohData?.composite ?? 0}, rated ${qohData?.band || "Insufficient Data"} for the selected period.`
           }
           visual={
-            qohData?.building ? (
+            (qohData?.recordsCount ?? 0) < (qohData?.minimumRequired ?? 5) ? (
               <BuildingVisual
                 title="Quality of Hire report"
-                body={`Quality of Hire remains in a Building state until at least ${qohData?.minimumRequired ?? 5} qualified post-hire records exist.`}
+                body={`There are ${qohData?.recordsCount ?? 0} qualified post-hire records available. This score will activate once at least ${qohData?.minimumRequired ?? 5} records exist.`}
               />
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
@@ -801,7 +825,9 @@ function Body() {
                     }}
                   >
                     <div style={{ fontSize: 10, color: "#94A3B8" }}>Composite</div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                    <div
+                      style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                    >
                       {qohData?.composite ?? 0}
                     </div>
                   </div>
@@ -814,7 +840,9 @@ function Body() {
                     }}
                   >
                     <div style={{ fontSize: 10, color: "#94A3B8" }}>Retention 90d</div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                    <div
+                      style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                    >
                       {qohData?.components?.retention90d ?? 0}%
                     </div>
                   </div>
@@ -827,7 +855,9 @@ function Body() {
                     }}
                   >
                     <div style={{ fontSize: 10, color: "#94A3B8" }}>Manager Rating</div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                    <div
+                      style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                    >
                       {qohData?.components?.managerRating ?? 0}
                     </div>
                   </div>
@@ -840,7 +870,9 @@ function Body() {
                     }}
                   >
                     <div style={{ fontSize: 10, color: "#94A3B8" }}>Avg Ramp Days</div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                    <div
+                      style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                    >
                       {qohData?.components?.rampDays ?? 0}
                     </div>
                   </div>
@@ -885,13 +917,17 @@ function Body() {
                       >
                         <div>
                           <div style={{ fontSize: 10, color: "#94A3B8" }}>Records</div>
-                          <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}>
+                          <div
+                            style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}
+                          >
                             {recruiter.recordsCount}
                           </div>
                         </div>
                         <div>
                           <div style={{ fontSize: 10, color: "#94A3B8" }}>Band</div>
-                          <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}>
+                          <div
+                            style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}
+                          >
                             {recruiter.band}
                           </div>
                         </div>
@@ -924,12 +960,51 @@ function Body() {
     return (
       <ReportShell
         title="Talent Intelligence narrative"
-        subtitle="Talent Intelligence should combine source quality, match reasoning, and role-specific signals so recruiters can explain not just outcomes, but the drivers behind them."
+        subtitle={`This period Talent Intelligence is summarizing pipeline efficiency using live report metrics. Current apply-to-interview rate is ${interviewRate}% and apply-to-hire rate is ${hireRate}%.`}
         visual={
-          <BuildingVisual
-            title="Talent Intelligence report"
-            body="This report is being wired toward deeper recruiting intelligence such as match reasons, skills patterns, and role-specific signal comparison."
-          />
+          <div style={{ display: "grid", gap: 10 }}>
+            <div
+              style={{
+                borderRadius: 14,
+                background: "rgba(255,255,255,0.72)",
+                border: "1px solid rgba(255,255,255,0.30)",
+                padding: 14,
+              }}
+            >
+              <div style={{ fontSize: 10, color: "#94A3B8" }}>Apply → Interview</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                {interviewRate}%
+              </div>
+            </div>
+
+            <div
+              style={{
+                borderRadius: 14,
+                background: "rgba(255,255,255,0.72)",
+                border: "1px solid rgba(255,255,255,0.30)",
+                padding: 14,
+              }}
+            >
+              <div style={{ fontSize: 10, color: "#94A3B8" }}>Apply → Hire</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                {hireRate}%
+              </div>
+            </div>
+
+            <div
+              style={{
+                borderRadius: 14,
+                background: "rgba(255,255,255,0.72)",
+                border: "1px solid rgba(255,255,255,0.30)",
+                padding: 14,
+              }}
+            >
+              <div style={{ fontSize: 10, color: "#94A3B8" }}>Avg Time-to-Fill</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                {avgTimeToFill} days
+              </div>
+            </div>
+          </div>
         }
         insights={
           <>
@@ -941,7 +1016,7 @@ function Body() {
             <NarrativeCard
               eyebrow="Recommendation"
               title="Use this report to connect pattern recognition with action"
-              body="The finished version should help the team see which sources, candidate traits, and match signals repeatedly lead to stronger hiring outcomes for specific roles."
+              body="This first-pass view should be used to compare live efficiency signals across the current recruiting window before deeper source attribution and candidate pattern analysis are added."
               accent="#0F766E"
             />
           </>
