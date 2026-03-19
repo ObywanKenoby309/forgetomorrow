@@ -1502,7 +1502,7 @@ function AddCandidateModal({ jobId, onClose, onAdded }) {
                     type="url"
                     placeholder="https://..."
                     value={newLinkedin}
-                    onChange={(e) => setExternalUrl(e.target.value)}
+                    onChange={(e) => setNewExternalUrl(e.target.value)}
                     style={inputStyle}
                   />
                 </div>
