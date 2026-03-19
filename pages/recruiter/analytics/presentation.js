@@ -6,10 +6,9 @@ import RecruiterAnalyticsLayout from "@/components/layouts/RecruiterAnalyticsLay
 import ApplicationFunnel from "@/components/analytics/charts/ApplicationFunnel";
 import SourceBreakdown from "@/components/analytics/charts/SourceBreakdown";
 import RecruiterActivity from "@/components/analytics/charts/RecruiterActivity";
-import KPICard from "@/components/analytics/KPICard";
 
 // ─────────────────────────────────────────
-// Style tokens — unified with platform
+// Tokens
 // ─────────────────────────────────────────
 const ORANGE = "#FF7043";
 const SLATE  = "#334155";
@@ -17,30 +16,23 @@ const MUTED  = "#64748B";
 const FAINT  = "#94A3B8";
 
 const GLASS = {
-  border: "1px solid rgba(255,255,255,0.24)",
-  background: "rgba(255,255,255,0.68)",
-  boxShadow: "0 8px 28px rgba(15,23,42,0.10)",
-  backdropFilter: "blur(14px)",
+  border:               "1px solid rgba(255,255,255,0.24)",
+  background:           "rgba(255,255,255,0.68)",
+  boxShadow:            "0 8px 28px rgba(15,23,42,0.10)",
+  backdropFilter:       "blur(14px)",
   WebkitBackdropFilter: "blur(14px)",
 };
 
-const GLASS_SOFT = {
-  border: "1px solid rgba(255,255,255,0.18)",
-  background: "rgba(255,255,255,0.52)",
-  boxShadow: "0 4px 16px rgba(15,23,42,0.07)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
-};
-
-// Clean white — used for export targets only
-const EXPORT_CARD = {
-  background: "#FFFFFF",
-  borderRadius: 16,
-  boxShadow: "0 4px 20px rgba(15,23,42,0.08)",
-};
+// ─────────────────────────────────────────
+// Preview geometry
+// Adjust PREVIEW_SCALE to make thumbnails
+// larger or smaller. Everything else adapts.
+// ─────────────────────────────────────────
+const PREVIEW_H     = 140; // visible height of the scaled preview area (px)
+const PREVIEW_SCALE = 0.40; // 40% of the chart's natural size
 
 // ─────────────────────────────────────────
-// Data hook — unchanged from original
+// Data hook
 // ─────────────────────────────────────────
 function useAnalytics(state) {
   const [data, setData]       = useState(null);
@@ -62,7 +54,7 @@ function useAnalytics(state) {
 
   useEffect(() => {
     let active = true;
-    const fetchData = async () => {
+    const load = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -75,8 +67,8 @@ function useAnalytics(state) {
         if (active) setLoading(false);
       }
     };
-    fetchData();
-    const id = setInterval(fetchData, 30000);
+    load();
+    const id = setInterval(load, 30000);
     return () => { active = false; clearInterval(id); };
   }, [qs]);
 
@@ -95,212 +87,131 @@ function getFiltersFromQuery(query) {
 }
 
 // ─────────────────────────────────────────
-// Export helpers
+// PNG export
 // ─────────────────────────────────────────
-async function exportCardAsPNG(ref, filename, resolution = "standard") {
-  if (!ref || typeof window === "undefined") return;
+async function exportAsPNG(el, filename, resolution = "standard") {
+  if (!el || typeof window === "undefined") return;
   try {
     const { default: html2canvas } = await import("html2canvas");
-    const scale = resolution === "high" ? 3 : 2;
-    const canvas = await html2canvas(ref, {
+    const canvas = await html2canvas(el, {
       backgroundColor: "#ffffff",
-      scale,
-      useCORS: true,
-      logging: false,
+      scale:           resolution === "high" ? 3 : 2,
+      useCORS:         true,
+      logging:         false,
     });
-    const link = document.createElement("a");
-    link.download = filename;
-    link.href     = canvas.toDataURL("image/png");
-    link.click();
+    const a    = document.createElement("a");
+    a.download = filename;
+    a.href     = canvas.toDataURL("image/png");
+    a.click();
   } catch (err) {
     console.error("PNG export failed:", err);
   }
 }
 
 // ─────────────────────────────────────────
-// Chip — small pill button
+// ScaledPreview
+// Renders children at full natural size
+// inside a hidden overflow box, then shrinks
+// visually with CSS transform — so the chart
+// looks like a miniature but renders cleanly.
 // ─────────────────────────────────────────
-function Chip({ children, active, onClick, style = {} }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: "5px 13px",
-        borderRadius: 999,
-        border: active
-          ? "1px solid transparent"
-          : "1px solid rgba(51,65,85,0.14)",
-        background: active ? ORANGE : "rgba(255,255,255,0.82)",
-        color:      active ? "#fff"  : MUTED,
-        fontSize:   12,
-        fontWeight: 700,
-        cursor:     "pointer",
-        transition: "all 130ms ease",
-        boxShadow:  active ? "0 4px 10px rgba(255,112,67,0.26)" : "none",
-        whiteSpace: "nowrap",
-        fontFamily: "inherit",
-        ...style,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
+function ScaledPreview({ children }) {
+  const containerRef = useRef(null);
+  const [containerW, setContainerW] = useState(300);
 
-// ─────────────────────────────────────────
-// Export button — consistent across cards
-// ─────────────────────────────────────────
-function ExportBtn({ onClick, loading: exporting }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={exporting}
-      style={{
-        display:        "inline-flex",
-        alignItems:     "center",
-        gap:            5,
-        padding:        "6px 12px",
-        borderRadius:   999,
-        border:         "1px solid rgba(255,112,67,0.22)",
-        background:     "rgba(255,112,67,0.09)",
-        color:          ORANGE,
-        fontSize:       11.5,
-        fontWeight:     800,
-        cursor:         exporting ? "default" : "pointer",
-        opacity:        exporting ? 0.55 : 1,
-        transition:     "all 130ms ease",
-        whiteSpace:     "nowrap",
-        fontFamily:     "inherit",
-        flexShrink:     0,
-      }}
-    >
-      {exporting ? "Exporting…" : "⬇ PNG"}
-    </button>
-  );
-}
+  // Measure the actual card width after mount
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setContainerW(entry.contentRect.width || 300);
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
 
-// ─────────────────────────────────────────
-// Gallery card wrapper
-// Each card:
-//   • Shows a compact preview (scaled-down chart)
-//   • Has its own Export PNG button
-//   • Clicking the preview opens a focus modal
-// ─────────────────────────────────────────
-function GalleryCard({ title, period, tag, children, exportRef, filename, resolution, onFocus }) {
-  const [exporting, setExporting] = useState(false);
-
-  const handleExport = async (e) => {
-    e.stopPropagation();
-    setExporting(true);
-    await exportCardAsPNG(exportRef.current, filename, resolution);
-    setExporting(false);
-  };
+  const innerW = Math.round(containerW / PREVIEW_SCALE);
+  const innerH = Math.round(PREVIEW_H  / PREVIEW_SCALE);
 
   return (
     <div
+      ref={containerRef}
       style={{
-        ...EXPORT_CARD,
-        display:        "flex",
-        flexDirection:  "column",
-        gap:            0,
-        cursor:         "pointer",
-        transition:     "transform 150ms ease, box-shadow 150ms ease",
-        overflow:       "hidden",
+        width:        "100%",
+        height:       PREVIEW_H,
+        overflow:     "hidden",
+        borderRadius: 8,
+        background:   "#fff",
+        position:     "relative",
+        flexShrink:   0,
       }}
-      className="gallery-card"
-      onClick={onFocus}
     >
-      {/* Card header */}
       <div
         style={{
-          padding:        "14px 16px 12px",
-          display:        "flex",
-          alignItems:     "flex-start",
-          justifyContent: "space-between",
-          gap:            10,
-          borderBottom:   "1px solid rgba(226,232,240,0.6)",
-        }}
-      >
-        <div style={{ minWidth: 0 }}>
-          {tag && (
-            <div
-              style={{
-                fontSize:       9.5,
-                fontWeight:     800,
-                letterSpacing:  "0.09em",
-                textTransform:  "uppercase",
-                color:          ORANGE,
-                marginBottom:   4,
-              }}
-            >
-              {tag}
-            </div>
-          )}
-          <div
-            style={{
-              fontSize:   14,
-              fontWeight: 800,
-              color:      SLATE,
-              lineHeight: 1.2,
-            }}
-          >
-            {title}
-          </div>
-          <div style={{ fontSize: 11, color: FAINT, marginTop: 3 }}>{period}</div>
-        </div>
-        <ExportBtn onClick={handleExport} loading={exporting} />
-      </div>
-
-      {/* Preview area — scaled chart */}
-      <div
-        ref={exportRef}
-        style={{
-          padding:    "16px 14px 14px",
-          background: "#ffffff",
-          flexGrow:   1,
+          width:           innerW,
+          height:          innerH,
+          transform:       `scale(${PREVIEW_SCALE})`,
+          transformOrigin: "top left",
+          pointerEvents:   "none",
+          userSelect:      "none",
+          position:        "absolute",
+          top:             0,
+          left:            0,
         }}
       >
         {children}
-      </div>
-
-      {/* Focus hint */}
-      <div
-        style={{
-          padding:    "8px 16px",
-          borderTop:  "1px solid rgba(226,232,240,0.5)",
-          fontSize:   11,
-          color:      FAINT,
-          fontWeight: 600,
-          display:    "flex",
-          alignItems: "center",
-          gap:        5,
-        }}
-      >
-        <span style={{ opacity: 0.6 }}>🔍</span> Click to preview full size
       </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────
-// Focus modal — full-size preview
+// KPI grid — shared between preview + export
 // ─────────────────────────────────────────
-function FocusModal({ item, periodLabel, resolution, onClose }) {
-  const exportRef  = useRef(null);
+function KPIGrid({ data, loading }) {
+  const metrics = [
+    { label: "Job Views",     value: data?.kpis?.totalViews      ?? (loading ? "…" : 0) },
+    { label: "Applications",  value: data?.kpis?.totalApplies    ?? (loading ? "…" : 0) },
+    { label: "Conversion",    value: data ? `${data.kpis.conversionRatePct}%`  : loading ? "…" : "0%" },
+    { label: "Time-to-Fill",  value: data ? `${data.kpis.avgTimeToFillDays}d` : loading ? "…" : "0d" },
+    { label: "Interviews",    value: data?.kpis?.totalInterviews ?? (loading ? "…" : 0) },
+    { label: "Hires",         value: data?.kpis?.totalHires      ?? (loading ? "…" : 0) },
+  ];
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
+      {metrics.map((m) => (
+        <div
+          key={m.label}
+          style={{
+            background:   "#F8FAFC",
+            borderRadius: 12,
+            padding:      "18px 14px",
+            textAlign:    "center",
+            border:       "1px solid rgba(226,232,240,0.8)",
+          }}
+        >
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: MUTED, marginBottom: 8 }}>
+            {m.label}
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 900, color: SLATE, lineHeight: 1 }}>
+            {m.value}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────
+// Gallery card — thumbnail size
+// ─────────────────────────────────────────
+function GalleryCard({ item, periodLabel, resolution, onFocus, exportRef }) {
   const [exporting, setExporting] = useState(false);
 
-  // Close on Escape
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const handleExport = async () => {
+  const handleExport = async (e) => {
+    e.stopPropagation();
     setExporting(true);
-    await exportCardAsPNG(
+    await exportAsPNG(
       exportRef.current,
       `ForgeTomorrow_${item.title.replace(/\s+/g, "_")}_${periodLabel}.png`,
       resolution
@@ -310,217 +221,149 @@ function FocusModal({ item, periodLabel, resolution, onClose }) {
 
   return (
     <div
+      onClick={onFocus}
+      className="gallery-card"
       style={{
-        position:        "fixed",
-        inset:           0,
-        zIndex:          500,
-        background:      "rgba(15,23,42,0.55)",
-        backdropFilter:  "blur(6px)",
-        display:         "flex",
-        alignItems:      "center",
-        justifyContent:  "center",
-        padding:         24,
+        background:    "#fff",
+        borderRadius:  14,
+        boxShadow:     "0 3px 14px rgba(15,23,42,0.07)",
+        border:        "1px solid rgba(226,232,240,0.7)",
+        overflow:      "hidden",
+        cursor:        "pointer",
+        transition:    "transform 150ms ease, box-shadow 150ms ease",
+        display:       "flex",
+        flexDirection: "column",
       }}
-      onClick={onClose}
     >
+      {/* Header */}
       <div
         style={{
-          background:   "#fff",
-          borderRadius: 20,
-          boxShadow:    "0 24px 64px rgba(15,23,42,0.22)",
-          width:        "100%",
-          maxWidth:     820,
-          maxHeight:    "90vh",
-          overflow:     "auto",
-          display:      "flex",
-          flexDirection:"column",
+          padding:        "10px 12px 8px",
+          borderBottom:   "1px solid rgba(226,232,240,0.5)",
+          display:        "flex",
+          alignItems:     "flex-start",
+          justifyContent: "space-between",
+          gap:            8,
+          flexShrink:     0,
         }}
-        onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal header */}
-        <div
-          style={{
-            padding:        "18px 22px",
-            borderBottom:   "1px solid rgba(226,232,240,0.7)",
-            display:        "flex",
-            alignItems:     "center",
-            justifyContent: "space-between",
-            gap:            12,
-            flexShrink:     0,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>{item.title}</div>
-            <div style={{ fontSize: 12, color: FAINT, marginTop: 3 }}>{periodLabel}</div>
+        <div style={{ minWidth: 0 }}>
+          {item.tag && (
+            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.09em", textTransform: "uppercase", color: ORANGE, marginBottom: 3 }}>
+              {item.tag}
+            </div>
+          )}
+          <div style={{ fontSize: 12, fontWeight: 800, color: SLATE, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {item.title}
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={exporting}
-              style={{
-                display:    "inline-flex",
-                alignItems: "center",
-                gap:        6,
-                padding:    "8px 16px",
-                borderRadius: 999,
-                border:     "none",
-                background: ORANGE,
-                color:      "#fff",
-                fontSize:   13,
-                fontWeight: 800,
-                cursor:     exporting ? "default" : "pointer",
-                opacity:    exporting ? 0.6 : 1,
-                boxShadow:  "0 6px 16px rgba(255,112,67,0.26)",
-                transition: "all 140ms ease",
-                fontFamily: "inherit",
-              }}
-            >
-              {exporting ? "Exporting…" : "⬇ Export PNG"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                width:      34,
-                height:     34,
-                borderRadius: 999,
-                border:     "1px solid rgba(51,65,85,0.14)",
-                background: "rgba(255,255,255,0.9)",
-                color:      MUTED,
-                fontSize:   16,
-                fontWeight: 700,
-                cursor:     "pointer",
-                display:    "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: "inherit",
-              }}
-            >
-              ✕
-            </button>
-          </div>
+          <div style={{ fontSize: 9.5, color: FAINT, marginTop: 2 }}>{periodLabel}</div>
         </div>
-
-        {/* Modal body — the export target */}
-        <div
-          ref={exportRef}
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exporting}
           style={{
-            padding:    "24px 28px 28px",
-            background: "#ffffff",
-            flexGrow:   1,
+            display:      "inline-flex",
+            alignItems:   "center",
+            gap:          3,
+            padding:      "3px 8px",
+            borderRadius: 999,
+            border:       "1px solid rgba(255,112,67,0.22)",
+            background:   "rgba(255,112,67,0.09)",
+            color:        ORANGE,
+            fontSize:     10,
+            fontWeight:   800,
+            cursor:       exporting ? "default" : "pointer",
+            opacity:      exporting ? 0.5 : 1,
+            whiteSpace:   "nowrap",
+            flexShrink:   0,
+            fontFamily:   "inherit",
           }}
         >
-          {item.renderFull()}
-        </div>
+          {exporting ? "…" : "⬇ PNG"}
+        </button>
+      </div>
 
-        <div
-          style={{
-            padding:    "12px 22px",
-            borderTop:  "1px solid rgba(226,232,240,0.6)",
-            fontSize:   11,
-            color:      FAINT,
-            flexShrink: 0,
-          }}
-        >
-          Export is clean PNG — white background, no watermarks. Resize freely in your deck.
-        </div>
+      {/* Scaled thumbnail preview */}
+      <div style={{ padding: "8px 10px 6px", flexGrow: 1 }}>
+        <ScaledPreview>
+          {item.renderPreview()}
+        </ScaledPreview>
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding: "5px 12px", borderTop: "1px solid rgba(226,232,240,0.4)", fontSize: 9.5, color: FAINT, fontWeight: 600, flexShrink: 0 }}>
+        Click to preview &amp; export
       </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────
-// KPI summary — presentation-clean version
+// Focus modal
 // ─────────────────────────────────────────
-function KPISummaryExport({ data, loading }) {
-  const metrics = [
-    { label: "Job Views",       value: data?.kpis?.totalViews       ?? (loading ? "…" : 0) },
-    { label: "Applications",    value: data?.kpis?.totalApplies     ?? (loading ? "…" : 0) },
-    { label: "Conversion",      value: data ? `${data.kpis.conversionRatePct}%`    : loading ? "…" : "0%" },
-    { label: "Avg. Time-to-Fill", value: data ? `${data.kpis.avgTimeToFillDays}d`  : loading ? "…" : "0d" },
-    { label: "Interviews",      value: data?.kpis?.totalInterviews  ?? (loading ? "…" : 0) },
-    { label: "Hires",           value: data?.kpis?.totalHires       ?? (loading ? "…" : 0) },
-  ];
+function FocusModal({ item, periodLabel, resolution, onClose, exportRef }) {
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    const fn = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [onClose]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    await exportAsPNG(
+      exportRef.current,
+      `ForgeTomorrow_${item.title.replace(/\s+/g, "_")}_${periodLabel}.png`,
+      resolution
+    );
+    setExporting(false);
+  };
 
   return (
     <div
-      style={{
-        display:             "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        gap:                 14,
-      }}
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(15,23,42,0.50)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
     >
-      {metrics.map((m) => (
-        <div
-          key={m.label}
-          style={{
-            background:   "#F8FAFC",
-            borderRadius: 12,
-            padding:      "16px 14px",
-            textAlign:    "center",
-            border:       "1px solid rgba(226,232,240,0.8)",
-          }}
-        >
-          <div
-            style={{
-              fontSize:       10,
-              fontWeight:     700,
-              textTransform:  "uppercase",
-              letterSpacing:  "0.07em",
-              color:          MUTED,
-              marginBottom:   8,
-            }}
-          >
-            {m.label}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 20, boxShadow: "0 24px 64px rgba(15,23,42,0.22)", width: "100%", maxWidth: 760, maxHeight: "88vh", overflow: "auto", display: "flex", flexDirection: "column" }}
+      >
+        {/* Modal header */}
+        <div style={{ padding: "16px 22px", borderBottom: "1px solid rgba(226,232,240,0.7)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexShrink: 0 }}>
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: SLATE }}>{item.title}</div>
+            <div style={{ fontSize: 11, color: FAINT, marginTop: 3 }}>{periodLabel}</div>
           </div>
-          <div
-            style={{
-              fontSize:   28,
-              fontWeight: 900,
-              color:      SLATE,
-              lineHeight: 1,
-            }}
-          >
-            {m.value}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 999, border: "none", background: ORANGE, color: "#fff", fontSize: 13, fontWeight: 800, cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.6 : 1, boxShadow: "0 6px 16px rgba(255,112,67,0.26)", fontFamily: "inherit" }}
+            >
+              {exporting ? "Exporting…" : "⬇ Export PNG"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{ width: 32, height: 32, borderRadius: 999, border: "1px solid rgba(51,65,85,0.14)", background: "rgba(255,255,255,0.9)", color: MUTED, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}
+            >
+              ✕
+            </button>
           </div>
         </div>
-      ))}
-    </div>
-  );
-}
 
-// ─────────────────────────────────────────
-// Mini KPI summary — compact gallery version
-// ─────────────────────────────────────────
-function KPISummaryMini({ data, loading }) {
-  const metrics = [
-    { label: "Views",        value: data?.kpis?.totalViews    ?? (loading ? "…" : 0) },
-    { label: "Applications", value: data?.kpis?.totalApplies  ?? (loading ? "…" : 0) },
-    { label: "Conversion",   value: data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%" },
-    { label: "Hires",        value: data?.kpis?.totalHires    ?? (loading ? "…" : 0) },
-  ];
-
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-      {metrics.map((m) => (
-        <div
-          key={m.label}
-          style={{
-            background:   "#F8FAFC",
-            borderRadius: 10,
-            padding:      "10px 10px",
-            border:       "1px solid rgba(226,232,240,0.8)",
-          }}
-        >
-          <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: MUTED, marginBottom: 5 }}>
-            {m.label}
-          </div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: SLATE, lineHeight: 1 }}>
-            {m.value}
-          </div>
+        {/* Export target */}
+        <div ref={exportRef} style={{ padding: "24px 28px 28px", background: "#ffffff", flexGrow: 1 }}>
+          {item.renderFull()}
         </div>
-      ))}
+
+        <div style={{ padding: "10px 22px", borderTop: "1px solid rgba(226,232,240,0.6)", fontSize: 10.5, color: FAINT, flexShrink: 0 }}>
+          White background · No watermarks · Resize freely in PowerPoint, Google Slides, or Keynote
+        </div>
+      </div>
     </div>
   );
 }
@@ -531,17 +374,15 @@ function KPISummaryMini({ data, loading }) {
 function Body() {
   const router = useRouter();
 
-  const [filters, setFilters] = useState(getFiltersFromQuery(router.query));
-  const { data, loading, error } = useAnalytics(filters);
-
+  const [filters, setFilters]       = useState(getFiltersFromQuery(router.query));
+  const { data, loading, error }    = useAnalytics(filters);
   const [resolution, setResolution] = useState("standard");
-  const [focusedIndex, setFocusedIndex] = useState(null);
+  const [focusedIndex, setFocused]  = useState(null);
 
-  // Per-card export refs
-  const cardRefs = useRef({});
-  const getRef = (key) => {
-    if (!cardRefs.current[key]) cardRefs.current[key] = React.createRef();
-    return cardRefs.current[key];
+  const exportRefs = useRef({});
+  const getExportRef = (key) => {
+    if (!exportRefs.current[key]) exportRefs.current[key] = React.createRef();
+    return exportRefs.current[key];
   };
 
   useEffect(() => {
@@ -553,17 +394,7 @@ function Body() {
     const next = { ...filters, ...patch };
     setFilters(next);
     router.replace(
-      {
-        pathname: router.pathname,
-        query: {
-          range:       next.range,
-          jobId:       next.jobId,
-          recruiterId: next.recruiterId,
-          companyId:   next.companyId,
-          ...(next.from ? { from: next.from } : {}),
-          ...(next.to   ? { to:   next.to   } : {}),
-        },
-      },
+      { pathname: router.pathname, query: { range: next.range, jobId: next.jobId, recruiterId: next.recruiterId, companyId: next.companyId, ...(next.from ? { from: next.from } : {}), ...(next.to ? { to: next.to } : {}) } },
       undefined,
       { shallow: true, scroll: false }
     );
@@ -574,59 +405,56 @@ function Body() {
       ? `${filters.from || "Start"} → ${filters.to || "End"}`
       : `Last ${String(filters.range || "30d").toUpperCase()}`;
 
-  // ── Visual items ──
-  // Each item has:
-  //   key         — unique identifier
-  //   title       — card title
-  //   tag         — optional eyebrow
-  //   renderMini  — compact version shown in gallery card
-  //   renderFull  — full version shown in focus modal + exported
+  // ─────────────────────────────────────────
+  // Visual registry
+  // To add a new chart: push one object here.
+  // The gallery grid handles the rest.
+  // ─────────────────────────────────────────
   const visualItems = [
     {
-      key:   "kpi",
-      title: "KPI Summary",
-      tag:   "Performance",
-      renderMini: () => <KPISummaryMini data={data} loading={loading} />,
-      renderFull: () => <KPISummaryExport data={data} loading={loading} />,
+      key:           "kpi",
+      title:         "KPI Summary",
+      tag:           "Performance",
+      renderPreview: () => <KPIGrid data={data} loading={loading} />,
+      renderFull:    () => (
+        <>
+          <div style={{ fontSize: 12, color: MUTED, marginBottom: 18, lineHeight: 1.6 }}>Core hiring performance metrics · {periodLabel}</div>
+          <KPIGrid data={data} loading={loading} />
+        </>
+      ),
     },
     {
-      key:   "funnel",
-      title: "Application Funnel",
-      tag:   "Conversion",
-      renderMini: () => <ApplicationFunnel data={data?.funnel || []} />,
-      renderFull: () => (
+      key:           "funnel",
+      title:         "Application Funnel",
+      tag:           "Conversion",
+      renderPreview: () => <ApplicationFunnel data={data?.funnel || []} />,
+      renderFull:    () => (
         <>
-          <div style={{ fontSize: 13, color: MUTED, marginBottom: 16, lineHeight: 1.6 }}>
-            Conversion flow from initial interest through downstream hiring stages.
-          </div>
+          <div style={{ fontSize: 12, color: MUTED, marginBottom: 18, lineHeight: 1.6 }}>Conversion flow from initial interest through downstream hiring stages · {periodLabel}</div>
           <ApplicationFunnel data={data?.funnel || []} />
         </>
       ),
     },
     {
-      key:   "sources",
-      title: "Source Performance",
-      tag:   "Sourcing",
-      renderMini: () => <SourceBreakdown data={data?.sources || []} />,
-      renderFull: () => (
+      key:           "sources",
+      title:         "Source Performance",
+      tag:           "Sourcing",
+      renderPreview: () => <SourceBreakdown data={data?.sources || []} />,
+      renderFull:    () => (
         <>
-          <div style={{ fontSize: 13, color: MUTED, marginBottom: 16, lineHeight: 1.6 }}>
-            Where candidate flow is originating for the selected reporting window.
-          </div>
+          <div style={{ fontSize: 12, color: MUTED, marginBottom: 18, lineHeight: 1.6 }}>Where candidate flow is originating · {periodLabel}</div>
           <SourceBreakdown data={data?.sources || []} />
         </>
       ),
     },
     {
-      key:   "activity",
-      title: "Recruiter Activity Trend",
-      tag:   "Productivity",
-      renderMini: () => <RecruiterActivity data={data?.recruiterActivity || []} />,
-      renderFull: () => (
+      key:           "activity",
+      title:         "Recruiter Activity Trend",
+      tag:           "Productivity",
+      renderPreview: () => <RecruiterActivity data={data?.recruiterActivity || []} />,
+      renderFull:    () => (
         <>
-          <div style={{ fontSize: 13, color: MUTED, marginBottom: 16, lineHeight: 1.6 }}>
-            Recruiter engagement and activity patterns over the selected period.
-          </div>
+          <div style={{ fontSize: 12, color: MUTED, marginBottom: 18, lineHeight: 1.6 }}>Recruiter engagement and activity patterns · {periodLabel}</div>
           <RecruiterActivity data={data?.recruiterActivity || []} />
         </>
       ),
@@ -639,128 +467,86 @@ function Body() {
     <RecruiterAnalyticsLayout
       title="Recruiter Analytics — ForgeTomorrow"
       pageTitle="Presentation Visuals"
-      pageSubtitle="Export-ready charts for decks, QBRs, and stakeholder reporting. Each visual downloads as a clean PNG — white background, no watermarks."
+      pageSubtitle="Export-ready charts for QBRs and stakeholder reporting. Clean PNG downloads — white background, no watermarks, resize freely in your deck."
       activeTab="presentation"
       filters={filters}
       onFilterChange={onFilterChange}
     >
-      {/* ── Error ── */}
       {error && (
-        <div
-          style={{
-            borderRadius: 14,
-            border:       "1px solid rgba(239,68,68,0.22)",
-            background:   "rgba(254,242,242,0.86)",
-            color:        "#B91C1C",
-            padding:      "12px 16px",
-            marginBottom: 16,
-            fontSize:     13,
-          }}
-        >
+        <div style={{ borderRadius: 12, border: "1px solid rgba(239,68,68,0.20)", background: "rgba(254,242,242,0.86)", color: "#B91C1C", padding: "11px 14px", marginBottom: 16, fontSize: 13 }}>
           {String(error)}
         </div>
       )}
 
-      {/* ── Export control bar ── */}
-      <div
-        style={{
-          ...GLASS,
-          borderRadius: 18,
-          padding:      "14px 18px",
-          display:      "flex",
-          alignItems:   "center",
-          gap:          12,
-          flexWrap:     "wrap",
-          marginBottom: 20,
-        }}
-      >
+      {/* ── Control bar ── */}
+      <div style={{ ...GLASS, borderRadius: 18, padding: "13px 18px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: SLATE, lineHeight: 1.2 }}>
-            Presentation Studio
-          </div>
-          <div style={{ fontSize: 12, color: MUTED, marginTop: 3 }}>
-            Browse the chart gallery below. Export any visual individually, or download all at once.
+          <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>Presentation Studio</div>
+          <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
+            {visualItems.length} visuals ready · click any card to preview · export individually or all at once
           </div>
         </div>
-
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto", flexWrap: "wrap" }}>
-          {/* Resolution toggle */}
-          <div
-            style={{
-              display:      "flex",
-              gap:          4,
-              padding:      "4px",
-              borderRadius: 999,
-              background:   "rgba(51,65,85,0.07)",
-            }}
-          >
-            <Chip active={resolution === "standard"} onClick={() => setResolution("standard")}>
-              Standard
-            </Chip>
-            <Chip active={resolution === "high"} onClick={() => setResolution("high")}>
-              High-res
-            </Chip>
+          <div style={{ display: "flex", gap: 3, padding: "3px", borderRadius: 999, background: "rgba(51,65,85,0.07)" }}>
+            {["standard", "high"].map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setResolution(r)}
+                style={{ padding: "5px 12px", borderRadius: 999, border: "none", background: resolution === r ? "#fff" : "transparent", color: resolution === r ? SLATE : FAINT, fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: resolution === r ? "0 2px 6px rgba(15,23,42,0.08)" : "none", transition: "all 120ms ease", fontFamily: "inherit", whiteSpace: "nowrap" }}
+              >
+                {r === "standard" ? "Standard" : "High-res"}
+              </button>
+            ))}
           </div>
-
-          {/* Download all */}
           <button
             type="button"
             onClick={async () => {
               for (const item of visualItems) {
-                const ref = cardRefs.current[item.key];
+                const ref = exportRefs.current[item.key];
                 if (ref?.current) {
-                  await exportCardAsPNG(
-                    ref.current,
-                    `ForgeTomorrow_${item.title.replace(/\s+/g, "_")}_${periodLabel}.png`,
-                    resolution
-                  );
+                  await exportAsPNG(ref.current, `ForgeTomorrow_${item.title.replace(/\s+/g, "_")}_${periodLabel}.png`, resolution);
                 }
               }
             }}
-            style={{
-              display:    "inline-flex",
-              alignItems: "center",
-              gap:        6,
-              padding:    "8px 16px",
-              borderRadius: 999,
-              border:     "none",
-              background: ORANGE,
-              color:      "#fff",
-              fontSize:   13,
-              fontWeight: 800,
-              cursor:     "pointer",
-              boxShadow:  "0 6px 16px rgba(255,112,67,0.26)",
-              transition: "all 140ms ease",
-              fontFamily: "inherit",
-            }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 999, border: "none", background: ORANGE, color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", boxShadow: "0 6px 16px rgba(255,112,67,0.26)", fontFamily: "inherit", whiteSpace: "nowrap" }}
           >
-            ⬇ Download All
+            ⬇ Download All ({visualItems.length})
           </button>
         </div>
       </div>
 
-      {/* ── Chart gallery ── */}
-      <div
-        style={{
-          display:             "grid",
-          gridTemplateColumns: "repeat(2, 1fr)",
-          gap:                 18,
-        }}
-        className="presentation-gallery"
-      >
+      {/* ── Gallery grid ── */}
+      <div className="pres-gallery">
         {visualItems.map((item, index) => (
           <GalleryCard
             key={item.key}
-            title={item.title}
-            period={periodLabel}
-            tag={item.tag}
-            exportRef={getRef(item.key)}
-            filename={`ForgeTomorrow_${item.title.replace(/\s+/g, "_")}_${periodLabel}.png`}
+            item={item}
+            periodLabel={periodLabel}
             resolution={resolution}
-            onFocus={() => setFocusedIndex(index)}
+            onFocus={() => setFocused(index)}
+            exportRef={getExportRef(item.key)}
+          />
+        ))}
+      </div>
+
+      {/* ── Off-screen full-size export targets ── */}
+      <div aria-hidden="true" style={{ position: "absolute", left: -9999, top: 0, width: 700, visibility: "hidden", pointerEvents: "none" }}>
+        {visualItems.map((item) => (
+          <div
+            key={item.key}
+            ref={getExportRef(item.key)}
+            style={{ padding: "28px 32px", background: "#ffffff", width: 700 }}
           >
-            {item.renderMini()}
-          </GalleryCard>
+            {item.tag && (
+              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.09em", textTransform: "uppercase", color: ORANGE, marginBottom: 6 }}>
+                {item.tag}
+              </div>
+            )}
+            <div style={{ fontSize: 20, fontWeight: 900, color: SLATE, marginBottom: 4, lineHeight: 1.2 }}>{item.title}</div>
+            <div style={{ fontSize: 11, color: FAINT, marginBottom: 22 }}>{periodLabel}</div>
+            {item.renderFull()}
+          </div>
         ))}
       </div>
 
@@ -770,43 +556,28 @@ function Body() {
           item={focusedItem}
           periodLabel={periodLabel}
           resolution={resolution}
-          onClose={() => setFocusedIndex(null)}
+          onClose={() => setFocused(null)}
+          exportRef={getExportRef(focusedItem.key)}
         />
       )}
 
-      {/* ── Footer note ── */}
-      <div
-        style={{
-          marginTop:  20,
-          fontSize:   11.5,
-          color:      FAINT,
-          textAlign:  "right",
-          lineHeight: 1.6,
-        }}
-      >
-        PNG exports are white-background and branding-free. Resize freely in PowerPoint, Google Slides, or Keynote.
+      <div style={{ marginTop: 18, fontSize: 11, color: FAINT, textAlign: "right" }}>
+        PNG exports · white background · no watermarks · resize freely in your deck
       </div>
 
-      {/* ── Responsive gallery styles ── */}
       <style>{`
-        .presentation-gallery {
-          grid-template-columns: repeat(2, 1fr);
+        .pres-gallery {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 14px;
         }
         .gallery-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 32px rgba(15,23,42,0.12) !important;
+          transform: translateY(-2px) !important;
+          box-shadow: 0 10px 26px rgba(15,23,42,0.11) !important;
         }
-        @media (max-width: 900px) {
-          .presentation-gallery {
-            grid-template-columns: 1fr;
-          }
-        }
-        @media (max-width: 580px) {
-          .presentation-gallery {
-            grid-template-columns: 1fr;
-            gap: 14px;
-          }
-        }
+        @media (max-width: 1100px) { .pres-gallery { grid-template-columns: repeat(3, 1fr) !important; } }
+        @media (max-width: 780px)  { .pres-gallery { grid-template-columns: repeat(2, 1fr) !important; } }
+        @media (max-width: 480px)  { .pres-gallery { grid-template-columns: 1fr !important; } }
       `}</style>
     </RecruiterAnalyticsLayout>
   );
