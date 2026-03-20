@@ -525,30 +525,58 @@ CLOSING: ...
   };
 
   // HEADER
-  const Header = (
-    <section className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
-      <h1 className="text-3xl font-bold text-orange-600">Cover Builder</h1>
-      <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
-        1 letter. 3 bullets. 100% tailored. No generic paragraphs. Only your real wins. Beats
-        3-paragraph letters every time.
-      </p>
-      <div className="flex items-center justify-center gap-8 mt-6">
-        <button
-          onClick={() => router.push(withChrome('/resume/create'))}
-          className="min-w-[160px] px-6 py-3 rounded-full font-bold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
-        >
-          1. Resume
-        </button>
-        <div className="w-16 h-px bg-gray-300" />
-        <button
-          onClick={() => router.push(withChrome('/cover/create'))}
-          className="min-w-[160px] px-6 py-3 rounded-full font-bold text-sm bg-orange-500 text-white shadow-md"
-        >
-          2. Cover Letter
-        </button>
-      </div>
-    </section>
-  );
+  // HEADER
+const Header = (
+  <section
+    style={{
+      borderRadius: 14,
+      border: '1px solid rgba(255,255,255,0.22)',
+      background: 'rgba(255,255,255,0.58)',
+      boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+      backdropFilter: 'blur(10px)',
+      WebkitBackdropFilter: 'blur(10px)',
+      padding: 18,
+      textAlign: 'center',
+    }}
+    aria-label="Cover Letter Builder header"
+  >
+    <h1 style={{ margin: 0, color: ORANGE, fontSize: 22, fontWeight: 900 }}>Cover Builder</h1>
+    <p style={{ margin: '8px auto 0', color: '#455A64', maxWidth: 860, fontWeight: 700, lineHeight: 1.35 }}>
+      1 letter. 3 bullets. 100% tailored. No generic paragraphs. Only your real wins. Beats 3-paragraph letters every time.
+    </p>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+      <button
+        onClick={() => router.push(withChrome('/resume/create'))}
+        style={{
+          borderRadius: 999,
+          padding: '10px 14px',
+          background: 'rgba(255,255,255,0.75)',
+          color: '#334155',
+          border: '1px solid rgba(0,0,0,0.10)',
+          fontWeight: 900,
+          cursor: 'pointer',
+        }}
+      >
+        1. Resume
+      </button>
+      <span style={{ width: 46, height: 1, background: 'rgba(0,0,0,0.12)' }} />
+      <button
+        onClick={() => router.push(withChrome('/cover/create'))}
+        style={{
+          borderRadius: 999,
+          padding: '10px 14px',
+          background: ORANGE,
+          color: 'white',
+          border: '1px solid rgba(255,112,67,0.55)',
+          fontWeight: 900,
+          cursor: 'pointer',
+        }}
+      >
+        2. Cover Letter
+      </button>
+    </div>
+  </section>
+);
 
   const Footer = (
     <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
