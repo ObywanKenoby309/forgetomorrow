@@ -54,7 +54,7 @@ const REPORT_LINKS = [
 const ANALYTICS_CSS = `
   /* Desktop charts — shown on desktop, hidden on mobile */
   .ft-desktop-charts { display: block; }
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .ft-desktop-charts {
       display: none !important;
       height: 0 !important;
@@ -65,26 +65,26 @@ const ANALYTICS_CSS = `
 
   /* Mobile carousel — hidden on desktop, shown on mobile */
   .ft-mobile-charts { display: none; }
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .ft-mobile-charts { display: block !important; }
   }
 
   /* KPI row — 2-col on mobile */
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .ft-kpi-row {
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     }
   }
 
   /* Stat tiles inside Executive Snapshot card — 1-col on mobile */
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .ft-stat-tiles {
       grid-template-columns: 1fr !important;
     }
   }
 
   /* Timestamp — remove bleed margin on mobile */
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .ft-bleed-ts {
       margin-right: 0 !important;
       text-align: left !important;
@@ -100,7 +100,7 @@ const ANALYTICS_CSS = `
     flex: 1;
     min-width: 0;
   }
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .ft-filter-strip {
       flex-wrap: nowrap !important;
       overflow-x: auto !important;
@@ -111,7 +111,7 @@ const ANALYTICS_CSS = `
   }
 
   /* Filter row — stack on mobile */
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .ft-filter-row {
       flex-direction: column !important;
       align-items: flex-start !important;
@@ -119,7 +119,7 @@ const ANALYTICS_CSS = `
   }
 
   /* Selects + export — full width stack on mobile */
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .ft-filter-stack {
       flex-direction: column !important;
       align-items: stretch !important;
@@ -133,7 +133,7 @@ const ANALYTICS_CSS = `
   /* Refresh label — swap desktop/mobile versions */
   .ft-refresh-desktop { display: block; }
   .ft-refresh-mobile  { display: none;  }
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .ft-refresh-desktop { display: none  !important; }
     .ft-refresh-mobile  { display: block !important; }
   }
@@ -297,8 +297,8 @@ export default function RecruiterAnalyticsLayout({
       right={rightRail}
       contentFullBleed
     >
-      {/* Analytics-scoped CSS — only affects ft-* classes used on these pages */}
-      <style>{ANALYTICS_CSS}</style>
+      {/* Analytics-scoped CSS — jsx global required for Next.js to apply media queries */}
+      <style jsx global>{ANALYTICS_CSS}</style>
 
       {/*
         Hard clip wrapper — catches any overflow that escapes RecruiterLayout's
