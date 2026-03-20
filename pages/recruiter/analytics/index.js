@@ -158,8 +158,8 @@ function MobileCarousel({ cards }) {
   }, [cards.length]);
 
   return (
-    <div style={{ marginBottom: 12, width: "100%", maxWidth: "100vw", overflow: "hidden", boxSizing: "border-box" }}>
-      <div style={{ ...GLASS, borderRadius: 18, overflow: "hidden", width: "100%", maxWidth: "100%" }}>
+    <div style={{ marginBottom: 12, width: "100%", overflow: "hidden", boxSizing: "border-box" }}>
+      <div style={{ borderRadius: 18, overflow: "hidden", width: "100%" }}>
         <div
           ref={trackRef}
           style={{
@@ -168,16 +168,7 @@ function MobileCarousel({ cards }) {
           }}
         >
           {cards.map((card, i) => (
-            <div key={i} style={{
-              flexShrink:     0,
-              width:          "100%",
-              scrollSnapAlign:"start",
-              boxSizing:      "border-box",
-              height:         "auto",
-              maxHeight:      360,
-              overflowY:      "auto",
-              overflowX:      "hidden",
-            }}>
+            <div key={i} style={{ flexShrink: 0, width: "100%", scrollSnapAlign: "start", boxSizing: "border-box", overflowY: "auto", overflowX: "hidden" }}>
               {card}
             </div>
           ))}
@@ -397,26 +388,26 @@ function Body() {
     </div>
   );
 
-  // ── Desktop bleed grid — only rendered when !isMobile ─────────────────────
-  const bleed = { marginLeft: BLEED, marginRight: BLEED, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)", gap: 12 };
-
-  const DesktopBlock = (
-    <>
-      <div style={{ ...bleed, marginTop: 68 }}>{execSnapshotCard}{recruiterActivityCard}{forgeInsightsCard}</div>
-      <div style={{ ...bleed, marginTop: 12 }}>{sourcePerformanceCard}{applicationFunnelCard}{reportGatewaysCard}</div>
-    </>
-  );
-
-  // ── Mobile carousel — only rendered when isMobile ─────────────────────────
-  const MobileBlock = (
+  // ── Layout — only the active layout is evaluated ──────────────────────────
+  // DesktopBlock uses negative margins (BLEED) and must NEVER be instantiated
+  // on mobile — not even as a variable — because React evaluates JSX on
+  // assignment, which would put the bleed divs in the DOM regardless of
+  // whether ChartsContent renders them.
+  const ChartsContent = isMobile ? (
     <>
       <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
       <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
     </>
+  ) : (
+    <>
+      <div style={{ marginLeft: BLEED, marginRight: BLEED, marginTop: 68, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)", gap: 12 }}>
+        {execSnapshotCard}{recruiterActivityCard}{forgeInsightsCard}
+      </div>
+      <div style={{ marginLeft: BLEED, marginRight: BLEED, marginTop: 12, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)", gap: 12 }}>
+        {sourcePerformanceCard}{applicationFunnelCard}{reportGatewaysCard}
+      </div>
+    </>
   );
-
-  // Conditional render — bleed rows never exist in the DOM on mobile
-  const ChartsContent = isMobile ? MobileBlock : DesktopBlock;
 
   return (
     <RecruiterAnalyticsLayout
