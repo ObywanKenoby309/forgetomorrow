@@ -288,7 +288,11 @@ export default function RecruiterAnalyticsLayout({
   const router = useRouter();
 
   // ── Mobile detection (hydration-safe) ──────────────────────────────────────
-  const [isMobile, setIsMobile] = useState(null);
+  // Default TRUE (mobile-safe) — only switches to false once desktop is confirmed.
+  // This ensures contentFullBleed is never true on first paint on any device.
+  // Desktop sees one imperceptible frame of mobile layout before correcting.
+  // Mobile never has overflowX:hidden removed — carousel clips correctly.
+  const [isMobile, setIsMobile] = useState(true);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);

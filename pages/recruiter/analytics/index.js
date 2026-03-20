@@ -314,9 +314,10 @@ function Body() {
   const { insights, loading: insightsLoading } = useInsights(filters);
   const { isEnterprise } = usePlan();
 
-  // SSR-safe mobile detection — mirrors candidate-center.js pattern exactly.
-  // Returns null until client measures; neither layout renders until confirmed.
-  const [isMobile, setIsMobile] = useState(null);
+  // Default TRUE (mobile-safe) — carousel renders on first paint everywhere.
+  // Switches to desktop bleed grid only after confirmed wide screen.
+  // Eliminates the race condition with RecruiterLayout's own hasMounted state.
+  const [isMobile, setIsMobile] = useState(true);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -503,14 +504,9 @@ function Body() {
     </>
   );
 
-  // null = not yet measured — render neither until client confirms.
-  // false = mobile confirmed → carousel.
-  // true (non-null, non-false) = desktop confirmed → bleed grid.
-  const ChartsBlock = isMobile === null
-    ? null
-    : isMobile
-    ? MobileChartsBlock
-    : DesktopChartsBlock;
+  // true = mobile/unconfirmed → carousel (safe default)
+  // false = desktop confirmed → bleed grid
+  const ChartsBlock = isMobile ? MobileChartsBlock : DesktopChartsBlock;
 
   return (
     <RecruiterAnalyticsLayout
@@ -531,9 +527,9 @@ function Body() {
       <section
         style={{
           display: "grid",
-          gridTemplateColumns: isMobile === false
-            ? "repeat(auto-fit, minmax(min(100%, 120px), 1fr))"
-            : "repeat(2, minmax(0, 1fr))",
+          gridTemplateColumns: isMobile
+            ? "repeat(2, minmax(0, 1fr))"
+            : "repeat(auto-fit, minmax(min(100%, 120px), 1fr))",
           gap: 12,
         }}
       >
@@ -554,7 +550,7 @@ function Body() {
             fontSize: 12,
             color: "#94A3B8",
             textAlign: "right",
-            ...(isMobile === false ? { marginRight: BLEED_RIGHT } : {}),
+            ...(!isMobile ? { marginRight: BLEED_RIGHT } : {}),
           }}
         >
           Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
