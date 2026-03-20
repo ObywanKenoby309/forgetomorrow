@@ -148,47 +148,72 @@ function getFiltersFromQuery(query) {
 // any instruction copy. Dot indicators track active position.
 //
 function MobileCarousel({ cards }) {
-  const scrollRef = useRef(null);
+  const trackRef = useRef(null);
+  const programmatic = useRef(false);
   const [activeIdx, setActiveIdx] = useState(0);
 
-  const handleScroll = () => {
-    if (!scrollRef.current) return;
-    const { scrollLeft, clientWidth } = scrollRef.current;
-    const cardW = clientWidth * 0.88 + 12;
-    const idx = Math.min(Math.round(scrollLeft / cardW), cards.length - 1);
-    setActiveIdx(idx);
+  const goTo = (index) => {
+    setActiveIdx(index);
+    const track = trackRef.current;
+    if (!track) return;
+    programmatic.current = true;
+    track.scrollTo({ left: index * track.offsetWidth, behavior: "smooth" });
+    setTimeout(() => { programmatic.current = false; }, 600);
   };
 
+  const handleScroll = () => {
+    if (programmatic.current) return;
+    const track = trackRef.current;
+    if (!track) return;
+    const index = Math.round(track.scrollLeft / track.offsetWidth);
+    if (index >= 0 && index < cards.length) setActiveIdx(index);
+  };
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.addEventListener("scroll", handleScroll, { passive: true });
+    return () => track.removeEventListener("scroll", handleScroll);
+  }, [cards.length]);
+
   return (
-    <div style={{ marginBottom: 4 }}>
+    <div style={{ marginBottom: 12 }}>
       {/*
-        overflow:hidden clips the 88vw cards so they don't bleed into the page.
-        RecruiterAnalyticsLayout passes contentFullBleed which removes the
-        parent overflow:hidden — so the carousel must self-clip here.
-        The inner scroll div retains overflowX:auto for touch scrolling.
+        overflow:hidden on this glass wrapper clips the carousel — same pattern
+        as candidate-center.js. The scroll track inside retains overflowX:auto.
+        paddingLeft/Right 0 so cards sit flush; cards carry their own padding.
       */}
-      <div style={{ overflow: "hidden", width: "100%" }}>
+      <div style={{
+        ...GLASS,
+        borderRadius: 18,
+        paddingTop: 0,
+        paddingBottom: 0,
+        paddingLeft: 0,
+        paddingRight: 0,
+        width: "100%",
+        overflow: "hidden",
+      }}>
+        {/* Scroll track */}
         <div
-          ref={scrollRef}
-          onScroll={handleScroll}
+          ref={trackRef}
           style={{
             display: "flex",
-            gap: 12,
             overflowX: "auto",
             scrollSnapType: "x mandatory",
-            WebkitOverflowScrolling: "touch",
-            scrollbarWidth: "none",
             msOverflowStyle: "none",
-            paddingBottom: 4,
+            scrollbarWidth: "none",
+            WebkitOverflowScrolling: "touch",
           }}
         >
           {cards.map((card, i) => (
             <div
               key={i}
               style={{
-                flex: "0 0 88vw",
-                minWidth: 0,
+                flexShrink: 0,
+                width: "100%",
                 scrollSnapAlign: "start",
+                padding: "16px",
+                boxSizing: "border-box",
               }}
             >
               {card}
@@ -198,24 +223,21 @@ function MobileCarousel({ cards }) {
       </div>
 
       {/* Dot indicators */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 6,
-          marginTop: 10,
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 10 }}>
         {cards.map((_, i) => (
-          <div
+          <button
             key={i}
+            onClick={() => goTo(i)}
+            aria-label={`Go to card ${i + 1}`}
             style={{
-              height: 6,
-              width: i === activeIdx ? 18 : 6,
+              width: i === activeIdx ? 24 : 8,
+              height: 8,
               borderRadius: 999,
-              background: i === activeIdx ? ORANGE : "rgba(100,116,139,0.28)",
-              transition: "width 200ms ease, background 200ms ease",
+              background: i === activeIdx ? ORANGE : "rgba(255,112,67,0.25)",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              transition: "width 220ms ease, background 220ms ease",
             }}
           />
         ))}
@@ -223,6 +245,7 @@ function MobileCarousel({ cards }) {
     </div>
   );
 }
+
 
 // ─── UI components ────────────────────────────────────────────────────────────
 
@@ -291,12 +314,11 @@ function Body() {
   const { insights, loading: insightsLoading } = useInsights(filters);
   const { isEnterprise } = usePlan();
 
-  // Mobile detection (hydration-safe — always render desktop on first paint)
-  const [hasMounted, setHasMounted] = useState(false);
-  const [isMobile, setIsMobile]     = useState(false);
+  // SSR-safe mobile detection — mirrors candidate-center.js pattern exactly.
+  // Returns null until client measures; neither layout renders until confirmed.
+  const [isMobile, setIsMobile] = useState(null);
 
   useEffect(() => {
-    setHasMounted(true);
     const check = () => setIsMobile(window.innerWidth < 1024);
     check();
     window.addEventListener("resize", check);
@@ -481,10 +503,14 @@ function Body() {
     </>
   );
 
-  // Default to carousel (mobile-safe, no negative margins).
-  // Only switch to the desktop bleed grid after mount confirms a wide screen.
-  // This prevents the -252px margin flash on every device before JS hydrates.
-  const ChartsBlock = hasMounted && !isMobile ? DesktopChartsBlock : MobileChartsBlock;
+  // null = not yet measured — render neither until client confirms.
+  // false = mobile confirmed → carousel.
+  // true (non-null, non-false) = desktop confirmed → bleed grid.
+  const ChartsBlock = isMobile === null
+    ? null
+    : isMobile
+    ? MobileChartsBlock
+    : DesktopChartsBlock;
 
   return (
     <RecruiterAnalyticsLayout
@@ -505,7 +531,7 @@ function Body() {
       <section
         style={{
           display: "grid",
-          gridTemplateColumns: hasMounted && !isMobile
+          gridTemplateColumns: isMobile === false
             ? "repeat(auto-fit, minmax(min(100%, 120px), 1fr))"
             : "repeat(2, minmax(0, 1fr))",
           gap: 12,
@@ -528,7 +554,7 @@ function Body() {
             fontSize: 12,
             color: "#94A3B8",
             textAlign: "right",
-            ...((hasMounted && !isMobile) ? { marginRight: BLEED_RIGHT } : {}),
+            ...(isMobile === false ? { marginRight: BLEED_RIGHT } : {}),
           }}
         >
           Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}

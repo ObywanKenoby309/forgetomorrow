@@ -288,11 +288,9 @@ export default function RecruiterAnalyticsLayout({
   const router = useRouter();
 
   // ── Mobile detection (hydration-safe) ──────────────────────────────────────
-  const [hasMounted, setHasMounted] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(null);
 
   useEffect(() => {
-    setHasMounted(true);
     const check = () => setIsMobile(window.innerWidth < 1024);
     check();
     window.addEventListener("resize", check);
@@ -337,10 +335,10 @@ export default function RecruiterAnalyticsLayout({
             <div
               style={{
                 display: "flex",
-                alignItems: hasMounted && isMobile ? "flex-start" : "center",
+                alignItems: isMobile === true ? "flex-start" : "center",
                 justifyContent: "space-between",
                 gap: 10,
-                flexDirection: hasMounted && isMobile ? "column" : "row",
+                flexDirection: isMobile === true ? "column" : "row",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", minWidth: 0 }}>
@@ -348,7 +346,7 @@ export default function RecruiterAnalyticsLayout({
                 {/* Scroll strip on mobile, normal flex on desktop */}
                 <div
                   style={
-                    hasMounted && isMobile
+                    isMobile === true
                       ? { ...SCROLL_STRIP_BASE, flex: 1 }
                       : { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1 }
                   }
@@ -364,7 +362,7 @@ export default function RecruiterAnalyticsLayout({
                   ))}
                 </div>
                 {/* Refresh badge: inline on desktop, hidden here (shown below) on mobile */}
-                {!(hasMounted && isMobile) && (
+                {!(isMobile === true) && (
                   <div style={{ textAlign: "left", flexShrink: 0, marginLeft: 6 }}>
                     <div style={{ fontSize: 11, color: "#94A3B8" }}>Refresh</div>
                     <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>30s live</div>
@@ -373,7 +371,7 @@ export default function RecruiterAnalyticsLayout({
               </div>
 
               {/* Refresh badge on mobile — sits under the tab row */}
-              {hasMounted && isMobile && (
+              {isMobile === true && (
                 <div style={{ fontSize: 11, color: "#94A3B8", paddingLeft: 2 }}>
                   Auto-refresh · <span style={{ fontWeight: 800, color: SLATE }}>30s live</span>
                 </div>
@@ -386,7 +384,7 @@ export default function RecruiterAnalyticsLayout({
               <LabelCell>Report:</LabelCell>
               <div
                 style={
-                  hasMounted && isMobile
+                  isMobile === true
                     ? { ...SCROLL_STRIP_BASE, flex: 1 }
                     : { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1 }
                 }
@@ -415,7 +413,7 @@ export default function RecruiterAnalyticsLayout({
                 <LabelCell>Period:</LabelCell>
                 <div
                   style={
-                    hasMounted && isMobile
+                    isMobile === true
                       ? { ...SCROLL_STRIP_BASE, flex: 1 }
                       : { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1 }
                   }
@@ -439,16 +437,16 @@ export default function RecruiterAnalyticsLayout({
                   alignItems: "center",
                   gap: 10,
                   flexWrap: "wrap",
-                  justifyContent: hasMounted && isMobile ? "stretch" : "flex-end",
+                  justifyContent: isMobile === true ? "stretch" : "flex-end",
                   marginTop: 10,
-                  ...(hasMounted && isMobile ? { flexDirection: "column" } : {}),
+                  ...(isMobile === true ? { flexDirection: "column" } : {}),
                 }}
               >
                 <select
                   value={filters?.jobId || "all"}
                   onChange={(e) => onFilterChange?.({ jobId: e.target.value })}
                   style={
-                    hasMounted && isMobile
+                    isMobile === true
                       ? { ...SELECT_STYLE, width: "100%" }
                       : SELECT_STYLE
                   }
@@ -463,7 +461,7 @@ export default function RecruiterAnalyticsLayout({
                   value={filters?.recruiterId || "all"}
                   onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })}
                   style={
-                    hasMounted && isMobile
+                    isMobile === true
                       ? { ...SELECT_STYLE, width: "100%" }
                       : SELECT_STYLE
                   }
@@ -477,7 +475,7 @@ export default function RecruiterAnalyticsLayout({
                 <button
                   type="button"
                   style={
-                    hasMounted && isMobile
+                    isMobile === true
                       ? { ...EXPORT_STYLE, width: "100%", textAlign: "center" }
                       : EXPORT_STYLE
                   }
@@ -507,7 +505,7 @@ export default function RecruiterAnalyticsLayout({
                     gap: 12,
                     flexWrap: "wrap",
                     marginTop: 12,
-                    ...(!(hasMounted && isMobile) ? { paddingLeft: 54 } : {}),
+                    ...(!(isMobile === true) ? { paddingLeft: 54 } : {}),
                   }}
                 >
                   <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>
@@ -518,7 +516,7 @@ export default function RecruiterAnalyticsLayout({
                     value={filters?.from || ""}
                     onChange={(e) => onFilterChange?.({ from: e.target.value })}
                     style={
-                      hasMounted && isMobile
+                      isMobile === true
                         ? { ...DATE_INPUT_STYLE, flex: 1, minWidth: 0 }
                         : DATE_INPUT_STYLE
                     }
@@ -531,7 +529,7 @@ export default function RecruiterAnalyticsLayout({
                     value={filters?.to || ""}
                     onChange={(e) => onFilterChange?.({ to: e.target.value })}
                     style={
-                      hasMounted && isMobile
+                      isMobile === true
                         ? { ...DATE_INPUT_STYLE, flex: 1, minWidth: 0 }
                         : DATE_INPUT_STYLE
                     }
