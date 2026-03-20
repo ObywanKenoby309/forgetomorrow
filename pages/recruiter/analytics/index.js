@@ -154,43 +154,47 @@ function MobileCarousel({ cards }) {
   const handleScroll = () => {
     if (!scrollRef.current) return;
     const { scrollLeft, clientWidth } = scrollRef.current;
-    const cardW = clientWidth * 0.88 + 12; // 88vw card + 12px gap
+    const cardW = clientWidth * 0.88 + 12;
     const idx = Math.min(Math.round(scrollLeft / cardW), cards.length - 1);
     setActiveIdx(idx);
   };
 
   return (
     <div style={{ marginBottom: 4 }}>
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        style={{
-          display: "flex",
-          gap: 12,
-          overflowX: "auto",
-          scrollSnapType: "x mandatory",
-          WebkitOverflowScrolling: "touch",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          // Bleed to page edges; padding preserves first card alignment
-          paddingBottom: 4,
-          // No negative margins — parent has overflowX:hidden which clips them.
-          // 88vw cards naturally create the peek effect without container bleed.
-        }}
-      >
-        {cards.map((card, i) => (
-          <div
-            key={i}
-            style={{
-              flex: "0 0 88vw",
-              minWidth: 0,
-              scrollSnapAlign: "start",
-            }}
-          >
-            {card}
-          </div>
-        ))}
-{/* paddingRight on the container gives the last card breathing room */}
+      {/*
+        overflow:hidden clips the 88vw cards so they don't bleed into the page.
+        RecruiterAnalyticsLayout passes contentFullBleed which removes the
+        parent overflow:hidden — so the carousel must self-clip here.
+        The inner scroll div retains overflowX:auto for touch scrolling.
+      */}
+      <div style={{ overflow: "hidden", width: "100%" }}>
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          style={{
+            display: "flex",
+            gap: 12,
+            overflowX: "auto",
+            scrollSnapType: "x mandatory",
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            paddingBottom: 4,
+          }}
+        >
+          {cards.map((card, i) => (
+            <div
+              key={i}
+              style={{
+                flex: "0 0 88vw",
+                minWidth: 0,
+                scrollSnapAlign: "start",
+              }}
+            >
+              {card}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Dot indicators */}
