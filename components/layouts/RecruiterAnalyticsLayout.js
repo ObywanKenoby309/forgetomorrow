@@ -299,7 +299,7 @@ export default function RecruiterAnalyticsLayout({
     }, undefined, { shallow: false });
   };
 
-  const rightRail = right || <DefaultRightRail />;
+  const rightRail = isMobile === true ? null : (right || <DefaultRightRail />);
 
   return (
     <RecruiterLayout
