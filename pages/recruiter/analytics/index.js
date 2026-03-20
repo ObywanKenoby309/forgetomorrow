@@ -158,9 +158,8 @@ function MobileCarousel({ cards }) {
   }, [cards.length]);
 
   return (
-    <div style={{ marginBottom: 12 }}>
-      {/* overflow:hidden clips the carousel — track inside retains overflowX:auto */}
-      <div style={{ ...GLASS, borderRadius: 18, overflow: "hidden", width: "100%" }}>
+    <div style={{ marginBottom: 12, maxWidth: "100%", overflow: "hidden" }}>
+      <div style={{ ...GLASS, borderRadius: 18, overflow: "hidden", width: "100%", maxWidth: "100%" }}>
         <div
           ref={trackRef}
           style={{
@@ -169,7 +168,7 @@ function MobileCarousel({ cards }) {
           }}
         >
           {cards.map((card, i) => (
-            <div key={i} style={{ flexShrink: 0, width: "100%", scrollSnapAlign: "start", boxSizing: "border-box" }}>
+            <div key={i} style={{ flexShrink: 0, width: "100%", maxWidth: "100%", scrollSnapAlign: "start", boxSizing: "border-box", overflow: "hidden" }}>
               {card}
             </div>
           ))}
