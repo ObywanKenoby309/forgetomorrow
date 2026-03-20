@@ -316,7 +316,7 @@ export default function RecruiterAnalyticsLayout({
   const rightRail = right || <DefaultRightRail />;
 
   return (
-    <RecruiterLayout title={title} activeNav="analytics" right={rightRail} contentFullBleed>
+    <RecruiterLayout title={title} activeNav="analytics" right={rightRail} contentFullBleed={isMobile !== true}>
       <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
         <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
           <AnalyticsHeader
