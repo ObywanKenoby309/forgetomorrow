@@ -173,11 +173,9 @@ function MobileCarousel({ cards }) {
           scrollbarWidth: "none",
           msOverflowStyle: "none",
           // Bleed to page edges; padding preserves first card alignment
-          marginLeft: -16,
-          marginRight: -16,
-          paddingLeft: 16,
-          paddingRight: 16,
           paddingBottom: 4,
+          // No negative margins — parent has overflowX:hidden which clips them.
+          // 88vw cards naturally create the peek effect without container bleed.
         }}
       >
         {cards.map((card, i) => (
@@ -192,8 +190,7 @@ function MobileCarousel({ cards }) {
             {card}
           </div>
         ))}
-        {/* Trailing spacer so last card can snap flush left */}
-        <div style={{ flex: "0 0 4px", minWidth: 0 }} />
+{/* paddingRight on the container gives the last card breathing room */}
       </div>
 
       {/* Dot indicators */}
