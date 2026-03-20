@@ -1,8 +1,8 @@
 // pages/recruiter/analytics/index.js
 //
-// Both desktop and mobile layouts are always rendered.
-// CSS classes ft-desktop-charts / ft-mobile-charts control which is visible.
-// No isMobile JavaScript state — zero layout flicker on any device.
+// isMobile state in Body() controls which layout renders.
+// Desktop bleed rows are NOT rendered on mobile — they are conditionally
+// excluded from the DOM entirely so negative margins cannot affect layout.
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -37,8 +37,9 @@ const ORANGE = "#FF7043";
 const SLATE  = "#334155";
 const MUTED  = "#64748B";
 
-// Desktop bleed: negative margins span into sidebar + right rail columns
-const BLEED = -(240 + 12); // LEFT_W/RIGHT_W(240) + GAP(12)
+// Desktop bleed: negative margins span into sidebar + right rail columns.
+// ONLY used when !isMobile — never touches the DOM on mobile.
+const BLEED = -(240 + 12);
 
 // ─── Insight type config ──────────────────────────────────────────────────────
 const INSIGHT_CONFIG = {
@@ -126,7 +127,6 @@ function getFiltersFromQuery(query) {
 }
 
 // ─── Mobile carousel ──────────────────────────────────────────────────────────
-// Same pattern as candidate-center.js — overflow:hidden on wrapper, 100% width cards.
 
 function MobileCarousel({ cards }) {
   const trackRef     = useRef(null);
@@ -158,8 +158,8 @@ function MobileCarousel({ cards }) {
   }, [cards.length]);
 
   return (
-    <div style={{ marginBottom: 12, maxWidth: "100%", overflow: "hidden" }}>
-      <div style={{ ...GLASS, borderRadius: 18, overflow: "hidden", width: "100%", maxWidth: "100%" }}>
+    <div style={{ marginBottom: 12, width: "100%", overflow: "hidden" }}>
+      <div style={{ ...GLASS, borderRadius: 18, overflow: "hidden", width: "100%" }}>
         <div
           ref={trackRef}
           style={{
@@ -168,7 +168,7 @@ function MobileCarousel({ cards }) {
           }}
         >
           {cards.map((card, i) => (
-            <div key={i} style={{ flexShrink: 0, width: "100%", maxWidth: "100%", scrollSnapAlign: "start", boxSizing: "border-box", overflow: "hidden" }}>
+            <div key={i} style={{ flexShrink: 0, width: "100%", scrollSnapAlign: "start", boxSizing: "border-box" }}>
               {card}
             </div>
           ))}
@@ -253,9 +253,19 @@ function ReportCard({ title, description, href, value }) {
 function Body() {
   const router = useRouter();
   const [filters, setFilters] = useState(getFiltersFromQuery(router.query));
-  const { data, loading, error }            = useAnalytics(filters);
+  const { data, loading, error }               = useAnalytics(filters);
   const { insights, loading: insightsLoading } = useInsights(filters);
   const { isEnterprise } = usePlan();
+
+  // Mobile detection — start true (mobile-first) so first paint is safe.
+  // useEffect corrects to false on desktop after mount.
+  const [isMobile, setIsMobile] = useState(true);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -271,8 +281,8 @@ function Body() {
     );
   };
 
-  const totalInterviews     = data?.kpis?.totalInterviews      ?? 0;
-  const totalHires          = data?.kpis?.totalHires           ?? 0;
+  const totalInterviews     = data?.kpis?.totalInterviews        ?? 0;
+  const totalHires          = data?.kpis?.totalHires             ?? 0;
   const offerAcceptanceRate = data?.kpis?.offerAcceptanceRatePct ?? 0;
 
   const topSource = Array.isArray(data?.sources) && data.sources.length > 0
@@ -282,8 +292,7 @@ function Body() {
   const visibleInsights = Array.isArray(insights) ? insights.slice(0, 4) : [];
 
   // ── Shared card definitions ───────────────────────────────────────────────
-  // Each card is used in BOTH the desktop bleed grid and the mobile carousel.
-  // CSS classes on the wrapper divs (ft-stat-tiles) handle internal layout changes.
+  // Each card is defined once and used in both desktop and mobile layouts.
 
   const execSnapshotCard = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
@@ -299,8 +308,7 @@ function Body() {
           Visuals
         </Link>
       </div>
-      {/* ft-stat-tiles: 3-col on desktop, 1-col on mobile via CSS */}
-      <div className="ft-stat-tiles" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 10 }}>
         <StatTile label="Top source"       value={loading ? "…" : topSource?.name || "N/A"}   hint="Best-performing inbound channel" />
         <StatTile label="Offer acceptance" value={loading ? "…" : `${offerAcceptanceRate}%`}  hint="High-trust close efficiency signal" />
         <StatTile label="Apply-to-hire"    value={loading ? "…" : data?.kpis?.totalApplies ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%` : "0%"} hint="Applications converting into hires" />
@@ -373,14 +381,14 @@ function Body() {
       <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Report Gateways</div>
       <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>Drill into dedicated reports for the why.</div>
       <div style={{ display: "grid", gap: 10 }}>
-        <ReportCard title="Time-to-Fill"       description="See which roles close fastest and where delays build."         href="/recruiter/analytics/time-to-fill"        value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`} />
-        <ReportCard title="Quality of Hire"    description="Track post-hire quality signals once enough data exists."      href="/recruiter/analytics/quality-of-hire"     value="Building" />
-        <ReportCard title="Talent Intelligence" description="Compare source quality, match reasons, and role signals."     href="/recruiter/analytics/talent-intelligence"  value={loading ? "…" : topSource?.name || "N/A"} />
+        <ReportCard title="Time-to-Fill"        description="See which roles close fastest and where delays build."       href="/recruiter/analytics/time-to-fill"       value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`} />
+        <ReportCard title="Quality of Hire"     description="Track post-hire quality signals once enough data exists."    href="/recruiter/analytics/quality-of-hire"    value="Building" />
+        <ReportCard title="Talent Intelligence" description="Compare source quality, match reasons, and role signals."    href="/recruiter/analytics/talent-intelligence" value={loading ? "…" : topSource?.name || "N/A"} />
       </div>
     </div>
   );
 
-  // ── Desktop bleed grid ────────────────────────────────────────────────────
+  // ── Desktop bleed grid — only rendered when !isMobile ─────────────────────
   const bleed = { marginLeft: BLEED, marginRight: BLEED, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)", gap: 12 };
 
   const DesktopBlock = (
@@ -390,7 +398,7 @@ function Body() {
     </>
   );
 
-  // ── Mobile carousel ───────────────────────────────────────────────────────
+  // ── Mobile carousel — only rendered when isMobile ─────────────────────────
   const MobileBlock = (
     <>
       <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
@@ -398,16 +406,8 @@ function Body() {
     </>
   );
 
-  const ChartsContent = (
-    <>
-      {/* ft-desktop-charts: visible on desktop, display:none on mobile via CSS.
-          overflow:hidden here ensures bleed margins never escape on mobile
-          even during the hydration window before CSS kicks in. */}
-      <div className="ft-desktop-charts" style={{ overflow: "hidden", maxWidth: "100%" }}>{DesktopBlock}</div>
-      {/* ft-mobile-charts: visible on mobile, display:none on desktop via CSS */}
-      <div className="ft-mobile-charts">{MobileBlock}</div>
-    </>
-  );
+  // Conditional render — bleed rows never exist in the DOM on mobile
+  const ChartsContent = isMobile ? MobileBlock : DesktopBlock;
 
   return (
     <RecruiterAnalyticsLayout
@@ -424,10 +424,10 @@ function Body() {
         </div>
       ) : null}
 
-      {/* KPI row — ft-kpi-row: 6-col on desktop, 2-col on mobile via CSS */}
+      {/* KPI strip — 2-col on mobile via CSS, 6-col on desktop */}
       <section
         className="ft-kpi-row"
-        style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: 12 }}
+        style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: 12 }}
       >
         <KPICard label="Total job views"   value={data?.kpis?.totalViews        ?? (loading ? "…" : 0)} />
         <KPICard label="Total applies"     value={data?.kpis?.totalApplies      ?? (loading ? "…" : 0)} />
@@ -440,7 +440,7 @@ function Body() {
       {isEnterprise ? ChartsContent : <FeatureLock label="Full Analytics">{ChartsContent}</FeatureLock>}
 
       {data?.meta?.refreshedAt ? (
-        <div className="ft-bleed-ts" style={{ fontSize: 12, color: "#94A3B8", textAlign: "right", marginRight: BLEED }}>
+        <div style={{ fontSize: 12, color: "#94A3B8", textAlign: "right", ...(isMobile ? {} : { marginRight: BLEED }) }}>
           Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
         </div>
       ) : null}
