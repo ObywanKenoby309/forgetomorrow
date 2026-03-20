@@ -8,17 +8,19 @@ import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
 
-// ✅ Mobile bottom bar + support floating button
 import MobileBottomBar from '@/components/mobile/MobileBottomBar';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 
-// Profile-standard glass
+// ─── Design system tokens ─────────────────────────────────────────────────────
+// GLASS:      primary cards
+// GLASS_SOFT: nested / chip elements
+// Radii:      22px page-level | 18px section cards | 12px chips/mini
 const GLASS = {
   border: '1px solid rgba(255,255,255,0.22)',
-  background: 'rgba(255,255,255,0.58)',
-  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-  backdropFilter: 'blur(10px)',
-  WebkitBackdropFilter: 'blur(10px)',
+  background: 'rgba(255,255,255,0.68)',
+  boxShadow: '0 10px 28px rgba(15,23,42,0.12)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
 };
 
 function normalizeChrome(input) {
@@ -72,7 +74,6 @@ export default function RecruiterLayout({
   right,
   children,
 
-  // ✅ Default true, but ONLY renders if header is actually provided.
   headerCard = true,
 
   role: roleProp = 'recruiter',
@@ -81,12 +82,9 @@ export default function RecruiterLayout({
   initialOpen,
   activeNav = 'dashboard',
 
-  // ✅ NEW (optional): DB-backed staff fields to pass through to sidebar
   employee = false,
   department = '',
 
-  // ✅ NEW: Seeker-style page-only opt-in to allow content to span under the left rail (desktop only)
-  // Default false so no other recruiter pages change.
   contentFullBleed = false,
 }) {
   const router = useRouter();
@@ -95,12 +93,9 @@ export default function RecruiterLayout({
 
   const { isLoaded: planLoaded, plan, role: planRole } = usePlan();
 
-  // ✅ NEW: resolve logged-in user's profile slug for sidebar Profile routing
   const [profileSlug, setProfileSlug] = useState('');
 
-  // ✅ HYDRATION FIX:
-  // Always render desktop-safe markup on the server and first client paint.
-  // Then switch to mobile after mount if needed.
+  // HYDRATION FIX: always render desktop-safe markup on server + first paint
   const [hasMounted, setHasMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
@@ -156,10 +151,9 @@ export default function RecruiterLayout({
     };
   }, []);
 
-  // ---- WALLPAPER / BACKGROUND (matches SeekerLayout behavior) ----
   const { wallpaperUrl } = useUserWallpaper();
 
-  // ✅ FIX: avoid background-attachment: fixed on mobile (can cause “seam/restart” artifacts)
+  // Avoid background-attachment: fixed on mobile (causes seam artifacts)
   const backgroundStyle = wallpaperUrl
     ? {
         minHeight: '100vh',
@@ -174,44 +168,32 @@ export default function RecruiterLayout({
         backgroundColor: '#ECEFF1',
       };
 
-  // --- DB-first recruiter chrome: enterprise users must be recruiter-ent ---
   const chromeMode = useMemo(() => {
     const urlChrome = normalizeChrome(router?.query?.chrome);
-
-    // DB truth
     const dbPlan = String(plan || '').toLowerCase();
     const isEnterprise = dbPlan === 'enterprise';
 
-    // If URL asked for recruiter chrome, we will canonicalize in an effect.
     if (urlChrome) return urlChrome;
-
-    // No URL chrome: use DB preference once loaded, else safe default
     if (planLoaded) return isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
     return 'recruiter-smb';
   }, [router?.query?.chrome, planLoaded, plan]);
 
-  // Canonicalize URL based on DB once loaded (kills SMB reinfection)
   useEffect(() => {
     if (!router?.isReady) return;
     if (!planLoaded) return;
 
     const urlChrome = normalizeChrome(router.query?.chrome);
-
     const dbPlan = String(plan || '').toLowerCase();
     const isEnterprise = dbPlan === 'enterprise';
-
     const canonical = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
 
-    // Only force-correct recruiter chrome values (don’t stomp other pages’ modes)
     if (urlChrome === 'recruiter-smb' || urlChrome === 'recruiter-ent') {
       setQueryChrome(router, canonical);
     } else if (!urlChrome) {
-      // Stamp chrome for recruiter pages to keep internal nav consistent
       setQueryChrome(router, canonical);
     }
   }, [router?.isReady, router?.query?.chrome, planLoaded, plan]);
 
-  // Variant: allow DB chrome to control unless explicitly passed enterprise
   const resolvedVariant = useMemo(() => {
     const inferred = chromeToVariant(chromeMode);
     if (!inferred) return variantProp;
@@ -220,16 +202,13 @@ export default function RecruiterLayout({
     return variantProp;
   }, [chromeMode, variantProp]);
 
-  // Optional: prefer PlanContext role if present (prevents passing stale role props)
   const resolvedRole = planRole || roleProp;
 
-  // --- Desktop vs mobile grid configs ---
-  const GAP = 12;
-  const PAD = 16;
+  const GAP    = 12;
+  const PAD    = 16;
   const LEFT_W = 240;
   const RIGHT_W = 240;
 
-  // ✅ KEY: if no header + no right, we run headerless + rightless grid (Seeker-style page-owned layout)
   const desktopGrid = useMemo(() => {
     if (!hasHeader && !hasRight) {
       return {
@@ -240,8 +219,6 @@ export default function RecruiterLayout({
       };
     }
 
-    // If header is absent but right exists, keep a 2-row grid but don’t render header row
-    // (This is rare, but safe.)
     if (!hasHeader && hasRight) {
       return {
         display: 'grid',
@@ -251,7 +228,6 @@ export default function RecruiterLayout({
       };
     }
 
-    // Standard behavior (existing)
     return {
       display: 'grid',
       gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr) ${hasRight ? `${RIGHT_W}px` : '0px'}`,
@@ -265,7 +241,6 @@ export default function RecruiterLayout({
   }, [hasHeader, hasRight]);
 
   const mobileGrid = useMemo(() => {
-    // On mobile, even headerless pages still stack cleanly
     if (!hasHeader && !hasRight) {
       return {
         display: 'grid',
@@ -303,14 +278,11 @@ export default function RecruiterLayout({
     gridArea: 'right',
     alignSelf: 'start',
 
-    // ✅ MIN CHANGE: match site-wide frosted glass right rail
-    border: GLASS.border,
-    background: GLASS.background,
-    boxShadow: GLASS.boxShadow,
-    backdropFilter: GLASS.backdropFilter,
-    WebkitBackdropFilter: GLASS.WebkitBackdropFilter,
+    // Canonical GLASS token
+    ...GLASS,
 
-    borderRadius: 14,
+    // Section-card radius (18px)
+    borderRadius: 18,
     padding: 16,
     minHeight: 120,
     boxSizing: 'border-box',
@@ -322,16 +294,13 @@ export default function RecruiterLayout({
     color: '#112033',
   };
 
-  // ✅ Stable callback so MobileBottomBar memo does NOT re-render on every parent refresh
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
-  // ✅ Seeker-style: page-only opt-in for full-bleed content (desktop only)
   const mainOverrides = {
     position: 'relative',
     zIndex: 1,
   };
 
-  // ✅ Ensure side rail stays above full-bleed content (same layering strategy as SeekerLayout)
   const leftRailLayer = { position: 'relative', zIndex: 1 };
 
   return (
@@ -388,7 +357,8 @@ export default function RecruiterLayout({
               <section
                 style={{
                   gridArea: 'header',
-                  borderRadius: 14,
+                  // Section-card radius (18px)
+                  borderRadius: 18,
                   padding: '8px 12px',
                   minWidth: 0,
                   boxSizing: 'border-box',
@@ -463,8 +433,9 @@ export default function RecruiterLayout({
               zIndex: 1,
               width: 'min(760px, 100%)',
               maxHeight: '82vh',
-              borderTopLeftRadius: 18,
-              borderTopRightRadius: 18,
+              // Page-level container radius (22px) for bottom sheet
+              borderTopLeftRadius: 22,
+              borderTopRightRadius: 22,
               border: '1px solid rgba(255,255,255,0.22)',
               background: 'rgba(255,255,255,0.92)',
               backdropFilter: 'blur(12px)',

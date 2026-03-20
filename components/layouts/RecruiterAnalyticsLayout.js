@@ -30,22 +30,24 @@
 // <main> sits in col 2 of the outer grid (between sidebar col and right col).
 // To span INTO right rail: marginRight: -(240 + 12) = -252
 // Bottom rows: marginLeft: 0 (already at left edge of content), marginRight: -252
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 
+// ─── Design system tokens ───────────────────────────────────────────────────
+// Radii: 22px page-level | 18px section cards | 12px chips/mini
 const GLASS = {
   border: "1px solid rgba(255,255,255,0.22)",
-  background: "rgba(255,255,255,0.58)",
-  boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
+  background: "rgba(255,255,255,0.68)",
+  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
 };
 
 const SOFT_GLASS = {
   border: "1px solid rgba(255,255,255,0.18)",
-  background: "rgba(255,255,255,0.46)",
-  boxShadow: "0 8px 18px rgba(0,0,0,0.09)",
+  background: "rgba(255,255,255,0.58)",
+  boxShadow: "0 8px 22px rgba(15,23,42,0.10)",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
 };
@@ -152,7 +154,7 @@ function AnalyticsHeader({ subtitle, activeTab, suiteTitle = "Recruiter Analytic
 function DefaultRightRail() {
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <div style={{ ...GLASS, borderRadius: 14, padding: 14 }}>
+      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
         <div
           style={{
             fontSize: 10,
@@ -174,7 +176,7 @@ function DefaultRightRail() {
         </div>
       </div>
 
-      <div style={{ ...GLASS, borderRadius: 14, padding: 14 }}>
+      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
         <div
           style={{
             fontSize: 10,
@@ -261,6 +263,18 @@ const DATE_INPUT_STYLE = {
   outline: "none",
 };
 
+// ─── Horizontal scroll strip — used for tab/pill rows on mobile ──────────────
+// Hides the scrollbar but keeps it functional (touch + mouse).
+const SCROLL_STRIP_BASE = {
+  display: "flex",
+  gap: 8,
+  overflowX: "auto",
+  WebkitOverflowScrolling: "touch",
+  scrollbarWidth: "none",        // Firefox
+  msOverflowStyle: "none",       // IE/Edge legacy
+  paddingBottom: 2,              // room for focus rings
+};
+
 export default function RecruiterAnalyticsLayout({
   title = "Recruiter Analytics — ForgeTomorrow",
   suiteTitle = "Recruiter Analytics",
@@ -272,6 +286,18 @@ export default function RecruiterAnalyticsLayout({
   right,
 }) {
   const router = useRouter();
+
+  // ── Mobile detection (hydration-safe) ──────────────────────────────────────
+  const [hasMounted, setHasMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   const period = filters?.range || "30d";
   const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
 
@@ -304,96 +330,96 @@ export default function RecruiterAnalyticsLayout({
 
         <section style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
           <div style={{ display: "grid", gap: 10 }}>
+
+            {/* ── View tabs row ──────────────────────────────────────────────
+                Desktop: flex-wrap. Mobile: horizontal scroll strip (no wrap,
+                no squash). The Refresh badge moves below on mobile.          */}
             <div
               style={{
                 display: "flex",
-                alignItems: "flex-start",
+                alignItems: hasMounted && isMobile ? "flex-start" : "center",
                 justifyContent: "space-between",
-                gap: 14,
-                flexWrap: "wrap",
+                gap: 10,
+                flexDirection: hasMounted && isMobile ? "column" : "row",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  flexWrap: "wrap",
-                  minWidth: 0,
-                  flex: 1,
-                }}
-              >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", minWidth: 0 }}>
                 <LabelCell>View:</LabelCell>
-                {MODE_TABS.map((tab) => (
+                {/* Scroll strip on mobile, normal flex on desktop */}
+                <div
+                  style={
+                    hasMounted && isMobile
+                      ? { ...SCROLL_STRIP_BASE, flex: 1 }
+                      : { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1 }
+                  }
+                >
+                  {MODE_TABS.map((tab) => (
+                    <TabButton
+                      key={tab.key}
+                      active={activeTab === tab.key}
+                      onClick={() => pushWithFilters(tab.href)}
+                    >
+                      {tab.label}
+                    </TabButton>
+                  ))}
+                </div>
+                {/* Refresh badge: inline on desktop, hidden here (shown below) on mobile */}
+                {!(hasMounted && isMobile) && (
+                  <div style={{ textAlign: "left", flexShrink: 0, marginLeft: 6 }}>
+                    <div style={{ fontSize: 11, color: "#94A3B8" }}>Refresh</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>30s live</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Refresh badge on mobile — sits under the tab row */}
+              {hasMounted && isMobile && (
+                <div style={{ fontSize: 11, color: "#94A3B8", paddingLeft: 2 }}>
+                  Auto-refresh · <span style={{ fontWeight: 800, color: SLATE }}>30s live</span>
+                </div>
+              )}
+            </div>
+
+            {/* ── Report tabs row ────────────────────────────────────────────
+                Same treatment — scroll strip on mobile.                       */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+              <LabelCell>Report:</LabelCell>
+              <div
+                style={
+                  hasMounted && isMobile
+                    ? { ...SCROLL_STRIP_BASE, flex: 1 }
+                    : { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1 }
+                }
+              >
+                {REPORT_LINKS.map((tab) => (
                   <TabButton
                     key={tab.key}
-                    active={activeTab === tab.key}
-                    onClick={() => pushWithFilters(tab.href)}
+                    active={activeTab === "reports" && activeReport === tab.key}
+                    onClick={() =>
+                      pushWithFilters("/recruiter/analytics/reports", { report: tab.key })
+                    }
                   >
                     {tab.label}
                   </TabButton>
                 ))}
               </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "flex-end",
-                  minWidth: 86,
-                }}
-              >
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ fontSize: 11, color: "#94A3B8" }}>Refresh</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>30s live</div>
-                </div>
-              </div>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                flexWrap: "wrap",
-                minWidth: 0,
-              }}
-            >
-              <LabelCell>Report:</LabelCell>
-              {REPORT_LINKS.map((tab) => (
-                <TabButton
-                  key={tab.key}
-                  active={activeTab === "reports" && activeReport === tab.key}
-                  onClick={() =>
-                    pushWithFilters("/recruiter/analytics/reports", { report: tab.key })
+            {/* ── Period + filters row ───────────────────────────────────────
+                Desktop: all in one flex row.
+                Mobile: period pills scroll horizontally; selects + export
+                stack full-width below.                                        */}
+            <div style={{ ...SOFT_GLASS, borderRadius: 12, padding: 14, marginTop: 2 }}>
+              {/* Period pills */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <LabelCell>Period:</LabelCell>
+                <div
+                  style={
+                    hasMounted && isMobile
+                      ? { ...SCROLL_STRIP_BASE, flex: 1 }
+                      : { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1 }
                   }
                 >
-                  {tab.label}
-                </TabButton>
-              ))}
-            </div>
-
-            <div style={{ ...SOFT_GLASS, borderRadius: 16, padding: 14, marginTop: 2 }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  flexWrap: "wrap",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    flexWrap: "wrap",
-                    minWidth: 0,
-                    flex: 1,
-                  }}
-                >
-                  <LabelCell>Period:</LabelCell>
                   {["7d", "30d", "90d", "ytd", "custom"].map((value) => (
                     <FilterPill
                       key={value}
@@ -404,60 +430,75 @@ export default function RecruiterAnalyticsLayout({
                     </FilterPill>
                   ))}
                 </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    flexWrap: "wrap",
-                    justifyContent: "flex-end",
-                  }}
-                >
-                  <select
-                    value={filters?.jobId || "all"}
-                    onChange={(e) => onFilterChange?.({ jobId: e.target.value })}
-                    style={SELECT_STYLE}
-                  >
-                    <option value="all">All Jobs</option>
-                    <option value="engineering">Engineering</option>
-                    <option value="sales">Sales</option>
-                    <option value="operations">Operations</option>
-                  </select>
-
-                  <select
-                    value={filters?.recruiterId || "all"}
-                    onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })}
-                    style={SELECT_STYLE}
-                  >
-                    <option value="all">All Recruiters</option>
-                    <option value="ajohnson">A. Johnson</option>
-                    <option value="mchen">M. Chen</option>
-                    <option value="slee">S. Lee</option>
-                  </select>
-
-                  <button
-  type="button"
-  style={EXPORT_STYLE}
-  onClick={() => {
-    const params = new URLSearchParams({
-	  report: activeTab === "reports" ? activeReport : "overview",
-	  range: filters?.range || "30d",
-	  jobId: filters?.jobId || "all",
-	  recruiterId: filters?.recruiterId || "all",
-	  companyId: filters?.companyId || "all",
-	  ...(filters?.from ? { from: filters.from } : {}),
-	  ...(filters?.to ? { to: filters.to } : {}),
-}	);
-
-    window.open(`/api/analytics/export?${params.toString()}`, "_blank");
-  }}
->
-  Export CSV
-</button>
-                </div>
               </div>
 
+              {/* Selects + Export — row on desktop, stacked full-width on mobile */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  justifyContent: hasMounted && isMobile ? "stretch" : "flex-end",
+                  marginTop: 10,
+                  ...(hasMounted && isMobile ? { flexDirection: "column" } : {}),
+                }}
+              >
+                <select
+                  value={filters?.jobId || "all"}
+                  onChange={(e) => onFilterChange?.({ jobId: e.target.value })}
+                  style={
+                    hasMounted && isMobile
+                      ? { ...SELECT_STYLE, width: "100%" }
+                      : SELECT_STYLE
+                  }
+                >
+                  <option value="all">All Jobs</option>
+                  <option value="engineering">Engineering</option>
+                  <option value="sales">Sales</option>
+                  <option value="operations">Operations</option>
+                </select>
+
+                <select
+                  value={filters?.recruiterId || "all"}
+                  onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })}
+                  style={
+                    hasMounted && isMobile
+                      ? { ...SELECT_STYLE, width: "100%" }
+                      : SELECT_STYLE
+                  }
+                >
+                  <option value="all">All Recruiters</option>
+                  <option value="ajohnson">A. Johnson</option>
+                  <option value="mchen">M. Chen</option>
+                  <option value="slee">S. Lee</option>
+                </select>
+
+                <button
+                  type="button"
+                  style={
+                    hasMounted && isMobile
+                      ? { ...EXPORT_STYLE, width: "100%", textAlign: "center" }
+                      : EXPORT_STYLE
+                  }
+                  onClick={() => {
+                    const params = new URLSearchParams({
+                      report: activeTab === "reports" ? activeReport : "overview",
+                      range: filters?.range || "30d",
+                      jobId: filters?.jobId || "all",
+                      recruiterId: filters?.recruiterId || "all",
+                      companyId: filters?.companyId || "all",
+                      ...(filters?.from ? { from: filters.from } : {}),
+                      ...(filters?.to ? { to: filters.to } : {}),
+                    });
+                    window.open(`/api/analytics/export?${params.toString()}`, "_blank");
+                  }}
+                >
+                  Export CSV
+                </button>
+              </div>
+
+              {/* Custom date range picker */}
               {period === "custom" ? (
                 <div
                   style={{
@@ -466,41 +507,34 @@ export default function RecruiterAnalyticsLayout({
                     gap: 12,
                     flexWrap: "wrap",
                     marginTop: 12,
-                    paddingLeft: 54,
+                    ...(!(hasMounted && isMobile) ? { paddingLeft: 54 } : {}),
                   }}
                 >
-                  <div
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: SLATE,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>
                     From
                   </div>
                   <input
                     type="date"
                     value={filters?.from || ""}
                     onChange={(e) => onFilterChange?.({ from: e.target.value })}
-                    style={DATE_INPUT_STYLE}
+                    style={
+                      hasMounted && isMobile
+                        ? { ...DATE_INPUT_STYLE, flex: 1, minWidth: 0 }
+                        : DATE_INPUT_STYLE
+                    }
                   />
-
-                  <div
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: SLATE,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>
                     To
                   </div>
                   <input
                     type="date"
                     value={filters?.to || ""}
                     onChange={(e) => onFilterChange?.({ to: e.target.value })}
-                    style={DATE_INPUT_STYLE}
+                    style={
+                      hasMounted && isMobile
+                        ? { ...DATE_INPUT_STYLE, flex: 1, minWidth: 0 }
+                        : DATE_INPUT_STYLE
+                    }
                   />
                 </div>
               ) : null}

@@ -16,11 +16,11 @@ const MUTED  = "#64748B";
 const FAINT  = "#94A3B8";
 
 const GLASS = {
-  border:               "1px solid rgba(255,255,255,0.24)",
+  border:               "1px solid rgba(255,255,255,0.22)",
   background:           "rgba(255,255,255,0.68)",
-  boxShadow:            "0 8px 28px rgba(15,23,42,0.10)",
-  backdropFilter:       "blur(14px)",
-  WebkitBackdropFilter: "blur(14px)",
+  boxShadow:            "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter:       "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
 };
 
 // ─────────────────────────────────────────
@@ -139,7 +139,7 @@ function ScaledPreview({ children }) {
         width:        "100%",
         height:       PREVIEW_H,
         overflow:     "hidden",
-        borderRadius: 8,
+        borderRadius: 12,
         background:   "#fff",
         position:     "relative",
         flexShrink:   0,
@@ -225,7 +225,7 @@ function GalleryCard({ item, periodLabel, resolution, onFocus, exportRef }) {
       className="gallery-card"
       style={{
         background:    "#fff",
-        borderRadius:  14,
+        borderRadius:  18,
         boxShadow:     "0 3px 14px rgba(15,23,42,0.07)",
         border:        "1px solid rgba(226,232,240,0.7)",
         overflow:      "hidden",
@@ -328,7 +328,7 @@ function FocusModal({ item, periodLabel, resolution, onClose, exportRef }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: "#fff", borderRadius: 20, boxShadow: "0 24px 64px rgba(15,23,42,0.22)", width: "100%", maxWidth: 760, maxHeight: "88vh", overflow: "auto", display: "flex", flexDirection: "column" }}
+        style={{ background: "#fff", borderRadius: 22, boxShadow: "0 24px 64px rgba(15,23,42,0.22)", width: "100%", maxWidth: 760, maxHeight: "88vh", overflow: "auto", display: "flex", flexDirection: "column" }}
       >
         {/* Modal header */}
         <div style={{ padding: "16px 22px", borderBottom: "1px solid rgba(226,232,240,0.7)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexShrink: 0 }}>

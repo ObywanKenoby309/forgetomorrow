@@ -6,12 +6,14 @@ import RecruiterAnalyticsLayout from "@/components/layouts/RecruiterAnalyticsLay
 import ApplicationFunnel from "@/components/analytics/charts/ApplicationFunnel";
 import SourceBreakdown from "@/components/analytics/charts/SourceBreakdown";
 
+// ─── Design system tokens ─────────────────────────────────────────────────────
+// Radii: 22px page-level | 18px section cards | 12px chips/mini
 const GLASS = {
   border: "1px solid rgba(255,255,255,0.22)",
-  background: "rgba(255,255,255,0.58)",
-  boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
+  background: "rgba(255,255,255,0.68)",
+  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
 };
 
 const REPORT_OPTIONS = [
@@ -91,7 +93,7 @@ function NarrativeCard({ eyebrow, title, body, accent = "#FF7043" }) {
   return (
     <div
       style={{
-        borderRadius: 16,
+        borderRadius: 18,
         borderLeft: `4px solid ${accent}`,
         background: "rgba(255,255,255,0.76)",
         borderTop: "1px solid rgba(255,255,255,0.36)",
@@ -125,7 +127,7 @@ function MethodCard({ eyebrow, title, body }) {
   return (
     <div
       style={{
-        borderRadius: 16,
+        borderRadius: 18,
         background: "rgba(255,255,255,0.48)",
         border: "1px solid rgba(255,255,255,0.18)",
         padding: 16,
@@ -194,7 +196,7 @@ function ReportShell({ title, subtitle, visual, insights }) {
         className="grid grid-cols-1 xl:grid-cols-2 gap-4"
         style={{ marginTop: 16, alignItems: "start" }}
       >
-        <div style={{ ...GLASS, borderRadius: 16, padding: 16 }}>{visual}</div>
+        <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>{visual}</div>
         <div style={{ display: "grid", gap: 12, alignContent: "start" }}>{insights}</div>
       </div>
     </section>
@@ -206,7 +208,7 @@ function BuildingVisual({ title, body }) {
     <div
       style={{
         minHeight: 320,
-        borderRadius: 14,
+        borderRadius: 18,
         background: "rgba(255,255,255,0.58)",
         border: "1px solid rgba(255,255,255,0.24)",
         padding: 18,
@@ -225,7 +227,7 @@ function BuildingVisual({ title, body }) {
       <div
         style={{
           marginTop: 20,
-          borderRadius: 14,
+          borderRadius: 12,
           padding: 14,
           background: "rgba(255,255,255,0.72)",
           border: "1px solid rgba(255,255,255,0.32)",
@@ -516,7 +518,7 @@ function Body() {
                   <div
                     key={recruiter.recruiterId}
                     style={{
-                      borderRadius: 14,
+                      borderRadius: 12,
                       background: "rgba(255,255,255,0.72)",
                       border: "1px solid rgba(255,255,255,0.30)",
                       padding: 14,
@@ -644,7 +646,7 @@ function Body() {
                   >
                     <div
                       style={{
-                        borderRadius: 14,
+                        borderRadius: 12,
                         background: "rgba(255,255,255,0.72)",
                         border: "1px solid rgba(255,255,255,0.30)",
                         padding: 14,
@@ -659,7 +661,7 @@ function Body() {
                     </div>
                     <div
                       style={{
-                        borderRadius: 14,
+                        borderRadius: 12,
                         background: "rgba(255,255,255,0.72)",
                         border: "1px solid rgba(255,255,255,0.30)",
                         padding: 14,
@@ -674,7 +676,7 @@ function Body() {
                     </div>
                     <div
                       style={{
-                        borderRadius: 14,
+                        borderRadius: 12,
                         background: "rgba(255,255,255,0.72)",
                         border: "1px solid rgba(255,255,255,0.30)",
                         padding: 14,
@@ -689,7 +691,7 @@ function Body() {
                     </div>
                     <div
                       style={{
-                        borderRadius: 14,
+                        borderRadius: 12,
                         background: "rgba(255,255,255,0.72)",
                         border: "1px solid rgba(255,255,255,0.30)",
                         padding: 14,
@@ -709,7 +711,7 @@ function Body() {
                       <div
                         key={job.jobId}
                         style={{
-                          borderRadius: 14,
+                          borderRadius: 12,
                           background: "rgba(255,255,255,0.72)",
                           border: "1px solid rgba(255,255,255,0.30)",
                           padding: 14,
@@ -795,7 +797,7 @@ function Body() {
     if (activeReport === "qualityOfHire") {
       return (
         <>
-          <div style={{ ...GLASS, borderRadius: 16, padding: 18, marginBottom: 16 }}>
+          <div style={{ ...GLASS, borderRadius: 18, padding: 18, marginBottom: 16 }}>
             <div style={{ fontSize: 16, fontWeight: 900, color: "#334155" }}>
               Quality of Hire methodology
             </div>
@@ -845,7 +847,7 @@ function Body() {
                 >
                   <div
                     style={{
-                      borderRadius: 14,
+                      borderRadius: 12,
                       background: "rgba(255,255,255,0.72)",
                       border: "1px solid rgba(255,255,255,0.30)",
                       padding: 14,
@@ -860,7 +862,7 @@ function Body() {
                   </div>
                   <div
                     style={{
-                      borderRadius: 14,
+                      borderRadius: 12,
                       background: "rgba(255,255,255,0.72)",
                       border: "1px solid rgba(255,255,255,0.30)",
                       padding: 14,
@@ -875,7 +877,7 @@ function Body() {
                   </div>
                   <div
                     style={{
-                      borderRadius: 14,
+                      borderRadius: 12,
                       background: "rgba(255,255,255,0.72)",
                       border: "1px solid rgba(255,255,255,0.30)",
                       padding: 14,
@@ -890,7 +892,7 @@ function Body() {
                   </div>
                   <div
                     style={{
-                      borderRadius: 14,
+                      borderRadius: 12,
                       background: "rgba(255,255,255,0.72)",
                       border: "1px solid rgba(255,255,255,0.30)",
                       padding: 14,
@@ -910,7 +912,7 @@ function Body() {
                     <div
                       key={recruiter.recruiterId}
                       style={{
-                        borderRadius: 14,
+                        borderRadius: 12,
                         background: "rgba(255,255,255,0.72)",
                         border: "1px solid rgba(255,255,255,0.30)",
                         padding: 14,
@@ -993,7 +995,7 @@ function Body() {
           <div style={{ display: "grid", gap: 10 }}>
             <div
               style={{
-                borderRadius: 14,
+                borderRadius: 12,
                 background: "rgba(255,255,255,0.72)",
                 border: "1px solid rgba(255,255,255,0.30)",
                 padding: 14,
@@ -1007,7 +1009,7 @@ function Body() {
 
             <div
               style={{
-                borderRadius: 14,
+                borderRadius: 12,
                 background: "rgba(255,255,255,0.72)",
                 border: "1px solid rgba(255,255,255,0.30)",
                 padding: 14,
@@ -1021,7 +1023,7 @@ function Body() {
 
             <div
               style={{
-                borderRadius: 14,
+                borderRadius: 12,
                 background: "rgba(255,255,255,0.72)",
                 border: "1px solid rgba(255,255,255,0.30)",
                 padding: 14,
@@ -1065,7 +1067,7 @@ function Body() {
       {error ? (
         <div
           style={{
-            borderRadius: 16,
+            borderRadius: 18,
             border: "1px solid rgba(239,68,68,0.20)",
             background: "rgba(254,242,242,0.86)",
             color: "#B91C1C",

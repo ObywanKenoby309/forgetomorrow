@@ -1,5 +1,5 @@
 // pages/recruiter/analytics/index.js
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
@@ -11,6 +11,7 @@ import ApplicationFunnel from "@/components/analytics/charts/ApplicationFunnel";
 import SourceBreakdown from "@/components/analytics/charts/SourceBreakdown";
 import RecruiterActivity from "@/components/analytics/charts/RecruiterActivity";
 
+// ─── Design system tokens ─────────────────────────────────────────────────────
 const GLASS = {
   border: "1px solid rgba(255,255,255,0.22)",
   background: "rgba(255,255,255,0.68)",
@@ -31,31 +32,26 @@ const ORANGE = "#FF7043";
 const SLATE  = "#334155";
 const MUTED  = "#64748B";
 
+// Desktop bleed: negative margins span <main> into the right rail column
 // RIGHT_W(240) + GAP(12) from RecruiterLayout
 const BLEED_LEFT  = -(240 + 12);
 const BLEED_RIGHT = -(240 + 12);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Insight type config
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ─── Insight type config ──────────────────────────────────────────────────────
 const INSIGHT_CONFIG = {
   live: {
-    color: ORANGE,
     badge: "Live",
     badgeBg: "rgba(255,112,67,0.12)",
     badgeColor: ORANGE,
     dot: ORANGE,
   },
   attention: {
-    color: "#DC2626",
     badge: "Attention",
     badgeBg: "rgba(220,38,38,0.10)",
     badgeColor: "#DC2626",
     dot: "#DC2626",
   },
   roadmap: {
-    color: "#0F766E",
     badge: "Building",
     badgeBg: "rgba(15,118,110,0.10)",
     badgeColor: "#0F766E",
@@ -63,9 +59,7 @@ const INSIGHT_CONFIG = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Hooks
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Hooks ────────────────────────────────────────────────────────────────────
 
 function buildQS(state) {
   const params = new URLSearchParams();
@@ -84,7 +78,6 @@ function useAnalytics(state) {
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState(null);
-
   const qs = useMemo(() => buildQS(state), [state]);
 
   useEffect(() => {
@@ -113,7 +106,6 @@ function useAnalytics(state) {
 function useInsights(state) {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading]   = useState(false);
-
   const qs = useMemo(() => buildQS(state), [state]);
 
   useEffect(() => {
@@ -125,13 +117,13 @@ function useInsights(state) {
         const json = await res.json();
         if (active && Array.isArray(json.insights)) setInsights(json.insights);
       } catch (_) {
-        // Insights are non-critical — fail silently so main dashboard still loads.
+        // Fail silently — insights are non-critical
       } finally {
         if (active) setLoading(false);
       }
     };
     fetchInsights();
-    const id = setInterval(fetchInsights, 60000); // refresh every minute
+    const id = setInterval(fetchInsights, 60000);
     return () => { active = false; clearInterval(id); };
   }, [qs]);
 
@@ -149,9 +141,89 @@ function getFiltersFromQuery(query) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UI components
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Mobile snap-scroll carousel ─────────────────────────────────────────────
+//
+// Cards sit at 88vw so ~12% of the next card bleeds into frame —
+// a deliberate affordance that signals "swipe for more" without
+// any instruction copy. Dot indicators track active position.
+//
+function MobileCarousel({ cards }) {
+  const scrollRef = useRef(null);
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, clientWidth } = scrollRef.current;
+    const cardW = clientWidth * 0.88 + 12; // 88vw card + 12px gap
+    const idx = Math.min(Math.round(scrollLeft / cardW), cards.length - 1);
+    setActiveIdx(idx);
+  };
+
+  return (
+    <div style={{ marginBottom: 4 }}>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        style={{
+          display: "flex",
+          gap: 12,
+          overflowX: "auto",
+          scrollSnapType: "x mandatory",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          // Bleed to page edges; padding preserves first card alignment
+          marginLeft: -16,
+          marginRight: -16,
+          paddingLeft: 16,
+          paddingRight: 16,
+          paddingBottom: 4,
+        }}
+      >
+        {cards.map((card, i) => (
+          <div
+            key={i}
+            style={{
+              flex: "0 0 88vw",
+              minWidth: 0,
+              scrollSnapAlign: "start",
+            }}
+          >
+            {card}
+          </div>
+        ))}
+        {/* Trailing spacer so last card can snap flush left */}
+        <div style={{ flex: "0 0 4px", minWidth: 0 }} />
+      </div>
+
+      {/* Dot indicators */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 6,
+          marginTop: 10,
+        }}
+      >
+        {cards.map((_, i) => (
+          <div
+            key={i}
+            style={{
+              height: 6,
+              width: i === activeIdx ? 18 : 6,
+              borderRadius: 999,
+              background: i === activeIdx ? ORANGE : "rgba(100,116,139,0.28)",
+              transition: "width 200ms ease, background 200ms ease",
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── UI components ────────────────────────────────────────────────────────────
 
 function StatTile({ label, value, hint }) {
   return (
@@ -168,28 +240,8 @@ function InsightTile({ insight }) {
   return (
     <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span
-          style={{
-            display: "inline-block",
-            width: 7,
-            height: 7,
-            borderRadius: "50%",
-            background: cfg.dot,
-            flexShrink: 0,
-          }}
-        />
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 800,
-            letterSpacing: "0.07em",
-            textTransform: "uppercase",
-            background: cfg.badgeBg,
-            color: cfg.badgeColor,
-            borderRadius: 6,
-            padding: "2px 7px",
-          }}
-        >
+        <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }} />
+        <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase", background: cfg.badgeBg, color: cfg.badgeColor, borderRadius: 6, padding: "2px 7px" }}>
           {cfg.badge}
         </span>
         <span style={{ fontSize: 12, fontWeight: 800, color: SLATE, flex: 1 }}>
@@ -205,17 +257,7 @@ function InsightsSkeleton() {
   return (
     <div style={{ display: "grid", gap: 10 }}>
       {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          style={{
-            ...GLASS_SOFT,
-            borderRadius: 12,
-            padding: 14,
-            height: 80,
-            opacity: 0.5,
-            background: "rgba(255,255,255,0.35)",
-          }}
-        />
+        <div key={i} style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, height: 80, opacity: 0.5, background: "rgba(255,255,255,0.35)" }} />
       ))}
     </div>
   );
@@ -224,21 +266,9 @@ function InsightsSkeleton() {
 function ReportCard({ title, description, href, value }) {
   return (
     <Link href={href} style={{ textDecoration: "none" }}>
-      <div
-        style={{
-          ...GLASS_SOFT,
-          borderRadius: 12,
-          padding: 14,
-          minHeight: 122,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-        }}
-      >
+      <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, minHeight: 110, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         <div>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: ORANGE, marginBottom: 6 }}>
-            Full report
-          </div>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: ORANGE, marginBottom: 6 }}>Full report</div>
           <div style={{ fontSize: 15, fontWeight: 900, color: SLATE }}>{title}</div>
           <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>{description}</div>
         </div>
@@ -251,9 +281,7 @@ function ReportCard({ title, description, href, value }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Page body
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Page body ────────────────────────────────────────────────────────────────
 
 function Body() {
   const router  = useRouter();
@@ -261,6 +289,18 @@ function Body() {
   const { data, loading, error } = useAnalytics(filters);
   const { insights, loading: insightsLoading } = useInsights(filters);
   const { isEnterprise } = usePlan();
+
+  // Mobile detection (hydration-safe — always render desktop on first paint)
+  const [hasMounted, setHasMounted] = useState(false);
+  const [isMobile, setIsMobile]     = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -287,8 +327,8 @@ function Body() {
     );
   };
 
-  const totalInterviews    = data?.kpis?.totalInterviews      ?? 0;
-  const totalHires         = data?.kpis?.totalHires           ?? 0;
+  const totalInterviews     = data?.kpis?.totalInterviews      ?? 0;
+  const totalHires          = data?.kpis?.totalHires           ?? 0;
   const offerAcceptanceRate = data?.kpis?.offerAcceptanceRatePct ?? 0;
 
   const topSource =
@@ -298,189 +338,149 @@ function Body() {
         )
       : null;
 
-  const bleedRowStyle = {
-    marginLeft: BLEED_LEFT,
+  const visibleInsights = Array.isArray(insights) ? insights.slice(0, 4) : [];
+
+  // ── Card definitions — shared between desktop grid and mobile carousel ─────
+
+  const execSnapshotCard = (
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Executive Snapshot</div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
+            Quick reads for source quality, interview flow, and close efficiency.
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link href="/recruiter/analytics/reports" style={{ textDecoration: "none", borderRadius: 999, background: "rgba(255,112,67,0.12)", color: ORANGE, fontSize: 12, fontWeight: 800, padding: "8px 12px" }}>
+            Open report details
+          </Link>
+          <Link href="/recruiter/analytics/presentation" style={{ textDecoration: "none", borderRadius: 999, background: "rgba(51,65,85,0.08)", color: SLATE, fontSize: 12, fontWeight: 800, padding: "8px 12px" }}>
+            Open visuals
+          </Link>
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 16 }}>
+        <StatTile label="Top source" value={loading ? "…" : topSource?.name || "N/A"} hint="Best-performing inbound channel right now" />
+        <StatTile label="Offer acceptance" value={loading ? "…" : `${offerAcceptanceRate}%`} hint="High-trust signal for close efficiency" />
+        <StatTile
+          label="Apply-to-hire"
+          value={loading ? "…" : data?.kpis?.totalApplies ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%` : "0%"}
+          hint="Applications converting into hires"
+        />
+      </div>
+    </div>
+  );
+
+  const recruiterActivityCard = (
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Recruiter Activity</div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Outreach, screens, and hires across your current window.</div>
+        </div>
+        <Link href="/recruiter/analytics/recruiters" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>Full report →</Link>
+      </div>
+      <RecruiterActivity data={data?.recruiterActivity || []} />
+    </div>
+  );
+
+  const forgeInsightsCard = (
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Forge Insights</div>
+          <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: ORANGE, boxShadow: "0 0 0 3px rgba(255,112,67,0.18)" }} />
+        </div>
+        <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>What matters most right now.</div>
+      </div>
+      {insightsLoading && !insights ? (
+        <InsightsSkeleton />
+      ) : visibleInsights.length > 0 ? (
+        <div style={{ display: "grid", gap: 10 }}>
+          {visibleInsights.map((insight, i) => (
+            <InsightTile key={i} insight={insight} />
+          ))}
+        </div>
+      ) : (
+        <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+          <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65 }}>Insights will appear here as your pipeline data builds.</div>
+        </div>
+      )}
+    </div>
+  );
+
+  const sourcePerformanceCard = (
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Source Performance</div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>See which channels produce the strongest recruiting outcomes.</div>
+        </div>
+        <Link href="/recruiter/analytics/sources" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>Full report →</Link>
+      </div>
+      <SourceBreakdown data={data?.sources || []} />
+    </div>
+  );
+
+  const applicationFunnelCard = (
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Application Funnel</div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Track movement from interest to hire and spot where candidates drop.</div>
+        </div>
+        <Link href="/recruiter/analytics/funnel" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>Full report →</Link>
+      </div>
+      <ApplicationFunnel data={data?.funnel || []} />
+    </div>
+  );
+
+  const reportGatewaysCard = (
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+      <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Report Gateways</div>
+      <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>Snapshot here, drill into dedicated reports for the why.</div>
+      <div style={{ display: "grid", gap: 10 }}>
+        <ReportCard title="Time-to-Fill" description="See which roles close fastest and where delays are building." href="/recruiter/analytics/time-to-fill" value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`} />
+        <ReportCard title="Quality of Hire" description="Track post-hire quality signals once enough historical data exists." href="/recruiter/analytics/quality-of-hire" value="Building" />
+        <ReportCard title="Talent Intelligence" description="Compare source quality, match reasons, and role-specific signals." href="/recruiter/analytics/talent-intelligence" value={loading ? "…" : topSource?.name || "N/A"} />
+      </div>
+    </div>
+  );
+
+  // ── Desktop layout: 3-col bleed rows ─────────────────────────────────────
+  const desktopBleedStyle = {
+    marginLeft:  BLEED_LEFT,
     marginRight: BLEED_RIGHT,
     display: "grid",
     gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
     gap: 12,
   };
 
-  // Determine how many insight tiles to show — cap at 4 to avoid overflow.
-  const visibleInsights = Array.isArray(insights) ? insights.slice(0, 4) : [];
-
-  const ChartsBlock = (
+  const DesktopChartsBlock = (
     <>
-      {/* Row A: Executive Snapshot | Recruiter Activity | Forge Insights */}
-      <div style={{ ...bleedRowStyle, marginTop: 68 }}>
-
-        {/* Executive Snapshot */}
-        <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Executive Snapshot</div>
-              <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
-                Quick reads for source quality, interview flow, and close efficiency.
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <Link
-                href="/recruiter/analytics/reports"
-                style={{ textDecoration: "none", borderRadius: 999, background: "rgba(255,112,67,0.12)", color: ORANGE, fontSize: 12, fontWeight: 800, padding: "8px 12px" }}
-              >
-                Open report details
-              </Link>
-              <Link
-                href="/recruiter/analytics/presentation"
-                style={{ textDecoration: "none", borderRadius: 999, background: "rgba(51,65,85,0.08)", color: SLATE, fontSize: 12, fontWeight: 800, padding: "8px 12px" }}
-              >
-                Open visuals
-              </Link>
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 16 }}>
-            <StatTile
-              label="Top source"
-              value={loading ? "…" : topSource?.name || "N/A"}
-              hint="Best-performing inbound channel right now"
-            />
-            <StatTile
-              label="Offer acceptance"
-              value={loading ? "…" : `${offerAcceptanceRate}%`}
-              hint="High-trust signal for close efficiency"
-            />
-            <StatTile
-              label="Apply-to-hire"
-              value={
-                loading
-                  ? "…"
-                  : data?.kpis?.totalApplies
-                  ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%`
-                  : "0%"
-              }
-              hint="Applications converting into hires"
-            />
-          </div>
-        </div>
-
-        {/* Recruiter Activity */}
-        <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Recruiter Activity</div>
-              <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
-                Outreach, screens, and hires across your current window.
-              </div>
-            </div>
-            <Link href="/recruiter/analytics/recruiters" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>
-              Full report →
-            </Link>
-          </div>
-          <RecruiterActivity data={data?.recruiterActivity || []} />
-        </div>
-
-        {/* Forge Insights — dynamic */}
-        <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Forge Insights</div>
-              {/* Live pulse dot */}
-              <span
-                style={{
-                  display: "inline-block",
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: ORANGE,
-                  boxShadow: `0 0 0 3px rgba(255,112,67,0.18)`,
-                }}
-              />
-            </div>
-            <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
-              What matters most right now.
-            </div>
-          </div>
-
-          {insightsLoading && !insights ? (
-            <InsightsSkeleton />
-          ) : visibleInsights.length > 0 ? (
-            <div style={{ display: "grid", gap: 10 }}>
-              {visibleInsights.map((insight, i) => (
-                <InsightTile key={i} insight={insight} />
-              ))}
-            </div>
-          ) : (
-            <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-              <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
-                Insights will appear here as your pipeline data builds.
-              </div>
-            </div>
-          )}
-        </div>
+      <div style={{ ...desktopBleedStyle, marginTop: 68 }}>
+        {execSnapshotCard}
+        {recruiterActivityCard}
+        {forgeInsightsCard}
       </div>
-
-      {/* Row B: Source Performance | Application Funnel | Report Gateways */}
-      <div style={{ ...bleedRowStyle, marginTop: 12 }}>
-
-        <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Source Performance</div>
-              <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
-                See which channels produce the strongest recruiting outcomes.
-              </div>
-            </div>
-            <Link href="/recruiter/analytics/sources" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>
-              Full report →
-            </Link>
-          </div>
-          <SourceBreakdown data={data?.sources || []} />
-        </div>
-
-        <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Application Funnel</div>
-              <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
-                Track movement from interest to hire and spot where candidates drop.
-              </div>
-            </div>
-            <Link href="/recruiter/analytics/funnel" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>
-              Full report →
-            </Link>
-          </div>
-          <ApplicationFunnel data={data?.funnel || []} />
-        </div>
-
-        <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Report Gateways</div>
-          <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>
-            Snapshot here, drill into dedicated reports for the why.
-          </div>
-          <div style={{ display: "grid", gap: 10 }}>
-            <ReportCard
-              title="Time-to-Fill"
-              description="See which roles close fastest and where delays are building."
-              href="/recruiter/analytics/time-to-fill"
-              value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`}
-            />
-            <ReportCard
-              title="Quality of Hire"
-              description="Track post-hire quality signals once enough historical data exists."
-              href="/recruiter/analytics/quality-of-hire"
-              value="Building"
-            />
-            <ReportCard
-              title="Talent Intelligence"
-              description="Compare source quality, match reasons, and role-specific signals."
-              href="/recruiter/analytics/talent-intelligence"
-              value={loading ? "…" : topSource?.name || "N/A"}
-            />
-          </div>
-        </div>
+      <div style={{ ...desktopBleedStyle, marginTop: 12 }}>
+        {sourcePerformanceCard}
+        {applicationFunnelCard}
+        {reportGatewaysCard}
       </div>
     </>
   );
+
+  // ── Mobile layout: snap-scroll carousels, one per row ─────────────────────
+  const MobileChartsBlock = (
+    <>
+      <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
+      <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
+    </>
+  );
+
+  const ChartsBlock = hasMounted && isMobile ? MobileChartsBlock : DesktopChartsBlock;
 
   return (
     <RecruiterAnalyticsLayout
@@ -497,11 +497,13 @@ function Body() {
         </div>
       ) : null}
 
-      {/* KPI row — sits alongside right rail */}
+      {/* KPI row — 2×3 on mobile, 6-col on desktop */}
       <section
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))",
+          gridTemplateColumns: hasMounted && isMobile
+            ? "repeat(2, minmax(0, 1fr))"
+            : "repeat(auto-fit, minmax(min(100%, 120px), 1fr))",
           gap: 12,
         }}
       >
@@ -513,11 +515,18 @@ function Body() {
         <KPICard label="Hires"             value={loading ? "…" : totalHires} />
       </section>
 
-      {/* Bleed rows */}
+      {/* Bleed rows (desktop) / carousel rows (mobile) */}
       {isEnterprise ? ChartsBlock : <FeatureLock label="Full Analytics">{ChartsBlock}</FeatureLock>}
 
       {data?.meta?.refreshedAt ? (
-        <div style={{ fontSize: 12, color: "#94A3B8", textAlign: "right", marginRight: BLEED_RIGHT }}>
+        <div
+          style={{
+            fontSize: 12,
+            color: "#94A3B8",
+            textAlign: "right",
+            ...(!(hasMounted && isMobile) ? { marginRight: BLEED_RIGHT } : {}),
+          }}
+        >
           Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
         </div>
       ) : null}
