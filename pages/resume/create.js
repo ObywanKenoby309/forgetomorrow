@@ -744,42 +744,42 @@ export default function CreateResumePage() {
     if (uploadedFlag !== '1' && uploadedFlag !== 'true') return;
 
     async function applyUploadedResume() {
-      try {
-        const raw = await getDraft(DRAFT_KEYS.LAST_UPLOADED_RESUME_TEXT);
-        const text = coerceUploadedDraftText(raw);
-        if (!text) return;
+  try {
+    const raw = await getDraft(DRAFT_KEYS.LAST_UPLOADED_RESUME_TEXT);
+    const text = coerceUploadedDraftText(raw);
+    if (!text) return;
 
-        const lines = text
-          .split(/\r?\n/)
-          .map((l) => l.trim())
-          .filter(Boolean);
+    // 🔧 FIX: Send to AI parser instead of dumping raw text into summary
+    const res = await fetch('/api/resume/parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
 
-        let guessedName = formData.fullName || formData.name || '';
-        if (!guessedName && lines.length > 0) guessedName = lines[0];
-
-        const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-        const guessedEmail = emailMatch ? emailMatch[0] : '';
-
-        const phoneMatch = text.match(/(\+?\d[\d\s\-().]{7,}\d)/);
-        const guessedPhone = phoneMatch ? phoneMatch[0].trim() : '';
-
-        setFormData((prev) => ({
-          ...prev,
-          fullName: prev.fullName || guessedName || '',
-          email: prev.email || guessedEmail || '',
-          phone: prev.phone || guessedPhone || '',
-        }));
-
-        if (!summary || !summary.trim()) {
-          const capped = text.length > 4000 ? text.slice(0, 4000) : text;
-          setSummary(capped);
-        }
-
-        hasAppliedUploadRef.current = true;
-      } catch (err) {
-        console.error('[resume/create] Failed to auto-fill from uploaded resume', err);
-      }
+    if (res.ok) {
+      const parsed = await res.json();
+      applyResumePayloadToState(parsed); // ← already handles all fields correctly
+    } else {
+      // Graceful fallback: at least populate contact fields via regex
+      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+      // 🔧 FIX: tighter phone regex - avoids matching dates/zip codes
+      const phoneMatch = text.match(/(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/);
+      
+      setFormData((prev) => ({
+        ...prev,
+        fullName: prev.fullName || lines[0] || '',
+        email: prev.email || (emailMatch ? emailMatch[0] : ''),
+        phone: prev.phone || (phoneMatch ? phoneMatch[0].trim() : ''),
+      }));
+      // ⚠️ Do NOT setSummary(raw text) — leave it blank for the user to fill
     }
+
+    hasAppliedUploadRef.current = true;
+  } catch (err) {
+    console.error('[resume/create] Failed to auto-fill from uploaded resume', err);
+  }
+}
 
     applyUploadedResume();
   }, [router.isReady, router.query, formData.fullName, formData.name, summary, setFormData, setSummary]);
