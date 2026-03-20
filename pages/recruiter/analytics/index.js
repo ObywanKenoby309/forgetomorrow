@@ -366,27 +366,29 @@ function Body() {
 
   // ── Card definitions — shared between desktop grid and mobile carousel ─────
 
+  // ── Card definitions — functions so mobile can adapt internals ─────────────
+
   const execSnapshotCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Executive Snapshot</div>
-          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
-            Quick reads for source quality, interview flow, and close efficiency.
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Link href="/recruiter/analytics/reports" style={{ textDecoration: "none", borderRadius: 999, background: "rgba(255,112,67,0.12)", color: ORANGE, fontSize: 12, fontWeight: 800, padding: "8px 12px" }}>
-            Open report details
-          </Link>
-          <Link href="/recruiter/analytics/presentation" style={{ textDecoration: "none", borderRadius: 999, background: "rgba(51,65,85,0.08)", color: SLATE, fontSize: 12, fontWeight: 800, padding: "8px 12px" }}>
-            Open visuals
-          </Link>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Executive Snapshot</div>
+        <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
+          Source quality, interview flow, and close efficiency.
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 16 }}>
-        <StatTile label="Top source" value={loading ? "…" : topSource?.name || "N/A"} hint="Best-performing inbound channel right now" />
-        <StatTile label="Offer acceptance" value={loading ? "…" : `${offerAcceptanceRate}%`} hint="High-trust signal for close efficiency" />
+      {/* Buttons — stack on mobile, inline on desktop */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+        <Link href="/recruiter/analytics/reports" style={{ textDecoration: "none", borderRadius: 999, background: "rgba(255,112,67,0.12)", color: ORANGE, fontSize: 12, fontWeight: 800, padding: "7px 12px" }}>
+          Report details
+        </Link>
+        <Link href="/recruiter/analytics/presentation" style={{ textDecoration: "none", borderRadius: 999, background: "rgba(51,65,85,0.08)", color: SLATE, fontSize: 12, fontWeight: 800, padding: "7px 12px" }}>
+          Visuals
+        </Link>
+      </div>
+      {/* Stat tiles — 1 col on mobile, 3 col on desktop */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+        <StatTile label="Top source" value={loading ? "…" : topSource?.name || "N/A"} hint="Best-performing inbound channel" />
+        <StatTile label="Offer acceptance" value={loading ? "…" : `${offerAcceptanceRate}%`} hint="High-trust close efficiency signal" />
         <StatTile
           label="Apply-to-hire"
           value={loading ? "…" : data?.kpis?.totalApplies ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%` : "0%"}
@@ -397,20 +399,20 @@ function Body() {
   );
 
   const recruiterActivityCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Recruiter Activity</div>
-          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Outreach, screens, and hires across your current window.</div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Applications and interviews this window.</div>
         </div>
-        <Link href="/recruiter/analytics/recruiters" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>Full report →</Link>
+        <Link href="/recruiter/analytics/recruiters" style={{ color: ORANGE, fontWeight: 800, fontSize: 12, whiteSpace: "nowrap" }}>Full report →</Link>
       </div>
       <RecruiterActivity data={data?.recruiterActivity || []} />
     </div>
   );
 
   const forgeInsightsCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <div style={{ marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Forge Insights</div>
@@ -422,9 +424,7 @@ function Body() {
         <InsightsSkeleton />
       ) : visibleInsights.length > 0 ? (
         <div style={{ display: "grid", gap: 10 }}>
-          {visibleInsights.map((insight, i) => (
-            <InsightTile key={i} insight={insight} />
-          ))}
+          {visibleInsights.map((insight, i) => <InsightTile key={i} insight={insight} />)}
         </div>
       ) : (
         <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
@@ -435,39 +435,39 @@ function Body() {
   );
 
   const sourcePerformanceCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Source Performance</div>
-          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>See which channels produce the strongest recruiting outcomes.</div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Channels producing the strongest outcomes.</div>
         </div>
-        <Link href="/recruiter/analytics/sources" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>Full report →</Link>
+        <Link href="/recruiter/analytics/sources" style={{ color: ORANGE, fontWeight: 800, fontSize: 12, whiteSpace: "nowrap" }}>Full report →</Link>
       </div>
       <SourceBreakdown data={data?.sources || []} />
     </div>
   );
 
   const applicationFunnelCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Application Funnel</div>
-          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Track movement from interest to hire and spot where candidates drop.</div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Movement from interest to hire.</div>
         </div>
-        <Link href="/recruiter/analytics/funnel" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>Full report →</Link>
+        <Link href="/recruiter/analytics/funnel" style={{ color: ORANGE, fontWeight: 800, fontSize: 12, whiteSpace: "nowrap" }}>Full report →</Link>
       </div>
       <ApplicationFunnel data={data?.funnel || []} />
     </div>
   );
 
   const reportGatewaysCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Report Gateways</div>
-      <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>Snapshot here, drill into dedicated reports for the why.</div>
+      <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>Drill into dedicated reports for the why.</div>
       <div style={{ display: "grid", gap: 10 }}>
-        <ReportCard title="Time-to-Fill" description="See which roles close fastest and where delays are building." href="/recruiter/analytics/time-to-fill" value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`} />
-        <ReportCard title="Quality of Hire" description="Track post-hire quality signals once enough historical data exists." href="/recruiter/analytics/quality-of-hire" value="Building" />
-        <ReportCard title="Talent Intelligence" description="Compare source quality, match reasons, and role-specific signals." href="/recruiter/analytics/talent-intelligence" value={loading ? "…" : topSource?.name || "N/A"} />
+        <ReportCard title="Time-to-Fill" description="See which roles close fastest and where delays build." href="/recruiter/analytics/time-to-fill" value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`} />
+        <ReportCard title="Quality of Hire" description="Track post-hire quality signals once enough data exists." href="/recruiter/analytics/quality-of-hire" value="Building" />
+        <ReportCard title="Talent Intelligence" description="Compare source quality, match reasons, role signals." href="/recruiter/analytics/talent-intelligence" value={loading ? "…" : topSource?.name || "N/A"} />
       </div>
     </div>
   );
