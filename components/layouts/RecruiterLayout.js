@@ -37,10 +37,12 @@ const LAYOUT_CSS = `
       grid-template-areas: "content" !important;
       padding-bottom: 100px !important;
       padding-right: 16px !important;
+      overflow-x: hidden !important;
     }
     .ft-rl-left  { display: none !important; }
     .ft-rl-right { display: none !important; }
     .ft-rl-main  { overflow-x: hidden !important; grid-area: content !important; }
+    .ft-bg-fixed { overflow-x: hidden !important; }
     .ft-bg-fixed { background-attachment: scroll !important; }
 
     .ft-filter-row   { flex-direction: column !important; align-items: flex-start !important; }
@@ -230,6 +232,7 @@ export default function RecruiterLayout({
             boxSizing: 'border-box',
             width: '100%',
             maxWidth: '100vw',
+            overflowX: 'hidden',
             minWidth: 0,
           }}
         >
