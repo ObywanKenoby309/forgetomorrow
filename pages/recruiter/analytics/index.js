@@ -1,4 +1,9 @@
 // pages/recruiter/analytics/index.js
+//
+// Both desktop and mobile layouts are always rendered.
+// CSS classes ft-desktop-charts / ft-mobile-charts control which is visible.
+// No isMobile JavaScript state — zero layout flicker on any device.
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -32,46 +37,29 @@ const ORANGE = "#FF7043";
 const SLATE  = "#334155";
 const MUTED  = "#64748B";
 
-// Desktop bleed: negative margins span <main> into the right rail column
-// RIGHT_W(240) + GAP(12) from RecruiterLayout
-const BLEED_LEFT  = -(240 + 12);
-const BLEED_RIGHT = -(240 + 12);
+// Desktop bleed: negative margins span into sidebar + right rail columns
+const BLEED = -(240 + 12); // LEFT_W/RIGHT_W(240) + GAP(12)
 
 // ─── Insight type config ──────────────────────────────────────────────────────
 const INSIGHT_CONFIG = {
-  live: {
-    badge: "Live",
-    badgeBg: "rgba(255,112,67,0.12)",
-    badgeColor: ORANGE,
-    dot: ORANGE,
-  },
-  attention: {
-    badge: "Attention",
-    badgeBg: "rgba(220,38,38,0.10)",
-    badgeColor: "#DC2626",
-    dot: "#DC2626",
-  },
-  roadmap: {
-    badge: "Building",
-    badgeBg: "rgba(15,118,110,0.10)",
-    badgeColor: "#0F766E",
-    dot: "#0F766E",
-  },
+  live:      { badge: "Live",      badgeBg: "rgba(255,112,67,0.12)",  badgeColor: ORANGE,    dot: ORANGE    },
+  attention: { badge: "Attention", badgeBg: "rgba(220,38,38,0.10)",   badgeColor: "#DC2626", dot: "#DC2626" },
+  roadmap:   { badge: "Building",  badgeBg: "rgba(15,118,110,0.10)",  badgeColor: "#0F766E", dot: "#0F766E" },
 };
 
-// ─── Hooks ────────────────────────────────────────────────────────────────────
+// ─── Data hooks ───────────────────────────────────────────────────────────────
 
 function buildQS(state) {
-  const params = new URLSearchParams();
-  params.set("range", state.range);
-  params.set("jobId", state.jobId);
-  params.set("recruiterId", state.recruiterId);
-  params.set("companyId", state.companyId);
+  const p = new URLSearchParams();
+  p.set("range",       state.range);
+  p.set("jobId",       state.jobId);
+  p.set("recruiterId", state.recruiterId);
+  p.set("companyId",   state.companyId);
   if (state.range === "custom") {
-    if (state.from) params.set("from", state.from);
-    if (state.to)   params.set("to", state.to);
+    if (state.from) p.set("from", state.from);
+    if (state.to)   p.set("to",   state.to);
   }
-  return params.toString();
+  return p.toString();
 }
 
 function useAnalytics(state) {
@@ -82,10 +70,9 @@ function useAnalytics(state) {
 
   useEffect(() => {
     let active = true;
-    const fetchData = async () => {
+    const fetch_ = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        setLoading(true); setError(null);
         const res  = await fetch(`/api/analytics/recruiter?${qs}`);
         const json = await res.json();
         if (active) setData(json);
@@ -95,8 +82,8 @@ function useAnalytics(state) {
         if (active) setLoading(false);
       }
     };
-    fetchData();
-    const id = setInterval(fetchData, 30000);
+    fetch_();
+    const id = setInterval(fetch_, 30000);
     return () => { active = false; clearInterval(id); };
   }, [qs]);
 
@@ -110,20 +97,17 @@ function useInsights(state) {
 
   useEffect(() => {
     let active = true;
-    const fetchInsights = async () => {
+    const fetch_ = async () => {
       try {
         setLoading(true);
         const res  = await fetch(`/api/analytics/insights?${qs}`);
         const json = await res.json();
         if (active && Array.isArray(json.insights)) setInsights(json.insights);
-      } catch (_) {
-        // Fail silently — insights are non-critical
-      } finally {
-        if (active) setLoading(false);
-      }
+      } catch (_) { }
+      finally { if (active) setLoading(false); }
     };
-    fetchInsights();
-    const id = setInterval(fetchInsights, 60000);
+    fetch_();
+    const id = setInterval(fetch_, 60000);
     return () => { active = false; clearInterval(id); };
   }, [qs]);
 
@@ -141,14 +125,11 @@ function getFiltersFromQuery(query) {
   };
 }
 
-// ─── Mobile snap-scroll carousel ─────────────────────────────────────────────
-//
-// Cards sit at 88vw so ~12% of the next card bleeds into frame —
-// a deliberate affordance that signals "swipe for more" without
-// any instruction copy. Dot indicators track active position.
-//
+// ─── Mobile carousel ──────────────────────────────────────────────────────────
+// Same pattern as candidate-center.js — overflow:hidden on wrapper, 100% width cards.
+
 function MobileCarousel({ cards }) {
-  const trackRef = useRef(null);
+  const trackRef     = useRef(null);
   const programmatic = useRef(false);
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -178,44 +159,17 @@ function MobileCarousel({ cards }) {
 
   return (
     <div style={{ marginBottom: 12 }}>
-      {/*
-        overflow:hidden on this glass wrapper clips the carousel — same pattern
-        as candidate-center.js. The scroll track inside retains overflowX:auto.
-        paddingLeft/Right 0 so cards sit flush; cards carry their own padding.
-      */}
-      <div style={{
-        ...GLASS,
-        borderRadius: 18,
-        paddingTop: 0,
-        paddingBottom: 0,
-        paddingLeft: 0,
-        paddingRight: 0,
-        width: "100%",
-        overflow: "hidden",
-      }}>
-        {/* Scroll track */}
+      {/* overflow:hidden clips the carousel — track inside retains overflowX:auto */}
+      <div style={{ ...GLASS, borderRadius: 18, overflow: "hidden", width: "100%" }}>
         <div
           ref={trackRef}
           style={{
-            display: "flex",
-            overflowX: "auto",
-            scrollSnapType: "x mandatory",
-            msOverflowStyle: "none",
-            scrollbarWidth: "none",
-            WebkitOverflowScrolling: "touch",
+            display: "flex", overflowX: "auto", scrollSnapType: "x mandatory",
+            msOverflowStyle: "none", scrollbarWidth: "none", WebkitOverflowScrolling: "touch",
           }}
         >
           {cards.map((card, i) => (
-            <div
-              key={i}
-              style={{
-                flexShrink: 0,
-                width: "100%",
-                scrollSnapAlign: "start",
-                boxSizing: "border-box",
-                // No padding here — cards carry their own padding:16
-              }}
-            >
+            <div key={i} style={{ flexShrink: 0, width: "100%", scrollSnapAlign: "start", boxSizing: "border-box" }}>
               {card}
             </div>
           ))}
@@ -225,18 +179,11 @@ function MobileCarousel({ cards }) {
       {/* Dot indicators */}
       <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 10 }}>
         {cards.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => goTo(i)}
-            aria-label={`Go to card ${i + 1}`}
+          <button key={i} onClick={() => goTo(i)} aria-label={`Go to card ${i + 1}`}
             style={{
-              width: i === activeIdx ? 24 : 8,
-              height: 8,
-              borderRadius: 999,
+              width: i === activeIdx ? 24 : 8, height: 8, borderRadius: 999,
               background: i === activeIdx ? ORANGE : "rgba(255,112,67,0.25)",
-              border: "none",
-              padding: 0,
-              cursor: "pointer",
+              border: "none", padding: 0, cursor: "pointer",
               transition: "width 220ms ease, background 220ms ease",
             }}
           />
@@ -245,7 +192,6 @@ function MobileCarousel({ cards }) {
     </div>
   );
 }
-
 
 // ─── UI components ────────────────────────────────────────────────────────────
 
@@ -268,9 +214,7 @@ function InsightTile({ insight }) {
         <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase", background: cfg.badgeBg, color: cfg.badgeColor, borderRadius: 6, padding: "2px 7px" }}>
           {cfg.badge}
         </span>
-        <span style={{ fontSize: 12, fontWeight: 800, color: SLATE, flex: 1 }}>
-          {insight.title}
-        </span>
+        <span style={{ fontSize: 12, fontWeight: 800, color: SLATE, flex: 1 }}>{insight.title}</span>
       </div>
       <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65 }}>{insight.body}</div>
     </div>
@@ -308,23 +252,11 @@ function ReportCard({ title, description, href, value }) {
 // ─── Page body ────────────────────────────────────────────────────────────────
 
 function Body() {
-  const router  = useRouter();
+  const router = useRouter();
   const [filters, setFilters] = useState(getFiltersFromQuery(router.query));
-  const { data, loading, error } = useAnalytics(filters);
+  const { data, loading, error }            = useAnalytics(filters);
   const { insights, loading: insightsLoading } = useInsights(filters);
   const { isEnterprise } = usePlan();
-
-  // Default TRUE (mobile-safe) — carousel renders on first paint everywhere.
-  // Switches to desktop bleed grid only after confirmed wide screen.
-  // Eliminates the race condition with RecruiterLayout's own hasMounted state.
-  const [isMobile, setIsMobile] = useState(true);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 1024);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -335,19 +267,8 @@ function Body() {
     const next = { ...filters, ...patch };
     setFilters(next);
     router.replace(
-      {
-        pathname: router.pathname,
-        query: {
-          range:       next.range,
-          jobId:       next.jobId,
-          recruiterId: next.recruiterId,
-          companyId:   next.companyId,
-          ...(next.from ? { from: next.from } : {}),
-          ...(next.to   ? { to:   next.to   } : {}),
-        },
-      },
-      undefined,
-      { shallow: true, scroll: false }
+      { pathname: router.pathname, query: { range: next.range, jobId: next.jobId, recruiterId: next.recruiterId, companyId: next.companyId, ...(next.from ? { from: next.from } : {}), ...(next.to ? { to: next.to } : {}) } },
+      undefined, { shallow: true, scroll: false }
     );
   };
 
@@ -355,28 +276,22 @@ function Body() {
   const totalHires          = data?.kpis?.totalHires           ?? 0;
   const offerAcceptanceRate = data?.kpis?.offerAcceptanceRatePct ?? 0;
 
-  const topSource =
-    Array.isArray(data?.sources) && data.sources.length > 0
-      ? data.sources.reduce((best, item) =>
-          Number(item?.value ?? 0) > Number(best?.value ?? 0) ? item : best
-        )
-      : null;
+  const topSource = Array.isArray(data?.sources) && data.sources.length > 0
+    ? data.sources.reduce((best, item) => Number(item?.value ?? 0) > Number(best?.value ?? 0) ? item : best)
+    : null;
 
   const visibleInsights = Array.isArray(insights) ? insights.slice(0, 4) : [];
 
-  // ── Card definitions — shared between desktop grid and mobile carousel ─────
-
-  // ── Card definitions — functions so mobile can adapt internals ─────────────
+  // ── Shared card definitions ───────────────────────────────────────────────
+  // Each card is used in BOTH the desktop bleed grid and the mobile carousel.
+  // CSS classes on the wrapper divs (ft-stat-tiles) handle internal layout changes.
 
   const execSnapshotCard = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Executive Snapshot</div>
-        <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
-          Source quality, interview flow, and close efficiency.
-        </div>
+        <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Source quality, interview flow, and close efficiency.</div>
       </div>
-      {/* Buttons — stack on mobile, inline on desktop */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         <Link href="/recruiter/analytics/reports" style={{ textDecoration: "none", borderRadius: 999, background: "rgba(255,112,67,0.12)", color: ORANGE, fontSize: 12, fontWeight: 800, padding: "7px 12px" }}>
           Report details
@@ -385,15 +300,11 @@ function Body() {
           Visuals
         </Link>
       </div>
-      {/* Stat tiles — 1 col on mobile, 3 col on desktop */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 10 }}>
-        <StatTile label="Top source" value={loading ? "…" : topSource?.name || "N/A"} hint="Best-performing inbound channel" />
-        <StatTile label="Offer acceptance" value={loading ? "…" : `${offerAcceptanceRate}%`} hint="High-trust close efficiency signal" />
-        <StatTile
-          label="Apply-to-hire"
-          value={loading ? "…" : data?.kpis?.totalApplies ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%` : "0%"}
-          hint="Applications converting into hires"
-        />
+      {/* ft-stat-tiles: 3-col on desktop, 1-col on mobile via CSS */}
+      <div className="ft-stat-tiles" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+        <StatTile label="Top source"       value={loading ? "…" : topSource?.name || "N/A"}   hint="Best-performing inbound channel" />
+        <StatTile label="Offer acceptance" value={loading ? "…" : `${offerAcceptanceRate}%`}  hint="High-trust close efficiency signal" />
+        <StatTile label="Apply-to-hire"    value={loading ? "…" : data?.kpis?.totalApplies ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%` : "0%"} hint="Applications converting into hires" />
       </div>
     </div>
   );
@@ -420,9 +331,7 @@ function Body() {
         </div>
         <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>What matters most right now.</div>
       </div>
-      {insightsLoading && !insights ? (
-        <InsightsSkeleton />
-      ) : visibleInsights.length > 0 ? (
+      {insightsLoading && !insights ? <InsightsSkeleton /> : visibleInsights.length > 0 ? (
         <div style={{ display: "grid", gap: 10 }}>
           {visibleInsights.map((insight, i) => <InsightTile key={i} insight={insight} />)}
         </div>
@@ -465,48 +374,39 @@ function Body() {
       <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Report Gateways</div>
       <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>Drill into dedicated reports for the why.</div>
       <div style={{ display: "grid", gap: 10 }}>
-        <ReportCard title="Time-to-Fill" description="See which roles close fastest and where delays build." href="/recruiter/analytics/time-to-fill" value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`} />
-        <ReportCard title="Quality of Hire" description="Track post-hire quality signals once enough data exists." href="/recruiter/analytics/quality-of-hire" value="Building" />
-        <ReportCard title="Talent Intelligence" description="Compare source quality, match reasons, role signals." href="/recruiter/analytics/talent-intelligence" value={loading ? "…" : topSource?.name || "N/A"} />
+        <ReportCard title="Time-to-Fill"       description="See which roles close fastest and where delays build."         href="/recruiter/analytics/time-to-fill"        value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`} />
+        <ReportCard title="Quality of Hire"    description="Track post-hire quality signals once enough data exists."      href="/recruiter/analytics/quality-of-hire"     value="Building" />
+        <ReportCard title="Talent Intelligence" description="Compare source quality, match reasons, and role signals."     href="/recruiter/analytics/talent-intelligence"  value={loading ? "…" : topSource?.name || "N/A"} />
       </div>
     </div>
   );
 
-  // ── Desktop layout: 3-col bleed rows ─────────────────────────────────────
-  const desktopBleedStyle = {
-    marginLeft:  BLEED_LEFT,
-    marginRight: BLEED_RIGHT,
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
-    gap: 12,
-  };
+  // ── Desktop bleed grid ────────────────────────────────────────────────────
+  const bleed = { marginLeft: BLEED, marginRight: BLEED, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)", gap: 12 };
 
-  const DesktopChartsBlock = (
+  const DesktopBlock = (
     <>
-      <div style={{ ...desktopBleedStyle, marginTop: 68 }}>
-        {execSnapshotCard}
-        {recruiterActivityCard}
-        {forgeInsightsCard}
-      </div>
-      <div style={{ ...desktopBleedStyle, marginTop: 12 }}>
-        {sourcePerformanceCard}
-        {applicationFunnelCard}
-        {reportGatewaysCard}
-      </div>
+      <div style={{ ...bleed, marginTop: 68 }}>{execSnapshotCard}{recruiterActivityCard}{forgeInsightsCard}</div>
+      <div style={{ ...bleed, marginTop: 12 }}>{sourcePerformanceCard}{applicationFunnelCard}{reportGatewaysCard}</div>
     </>
   );
 
-  // ── Mobile layout: snap-scroll carousels, one per row ─────────────────────
-  const MobileChartsBlock = (
+  // ── Mobile carousel ───────────────────────────────────────────────────────
+  const MobileBlock = (
     <>
       <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
       <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
     </>
   );
 
-  // true = mobile/unconfirmed → carousel (safe default)
-  // false = desktop confirmed → bleed grid
-  const ChartsBlock = isMobile ? MobileChartsBlock : DesktopChartsBlock;
+  const ChartsContent = (
+    <>
+      {/* ft-desktop-charts: visible on desktop, display:none on mobile via CSS */}
+      <div className="ft-desktop-charts">{DesktopBlock}</div>
+      {/* ft-mobile-charts: visible on mobile, display:none on desktop via CSS */}
+      <div className="ft-mobile-charts">{MobileBlock}</div>
+    </>
+  );
 
   return (
     <RecruiterAnalyticsLayout
@@ -523,36 +423,23 @@ function Body() {
         </div>
       ) : null}
 
-      {/* KPI row — 2×3 on mobile, 6-col on desktop */}
+      {/* KPI row — ft-kpi-row: 6-col on desktop, 2-col on mobile via CSS */}
       <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: isMobile
-            ? "repeat(2, minmax(0, 1fr))"
-            : "repeat(auto-fit, minmax(min(100%, 120px), 1fr))",
-          gap: 12,
-        }}
+        className="ft-kpi-row"
+        style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: 12 }}
       >
         <KPICard label="Total job views"   value={data?.kpis?.totalViews        ?? (loading ? "…" : 0)} />
         <KPICard label="Total applies"     value={data?.kpis?.totalApplies      ?? (loading ? "…" : 0)} />
-        <KPICard label="Conversion rate"   value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"} />
-        <KPICard label="Avg. time-to-fill" value={data ? `${data.kpis.avgTimeToFillDays} days` : loading ? "…" : "0 days"} />
+        <KPICard label="Conversion rate"   value={data ? `${data.kpis.conversionRatePct}%`           : loading ? "…" : "0%"} />
+        <KPICard label="Avg. time-to-fill" value={data ? `${data.kpis.avgTimeToFillDays} days`       : loading ? "…" : "0 days"} />
         <KPICard label="Interviews"        value={loading ? "…" : totalInterviews} />
         <KPICard label="Hires"             value={loading ? "…" : totalHires} />
       </section>
 
-      {/* Bleed rows (desktop) / carousel rows (mobile) */}
-      {isEnterprise ? ChartsBlock : <FeatureLock label="Full Analytics">{ChartsBlock}</FeatureLock>}
+      {isEnterprise ? ChartsContent : <FeatureLock label="Full Analytics">{ChartsContent}</FeatureLock>}
 
       {data?.meta?.refreshedAt ? (
-        <div
-          style={{
-            fontSize: 12,
-            color: "#94A3B8",
-            textAlign: "right",
-            ...(!isMobile ? { marginRight: BLEED_RIGHT } : {}),
-          }}
-        >
+        <div className="ft-bleed-ts" style={{ fontSize: 12, color: "#94A3B8", textAlign: "right", marginRight: BLEED }}>
           Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
         </div>
       ) : null}
