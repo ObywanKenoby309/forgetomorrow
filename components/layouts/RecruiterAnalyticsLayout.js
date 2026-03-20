@@ -266,7 +266,7 @@ export default function RecruiterAnalyticsLayout({
   // ── Mobile detection ──────────────────────────────────────────────────────
   // null = not yet measured (SSR / first paint)
   // This mirrors the same pattern RecruiterLayout uses internally.
-  const [isMobile, setIsMobile] = useState(null);
+  const [isMobile, setIsMobile] = useState(true);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
