@@ -418,7 +418,7 @@ export default function ResumeCoverLanding() {
 
     try {
       const raw = await extractTextFromFile(file);
-      const clean = raw ? normalizeJobText(raw) : '';
+      const clean = raw ? raw.trim() : '';
 
       try {
         await fetch('/api/drafts/set', {
