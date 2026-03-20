@@ -5,7 +5,7 @@
 // All ft-* CSS classes are defined here — scoped to analytics pages only.
 // RecruiterLayout.js is NOT modified.
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useRouter } from "next/router";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 
@@ -260,26 +260,19 @@ export default function RecruiterAnalyticsLayout({
   onFilterChange,
   children,
   right,
+  isMobile    = false,
+  isDesktop   = false,
+  mobileShell = false,
 }) {
   const router = useRouter();
 
-  // Start true (mobile-first) so first paint is always safe.
-  // useEffect corrects to false on desktop after mount.
-  const [isMobile, setIsMobile] = useState(true);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
-  // Always pass the right rail — RecruiterLayout handles mobile stacking
-  // naturally (below content) the same way every other recruiter page works.
-  // Passing null was causing a different grid template with no right column,
-  // which is what caused the content width to be wrong on mobile.
+  // contentFullBleed and right rail controlled by props from index.js.
+  // Desktop needs contentFullBleed for the -252px bleed rows.
+  // Mobile must NOT have contentFullBleed — it removes overflow:hidden from
+  // <main> which lets the bleed margins escape on mobile.
   const rightRail  = right || <DefaultRightRail />;
-  const fullBleed  = !isMobile;
+  const fullBleed  = isDesktop;
+  const activeRight = isDesktop ? rightRail : null;
 
   const period       = filters?.range || "30d";
   const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
@@ -303,14 +296,21 @@ export default function RecruiterAnalyticsLayout({
     <RecruiterLayout
       title={title}
       activeNav="analytics"
-      right={rightRail}
+      right={activeRight}
       contentFullBleed={fullBleed}
     >
       {/* Analytics-scoped CSS */}
       <style>{ANALYTICS_CSS}</style>
 
       {/* Hard clip — catches anything that escapes RecruiterLayout's clip */}
-      <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
+      <div style={{
+        width: "100%",
+        minWidth: 0,
+        maxWidth: "100%",
+        overflowX: "hidden",
+        boxSizing: "border-box",
+      }}>
+        <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
 
           {/* ── Page title card ── */}
           <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
@@ -430,6 +430,7 @@ export default function RecruiterAnalyticsLayout({
           </section>
 
           {children}
+        </div>
       </div>
 
     </RecruiterLayout>
