@@ -477,7 +477,10 @@ function Body() {
     </>
   );
 
-  const ChartsBlock = hasMounted && isMobile ? MobileChartsBlock : DesktopChartsBlock;
+  // Default to carousel (mobile-safe, no negative margins).
+  // Only switch to the desktop bleed grid after mount confirms a wide screen.
+  // This prevents the -252px margin flash on every device before JS hydrates.
+  const ChartsBlock = hasMounted && !isMobile ? DesktopChartsBlock : MobileChartsBlock;
 
   return (
     <RecruiterAnalyticsLayout
@@ -498,9 +501,9 @@ function Body() {
       <section
         style={{
           display: "grid",
-          gridTemplateColumns: hasMounted && isMobile
-            ? "repeat(2, minmax(0, 1fr))"
-            : "repeat(auto-fit, minmax(min(100%, 120px), 1fr))",
+          gridTemplateColumns: hasMounted && !isMobile
+            ? "repeat(auto-fit, minmax(min(100%, 120px), 1fr))"
+            : "repeat(2, minmax(0, 1fr))",
           gap: 12,
         }}
       >
@@ -521,7 +524,7 @@ function Body() {
             fontSize: 12,
             color: "#94A3B8",
             textAlign: "right",
-            ...(!(hasMounted && isMobile) ? { marginRight: BLEED_RIGHT } : {}),
+            ...((hasMounted && !isMobile) ? { marginRight: BLEED_RIGHT } : {}),
           }}
         >
           Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
