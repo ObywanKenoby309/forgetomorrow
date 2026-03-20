@@ -212,8 +212,8 @@ function MobileCarousel({ cards }) {
                 flexShrink: 0,
                 width: "100%",
                 scrollSnapAlign: "start",
-                padding: "16px",
                 boxSizing: "border-box",
+                // No padding here — cards carry their own padding:16
               }}
             >
               {card}
@@ -401,11 +401,11 @@ function Body() {
   const recruiterActivityCard = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Recruiter Activity</div>
           <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Applications and interviews this window.</div>
         </div>
-        <Link href="/recruiter/analytics/recruiters" style={{ color: ORANGE, fontWeight: 800, fontSize: 12, whiteSpace: "nowrap" }}>Full report →</Link>
+        <Link href="/recruiter/analytics/recruiters" style={{ color: ORANGE, fontWeight: 800, fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}>Full report →</Link>
       </div>
       <RecruiterActivity data={data?.recruiterActivity || []} />
     </div>
@@ -437,11 +437,11 @@ function Body() {
   const sourcePerformanceCard = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Source Performance</div>
           <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Channels producing the strongest outcomes.</div>
         </div>
-        <Link href="/recruiter/analytics/sources" style={{ color: ORANGE, fontWeight: 800, fontSize: 12, whiteSpace: "nowrap" }}>Full report →</Link>
+        <Link href="/recruiter/analytics/sources" style={{ color: ORANGE, fontWeight: 800, fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}>Full report →</Link>
       </div>
       <SourceBreakdown data={data?.sources || []} />
     </div>
@@ -450,11 +450,11 @@ function Body() {
   const applicationFunnelCard = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Application Funnel</div>
           <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Movement from interest to hire.</div>
         </div>
-        <Link href="/recruiter/analytics/funnel" style={{ color: ORANGE, fontWeight: 800, fontSize: 12, whiteSpace: "nowrap" }}>Full report →</Link>
+        <Link href="/recruiter/analytics/funnel" style={{ color: ORANGE, fontWeight: 800, fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}>Full report →</Link>
       </div>
       <ApplicationFunnel data={data?.funnel || []} />
     </div>
