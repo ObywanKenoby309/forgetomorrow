@@ -158,8 +158,8 @@ function MobileCarousel({ cards }) {
   }, [cards.length]);
 
   return (
-    <div style={{ marginBottom: 12, width: "100%", overflow: "hidden" }}>
-      <div style={{ ...GLASS, borderRadius: 18, overflow: "hidden", width: "100%" }}>
+    <div style={{ marginBottom: 12, width: "100%", maxWidth: "100vw", overflow: "hidden", boxSizing: "border-box" }}>
+      <div style={{ ...GLASS, borderRadius: 18, overflow: "hidden", width: "100%", maxWidth: "100%" }}>
         <div
           ref={trackRef}
           style={{
@@ -168,7 +168,16 @@ function MobileCarousel({ cards }) {
           }}
         >
           {cards.map((card, i) => (
-            <div key={i} style={{ flexShrink: 0, width: "100%", scrollSnapAlign: "start", boxSizing: "border-box", maxHeight: 320, overflowY: "auto" }}>
+            <div key={i} style={{
+              flexShrink:     0,
+              width:          "100%",
+              scrollSnapAlign:"start",
+              boxSizing:      "border-box",
+              height:         "auto",
+              maxHeight:      360,
+              overflowY:      "auto",
+              overflowX:      "hidden",
+            }}>
               {card}
             </div>
           ))}

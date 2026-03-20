@@ -34,7 +34,7 @@ export default function SourceBreakdown({ data = [] }) {
   }
 
   return (
-    <div style={{ width: '100%', height: 280 }}>
+    <div style={{ width: '100%', height: 'clamp(160px, 30vw, 280px)' }}>
       <ResponsiveContainer>
         <PieChart>
           <Pie
