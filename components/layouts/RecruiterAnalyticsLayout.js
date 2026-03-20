@@ -201,6 +201,96 @@ export default function RecruiterAnalyticsLayout({
     // CSS class ft-rl-main adds overflow:hidden on mobile regardless.
     // right={rightRail} — always passed, CSS class ft-rl-right hides it on mobile.
     <RecruiterLayout title={title} activeNav="analytics" right={rightRail} contentFullBleed>
+      <style>{`
+        /* ── Analytics layout CSS ── */
+
+        /* KPI row: 6-col desktop → 2-col mobile */
+        .ft-kpi-row {
+          grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+        }
+        @media (max-width: 640px) {
+          .ft-kpi-row {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+        }
+
+        /* Stat tiles inside cards: 3-col desktop → 1-col mobile */
+        @media (max-width: 640px) {
+          .ft-stat-tiles {
+            grid-template-columns: 1fr !important;
+          }
+        }
+
+        /* Desktop charts: visible desktop, hidden mobile */
+        .ft-desktop-charts { display: block; }
+        @media (max-width: 767px) {
+          .ft-desktop-charts { display: none !important; }
+        }
+
+        /* Mobile carousel: hidden desktop, visible mobile */
+        .ft-mobile-charts { display: none; }
+        @media (max-width: 767px) {
+          .ft-mobile-charts { display: block !important; }
+        }
+
+        /* Timestamp: bleed on desktop, normal on mobile */
+        @media (max-width: 767px) {
+          .ft-bleed-ts {
+            margin-right: 0 !important;
+            text-align: left !important;
+          }
+        }
+
+        /* Filter strip: scrollable on mobile */
+        .ft-filter-strip {
+          overflow-x: auto;
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+          flex-wrap: nowrap !important;
+        }
+        .ft-filter-strip::-webkit-scrollbar { display: none; }
+        @media (min-width: 768px) {
+          .ft-filter-strip {
+            overflow-x: visible;
+            flex-wrap: wrap !important;
+          }
+        }
+
+        /* Filter row: stack on mobile */
+        @media (max-width: 767px) {
+          .ft-filter-row {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+          }
+        }
+
+        /* Filter selects + export: full width on mobile */
+        @media (max-width: 767px) {
+          .ft-filter-stack {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .ft-filter-full {
+            width: 100% !important;
+          }
+        }
+
+        /* Refresh label: desktop shows inline, mobile shows compact */
+        .ft-refresh-desktop { display: block; }
+        .ft-refresh-mobile  { display: none;  }
+        @media (max-width: 767px) {
+          .ft-refresh-desktop { display: none  !important; }
+          .ft-refresh-mobile  { display: block !important; }
+        }
+
+        /* Prevent bleed rows from overflowing on mobile */
+        @media (max-width: 767px) {
+          .ft-desktop-charts {
+            overflow: hidden;
+            max-width: 100vw;
+          }
+        }
+      `}</style>
       <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
 
         {/* ── Page title card ── */}
