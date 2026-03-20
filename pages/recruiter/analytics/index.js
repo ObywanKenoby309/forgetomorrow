@@ -401,8 +401,10 @@ function Body() {
 
   const ChartsContent = (
     <>
-      {/* ft-desktop-charts: visible on desktop, display:none on mobile via CSS */}
-      <div className="ft-desktop-charts">{DesktopBlock}</div>
+      {/* ft-desktop-charts: visible on desktop, display:none on mobile via CSS.
+          overflow:hidden here ensures bleed margins never escape on mobile
+          even during the hydration window before CSS kicks in. */}
+      <div className="ft-desktop-charts" style={{ overflow: "hidden", maxWidth: "100%" }}>{DesktopBlock}</div>
       {/* ft-mobile-charts: visible on mobile, display:none on desktop via CSS */}
       <div className="ft-mobile-charts">{MobileBlock}</div>
     </>

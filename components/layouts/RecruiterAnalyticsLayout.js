@@ -1,8 +1,8 @@
 // components/layouts/RecruiterAnalyticsLayout.js
 //
-// All mobile/desktop layout decisions are handled by CSS classes defined in
-// RecruiterLayout's LAYOUT_CSS injection. No isMobile state here.
-// This component just applies the right classNames to the right elements.
+// All mobile/desktop layout decisions are handled by the <style> block below.
+// No isMobile state — zero layout flicker on any device.
+// RecruiterLayout.js is NOT modified.
 
 import React from "react";
 import { useRouter } from "next/router";
@@ -164,6 +164,109 @@ const DATE_INPUT_STYLE = {
   fontSize: 12, fontWeight: 700, padding: "7px 12px", outline: "none",
 };
 
+// ─── CSS injected here — scoped to analytics pages only ──────────────────────
+// Defines all ft-* classes used by index.js, reports.js, presentation.js.
+// RecruiterLayout.js is NOT touched.
+const ANALYTICS_CSS = `
+  /* ── KPI row ── */
+  .ft-kpi-row {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+  }
+  @media (max-width: 640px) {
+    .ft-kpi-row {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+  }
+
+  /* ── Stat tiles inside cards ── */
+  @media (max-width: 640px) {
+    .ft-stat-tiles {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  /* ── Desktop charts: visible desktop, FULLY removed on mobile ── */
+  .ft-desktop-charts { display: block; }
+  @media (max-width: 767px) {
+    .ft-desktop-charts {
+      display: none !important;
+      visibility: hidden !important;
+      position: absolute !important;
+      pointer-events: none !important;
+      height: 0 !important;
+      overflow: hidden !important;
+    }
+  }
+
+  /* ── Mobile carousel: hidden desktop, visible mobile ── */
+  .ft-mobile-charts { display: none; }
+  @media (max-width: 767px) {
+    .ft-mobile-charts { display: block !important; }
+  }
+
+  /* ── Analytics root: clips overflow on mobile ── */
+  .ft-analytics-root {
+    width: 100%;
+    min-width: 0;
+  }
+  @media (max-width: 767px) {
+    .ft-analytics-root {
+      overflow-x: hidden;
+      max-width: 100vw;
+    }
+  }
+
+  /* ── Timestamp ── */
+  @media (max-width: 767px) {
+    .ft-bleed-ts {
+      margin-right: 0 !important;
+      text-align: left !important;
+    }
+  }
+
+  /* ── Filter strip: horizontal scroll on mobile ── */
+  .ft-filter-strip {
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    flex-wrap: nowrap !important;
+  }
+  .ft-filter-strip::-webkit-scrollbar { display: none; }
+  @media (min-width: 768px) {
+    .ft-filter-strip {
+      overflow-x: visible;
+      flex-wrap: wrap !important;
+    }
+  }
+
+  /* ── Filter row: stack on mobile ── */
+  @media (max-width: 767px) {
+    .ft-filter-row {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+    }
+  }
+
+  /* ── Filter selects + export: full width on mobile ── */
+  @media (max-width: 767px) {
+    .ft-filter-stack {
+      flex-direction: column !important;
+      align-items: stretch !important;
+    }
+    .ft-filter-full {
+      width: 100% !important;
+    }
+  }
+
+  /* ── Refresh label ── */
+  .ft-refresh-desktop { display: block; }
+  .ft-refresh-mobile  { display: none;  }
+  @media (max-width: 767px) {
+    .ft-refresh-desktop { display: none  !important; }
+    .ft-refresh-mobile  { display: block !important; }
+  }
+`;
+
 export default function RecruiterAnalyticsLayout({
   title        = "Recruiter Analytics — ForgeTomorrow",
   suiteTitle   = "Recruiter Analytics",
@@ -197,230 +300,142 @@ export default function RecruiterAnalyticsLayout({
   const rightRail = right || <DefaultRightRail />;
 
   return (
-    // contentFullBleed={true} — always, because desktop bleed rows need it.
-    // CSS class ft-rl-main adds overflow:hidden on mobile regardless.
-    // right={rightRail} — always passed, CSS class ft-rl-right hides it on mobile.
     <RecruiterLayout title={title} activeNav="analytics" right={rightRail} contentFullBleed>
-      <style>{`
-        /* ── Analytics layout CSS ── */
 
-        /* KPI row: 6-col desktop → 2-col mobile */
-        .ft-kpi-row {
-          grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
-        }
-        @media (max-width: 640px) {
-          .ft-kpi-row {
-            grid-template-columns: repeat(2, 1fr) !important;
-          }
-        }
+      {/* Inject analytics-scoped CSS — does not affect any other recruiter page */}
+      <style>{ANALYTICS_CSS}</style>
 
-        /* Stat tiles inside cards: 3-col desktop → 1-col mobile */
-        @media (max-width: 640px) {
-          .ft-stat-tiles {
-            grid-template-columns: 1fr !important;
-          }
-        }
+      {/* ft-analytics-root clips horizontal overflow on mobile,
+          preventing bleed rows from escaping the viewport */}
+      <div className="ft-analytics-root">
+        <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
 
-        /* Desktop charts: visible desktop, hidden mobile */
-        .ft-desktop-charts { display: block; }
-        @media (max-width: 767px) {
-          .ft-desktop-charts { display: none !important; }
-        }
+          {/* ── Page title card ── */}
+          <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+            <AnalyticsHeader suiteTitle={suiteTitle} subtitle={pageSubtitle} activeTab={activeTab} />
+          </section>
 
-        /* Mobile carousel: hidden desktop, visible mobile */
-        .ft-mobile-charts { display: none; }
-        @media (max-width: 767px) {
-          .ft-mobile-charts { display: block !important; }
-        }
+          {/* ── Filter bar ── */}
+          <section style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
+            <div style={{ display: "grid", gap: 10 }}>
 
-        /* Timestamp: bleed on desktop, normal on mobile */
-        @media (max-width: 767px) {
-          .ft-bleed-ts {
-            margin-right: 0 !important;
-            text-align: left !important;
-          }
-        }
+              {/* View tabs row */}
+              <div className="ft-filter-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", minWidth: 0 }}>
+                  <LabelCell>View:</LabelCell>
+                  <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+                    {MODE_TABS.map((tab) => (
+                      <TabButton key={tab.key} active={activeTab === tab.key} onClick={() => pushWithFilters(tab.href)}>
+                        {tab.label}
+                      </TabButton>
+                    ))}
+                  </div>
+                  {/* Refresh — desktop only */}
+                  <div className="ft-refresh-desktop" style={{ flexShrink: 0, marginLeft: 6, textAlign: "left" }}>
+                    <div style={{ fontSize: 11, color: "#94A3B8" }}>Refresh</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>30s live</div>
+                  </div>
+                </div>
+                {/* Refresh — mobile only */}
+                <div className="ft-refresh-mobile" style={{ fontSize: 11, color: "#94A3B8", paddingLeft: 2 }}>
+                  Auto-refresh · <span style={{ fontWeight: 800, color: SLATE }}>30s live</span>
+                </div>
+              </div>
 
-        /* Filter strip: scrollable on mobile */
-        .ft-filter-strip {
-          overflow-x: auto;
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-          flex-wrap: nowrap !important;
-        }
-        .ft-filter-strip::-webkit-scrollbar { display: none; }
-        @media (min-width: 768px) {
-          .ft-filter-strip {
-            overflow-x: visible;
-            flex-wrap: wrap !important;
-          }
-        }
-
-        /* Filter row: stack on mobile */
-        @media (max-width: 767px) {
-          .ft-filter-row {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-          }
-        }
-
-        /* Filter selects + export: full width on mobile */
-        @media (max-width: 767px) {
-          .ft-filter-stack {
-            flex-direction: column !important;
-            align-items: stretch !important;
-          }
-          .ft-filter-full {
-            width: 100% !important;
-          }
-        }
-
-        /* Refresh label: desktop shows inline, mobile shows compact */
-        .ft-refresh-desktop { display: block; }
-        .ft-refresh-mobile  { display: none;  }
-        @media (max-width: 767px) {
-          .ft-refresh-desktop { display: none  !important; }
-          .ft-refresh-mobile  { display: block !important; }
-        }
-
-        /* Prevent bleed rows from overflowing on mobile */
-        @media (max-width: 767px) {
-          .ft-desktop-charts {
-            overflow: hidden;
-            max-width: 100vw;
-          }
-        }
-      `}</style>
-      <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
-
-        {/* ── Page title card ── */}
-        <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <AnalyticsHeader suiteTitle={suiteTitle} subtitle={pageSubtitle} activeTab={activeTab} />
-        </section>
-
-        {/* ── Filter bar ── */}
-        <section style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
-          <div style={{ display: "grid", gap: 10 }}>
-
-            {/* View tabs row
-                ft-filter-row  → column on mobile, row on desktop
-                ft-filter-strip → scroll on mobile, wrap on desktop            */}
-            <div className="ft-filter-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", minWidth: 0 }}>
-                <LabelCell>View:</LabelCell>
+              {/* Report tabs row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <LabelCell>Report:</LabelCell>
                 <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
-                  {MODE_TABS.map((tab) => (
-                    <TabButton key={tab.key} active={activeTab === tab.key} onClick={() => pushWithFilters(tab.href)}>
+                  {REPORT_LINKS.map((tab) => (
+                    <TabButton
+                      key={tab.key}
+                      active={activeTab === "reports" && activeReport === tab.key}
+                      onClick={() => pushWithFilters("/recruiter/analytics/reports", { report: tab.key })}
+                    >
                       {tab.label}
                     </TabButton>
                   ))}
                 </div>
-                {/* Refresh — desktop only */}
-                <div className="ft-refresh-desktop" style={{ flexShrink: 0, marginLeft: 6, textAlign: "left" }}>
-                  <div style={{ fontSize: 11, color: "#94A3B8" }}>Refresh</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>30s live</div>
-                </div>
               </div>
-              {/* Refresh — mobile only */}
-              <div className="ft-refresh-mobile" style={{ fontSize: 11, color: "#94A3B8", paddingLeft: 2 }}>
-                Auto-refresh · <span style={{ fontWeight: 800, color: SLATE }}>30s live</span>
-              </div>
-            </div>
 
-            {/* Report tabs row */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-              <LabelCell>Report:</LabelCell>
-              <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
-                {REPORT_LINKS.map((tab) => (
-                  <TabButton
-                    key={tab.key}
-                    active={activeTab === "reports" && activeReport === tab.key}
-                    onClick={() => pushWithFilters("/recruiter/analytics/reports", { report: tab.key })}
+              {/* Period + filters */}
+              <div style={{ ...SOFT_GLASS, borderRadius: 12, padding: 14, marginTop: 2 }}>
+                {/* Period pills */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <LabelCell>Period:</LabelCell>
+                  <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+                    {["7d", "30d", "90d", "ytd", "custom"].map((value) => (
+                      <FilterPill key={value} active={period === value} onClick={() => onFilterChange?.({ range: value })}>
+                        {value.toUpperCase()}
+                      </FilterPill>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Selects + Export */}
+                <div className="ft-filter-stack" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 10 }}>
+                  <select
+                    className="ft-filter-full"
+                    value={filters?.jobId || "all"}
+                    onChange={(e) => onFilterChange?.({ jobId: e.target.value })}
+                    style={SELECT_STYLE}
                   >
-                    {tab.label}
-                  </TabButton>
-                ))}
+                    <option value="all">All Jobs</option>
+                    <option value="engineering">Engineering</option>
+                    <option value="sales">Sales</option>
+                    <option value="operations">Operations</option>
+                  </select>
+
+                  <select
+                    className="ft-filter-full"
+                    value={filters?.recruiterId || "all"}
+                    onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })}
+                    style={SELECT_STYLE}
+                  >
+                    <option value="all">All Recruiters</option>
+                    <option value="ajohnson">A. Johnson</option>
+                    <option value="mchen">M. Chen</option>
+                    <option value="slee">S. Lee</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    className="ft-filter-full"
+                    style={EXPORT_STYLE}
+                    onClick={() => {
+                      const params = new URLSearchParams({
+                        report:      activeTab === "reports" ? activeReport : "overview",
+                        range:       filters?.range       || "30d",
+                        jobId:       filters?.jobId       || "all",
+                        recruiterId: filters?.recruiterId || "all",
+                        companyId:   filters?.companyId   || "all",
+                        ...(filters?.from ? { from: filters.from } : {}),
+                        ...(filters?.to   ? { to:   filters.to }   : {}),
+                      });
+                      window.open(`/api/analytics/export?${params.toString()}`, "_blank");
+                    }}
+                  >
+                    Export CSV
+                  </button>
+                </div>
+
+                {/* Custom date range */}
+                {period === "custom" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>From</div>
+                    <input type="date" value={filters?.from || ""} onChange={(e) => onFilterChange?.({ from: e.target.value })} style={DATE_INPUT_STYLE} />
+                    <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>To</div>
+                    <input type="date" value={filters?.to || ""}   onChange={(e) => onFilterChange?.({ to:   e.target.value })} style={DATE_INPUT_STYLE} />
+                  </div>
+                )}
               </div>
             </div>
+          </section>
 
-            {/* Period + filters */}
-            <div style={{ ...SOFT_GLASS, borderRadius: 12, padding: 14, marginTop: 2 }}>
-              {/* Period pills */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                <LabelCell>Period:</LabelCell>
-                <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
-                  {["7d", "30d", "90d", "ytd", "custom"].map((value) => (
-                    <FilterPill key={value} active={period === value} onClick={() => onFilterChange?.({ range: value })}>
-                      {value.toUpperCase()}
-                    </FilterPill>
-                  ))}
-                </div>
-              </div>
-
-              {/* Selects + Export
-                  ft-filter-stack → column on mobile, row on desktop
-                  ft-filter-full  → full width on mobile                        */}
-              <div className="ft-filter-stack" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 10 }}>
-                <select
-                  className="ft-filter-full"
-                  value={filters?.jobId || "all"}
-                  onChange={(e) => onFilterChange?.({ jobId: e.target.value })}
-                  style={SELECT_STYLE}
-                >
-                  <option value="all">All Jobs</option>
-                  <option value="engineering">Engineering</option>
-                  <option value="sales">Sales</option>
-                  <option value="operations">Operations</option>
-                </select>
-
-                <select
-                  className="ft-filter-full"
-                  value={filters?.recruiterId || "all"}
-                  onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })}
-                  style={SELECT_STYLE}
-                >
-                  <option value="all">All Recruiters</option>
-                  <option value="ajohnson">A. Johnson</option>
-                  <option value="mchen">M. Chen</option>
-                  <option value="slee">S. Lee</option>
-                </select>
-
-                <button
-                  type="button"
-                  className="ft-filter-full"
-                  style={EXPORT_STYLE}
-                  onClick={() => {
-                    const params = new URLSearchParams({
-                      report:      activeTab === "reports" ? activeReport : "overview",
-                      range:       filters?.range       || "30d",
-                      jobId:       filters?.jobId       || "all",
-                      recruiterId: filters?.recruiterId || "all",
-                      companyId:   filters?.companyId   || "all",
-                      ...(filters?.from ? { from: filters.from } : {}),
-                      ...(filters?.to   ? { to:   filters.to }   : {}),
-                    });
-                    window.open(`/api/analytics/export?${params.toString()}`, "_blank");
-                  }}
-                >
-                  Export CSV
-                </button>
-              </div>
-
-              {/* Custom date range */}
-              {period === "custom" && (
-                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>From</div>
-                  <input type="date" value={filters?.from || ""} onChange={(e) => onFilterChange?.({ from: e.target.value })} style={DATE_INPUT_STYLE} />
-                  <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>To</div>
-                  <input type="date" value={filters?.to || ""}   onChange={(e) => onFilterChange?.({ to:   e.target.value })} style={DATE_INPUT_STYLE} />
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {children}
+          {children}
+        </div>
       </div>
+
     </RecruiterLayout>
   );
 }
