@@ -263,9 +263,8 @@ export default function RecruiterAnalyticsLayout({
 }) {
   const router = useRouter();
 
-  // ── Mobile detection ──────────────────────────────────────────────────────
-  // null = not yet measured (SSR / first paint)
-  // This mirrors the same pattern RecruiterLayout uses internally.
+  // Start true (mobile-first) so first paint is always safe.
+  // useEffect corrects to false on desktop after mount.
   const [isMobile, setIsMobile] = useState(true);
 
   useEffect(() => {
@@ -275,11 +274,10 @@ export default function RecruiterAnalyticsLayout({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // contentFullBleed is only true on desktop.
-  // On mobile, RecruiterLayout's own overflowX:hidden (applied when
-  // contentFullBleed is false) is what clips the viewport correctly.
-  // This is the root fix — no CSS specificity battle required.
-  const fullBleed = isMobile === true ? false : true;
+  // contentFullBleed only on desktop — lets RecruiterLayout's
+  // overflowX:hidden do its job on mobile.
+  const fullBleed  = !isMobile;
+  const rightRail  = isMobile ? null : (right || <DefaultRightRail />);
 
   const period       = filters?.range || "30d";
   const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
@@ -299,8 +297,6 @@ export default function RecruiterAnalyticsLayout({
     }, undefined, { shallow: false });
   };
 
-  const rightRail = isMobile === true ? null : (right || <DefaultRightRail />);
-
   return (
     <RecruiterLayout
       title={title}
@@ -308,136 +304,140 @@ export default function RecruiterAnalyticsLayout({
       right={rightRail}
       contentFullBleed={fullBleed}
     >
-	<div style={{ 
-  background: "red", color: "white", padding: 8, fontSize: 11,
-  position: "fixed", top: 60, left: 0, zIndex: 9999,
-}}>
-  fullBleed: {String(fullBleed)} | isMobile: {String(isMobile ?? "null")}
-</div>
-      {/* Analytics-scoped CSS — does not affect any other recruiter page */}
+      {/* Analytics-scoped CSS */}
       <style>{ANALYTICS_CSS}</style>
 
-      <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
+      {/* Hard clip — catches anything that escapes RecruiterLayout's clip */}
+      <div style={{
+        width: "100%",
+        minWidth: 0,
+        maxWidth: "100%",
+        overflowX: "hidden",
+        boxSizing: "border-box",
+      }}>
+        <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
 
-        {/* ── Page title card ── */}
-        <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <AnalyticsHeader suiteTitle={suiteTitle} subtitle={pageSubtitle} activeTab={activeTab} />
-        </section>
+          {/* ── Page title card ── */}
+          <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+            <AnalyticsHeader suiteTitle={suiteTitle} subtitle={pageSubtitle} activeTab={activeTab} />
+          </section>
 
-        {/* ── Filter bar ── */}
-        <section style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
-          <div style={{ display: "grid", gap: 10 }}>
+          {/* ── Filter bar ── */}
+          <section style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
+            <div style={{ display: "grid", gap: 10 }}>
 
-            {/* View tabs */}
-            <div className="ft-filter-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", minWidth: 0 }}>
-                <LabelCell>View:</LabelCell>
+              {/* View tabs */}
+              <div className="ft-filter-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", minWidth: 0 }}>
+                  <LabelCell>View:</LabelCell>
+                  <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+                    {MODE_TABS.map((tab) => (
+                      <TabButton key={tab.key} active={activeTab === tab.key} onClick={() => pushWithFilters(tab.href)}>
+                        {tab.label}
+                      </TabButton>
+                    ))}
+                  </div>
+                  <div className="ft-refresh-desktop" style={{ flexShrink: 0, marginLeft: 6, textAlign: "left" }}>
+                    <div style={{ fontSize: 11, color: "#94A3B8" }}>Refresh</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>30s live</div>
+                  </div>
+                </div>
+                <div className="ft-refresh-mobile" style={{ fontSize: 11, color: "#94A3B8", paddingLeft: 2 }}>
+                  Auto-refresh · <span style={{ fontWeight: 800, color: SLATE }}>30s live</span>
+                </div>
+              </div>
+
+              {/* Report tabs */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <LabelCell>Report:</LabelCell>
                 <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
-                  {MODE_TABS.map((tab) => (
-                    <TabButton key={tab.key} active={activeTab === tab.key} onClick={() => pushWithFilters(tab.href)}>
+                  {REPORT_LINKS.map((tab) => (
+                    <TabButton
+                      key={tab.key}
+                      active={activeTab === "reports" && activeReport === tab.key}
+                      onClick={() => pushWithFilters("/recruiter/analytics/reports", { report: tab.key })}
+                    >
                       {tab.label}
                     </TabButton>
                   ))}
                 </div>
-                <div className="ft-refresh-desktop" style={{ flexShrink: 0, marginLeft: 6, textAlign: "left" }}>
-                  <div style={{ fontSize: 11, color: "#94A3B8" }}>Refresh</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>30s live</div>
-                </div>
               </div>
-              <div className="ft-refresh-mobile" style={{ fontSize: 11, color: "#94A3B8", paddingLeft: 2 }}>
-                Auto-refresh · <span style={{ fontWeight: 800, color: SLATE }}>30s live</span>
-              </div>
-            </div>
 
-            {/* Report tabs */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-              <LabelCell>Report:</LabelCell>
-              <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
-                {REPORT_LINKS.map((tab) => (
-                  <TabButton
-                    key={tab.key}
-                    active={activeTab === "reports" && activeReport === tab.key}
-                    onClick={() => pushWithFilters("/recruiter/analytics/reports", { report: tab.key })}
+              {/* Period + selects */}
+              <div style={{ ...SOFT_GLASS, borderRadius: 12, padding: 14, marginTop: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <LabelCell>Period:</LabelCell>
+                  <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+                    {["7d", "30d", "90d", "ytd", "custom"].map((value) => (
+                      <FilterPill key={value} active={period === value} onClick={() => onFilterChange?.({ range: value })}>
+                        {value.toUpperCase()}
+                      </FilterPill>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="ft-filter-stack" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 10 }}>
+                  <select
+                    className="ft-filter-full"
+                    value={filters?.jobId || "all"}
+                    onChange={(e) => onFilterChange?.({ jobId: e.target.value })}
+                    style={SELECT_STYLE}
                   >
-                    {tab.label}
-                  </TabButton>
-                ))}
+                    <option value="all">All Jobs</option>
+                    <option value="engineering">Engineering</option>
+                    <option value="sales">Sales</option>
+                    <option value="operations">Operations</option>
+                  </select>
+
+                  <select
+                    className="ft-filter-full"
+                    value={filters?.recruiterId || "all"}
+                    onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })}
+                    style={SELECT_STYLE}
+                  >
+                    <option value="all">All Recruiters</option>
+                    <option value="ajohnson">A. Johnson</option>
+                    <option value="mchen">M. Chen</option>
+                    <option value="slee">S. Lee</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    className="ft-filter-full"
+                    style={EXPORT_STYLE}
+                    onClick={() => {
+                      const params = new URLSearchParams({
+                        report:      activeTab === "reports" ? activeReport : "overview",
+                        range:       filters?.range       || "30d",
+                        jobId:       filters?.jobId       || "all",
+                        recruiterId: filters?.recruiterId || "all",
+                        companyId:   filters?.companyId   || "all",
+                        ...(filters?.from ? { from: filters.from } : {}),
+                        ...(filters?.to   ? { to:   filters.to }   : {}),
+                      });
+                      window.open(`/api/analytics/export?${params.toString()}`, "_blank");
+                    }}
+                  >
+                    Export CSV
+                  </button>
+                </div>
+
+                {period === "custom" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>From</div>
+                    <input type="date" value={filters?.from || ""} onChange={(e) => onFilterChange?.({ from: e.target.value })} style={DATE_INPUT_STYLE} />
+                    <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>To</div>
+                    <input type="date" value={filters?.to || ""}   onChange={(e) => onFilterChange?.({ to:   e.target.value })} style={DATE_INPUT_STYLE} />
+                  </div>
+                )}
               </div>
             </div>
+          </section>
 
-            {/* Period + selects */}
-            <div style={{ ...SOFT_GLASS, borderRadius: 12, padding: 14, marginTop: 2 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                <LabelCell>Period:</LabelCell>
-                <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
-                  {["7d", "30d", "90d", "ytd", "custom"].map((value) => (
-                    <FilterPill key={value} active={period === value} onClick={() => onFilterChange?.({ range: value })}>
-                      {value.toUpperCase()}
-                    </FilterPill>
-                  ))}
-                </div>
-              </div>
-
-              <div className="ft-filter-stack" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 10 }}>
-                <select
-                  className="ft-filter-full"
-                  value={filters?.jobId || "all"}
-                  onChange={(e) => onFilterChange?.({ jobId: e.target.value })}
-                  style={SELECT_STYLE}
-                >
-                  <option value="all">All Jobs</option>
-                  <option value="engineering">Engineering</option>
-                  <option value="sales">Sales</option>
-                  <option value="operations">Operations</option>
-                </select>
-
-                <select
-                  className="ft-filter-full"
-                  value={filters?.recruiterId || "all"}
-                  onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })}
-                  style={SELECT_STYLE}
-                >
-                  <option value="all">All Recruiters</option>
-                  <option value="ajohnson">A. Johnson</option>
-                  <option value="mchen">M. Chen</option>
-                  <option value="slee">S. Lee</option>
-                </select>
-
-                <button
-                  type="button"
-                  className="ft-filter-full"
-                  style={EXPORT_STYLE}
-                  onClick={() => {
-                    const params = new URLSearchParams({
-                      report:      activeTab === "reports" ? activeReport : "overview",
-                      range:       filters?.range       || "30d",
-                      jobId:       filters?.jobId       || "all",
-                      recruiterId: filters?.recruiterId || "all",
-                      companyId:   filters?.companyId   || "all",
-                      ...(filters?.from ? { from: filters.from } : {}),
-                      ...(filters?.to   ? { to:   filters.to }   : {}),
-                    });
-                    window.open(`/api/analytics/export?${params.toString()}`, "_blank");
-                  }}
-                >
-                  Export CSV
-                </button>
-              </div>
-
-              {period === "custom" && (
-                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>From</div>
-                  <input type="date" value={filters?.from || ""} onChange={(e) => onFilterChange?.({ from: e.target.value })} style={DATE_INPUT_STYLE} />
-                  <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>To</div>
-                  <input type="date" value={filters?.to || ""}   onChange={(e) => onFilterChange?.({ to:   e.target.value })} style={DATE_INPUT_STYLE} />
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {children}
+          {children}
+        </div>
       </div>
+
     </RecruiterLayout>
   );
 }
