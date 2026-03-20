@@ -308,6 +308,12 @@ export default function RecruiterAnalyticsLayout({
       right={rightRail}
       contentFullBleed={fullBleed}
     >
+	<div style={{ 
+  background: "red", color: "white", padding: 8, fontSize: 11,
+  position: "fixed", top: 60, left: 0, zIndex: 9999,
+}}>
+  fullBleed: {String(fullBleed)} | isMobile: {String(isMobile ?? "null")}
+</div>
       {/* Analytics-scoped CSS — does not affect any other recruiter page */}
       <style>{ANALYTICS_CSS}</style>
 
