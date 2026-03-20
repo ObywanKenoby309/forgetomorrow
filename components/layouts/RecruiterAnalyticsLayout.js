@@ -274,10 +274,12 @@ export default function RecruiterAnalyticsLayout({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // contentFullBleed only on desktop — lets RecruiterLayout's
-  // overflowX:hidden do its job on mobile.
+  // Always pass the right rail — RecruiterLayout handles mobile stacking
+  // naturally (below content) the same way every other recruiter page works.
+  // Passing null was causing a different grid template with no right column,
+  // which is what caused the content width to be wrong on mobile.
+  const rightRail  = right || <DefaultRightRail />;
   const fullBleed  = !isMobile;
-  const rightRail  = isMobile ? null : (right || <DefaultRightRail />);
 
   const period       = filters?.range || "30d";
   const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
@@ -307,21 +309,8 @@ export default function RecruiterAnalyticsLayout({
       {/* Analytics-scoped CSS */}
       <style>{ANALYTICS_CSS}</style>
 
-      {/* On mobile: anchor to true viewport width, not parent grid width.
-          RecruiterLayout renders desktopGrid on first paint (hasMounted=false),
-          making the parent 240px wider than the phone screen.
-          We compensate by explicitly sizing to 100vw on mobile only. */}
-      <div style={isMobile ? {
-        width: "100vw",
-        maxWidth: "100vw",
-        overflowX: "hidden",
-        boxSizing: "border-box",
-        position: "relative",
-        left: "50%",
-        transform: "translateX(-50%)",
-        paddingLeft: 14,
-        paddingRight: 14,
-      } : {
+      {/* Hard clip — catches anything that escapes RecruiterLayout's clip */}
+      <div style={{
         width: "100%",
         minWidth: 0,
         maxWidth: "100%",
