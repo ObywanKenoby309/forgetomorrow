@@ -1,11 +1,13 @@
 // components/layouts/RecruiterAnalyticsLayout.js
 //
-// contentFullBleed is passed to RecruiterLayout only on desktop.
-// On mobile it is false so RecruiterLayout's own overflowX:hidden kicks in.
-// All ft-* CSS classes are defined here — scoped to analytics pages only.
+// Strategy: always pass contentFullBleed so desktop bleed rows can escape <main>.
+// A hard overflowX:hidden wrapper directly inside this layout catches anything
+// that would otherwise escape on mobile. The CSS (injected via <style>) hides
+// the desktop bleed block and shows the carousel on mobile — no JS involved.
+//
 // RecruiterLayout.js is NOT modified.
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useRouter } from "next/router";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 
@@ -46,42 +48,42 @@ const REPORT_LINKS = [
   { key: "talentIntel",   label: "Talent Intel" },
 ];
 
-// ─── CSS — analytics pages only ───────────────────────────────────────────────
+// ─── Analytics-scoped CSS — injected as <style> tag, scoped to ft-* classes ──
+// These classes are only used on analytics pages so there is no bleed to other
+// pages. RecruiterLayout is not touched.
 const ANALYTICS_CSS = `
-  /* KPI row */
-  @media (max-width: 640px) {
-    .ft-kpi-row {
-      grid-template-columns: repeat(2, 1fr) !important;
-    }
-  }
-
-  /* Stat tiles inside cards */
-  @media (max-width: 640px) {
-    .ft-stat-tiles {
-      grid-template-columns: 1fr !important;
-    }
-  }
-
-  /* Desktop charts — hidden on mobile */
+  /* Desktop charts — shown on desktop, hidden on mobile */
   .ft-desktop-charts { display: block; }
   @media (max-width: 767px) {
     .ft-desktop-charts {
       display: none !important;
-      visibility: hidden !important;
-      position: absolute !important;
-      pointer-events: none !important;
       height: 0 !important;
       overflow: hidden !important;
+      pointer-events: none !important;
     }
   }
 
-  /* Mobile carousel — hidden on desktop */
+  /* Mobile carousel — hidden on desktop, shown on mobile */
   .ft-mobile-charts { display: none; }
   @media (max-width: 767px) {
     .ft-mobile-charts { display: block !important; }
   }
 
-  /* Timestamp */
+  /* KPI row — 2-col on mobile */
+  @media (max-width: 767px) {
+    .ft-kpi-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+  }
+
+  /* Stat tiles inside Executive Snapshot card — 1-col on mobile */
+  @media (max-width: 767px) {
+    .ft-stat-tiles {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  /* Timestamp — remove bleed margin on mobile */
   @media (max-width: 767px) {
     .ft-bleed-ts {
       margin-right: 0 !important;
@@ -89,19 +91,23 @@ const ANALYTICS_CSS = `
     }
   }
 
-  /* Filter strip — horizontal scroll on mobile */
+  /* Filter strip — horizontal scroll on mobile, wrap on desktop */
   .ft-filter-strip {
-    overflow-x: auto;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-    flex-wrap: nowrap !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
   }
-  .ft-filter-strip::-webkit-scrollbar { display: none; }
-  @media (min-width: 768px) {
+  @media (max-width: 767px) {
     .ft-filter-strip {
-      overflow-x: visible;
-      flex-wrap: wrap !important;
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      scrollbar-width: none !important;
     }
+    .ft-filter-strip::-webkit-scrollbar { display: none; }
   }
 
   /* Filter row — stack on mobile */
@@ -112,7 +118,7 @@ const ANALYTICS_CSS = `
     }
   }
 
-  /* Selects + export — full width on mobile */
+  /* Selects + export — full width stack on mobile */
   @media (max-width: 767px) {
     .ft-filter-stack {
       flex-direction: column !important;
@@ -120,10 +126,11 @@ const ANALYTICS_CSS = `
     }
     .ft-filter-full {
       width: 100% !important;
+      box-sizing: border-box !important;
     }
   }
 
-  /* Refresh label */
+  /* Refresh label — swap desktop/mobile versions */
   .ft-refresh-desktop { display: block; }
   .ft-refresh-mobile  { display: none;  }
   @media (max-width: 767px) {
@@ -263,24 +270,6 @@ export default function RecruiterAnalyticsLayout({
 }) {
   const router = useRouter();
 
-  // Start true (mobile-first) so first paint is always safe.
-  // useEffect corrects to false on desktop after mount.
-  const [isMobile, setIsMobile] = useState(true);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
-  // Always pass the right rail — RecruiterLayout handles mobile stacking
-  // naturally (below content) the same way every other recruiter page works.
-  // Passing null was causing a different grid template with no right column,
-  // which is what caused the content width to be wrong on mobile.
-  const rightRail  = right || <DefaultRightRail />;
-  const fullBleed  = !isMobile;
-
   const period       = filters?.range || "30d";
   const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
 
@@ -299,17 +288,24 @@ export default function RecruiterAnalyticsLayout({
     }, undefined, { shallow: false });
   };
 
+  const rightRail = right || <DefaultRightRail />;
+
   return (
     <RecruiterLayout
       title={title}
       activeNav="analytics"
       right={rightRail}
-      contentFullBleed={fullBleed}
+      contentFullBleed
     >
-      {/* Analytics-scoped CSS */}
+      {/* Analytics-scoped CSS — only affects ft-* classes used on these pages */}
       <style>{ANALYTICS_CSS}</style>
 
-      {/* Hard clip — catches anything that escapes RecruiterLayout's clip */}
+      {/*
+        Hard clip wrapper — catches any overflow that escapes RecruiterLayout's
+        <main> (which has overflowX removed by contentFullBleed on desktop).
+        On mobile the CSS hides ft-desktop-charts entirely so the -252px bleed
+        margins never affect layout, and the carousel sits cleanly inside this clip.
+      */}
       <div style={{
         width: "100%",
         minWidth: 0,
@@ -319,20 +315,20 @@ export default function RecruiterAnalyticsLayout({
       }}>
         <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
 
-          {/* ── Page title card ── */}
+          {/* Page title card */}
           <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
             <AnalyticsHeader suiteTitle={suiteTitle} subtitle={pageSubtitle} activeTab={activeTab} />
           </section>
 
-          {/* ── Filter bar ── */}
+          {/* Filter bar */}
           <section style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
             <div style={{ display: "grid", gap: 10 }}>
 
-              {/* View tabs */}
+              {/* View tabs row */}
               <div className="ft-filter-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", minWidth: 0 }}>
                   <LabelCell>View:</LabelCell>
-                  <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+                  <div className="ft-filter-strip">
                     {MODE_TABS.map((tab) => (
                       <TabButton key={tab.key} active={activeTab === tab.key} onClick={() => pushWithFilters(tab.href)}>
                         {tab.label}
@@ -349,10 +345,10 @@ export default function RecruiterAnalyticsLayout({
                 </div>
               </div>
 
-              {/* Report tabs */}
+              {/* Report tabs row */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                 <LabelCell>Report:</LabelCell>
-                <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+                <div className="ft-filter-strip">
                   {REPORT_LINKS.map((tab) => (
                     <TabButton
                       key={tab.key}
@@ -369,7 +365,7 @@ export default function RecruiterAnalyticsLayout({
               <div style={{ ...SOFT_GLASS, borderRadius: 12, padding: 14, marginTop: 2 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                   <LabelCell>Period:</LabelCell>
-                  <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+                  <div className="ft-filter-strip">
                     {["7d", "30d", "90d", "ytd", "custom"].map((value) => (
                       <FilterPill key={value} active={period === value} onClick={() => onFilterChange?.({ range: value })}>
                         {value.toUpperCase()}
@@ -379,24 +375,14 @@ export default function RecruiterAnalyticsLayout({
                 </div>
 
                 <div className="ft-filter-stack" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 10 }}>
-                  <select
-                    className="ft-filter-full"
-                    value={filters?.jobId || "all"}
-                    onChange={(e) => onFilterChange?.({ jobId: e.target.value })}
-                    style={SELECT_STYLE}
-                  >
+                  <select className="ft-filter-full" value={filters?.jobId || "all"} onChange={(e) => onFilterChange?.({ jobId: e.target.value })} style={SELECT_STYLE}>
                     <option value="all">All Jobs</option>
                     <option value="engineering">Engineering</option>
                     <option value="sales">Sales</option>
                     <option value="operations">Operations</option>
                   </select>
 
-                  <select
-                    className="ft-filter-full"
-                    value={filters?.recruiterId || "all"}
-                    onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })}
-                    style={SELECT_STYLE}
-                  >
+                  <select className="ft-filter-full" value={filters?.recruiterId || "all"} onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })} style={SELECT_STYLE}>
                     <option value="all">All Recruiters</option>
                     <option value="ajohnson">A. Johnson</option>
                     <option value="mchen">M. Chen</option>

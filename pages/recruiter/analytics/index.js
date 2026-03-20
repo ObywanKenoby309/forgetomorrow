@@ -1,6 +1,6 @@
 // pages/recruiter/analytics/index.js
 //
-// isMobile state in Body() controls which layout renders.
+// Layout switching is handled by CSS classes in RecruiterAnalyticsLayout.
 // Desktop bleed rows are NOT rendered on mobile — they are conditionally
 // excluded from the DOM entirely so negative margins cannot affect layout.
 
@@ -257,16 +257,6 @@ function Body() {
   const { insights, loading: insightsLoading } = useInsights(filters);
   const { isEnterprise } = usePlan();
 
-  // Mobile detection — start true (mobile-first) so first paint is safe.
-  // useEffect corrects to false on desktop after mount.
-  const [isMobile, setIsMobile] = useState(true);
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
   useEffect(() => {
     if (!router.isReady) return;
     setFilters(getFiltersFromQuery(router.query));
@@ -308,7 +298,7 @@ function Body() {
           Visuals
         </Link>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+      <div className="ft-stat-tiles" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
         <StatTile label="Top source"       value={loading ? "…" : topSource?.name || "N/A"}   hint="Best-performing inbound channel" />
         <StatTile label="Offer acceptance" value={loading ? "…" : `${offerAcceptanceRate}%`}  hint="High-trust close efficiency signal" />
         <StatTile label="Apply-to-hire"    value={loading ? "…" : data?.kpis?.totalApplies ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%` : "0%"} hint="Applications converting into hires" />
@@ -388,17 +378,11 @@ function Body() {
     </div>
   );
 
-  // ── Layout — only the active layout is evaluated ──────────────────────────
-  // DesktopBlock uses negative margins (BLEED) and must NEVER be instantiated
-  // on mobile — not even as a variable — because React evaluates JSX on
-  // assignment, which would put the bleed divs in the DOM regardless of
-  // whether ChartsContent renders them.
-  const ChartsContent = isMobile ? (
-    <>
-      <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
-      <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
-    </>
-  ) : (
+  // Both layouts always in the DOM — CSS controls which is visible.
+  // ft-desktop-charts: display:none at max-width:767px
+  // ft-mobile-charts:  display:none at min-width:768px
+  // The hard clip wrapper in RecruiterAnalyticsLayout contains any overflow.
+  const DesktopBlock = (
     <>
       <div style={{ marginLeft: BLEED, marginRight: BLEED, marginTop: 68, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)", gap: 12 }}>
         {execSnapshotCard}{recruiterActivityCard}{forgeInsightsCard}
@@ -406,6 +390,20 @@ function Body() {
       <div style={{ marginLeft: BLEED, marginRight: BLEED, marginTop: 12, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)", gap: 12 }}>
         {sourcePerformanceCard}{applicationFunnelCard}{reportGatewaysCard}
       </div>
+    </>
+  );
+
+  const MobileBlock = (
+    <>
+      <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
+      <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
+    </>
+  );
+
+  const ChartsContent = (
+    <>
+      <div className="ft-desktop-charts">{DesktopBlock}</div>
+      <div className="ft-mobile-charts">{MobileBlock}</div>
     </>
   );
 
@@ -427,7 +425,7 @@ function Body() {
       {/* KPI strip — 2-col on mobile via CSS, 6-col on desktop */}
       <section
         className="ft-kpi-row"
-        style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: 12 }}
+        style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: 12 }}
       >
         <KPICard label="Total job views"   value={data?.kpis?.totalViews        ?? (loading ? "…" : 0)} />
         <KPICard label="Total applies"     value={data?.kpis?.totalApplies      ?? (loading ? "…" : 0)} />
@@ -440,7 +438,7 @@ function Body() {
       {isEnterprise ? ChartsContent : <FeatureLock label="Full Analytics">{ChartsContent}</FeatureLock>}
 
       {data?.meta?.refreshedAt ? (
-        <div style={{ fontSize: 12, color: "#94A3B8", textAlign: "right", ...(isMobile ? {} : { marginRight: BLEED }) }}>
+        <div className="ft-bleed-ts" style={{ fontSize: 12, color: "#94A3B8", textAlign: "right", marginRight: BLEED }}>
           Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
         </div>
       ) : null}
