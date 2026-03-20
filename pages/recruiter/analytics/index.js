@@ -1,6 +1,6 @@
 // pages/recruiter/analytics/index.js
 //
-// Layout switching is handled by CSS classes in RecruiterAnalyticsLayout.
+// isMobile state in Body() controls which layout renders.
 // Desktop bleed rows are NOT rendered on mobile — they are conditionally
 // excluded from the DOM entirely so negative margins cannot affect layout.
 
@@ -257,6 +257,20 @@ function Body() {
   const { insights, loading: insightsLoading } = useInsights(filters);
   const { isEnterprise } = usePlan();
 
+  // Mobile detection — start true (mobile-first) so first paint is safe.
+  // useEffect corrects to false on desktop after mount.
+  // Exact pattern from candidate-center.js:
+  // null = unmeasured (render empty shell, no flash)
+  // true = mobile confirmed
+  // false = desktop confirmed
+  const [isMobile, setIsMobile] = useState(null);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   useEffect(() => {
     if (!router.isReady) return;
     setFilters(getFiltersFromQuery(router.query));
@@ -378,10 +392,72 @@ function Body() {
     </div>
   );
 
-  // Both layouts always in the DOM — CSS controls which is visible.
-  // ft-desktop-charts: display:none at max-width:767px
-  // ft-mobile-charts:  display:none at min-width:768px
-  // The hard clip wrapper in RecruiterAnalyticsLayout contains any overflow.
+  // ── Exact candidate-center.js pattern ───────────────────────────────────
+  // null: render empty shell — no flash, no layout committed yet
+  // true: mobile layout — no contentFullBleed, no right rail, carousel shown
+  // false: desktop layout — contentFullBleed, right rail, bleed grid shown
+
+  const LAYOUT_TITLE = "Analytics — ForgeTomorrow";
+  const LAYOUT_SUBTITLE = "A recruiter command center for funnel health, source performance, recruiter output, and hiring intelligence.";
+
+  // Empty shell while measuring
+  if (isMobile === null) {
+    return (
+      <RecruiterAnalyticsLayout
+        title={LAYOUT_TITLE}
+        pageTitle="Recruiter Analytics"
+        pageSubtitle={LAYOUT_SUBTITLE}
+        activeTab="command"
+        filters={filters}
+        onFilterChange={onFilterChange}
+        mobileShell
+      />
+    );
+  }
+
+  // Mobile layout — no contentFullBleed, carousel only
+  if (isMobile) {
+    return (
+      <RecruiterAnalyticsLayout
+        title={LAYOUT_TITLE}
+        pageTitle="Recruiter Analytics"
+        pageSubtitle={LAYOUT_SUBTITLE}
+        activeTab="command"
+        filters={filters}
+        onFilterChange={onFilterChange}
+        isMobile
+      >
+        {error ? (
+          <div style={{ borderRadius: 18, border: "1px solid rgba(239,68,68,0.20)", background: "rgba(254,242,242,0.86)", color: "#B91C1C", padding: 16 }}>
+            {String(error)}
+          </div>
+        ) : null}
+
+        <section className="ft-kpi-row" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+          <KPICard label="Total job views"   value={data?.kpis?.totalViews        ?? (loading ? "…" : 0)} />
+          <KPICard label="Total applies"     value={data?.kpis?.totalApplies      ?? (loading ? "…" : 0)} />
+          <KPICard label="Conversion rate"   value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"} />
+          <KPICard label="Avg. time-to-fill" value={data ? `${data.kpis.avgTimeToFillDays} days` : loading ? "…" : "0 days"} />
+          <KPICard label="Interviews"        value={loading ? "…" : totalInterviews} />
+          <KPICard label="Hires"             value={loading ? "…" : totalHires} />
+        </section>
+
+        {isEnterprise ? (
+          <>
+            <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
+            <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
+          </>
+        ) : (
+          <FeatureLock label="Full Analytics">
+            <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
+            <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
+          </FeatureLock>
+        )}
+      </RecruiterAnalyticsLayout>
+    );
+  }
+
+  // Desktop layout — contentFullBleed, right rail, bleed grid
   const DesktopBlock = (
     <>
       <div style={{ marginLeft: BLEED, marginRight: BLEED, marginTop: 68, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)", gap: 12 }}>
@@ -393,28 +469,15 @@ function Body() {
     </>
   );
 
-  const MobileBlock = (
-    <>
-      <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
-      <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
-    </>
-  );
-
-  const ChartsContent = (
-    <>
-      <div className="ft-desktop-charts">{DesktopBlock}</div>
-      <div className="ft-mobile-charts">{MobileBlock}</div>
-    </>
-  );
-
   return (
     <RecruiterAnalyticsLayout
-      title="Analytics — ForgeTomorrow"
+      title={LAYOUT_TITLE}
       pageTitle="Recruiter Analytics"
-      pageSubtitle="A recruiter command center for funnel health, source performance, recruiter output, and hiring intelligence."
+      pageSubtitle={LAYOUT_SUBTITLE}
       activeTab="command"
       filters={filters}
       onFilterChange={onFilterChange}
+      isDesktop
     >
       {error ? (
         <div style={{ borderRadius: 18, border: "1px solid rgba(239,68,68,0.20)", background: "rgba(254,242,242,0.86)", color: "#B91C1C", padding: 16 }}>
@@ -422,23 +485,19 @@ function Body() {
         </div>
       ) : null}
 
-      {/* KPI strip — 2-col on mobile via CSS, 6-col on desktop */}
-      <section
-        className="ft-kpi-row"
-        style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: 12 }}
-      >
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: 12 }}>
         <KPICard label="Total job views"   value={data?.kpis?.totalViews        ?? (loading ? "…" : 0)} />
         <KPICard label="Total applies"     value={data?.kpis?.totalApplies      ?? (loading ? "…" : 0)} />
-        <KPICard label="Conversion rate"   value={data ? `${data.kpis.conversionRatePct}%`           : loading ? "…" : "0%"} />
-        <KPICard label="Avg. time-to-fill" value={data ? `${data.kpis.avgTimeToFillDays} days`       : loading ? "…" : "0 days"} />
+        <KPICard label="Conversion rate"   value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"} />
+        <KPICard label="Avg. time-to-fill" value={data ? `${data.kpis.avgTimeToFillDays} days` : loading ? "…" : "0 days"} />
         <KPICard label="Interviews"        value={loading ? "…" : totalInterviews} />
         <KPICard label="Hires"             value={loading ? "…" : totalHires} />
       </section>
 
-      {isEnterprise ? ChartsContent : <FeatureLock label="Full Analytics">{ChartsContent}</FeatureLock>}
+      {isEnterprise ? DesktopBlock : <FeatureLock label="Full Analytics">{DesktopBlock}</FeatureLock>}
 
       {data?.meta?.refreshedAt ? (
-        <div className="ft-bleed-ts" style={{ fontSize: 12, color: "#94A3B8", textAlign: "right", marginRight: BLEED }}>
+        <div style={{ fontSize: 12, color: "#94A3B8", textAlign: "right", marginRight: BLEED }}>
           Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
         </div>
       ) : null}

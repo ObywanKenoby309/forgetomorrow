@@ -267,6 +267,9 @@ export default function RecruiterAnalyticsLayout({
   onFilterChange,
   children,
   right,
+  isMobile  = false,  // true → mobile layout (no contentFullBleed, no right rail)
+  isDesktop = false,  // true → desktop layout (contentFullBleed, right rail)
+  mobileShell = false, // true → empty shell while measuring
 }) {
   const router = useRouter();
 
@@ -290,12 +293,17 @@ export default function RecruiterAnalyticsLayout({
 
   const rightRail = right || <DefaultRightRail />;
 
+  // contentFullBleed only on desktop (bleed rows need it)
+  // right rail only on desktop (hidden on mobile, causes width issues)
+  const useFullBleed = isDesktop;
+  const useRightRail = isDesktop ? rightRail : null;
+
   return (
     <RecruiterLayout
       title={title}
       activeNav="analytics"
-      right={rightRail}
-      contentFullBleed
+      right={useRightRail}
+      contentFullBleed={useFullBleed}
     >
       {/* Analytics-scoped CSS — jsx global required for Next.js to apply media queries */}
       <style jsx global>{ANALYTICS_CSS}</style>
