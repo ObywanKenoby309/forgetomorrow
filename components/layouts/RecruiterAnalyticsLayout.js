@@ -307,11 +307,24 @@ export default function RecruiterAnalyticsLayout({
       {/* Analytics-scoped CSS */}
       <style>{ANALYTICS_CSS}</style>
 
-      {/* Hard clip — always capped to viewport width regardless of parent */}
-      <div style={{
+      {/* On mobile: anchor to true viewport width, not parent grid width.
+          RecruiterLayout renders desktopGrid on first paint (hasMounted=false),
+          making the parent 240px wider than the phone screen.
+          We compensate by explicitly sizing to 100vw on mobile only. */}
+      <div style={isMobile ? {
+        width: "100vw",
+        maxWidth: "100vw",
+        overflowX: "hidden",
+        boxSizing: "border-box",
+        position: "relative",
+        left: "50%",
+        transform: "translateX(-50%)",
+        paddingLeft: 14,
+        paddingRight: 14,
+      } : {
         width: "100%",
         minWidth: 0,
-        maxWidth: "100vw",
+        maxWidth: "100%",
         overflowX: "hidden",
         boxSizing: "border-box",
       }}>
@@ -330,7 +343,7 @@ export default function RecruiterAnalyticsLayout({
               <div className="ft-filter-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", minWidth: 0 }}>
                   <LabelCell>View:</LabelCell>
-                  <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                  <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
                     {MODE_TABS.map((tab) => (
                       <TabButton key={tab.key} active={activeTab === tab.key} onClick={() => pushWithFilters(tab.href)}>
                         {tab.label}
@@ -350,7 +363,7 @@ export default function RecruiterAnalyticsLayout({
               {/* Report tabs */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                 <LabelCell>Report:</LabelCell>
-                <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
                   {REPORT_LINKS.map((tab) => (
                     <TabButton
                       key={tab.key}
@@ -367,7 +380,7 @@ export default function RecruiterAnalyticsLayout({
               <div style={{ ...SOFT_GLASS, borderRadius: 12, padding: 14, marginTop: 2 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                   <LabelCell>Period:</LabelCell>
-                  <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                  <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
                     {["7d", "30d", "90d", "ytd", "custom"].map((value) => (
                       <FilterPill key={value} active={period === value} onClick={() => onFilterChange?.({ range: value })}>
                         {value.toUpperCase()}
