@@ -290,12 +290,16 @@ export default function CreateResumePage() {
     languages,
     setLanguages,
     saveEventAt,
+	setSaveEventAt,
     saveResume,
   } = useContext(ResumeContext);
 
   const [TemplateComp, setTemplateComp] = useState(null);
   const [jd, setJd] = useState('');
   const [showToast, setShowToast] = useState(false);
+  
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [existingResumes, setExistingResumes] = useState([]);
 
   // ✅ UX: default collapsed (user chooses what they see)
   const [openRequired, setOpenRequired] = useState(false);
@@ -896,6 +900,52 @@ export default function CreateResumePage() {
     </div>
   );
 
+const handleSaveClick = async () => {
+  try {
+    const res = await fetch('/api/resume/list');
+    if (res.ok) {
+      const json = await res.json();
+      setExistingResumes(json.resumes || []);
+    } else {
+      setExistingResumes([]);
+    }
+  } catch (e) {
+    setExistingResumes([]);
+  }
+  setShowSaveModal(true);
+};
+
+const handleSaveNew = async () => {
+  setShowSaveModal(false);
+  await saveResume(); // existing logic
+};
+
+const handleOverwrite = async (resumeId, resumeName) => {
+  setShowSaveModal(false);
+
+  try {
+    const res = await fetch('/api/resume/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: resumeId,
+        name: resumeName,
+        content: {
+          template: router.query.template === 'hybrid' ? 'hybrid' : 'reverse',
+          data: resumeData,
+        },
+        setPrimary: true,
+      }),
+    });
+
+    if (!res.ok) throw new Error('Save failed');
+
+    setSaveEventAt(new Date().toISOString());
+  } catch (e) {
+    alert('Save failed. Try again.');
+  }
+};
+
   return (
     <SeekerLayout title="Resume Builder" header={Header} right={null} footer={Footer} activeNav="resume-cover">
       {/* ✅ Guardrails (profile-style) */}
@@ -1357,7 +1407,7 @@ export default function CreateResumePage() {
             </DesignedPDFButton>
 
             <button
-              onClick={saveResume}
+              onClick={handleSaveClick}
               className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700 transition-all"
             >
               Save Resume
@@ -1415,6 +1465,128 @@ export default function CreateResumePage() {
           Saved at {savedTime}
         </div>
       )}
+	  {showSaveModal && (
+  <div
+    style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 9999,
+      background: 'rgba(0,0,0,0.45)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}
+    onClick={() => setShowSaveModal(false)}
+  >
+    <div
+      style={{
+        background: 'white',
+        borderRadius: 16,
+        padding: 28,
+        width: 'min(480px, 92vw)',
+        boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 6 }}>
+        Save Resume
+      </div>
+
+      <div style={{ color: '#64748B', fontSize: 14, marginBottom: 20 }}>
+        Save as a new resume, or overwrite an existing one.
+      </div>
+
+      <button
+        onClick={handleSaveNew}
+        style={{
+          width: '100%',
+          padding: '12px 16px',
+          background: ORANGE,
+          color: 'white',
+          border: 'none',
+          borderRadius: 10,
+          fontWeight: 800,
+          fontSize: 15,
+          cursor: 'pointer',
+          marginBottom: 16,
+        }}
+      >
+        + Save as new resume
+      </button>
+
+      {existingResumes.length > 0 && (
+        <>
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: 12,
+              color: '#94A3B8',
+              marginBottom: 10,
+              letterSpacing: 0.5,
+            }}
+          >
+            OVERWRITE EXISTING
+          </div>
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            {existingResumes.map((r) => (
+              <button
+                key={r.id}
+                onClick={() =>
+                  handleOverwrite(
+                    r.id,
+                    r.name || r.resumeName || 'Resume'
+                  )
+                }
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'white',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: 10,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  color: '#1F2937',
+                }}
+              >
+                <div>{r.name || 'Untitled Resume'}</div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: '#94A3B8',
+                    marginTop: 2,
+                  }}
+                >
+                  {r.updatedAt
+                    ? `Updated ${new Date(r.updatedAt).toLocaleDateString()}`
+                    : 'Saved resume'}
+                </div>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      <button
+        onClick={() => setShowSaveModal(false)}
+        style={{
+          marginTop: 16,
+          width: '100%',
+          padding: 10,
+          background: 'transparent',
+          border: 'none',
+          color: '#94A3B8',
+          fontWeight: 700,
+          cursor: 'pointer',
+        }}
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
     </SeekerLayout>
   );
 }
