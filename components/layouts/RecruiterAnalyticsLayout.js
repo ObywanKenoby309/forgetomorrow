@@ -24,11 +24,11 @@ import { useRouter } from "next/router";
 import { usePlan } from "@/context/PlanContext";
 import { useUserWallpaper } from "@/hooks/useUserWallpaper";
 
-import RecruiterHeader       from "@/components/recruiter/RecruiterHeader";
-import RecruiterSidebar      from "@/components/recruiter/RecruiterSidebar";
-import MobileBottomBar       from "@/components/mobile/MobileBottomBar";
+import RecruiterHeader from "@/components/recruiter/RecruiterHeader";
+import RecruiterSidebar from "@/components/recruiter/RecruiterSidebar";
+import MobileBottomBar from "@/components/mobile/MobileBottomBar";
 import SupportFloatingButton from "@/components/SupportFloatingButton";
-import AnalyticsFilterBar    from "@/components/analytics/AnalyticsFilterBar";
+import AnalyticsFilterBar from "@/components/analytics/AnalyticsFilterBar";
 
 // ─── Isomorphic layout effect ─────────────────────────────────────────────────
 const useIsomorphicLayoutEffect =
@@ -56,24 +56,26 @@ function setQueryChrome(router, chrome) {
       undefined,
       { shallow: true, scroll: false }
     );
-  } catch { /* no-throw */ }
+  } catch {
+    /* no-throw */
+  }
 }
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const GLASS = {
-  border:               "1px solid rgba(255,255,255,0.22)",
-  background:           "rgba(255,255,255,0.68)",
-  boxShadow:            "0 10px 28px rgba(15,23,42,0.12)",
-  backdropFilter:       "blur(12px)",
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(255,255,255,0.68)",
+  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter: "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
 };
 
-const ORANGE  = "#FF7043";
-const SLATE   = "#334155";
-const MUTED   = "#64748B";
-const GAP     = 12;
-const PAD     = 16;
-const LEFT_W  = 240;
+const ORANGE = "#FF7043";
+const SLATE = "#334155";
+const MUTED = "#64748B";
+const GAP = 12;
+const PAD = 16;
+const LEFT_W = 240;
 const RIGHT_W = 240;
 
 // ─── Default right rail ───────────────────────────────────────────────────────
@@ -81,19 +83,54 @@ function DefaultRightRail() {
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: ORANGE, marginBottom: 8 }}>
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: ORANGE,
+            marginBottom: 8,
+          }}
+        >
           Recruiter Intel
         </div>
-        <div style={{ fontSize: 16, fontWeight: 800, color: SLATE, marginBottom: 6 }}>Executive Snapshot</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: SLATE, marginBottom: 6 }}>
+          Executive Snapshot
+        </div>
         <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
           Recruiter-facing guidance, quick tips, and contextual notes.
         </div>
       </div>
       <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#94A3B8", marginBottom: 8 }}>
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#94A3B8",
+            marginBottom: 8,
+          }}
+        >
           Sponsored
         </div>
-        <div style={{ borderRadius: 12, border: "1px dashed rgba(100,116,139,0.24)", background: "rgba(255,255,255,0.60)", minHeight: 180, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, textAlign: "center", color: "#94A3B8", fontSize: 13, fontWeight: 700 }}>
+        <div
+          style={{
+            borderRadius: 12,
+            border: "1px dashed rgba(100,116,139,0.24)",
+            background: "rgba(255,255,255,0.60)",
+            minHeight: 180,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            textAlign: "center",
+            color: "#94A3B8",
+            fontSize: 13,
+            fontWeight: 700,
+          }}
+        >
           Reserved ad / sponsor panel
         </div>
       </div>
@@ -104,18 +141,47 @@ function DefaultRightRail() {
 // ─── Page title card ──────────────────────────────────────────────────────────
 function AnalyticsHeader({ subtitle, activeTab, suiteTitle = "Recruiter Analytics" }) {
   const activeLabel =
-    activeTab === "command"      ? "Command Center"      :
-    activeTab === "reports"      ? "Report Details"      :
-                                   "Presentation Visuals";
+    activeTab === "command"
+      ? "Command Center"
+      : activeTab === "reports"
+        ? "Report Details"
+        : "Presentation Visuals";
+
   return (
     <div style={{ textAlign: "center" }}>
-      <h1 style={{ fontSize: 28, fontWeight: 900, color: ORANGE, lineHeight: 1.05, margin: 0 }}>
+      <h1
+        style={{
+          fontSize: 28,
+          fontWeight: 900,
+          color: ORANGE,
+          lineHeight: 1.05,
+          margin: 0,
+        }}
+      >
         {suiteTitle}
       </h1>
-      <div style={{ fontSize: 22, fontWeight: 900, color: SLATE, lineHeight: 1.1, marginTop: 2 }}>
+      <div
+        style={{
+          fontSize: 22,
+          fontWeight: 900,
+          color: SLATE,
+          lineHeight: 1.1,
+          marginTop: 2,
+        }}
+      >
         {activeLabel}
       </div>
-      <p style={{ fontSize: 14, color: "#475569", marginTop: 8, maxWidth: 760, marginLeft: "auto", marginRight: "auto", lineHeight: 1.6 }}>
+      <p
+        style={{
+          fontSize: 14,
+          color: "#475569",
+          marginTop: 8,
+          maxWidth: 760,
+          marginLeft: "auto",
+          marginRight: "auto",
+          lineHeight: 1.6,
+        }}
+      >
         {subtitle}
       </p>
     </div>
@@ -124,17 +190,18 @@ function AnalyticsHeader({ subtitle, activeTab, suiteTitle = "Recruiter Analytic
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 export default function RecruiterAnalyticsLayout({
-  title        = "Recruiter Analytics — ForgeTomorrow",
-  suiteTitle   = "Recruiter Analytics",
+  title = "Recruiter Analytics — ForgeTomorrow",
+  suiteTitle = "Recruiter Analytics",
   pageSubtitle = "A recruiter analytics command center built for quick reads, deeper report details, and presentation-ready visuals.",
-  activeTab    = "command",
+  activeTab = "command",
   filters,
   onFilterChange,
   children,
   right,
+  hideDesktopRightRail = false,
   // Props from page — trusted as source of truth when provided
-  isMobile:    isMobileProp    = null,
-  isDesktop:   isDesktopProp   = null,
+  isMobile: isMobileProp = null,
+  isDesktop: isDesktopProp = null,
   mobileShell: mobileShellProp = false,
 }) {
   const router = useRouter();
@@ -150,14 +217,16 @@ export default function RecruiterAnalyticsLayout({
       headers: { "Content-Type": "application/json" },
       credentials: "include",
     })
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!alive || !data) return;
         const slug = data?.user?.slug || data?.details?.slug || data?.slug || "";
         if (slug) setProfileSlug(String(slug));
       })
       .catch(() => {});
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // ── Chrome resolution (mirrors RecruiterLayout) ───────────────────────────
@@ -185,9 +254,6 @@ export default function RecruiterAnalyticsLayout({
   }, [chromeMode]);
 
   // ── isMobile — synchronous detection, syncs with prop from page ──────────
-  // Reads window.innerWidth on first render so frame 1 is always correct.
-  // If the page passes isMobileProp/isDesktopProp, those take precedence
-  // after the first render — keeping index.js three-path logic intact.
   const [isMobileInternal, setIsMobileInternal] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.innerWidth < 1024;
@@ -200,8 +266,6 @@ export default function RecruiterAnalyticsLayout({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Page prop takes precedence once it's resolved (not null).
-  // This keeps index.js three-path logic (null/true/false) working correctly.
   const isMobile = isMobileProp !== null ? isMobileProp : isMobileInternal;
   const isDesktop = !isMobile;
 
@@ -211,28 +275,35 @@ export default function RecruiterAnalyticsLayout({
   // ── Wallpaper ─────────────────────────────────────────────────────────────
   const backgroundStyle = wallpaperUrl
     ? {
-        minHeight:            "100vh",
-        backgroundImage:      `url(${wallpaperUrl})`,
-        backgroundSize:       "cover",
-        backgroundPosition:   "center top",
-        backgroundRepeat:     "no-repeat",
+        minHeight: "100vh",
+        backgroundImage: `url(${wallpaperUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center top",
+        backgroundRepeat: "no-repeat",
         backgroundAttachment: isMobile ? "scroll" : "fixed",
       }
     : { minHeight: "100vh", backgroundColor: "#ECEFF1" };
 
   // ── Grid templates ────────────────────────────────────────────────────────
-  const desktopGrid = {
-    display:               "grid",
-    gridTemplateColumns:   `${LEFT_W}px minmax(0, 1fr) ${RIGHT_W}px`,
-    gridTemplateRows:      "1fr",
-    gridTemplateAreas:     `"left content right"`,
-  };
+  const desktopGrid = hideDesktopRightRail
+    ? {
+        display: "grid",
+        gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr)`,
+        gridTemplateRows: "1fr",
+        gridTemplateAreas: `"left content"`,
+      }
+    : {
+        display: "grid",
+        gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr) ${RIGHT_W}px`,
+        gridTemplateRows: "1fr",
+        gridTemplateAreas: `"left content right"`,
+      };
 
   const mobileGrid = {
-    display:             "grid",
+    display: "grid",
     gridTemplateColumns: "1fr",
-    gridTemplateRows:    "auto",
-    gridTemplateAreas:   `"content"`,
+    gridTemplateRows: "auto",
+    gridTemplateAreas: `"content"`,
   };
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
@@ -241,25 +312,31 @@ export default function RecruiterAnalyticsLayout({
   const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
 
   function handleNavigate(pathname, extraQuery = {}) {
-    router.push({
-      pathname,
-      query: {
-        ...(filters?.range       ? { range:       filters.range }       : {}),
-        ...(filters?.jobId       ? { jobId:       filters.jobId }       : {}),
-        ...(filters?.recruiterId ? { recruiterId: filters.recruiterId } : {}),
-        ...(filters?.companyId   ? { companyId:   filters.companyId }   : {}),
-        ...(filters?.from        ? { from:        filters.from }        : {}),
-        ...(filters?.to          ? { to:          filters.to }          : {}),
-        ...extraQuery,
+    router.push(
+      {
+        pathname,
+        query: {
+          ...(filters?.range ? { range: filters.range } : {}),
+          ...(filters?.jobId ? { jobId: filters.jobId } : {}),
+          ...(filters?.recruiterId ? { recruiterId: filters.recruiterId } : {}),
+          ...(filters?.companyId ? { companyId: filters.companyId } : {}),
+          ...(filters?.from ? { from: filters.from } : {}),
+          ...(filters?.to ? { to: filters.to } : {}),
+          ...extraQuery,
+        },
       },
-    }, undefined, { shallow: false });
+      undefined,
+      { shallow: false }
+    );
   }
 
   const rightRail = right || <DefaultRightRail />;
 
   return (
     <>
-      <Head><title>{title}</title></Head>
+      <Head>
+        <title>{title}</title>
+      </Head>
 
       <div style={backgroundStyle}>
         <RecruiterHeader />
@@ -267,28 +344,30 @@ export default function RecruiterAnalyticsLayout({
         <div
           style={{
             ...gridStyles,
-            gap:           GAP,
-            paddingTop:    PAD,
+            gap: GAP,
+            paddingTop: PAD,
             paddingBottom: isMobile ? PAD + 84 : PAD,
-            paddingLeft:   PAD,
-            paddingRight:  isMobile ? PAD : Math.max(8, PAD - 4),
-            alignItems:    "start",
-            boxSizing:     "border-box",
-            width:         "100%",
-            maxWidth:      "100vw",
-            overflowX:     "hidden",
-            minWidth:      0,
+            paddingLeft: PAD,
+            paddingRight: isMobile ? PAD : Math.max(8, PAD - 4),
+            alignItems: "start",
+            boxSizing: "border-box",
+            width: "100%",
+            maxWidth: "100vw",
+            overflowX: "hidden",
+            minWidth: 0,
           }}
         >
           {/* Left sidebar — desktop only */}
-          <aside style={{
-            gridArea:  "left",
-            alignSelf: "start",
-            minWidth:  0,
-            position:  "relative",
-            zIndex:    1,
-            display:   isMobile ? "none" : "block",
-          }}>
+          <aside
+            style={{
+              gridArea: "left",
+              alignSelf: "start",
+              minWidth: 0,
+              position: "relative",
+              zIndex: 1,
+              display: isMobile ? "none" : "block",
+            }}
+          >
             <RecruiterSidebar
               active="analytics"
               role={planRole || "recruiter"}
@@ -297,20 +376,19 @@ export default function RecruiterAnalyticsLayout({
             />
           </aside>
 
-          {/* Main content
-              On desktop: NO overflowX hidden — bleed rows must escape the content column.
-              On mobile:  overflowX hidden — clips anything wider than the column. */}
-          <main style={{
-            gridArea:  "content",
-            minWidth:  0,
-            width:     "100%",
-            maxWidth:  "100%",
-            position:  "relative",
-            zIndex:    1,
-            ...(isMobile ? { overflowX: "hidden" } : {}),
-          }}>
+          {/* Main content */}
+          <main
+            style={{
+              gridArea: "content",
+              minWidth: 0,
+              width: "100%",
+              maxWidth: "100%",
+              position: "relative",
+              zIndex: 1,
+              ...(isMobile ? { overflowX: "hidden" } : {}),
+            }}
+          >
             <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
-
               {/* Page title card */}
               <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
                 <AnalyticsHeader
@@ -334,21 +412,23 @@ export default function RecruiterAnalyticsLayout({
           </main>
 
           {/* Right rail — desktop only */}
-          {isDesktop && (
-            <aside style={{
-              gridArea:      "right",
-              alignSelf:     "start",
-              width:         RIGHT_W,
-              minWidth:      RIGHT_W,
-              maxWidth:      RIGHT_W,
-              minInlineSize: 0,
-              boxSizing:     "border-box",
-              position:      "relative",
-              zIndex:        1,
-              ...GLASS,
-              borderRadius:  18,
-              padding:       16,
-            }}>
+          {isDesktop && !hideDesktopRightRail && (
+            <aside
+              style={{
+                gridArea: "right",
+                alignSelf: "start",
+                width: RIGHT_W,
+                minWidth: RIGHT_W,
+                maxWidth: RIGHT_W,
+                minInlineSize: 0,
+                boxSizing: "border-box",
+                position: "relative",
+                zIndex: 1,
+                ...GLASS,
+                borderRadius: 18,
+                padding: 16,
+              }}
+            >
               {rightRail}
             </aside>
           )}
@@ -364,37 +444,70 @@ export default function RecruiterAnalyticsLayout({
       />
 
       {isMobile && mobileToolsOpen && (
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 99999,
-          display: "flex", justifyContent: "center", alignItems: "flex-end",
-        }}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "flex-end",
+          }}
+        >
           <button
             type="button"
             onClick={() => setMobileToolsOpen(false)}
             aria-label="Dismiss Tools"
             style={{
-              position: "absolute", inset: 0, border: "none",
-              background: "rgba(0,0,0,0.55)", cursor: "pointer",
+              position: "absolute",
+              inset: 0,
+              border: "none",
+              background: "rgba(0,0,0,0.55)",
+              cursor: "pointer",
             }}
           />
-          <div style={{
-            position: "relative", zIndex: 1,
-            width: "min(760px, 100%)", maxHeight: "82vh",
-            borderTopLeftRadius: 22, borderTopRightRadius: 22,
-            border: "1px solid rgba(255,255,255,0.22)",
-            background: "rgba(255,255,255,0.92)",
-            backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-            padding: 16, boxSizing: "border-box", overflowY: "auto",
-            boxShadow: "0 -10px 26px rgba(0,0,0,0.22)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div
+            style={{
+              position: "relative",
+              zIndex: 1,
+              width: "min(760px, 100%)",
+              maxHeight: "82vh",
+              borderTopLeftRadius: 22,
+              borderTopRightRadius: 22,
+              border: "1px solid rgba(255,255,255,0.22)",
+              background: "rgba(255,255,255,0.92)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              padding: 16,
+              boxSizing: "border-box",
+              overflowY: "auto",
+              boxShadow: "0 -10px 26px rgba(0,0,0,0.22)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
               <div style={{ fontSize: 14, fontWeight: 800, color: "#112033" }}>Tools</div>
               <button
                 type="button"
                 onClick={() => setMobileToolsOpen(false)}
                 aria-label="Close Tools"
-                style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 22, lineHeight: 1, color: "#546E7A" }}
-              >×</button>
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: 22,
+                  lineHeight: 1,
+                  color: "#546E7A",
+                }}
+              >
+                ×
+              </button>
             </div>
             <RecruiterSidebar
               active="analytics"
