@@ -1,29 +1,21 @@
 // components/layouts/RecruiterAnalyticsLayout.js
 //
-// contentFullBleed is passed to RecruiterLayout only on desktop.
-// On mobile it is false so RecruiterLayout's own overflowX:hidden kicks in.
-// All ft-* CSS classes are defined here — scoped to analytics pages only.
-// RecruiterLayout.js is NOT modified.
+// Thin layout shell for all recruiter analytics pages.
+// Filter bar logic lives in AnalyticsFilterBar component.
+// Data hooks live in hooks/useAnalyticsData.
+// Utilities live in lib/analytics/analyticsUtils.
 
 import React from "react";
 import { useRouter } from "next/router";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
+import AnalyticsFilterBar from "@/components/analytics/AnalyticsFilterBar";
 
-// ─── Design system tokens ─────────────────────────────────────────────────────
 const GLASS = {
-  border: "1px solid rgba(255,255,255,0.22)",
-  background: "rgba(255,255,255,0.68)",
-  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
-  backdropFilter: "blur(12px)",
+  border:               "1px solid rgba(255,255,255,0.22)",
+  background:           "rgba(255,255,255,0.68)",
+  boxShadow:            "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter:       "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
-};
-
-const SOFT_GLASS = {
-  border: "1px solid rgba(255,255,255,0.18)",
-  background: "rgba(255,255,255,0.58)",
-  boxShadow: "0 8px 22px rgba(15,23,42,0.10)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
 };
 
 const ORANGE = "#FF7043";
@@ -31,151 +23,27 @@ const SLATE  = "#334155";
 const MUTED  = "#64748B";
 const GAP    = 12;
 
-const MODE_TABS = [
-  { key: "command",      label: "Command Center",       href: "/recruiter/analytics" },
-  { key: "reports",      label: "Report Details",       href: "/recruiter/analytics/reports" },
-  { key: "presentation", label: "Presentation Visuals", href: "/recruiter/analytics/presentation" },
-];
-
-const REPORT_LINKS = [
-  { key: "funnel",        label: "Funnel" },
-  { key: "sources",       label: "Sources" },
-  { key: "recruiters",    label: "Recruiters" },
-  { key: "timeToFill",    label: "Time-to-Fill" },
-  { key: "qualityOfHire", label: "Quality of Hire" },
-  { key: "talentIntel",   label: "Talent Intel" },
-];
-
-// ─── CSS — analytics pages only ───────────────────────────────────────────────
-const ANALYTICS_CSS = `
-  /* KPI row */
-  @media (max-width: 640px) {
-    .ft-kpi-row {
-      grid-template-columns: repeat(2, 1fr) !important;
-    }
-  }
-
-  /* Stat tiles inside cards */
-  @media (max-width: 640px) {
-    .ft-stat-tiles {
-      grid-template-columns: 1fr !important;
-    }
-  }
-
-  /* Desktop charts — hidden on mobile */
-  .ft-desktop-charts { display: block; }
-  @media (max-width: 767px) {
-    .ft-desktop-charts {
-      display: none !important;
-      visibility: hidden !important;
-      position: absolute !important;
-      pointer-events: none !important;
-      height: 0 !important;
-      overflow: hidden !important;
-    }
-  }
-
-  /* Mobile carousel — hidden on desktop */
-  .ft-mobile-charts { display: none; }
-  @media (max-width: 767px) {
-    .ft-mobile-charts { display: block !important; }
-  }
-
-  /* Timestamp */
-  @media (max-width: 767px) {
-    .ft-bleed-ts {
-      margin-right: 0 !important;
-      text-align: left !important;
-    }
-  }
-
-  /* Filter strip — horizontal scroll on mobile */
-  .ft-filter-strip {
-    overflow-x: auto;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-    flex-wrap: nowrap !important;
-  }
-  .ft-filter-strip::-webkit-scrollbar { display: none; }
-  @media (min-width: 768px) {
-    .ft-filter-strip {
-      overflow-x: visible;
-      flex-wrap: wrap !important;
-    }
-  }
-
-  /* Filter row — stack on mobile */
-  @media (max-width: 767px) {
-    .ft-filter-row {
-      flex-direction: column !important;
-      align-items: flex-start !important;
-    }
-  }
-
-  /* Selects + export — full width on mobile */
-  @media (max-width: 767px) {
-    .ft-filter-stack {
-      flex-direction: column !important;
-      align-items: stretch !important;
-    }
-    .ft-filter-full {
-      width: 100% !important;
-    }
-  }
-
-  /* Refresh label */
-  .ft-refresh-desktop { display: block; }
-  .ft-refresh-mobile  { display: none;  }
-  @media (max-width: 767px) {
-    .ft-refresh-desktop { display: none  !important; }
-    .ft-refresh-mobile  { display: block !important; }
-  }
-`;
-
-function TabButton({ active, onClick, children }) {
+function DefaultRightRail() {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        border:       active ? `1px solid ${ORANGE}` : "1px solid rgba(51,65,85,0.14)",
-        background:   active ? ORANGE : "rgba(255,255,255,0.78)",
-        color:        active ? "#fff" : SLATE,
-        borderRadius: 999,
-        padding:      "8px 14px",
-        fontSize:     12.5,
-        fontWeight:   800,
-        whiteSpace:   "nowrap",
-        cursor:       "pointer",
-        flexShrink:   0,
-        boxShadow:    active ? "0 6px 16px rgba(255,112,67,0.24)" : "none",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function FilterPill({ active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        border:       active ? `1px solid ${ORANGE}` : "1px solid rgba(51,65,85,0.14)",
-        background:   active ? ORANGE : "rgba(255,255,255,0.84)",
-        color:        active ? "#fff" : SLATE,
-        borderRadius: 999,
-        padding:      "6px 12px",
-        fontSize:     11.5,
-        fontWeight:   800,
-        whiteSpace:   "nowrap",
-        cursor:       "pointer",
-        flexShrink:   0,
-      }}
-    >
-      {children}
-    </button>
+    <div style={{ display: "grid", gap: 12 }}>
+      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
+        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: ORANGE, marginBottom: 8 }}>
+          Recruiter Intel
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: SLATE, marginBottom: 6 }}>Executive Snapshot</div>
+        <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
+          Use this area for recruiter-facing guidance, quick tips, and short contextual notes.
+        </div>
+      </div>
+      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
+        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#94A3B8", marginBottom: 8 }}>
+          Sponsored
+        </div>
+        <div style={{ borderRadius: 12, border: "1px dashed rgba(100,116,139,0.24)", background: "rgba(255,255,255,0.60)", minHeight: 180, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, textAlign: "center", color: "#94A3B8", fontSize: 13, fontWeight: 700 }}>
+          Reserved ad / sponsor panel
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -199,58 +67,6 @@ function AnalyticsHeader({ subtitle, activeTab, suiteTitle = "Recruiter Analytic
   );
 }
 
-function DefaultRightRail() {
-  return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: ORANGE, marginBottom: 8 }}>
-          Recruiter Intel
-        </div>
-        <div style={{ fontSize: 16, fontWeight: 800, color: SLATE, marginBottom: 6 }}>Executive Snapshot</div>
-        <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
-          Use this area for recruiter-facing guidance, quick tips, and short contextual notes
-          while the main page handles the analytics workflow.
-        </div>
-      </div>
-      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#94A3B8", marginBottom: 8 }}>
-          Sponsored
-        </div>
-        <div style={{ borderRadius: 12, border: "1px dashed rgba(100,116,139,0.24)", background: "rgba(255,255,255,0.60)", minHeight: 180, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, textAlign: "center", color: "#94A3B8", fontSize: 13, fontWeight: 700 }}>
-          Reserved ad / sponsor panel
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LabelCell({ children }) {
-  return (
-    <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, minWidth: 44, paddingTop: 2, whiteSpace: "nowrap", flexShrink: 0 }}>
-      {children}
-    </div>
-  );
-}
-
-const SELECT_STYLE = {
-  borderRadius: 999, border: "1px solid rgba(51,65,85,0.14)",
-  background: "rgba(255,255,255,0.84)", color: SLATE,
-  fontSize: 12, fontWeight: 700, padding: "7px 12px", outline: "none",
-};
-
-const EXPORT_STYLE = {
-  borderRadius: 999, border: "1px solid rgba(51,65,85,0.14)",
-  background: "rgba(255,255,255,0.92)", color: SLATE,
-  fontSize: 12, fontWeight: 800, padding: "7px 14px",
-  cursor: "pointer", whiteSpace: "nowrap",
-};
-
-const DATE_INPUT_STYLE = {
-  borderRadius: 999, border: "1px solid rgba(51,65,85,0.14)",
-  background: "rgba(255,255,255,0.84)", color: SLATE,
-  fontSize: 12, fontWeight: 700, padding: "7px 12px", outline: "none",
-};
-
 export default function RecruiterAnalyticsLayout({
   title        = "Recruiter Analytics — ForgeTomorrow",
   suiteTitle   = "Recruiter Analytics",
@@ -266,18 +82,12 @@ export default function RecruiterAnalyticsLayout({
 }) {
   const router = useRouter();
 
-  // contentFullBleed and right rail controlled by props from index.js.
-  // Desktop needs contentFullBleed for the -252px bleed rows.
-  // Mobile must NOT have contentFullBleed — it removes overflow:hidden from
-  // <main> which lets the bleed margins escape on mobile.
-  const rightRail  = right || <DefaultRightRail />;
-  const fullBleed  = isDesktop;
-  const activeRight = isDesktop ? rightRail : null;
-
-  const period       = filters?.range || "30d";
   const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
+  const rightRail    = right || <DefaultRightRail />;
+  const activeRight  = isDesktop ? rightRail : null;
+  const fullBleed    = isDesktop;
 
-  const pushWithFilters = (pathname, extraQuery = {}) => {
+  function handleNavigate(pathname, extraQuery = {}) {
     router.push({
       pathname,
       query: {
@@ -290,7 +100,7 @@ export default function RecruiterAnalyticsLayout({
         ...extraQuery,
       },
     }, undefined, { shallow: false });
-  };
+  }
 
   return (
     <RecruiterLayout
@@ -299,133 +109,28 @@ export default function RecruiterAnalyticsLayout({
       right={activeRight}
       contentFullBleed={fullBleed}
     >
-      {/* Analytics-scoped CSS */}
-      <style>{ANALYTICS_CSS}</style>
+      <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
 
-      <div style={{ width: "100%", minWidth: 0 }}>
-        <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
+        {/* Page title card */}
+        <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+          <AnalyticsHeader
+            suiteTitle={suiteTitle}
+            subtitle={pageSubtitle}
+            activeTab={activeTab}
+          />
+        </section>
 
-          {/* ── Page title card ── */}
-          <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-            <AnalyticsHeader suiteTitle={suiteTitle} subtitle={pageSubtitle} activeTab={activeTab} />
-          </section>
+        {/* Filter bar — self-contained, owns its own isMobile state */}
+        <AnalyticsFilterBar
+          activeTab={activeTab}
+          activeReport={activeReport}
+          filters={filters}
+          onFilterChange={onFilterChange}
+          onNavigate={handleNavigate}
+        />
 
-          {/* ── Filter bar ── */}
-          <section style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
-            <div style={{ display: "grid", gap: 10 }}>
-
-              {/* View tabs */}
-              <div className="ft-filter-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", minWidth: 0 }}>
-                  <LabelCell>View:</LabelCell>
-                  <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
-                    {MODE_TABS.map((tab) => (
-                      <TabButton key={tab.key} active={activeTab === tab.key} onClick={() => pushWithFilters(tab.href)}>
-                        {tab.label}
-                      </TabButton>
-                    ))}
-                  </div>
-                  <div className="ft-refresh-desktop" style={{ flexShrink: 0, marginLeft: 6, textAlign: "left" }}>
-                    <div style={{ fontSize: 11, color: "#94A3B8" }}>Refresh</div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>30s live</div>
-                  </div>
-                </div>
-                <div className="ft-refresh-mobile" style={{ fontSize: 11, color: "#94A3B8", paddingLeft: 2 }}>
-                  Auto-refresh · <span style={{ fontWeight: 800, color: SLATE }}>30s live</span>
-                </div>
-              </div>
-
-              {/* Report tabs */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                <LabelCell>Report:</LabelCell>
-                <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
-                  {REPORT_LINKS.map((tab) => (
-                    <TabButton
-                      key={tab.key}
-                      active={activeTab === "reports" && activeReport === tab.key}
-                      onClick={() => pushWithFilters("/recruiter/analytics/reports", { report: tab.key })}
-                    >
-                      {tab.label}
-                    </TabButton>
-                  ))}
-                </div>
-              </div>
-
-              {/* Period + selects */}
-              <div style={{ ...SOFT_GLASS, borderRadius: 12, padding: 14, marginTop: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                  <LabelCell>Period:</LabelCell>
-                  <div className="ft-filter-strip" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
-                    {["7d", "30d", "90d", "ytd", "custom"].map((value) => (
-                      <FilterPill key={value} active={period === value} onClick={() => onFilterChange?.({ range: value })}>
-                        {value.toUpperCase()}
-                      </FilterPill>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="ft-filter-stack" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 10 }}>
-                  <select
-                    className="ft-filter-full"
-                    value={filters?.jobId || "all"}
-                    onChange={(e) => onFilterChange?.({ jobId: e.target.value })}
-                    style={SELECT_STYLE}
-                  >
-                    <option value="all">All Jobs</option>
-                    <option value="engineering">Engineering</option>
-                    <option value="sales">Sales</option>
-                    <option value="operations">Operations</option>
-                  </select>
-
-                  <select
-                    className="ft-filter-full"
-                    value={filters?.recruiterId || "all"}
-                    onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })}
-                    style={SELECT_STYLE}
-                  >
-                    <option value="all">All Recruiters</option>
-                    <option value="ajohnson">A. Johnson</option>
-                    <option value="mchen">M. Chen</option>
-                    <option value="slee">S. Lee</option>
-                  </select>
-
-                  <button
-                    type="button"
-                    className="ft-filter-full"
-                    style={EXPORT_STYLE}
-                    onClick={() => {
-                      const params = new URLSearchParams({
-                        report:      activeTab === "reports" ? activeReport : "overview",
-                        range:       filters?.range       || "30d",
-                        jobId:       filters?.jobId       || "all",
-                        recruiterId: filters?.recruiterId || "all",
-                        companyId:   filters?.companyId   || "all",
-                        ...(filters?.from ? { from: filters.from } : {}),
-                        ...(filters?.to   ? { to:   filters.to }   : {}),
-                      });
-                      window.open(`/api/analytics/export?${params.toString()}`, "_blank");
-                    }}
-                  >
-                    Export CSV
-                  </button>
-                </div>
-
-                {period === "custom" && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>From</div>
-                    <input type="date" value={filters?.from || ""} onChange={(e) => onFilterChange?.({ from: e.target.value })} style={DATE_INPUT_STYLE} />
-                    <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, whiteSpace: "nowrap" }}>To</div>
-                    <input type="date" value={filters?.to || ""}   onChange={(e) => onFilterChange?.({ to:   e.target.value })} style={DATE_INPUT_STYLE} />
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {children}
-        </div>
+        {children}
       </div>
-
     </RecruiterLayout>
   );
 }

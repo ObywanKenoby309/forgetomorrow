@@ -1,10 +1,13 @@
 // pages/recruiter/analytics/reports.js
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider } from "@/context/PlanContext";
 import RecruiterAnalyticsLayout from "@/components/layouts/RecruiterAnalyticsLayout";
 import ApplicationFunnel from "@/components/analytics/charts/ApplicationFunnel";
 import SourceBreakdown from "@/components/analytics/charts/SourceBreakdown";
+
+import { useAnalytics } from "@/hooks/useAnalyticsData";
+import { getFiltersFromQuery } from "@/lib/analytics/analyticsUtils";
 
 // ─── Design system tokens ─────────────────────────────────────────────────────
 // Radii: 22px page-level | 18px section cards | 12px chips/mini
@@ -24,64 +27,6 @@ const REPORT_OPTIONS = [
   { key: "qualityOfHire", label: "Quality of Hire" },
   { key: "talentIntel", label: "Talent Intel" },
 ];
-
-function useAnalytics(state) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const qs = useMemo(() => {
-    const params = new URLSearchParams();
-    params.set("range", state.range);
-    params.set("jobId", state.jobId);
-    params.set("recruiterId", state.recruiterId);
-    params.set("companyId", state.companyId);
-    if (state.range === "custom") {
-      if (state.from) params.set("from", state.from);
-      if (state.to) params.set("to", state.to);
-    }
-    return params.toString();
-  }, [state]);
-
-  useEffect(() => {
-    let active = true;
-
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await fetch(`/api/analytics/recruiter?${qs}`);
-        const json = await res.json();
-        if (active) setData(json);
-      } catch (e) {
-        if (active) setError(e);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    fetchData();
-    const id = setInterval(fetchData, 30000);
-
-    return () => {
-      active = false;
-      clearInterval(id);
-    };
-  }, [qs]);
-
-  return { data, loading, error };
-}
-
-function getFiltersFromQuery(query) {
-  return {
-    range: typeof query.range === "string" ? query.range : "30d",
-    jobId: typeof query.jobId === "string" ? query.jobId : "all",
-    recruiterId: typeof query.recruiterId === "string" ? query.recruiterId : "all",
-    companyId: typeof query.companyId === "string" ? query.companyId : "all",
-    from: typeof query.from === "string" ? query.from : "",
-    to: typeof query.to === "string" ? query.to : "",
-  };
-}
 
 function getReportFromQuery(query) {
   const raw = typeof query.report === "string" ? query.report : "funnel";

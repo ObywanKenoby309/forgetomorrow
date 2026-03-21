@@ -1,35 +1,41 @@
 // pages/recruiter/analytics/index.js
 //
-// isMobile state in Body() controls which layout renders.
-// Desktop bleed rows are NOT rendered on mobile — they are conditionally
-// excluded from the DOM entirely so negative margins cannot affect layout.
+// Three-path render pattern:
+//   null  — measuring screen, render empty shell
+//   true  — mobile confirmed, render carousel layout
+//   false — desktop confirmed, render bleed grid layout
+//
+// Data hooks: @/hooks/useAnalyticsData
+// Utilities:  @/lib/analytics/analyticsUtils
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
 import RecruiterAnalyticsLayout from "@/components/layouts/RecruiterAnalyticsLayout";
 import FeatureLock from "@/components/recruiter/FeatureLock";
-
 import KPICard from "@/components/analytics/KPICard";
 import ApplicationFunnel from "@/components/analytics/charts/ApplicationFunnel";
 import SourceBreakdown from "@/components/analytics/charts/SourceBreakdown";
 import RecruiterActivity from "@/components/analytics/charts/RecruiterActivity";
 
-// ─── Design system tokens ─────────────────────────────────────────────────────
+import { useAnalytics, useInsights } from "@/hooks/useAnalyticsData";
+import { getFiltersFromQuery } from "@/lib/analytics/analyticsUtils";
+
+// ─── Design tokens ────────────────────────────────────────────────────────────
 const GLASS = {
-  border: "1px solid rgba(255,255,255,0.22)",
-  background: "rgba(255,255,255,0.68)",
-  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
-  backdropFilter: "blur(12px)",
+  border:               "1px solid rgba(255,255,255,0.22)",
+  background:           "rgba(255,255,255,0.68)",
+  boxShadow:            "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter:       "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
 };
 
 const GLASS_SOFT = {
-  border: "1px solid rgba(255,255,255,0.18)",
-  background: "rgba(255,255,255,0.58)",
-  boxShadow: "0 8px 22px rgba(15,23,42,0.10)",
-  backdropFilter: "blur(10px)",
+  border:               "1px solid rgba(255,255,255,0.18)",
+  background:           "rgba(255,255,255,0.58)",
+  boxShadow:            "0 8px 22px rgba(15,23,42,0.10)",
+  backdropFilter:       "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
 };
 
@@ -37,97 +43,18 @@ const ORANGE = "#FF7043";
 const SLATE  = "#334155";
 const MUTED  = "#64748B";
 
-// Desktop bleed: negative margins span into BOTH sidebar (left) AND right rail columns.
-// LEFT_W (240) + GAP (12) on each side.
+// Bleed spans into left sidebar (240px) + gap (12px) on each side.
+// Only ever applied when isDesktop — never rendered on mobile.
 const BLEED = -(240 + 12);
 
-// ─── Insight type config ──────────────────────────────────────────────────────
+// ─── Insight config ───────────────────────────────────────────────────────────
 const INSIGHT_CONFIG = {
   live:      { badge: "Live",      badgeBg: "rgba(255,112,67,0.12)",  badgeColor: ORANGE,    dot: ORANGE    },
   attention: { badge: "Attention", badgeBg: "rgba(220,38,38,0.10)",   badgeColor: "#DC2626", dot: "#DC2626" },
   roadmap:   { badge: "Building",  badgeBg: "rgba(15,118,110,0.10)",  badgeColor: "#0F766E", dot: "#0F766E" },
 };
 
-// ─── Data hooks ───────────────────────────────────────────────────────────────
-
-function buildQS(state) {
-  const p = new URLSearchParams();
-  p.set("range",       state.range);
-  p.set("jobId",       state.jobId);
-  p.set("recruiterId", state.recruiterId);
-  p.set("companyId",   state.companyId);
-  if (state.range === "custom") {
-    if (state.from) p.set("from", state.from);
-    if (state.to)   p.set("to",   state.to);
-  }
-  return p.toString();
-}
-
-function useAnalytics(state) {
-  const [data, setData]       = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState(null);
-  const qs = useMemo(() => buildQS(state), [state]);
-
-  useEffect(() => {
-    let active = true;
-    const fetch_ = async () => {
-      try {
-        setLoading(true); setError(null);
-        const res  = await fetch(`/api/analytics/recruiter?${qs}`);
-        const json = await res.json();
-        if (active) setData(json);
-      } catch (e) {
-        if (active) setError(e);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    fetch_();
-    const id = setInterval(fetch_, 30000);
-    return () => { active = false; clearInterval(id); };
-  }, [qs]);
-
-  return { data, loading, error };
-}
-
-function useInsights(state) {
-  const [insights, setInsights] = useState(null);
-  const [loading, setLoading]   = useState(false);
-  const qs = useMemo(() => buildQS(state), [state]);
-
-  useEffect(() => {
-    let active = true;
-    const fetch_ = async () => {
-      try {
-        setLoading(true);
-        const res  = await fetch(`/api/analytics/insights?${qs}`);
-        const json = await res.json();
-        if (active && Array.isArray(json.insights)) setInsights(json.insights);
-      } catch (_) { }
-      finally { if (active) setLoading(false); }
-    };
-    fetch_();
-    const id = setInterval(fetch_, 60000);
-    return () => { active = false; clearInterval(id); };
-  }, [qs]);
-
-  return { insights, loading };
-}
-
-function getFiltersFromQuery(query) {
-  return {
-    range:       typeof query.range       === "string" ? query.range       : "30d",
-    jobId:       typeof query.jobId       === "string" ? query.jobId       : "all",
-    recruiterId: typeof query.recruiterId === "string" ? query.recruiterId : "all",
-    companyId:   typeof query.companyId   === "string" ? query.companyId   : "all",
-    from:        typeof query.from        === "string" ? query.from        : "",
-    to:          typeof query.to          === "string" ? query.to          : "",
-  };
-}
-
 // ─── Mobile carousel ──────────────────────────────────────────────────────────
-
 function MobileCarousel({ cards }) {
   const trackRef     = useRef(null);
   const programmatic = useRef(false);
@@ -158,7 +85,7 @@ function MobileCarousel({ cards }) {
   }, [cards.length]);
 
   return (
-    <div style={{ marginBottom: 12, width: "100%", overflow: "hidden", boxSizing: "border-box" }}>
+    <div style={{ marginBottom: 12, width: "100%", boxSizing: "border-box" }}>
       <div style={{ borderRadius: 18, overflow: "hidden", width: "100%" }}>
         <div
           ref={trackRef}
@@ -168,14 +95,20 @@ function MobileCarousel({ cards }) {
           }}
         >
           {cards.map((card, i) => (
-            <div key={i} style={{ flexShrink: 0, width: "100%", scrollSnapAlign: "start", boxSizing: "border-box", overflowY: "auto", overflowX: "hidden" }}>
+            <div key={i} style={{
+              flexShrink:     0,
+              width:          "100%",
+              scrollSnapAlign:"start",
+              boxSizing:      "border-box",
+              overflowY:      "auto",
+              overflowX:      "hidden",
+            }}>
               {card}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Dot indicators */}
       <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 10 }}>
         {cards.map((_, i) => (
           <button key={i} onClick={() => goTo(i)} aria-label={`Go to card ${i + 1}`}
@@ -192,8 +125,7 @@ function MobileCarousel({ cards }) {
   );
 }
 
-// ─── UI components ────────────────────────────────────────────────────────────
-
+// ─── Card sub-components ──────────────────────────────────────────────────────
 function StatTile({ label, value, hint }) {
   return (
     <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
@@ -249,7 +181,6 @@ function ReportCard({ title, description, href, value }) {
 }
 
 // ─── Page body ────────────────────────────────────────────────────────────────
-
 function Body() {
   const router = useRouter();
   const [filters, setFilters] = useState(getFiltersFromQuery(router.query));
@@ -257,12 +188,7 @@ function Body() {
   const { insights, loading: insightsLoading } = useInsights(filters);
   const { isEnterprise } = usePlan();
 
-  // Mobile detection — start true (mobile-first) so first paint is safe.
-  // useEffect corrects to false on desktop after mount.
-  // Exact pattern from candidate-center.js:
-  // null = unmeasured (render empty shell, no flash)
-  // true = mobile confirmed
-  // false = desktop confirmed
+  // null = unmeasured | true = mobile | false = desktop
   const [isMobile, setIsMobile] = useState(null);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -295,9 +221,10 @@ function Body() {
 
   const visibleInsights = Array.isArray(insights) ? insights.slice(0, 4) : [];
 
-  // ── Shared card definitions ───────────────────────────────────────────────
-  // Each card is defined once and used in both desktop and mobile layouts.
+  const LAYOUT_TITLE    = "Analytics — ForgeTomorrow";
+  const LAYOUT_SUBTITLE = "A recruiter command center for funnel health, source performance, recruiter output, and hiring intelligence.";
 
+  // Shared card definitions — same JSX used in both mobile and desktop
   const execSnapshotCard = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <div style={{ marginBottom: 12 }}>
@@ -312,7 +239,7 @@ function Body() {
           Visuals
         </Link>
       </div>
-      <div className="ft-stat-tiles" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
         <StatTile label="Top source"       value={loading ? "…" : topSource?.name || "N/A"}   hint="Best-performing inbound channel" />
         <StatTile label="Offer acceptance" value={loading ? "…" : `${offerAcceptanceRate}%`}  hint="High-trust close efficiency signal" />
         <StatTile label="Apply-to-hire"    value={loading ? "…" : data?.kpis?.totalApplies ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%` : "0%"} hint="Applications converting into hires" />
@@ -385,27 +312,18 @@ function Body() {
       <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Report Gateways</div>
       <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>Drill into dedicated reports for the why.</div>
       <div style={{ display: "grid", gap: 10 }}>
-        <ReportCard title="Time-to-Fill"        description="See which roles close fastest and where delays build."       href="/recruiter/analytics/time-to-fill"       value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`} />
-        <ReportCard title="Quality of Hire"     description="Track post-hire quality signals once enough data exists."    href="/recruiter/analytics/quality-of-hire"    value="Building" />
-        <ReportCard title="Talent Intelligence" description="Compare source quality, match reasons, and role signals."    href="/recruiter/analytics/talent-intelligence" value={loading ? "…" : topSource?.name || "N/A"} />
+        <ReportCard title="Time-to-Fill"        description="See which roles close fastest and where delays build."    href="/recruiter/analytics/time-to-fill"       value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`} />
+        <ReportCard title="Quality of Hire"     description="Track post-hire quality signals once enough data exists." href="/recruiter/analytics/quality-of-hire"    value="Building" />
+        <ReportCard title="Talent Intelligence" description="Compare source quality, match reasons, and role signals." href="/recruiter/analytics/talent-intelligence" value={loading ? "…" : topSource?.name || "N/A"} />
       </div>
     </div>
   );
 
-  // ── Exact candidate-center.js pattern ───────────────────────────────────
-  // null: render empty shell — no flash, no layout committed yet
-  // true: mobile layout — no contentFullBleed, no right rail, carousel shown
-  // false: desktop layout — contentFullBleed, right rail, bleed grid shown
-
-  const LAYOUT_TITLE = "Analytics — ForgeTomorrow";
-  const LAYOUT_SUBTITLE = "A recruiter command center for funnel health, source performance, recruiter output, and hiring intelligence.";
-
-  // Empty shell while measuring
+  // ── Empty shell — measuring ────────────────────────────────────────────────
   if (isMobile === null) {
     return (
       <RecruiterAnalyticsLayout
         title={LAYOUT_TITLE}
-        pageTitle="Recruiter Analytics"
         pageSubtitle={LAYOUT_SUBTITLE}
         activeTab="command"
         filters={filters}
@@ -415,25 +333,24 @@ function Body() {
     );
   }
 
-  // Mobile layout — no contentFullBleed, carousel only
+  // ── Mobile layout ──────────────────────────────────────────────────────────
   if (isMobile) {
     return (
       <RecruiterAnalyticsLayout
         title={LAYOUT_TITLE}
-        pageTitle="Recruiter Analytics"
         pageSubtitle={LAYOUT_SUBTITLE}
         activeTab="command"
         filters={filters}
         onFilterChange={onFilterChange}
         isMobile
       >
-        {error ? (
+        {error && (
           <div style={{ borderRadius: 18, border: "1px solid rgba(239,68,68,0.20)", background: "rgba(254,242,242,0.86)", color: "#B91C1C", padding: 16 }}>
             {String(error)}
           </div>
-        ) : null}
+        )}
 
-        <section className="ft-kpi-row" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+        <section style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
           <KPICard label="Total job views"   value={data?.kpis?.totalViews        ?? (loading ? "…" : 0)} />
           <KPICard label="Total applies"     value={data?.kpis?.totalApplies      ?? (loading ? "…" : 0)} />
           <KPICard label="Conversion rate"   value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"} />
@@ -457,7 +374,7 @@ function Body() {
     );
   }
 
-  // Desktop layout — contentFullBleed, right rail, bleed grid
+  // ── Desktop layout ─────────────────────────────────────────────────────────
   const DesktopBlock = (
     <>
       <div style={{ marginLeft: BLEED, marginRight: BLEED, marginTop: 68, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)", gap: 12 }}>
@@ -472,18 +389,17 @@ function Body() {
   return (
     <RecruiterAnalyticsLayout
       title={LAYOUT_TITLE}
-      pageTitle="Recruiter Analytics"
       pageSubtitle={LAYOUT_SUBTITLE}
       activeTab="command"
       filters={filters}
       onFilterChange={onFilterChange}
       isDesktop
     >
-      {error ? (
+      {error && (
         <div style={{ borderRadius: 18, border: "1px solid rgba(239,68,68,0.20)", background: "rgba(254,242,242,0.86)", color: "#B91C1C", padding: 16 }}>
           {String(error)}
         </div>
-      ) : null}
+      )}
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: 12 }}>
         <KPICard label="Total job views"   value={data?.kpis?.totalViews        ?? (loading ? "…" : 0)} />
@@ -496,11 +412,11 @@ function Body() {
 
       {isEnterprise ? DesktopBlock : <FeatureLock label="Full Analytics">{DesktopBlock}</FeatureLock>}
 
-      {data?.meta?.refreshedAt ? (
+      {data?.meta?.refreshedAt && (
         <div style={{ fontSize: 12, color: "#94A3B8", textAlign: "right", marginRight: BLEED }}>
           Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
         </div>
-      ) : null}
+      )}
     </RecruiterAnalyticsLayout>
   );
 }
