@@ -96,12 +96,15 @@ function MobileCarousel({ cards }) {
         >
           {cards.map((card, i) => (
             <div key={i} style={{
-              flexShrink:     0,
-              width:          "100%",
-              scrollSnapAlign:"start",
-              boxSizing:      "border-box",
-              overflowY:      "auto",
-              overflowX:      "hidden",
+              flexShrink:      0,
+              width:           "100%",
+              scrollSnapAlign: "start",
+              boxSizing:       "border-box",
+              height:          360,
+              overflowY:       "auto",
+              overflowX:       "hidden",
+              // Consistent height across all cards — page never jumps while swiping.
+              // Content taller than 360px scrolls internally within the card.
             }}>
               {card}
             </div>
