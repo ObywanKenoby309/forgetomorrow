@@ -3,7 +3,7 @@
 // Three-path render pattern:
 //   null  — measuring screen, render empty shell
 //   true  — mobile confirmed, render carousel layout
-//   false — desktop confirmed, render full-width grid layout
+//   false — desktop confirmed, render bleed grid layout
 //
 // Data hooks: @/hooks/useAnalyticsData
 // Utilities:  @/lib/analytics/analyticsUtils
@@ -42,6 +42,11 @@ const GLASS_SOFT = {
 const ORANGE = "#FF7043";
 const SLATE = "#334155";
 const MUTED = "#64748B";
+
+// desktop bleed settings
+const LEFT_BLEED = -(240 + 12);
+const RIGHT_BLEED = -12;
+const DESKTOP_REPORT_DROP = 56;
 
 // ─── Insight config ───────────────────────────────────────────────────────────
 const INSIGHT_CONFIG = {
@@ -83,12 +88,30 @@ function MobileCarousel({ cards }) {
   }, [cards.length]);
 
   return (
-    <div style={{ marginBottom: 12, width: "100%", boxSizing: "border-box" }}>
-      <div style={{ borderRadius: 18, overflow: "hidden", width: "100%" }}>
+    <div
+      style={{
+        marginBottom: 12,
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        overflowX: "hidden",
+      }}
+    >
+      <div
+        style={{
+          borderRadius: 18,
+          overflow: "hidden",
+          width: "100%",
+          maxWidth: "100%",
+        }}
+      >
         <div
           ref={trackRef}
           style={{
             display: "flex",
+            width: "100%",
+            maxWidth: "100%",
             overflowX: "auto",
             scrollSnapType: "x mandatory",
             msOverflowStyle: "none",
@@ -100,8 +123,10 @@ function MobileCarousel({ cards }) {
             <div
               key={i}
               style={{
-                flexShrink: 0,
+                flex: "0 0 100%",
                 width: "100%",
+                minWidth: "100%",
+                maxWidth: "100%",
                 scrollSnapAlign: "start",
                 boxSizing: "border-box",
                 height: 360,
@@ -161,6 +186,7 @@ function StatTile({ label, value, hint }) {
 
 function InsightTile({ insight }) {
   const cfg = INSIGHT_CONFIG[insight.type] ?? INSIGHT_CONFIG.live;
+
   return (
     <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
@@ -274,8 +300,8 @@ function Body() {
   const { insights, loading: insightsLoading } = useInsights(filters);
   const { isEnterprise } = usePlan();
 
-  // null = unmeasured | true = mobile | false = desktop
   const [isMobile, setIsMobile] = useState(null);
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
     check();
@@ -326,13 +352,14 @@ function Body() {
     "A recruiter command center for funnel health, source performance, recruiter output, and hiring intelligence.";
 
   const execSnapshotCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Executive Snapshot</div>
         <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
           Source quality, interview flow, and close efficiency.
         </div>
       </div>
+
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         <Link
           href="/recruiter/analytics/reports"
@@ -363,6 +390,7 @@ function Body() {
           Visuals
         </Link>
       </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
         <StatTile
           label="Top source"
@@ -390,7 +418,7 @@ function Body() {
   );
 
   const recruiterActivityCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
       <div
         style={{
           display: "flex",
@@ -424,7 +452,7 @@ function Body() {
   );
 
   const forgeInsightsCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
       <div style={{ marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Forge Insights</div>
@@ -439,10 +467,9 @@ function Body() {
             }}
           />
         </div>
-        <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
-          What matters most right now.
-        </div>
+        <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>What matters most right now.</div>
       </div>
+
       {insightsLoading && !insights ? (
         <InsightsSkeleton />
       ) : visibleInsights.length > 0 ? (
@@ -462,7 +489,7 @@ function Body() {
   );
 
   const sourcePerformanceCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
       <div
         style={{
           display: "flex",
@@ -496,7 +523,7 @@ function Body() {
   );
 
   const applicationFunnelCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
       <div
         style={{
           display: "flex",
@@ -508,9 +535,7 @@ function Body() {
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Application Funnel</div>
-          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
-            Movement from interest to hire.
-          </div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Movement from interest to hire.</div>
         </div>
         <Link
           href="/recruiter/analytics/funnel"
@@ -530,7 +555,7 @@ function Body() {
   );
 
   const reportGatewaysCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
       <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Report Gateways</div>
       <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>
         Drill into dedicated reports for the why.
@@ -583,64 +608,71 @@ function Body() {
         hideDesktopRightRail
         isMobile
       >
-        {error && (
-          <div
+        <div style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden" }}>
+          {error && (
+            <div
+              style={{
+                borderRadius: 18,
+                border: "1px solid rgba(239,68,68,0.20)",
+                background: "rgba(254,242,242,0.86)",
+                color: "#B91C1C",
+                padding: 16,
+              }}
+            >
+              {String(error)}
+            </div>
+          )}
+
+          <section
             style={{
-              borderRadius: 18,
-              border: "1px solid rgba(239,68,68,0.20)",
-              background: "rgba(254,242,242,0.86)",
-              color: "#B91C1C",
-              padding: 16,
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 12,
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
             }}
           >
-            {String(error)}
-          </div>
-        )}
+            <KPICard label="Total job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
+            <KPICard label="Total applies" value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)} />
+            <KPICard
+              label="Conversion rate"
+              value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"}
+            />
+            <KPICard
+              label="Avg. time-to-fill"
+              value={data ? `${data.kpis.avgTimeToFillDays} days` : loading ? "…" : "0 days"}
+            />
+            <KPICard label="Interviews" value={loading ? "…" : totalInterviews} />
+            <KPICard label="Hires" value={loading ? "…" : totalHires} />
+          </section>
 
-        <section
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: 12,
-          }}
-        >
-          <KPICard label="Total job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
-          <KPICard label="Total applies" value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)} />
-          <KPICard
-            label="Conversion rate"
-            value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"}
-          />
-          <KPICard
-            label="Avg. time-to-fill"
-            value={data ? `${data.kpis.avgTimeToFillDays} days` : loading ? "…" : "0 days"}
-          />
-          <KPICard label="Interviews" value={loading ? "…" : totalInterviews} />
-          <KPICard label="Hires" value={loading ? "…" : totalHires} />
-        </section>
-
-        {isEnterprise ? (
-          <>
-            <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
-            <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
-          </>
-        ) : (
-          <FeatureLock label="Full Analytics">
-            <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
-            <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
-          </FeatureLock>
-        )}
+          {isEnterprise ? (
+            <>
+              <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
+              <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
+            </>
+          ) : (
+            <FeatureLock label="Full Analytics">
+              <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
+              <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
+            </FeatureLock>
+          )}
+        </div>
       </RecruiterAnalyticsLayout>
     );
   }
 
   const DesktopBlock = (
-    <div style={{ display: "grid", gap: 12 }}>
+    <>
       <div
         style={{
+          marginLeft: LEFT_BLEED,
+          marginRight: RIGHT_BLEED,
+          marginTop: DESKTOP_REPORT_DROP,
           display: "grid",
-          gridTemplateColumns: "minmax(280px, 1fr) minmax(420px, 1.6fr) minmax(280px, 1fr)",
+          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
           gap: 12,
-          alignItems: "stretch",
         }}
       >
         {execSnapshotCard}
@@ -650,17 +682,19 @@ function Body() {
 
       <div
         style={{
+          marginLeft: LEFT_BLEED,
+          marginRight: RIGHT_BLEED,
+          marginTop: 12,
           display: "grid",
-          gridTemplateColumns: "minmax(280px, 1fr) minmax(420px, 1.6fr) minmax(280px, 1fr)",
+          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
           gap: 12,
-          alignItems: "stretch",
         }}
       >
         {sourcePerformanceCard}
         {applicationFunnelCard}
         {reportGatewaysCard}
       </div>
-    </div>
+    </>
   );
 
   return (
@@ -708,11 +742,7 @@ function Body() {
         <KPICard label="Hires" value={loading ? "…" : totalHires} />
       </section>
 
-      {isEnterprise ? (
-        DesktopBlock
-      ) : (
-        <FeatureLock label="Full Analytics">{DesktopBlock}</FeatureLock>
-      )}
+      {isEnterprise ? <>{DesktopBlock}</> : <FeatureLock label="Full Analytics">{DesktopBlock}</FeatureLock>}
 
       {data?.meta?.refreshedAt && (
         <div style={{ fontSize: 12, color: "#94A3B8", textAlign: "right" }}>

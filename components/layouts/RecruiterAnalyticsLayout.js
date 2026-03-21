@@ -9,7 +9,7 @@
 //   2. Layout reads window.innerWidth synchronously as fallback (SeekerLayout pattern)
 //   3. Both agree — no conflict, no desktop-first flash
 //
-// Desktop grid: 240px sidebar | content (with contentFullBleed for bleed rows) | 240px right rail
+// Desktop grid: 240px sidebar | content | optional right rail
 // Mobile grid:  single column, right rail not rendered, overflowX hidden
 
 import React, {
@@ -72,7 +72,6 @@ const GLASS = {
 
 const ORANGE = "#FF7043";
 const SLATE = "#334155";
-const MUTED = "#64748B";
 const GAP = 12;
 const PAD = 16;
 const LEFT_W = 240;
@@ -98,10 +97,11 @@ function DefaultRightRail() {
         <div style={{ fontSize: 16, fontWeight: 800, color: SLATE, marginBottom: 6 }}>
           Executive Snapshot
         </div>
-        <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6 }}>
           Recruiter-facing guidance, quick tips, and contextual notes.
         </div>
       </div>
+
       <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
         <div
           style={{
@@ -199,7 +199,6 @@ export default function RecruiterAnalyticsLayout({
   children,
   right,
   hideDesktopRightRail = false,
-  // Props from page — trusted as source of truth when provided
   isMobile: isMobileProp = null,
   isDesktop: isDesktopProp = null,
   mobileShell: mobileShellProp = false,
@@ -208,10 +207,11 @@ export default function RecruiterAnalyticsLayout({
   const { isLoaded: planLoaded, plan, role: planRole } = usePlan();
   const { wallpaperUrl } = useUserWallpaper();
 
-  // ── Profile slug ──────────────────────────────────────────────────────────
   const [profileSlug, setProfileSlug] = useState("");
+
   useEffect(() => {
     let alive = true;
+
     fetch("/api/profile/details", {
       method: "GET",
       headers: { "Content-Type": "application/json" },
@@ -224,12 +224,12 @@ export default function RecruiterAnalyticsLayout({
         if (slug) setProfileSlug(String(slug));
       })
       .catch(() => {});
+
     return () => {
       alive = false;
     };
   }, []);
 
-  // ── Chrome resolution (mirrors RecruiterLayout) ───────────────────────────
   const chromeMode = useMemo(() => {
     const urlChrome = normalizeChrome(router?.query?.chrome);
     const isEnterprise = String(plan || "").toLowerCase() === "enterprise";
@@ -240,9 +240,11 @@ export default function RecruiterAnalyticsLayout({
 
   useEffect(() => {
     if (!router?.isReady || !planLoaded) return;
+
     const urlChrome = normalizeChrome(router.query?.chrome);
     const isEnterprise = String(plan || "").toLowerCase() === "enterprise";
     const canonical = isEnterprise ? "recruiter-ent" : "recruiter-smb";
+
     if (urlChrome === "recruiter-smb" || urlChrome === "recruiter-ent" || !urlChrome) {
       setQueryChrome(router, canonical);
     }
@@ -253,7 +255,6 @@ export default function RecruiterAnalyticsLayout({
     return c === "recruiter-ent" ? "enterprise" : "smb";
   }, [chromeMode]);
 
-  // ── isMobile — synchronous detection, syncs with prop from page ──────────
   const [isMobileInternal, setIsMobileInternal] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.innerWidth < 1024;
@@ -267,12 +268,11 @@ export default function RecruiterAnalyticsLayout({
   }, []);
 
   const isMobile = isMobileProp !== null ? isMobileProp : isMobileInternal;
-  const isDesktop = !isMobile;
+  const isDesktop = isDesktopProp !== null ? isDesktopProp : !isMobile;
 
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
-  // ── Wallpaper ─────────────────────────────────────────────────────────────
   const backgroundStyle = wallpaperUrl
     ? {
         minHeight: "100vh",
@@ -284,7 +284,6 @@ export default function RecruiterAnalyticsLayout({
       }
     : { minHeight: "100vh", backgroundColor: "#ECEFF1" };
 
-  // ── Grid templates ────────────────────────────────────────────────────────
   const desktopGrid = hideDesktopRightRail
     ? {
         display: "grid",
@@ -307,8 +306,6 @@ export default function RecruiterAnalyticsLayout({
   };
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
-
-  // ── Filter navigation ─────────────────────────────────────────────────────
   const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
 
   function handleNavigate(pathname, extraQuery = {}) {
@@ -357,7 +354,6 @@ export default function RecruiterAnalyticsLayout({
             minWidth: 0,
           }}
         >
-          {/* Left sidebar — desktop only */}
           <aside
             style={{
               gridArea: "left",
@@ -376,7 +372,6 @@ export default function RecruiterAnalyticsLayout({
             />
           </aside>
 
-          {/* Main content */}
           <main
             style={{
               gridArea: "content",
@@ -388,8 +383,15 @@ export default function RecruiterAnalyticsLayout({
               ...(isMobile ? { overflowX: "hidden" } : {}),
             }}
           >
-            <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
-              {/* Page title card */}
+            <div
+              style={{
+                display: "grid",
+                gap: GAP,
+                width: "100%",
+                minWidth: 0,
+                maxWidth: "100%",
+              }}
+            >
               <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
                 <AnalyticsHeader
                   suiteTitle={suiteTitle}
@@ -398,7 +400,6 @@ export default function RecruiterAnalyticsLayout({
                 />
               </section>
 
-              {/* Filter bar */}
               <AnalyticsFilterBar
                 activeTab={activeTab}
                 activeReport={activeReport}
@@ -411,7 +412,6 @@ export default function RecruiterAnalyticsLayout({
             </div>
           </main>
 
-          {/* Right rail — desktop only */}
           {isDesktop && !hideDesktopRightRail && (
             <aside
               style={{
@@ -466,6 +466,7 @@ export default function RecruiterAnalyticsLayout({
               cursor: "pointer",
             }}
           />
+
           <div
             style={{
               position: "relative",
@@ -509,6 +510,7 @@ export default function RecruiterAnalyticsLayout({
                 ×
               </button>
             </div>
+
             <RecruiterSidebar
               active="analytics"
               role={planRole || "recruiter"}
