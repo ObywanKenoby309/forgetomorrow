@@ -45,8 +45,8 @@ const MUTED = "#64748B";
 
 // desktop bleed settings
 const LEFT_BLEED = -(240 + 12);
-const RIGHT_BLEED = -12;
-const DESKTOP_REPORT_DROP = 56;
+const RIGHT_BLEED = 0;
+const DESKTOP_REPORT_DROP = 72;
 
 // ─── Insight config ───────────────────────────────────────────────────────────
 const INSIGHT_CONFIG = {
@@ -351,6 +351,8 @@ function Body() {
   const LAYOUT_SUBTITLE =
     "A recruiter command center for funnel health, source performance, recruiter output, and hiring intelligence.";
 
+  const compactStatColumns = isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))";
+
   const execSnapshotCard = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
       <div style={{ marginBottom: 12 }}>
@@ -391,7 +393,7 @@ function Body() {
         </Link>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: compactStatColumns, gap: 10 }}>
         <StatTile
           label="Top source"
           value={loading ? "…" : topSource?.name || "N/A"}
