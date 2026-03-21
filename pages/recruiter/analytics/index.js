@@ -18,6 +18,7 @@ import KPICard from "@/components/analytics/KPICard";
 import ApplicationFunnel from "@/components/analytics/charts/ApplicationFunnel";
 import SourceBreakdown from "@/components/analytics/charts/SourceBreakdown";
 import RecruiterActivity from "@/components/analytics/charts/RecruiterActivity";
+import ExecutiveSnapshotCard from "@/components/analytics/ExecutiveSnapshotCard";
 
 import { useAnalytics, useInsights } from "@/hooks/useAnalyticsData";
 import { getFiltersFromQuery } from "@/lib/analytics/analyticsUtils";
@@ -107,29 +108,29 @@ function MobileCarousel({ cards }) {
         }}
       >
         <div
-  ref={trackRef}
-  style={{
-    display: "flex",
-    gap: 10, // 👈 THIS is the fix
-    paddingLeft: 2,
-    paddingRight: 2,
-    width: "100%",
-    maxWidth: "100%",
-    overflowX: "auto",
-    scrollSnapType: "x mandatory",
-    msOverflowStyle: "none",
-    scrollbarWidth: "none",
-    WebkitOverflowScrolling: "touch",
-  }}
->
+          ref={trackRef}
+          style={{
+            display: "flex",
+            gap: 12,
+            paddingLeft: 2,
+            paddingRight: 2,
+            width: "100%",
+            maxWidth: "100%",
+            overflowX: "auto",
+            scrollSnapType: "x mandatory",
+            msOverflowStyle: "none",
+            scrollbarWidth: "none",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
           {cards.map((card, i) => (
             <div
               key={i}
               style={{
                 flex: "0 0 calc(100% - 6px)",
-				width: "calc(100% - 6px)",
-				minWidth: "calc(100% - 6px)",
-				maxWidth: "calc(100% - 6px)",
+                width: "calc(100% - 6px)",
+                minWidth: "calc(100% - 6px)",
+                maxWidth: "calc(100% - 6px)",
                 scrollSnapAlign: "start",
                 boxSizing: "border-box",
                 height: 360,
@@ -167,26 +168,6 @@ function MobileCarousel({ cards }) {
 }
 
 // ─── Card sub-components ──────────────────────────────────────────────────────
-function StatTile({ label, value, hint }) {
-  return (
-    <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-      <div style={{ fontSize: 11, color: MUTED }}>{label}</div>
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 900,
-          color: SLATE,
-          marginTop: 5,
-          lineHeight: 1.2,
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{hint}</div>
-    </div>
-  );
-}
-
 function InsightTile({ insight }) {
   const cfg = INSIGHT_CONFIG[insight.type] ?? INSIGHT_CONFIG.live;
 
@@ -339,6 +320,7 @@ function Body() {
 
   const totalInterviews = data?.kpis?.totalInterviews ?? 0;
   const totalHires = data?.kpis?.totalHires ?? 0;
+  const totalApplies = data?.kpis?.totalApplies ?? 0;
   const offerAcceptanceRate = data?.kpis?.offerAcceptanceRatePct ?? 0;
 
   const topSource =
@@ -357,69 +339,14 @@ function Body() {
   const compactStatColumns = isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))";
 
   const execSnapshotCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Executive Snapshot</div>
-        <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
-          Source quality, interview flow, and close efficiency.
-        </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-        <Link
-          href="/recruiter/analytics/reports"
-          style={{
-            textDecoration: "none",
-            borderRadius: 999,
-            background: "rgba(255,112,67,0.12)",
-            color: ORANGE,
-            fontSize: 12,
-            fontWeight: 800,
-            padding: "7px 12px",
-          }}
-        >
-          Report details
-        </Link>
-        <Link
-          href="/recruiter/analytics/presentation"
-          style={{
-            textDecoration: "none",
-            borderRadius: 999,
-            background: "rgba(51,65,85,0.08)",
-            color: SLATE,
-            fontSize: 12,
-            fontWeight: 800,
-            padding: "7px 12px",
-          }}
-        >
-          Visuals
-        </Link>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: compactStatColumns, gap: 10 }}>
-        <StatTile
-          label="Top source"
-          value={loading ? "…" : topSource?.name || "N/A"}
-          hint="Best-performing inbound channel"
-        />
-        <StatTile
-          label="Offer acceptance"
-          value={loading ? "…" : `${offerAcceptanceRate}%`}
-          hint="High-trust close efficiency signal"
-        />
-        <StatTile
-          label="Apply-to-hire"
-          value={
-            loading
-              ? "…"
-              : data?.kpis?.totalApplies
-                ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%`
-                : "0%"
-          }
-          hint="Applications converting into hires"
-        />
-      </div>
-    </div>
+    <ExecutiveSnapshotCard
+      loading={loading}
+      topSource={topSource}
+      offerAcceptanceRate={offerAcceptanceRate}
+      totalHires={totalHires}
+      totalApplies={totalApplies}
+      compactStatColumns={compactStatColumns}
+    />
   );
 
   const recruiterActivityCard = (
@@ -652,16 +579,18 @@ function Body() {
             <KPICard label="Hires" value={loading ? "…" : totalHires} />
           </section>
 
-            {isEnterprise ? (
-			  <>
-				<div style={{ marginTop: 12 }}>
-				  <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
-				</div>
-				<MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
-			  </>
-			) : (
+          {isEnterprise ? (
+            <>
+              <div style={{ marginTop: 12 }}>
+                <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
+              </div>
+              <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
+            </>
+          ) : (
             <FeatureLock label="Full Analytics">
-              <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
+              <div style={{ marginTop: 12 }}>
+                <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
+              </div>
               <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
             </FeatureLock>
           )}
