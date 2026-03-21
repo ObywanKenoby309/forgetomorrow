@@ -1,5 +1,6 @@
 // pages/resume/create.js — FINAL LOCKED + ATS CONTEXT
 import { useContext, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
@@ -286,18 +287,17 @@ export default function CreateResumePage() {
     setCertifications,
     customSections,
     setCustomSections,
-    // ✅ FIX: use ResumeContext languages (DB-persistent via drafts + saveResume)
     languages,
     setLanguages,
     saveEventAt,
-	setSaveEventAt,
+    setSaveEventAt,
     saveResume,
   } = useContext(ResumeContext);
 
   const [TemplateComp, setTemplateComp] = useState(null);
   const [jd, setJd] = useState('');
   const [showToast, setShowToast] = useState(false);
-  
+
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [existingResumes, setExistingResumes] = useState([]);
 
@@ -748,42 +748,42 @@ export default function CreateResumePage() {
     if (uploadedFlag !== '1' && uploadedFlag !== 'true') return;
 
     async function applyUploadedResume() {
-  try {
-    const raw = await getDraft(DRAFT_KEYS.LAST_UPLOADED_RESUME_TEXT);
-    const text = coerceUploadedDraftText(raw);
-    if (!text) return;
+      try {
+        const raw = await getDraft(DRAFT_KEYS.LAST_UPLOADED_RESUME_TEXT);
+        const text = coerceUploadedDraftText(raw);
+        if (!text) return;
 
-    // 🔧 FIX: Send to AI parser instead of dumping raw text into summary
-    const res = await fetch('/api/resume/parse', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
+        // 🔧 FIX: Send to AI parser instead of dumping raw text into summary
+        const res = await fetch('/api/resume/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
 
-    if (res.ok) {
-      const parsed = await res.json();
-      applyResumePayloadToState(parsed); // ← already handles all fields correctly
-    } else {
-      // Graceful fallback: at least populate contact fields via regex
-      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-      const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-      // 🔧 FIX: tighter phone regex - avoids matching dates/zip codes
-      const phoneMatch = text.match(/(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/);
-      
-      setFormData((prev) => ({
-        ...prev,
-        fullName: prev.fullName || lines[0] || '',
-        email: prev.email || (emailMatch ? emailMatch[0] : ''),
-        phone: prev.phone || (phoneMatch ? phoneMatch[0].trim() : ''),
-      }));
-      // ⚠️ Do NOT setSummary(raw text) — leave it blank for the user to fill
+        if (res.ok) {
+          const parsed = await res.json();
+          applyResumePayloadToState(parsed); // ← already handles all fields correctly
+        } else {
+          // Graceful fallback: at least populate contact fields via regex
+          const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+          const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+          // 🔧 FIX: tighter phone regex - avoids matching dates/zip codes
+          const phoneMatch = text.match(/(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/);
+
+          setFormData((prev) => ({
+            ...prev,
+            fullName: prev.fullName || lines[0] || '',
+            email: prev.email || (emailMatch ? emailMatch[0] : ''),
+            phone: prev.phone || (phoneMatch ? phoneMatch[0].trim() : ''),
+          }));
+          // ⚠️ Do NOT setSummary(raw text) — leave it blank for the user to fill
+        }
+
+        hasAppliedUploadRef.current = true;
+      } catch (err) {
+        console.error('[resume/create] Failed to auto-fill from uploaded resume', err);
+      }
     }
-
-    hasAppliedUploadRef.current = true;
-  } catch (err) {
-    console.error('[resume/create] Failed to auto-fill from uploaded resume', err);
-  }
-}
 
     applyUploadedResume();
   }, [router.isReady, router.query, formData.fullName, formData.name, summary, setFormData, setSummary]);
@@ -900,51 +900,173 @@ export default function CreateResumePage() {
     </div>
   );
 
-const handleSaveClick = async () => {
-  try {
-    const res = await fetch('/api/resume/list');
-    if (res.ok) {
-      const json = await res.json();
-      setExistingResumes(json.resumes || []);
-    } else {
+  const handleSaveClick = async () => {
+    try {
+      const res = await fetch('/api/resume/list');
+      if (res.ok) {
+        const json = await res.json();
+        setExistingResumes(json.resumes || []);
+      } else {
+        setExistingResumes([]);
+      }
+    } catch (e) {
       setExistingResumes([]);
     }
-  } catch (e) {
-    setExistingResumes([]);
-  }
-  setShowSaveModal(true);
-};
+    setShowSaveModal(true);
+  };
 
-const handleSaveNew = async () => {
-  setShowSaveModal(false);
-  await saveResume(); // existing logic
-};
+  const handleSaveNew = async () => {
+    setShowSaveModal(false);
+    await saveResume();
+  };
 
-const handleOverwrite = async (resumeId, resumeName) => {
-  setShowSaveModal(false);
+  const handleOverwrite = async (resumeId, resumeName) => {
+    setShowSaveModal(false);
 
-  try {
-    const res = await fetch('/api/resume/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: resumeId,
-        name: resumeName,
-        content: {
-          template: router.query.template === 'hybrid' ? 'hybrid' : 'reverse',
-          data: resumeData,
-        },
-        setPrimary: true,
-      }),
-    });
+    try {
+      const res = await fetch('/api/resume/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: resumeId,
+          name: resumeName,
+          content: {
+            template: router.query.template === 'hybrid' ? 'hybrid' : 'reverse',
+            data: resumeData,
+          },
+          setPrimary: true,
+        }),
+      });
 
-    if (!res.ok) throw new Error('Save failed');
+      if (!res.ok) throw new Error('Save failed');
 
-    setSaveEventAt(new Date().toISOString());
-  } catch (e) {
-    alert('Save failed. Try again.');
-  }
-};
+      setSaveEventAt(new Date().toISOString());
+    } catch (e) {
+      alert('Save failed. Try again.');
+    }
+  };
+
+  const saveModal =
+    typeof window !== 'undefined' && showSaveModal
+      ? createPortal(
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 999999,
+              background: 'rgba(0,0,0,0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onClick={() => setShowSaveModal(false)}
+          >
+            <div
+              style={{
+                background: 'white',
+                borderRadius: 16,
+                padding: 28,
+                width: 'min(480px, 92vw)',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 6 }}>
+                Save Resume
+              </div>
+
+              <div style={{ color: '#64748B', fontSize: 14, marginBottom: 20 }}>
+                Save as a new resume, or overwrite an existing one.
+              </div>
+
+              <button
+                onClick={handleSaveNew}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  background: ORANGE,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 10,
+                  fontWeight: 800,
+                  fontSize: 15,
+                  cursor: 'pointer',
+                  marginBottom: 16,
+                }}
+              >
+                + Save as new resume
+              </button>
+
+              {existingResumes.length > 0 && (
+                <>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 12,
+                      color: '#94A3B8',
+                      marginBottom: 10,
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    OVERWRITE EXISTING
+                  </div>
+
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {existingResumes.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => handleOverwrite(r.id, r.name || r.resumeName || 'Resume')}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          background: 'white',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: 10,
+                          fontWeight: 700,
+                          fontSize: 14,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          color: '#1F2937',
+                        }}
+                      >
+                        <div>{r.name || 'Untitled Resume'}</div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: '#94A3B8',
+                            marginTop: 2,
+                          }}
+                        >
+                          {r.updatedAt
+                            ? `Updated ${new Date(r.updatedAt).toLocaleDateString()}`
+                            : 'Saved resume'}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <button
+                onClick={() => setShowSaveModal(false)}
+                style={{
+                  marginTop: 16,
+                  width: '100%',
+                  padding: 10,
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#94A3B8',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
 
   return (
     <SeekerLayout title="Resume Builder" header={Header} right={null} footer={Footer} activeNav="resume-cover">
@@ -1234,7 +1356,6 @@ const handleOverwrite = async (resumeId, resumeName) => {
               <div
                 ref={dropRef}
                 onClick={() => {
-                  // reset first so selecting the same file still triggers onChange
                   if (fileInputRef.current) fileInputRef.current.value = '';
                   fileInputRef.current?.click();
                 }}
@@ -1281,7 +1402,7 @@ const handleOverwrite = async (resumeId, resumeName) => {
                     const f = e.target.files?.[0];
                     console.log('[Hammer] input change fired:', f?.name, f?.type, f?.size);
                     if (f) handleFile(f);
-                    e.target.value = ''; // ✅ allows re-selecting same file
+                    e.target.value = '';
                   }}
                   style={{ display: 'none' }}
                 />
@@ -1465,128 +1586,8 @@ const handleOverwrite = async (resumeId, resumeName) => {
           Saved at {savedTime}
         </div>
       )}
-	  {showSaveModal && (
-  <div
-    style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 9999,
-      background: 'rgba(0,0,0,0.45)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}
-    onClick={() => setShowSaveModal(false)}
-  >
-    <div
-      style={{
-        background: 'white',
-        borderRadius: 16,
-        padding: 28,
-        width: 'min(480px, 92vw)',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
-      }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 6 }}>
-        Save Resume
-      </div>
 
-      <div style={{ color: '#64748B', fontSize: 14, marginBottom: 20 }}>
-        Save as a new resume, or overwrite an existing one.
-      </div>
-
-      <button
-        onClick={handleSaveNew}
-        style={{
-          width: '100%',
-          padding: '12px 16px',
-          background: ORANGE,
-          color: 'white',
-          border: 'none',
-          borderRadius: 10,
-          fontWeight: 800,
-          fontSize: 15,
-          cursor: 'pointer',
-          marginBottom: 16,
-        }}
-      >
-        + Save as new resume
-      </button>
-
-      {existingResumes.length > 0 && (
-        <>
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: 12,
-              color: '#94A3B8',
-              marginBottom: 10,
-              letterSpacing: 0.5,
-            }}
-          >
-            OVERWRITE EXISTING
-          </div>
-
-          <div style={{ display: 'grid', gap: 8 }}>
-            {existingResumes.map((r) => (
-              <button
-                key={r.id}
-                onClick={() =>
-                  handleOverwrite(
-                    r.id,
-                    r.name || r.resumeName || 'Resume'
-                  )
-                }
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: 'white',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: 10,
-                  fontWeight: 700,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  color: '#1F2937',
-                }}
-              >
-                <div>{r.name || 'Untitled Resume'}</div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: '#94A3B8',
-                    marginTop: 2,
-                  }}
-                >
-                  {r.updatedAt
-                    ? `Updated ${new Date(r.updatedAt).toLocaleDateString()}`
-                    : 'Saved resume'}
-                </div>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      <button
-        onClick={() => setShowSaveModal(false)}
-        style={{
-          marginTop: 16,
-          width: '100%',
-          padding: 10,
-          background: 'transparent',
-          border: 'none',
-          color: '#94A3B8',
-          fontWeight: 700,
-          cursor: 'pointer',
-        }}
-      >
-        Cancel
-      </button>
-    </div>
-  </div>
-)}
+      {saveModal}
     </SeekerLayout>
   );
 }
