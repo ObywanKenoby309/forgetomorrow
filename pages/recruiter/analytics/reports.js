@@ -208,6 +208,15 @@ function Body() {
   const [timeToFillData, setTimeToFillData] = useState(null);
   const [qohData, setQohData] = useState(null);
 
+  // null = measuring | true = mobile | false = desktop
+  const [isMobile, setIsMobile] = useState(null);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   useEffect(() => {
     if (!router.isReady) return;
     setFilters(getFiltersFromQuery(router.query));
@@ -1008,6 +1017,9 @@ function Body() {
       activeTab="reports"
       filters={filters}
       onFilterChange={onFilterChange}
+      isMobile={isMobile === true}
+      isDesktop={isMobile === false}
+      mobileShell={isMobile === null}
     >
       {error ? (
         <div

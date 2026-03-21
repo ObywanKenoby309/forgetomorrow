@@ -327,6 +327,15 @@ function Body() {
   const [resolution, setResolution] = useState("standard");
   const [focusedIndex, setFocused]  = useState(null);
 
+  // null = measuring | true = mobile | false = desktop
+  const [isMobile, setIsMobile] = useState(null);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   const exportRefs = useRef({});
   const getExportRef = (key) => {
     if (!exportRefs.current[key]) exportRefs.current[key] = React.createRef();
@@ -419,6 +428,9 @@ function Body() {
       activeTab="presentation"
       filters={filters}
       onFilterChange={onFilterChange}
+      isMobile={isMobile === true}
+      isDesktop={isMobile === false}
+      mobileShell={isMobile === null}
     >
       {error && (
         <div style={{ borderRadius: 12, border: "1px solid rgba(239,68,68,0.20)", background: "rgba(254,242,242,0.86)", color: "#B91C1C", padding: "11px 14px", marginBottom: 16, fontSize: 13 }}>
