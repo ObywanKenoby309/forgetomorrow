@@ -37,8 +37,8 @@ const ORANGE = "#FF7043";
 const SLATE  = "#334155";
 const MUTED  = "#64748B";
 
-// Desktop bleed: negative margins span into sidebar + right rail columns.
-// ONLY used when !isMobile — never touches the DOM on mobile.
+// Desktop bleed: negative margins span into BOTH sidebar (left) AND right rail columns.
+// LEFT_W (240) + GAP (12) on each side.
 const BLEED = -(240 + 12);
 
 // ─── Insight type config ──────────────────────────────────────────────────────

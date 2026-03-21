@@ -302,14 +302,7 @@ export default function RecruiterAnalyticsLayout({
       {/* Analytics-scoped CSS */}
       <style>{ANALYTICS_CSS}</style>
 
-      {/* Hard clip — catches anything that escapes RecruiterLayout's clip */}
-      <div style={{
-        width: "100%",
-        minWidth: 0,
-        maxWidth: "100%",
-        overflowX: "hidden",
-        boxSizing: "border-box",
-      }}>
+      <div style={{ width: "100%", minWidth: 0 }}>
         <div style={{ display: "grid", gap: GAP, width: "100%", minWidth: 0 }}>
 
           {/* ── Page title card ── */}
