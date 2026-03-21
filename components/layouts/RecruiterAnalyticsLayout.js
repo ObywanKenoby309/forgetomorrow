@@ -5,7 +5,7 @@
 // Data hooks live in hooks/useAnalyticsData.
 // Utilities live in lib/analytics/analyticsUtils.
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import AnalyticsFilterBar from "@/components/analytics/AnalyticsFilterBar";
@@ -82,10 +82,35 @@ export default function RecruiterAnalyticsLayout({
 }) {
   const router = useRouter();
 
+  // Synchronous isMobile detection — same pattern as SeekerLayout.
+  // Reads window.innerWidth immediately in the useState initializer
+  // so the correct value is known on frame 1, before any paint.
+  // No timeout, no flash, no blank state.
+  const [isMounted, setIsMounted] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return true;
+  });
+  const [screenIsMobile, setScreenIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 1024;
+  });
+
+  useEffect(() => {
+    setIsMounted(true);
+    const check = () => setScreenIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // Use screenIsMobile to override the isMobile/isDesktop props from the page.
+  // This ensures RecruiterLayout always receives the correct props on first paint.
+  const resolvedIsMobile  = isMounted ? screenIsMobile : isMobile;
+  const resolvedIsDesktop = isMounted ? !screenIsMobile : isDesktop;
+
   const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
   const rightRail    = right || <DefaultRightRail />;
-  const activeRight  = isDesktop ? rightRail : null;
-  const fullBleed    = isDesktop;
+  const activeRight  = resolvedIsDesktop ? rightRail : null;
+  const fullBleed    = resolvedIsDesktop;
 
   function handleNavigate(pathname, extraQuery = {}) {
     router.push({
