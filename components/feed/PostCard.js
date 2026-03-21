@@ -19,6 +19,9 @@ export default function PostCard({
   const router = useRouter();
   const { connectWith } = useConnect();
 
+const [expanded, setExpanded] = useState(false);
+const TRUNCATE_LIMIT = 280; // characters
+
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [hoveredEmoji, setHoveredEmoji] = useState(null);
@@ -573,16 +576,23 @@ export default function PostCard({
       </div>
 
       {/* BODY */}
-      <button
-        type="button"
-        onClick={handleOpenPost}
-        className="w-full text-left"
-        aria-label="Open post"
-      >
-        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-gray-800">
-          {post.body}
-        </p>
-      </button>
+<div className="w-full text-left">
+  <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-gray-800">
+    {!expanded && post.body?.length > TRUNCATE_LIMIT
+      ? post.body.slice(0, TRUNCATE_LIMIT).trimEnd() + '…'
+      : post.body}
+  </p>
+
+  {post.body?.length > TRUNCATE_LIMIT && (
+    <button
+      type="button"
+      onClick={() => setExpanded((v) => !v)}
+      className="mt-1 text-sm font-semibold text-orange-500 hover:text-orange-600"
+    >
+      {expanded ? 'See less' : 'See more'}
+    </button>
+  )}
+</div>
 
       {/* ATTACHMENTS (minimal, safe display) */}
       {safeAttachments.length > 0 ? (
