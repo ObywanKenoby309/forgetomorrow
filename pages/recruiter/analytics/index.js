@@ -107,26 +107,29 @@ function MobileCarousel({ cards }) {
         }}
       >
         <div
-          ref={trackRef}
-          style={{
-            display: "flex",
-            width: "100%",
-            maxWidth: "100%",
-            overflowX: "auto",
-            scrollSnapType: "x mandatory",
-            msOverflowStyle: "none",
-            scrollbarWidth: "none",
-            WebkitOverflowScrolling: "touch",
-          }}
-        >
+  ref={trackRef}
+  style={{
+    display: "flex",
+    gap: 10, // 👈 THIS is the fix
+    paddingLeft: 2,
+    paddingRight: 2,
+    width: "100%",
+    maxWidth: "100%",
+    overflowX: "auto",
+    scrollSnapType: "x mandatory",
+    msOverflowStyle: "none",
+    scrollbarWidth: "none",
+    WebkitOverflowScrolling: "touch",
+  }}
+>
           {cards.map((card, i) => (
             <div
               key={i}
               style={{
-                flex: "0 0 100%",
-                width: "100%",
-                minWidth: "100%",
-                maxWidth: "100%",
+                flex: "0 0 calc(100% - 6px)",
+				width: "calc(100% - 6px)",
+				minWidth: "calc(100% - 6px)",
+				maxWidth: "calc(100% - 6px)",
                 scrollSnapAlign: "start",
                 boxSizing: "border-box",
                 height: 360,
@@ -649,12 +652,14 @@ function Body() {
             <KPICard label="Hires" value={loading ? "…" : totalHires} />
           </section>
 
-          {isEnterprise ? (
-            <>
-              <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
-              <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
-            </>
-          ) : (
+            {isEnterprise ? (
+			  <>
+				<div style={{ marginTop: 12 }}>
+				  <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
+				</div>
+				<MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
+			  </>
+			) : (
             <FeatureLock label="Full Analytics">
               <MobileCarousel cards={[execSnapshotCard, recruiterActivityCard, forgeInsightsCard]} />
               <MobileCarousel cards={[sourcePerformanceCard, applicationFunnelCard, reportGatewaysCard]} />
