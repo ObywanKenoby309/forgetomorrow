@@ -61,6 +61,7 @@ export default function ExecutiveSnapshotCard({
         </div>
       </div>
 
+      {/* 🔥 BUTTON ROW (UPDATED) */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         <Link
           href="/recruiter/analytics/reports"
@@ -76,6 +77,7 @@ export default function ExecutiveSnapshotCard({
         >
           Report details
         </Link>
+
         <Link
           href="/recruiter/analytics/presentation"
           style={{
@@ -90,38 +92,25 @@ export default function ExecutiveSnapshotCard({
         >
           Visuals
         </Link>
-      </div>
 
-      <div style={{ marginTop: 10, marginBottom: 14 }}>
-        <button
-          onClick={async () => {
-            await fetch("/api/analytics/send-snapshot", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                recipients: ["test@company.com"],
-                snapshot: {
-                  topSource: topSource?.name,
-                  acceptance: offerAcceptanceRate,
-                },
-              }),
-            });
-            alert("Snapshot sent");
-          }}
+        {/* ✅ NEW: ROUTE TO DELIVERY PAGE */}
+        <Link
+          href="/recruiter/analytics/snapshot-delivery"
           style={{
-            borderRadius: 10,
+            textDecoration: "none",
+            borderRadius: 999,
             background: ORANGE,
             color: "#fff",
             fontSize: 12,
             fontWeight: 800,
-            padding: "8px 12px",
-            border: "none",
-            cursor: "pointer",
+            padding: "7px 12px",
           }}
         >
           Send Snapshot
-        </button>
+        </Link>
       </div>
+
+      {/* ❌ REMOVED old button block */}
 
       <div style={{ display: "grid", gridTemplateColumns: compactStatColumns, gap: 10 }}>
         <StatTile
