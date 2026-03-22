@@ -199,8 +199,7 @@ function regionFromTimeZone(tz) {
 
 function locationLabelFromTimeZone(tz) {
   if (tz === "UTC") return "UTC";
-  const city = tz.split("/").slice(1).join(" / ").replace(/_/g, " ");
-  return city;
+  return tz.split("/").slice(1).join(" / ").replace(/_/g, " ");
 }
 
 function prettyTimeZoneLabel(tz) {
@@ -452,7 +451,8 @@ function TimeZoneSelector({
         <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
           {detectedTimezone ? (
             <div style={{ fontSize: 12, color: MUTED }}>
-              Detected current time zone: <strong style={{ color: SLATE }}>{prettyTimeZoneLabel(detectedTimezone)}</strong>
+              Detected current time zone:{" "}
+              <strong style={{ color: SLATE }}>{prettyTimeZoneLabel(detectedTimezone)}</strong>
             </div>
           ) : null}
 
@@ -467,6 +467,7 @@ function TimeZoneSelector({
 
 export default function SnapshotDeliveryPage() {
   const [isMobile, setIsMobile] = useState(false);
+  const [loadingSchedule, setLoadingSchedule] = useState(true);
   const [emails, setEmails] = useState("");
   const [snapshotType, setSnapshotType] = useState("executive");
   const [cadence, setCadence] = useState("weekly");
@@ -509,6 +510,47 @@ export default function SnapshotDeliveryPage() {
     }
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+
+    async function loadSchedule() {
+      try {
+        const res = await fetch("/api/analytics/save-snapshot-schedule");
+        const data = await res.json();
+
+        if (!alive || !data?.success || !data?.schedule) {
+          if (alive) setLoadingSchedule(false);
+          return;
+        }
+
+        const schedule = data.schedule;
+
+        setEmails(schedule.recipients || "");
+        setCadence(schedule.cadence || "weekly");
+        setTimezone(schedule.timezone || "America/Chicago");
+        setTimeZoneRegion(regionFromTimeZone(schedule.timezone || "America/Chicago"));
+        setTimeOfDay(schedule.timeOfDay || "08:00");
+        setWeeklyDay(schedule.weeklyDay || "Monday");
+        setMonthlyMode(schedule.monthlyMode || "date");
+        setMonthlyDate(schedule.monthlyDate || "1");
+        setMonthlyOrdinal(schedule.monthlyOrdinal || "First");
+        setMonthlyWeekday(schedule.monthlyWeekday || "Monday");
+        setIncludePng(!!schedule.includePng);
+        setIncludeInsights(!!schedule.includeInsights);
+      } catch (err) {
+        console.error("Failed to load snapshot schedule", err);
+      } finally {
+        if (alive) setLoadingSchedule(false);
+      }
+    }
+
+    loadSchedule();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const currentRegionZones = useMemo(() => {
     return timeZoneGroups.find((group) => group.region === timeZoneRegion)?.zones || [];
   }, [timeZoneGroups, timeZoneRegion]);
@@ -536,7 +578,7 @@ export default function SnapshotDeliveryPage() {
     setSending(true);
 
     try {
-      await fetch("/api/analytics/send-snapshot", {
+      const res = await fetch("/api/analytics/send-snapshot", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -547,11 +589,23 @@ export default function SnapshotDeliveryPage() {
           includePng,
           includeInsights,
           timezone,
-          timeZoneRegion,
+          cadence,
+          timeOfDay,
+          weeklyDay,
+          monthlyMode,
+          monthlyDate,
+          monthlyOrdinal,
+          monthlyWeekday,
         }),
       });
 
-      alert("Snapshot sent");
+      const data = await res.json();
+
+      if (data?.success) {
+        alert("Snapshot sent");
+      } else {
+        alert(data?.error || "Failed to send snapshot");
+      }
     } catch {
       alert("Failed to send snapshot");
     }
@@ -560,43 +614,43 @@ export default function SnapshotDeliveryPage() {
   };
 
   const handleSaveSchedule = async () => {
-  if (!parsedRecipients.length) {
-    alert("Add at least one recipient");
-    return;
-  }
-
-  try {
-    const res = await fetch("/api/analytics/save-snapshot-schedule", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        recipients: emails,
-        cadence,
-        timezone,
-        timeOfDay,
-        weeklyDay,
-        monthlyMode,
-        monthlyDate,
-        monthlyOrdinal,
-        monthlyWeekday,
-        includePng,
-        includeInsights,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      alert("Schedule saved");
-    } else {
-      alert("Failed to save");
+    if (!parsedRecipients.length) {
+      alert("Add at least one recipient");
+      return;
     }
-  } catch (err) {
-    alert("Error saving schedule");
-  }
-};
+
+    try {
+      const res = await fetch("/api/analytics/save-snapshot-schedule", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipients: emails,
+          cadence,
+          timezone,
+          timeOfDay,
+          weeklyDay,
+          monthlyMode,
+          monthlyDate,
+          monthlyOrdinal,
+          monthlyWeekday,
+          includePng,
+          includeInsights,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert("Schedule saved");
+      } else {
+        alert("Failed to save");
+      }
+    } catch (err) {
+      alert("Error saving schedule");
+    }
+  };
 
   const rightRail = (
     <div style={{ display: "grid", gap: 12 }}>
@@ -773,6 +827,7 @@ export default function SnapshotDeliveryPage() {
           <div style={{ marginTop: 14 }}>
             <button
               onClick={handleSaveSchedule}
+              disabled={loadingSchedule}
               style={{
                 borderRadius: 10,
                 background: SLATE,
@@ -780,11 +835,12 @@ export default function SnapshotDeliveryPage() {
                 fontWeight: 800,
                 padding: "11px 16px",
                 border: "none",
-                cursor: "pointer",
+                cursor: loadingSchedule ? "not-allowed" : "pointer",
                 minWidth: 160,
+                opacity: loadingSchedule ? 0.7 : 1,
               }}
             >
-              Save Schedule
+              {loadingSchedule ? "Loading..." : "Save Schedule"}
             </button>
           </div>
         </Section>
@@ -840,7 +896,7 @@ export default function SnapshotDeliveryPage() {
           <div style={{ marginTop: 14 }}>
             <button
               onClick={handleSend}
-              disabled={sending}
+              disabled={sending || loadingSchedule}
               style={{
                 borderRadius: 10,
                 background: ORANGE,
@@ -848,8 +904,9 @@ export default function SnapshotDeliveryPage() {
                 fontWeight: 800,
                 padding: "11px 16px",
                 border: "none",
-                cursor: "pointer",
+                cursor: sending || loadingSchedule ? "not-allowed" : "pointer",
                 minWidth: 140,
+                opacity: sending || loadingSchedule ? 0.7 : 1,
               }}
             >
               {sending ? "Sending..." : "Send Now"}
