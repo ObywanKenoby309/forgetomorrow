@@ -357,7 +357,7 @@ export default function SeekerDashboard() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) => chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
-  const scope = resolveScopeFromChrome(chrome);
+  const scope = 'SEEKER';
   const chromeKey = chrome || 'seeker';
   const seekerActiveNav = chromeKey === 'coach' || chromeKey.startsWith('recruiter') ? 'seeker-dashboard' : 'dashboard';
 
