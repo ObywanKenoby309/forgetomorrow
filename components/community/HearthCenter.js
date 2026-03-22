@@ -74,8 +74,6 @@ function DesktopGrid({ tiles, withChrome }) {
           display: 'grid',
           gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
           gap: 16,
-          overflowX: 'hidden',
-          paddingRight: 4,
         }}
       >
         {tiles.map(({ title, desc, href, status, img }) => (
