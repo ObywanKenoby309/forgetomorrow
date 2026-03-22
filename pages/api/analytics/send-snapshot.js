@@ -18,7 +18,9 @@ export default async function handler(req, res) {
 
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
-      to: recipients.join(","),
+      to: Array.isArray(recipients)
+		? recipients.join(",")
+		: recipients,
       subject: "Executive Snapshot",
       html: `
         <h2>Executive Snapshot</h2>
