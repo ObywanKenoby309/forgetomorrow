@@ -1030,6 +1030,22 @@ model RecruiterCalendarItem {
   @@map("recruiter_calendar_items")
 }
 
+model SnapshotSchedule {
+  id               Int      @id
+  recipients       String
+  cadence          String
+  timezone         String
+  timeOfDay        String
+  weeklyDay        String?
+  monthlyMode      String?
+  monthlyDate      String?
+  monthlyOrdinal   String?
+  monthlyWeekday   String?
+  includePng       Boolean  @default(true)
+  includeInsights  Boolean  @default(true)
+  updatedAt        DateTime @updatedAt
+}
+
 model SeekerCalendarItem {
   id           String   @id @default(cuid())
   userId       String

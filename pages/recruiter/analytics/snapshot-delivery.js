@@ -559,18 +559,44 @@ export default function SnapshotDeliveryPage() {
     setSending(false);
   };
 
-  const handleSaveSchedule = () => {
-    const summary =
-      cadence === "daily"
-        ? `Daily at ${timeOfDay} (${prettyTimeZoneLabel(timezone)})`
-        : cadence === "weekly"
-          ? `Weekly on ${weeklyDay} at ${timeOfDay} (${prettyTimeZoneLabel(timezone)})`
-          : monthlyMode === "date"
-            ? `Monthly on day ${monthlyDate} at ${timeOfDay} (${prettyTimeZoneLabel(timezone)})`
-            : `Monthly on the ${monthlyOrdinal.toLowerCase()} ${monthlyWeekday} at ${timeOfDay} (${prettyTimeZoneLabel(timezone)})`;
+  const handleSaveSchedule = async () => {
+  if (!parsedRecipients.length) {
+    alert("Add at least one recipient");
+    return;
+  }
 
-    alert(`Schedule saving is the next DB/API wiring step.\n\nCurrent rule:\n${summary}`);
-  };
+  try {
+    const res = await fetch("/api/analytics/save-snapshot-schedule", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipients: emails,
+        cadence,
+        timezone,
+        timeOfDay,
+        weeklyDay,
+        monthlyMode,
+        monthlyDate,
+        monthlyOrdinal,
+        monthlyWeekday,
+        includePng,
+        includeInsights,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      alert("Schedule saved");
+    } else {
+      alert("Failed to save");
+    }
+  } catch (err) {
+    alert("Error saving schedule");
+  }
+};
 
   const rightRail = (
     <div style={{ display: "grid", gap: 12 }}>

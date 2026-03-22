@@ -1,21 +1,35 @@
-// pages/api/analytics/send-snapshot.js
+import nodemailer from "nodemailer";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).end();
   }
 
+  const { recipients, snapshotType } = req.body;
+
   try {
-    const { recipients, snapshot } = req.body;
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
 
-    if (!recipients || !recipients.length) {
-      return res.status(400).json({ error: "Recipients required" });
-    }
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to: recipients.join(","),
+      subject: "Executive Snapshot",
+      html: `
+        <h2>Executive Snapshot</h2>
+        <p>This is your current recruiter performance snapshot.</p>
+        <p>Type: ${snapshotType}</p>
+      `,
+    });
 
-    // TODO: replace with real email service (Resend, SendGrid, etc)
-    console.log("Sending snapshot to:", recipients);
-
-    return res.status(200).json({ success: true });
+    res.status(200).json({ success: true });
   } catch (err) {
-    return res.status(500).json({ error: "Failed to send snapshot" });
+    console.error(err);
+    res.status(500).json({ error: "Email failed" });
   }
 }
