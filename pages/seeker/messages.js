@@ -9,35 +9,47 @@ const SignalMessages = dynamic(
   { ssr: false }
 );
 
+// ✅ Added GLASS + tokens (minimal change)
+const GLASS = {
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
+const ORANGE = '#FF7043';
+const MUTED = '#64748B';
+
 export default function Messages() {
+  // ✅ UPDATED HEADER (glass style)
   const HeaderBox = (
     <section
       style={{
-        background: 'white',
-        borderRadius: 12,
+        ...GLASS,
+        borderRadius: 18,
         padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        border: '1px solid #eee',
         textAlign: 'center',
       }}
     >
-      <h1
+      <div
         style={{
           margin: 0,
-          color: '#ff8a65',
+          color: ORANGE,
           fontSize: 24,
-          fontWeight: 800,
+          fontWeight: 900,
         }}
       >
         The Signal
-      </h1>
-      <p
+      </div>
+      <div
         style={{
-          margin: '6px auto 0',
-          color: '#607D8B',
+          marginTop: 6,
+          color: MUTED,
           maxWidth: 720,
           fontSize: 14,
           lineHeight: 1.5,
+          marginInline: 'auto',
         }}
       >
         Chat with coaches, recruiters, and peers all in one place.
@@ -45,9 +57,9 @@ export default function Messages() {
         <span style={{ fontSize: 13 }}>
           New conversations are started from user profile and candidate cards.
           Once you send a message from someone&apos;s profile, the thread will
-          appear here in The Signal so you can pick it up any time.
+          appear here so you can pick it up any time.
         </span>
-      </p>
+      </div>
     </section>
   );
 

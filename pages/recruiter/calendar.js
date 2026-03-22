@@ -15,15 +15,18 @@ const GLASS = {
   WebkitBackdropFilter: 'blur(10px)',
 };
 
+const ORANGE = '#FF7043';
+const MUTED = '#64748B';
+
 export default function RecruiterCalendarPage() {
   const HeaderBox = (
-    <section style={{ ...GLASS, padding: 16, textAlign: 'center' }}>
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
+    <section style={{ ...GLASS, borderRadius: 18, padding: 16, textAlign: 'center' }}>
+      <div style={{ margin: 0, color: ORANGE, fontSize: 24, fontWeight: 900 }}>
         Recruiter Calendar
-      </h1>
-      <p style={{ margin: '6px auto 0', color: '#546E7A', maxWidth: 720, fontWeight: 600 }}>
+      </div>
+      <div style={{ marginTop: 6, color: MUTED, maxWidth: 720, fontSize: 14, lineHeight: 1.5, marginInline: 'auto' }}>
         Block interviews, intakes, outreach blocks, and offer milestones — all in one place.
-      </p>
+      </div>
     </section>
   );
 

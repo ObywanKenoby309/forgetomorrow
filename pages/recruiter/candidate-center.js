@@ -16,6 +16,9 @@ const GLASS = {
   WebkitBackdropFilter: "blur(10px)",
 };
 
+const ORANGE = "#FF7043";
+const MUTED = "#64748B";
+
 // ─── SSR-safe mobile hook ─────────────────────────────────────────────────────
 function useIsMobile(breakpoint = 1024) {
   const [isMobile, setIsMobile] = useState(null);
@@ -316,13 +319,13 @@ export default function CandidateCenter() {
   const tiles = buildTiles(isEnterprise);
 
   const HeaderBox = (
-    <section style={{ textAlign: "center", padding: "8px 0" }}>
-      <h1 style={{ color: "#FF7043", fontSize: 28, fontWeight: 800, margin: 0 }}>
+    <section style={{ ...GLASS, borderRadius: 18, padding: 16, textAlign: "center" }}>
+      <div style={{ fontSize: 24, fontWeight: 900, color: ORANGE }}>
         Candidate Center
-      </h1>
-      <p style={{ marginTop: 8, color: "#546E7A", fontSize: 14 }}>
+      </div>
+      <div style={{ fontSize: 14, color: MUTED, marginTop: 6 }}>
         Internal search, external comparisons, and talent pools — all in one place.
-      </p>
+      </div>
     </section>
   );
 

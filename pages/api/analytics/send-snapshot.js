@@ -1,33 +1,113 @@
 // pages/api/analytics/send-snapshot.js
 import { safeSendMail } from "@/lib/email";
 
-function formatCadenceSummary({
-  cadence,
-  timezone,
-  timeOfDay,
-  weeklyDay,
-  monthlyMode,
-  monthlyDate,
-  monthlyOrdinal,
-  monthlyWeekday,
-}) {
-  if (cadence === "daily") {
-    return `Daily at ${timeOfDay || "08:00"} (${timezone || "Not set"})`;
-  }
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
-  if (cadence === "weekly") {
-    return `Weekly on ${weeklyDay || "Monday"} at ${timeOfDay || "08:00"} (${timezone || "Not set"})`;
-  }
+function formatMetric(value, suffix = "") {
+  if (value === null || value === undefined || value === "") return "—";
+  return `${value}${suffix}`;
+}
 
-  if (cadence === "monthly") {
-    if (monthlyMode === "ordinal") {
-      return `Monthly on the ${(monthlyOrdinal || "First").toLowerCase()} ${monthlyWeekday || "Monday"} at ${timeOfDay || "08:00"} (${timezone || "Not set"})`;
-    }
+function buildKPISection(kpis = {}) {
+  const metrics = [
+    {
+      label: "Job Views",
+      value: formatMetric(
+        kpis.jobViews ?? kpis.totalJobViews ?? kpis.views ?? kpis.totalViews
+      ),
+    },
+    {
+      label: "Applications",
+      value: formatMetric(
+        kpis.applies ?? kpis.totalApplies ?? kpis.applications
+      ),
+    },
+    {
+      label: "Conversion Rate",
+      value: formatMetric(
+        kpis.conversionRate ?? kpis.viewToApplyRate,
+        "%"
+      ),
+    },
+    {
+      label: "Time to Fill",
+      value: formatMetric(
+        kpis.avgTimeToFill ?? kpis.timeToFill,
+        " days"
+      ),
+    },
+  ];
 
-    return `Monthly on day ${monthlyDate || "1"} at ${timeOfDay || "08:00"} (${timezone || "Not set"})`;
-  }
+  return `
+    <div style="margin:0 0 28px 0;">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;">
+        ${metrics
+          .map(
+            (m) => `
+          <div style="padding:18px;border:1px solid #E2E8F0;border-radius:14px;background:#F8FAFC;">
+            <div style="font-size:12px;color:#64748B;margin-bottom:8px;">${escapeHtml(m.label)}</div>
+            <div style="font-size:30px;font-weight:800;color:#0F172A;">${escapeHtml(m.value)}</div>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
 
-  return "Not scheduled";
+function buildSection(title, content, highlight = false) {
+  if (!content) return "";
+
+  return `
+    <div style="
+      margin:0 0 20px 0;
+      padding:20px;
+      border-radius:14px;
+      border:1px solid ${highlight ? "#FBD5C6" : "#E2E8F0"};
+      background:${highlight ? "#FFF7F3" : "#FFFFFF"};
+    ">
+      <div style="
+        font-size:13px;
+        font-weight:800;
+        letter-spacing:0.06em;
+        text-transform:uppercase;
+        color:${highlight ? "#C2410C" : "#94A3B8"};
+        margin-bottom:10px;
+      ">
+        ${escapeHtml(title)}
+      </div>
+      <div style="font-size:16px;line-height:1.7;color:#0F172A;">
+        ${escapeHtml(content)}
+      </div>
+    </div>
+  `;
+}
+
+function buildListSection(title, items = []) {
+  const clean = Array.isArray(items)
+    ? items.map((i) => String(i).trim()).filter(Boolean)
+    : [];
+
+  if (!clean.length) return "";
+
+  return `
+    <div style="margin-top:18px;padding:18px;border:1px solid #E2E8F0;border-radius:14px;background:#FFFFFF;">
+      <div style="font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#94A3B8;margin-bottom:10px;">
+        ${escapeHtml(title)}
+      </div>
+      <ul style="padding-left:18px;margin:0;color:#334155;line-height:1.8;">
+        ${clean.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+      </ul>
+    </div>
+  `;
 }
 
 export default async function handler(req, res) {
@@ -37,17 +117,14 @@ export default async function handler(req, res) {
 
   const {
     recipients,
-    snapshotType,
-    includePng,
-    includeInsights,
-    timezone,
-    cadence,
-    timeOfDay,
-    weeklyDay,
-    monthlyMode,
-    monthlyDate,
-    monthlyOrdinal,
-    monthlyWeekday,
+    accountName,
+    recruiterName,
+    reportingWindow,
+    kpis,
+    insightSummary,
+    recommendedAction,
+    funnelBreakdown,
+    sourceBreakdown,
   } = req.body || {};
 
   const normalizedRecipients = Array.isArray(recipients)
@@ -61,86 +138,69 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "No recipients provided" });
   }
 
-  const cadenceSummary = formatCadenceSummary({
-    cadence,
-    timezone,
-    timeOfDay,
-    weeklyDay,
-    monthlyMode,
-    monthlyDate,
-    monthlyOrdinal,
-    monthlyWeekday,
-  });
+  const html = `
+    <div style="font-family:Arial,sans-serif;padding:24px;background:#F8FAFC;color:#334155;">
+      <div style="max-width:760px;margin:0 auto;background:#FFFFFF;border-radius:18px;border:1px solid #E2E8F0;overflow:hidden;">
+        
+        <!-- HEADER -->
+        <div style="padding:26px;border-bottom:1px solid #E2E8F0;background:#FFFFFF;">
+          <div style="font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#FF7043;margin-bottom:10px;">
+            Executive Snapshot
+          </div>
+
+          <h1 style="margin:0;font-size:30px;color:#0F172A;">
+            ${escapeHtml(accountName || "Account")}
+          </h1>
+
+          <div style="margin-top:10px;font-size:14px;color:#475569;line-height:1.7;">
+            Prepared for <strong>${escapeHtml(recruiterName || "Recruiter")}</strong><br/>
+            ${escapeHtml(reportingWindow || "")}
+          </div>
+        </div>
+
+        <!-- BODY -->
+        <div style="padding:26px;">
+
+          ${buildKPISection(kpis)}
+
+          ${buildSection("Insight", insightSummary)}
+
+          ${buildSection("Recommended Action", recommendedAction, true)}
+
+          ${buildListSection("Funnel Breakdown", funnelBreakdown)}
+
+          ${buildListSection("Source Breakdown", sourceBreakdown)}
+
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  const text = `
+Executive Snapshot — ${accountName || "Account"}
+
+Prepared for: ${recruiterName || "Recruiter"}
+${reportingWindow || ""}
+
+Key Metrics:
+- Job Views: ${kpis?.jobViews ?? "—"}
+- Applications: ${kpis?.applies ?? "—"}
+- Conversion Rate: ${kpis?.conversionRate ?? "—"}%
+- Time to Fill: ${kpis?.avgTimeToFill ?? "—"} days
+
+${insightSummary ? `Insight:\n${insightSummary}\n` : ""}
+
+${recommendedAction ? `Recommended Action:\n${recommendedAction}\n` : ""}
+`;
 
   try {
     await safeSendMail(
       {
         to: normalizedRecipients.join(","),
-        subject: "Executive Snapshot – ForgeTomorrow",
-        html: `
-          <div style="font-family:Arial,sans-serif;padding:24px;background:#f8fafc;color:#334155;">
-            <div style="max-width:700px;margin:0 auto;background:#ffffff;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;">
-              <div style="padding:20px 24px;background:#fff7f3;border-bottom:1px solid #e2e8f0;">
-                <h1 style="margin:0;font-size:28px;line-height:1.1;color:#FF7043;">Executive Snapshot</h1>
-                <p style="margin:8px 0 0 0;font-size:14px;color:#64748B;">
-                  ForgeTomorrow recruiter reporting summary
-                </p>
-              </div>
-
-              <div style="padding:24px;">
-                <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">
-                  This is your current recruiter performance snapshot. Delivery settings and included content are summarized below.
-                </p>
-
-                <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 18px 0;">
-                  <div style="padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
-                    <div style="font-size:12px;color:#64748B;margin-bottom:6px;">Snapshot type</div>
-                    <div style="font-size:18px;font-weight:800;color:#334155;">${snapshotType || "executive"}</div>
-                  </div>
-
-                  <div style="padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
-                    <div style="font-size:12px;color:#64748B;margin-bottom:6px;">Recipient count</div>
-                    <div style="font-size:18px;font-weight:800;color:#334155;">${normalizedRecipients.length}</div>
-                  </div>
-
-                  <div style="padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
-                    <div style="font-size:12px;color:#64748B;margin-bottom:6px;">Time zone</div>
-                    <div style="font-size:18px;font-weight:800;color:#334155;">${timezone || "Not set"}</div>
-                  </div>
-
-                  <div style="padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
-                    <div style="font-size:12px;color:#64748B;margin-bottom:6px;">Delivery cadence</div>
-                    <div style="font-size:16px;font-weight:800;color:#334155;">${cadenceSummary}</div>
-                  </div>
-                </div>
-
-                <div style="padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;">
-                  <div style="font-size:13px;font-weight:800;color:#334155;margin-bottom:10px;">Included content</div>
-                  <ul style="padding-left:18px;margin:0;color:#475569;line-height:1.8;">
-                    <li>PNG-ready reporting attachment: ${includePng ? "Yes" : "No"}</li>
-                    <li>AI insights summary: ${includeInsights ? "Yes" : "No"}</li>
-                  </ul>
-                </div>
-
-                <div style="margin-top:20px;font-size:12px;color:#64748B;line-height:1.7;">
-                  Sent by ForgeTomorrow Executive Snapshot Delivery Center
-                </div>
-              </div>
-            </div>
-          </div>
-        `,
-        text: [
-          "Executive Snapshot – ForgeTomorrow",
-          "",
-          "This is your current recruiter performance snapshot.",
-          "",
-          `Snapshot type: ${snapshotType || "executive"}`,
-          `Recipient count: ${normalizedRecipients.length}`,
-          `Time zone: ${timezone || "Not set"}`,
-          `Delivery cadence: ${cadenceSummary}`,
-          `PNG-ready reporting attachment: ${includePng ? "Yes" : "No"}`,
-          `AI insights summary: ${includeInsights ? "Yes" : "No"}`,
-        ].join("\n"),
+        subject: `Executive Snapshot — ${accountName || "ForgeTomorrow"}`,
+        html,
+        text,
       },
       { type: "snapshot", to: normalizedRecipients.join(",") }
     );
