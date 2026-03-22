@@ -801,14 +801,14 @@ function CommandBar({
 function HeaderOnly() {
   return (
     <div className="w-full">
-      <GlassPanel className="px-5 py-4 sm:px-6">
+      <GlassPanel className="px-5 py-4 sm:px-6" style={{ borderRadius: 18 }}>
         <div className="flex flex-col items-center text-center">
-          <h1 className="text-2xl font-bold text-[#FF7043]">Candidates</h1>
-          <p className="mt-2 text-sm text-slate-500 max-w-lg leading-snug">
+          <div className="text-[24px] font-black text-[#FF7043]">Candidates</div>
+          <div className="mt-1.5 text-[14px] text-[#64748B] max-w-xl leading-[1.5]">
             Review and manage your active pipeline. Search by name or role,
             filter by location, and on Enterprise use advanced queries to dial in
             exactly who you need.
-          </p>
+          </div>
         </div>
       </GlassPanel>
     </div>
@@ -1647,9 +1647,10 @@ export default function CandidatesPage() {
   const RightCard = (props) => <RightToolsCard {...props} />;
   return (
     <PlanProvider>
-      <RecruiterLayout
+            <RecruiterLayout
         title="Candidates - ForgeTomorrow"
         header={<HeaderOnly />}
+        headerCard={false}
         right={<RightCard />}
         activeNav="candidates"
       >

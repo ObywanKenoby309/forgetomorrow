@@ -341,6 +341,7 @@ export default function CandidateCenter() {
       <RecruiterLayout
         title="ForgeTomorrow — Candidate Center"
         header={HeaderBox}
+        headerCard={false}
         right={RightColumn}
         activeNav="candidate-center"
       />
@@ -353,6 +354,7 @@ export default function CandidateCenter() {
       <RecruiterLayout
         title="ForgeTomorrow — Candidate Center"
         header={HeaderBox}
+        headerCard={false}
         right={null}
         activeNav="candidate-center"
       >
@@ -376,6 +378,7 @@ export default function CandidateCenter() {
     <RecruiterLayout
       title="ForgeTomorrow — Candidate Center"
       header={HeaderBox}
+      headerCard={false}
       right={RightColumn}
       activeNav="candidate-center"
     >
