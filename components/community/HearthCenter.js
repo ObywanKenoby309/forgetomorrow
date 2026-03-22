@@ -428,7 +428,7 @@ export default function HearthCenter() {
         paddingLeft: isMobile ? 0 : 16,
         paddingRight: isMobile ? 0 : 16,
         position: 'relative',
-        overflow: isMobile ? 'hidden' : 'visible',
+        overflow: 'hidden',
       }}
     >
       {/* Ambient glow */}
