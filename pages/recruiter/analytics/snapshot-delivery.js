@@ -1,3 +1,4 @@
+// pages/recruiter/analytics/snapshot-delivery.js
 import { useEffect, useMemo, useState } from "react";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 
@@ -21,210 +22,6 @@ const ORANGE = "#FF7043";
 const SLATE = "#334155";
 const MUTED = "#64748B";
 
-const COUNTRY_TIMEZONES = [
-  {
-    country: "United States",
-    zones: [
-      { value: "America/New_York", label: "Eastern Time" },
-      { value: "America/Chicago", label: "Central Time" },
-      { value: "America/Denver", label: "Mountain Time" },
-      { value: "America/Phoenix", label: "Arizona" },
-      { value: "America/Los_Angeles", label: "Pacific Time" },
-      { value: "America/Anchorage", label: "Alaska" },
-      { value: "Pacific/Honolulu", label: "Hawaii" },
-    ],
-  },
-  {
-    country: "Canada",
-    zones: [
-      { value: "America/St_Johns", label: "Newfoundland" },
-      { value: "America/Halifax", label: "Atlantic" },
-      { value: "America/Toronto", label: "Eastern" },
-      { value: "America/Winnipeg", label: "Central" },
-      { value: "America/Edmonton", label: "Mountain" },
-      { value: "America/Vancouver", label: "Pacific" },
-    ],
-  },
-  {
-    country: "Mexico",
-    zones: [
-      { value: "America/Mexico_City", label: "Central" },
-      { value: "America/Cancun", label: "Quintana Roo" },
-      { value: "America/Chihuahua", label: "Chihuahua" },
-      { value: "America/Tijuana", label: "Baja California" },
-    ],
-  },
-  {
-    country: "Brazil",
-    zones: [
-      { value: "America/Sao_Paulo", label: "São Paulo" },
-      { value: "America/Manaus", label: "Amazonas" },
-      { value: "America/Recife", label: "Recife" },
-    ],
-  },
-  {
-    country: "United Kingdom",
-    zones: [{ value: "Europe/London", label: "United Kingdom" }],
-  },
-  {
-    country: "Ireland",
-    zones: [{ value: "Europe/Dublin", label: "Ireland" }],
-  },
-  {
-    country: "Portugal",
-    zones: [
-      { value: "Europe/Lisbon", label: "Mainland Portugal" },
-      { value: "Atlantic/Azores", label: "Azores" },
-      { value: "Atlantic/Madeira", label: "Madeira" },
-    ],
-  },
-  {
-    country: "Spain",
-    zones: [
-      { value: "Europe/Madrid", label: "Mainland Spain" },
-      { value: "Atlantic/Canary", label: "Canary Islands" },
-    ],
-  },
-  {
-    country: "France",
-    zones: [{ value: "Europe/Paris", label: "France" }],
-  },
-  {
-    country: "Germany",
-    zones: [{ value: "Europe/Berlin", label: "Germany" }],
-  },
-  {
-    country: "Netherlands",
-    zones: [{ value: "Europe/Amsterdam", label: "Netherlands" }],
-  },
-  {
-    country: "Belgium",
-    zones: [{ value: "Europe/Brussels", label: "Belgium" }],
-  },
-  {
-    country: "Switzerland",
-    zones: [{ value: "Europe/Zurich", label: "Switzerland" }],
-  },
-  {
-    country: "Italy",
-    zones: [{ value: "Europe/Rome", label: "Italy" }],
-  },
-  {
-    country: "Poland",
-    zones: [{ value: "Europe/Warsaw", label: "Poland" }],
-  },
-  {
-    country: "Sweden",
-    zones: [{ value: "Europe/Stockholm", label: "Sweden" }],
-  },
-  {
-    country: "Norway",
-    zones: [{ value: "Europe/Oslo", label: "Norway" }],
-  },
-  {
-    country: "Denmark",
-    zones: [{ value: "Europe/Copenhagen", label: "Denmark" }],
-  },
-  {
-    country: "Finland",
-    zones: [{ value: "Europe/Helsinki", label: "Finland" }],
-  },
-  {
-    country: "Latvia",
-    zones: [{ value: "Europe/Riga", label: "Latvia" }],
-  },
-  {
-    country: "Lithuania",
-    zones: [{ value: "Europe/Vilnius", label: "Lithuania" }],
-  },
-  {
-    country: "Estonia",
-    zones: [{ value: "Europe/Tallinn", label: "Estonia" }],
-  },
-  {
-    country: "Ukraine",
-    zones: [{ value: "Europe/Kyiv", label: "Ukraine" }],
-  },
-  {
-    country: "Greece",
-    zones: [{ value: "Europe/Athens", label: "Greece" }],
-  },
-  {
-    country: "Turkey",
-    zones: [{ value: "Europe/Istanbul", label: "Turkey" }],
-  },
-  {
-    country: "South Africa",
-    zones: [{ value: "Africa/Johannesburg", label: "South Africa" }],
-  },
-  {
-    country: "UAE",
-    zones: [{ value: "Asia/Dubai", label: "United Arab Emirates" }],
-  },
-  {
-    country: "Saudi Arabia",
-    zones: [{ value: "Asia/Riyadh", label: "Saudi Arabia" }],
-  },
-  {
-    country: "India",
-    zones: [{ value: "Asia/Kolkata", label: "India" }],
-  },
-  {
-    country: "Singapore",
-    zones: [{ value: "Asia/Singapore", label: "Singapore" }],
-  },
-  {
-    country: "China",
-    zones: [{ value: "Asia/Shanghai", label: "China" }],
-  },
-  {
-    country: "Japan",
-    zones: [{ value: "Asia/Tokyo", label: "Japan" }],
-  },
-  {
-    country: "South Korea",
-    zones: [{ value: "Asia/Seoul", label: "South Korea" }],
-  },
-  {
-    country: "Philippines",
-    zones: [{ value: "Asia/Manila", label: "Philippines" }],
-  },
-  {
-    country: "Indonesia",
-    zones: [
-      { value: "Asia/Jakarta", label: "Western Indonesia" },
-      { value: "Asia/Makassar", label: "Central Indonesia" },
-      { value: "Asia/Jayapura", label: "Eastern Indonesia" },
-    ],
-  },
-  {
-    country: "Thailand",
-    zones: [{ value: "Asia/Bangkok", label: "Thailand" }],
-  },
-  {
-    country: "Malaysia",
-    zones: [{ value: "Asia/Kuala_Lumpur", label: "Malaysia" }],
-  },
-  {
-    country: "Australia",
-    zones: [
-      { value: "Australia/Perth", label: "Western Australia" },
-      { value: "Australia/Adelaide", label: "South Australia" },
-      { value: "Australia/Darwin", label: "Northern Territory" },
-      { value: "Australia/Brisbane", label: "Queensland" },
-      { value: "Australia/Sydney", label: "New South Wales / ACT" },
-      { value: "Australia/Hobart", label: "Tasmania" },
-    ],
-  },
-  {
-    country: "New Zealand",
-    zones: [
-      { value: "Pacific/Auckland", label: "New Zealand" },
-      { value: "Pacific/Chatham", label: "Chatham Islands" },
-    ],
-  },
-];
-
 const WEEKDAY_OPTIONS = [
   "Sunday",
   "Monday",
@@ -236,6 +33,104 @@ const WEEKDAY_OPTIONS = [
 ];
 
 const ORDINAL_OPTIONS = ["First", "Second", "Third", "Fourth", "Last"];
+
+const FALLBACK_TIMEZONES = [
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Phoenix",
+  "America/Anchorage",
+  "Pacific/Honolulu",
+  "America/Toronto",
+  "America/Vancouver",
+  "America/Mexico_City",
+  "America/Sao_Paulo",
+  "Europe/London",
+  "Europe/Dublin",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Madrid",
+  "Europe/Rome",
+  "Europe/Amsterdam",
+  "Europe/Zurich",
+  "Europe/Warsaw",
+  "Europe/Stockholm",
+  "Europe/Helsinki",
+  "Europe/Riga",
+  "Europe/Vilnius",
+  "Europe/Tallinn",
+  "Europe/Athens",
+  "Europe/Istanbul",
+  "Europe/Kyiv",
+  "Africa/Johannesburg",
+  "Africa/Cairo",
+  "Africa/Lagos",
+  "Asia/Dubai",
+  "Asia/Riyadh",
+  "Asia/Jerusalem",
+  "Asia/Kolkata",
+  "Asia/Singapore",
+  "Asia/Bangkok",
+  "Asia/Kuala_Lumpur",
+  "Asia/Manila",
+  "Asia/Jakarta",
+  "Asia/Shanghai",
+  "Asia/Hong_Kong",
+  "Asia/Tokyo",
+  "Asia/Seoul",
+  "Australia/Perth",
+  "Australia/Adelaide",
+  "Australia/Brisbane",
+  "Australia/Sydney",
+  "Australia/Hobart",
+  "Pacific/Auckland",
+  "UTC",
+];
+
+function regionFromTimeZone(tz) {
+  if (tz === "UTC") return "UTC / Other";
+  const [prefix] = tz.split("/");
+  if (prefix === "America" || prefix === "Pacific") return "Americas";
+  if (prefix === "Europe") return "Europe";
+  if (prefix === "Africa") return "Africa";
+  if (prefix === "Asia") return "Asia / Middle East";
+  if (prefix === "Australia") return "Oceania";
+  return "UTC / Other";
+}
+
+function prettyTimeZoneLabel(tz) {
+  if (tz === "UTC") return "UTC";
+  const parts = tz.split("/");
+  const region = parts[0];
+  const city = parts.slice(1).join(" / ").replace(/_/g, " ");
+  return `${city} — ${tz}`;
+}
+
+function buildTimeZoneGroups() {
+  let zones = [];
+
+  try {
+    if (typeof Intl !== "undefined" && typeof Intl.supportedValuesOf === "function") {
+      zones = Intl.supportedValuesOf("timeZone");
+    }
+  } catch {
+    zones = [];
+  }
+
+  if (!zones.length) zones = FALLBACK_TIMEZONES;
+
+  const deduped = Array.from(new Set([...zones, "UTC"])).sort((a, b) => a.localeCompare(b));
+
+  const groups = ["Americas", "Europe", "Africa", "Asia / Middle East", "Oceania", "UTC / Other"].map(
+    (region) => ({
+      region,
+      zones: deduped.filter((tz) => regionFromTimeZone(tz) === region),
+    })
+  );
+
+  return groups.filter((group) => group.zones.length > 0);
+}
 
 function Section({ title, subtitle, children }) {
   return (
@@ -370,7 +265,8 @@ export default function SnapshotDeliveryPage() {
   const [cadence, setCadence] = useState("weekly");
   const [sending, setSending] = useState(false);
 
-  const [country, setCountry] = useState("United States");
+  const timeZoneGroups = useMemo(() => buildTimeZoneGroups(), []);
+  const [timeZoneRegion, setTimeZoneRegion] = useState("Americas");
   const [timezone, setTimezone] = useState("America/New_York");
   const [timeOfDay, setTimeOfDay] = useState("08:00");
   const [weeklyDay, setWeeklyDay] = useState("Monday");
@@ -392,14 +288,13 @@ export default function SnapshotDeliveryPage() {
   }, []);
 
   const availableZones = useMemo(() => {
-    return COUNTRY_TIMEZONES.find((item) => item.country === country)?.zones || [];
-  }, [country]);
+    return timeZoneGroups.find((group) => group.region === timeZoneRegion)?.zones || [];
+  }, [timeZoneGroups, timeZoneRegion]);
 
   useEffect(() => {
     if (!availableZones.length) return;
-    const found = availableZones.some((zone) => zone.value === timezone);
-    if (!found) {
-      setTimezone(availableZones[0].value);
+    if (!availableZones.includes(timezone)) {
+      setTimezone(availableZones[0]);
     }
   }, [availableZones, timezone]);
 
@@ -409,6 +304,83 @@ export default function SnapshotDeliveryPage() {
       .map((email) => email.trim())
       .filter(Boolean);
   }, [emails]);
+
+  const header = (
+    <div style={{ textAlign: "center" }}>
+      <h1
+        style={{
+          fontSize: 28,
+          fontWeight: 900,
+          color: ORANGE,
+          lineHeight: 1.05,
+          margin: 0,
+        }}
+      >
+        Executive Snapshot
+      </h1>
+      <div
+        style={{
+          fontSize: 22,
+          fontWeight: 900,
+          color: SLATE,
+          lineHeight: 1.1,
+          marginTop: 2,
+        }}
+      >
+        Delivery Center
+      </div>
+      <p
+        style={{
+          fontSize: 14,
+          color: "#475569",
+          marginTop: 8,
+          maxWidth: 760,
+          marginLeft: "auto",
+          marginRight: "auto",
+          lineHeight: 1.6,
+        }}
+      >
+        Set up recurring snapshot distribution, global delivery timing, and one-time sends from one place.
+      </p>
+    </div>
+  );
+
+  const rightRail = (
+    <div style={{ display: "grid", gap: 12 }}>
+      <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#94A3B8",
+            marginBottom: 8,
+          }}
+        >
+          Sponsored
+        </div>
+        <div
+          style={{
+            borderRadius: 12,
+            border: "1px dashed rgba(100,116,139,0.24)",
+            background: "rgba(255,255,255,0.60)",
+            minHeight: 180,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            textAlign: "center",
+            color: "#94A3B8",
+            fontSize: 13,
+            fontWeight: 700,
+          }}
+        >
+          Reserved ad / sponsor panel
+        </div>
+      </div>
+    </div>
+  );
 
   const handleSend = async () => {
     if (!parsedRecipients.length) {
@@ -429,11 +401,13 @@ export default function SnapshotDeliveryPage() {
           snapshotType,
           includePng,
           includeInsights,
+          timezone,
+          timeZoneRegion,
         }),
       });
 
       alert("Snapshot sent");
-    } catch (err) {
+    } catch {
       alert("Failed to send snapshot");
     }
 
@@ -441,7 +415,7 @@ export default function SnapshotDeliveryPage() {
   };
 
   const handleSaveSchedule = () => {
-    const scheduleSummary =
+    const summary =
       cadence === "daily"
         ? `Daily at ${timeOfDay} (${timezone})`
         : cadence === "weekly"
@@ -450,313 +424,272 @@ export default function SnapshotDeliveryPage() {
             ? `Monthly on day ${monthlyDate} at ${timeOfDay} (${timezone})`
             : `Monthly on the ${monthlyOrdinal.toLowerCase()} ${monthlyWeekday} at ${timeOfDay} (${timezone})`;
 
-    alert(`Schedule saving is the next wiring step.\n\nCurrent rule:\n${scheduleSummary}`);
+    alert(`Schedule saving is the next DB/API wiring step.\n\nCurrent rule:\n${summary}`);
   };
 
   return (
     <RecruiterLayout
       title="Executive Snapshot Delivery Center"
-      subtitle="Configure recipients, send a snapshot now, or build a recurring executive delivery schedule."
+      header={header}
+      right={rightRail}
+      activeNav="analytics"
     >
       <div
         style={{
           display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) minmax(0, 1fr)",
           gap: 12,
-          width: "100%",
-          maxWidth: 1120,
-          margin: "0 auto",
         }}
       >
         <Section
-          title="Executive Snapshot Delivery Center"
-          subtitle="Set up recurring snapshot distribution, global delivery timing, and one-time sends from one place."
+          title="Automated Delivery"
+          subtitle="Build a recurring schedule with full timing details for global delivery."
         >
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+            {["daily", "weekly", "monthly"].map((type) => (
+              <PillButton key={type} active={cadence === type} onClick={() => setCadence(type)}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </PillButton>
+            ))}
+          </div>
+
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
               gap: 12,
             }}
           >
-            <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 14 }}>
-              <div style={{ fontSize: 12, color: MUTED }}>Current purpose</div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: SLATE, marginTop: 4 }}>
-                Executive reporting and scheduled stakeholder delivery
-              </div>
+            <div>
+              <FieldLabel>Region</FieldLabel>
+              <Select value={timeZoneRegion} onChange={(e) => setTimeZoneRegion(e.target.value)}>
+                {timeZoneGroups.map((group) => (
+                  <option key={group.region} value={group.region}>
+                    {group.region}
+                  </option>
+                ))}
+              </Select>
             </div>
-            <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 14 }}>
-              <div style={{ fontSize: 12, color: MUTED }}>Supported modes</div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: SLATE, marginTop: 4 }}>
-                Send now, daily, weekly, monthly
-              </div>
+
+            <div>
+              <FieldLabel>Time zone</FieldLabel>
+              <Select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+                {availableZones.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {prettyTimeZoneLabel(zone)}
+                  </option>
+                ))}
+              </Select>
             </div>
+
+            <div>
+              <FieldLabel>Delivery time</FieldLabel>
+              <Input type="time" value={timeOfDay} onChange={(e) => setTimeOfDay(e.target.value)} />
+            </div>
+
+            {cadence === "weekly" ? (
+              <div>
+                <FieldLabel>Day of week</FieldLabel>
+                <Select value={weeklyDay} onChange={(e) => setWeeklyDay(e.target.value)}>
+                  {WEEKDAY_OPTIONS.map((day) => (
+                    <option key={day} value={day}>
+                      {day}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            ) : null}
+          </div>
+
+          {cadence === "monthly" ? (
+            <div style={{ marginTop: 14 }}>
+              <FieldLabel>Monthly rule</FieldLabel>
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+                <PillButton active={monthlyMode === "date"} onClick={() => setMonthlyMode("date")}>
+                  Specific date
+                </PillButton>
+                <PillButton
+                  active={monthlyMode === "ordinal"}
+                  onClick={() => setMonthlyMode("ordinal")}
+                >
+                  Ordinal weekday
+                </PillButton>
+              </div>
+
+              {monthlyMode === "date" ? (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) minmax(0, 1fr)",
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <FieldLabel>Date of month</FieldLabel>
+                    <Select value={monthlyDate} onChange={(e) => setMonthlyDate(e.target.value)}>
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                        <option key={day} value={String(day)}>
+                          {day}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <FieldLabel>Ordinal</FieldLabel>
+                    <Select value={monthlyOrdinal} onChange={(e) => setMonthlyOrdinal(e.target.value)}>
+                      {ORDINAL_OPTIONS.map((ordinal) => (
+                        <option key={ordinal} value={ordinal}>
+                          {ordinal}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div>
+                    <FieldLabel>Weekday</FieldLabel>
+                    <Select value={monthlyWeekday} onChange={(e) => setMonthlyWeekday(e.target.value)}>
+                      {WEEKDAY_OPTIONS.map((day) => (
+                        <option key={day} value={day}>
+                          {day}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          <div style={{ marginTop: 14 }}>
+            <button
+              onClick={handleSaveSchedule}
+              style={{
+                borderRadius: 10,
+                background: SLATE,
+                color: "#fff",
+                fontWeight: 800,
+                padding: "11px 16px",
+                border: "none",
+                cursor: "pointer",
+                minWidth: 160,
+              }}
+            >
+              Save Schedule
+            </button>
           </div>
         </Section>
 
         <Section
-          title="Recipients"
-          subtitle="Enter emails separated by commas. These recipients are used for both one-time sends and recurring delivery."
+          title="Send Snapshot"
+          subtitle="Immediately send the current executive snapshot to the selected recipients."
         >
-          <Textarea
-            value={emails}
-            onChange={(e) => setEmails(e.target.value)}
-            placeholder="ceo@company.com, coo@company.com, cfo@company.com"
-          />
-
           <div
             style={{
-              marginTop: 12,
               display: "grid",
               gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-              gap: 10,
+              gap: 12,
             }}
           >
-            <ToggleRow
-              checked={sendToSelf}
-              onChange={(e) => setSendToSelf(e.target.checked)}
-              label="Send a copy to me"
-              hint="Useful for visibility and confirmation on recurring delivery."
-            />
-            <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: SLATE }}>Current recipient count</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: ORANGE, marginTop: 6 }}>
-                {parsedRecipients.length}
+            <div>
+              <FieldLabel>Snapshot type</FieldLabel>
+              <Select value={snapshotType} onChange={(e) => setSnapshotType(e.target.value)}>
+                <option value="executive">Executive Snapshot</option>
+                <option value="full-analytics">Full Analytics Summary</option>
+                <option value="funnel">Funnel Summary</option>
+                <option value="source-performance">Source Performance Summary</option>
+              </Select>
+            </div>
+
+            <div>
+              <FieldLabel>Delivery preview</FieldLabel>
+              <div style={{ ...GLASS_SOFT, borderRadius: 10, padding: 12 }}>
+                <div style={{ fontSize: 13, color: MUTED }}>
+                  {parsedRecipients.length
+                    ? `Sending to ${parsedRecipients.length} recipient${parsedRecipients.length === 1 ? "" : "s"}`
+                    : "No recipients entered yet"}
+                </div>
               </div>
             </div>
           </div>
+
+          <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+            <ToggleRow
+              checked={includePng}
+              onChange={(e) => setIncludePng(e.target.checked)}
+              label="Include PNG-ready reporting attachment"
+              hint="Prepare this for executive and stakeholder sharing."
+            />
+            <ToggleRow
+              checked={includeInsights}
+              onChange={(e) => setIncludeInsights(e.target.checked)}
+              label="Include AI insights summary"
+              hint="Adds the recruiter-facing insight layer to the outbound snapshot."
+            />
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <button
+              onClick={handleSend}
+              disabled={sending}
+              style={{
+                borderRadius: 10,
+                background: ORANGE,
+                color: "#fff",
+                fontWeight: 800,
+                padding: "11px 16px",
+                border: "none",
+                cursor: "pointer",
+                minWidth: 140,
+              }}
+            >
+              {sending ? "Sending..." : "Send Now"}
+            </button>
+          </div>
         </Section>
+      </div>
+
+      <Section
+        title="Recipients"
+        subtitle="Enter emails separated by commas. These recipients are used for both one-time sends and recurring delivery."
+      >
+        <Textarea
+          value={emails}
+          onChange={(e) => setEmails(e.target.value)}
+          placeholder="ceo@company.com, coo@company.com, cfo@company.com"
+        />
 
         <div
           style={{
+            marginTop: 12,
             display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) minmax(0, 1.3fr)",
-            gap: 12,
-            alignItems: "start",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+            gap: 10,
           }}
         >
-          <Section
-            title="Send Snapshot"
-            subtitle="Immediately send the current executive snapshot to the selected recipients."
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-                gap: 12,
-              }}
-            >
-              <div>
-                <FieldLabel>Snapshot type</FieldLabel>
-                <Select value={snapshotType} onChange={(e) => setSnapshotType(e.target.value)}>
-                  <option value="executive">Executive Snapshot</option>
-                  <option value="full-analytics">Full Analytics Summary</option>
-                  <option value="funnel">Funnel Summary</option>
-                  <option value="source-performance">Source Performance Summary</option>
-                </Select>
-              </div>
-
-              <div>
-                <FieldLabel>Delivery preview</FieldLabel>
-                <div style={{ ...GLASS_SOFT, borderRadius: 10, padding: 12 }}>
-                  <div style={{ fontSize: 13, color: MUTED }}>
-                    {parsedRecipients.length
-                      ? `Sending to ${parsedRecipients.length} recipient${parsedRecipients.length === 1 ? "" : "s"}`
-                      : "No recipients entered yet"}
-                  </div>
-                </div>
-              </div>
+          <ToggleRow
+            checked={sendToSelf}
+            onChange={(e) => setSendToSelf(e.target.checked)}
+            label="Send a copy to me"
+            hint="Useful for visibility and confirmation on recurring delivery."
+          />
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: SLATE }}>Current recipient count</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: ORANGE, marginTop: 6 }}>
+              {parsedRecipients.length}
             </div>
-
-            <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-              <ToggleRow
-                checked={includePng}
-                onChange={(e) => setIncludePng(e.target.checked)}
-                label="Include PNG-ready reporting attachment"
-                hint="Prepare this for executive and stakeholder sharing."
-              />
-              <ToggleRow
-                checked={includeInsights}
-                onChange={(e) => setIncludeInsights(e.target.checked)}
-                label="Include AI insights summary"
-                hint="Adds the recruiter-facing insight layer to the outbound snapshot."
-              />
-            </div>
-
-            <div style={{ marginTop: 14 }}>
-              <button
-                onClick={handleSend}
-                disabled={sending}
-                style={{
-                  borderRadius: 10,
-                  background: ORANGE,
-                  color: "#fff",
-                  fontWeight: 800,
-                  padding: "11px 16px",
-                  border: "none",
-                  cursor: "pointer",
-                  minWidth: 140,
-                }}
-              >
-                {sending ? "Sending..." : "Send Now"}
-              </button>
-            </div>
-          </Section>
-
-          <Section
-            title="Automated Delivery"
-            subtitle="Build a recurring schedule with the timing details needed for global delivery."
-          >
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-              {["daily", "weekly", "monthly"].map((type) => (
-                <PillButton key={type} active={cadence === type} onClick={() => setCadence(type)}>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </PillButton>
-              ))}
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-                gap: 12,
-              }}
-            >
-              <div>
-                <FieldLabel>Country / region</FieldLabel>
-                <Select value={country} onChange={(e) => setCountry(e.target.value)}>
-                  {COUNTRY_TIMEZONES.map((item) => (
-                    <option key={item.country} value={item.country}>
-                      {item.country}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div>
-                <FieldLabel>Time zone</FieldLabel>
-                <Select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
-                  {availableZones.map((zone) => (
-                    <option key={zone.value} value={zone.value}>
-                      {zone.label} — {zone.value}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div>
-                <FieldLabel>Delivery time</FieldLabel>
-                <Input type="time" value={timeOfDay} onChange={(e) => setTimeOfDay(e.target.value)} />
-              </div>
-
-              {cadence === "weekly" ? (
-                <div>
-                  <FieldLabel>Day of week</FieldLabel>
-                  <Select value={weeklyDay} onChange={(e) => setWeeklyDay(e.target.value)}>
-                    {WEEKDAY_OPTIONS.map((day) => (
-                      <option key={day} value={day}>
-                        {day}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              ) : null}
-            </div>
-
-            {cadence === "monthly" ? (
-              <div style={{ marginTop: 14 }}>
-                <FieldLabel>Monthly rule</FieldLabel>
-
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-                  <PillButton active={monthlyMode === "date"} onClick={() => setMonthlyMode("date")}>
-                    Specific date
-                  </PillButton>
-                  <PillButton
-                    active={monthlyMode === "ordinal"}
-                    onClick={() => setMonthlyMode("ordinal")}
-                  >
-                    Ordinal weekday
-                  </PillButton>
-                </div>
-
-                {monthlyMode === "date" ? (
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) minmax(0, 1fr)",
-                      gap: 12,
-                    }}
-                  >
-                    <div>
-                      <FieldLabel>Date of month</FieldLabel>
-                      <Select value={monthlyDate} onChange={(e) => setMonthlyDate(e.target.value)}>
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                          <option key={day} value={String(day)}>
-                            {day}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-                      gap: 12,
-                    }}
-                  >
-                    <div>
-                      <FieldLabel>Ordinal</FieldLabel>
-                      <Select
-                        value={monthlyOrdinal}
-                        onChange={(e) => setMonthlyOrdinal(e.target.value)}
-                      >
-                        {ORDINAL_OPTIONS.map((ordinal) => (
-                          <option key={ordinal} value={ordinal}>
-                            {ordinal}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-
-                    <div>
-                      <FieldLabel>Weekday</FieldLabel>
-                      <Select
-                        value={monthlyWeekday}
-                        onChange={(e) => setMonthlyWeekday(e.target.value)}
-                      >
-                        {WEEKDAY_OPTIONS.map((day) => (
-                          <option key={day} value={day}>
-                            {day}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : null}
-
-            <div style={{ marginTop: 14 }}>
-              <button
-                onClick={handleSaveSchedule}
-                style={{
-                  borderRadius: 10,
-                  background: SLATE,
-                  color: "#fff",
-                  fontWeight: 800,
-                  padding: "11px 16px",
-                  border: "none",
-                  cursor: "pointer",
-                  minWidth: 160,
-                }}
-              >
-                Save Schedule
-              </button>
-            </div>
-          </Section>
+          </div>
         </div>
-      </div>
+      </Section>
     </RecruiterLayout>
   );
 }
