@@ -74,8 +74,6 @@ function DesktopGrid({ tiles, withChrome }) {
           display: 'grid',
           gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
           gap: 16,
-          maxHeight: 340,
-          overflowY: 'auto',
           overflowX: 'hidden',
           paddingRight: 4,
         }}
