@@ -421,15 +421,35 @@ export default function ActionCenterPage() {
      Header: clean, no tabs
   ------------------------------ */
   const Header = (
-  <FrostPanel className="p-6 text-center">
-    <h1 className="text-2xl md:text-3xl font-bold text-orange-600">
+  <section
+    style={{
+      borderRadius: 18,
+      border: "1px solid rgba(255,255,255,0.22)",
+      background: "rgba(255,255,255,0.58)",
+      boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
+      backdropFilter: "blur(10px)",
+      WebkitBackdropFilter: "blur(10px)",
+      padding: 16,
+      textAlign: "center",
+    }}
+  >
+    <div style={{ fontSize: 24, fontWeight: 900, color: "#FF7043" }}>
       {scopeLabel(scope)}
-    </h1>
-    <p className="text-sm md:text-base text-slate-700 mt-2 max-w-3xl mx-auto">
+    </div>
+    <div
+      style={{
+        marginTop: 6,
+        fontSize: 14,
+        color: "#64748B",
+        maxWidth: 720,
+        marginInline: "auto",
+        lineHeight: 1.5,
+      }}
+    >
       This is your review surface. Items that need attention are on the left. History for
       this category is on the right.
-    </p>
-  </FrostPanel>
+    </div>
+  </section>
 );
 
   /* -----------------------------
@@ -749,11 +769,12 @@ export default function ActionCenterPage() {
           <title>Action Center | ForgeTomorrow</title>
         </Head>
         <RecruiterLayout
-          title="Action Center | ForgeTomorrow"
-          header={Header}
-          right={<RecruiterRightRail />}
-          activeNav="dashboard"
-        >
+  title="Action Center | ForgeTomorrow"
+  header={Header}
+  headerCard={false}
+  right={<RecruiterRightRail />}
+  activeNav="dashboard"
+>
           {Content}
         </RecruiterLayout>
       </>
