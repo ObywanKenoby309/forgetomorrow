@@ -751,19 +751,23 @@ export default function SnapshotDeliveryPage() {
           display: "grid",
           gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 3fr) minmax(0, 2fr)",
           gap: 12,
-          alignItems: "start",
+          alignItems: "stretch",
         }}
       >
-        {/* Recipients — compact, always first */}
-        <Section
-          title="Recipients"
-          subtitle="Enter emails separated by commas. These recipients are used for both one-time sends and recurring delivery."
-        >
+        {/* Recipients — flex column so textarea grows to match Send Now height */}
+        <section style={{ ...GLASS, borderRadius: 18, padding: 16, display: "flex", flexDirection: "column" }}>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Recipients</div>
+            <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
+              Enter emails separated by commas. These recipients are used for both one-time sends and recurring delivery.
+            </div>
+          </div>
+
           <Textarea
             value={emails}
             onChange={(e) => setEmails(e.target.value)}
             placeholder="ceo@company.com, coo@company.com, cfo@company.com"
-            style={{ minHeight: 80 }}
+            style={{ flex: 1, minHeight: 80, resize: "none" }}
           />
 
           <div
@@ -806,14 +810,18 @@ export default function SnapshotDeliveryPage() {
               </div>
             </div>
           </div>
-        </Section>
+        </section>
 
-        {/* Send Now — sticky action panel */}
-        <Section
-          title="Send Snapshot"
-          subtitle="Immediately send the current executive snapshot to the selected recipients."
-        >
-          <div style={{ display: "grid", gap: 10 }}>
+        {/* Send Now — flex column so button pins to bottom */}
+        <section style={{ ...GLASS, borderRadius: 18, padding: 16, display: "flex", flexDirection: "column" }}>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Send Snapshot</div>
+            <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
+              Immediately send the current executive snapshot to the selected recipients.
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gap: 10, flex: 1 }}>
             <div>
               <FieldLabel>Snapshot type</FieldLabel>
               <Select value={snapshotType} onChange={(e) => setSnapshotType(e.target.value)}>
@@ -822,15 +830,6 @@ export default function SnapshotDeliveryPage() {
                 <option value="funnel">Funnel Summary</option>
                 <option value="source-performance">Source Performance Summary</option>
               </Select>
-            </div>
-
-            <div style={{ ...GLASS_SOFT, borderRadius: 10, padding: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: MUTED, marginBottom: 2 }}>Delivery preview</div>
-              <div style={{ fontSize: 13, color: SLATE, fontWeight: 800 }}>
-                {parsedRecipients.length
-                  ? `Sending to ${parsedRecipients.length} recipient${parsedRecipients.length === 1 ? "" : "s"}`
-                  : "No recipients entered yet"}
-              </div>
             </div>
 
             <ToggleRow
@@ -845,28 +844,29 @@ export default function SnapshotDeliveryPage() {
               label="Include AI insights summary"
               hint="Adds the recruiter-facing insight layer to the outbound snapshot."
             />
-
-            <button
-              onClick={handleSend}
-              disabled={sending || loadingSchedule}
-              style={{
-                borderRadius: 10,
-                background: ORANGE,
-                color: "#fff",
-                fontWeight: 800,
-                padding: "13px 16px",
-                border: "none",
-                cursor: sending || loadingSchedule ? "not-allowed" : "pointer",
-                width: "100%",
-                fontSize: 15,
-                opacity: sending || loadingSchedule ? 0.7 : 1,
-                boxShadow: "0 4px 14px rgba(255,112,67,0.30)",
-              }}
-            >
-              {sending ? "Sending..." : "Send Now"}
-            </button>
           </div>
-        </Section>
+
+          <button
+            onClick={handleSend}
+            disabled={sending || loadingSchedule}
+            style={{
+              borderRadius: 10,
+              background: ORANGE,
+              color: "#fff",
+              fontWeight: 800,
+              padding: "13px 16px",
+              border: "none",
+              cursor: sending || loadingSchedule ? "not-allowed" : "pointer",
+              width: "100%",
+              fontSize: 15,
+              opacity: sending || loadingSchedule ? 0.7 : 1,
+              boxShadow: "0 4px 14px rgba(255,112,67,0.30)",
+              marginTop: 14,
+            }}
+          >
+            {sending ? "Sending..." : "Send Now"}
+          </button>
+        </section>
       </div>
 
       {/* ── Row 2: Automated Delivery — full width ── */}
