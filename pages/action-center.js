@@ -813,9 +813,14 @@ export default function ActionCenterPage() {
       <Head>
         <title>Action Center | ForgeTomorrow</title>
       </Head>
-      <SeekerLayout title="Action Center | ForgeTomorrow" header={Header} activeNav="dashboard">
-        {Content}
-      </SeekerLayout>
+      <SeekerLayout
+		title="Action Center | ForgeTomorrow"
+		header={Header}
+		right={<RecruiterRightRail />}
+		activeNav="dashboard"
+	  >
+		{Content}
+	  </SeekerLayout>
     </>
   );
 }
