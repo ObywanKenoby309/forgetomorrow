@@ -789,16 +789,20 @@ export default function SnapshotDeliveryPage() {
               onClick={handleSaveRecipients}
               disabled={savingRecipients}
               style={{
-                borderRadius: 10,
+                borderRadius: 12,
                 background: SLATE,
                 color: "#fff",
                 fontWeight: 800,
-                padding: "11px 16px",
+                padding: "10px 16px",
                 border: "none",
                 cursor: savingRecipients ? "not-allowed" : "pointer",
                 whiteSpace: "nowrap",
                 fontSize: 13,
                 opacity: savingRecipients ? 0.7 : 1,
+                alignSelf: "stretch",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               {savingRecipients ? "Saving..." : "Save Recipients"}
@@ -870,16 +874,21 @@ export default function SnapshotDeliveryPage() {
       </div>
 
       {/* ── Row 2: Automated Delivery — full width ── */}
-      <Section
-        title="Automated Delivery"
-        subtitle="Build a recurring schedule with full timing details for global delivery."
-      >
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-          {["daily", "weekly", "monthly"].map((type) => (
-            <PillButton key={type} active={cadence === type} onClick={() => setCadence(type)}>
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </PillButton>
-          ))}
+      <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+
+        {/* Header row: title + cadence pills right */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Automated Delivery</div>
+            <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Build a recurring schedule with full timing details for global delivery.</div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            {["daily", "weekly", "monthly"].map((type) => (
+              <PillButton key={type} active={cadence === type} onClick={() => setCadence(type)}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </PillButton>
+            ))}
+          </div>
         </div>
 
         <TimeZoneSelector
@@ -894,6 +903,7 @@ export default function SnapshotDeliveryPage() {
           detectedTimezone={detectedTimezone}
         />
 
+        {/* Delivery time + cadence-specific field — always same 2-col layout */}
         <div
           style={{
             display: "grid",
@@ -907,64 +917,98 @@ export default function SnapshotDeliveryPage() {
             <Input type="time" value={timeOfDay} onChange={(e) => setTimeOfDay(e.target.value)} />
           </div>
 
-          {cadence === "weekly" ? (
-            <div>
-              <FieldLabel>Day of week</FieldLabel>
-              <Select value={weeklyDay} onChange={(e) => setWeeklyDay(e.target.value)}>
-                {WEEKDAY_OPTIONS.map((day) => (
-                  <option key={day} value={day}>{day}</option>
-                ))}
-              </Select>
-            </div>
-          ) : null}
-        </div>
+          {/* Right slot — swaps based on cadence, always occupies same space */}
+          <div>
+            {cadence === "weekly" && (
+              <>
+                <FieldLabel>Day of week</FieldLabel>
+                <Select value={weeklyDay} onChange={(e) => setWeeklyDay(e.target.value)}>
+                  {WEEKDAY_OPTIONS.map((day) => (
+                    <option key={day} value={day}>{day}</option>
+                  ))}
+                </Select>
+              </>
+            )}
 
-        {cadence === "monthly" ? (
-          <div style={{ marginTop: 14 }}>
-            <FieldLabel>Monthly rule</FieldLabel>
+            {cadence === "monthly" && (
+              <>
+                {/* Segmented control — Specific date vs Ordinal weekday */}
+                <FieldLabel>Monthly rule</FieldLabel>
+                <div style={{
+                  display: "inline-flex",
+                  borderRadius: 10,
+                  border: "1px solid rgba(51,65,85,0.14)",
+                  background: "rgba(255,255,255,0.60)",
+                  overflow: "hidden",
+                  marginBottom: 10,
+                  width: "100%",
+                }}>
+                  {[
+                    { value: "date",    label: "Specific date" },
+                    { value: "ordinal", label: "Ordinal weekday" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setMonthlyMode(opt.value)}
+                      style={{
+                        flex: 1,
+                        padding: "9px 10px",
+                        border: "none",
+                        background: monthlyMode === opt.value ? SLATE : "transparent",
+                        color: monthlyMode === opt.value ? "#fff" : MUTED,
+                        fontWeight: 800,
+                        fontSize: 12,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        transition: "all 130ms ease",
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-              <PillButton active={monthlyMode === "date"} onClick={() => setMonthlyMode("date")}>
-                Specific date
-              </PillButton>
-              <PillButton active={monthlyMode === "ordinal"} onClick={() => setMonthlyMode("ordinal")}>
-                Ordinal weekday
-              </PillButton>
-            </div>
+                {/* Content swaps inline — no layout shift */}
+                {monthlyMode === "date" ? (
+                  <>
+                    <FieldLabel>Date of month</FieldLabel>
+                    <Select value={monthlyDate} onChange={(e) => setMonthlyDate(e.target.value)}>
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                        <option key={day} value={String(day)}>{day}</option>
+                      ))}
+                    </Select>
+                  </>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div>
+                      <FieldLabel>Ordinal</FieldLabel>
+                      <Select value={monthlyOrdinal} onChange={(e) => setMonthlyOrdinal(e.target.value)}>
+                        {ORDINAL_OPTIONS.map((ordinal) => (
+                          <option key={ordinal} value={ordinal}>{ordinal}</option>
+                        ))}
+                      </Select>
+                    </div>
+                    <div>
+                      <FieldLabel>Weekday</FieldLabel>
+                      <Select value={monthlyWeekday} onChange={(e) => setMonthlyWeekday(e.target.value)}>
+                        {WEEKDAY_OPTIONS.map((day) => (
+                          <option key={day} value={day}>{day}</option>
+                        ))}
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
-            {monthlyMode === "date" ? (
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) minmax(0, 1fr)", gap: 12 }}>
-                <div>
-                  <FieldLabel>Date of month</FieldLabel>
-                  <Select value={monthlyDate} onChange={(e) => setMonthlyDate(e.target.value)}>
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                      <option key={day} value={String(day)}>{day}</option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-                <div>
-                  <FieldLabel>Ordinal</FieldLabel>
-                  <Select value={monthlyOrdinal} onChange={(e) => setMonthlyOrdinal(e.target.value)}>
-                    {ORDINAL_OPTIONS.map((ordinal) => (
-                      <option key={ordinal} value={ordinal}>{ordinal}</option>
-                    ))}
-                  </Select>
-                </div>
-                <div>
-                  <FieldLabel>Weekday</FieldLabel>
-                  <Select value={monthlyWeekday} onChange={(e) => setMonthlyWeekday(e.target.value)}>
-                    {WEEKDAY_OPTIONS.map((day) => (
-                      <option key={day} value={day}>{day}</option>
-                    ))}
-                  </Select>
-                </div>
+            {cadence === "daily" && (
+              <div style={{ ...GLASS_SOFT, borderRadius: 10, padding: 12, height: "100%", display: "flex", alignItems: "center" }}>
+                <div style={{ fontSize: 13, color: MUTED }}>Sends every day at the selected time.</div>
               </div>
             )}
           </div>
-        ) : null}
+        </div>
 
         <div style={{ marginTop: 14 }}>
           <button
@@ -985,7 +1029,7 @@ export default function SnapshotDeliveryPage() {
             {loadingSchedule ? "Loading..." : "Save Schedule"}
           </button>
         </div>
-      </Section>
+      </section>
 
     </RecruiterLayout>
   );
