@@ -35,58 +35,156 @@ const WEEKDAY_OPTIONS = [
 const ORDINAL_OPTIONS = ["First", "Second", "Third", "Fourth", "Last"];
 
 const FALLBACK_TIMEZONES = [
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-  "America/Phoenix",
-  "America/Anchorage",
+  "UTC",
+  "Pacific/Midway",
   "Pacific/Honolulu",
-  "America/Toronto",
-  "America/Vancouver",
+  "America/Anchorage",
+  "America/Adak",
+  "America/Los_Angeles",
+  "America/Tijuana",
+  "America/Phoenix",
+  "America/Denver",
+  "America/Edmonton",
+  "America/Chicago",
   "America/Mexico_City",
+  "America/Winnipeg",
+  "America/New_York",
+  "America/Toronto",
+  "America/Halifax",
+  "America/St_Johns",
   "America/Sao_Paulo",
+  "America/Buenos_Aires",
+  "Atlantic/Azores",
   "Europe/London",
   "Europe/Dublin",
+  "Europe/Lisbon",
   "Europe/Paris",
   "Europe/Berlin",
+  "Europe/Amsterdam",
+  "Europe/Brussels",
   "Europe/Madrid",
   "Europe/Rome",
-  "Europe/Amsterdam",
   "Europe/Zurich",
   "Europe/Warsaw",
+  "Europe/Prague",
+  "Europe/Vienna",
   "Europe/Stockholm",
+  "Europe/Copenhagen",
+  "Europe/Oslo",
   "Europe/Helsinki",
+  "Europe/Athens",
   "Europe/Riga",
   "Europe/Vilnius",
   "Europe/Tallinn",
-  "Europe/Athens",
-  "Europe/Istanbul",
   "Europe/Kyiv",
-  "Africa/Johannesburg",
+  "Europe/Bucharest",
+  "Europe/Istanbul",
   "Africa/Cairo",
+  "Africa/Johannesburg",
   "Africa/Lagos",
-  "Asia/Dubai",
-  "Asia/Riyadh",
+  "Africa/Nairobi",
   "Asia/Jerusalem",
+  "Asia/Riyadh",
+  "Asia/Dubai",
+  "Asia/Tehran",
+  "Asia/Karachi",
   "Asia/Kolkata",
-  "Asia/Singapore",
+  "Asia/Dhaka",
   "Asia/Bangkok",
+  "Asia/Singapore",
   "Asia/Kuala_Lumpur",
   "Asia/Manila",
   "Asia/Jakarta",
   "Asia/Shanghai",
   "Asia/Hong_Kong",
-  "Asia/Tokyo",
+  "Asia/Taipei",
   "Asia/Seoul",
+  "Asia/Tokyo",
   "Australia/Perth",
   "Australia/Adelaide",
+  "Australia/Darwin",
   "Australia/Brisbane",
   "Australia/Sydney",
   "Australia/Hobart",
   "Pacific/Auckland",
-  "UTC",
+  "Pacific/Chatham",
 ];
+
+const TIMEZONE_LABEL_MAP = {
+  UTC: "Coordinated Universal Time",
+  "Pacific/Midway": "Samoa Standard Time",
+  "Pacific/Honolulu": "Hawaii Aleutian Time",
+  "America/Adak": "Hawaii Aleutian Time",
+  "America/Anchorage": "Alaska Time",
+  "America/Los_Angeles": "Pacific Time",
+  "America/Tijuana": "Pacific Time",
+  "America/Phoenix": "Mountain Time Arizona",
+  "America/Denver": "Mountain Time",
+  "America/Edmonton": "Mountain Time Canada",
+  "America/Chicago": "Central Time",
+  "America/Mexico_City": "Central Time Mexico",
+  "America/Winnipeg": "Central Time Canada",
+  "America/New_York": "Eastern Time",
+  "America/Toronto": "Eastern Time Canada",
+  "America/Halifax": "Atlantic Time",
+  "America/St_Johns": "Newfoundland Time",
+  "America/Sao_Paulo": "Brasilia Time",
+  "America/Buenos_Aires": "Argentina Time",
+  "Atlantic/Azores": "Azores Time",
+  "Europe/London": "Greenwich Mean Time",
+  "Europe/Dublin": "Irish Time",
+  "Europe/Lisbon": "Western European Time",
+  "Europe/Paris": "Central European Time",
+  "Europe/Berlin": "Central European Time",
+  "Europe/Amsterdam": "Central European Time",
+  "Europe/Brussels": "Central European Time",
+  "Europe/Madrid": "Central European Time",
+  "Europe/Rome": "Central European Time",
+  "Europe/Zurich": "Central European Time",
+  "Europe/Warsaw": "Central European Time",
+  "Europe/Prague": "Central European Time",
+  "Europe/Vienna": "Central European Time",
+  "Europe/Stockholm": "Central European Time",
+  "Europe/Copenhagen": "Central European Time",
+  "Europe/Oslo": "Central European Time",
+  "Europe/Helsinki": "Eastern European Time",
+  "Europe/Athens": "Eastern European Time",
+  "Europe/Riga": "Eastern European Time",
+  "Europe/Vilnius": "Eastern European Time",
+  "Europe/Tallinn": "Eastern European Time",
+  "Europe/Kyiv": "Eastern European Time",
+  "Europe/Bucharest": "Eastern European Time",
+  "Europe/Istanbul": "Turkey Time",
+  "Africa/Cairo": "Eastern European Time Egypt",
+  "Africa/Johannesburg": "South Africa Standard Time",
+  "Africa/Lagos": "West Africa Time",
+  "Africa/Nairobi": "East Africa Time",
+  "Asia/Jerusalem": "Israel Time",
+  "Asia/Riyadh": "Arabia Standard Time",
+  "Asia/Dubai": "Gulf Standard Time",
+  "Asia/Tehran": "Iran Standard Time",
+  "Asia/Karachi": "Pakistan Standard Time",
+  "Asia/Kolkata": "India Standard Time",
+  "Asia/Dhaka": "Bangladesh Standard Time",
+  "Asia/Bangkok": "Indochina Time",
+  "Asia/Singapore": "Singapore Time",
+  "Asia/Kuala_Lumpur": "Malaysia Time",
+  "Asia/Manila": "Philippine Time",
+  "Asia/Jakarta": "Western Indonesia Time",
+  "Asia/Shanghai": "China Standard Time",
+  "Asia/Hong_Kong": "Hong Kong Time",
+  "Asia/Taipei": "Taipei Standard Time",
+  "Asia/Seoul": "Korea Standard Time",
+  "Asia/Tokyo": "Japan Standard Time",
+  "Australia/Perth": "Australian Western Time",
+  "Australia/Adelaide": "Australian Central Time",
+  "Australia/Darwin": "Australian Central Time",
+  "Australia/Brisbane": "Australian Eastern Time",
+  "Australia/Sydney": "Australian Eastern Time",
+  "Australia/Hobart": "Australian Eastern Time",
+  "Pacific/Auckland": "New Zealand Time",
+  "Pacific/Chatham": "Chatham Islands Time",
+};
 
 function regionFromTimeZone(tz) {
   if (tz === "UTC") return "UTC / Other";
@@ -99,12 +197,17 @@ function regionFromTimeZone(tz) {
   return "UTC / Other";
 }
 
-function prettyTimeZoneLabel(tz) {
+function locationLabelFromTimeZone(tz) {
   if (tz === "UTC") return "UTC";
-  const parts = tz.split("/");
-  const region = parts[0];
-  const city = parts.slice(1).join(" / ").replace(/_/g, " ");
-  return `${city} — ${tz}`;
+  const city = tz.split("/").slice(1).join(" / ").replace(/_/g, " ");
+  return city;
+}
+
+function prettyTimeZoneLabel(tz) {
+  const friendly = TIMEZONE_LABEL_MAP[tz] || "Time Zone";
+  const location = locationLabelFromTimeZone(tz);
+  if (tz === "UTC") return "Coordinated Universal Time | UTC";
+  return `${friendly} | ${location}`;
 }
 
 function buildTimeZoneGroups() {
@@ -120,7 +223,9 @@ function buildTimeZoneGroups() {
 
   if (!zones.length) zones = FALLBACK_TIMEZONES;
 
-  const deduped = Array.from(new Set([...zones, "UTC"])).sort((a, b) => a.localeCompare(b));
+  const deduped = Array.from(new Set([...zones, ...FALLBACK_TIMEZONES, "UTC"])).sort((a, b) =>
+    a.localeCompare(b)
+  );
 
   const groups = ["Americas", "Europe", "Africa", "Asia / Middle East", "Oceania", "UTC / Other"].map(
     (region) => ({
@@ -258,6 +363,108 @@ function ToggleRow({ checked, onChange, label, hint }) {
   );
 }
 
+function TimeZoneSelector({
+  isMobile,
+  groups,
+  timeZoneRegion,
+  setTimeZoneRegion,
+  timezone,
+  setTimezone,
+  timeZoneSearch,
+  setTimeZoneSearch,
+  detectedTimezone,
+}) {
+  const search = timeZoneSearch.trim().toLowerCase();
+
+  const filteredGroups = useMemo(() => {
+    if (!search) {
+      return groups.map((group) => ({
+        ...group,
+        zones: group.zones.filter((tz) => regionFromTimeZone(tz) === timeZoneRegion),
+      }));
+    }
+
+    return groups.map((group) => ({
+      ...group,
+      zones: group.zones.filter((tz) => {
+        const friendly = prettyTimeZoneLabel(tz).toLowerCase();
+        const raw = tz.toLowerCase();
+        return friendly.includes(search) || raw.includes(search);
+      }),
+    }));
+  }, [groups, search, timeZoneRegion]);
+
+  const flatMatches = filteredGroups.flatMap((group) => group.zones);
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+        gap: 12,
+      }}
+    >
+      <div>
+        <FieldLabel>Region</FieldLabel>
+        <Select value={timeZoneRegion} onChange={(e) => setTimeZoneRegion(e.target.value)}>
+          {groups.map((group) => (
+            <option key={group.region} value={group.region}>
+              {group.region}
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      <div>
+        <FieldLabel>Search time zone</FieldLabel>
+        <Input
+          type="text"
+          value={timeZoneSearch}
+          onChange={(e) => setTimeZoneSearch(e.target.value)}
+          placeholder="Search by time zone or city"
+        />
+      </div>
+
+      <div style={{ gridColumn: "1 / -1" }}>
+        <FieldLabel>Time zone</FieldLabel>
+        <Select value={timezone} onChange={(e) => setTimezone(e.target.value)} size={isMobile ? 1 : 8}>
+          {!search &&
+            filteredGroups
+              .filter((group) => group.zones.length > 0)
+              .map((group) => (
+                <optgroup key={group.region} label={group.region}>
+                  {group.zones.map((zone) => (
+                    <option key={zone} value={zone}>
+                      {prettyTimeZoneLabel(zone)}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+
+          {search &&
+            flatMatches.map((zone) => (
+              <option key={zone} value={zone}>
+                {prettyTimeZoneLabel(zone)}
+              </option>
+            ))}
+        </Select>
+
+        <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
+          {detectedTimezone ? (
+            <div style={{ fontSize: 12, color: MUTED }}>
+              Detected current time zone: <strong style={{ color: SLATE }}>{prettyTimeZoneLabel(detectedTimezone)}</strong>
+            </div>
+          ) : null}
+
+          <div style={{ fontSize: 12, color: MUTED }}>
+            Selected: <strong style={{ color: SLATE }}>{prettyTimeZoneLabel(timezone)}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SnapshotDeliveryPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [emails, setEmails] = useState("");
@@ -267,7 +474,9 @@ export default function SnapshotDeliveryPage() {
 
   const timeZoneGroups = useMemo(() => buildTimeZoneGroups(), []);
   const [timeZoneRegion, setTimeZoneRegion] = useState("Americas");
-  const [timezone, setTimezone] = useState("America/New_York");
+  const [timezone, setTimezone] = useState("America/Chicago");
+  const [timeZoneSearch, setTimeZoneSearch] = useState("");
+  const [detectedTimezone, setDetectedTimezone] = useState("");
   const [timeOfDay, setTimeOfDay] = useState("08:00");
   const [weeklyDay, setWeeklyDay] = useState("Monday");
 
@@ -287,16 +496,29 @@ export default function SnapshotDeliveryPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const availableZones = useMemo(() => {
+  useEffect(() => {
+    try {
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+      if (detected) {
+        setDetectedTimezone(detected);
+        setTimezone(detected);
+        setTimeZoneRegion(regionFromTimeZone(detected));
+      }
+    } catch {
+      // keep defaults
+    }
+  }, []);
+
+  const currentRegionZones = useMemo(() => {
     return timeZoneGroups.find((group) => group.region === timeZoneRegion)?.zones || [];
   }, [timeZoneGroups, timeZoneRegion]);
 
   useEffect(() => {
-    if (!availableZones.length) return;
-    if (!availableZones.includes(timezone)) {
-      setTimezone(availableZones[0]);
+    if (!currentRegionZones.length) return;
+    if (!currentRegionZones.includes(timezone)) {
+      setTimezone(currentRegionZones[0]);
     }
-  }, [availableZones, timezone]);
+  }, [currentRegionZones, timezone]);
 
   const parsedRecipients = useMemo(() => {
     return emails
@@ -305,45 +527,50 @@ export default function SnapshotDeliveryPage() {
       .filter(Boolean);
   }, [emails]);
 
-  const header = (
-    <div style={{ textAlign: "center" }}>
-      <h1
-        style={{
-          fontSize: 28,
-          fontWeight: 900,
-          color: ORANGE,
-          lineHeight: 1.05,
-          margin: 0,
-        }}
-      >
-        Executive Snapshot
-      </h1>
-      <div
-        style={{
-          fontSize: 22,
-          fontWeight: 900,
-          color: SLATE,
-          lineHeight: 1.1,
-          marginTop: 2,
-        }}
-      >
-        Delivery Center
-      </div>
-      <p
-        style={{
-          fontSize: 14,
-          color: "#475569",
-          marginTop: 8,
-          maxWidth: 760,
-          marginLeft: "auto",
-          marginRight: "auto",
-          lineHeight: 1.6,
-        }}
-      >
-        Set up recurring snapshot distribution, global delivery timing, and one-time sends from one place.
-      </p>
-    </div>
-  );
+  const handleSend = async () => {
+    if (!parsedRecipients.length) {
+      alert("Enter at least one email recipient.");
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      await fetch("/api/analytics/send-snapshot", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipients: parsedRecipients,
+          snapshotType,
+          includePng,
+          includeInsights,
+          timezone,
+          timeZoneRegion,
+        }),
+      });
+
+      alert("Snapshot sent");
+    } catch {
+      alert("Failed to send snapshot");
+    }
+
+    setSending(false);
+  };
+
+  const handleSaveSchedule = () => {
+    const summary =
+      cadence === "daily"
+        ? `Daily at ${timeOfDay} (${prettyTimeZoneLabel(timezone)})`
+        : cadence === "weekly"
+          ? `Weekly on ${weeklyDay} at ${timeOfDay} (${prettyTimeZoneLabel(timezone)})`
+          : monthlyMode === "date"
+            ? `Monthly on day ${monthlyDate} at ${timeOfDay} (${prettyTimeZoneLabel(timezone)})`
+            : `Monthly on the ${monthlyOrdinal.toLowerCase()} ${monthlyWeekday} at ${timeOfDay} (${prettyTimeZoneLabel(timezone)})`;
+
+    alert(`Schedule saving is the next DB/API wiring step.\n\nCurrent rule:\n${summary}`);
+  };
 
   const rightRail = (
     <div style={{ display: "grid", gap: 12 }}>
@@ -382,55 +609,11 @@ export default function SnapshotDeliveryPage() {
     </div>
   );
 
-  const handleSend = async () => {
-    if (!parsedRecipients.length) {
-      alert("Enter at least one email recipient.");
-      return;
-    }
-
-    setSending(true);
-
-    try {
-      await fetch("/api/analytics/send-snapshot", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          recipients: parsedRecipients,
-          snapshotType,
-          includePng,
-          includeInsights,
-          timezone,
-          timeZoneRegion,
-        }),
-      });
-
-      alert("Snapshot sent");
-    } catch {
-      alert("Failed to send snapshot");
-    }
-
-    setSending(false);
-  };
-
-  const handleSaveSchedule = () => {
-    const summary =
-      cadence === "daily"
-        ? `Daily at ${timeOfDay} (${timezone})`
-        : cadence === "weekly"
-          ? `Weekly on ${weeklyDay} at ${timeOfDay} (${timezone})`
-          : monthlyMode === "date"
-            ? `Monthly on day ${monthlyDate} at ${timeOfDay} (${timezone})`
-            : `Monthly on the ${monthlyOrdinal.toLowerCase()} ${monthlyWeekday} at ${timeOfDay} (${timezone})`;
-
-    alert(`Schedule saving is the next DB/API wiring step.\n\nCurrent rule:\n${summary}`);
-  };
-
   return (
     <RecruiterLayout
       title="Executive Snapshot Delivery Center"
-      header={header}
+      pageTitle="Executive Snapshot Delivery Center"
+      pageSubtitle="Set up recurring snapshot distribution, global delivery timing, and one-time sends from one place."
       right={rightRail}
       activeNav="analytics"
     >
@@ -453,35 +636,26 @@ export default function SnapshotDeliveryPage() {
             ))}
           </div>
 
+          <TimeZoneSelector
+            isMobile={isMobile}
+            groups={timeZoneGroups}
+            timeZoneRegion={timeZoneRegion}
+            setTimeZoneRegion={setTimeZoneRegion}
+            timezone={timezone}
+            setTimezone={setTimezone}
+            timeZoneSearch={timeZoneSearch}
+            setTimeZoneSearch={setTimeZoneSearch}
+            detectedTimezone={detectedTimezone}
+          />
+
           <div
             style={{
               display: "grid",
               gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
               gap: 12,
+              marginTop: 12,
             }}
           >
-            <div>
-              <FieldLabel>Region</FieldLabel>
-              <Select value={timeZoneRegion} onChange={(e) => setTimeZoneRegion(e.target.value)}>
-                {timeZoneGroups.map((group) => (
-                  <option key={group.region} value={group.region}>
-                    {group.region}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div>
-              <FieldLabel>Time zone</FieldLabel>
-              <Select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
-                {availableZones.map((zone) => (
-                  <option key={zone} value={zone}>
-                    {prettyTimeZoneLabel(zone)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
             <div>
               <FieldLabel>Delivery time</FieldLabel>
               <Input type="time" value={timeOfDay} onChange={(e) => setTimeOfDay(e.target.value)} />
