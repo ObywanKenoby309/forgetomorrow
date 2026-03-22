@@ -64,14 +64,63 @@ const GLASS = {
   WebkitBackdropFilter: 'blur(10px)',
 };
 
-// ─── Desktop 2×2 grid (unchanged from original) ─────────────────────────────
+// ─── Desktop 2×2 grid ────────────────────────────────────────────────────────
 function DesktopGrid({ tiles, withChrome }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
-      {tiles.map(({ title, desc, href, status, img }) => (
-        <DesktopCard key={title} title={title} desc={desc} href={withChrome(href)} status={status} img={img} />
-      ))}
-    </div>
+    <>
+      <div
+        className="hearth-desktop-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gap: 16,
+          maxHeight: 340,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          paddingRight: 4,
+        }}
+      >
+        {tiles.map(({ title, desc, href, status, img }) => (
+          <DesktopCard
+            key={title}
+            title={title}
+            desc={desc}
+            href={withChrome(href)}
+            status={status}
+            img={img}
+          />
+        ))}
+      </div>
+
+      <style jsx>{`
+        .hearth-desktop-grid {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 112, 67, 0.45) transparent;
+        }
+
+        .hearth-desktop-grid::-webkit-scrollbar {
+          width: 5px;
+        }
+
+        .hearth-desktop-grid::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .hearth-desktop-grid::-webkit-scrollbar-thumb {
+          background: rgba(255, 112, 67, 0.0);
+          border-radius: 999px;
+          transition: background 300ms ease;
+        }
+
+        .hearth-desktop-grid:hover::-webkit-scrollbar-thumb {
+          background: rgba(255, 112, 67, 0.40);
+        }
+
+        .hearth-desktop-grid::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 112, 67, 0.65);
+        }
+      `}</style>
+    </>
   );
 }
 
@@ -103,11 +152,18 @@ function DesktopCard({ title, desc, href, status, img }) {
         e.currentTarget.style.boxShadow = '0 10px 22px rgba(0,0,0,0.10)';
       }}
     >
-      <div aria-hidden="true" style={{
-        position: 'absolute', right: -60, top: -60, width: 160, height: 160,
-        background: 'radial-gradient(circle, rgba(255,112,67,0.20), rgba(255,112,67,0.00) 70%)',
-        pointerEvents: 'none',
-      }} />
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          right: -60,
+          top: -60,
+          width: 160,
+          height: 160,
+          background: 'radial-gradient(circle, rgba(255,112,67,0.20), rgba(255,112,67,0.00) 70%)',
+          pointerEvents: 'none',
+        }}
+      />
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
         <div style={{ flexShrink: 0, lineHeight: 0 }}>
           <HearthIcon src={img} alt={title} size={64} />
@@ -118,11 +174,20 @@ function DesktopCard({ title, desc, href, status, img }) {
       </div>
       <p style={{ color: '#37474F', margin: 0, lineHeight: 1.45 }}>{desc}</p>
       <div style={{ marginTop: 12 }}>
-        <span style={{
-          fontSize: 12, fontWeight: 800, color: '#FF7043',
-          background: 'rgba(255,112,67,0.10)', border: '1px solid rgba(255,112,67,0.20)',
-          padding: '5px 10px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: 6,
-        }}>
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 800,
+            color: '#FF7043',
+            background: 'rgba(255,112,67,0.10)',
+            border: '1px solid rgba(255,112,67,0.20)',
+            padding: '5px 10px',
+            borderRadius: 999,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
           {status}
         </span>
       </div>
@@ -137,7 +202,6 @@ function MobileLayoutInner({ tiles, withChrome }) {
   const trackRef = useRef(null);
   const programmatic = useRef(false);
 
-  // Dropdown → snap carousel
   const goTo = useCallback((index) => {
     setActiveIndex(index);
     setDropdownOpen(false);
@@ -148,7 +212,6 @@ function MobileLayoutInner({ tiles, withChrome }) {
     setTimeout(() => { programmatic.current = false; }, 600);
   }, []);
 
-  // Swipe → update dropdown label
   const handleScroll = useCallback(() => {
     if (programmatic.current) return;
     const track = trackRef.current;
@@ -169,7 +232,7 @@ function MobileLayoutInner({ tiles, withChrome }) {
   return (
     <div style={{ position: 'relative' }}>
 
-      {/* ── Dropdown (16px side padding = page gutter) ── */}
+      {/* ── Dropdown ── */}
       <div style={{ padding: '0 16px 14px', position: 'relative', zIndex: 20 }}>
         <button
           onClick={() => setDropdownOpen((o) => !o)}
@@ -248,9 +311,7 @@ function MobileLayoutInner({ tiles, withChrome }) {
         )}
       </div>
 
-      {/* ── Carousel track ──
-          The section's paddingLeft/paddingRight are zeroed out in JS on mobile,
-          so offsetWidth here = true content width. Each slide adds 16px gutters. */}
+      {/* ── Carousel track ── */}
       <div
         ref={trackRef}
         style={{
@@ -354,8 +415,6 @@ export default function HearthCenter() {
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // Use JS state to control padding — same pattern as SeekerLayout.
-  // CSS classes cannot override inline style props, so we do it here directly.
   const [isMobile, setIsMobile] = useState(true);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
@@ -368,8 +427,6 @@ export default function HearthCenter() {
     <section
       style={{
         ...GLASS,
-        // On mobile: zero out horizontal padding so carousel width = true viewport width.
-        // MobileLayoutInner manages its own 16px side padding for dropdown + dots.
         paddingTop: 16,
         paddingBottom: 16,
         paddingLeft: isMobile ? 0 : 16,
