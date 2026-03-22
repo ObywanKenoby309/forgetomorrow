@@ -113,6 +113,15 @@ const RECRUITER_TABS = [
   { key: "UPCOMING", label: "Upcoming" },
 ];
 
+const SEEKER_TABS = [
+  { key: "ALL", label: "All" },
+  { key: "SOCIAL", label: "Social" },
+  { key: "JOBS", label: "Jobs" },
+  { key: "CALENDAR", label: "Calendar" },
+  { key: "ACTIVITY", label: "Activity" },
+  { key: "SUPPORT", label: "Support" },
+];
+
 function safeText(v) {
   return typeof v === "string" ? v : v == null ? "" : String(v);
 }
@@ -511,10 +520,10 @@ export default function ActionCenterPage() {
   const Content = (
     <div className="grid gap-4">
       {/* Recruiter Tabs (below header) */}
-      {scope === "RECRUITER" ? (
-        <FrostPanel className="p-3">
-          <div className="flex flex-wrap gap-2 justify-start">
-            {RECRUITER_TABS.map((t) => {
+      {scope === "RECRUITER" || scope === "SEEKER" ? (
+  <FrostPanel className="p-3">
+    <div className="flex flex-wrap gap-2 justify-start">
+      {(scope === "RECRUITER" ? RECRUITER_TABS : SEEKER_TABS).map((t) => {
               const isActive = activeRecruiterTab === t.key;
               const count = Number(recruiterTabCounts?.[t.key] || 0);
 
@@ -524,9 +533,9 @@ export default function ActionCenterPage() {
                   type="button"
                   onClick={() => {
                     setActiveRecruiterTab(t.key);
-                    const nextHref = `/action-center?scope=RECRUITER&tab=${encodeURIComponent(
-                      t.key
-                    )}${chrome ? `&chrome=${encodeURIComponent(chrome)}` : ""}`;
+                    const nextHref = `/action-center?scope=${scope}&tab=${encodeURIComponent(
+					  t.key
+					)}${chrome ? `&chrome=${encodeURIComponent(chrome)}` : ""}`;
                     router.replace(nextHref, undefined, { shallow: true });
                   }}
                   className={[
@@ -563,7 +572,7 @@ export default function ActionCenterPage() {
       ) : null}
 
       {/* Recruiter: true two-column */}
-      {scope === "RECRUITER" ? (
+      {scope === "RECRUITER" || scope === "SEEKER" ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Needs Attention */}
           <FrostPanel className="p-4 bg-white/80">
