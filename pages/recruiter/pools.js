@@ -490,6 +490,7 @@ export default function RecruiterPools() {
     <RecruiterLayout
       title="ForgeTomorrow — Talent Pools"
       header={<HeaderBox />}
+	  headerCard={false}
       right={<RightRail />}
       activeNav="candidate-center"
     >

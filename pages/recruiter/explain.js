@@ -28,18 +28,41 @@ const CARD = {
 
 function HeaderOnly() {
   return (
-    <div className="w-full text-center">
-      <h1 className="text-2xl font-bold text-[#FF7043]">
-        Resume &amp; Job Match Explainability
-      </h1>
-      <p className="mt-1 text-sm text-slate-600 max-w-2xl mx-auto leading-relaxed">
-        Paste a job description and a resume to generate explainable alignment insights.
-        <br />
-        <span className="text-[13px]">
-          This tool supports recruiter judgment by mapping evidence and highlighting
-          strengths, gaps, and interview guidance. It does not make hiring decisions.
-        </span>
-      </p>
+    <div className="w-full">
+      <section
+        style={{
+          borderRadius: 18,
+          border: '1px solid rgba(255,255,255,0.22)',
+          background: 'rgba(255,255,255,0.58)',
+          boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          padding: 16,
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ fontSize: 24, fontWeight: 900, color: '#FF7043' }}>
+          Resume &amp; Job Match Explainability
+        </div>
+
+        <div
+          style={{
+            marginTop: 6,
+            fontSize: 14,
+            color: '#64748B',
+            maxWidth: 720,
+            marginInline: 'auto',
+            lineHeight: 1.5,
+          }}
+        >
+          Paste a job description and a resume to generate explainable alignment insights.
+          <br />
+          <span style={{ fontSize: 13 }}>
+            This tool supports recruiter judgment by mapping evidence and highlighting
+            strengths, gaps, and interview guidance. It does not make hiring decisions.
+          </span>
+        </div>
+      </section>
     </div>
   );
 }
@@ -123,6 +146,7 @@ export default function RecruiterExplainPage() {
     <RecruiterLayout
       title="Applicant Explain — ForgeTomorrow"
       header={<HeaderOnly />}
+	  headerCard={false}
       right={<RightRailPlacementManager surfaceId="applicant_explain" />}
       activeNav="applicant-explain"
     >

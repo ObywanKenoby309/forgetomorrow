@@ -9,18 +9,44 @@ import { PrimaryButton } from "@/components/ui/Buttons";
 
 function HeaderBar({ onOpenModal }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3">
-      <div className="hidden md:block" />
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-[#FF7043]">Job Postings</h1>
-        <p className="text-sm text-slate-600 mt-1 max-w-xl mx-auto">
-          Create and manage roles, then track performance and applications.
-        </p>
+    <section
+      style={{
+        borderRadius: 18,
+        border: '1px solid rgba(255,255,255,0.22)',
+        background: 'rgba(255,255,255,0.58)',
+        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        padding: 16,
+      }}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3">
+        <div className="hidden md:block" />
+
+        <div className="text-center">
+          <div style={{ fontSize: 24, fontWeight: 900, color: '#FF7043' }}>
+            Job Postings
+          </div>
+
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: 14,
+              color: '#64748B',
+              maxWidth: 720,
+              marginInline: 'auto',
+              lineHeight: 1.5,
+            }}
+          >
+            Create and manage roles, then track performance and applications.
+          </div>
+        </div>
+
+        <div className="justify-self-center md:justify-self-end">
+          <PrimaryButton onClick={onOpenModal}>Post a Job</PrimaryButton>
+        </div>
       </div>
-      <div className="justify-self-center md:justify-self-end">
-        <PrimaryButton onClick={onOpenModal}>Post a Job</PrimaryButton>
-      </div>
-    </div>
+    </section>
   );
 }
 
@@ -63,7 +89,7 @@ function Body({
   const isTemplates = viewMode === "templates";
 
   return (
-    <main className="space-y-6">
+    <main className="min-w-0 w-full space-y-6">
       {/* Error banner (only for real failures) */}
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
@@ -79,7 +105,7 @@ function Body({
       )}
 
       {/* Table */}
-      <div className="rounded-lg border bg-white p-2 sm:p-4">
+      <div className="min-w-0 w-full rounded-lg border bg-white p-2 sm:p-4">
         {/* Jobs | Templates toggle */}
         <div className="px-2 sm:px-0 pb-3 flex items-center gap-2">
           <button
@@ -134,7 +160,7 @@ function Body({
 
       {/* Performance preview – wired later to analytics */}
       {!isTemplates && (
-        <div className="rounded-lg border bg-white p-4 text-sm">
+        <div className="min-w-0 w-full rounded-lg border bg-white p-4 text-sm">
           <div className="font-medium mb-2">Job Performance (Preview)</div>
           <div className="text-slate-500">
             This area will pull per-job funnel metrics from Recruiter Analytics
@@ -378,6 +404,7 @@ export default function JobPostingsPage() {
       <RecruiterLayout
         title="Job Postings — ForgeTomorrow"
         header={<HeaderBar onOpenModal={openCreateModal} />}
+		headerCard={false}
         right={<RightToolsCard />}
         activeNav="job-postings"
       >

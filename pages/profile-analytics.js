@@ -299,16 +299,37 @@ export default function ProfileAnalyticsPage() {
   }
 
   const HeaderBox = (
-    <section
-      className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-center"
-      aria-label="Profile analytics overview"
+  <section
+    style={{
+      borderRadius: 18,
+      border: '1px solid rgba(255,255,255,0.22)',
+      background: 'rgba(255,255,255,0.58)',
+      boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+      backdropFilter: 'blur(10px)',
+      WebkitBackdropFilter: 'blur(10px)',
+      padding: 16,
+      textAlign: 'center',
+    }}
+    aria-label="Profile analytics overview"
+  >
+    <div style={{ fontSize: 24, fontWeight: 900, color: '#FF7043' }}>
+      Profile Analytics
+    </div>
+
+    <div
+      style={{
+        marginTop: 6,
+        fontSize: 14,
+        color: '#64748B',
+        maxWidth: 720,
+        marginInline: 'auto',
+        lineHeight: 1.5,
+      }}
     >
-      <h1 className="m-0 text-[#FF7043] text-2xl font-extrabold">Profile Analytics</h1>
-      <p className="mt-1 mb-0 text-[#607D8B] max-w-3xl mx-auto text-sm">
-        Track engagement on your profile and content.
-      </p>
-    </section>
-  );
+      Track engagement on your profile and content.
+    </div>
+  </section>
+);
 
   const kpiValue = (v) => (v === null || typeof v === 'undefined' ? '—' : String(v));
 
@@ -327,6 +348,7 @@ export default function ProfileAnalyticsPage() {
       <Layout
         title="Profile Analytics | ForgeTomorrow"
         header={HeaderBox}
+		headerCard={false}
         right={<RightRailPlacementManager surfaceId="profile" />}
         activeNav="profile"
         sidebarInitialOpen={{ coaching: false, seeker: false }}
