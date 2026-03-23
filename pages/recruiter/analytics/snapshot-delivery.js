@@ -49,7 +49,18 @@ function PreviewPanel({ report, previewData, loadingPreview }) {
     );
   }
 
-  if (!previewData) return null;
+  if (!previewData) {
+    return (
+      <div style={{...GLASS,borderRadius:18,padding:16,display:"grid",gap:12,minHeight:420}}>
+        <div>
+          <div style={{fontSize:16,fontWeight:900,color:SLATE}}>Preview Snapshot</div>
+          <div style={{fontSize:13,color:MUTED,marginTop:4}}>
+            Generate a preview to see the report content that will be used for preview and send.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const { kpis = {}, funnelData = [], sourcesData = [], activityData = [], previewInsight } = previewData;
 
@@ -210,7 +221,7 @@ function AllOverview({schedules,onSelectReport}){
   </div>;
 }
 
-function ReportScheduleEditor({report,schedule,onSave,onSendNow,onPreview,saving,sending,previewing,previewData}){
+function ReportScheduleEditor({report,schedule,onSave,onSendNow,onPreview,saving,sending,previewing,previewData,isMobile}){
   const [s,setS]=useState(schedule||defaultSchedule(report.key));
   const [tzSearch,setTzSearch]=useState("");
   useEffect(()=>{setS(schedule||defaultSchedule(report.key));},[report.key,schedule]);
@@ -231,81 +242,106 @@ function ReportScheduleEditor({report,schedule,onSave,onSendNow,onPreview,saving
 
   const parsedRecipients=s.recipients.split(",").map(r=>r.trim()).filter(Boolean);
 
-  return <div style={{display:"grid",gap:14}}>
-    <div style={{...GLASS_SOFT,borderRadius:12,padding:"12px 14px"}}><div style={{fontSize:13,color:MUTED,lineHeight:1.6}}>{report.description}</div></div>
+  const workspaceStyle = isMobile
+    ? {
+        display: "grid",
+        gap: 14,
+      }
+    : {
+        display: "grid",
+        gridTemplateColumns: "1.05fr 0.95fr",
+        gridTemplateAreas: `
+          "desc desc"
+          "recipients preview"
+          "schedule preview"
+          "content preview"
+          "footer footer"
+        `,
+        gap: 14,
+        alignItems: "start",
+      };
 
-    <div style={{...GLASS,borderRadius:18,padding:16}}>
-      <div style={{fontSize:16,fontWeight:900,color:SLATE,marginBottom:4}}>Recipients</div>
-      <div style={{fontSize:13,color:MUTED,marginBottom:12}}>Who receives this specific report. Separate with commas.</div>
-      <Textarea value={s.recipients} onChange={e=>update({recipients:e.target.value})} placeholder="ceo@company.com, board@company.com" style={{minHeight:72,resize:"none"}} />
-      <div style={{marginTop:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-        <ToggleRow checked={s.sendToSelf} onChange={e=>update({sendToSelf:e.target.checked})} label="Send a copy to me" hint="Get a confirmation copy on every send." />
-        <div style={{...GLASS_SOFT,borderRadius:12,padding:"8px 14px",textAlign:"center",minWidth:72}}>
-          <div style={{fontSize:10,fontWeight:700,color:MUTED,textTransform:"uppercase"}}>Recipients</div>
-          <div style={{fontSize:24,fontWeight:900,color:ORANGE,lineHeight:1.1,marginTop:2}}>{parsedRecipients.length}</div>
+  return (
+    <div style={workspaceStyle}>
+      <div style={{...GLASS_SOFT,borderRadius:12,padding:"12px 14px", ...(isMobile ? {} : { gridArea: "desc" })}}>
+        <div style={{fontSize:13,color:MUTED,lineHeight:1.6}}>{report.description}</div>
+      </div>
+
+      <div style={{...GLASS,borderRadius:18,padding:16, ...(isMobile ? {} : { gridArea: "recipients" })}}>
+        <div style={{fontSize:16,fontWeight:900,color:SLATE,marginBottom:4}}>Recipients</div>
+        <div style={{fontSize:13,color:MUTED,marginBottom:12}}>Who receives this specific report. Separate with commas.</div>
+        <Textarea value={s.recipients} onChange={e=>update({recipients:e.target.value})} placeholder="ceo@company.com, board@company.com" style={{minHeight:72,resize:"none"}} />
+        <div style={{marginTop:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+          <ToggleRow checked={s.sendToSelf} onChange={e=>update({sendToSelf:e.target.checked})} label="Send a copy to me" hint="Get a confirmation copy on every send." />
+          <div style={{...GLASS_SOFT,borderRadius:12,padding:"8px 14px",textAlign:"center",minWidth:72}}>
+            <div style={{fontSize:10,fontWeight:700,color:MUTED,textTransform:"uppercase"}}>Recipients</div>
+            <div style={{fontSize:24,fontWeight:900,color:ORANGE,lineHeight:1.1,marginTop:2}}>{parsedRecipients.length}</div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div style={{...GLASS,borderRadius:18,padding:16}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:14}}>
-        <div>
-          <div style={{fontSize:16,fontWeight:900,color:SLATE}}>Delivery Schedule</div>
-          <div style={{fontSize:13,color:MUTED,marginTop:2}}>When this report is automatically sent.</div>
+      <div style={{...GLASS,borderRadius:18,padding:16, ...(isMobile ? {} : { gridArea: "schedule" })}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:14}}>
+          <div>
+            <div style={{fontSize:16,fontWeight:900,color:SLATE}}>Delivery Schedule</div>
+            <div style={{fontSize:13,color:MUTED,marginTop:2}}>When this report is automatically sent.</div>
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            {["daily","weekly","monthly"].map(c=><PillButton key={c} active={s.cadence===c} onClick={()=>update({cadence:c})} small>{c.charAt(0).toUpperCase()+c.slice(1)}</PillButton>)}
+          </div>
         </div>
-        <div style={{display:"flex",gap:6}}>
-          {["daily","weekly","monthly"].map(c=><PillButton key={c} active={s.cadence===c} onClick={()=>update({cadence:c})} small>{c.charAt(0).toUpperCase()+c.slice(1)}</PillButton>)}
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+          <div><FieldLabel>Search time zone</FieldLabel><Input type="text" value={tzSearch} onChange={e=>setTzSearch(e.target.value)} placeholder="Search city or zone..." /></div>
+          <div><FieldLabel>Time zone</FieldLabel><Select value={s.timezone} onChange={e=>update({timezone:e.target.value})} size={5}>{filteredTZs.map(tz=><option key={tz} value={tz}>{prettyTZ(tz)}</option>)}</Select></div>
+        </div>
+
+        <div style={{fontSize:12,color:MUTED,marginBottom:14}}>
+          📍 Your location: <strong style={{color:SLATE}}>{prettyTZ(LOCAL_TZ)}</strong>
+          {s.timezone!==LOCAL_TZ&&<button type="button" onClick={()=>update({timezone:LOCAL_TZ})} style={{marginLeft:10,fontSize:11,fontWeight:700,color:ORANGE,background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0}}>↩ Use my location</button>}
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div><FieldLabel>Delivery time</FieldLabel><Input type="time" value={s.timeOfDay} onChange={e=>update({timeOfDay:e.target.value})} /></div>
+          <div>
+            {s.cadence==="weekly"&&<><FieldLabel>Day of week</FieldLabel><Select value={s.weeklyDay} onChange={e=>update({weeklyDay:e.target.value})}>{WEEKDAY_OPTIONS.map(d=><option key={d} value={d}>{d}</option>)}</Select></>}
+            {s.cadence==="monthly"&&<>
+              <FieldLabel>Monthly rule</FieldLabel>
+              <div style={{display:"flex",borderRadius:10,border:"1px solid rgba(51,65,85,0.14)",overflow:"hidden",marginBottom:10}}>
+                {[{value:"date",label:"Specific date"},{value:"ordinal",label:"Ordinal weekday"}].map(opt=><button key={opt.value} type="button" onClick={()=>update({monthlyMode:opt.value})} style={{flex:1,padding:"8px 10px",border:"none",background:s.monthlyMode===opt.value?SLATE:"transparent",color:s.monthlyMode===opt.value?"#fff":MUTED,fontWeight:800,fontSize:12,cursor:"pointer"}}>{opt.label}</button>)}
+              </div>
+              {s.monthlyMode==="date"?<Select value={s.monthlyDate} onChange={e=>update({monthlyDate:e.target.value})}>{Array.from({length:31},(_,i)=>i+1).map(d=><option key={d} value={String(d)}>{d}</option>)}</Select>:<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><Select value={s.monthlyOrdinal} onChange={e=>update({monthlyOrdinal:e.target.value})}>{ORDINAL_OPTIONS.map(o=><option key={o} value={o}>{o}</option>)}</Select><Select value={s.monthlyWeekday} onChange={e=>update({monthlyWeekday:e.target.value})}>{WEEKDAY_OPTIONS.map(d=><option key={d} value={d}>{d}</option>)}</Select></div>}
+            </>}
+            {s.cadence==="daily"&&<div style={{...GLASS_SOFT,borderRadius:10,padding:12,height:"100%",display:"flex",alignItems:"center"}}><div style={{fontSize:13,color:MUTED}}>Sends every day at the selected time.</div></div>}
+          </div>
         </div>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-        <div><FieldLabel>Search time zone</FieldLabel><Input type="text" value={tzSearch} onChange={e=>setTzSearch(e.target.value)} placeholder="Search city or zone..." /></div>
-        <div><FieldLabel>Time zone</FieldLabel><Select value={s.timezone} onChange={e=>update({timezone:e.target.value})} size={5}>{filteredTZs.map(tz=><option key={tz} value={tz}>{prettyTZ(tz)}</option>)}</Select></div>
-      </div>
-
-      <div style={{fontSize:12,color:MUTED,marginBottom:14}}>
-        📍 Your location: <strong style={{color:SLATE}}>{prettyTZ(LOCAL_TZ)}</strong>
-        {s.timezone!==LOCAL_TZ&&<button type="button" onClick={()=>update({timezone:LOCAL_TZ})} style={{marginLeft:10,fontSize:11,fontWeight:700,color:ORANGE,background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0}}>↩ Use my location</button>}
-      </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <div><FieldLabel>Delivery time</FieldLabel><Input type="time" value={s.timeOfDay} onChange={e=>update({timeOfDay:e.target.value})} /></div>
-        <div>
-          {s.cadence==="weekly"&&<><FieldLabel>Day of week</FieldLabel><Select value={s.weeklyDay} onChange={e=>update({weeklyDay:e.target.value})}>{WEEKDAY_OPTIONS.map(d=><option key={d} value={d}>{d}</option>)}</Select></>}
-          {s.cadence==="monthly"&&<>
-            <FieldLabel>Monthly rule</FieldLabel>
-            <div style={{display:"flex",borderRadius:10,border:"1px solid rgba(51,65,85,0.14)",overflow:"hidden",marginBottom:10}}>
-              {[{value:"date",label:"Specific date"},{value:"ordinal",label:"Ordinal weekday"}].map(opt=><button key={opt.value} type="button" onClick={()=>update({monthlyMode:opt.value})} style={{flex:1,padding:"8px 10px",border:"none",background:s.monthlyMode===opt.value?SLATE:"transparent",color:s.monthlyMode===opt.value?"#fff":MUTED,fontWeight:800,fontSize:12,cursor:"pointer"}}>{opt.label}</button>)}
-            </div>
-            {s.monthlyMode==="date"?<Select value={s.monthlyDate} onChange={e=>update({monthlyDate:e.target.value})}>{Array.from({length:31},(_,i)=>i+1).map(d=><option key={d} value={String(d)}>{d}</option>)}</Select>:<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><Select value={s.monthlyOrdinal} onChange={e=>update({monthlyOrdinal:e.target.value})}>{ORDINAL_OPTIONS.map(o=><option key={o} value={o}>{o}</option>)}</Select><Select value={s.monthlyWeekday} onChange={e=>update({monthlyWeekday:e.target.value})}>{WEEKDAY_OPTIONS.map(d=><option key={d} value={d}>{d}</option>)}</Select></div>}
-          </>}
-          {s.cadence==="daily"&&<div style={{...GLASS_SOFT,borderRadius:10,padding:12,height:"100%",display:"flex",alignItems:"center"}}><div style={{fontSize:13,color:MUTED}}>Sends every day at the selected time.</div></div>}
+      <div style={{...GLASS,borderRadius:18,padding:16, ...(isMobile ? {} : { gridArea: "content" })}}>
+        <div style={{fontSize:16,fontWeight:900,color:SLATE,marginBottom:12}}>Content Options</div>
+        <div style={{display:"grid",gap:10}}>
+          <ToggleRow checked={s.includeInsights} onChange={e=>update({includeInsights:e.target.checked})} label="Include AI insights" hint="Adds a Groq-powered insight paragraph tailored to this report's data." />
+          <ToggleRow checked={s.includePng} onChange={e=>update({includePng:e.target.checked})} label="Include HTML data visuals" hint="Embeds inline chart visualizations designed for email and stakeholder review." />
         </div>
       </div>
-    </div>
 
-    <div style={{...GLASS,borderRadius:18,padding:16}}>
-      <div style={{fontSize:16,fontWeight:900,color:SLATE,marginBottom:12}}>Content Options</div>
-      <div style={{display:"grid",gap:10}}>
-        <ToggleRow checked={s.includeInsights} onChange={e=>update({includeInsights:e.target.checked})} label="Include AI insights" hint="Adds a Groq-powered insight paragraph tailored to this report's data." />
-        <ToggleRow checked={s.includePng} onChange={e=>update({includePng:e.target.checked})} label="Include HTML data visuals" hint="Embeds inline chart visualizations designed for email and stakeholder review." />
+      <div style={isMobile ? {} : { gridArea: "preview", alignSelf: "stretch" }}>
+        <PreviewPanel report={report} previewData={previewData} loadingPreview={previewing} />
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"auto auto 1fr",gap:10, ...(isMobile ? {} : { gridArea: "footer" })}}>
+        <button onClick={()=>onPreview(s)} disabled={previewing} style={{borderRadius:10,background:"rgba(255,255,255,0.75)",color:SLATE,fontWeight:800,padding:"12px 16px",border:"1px solid rgba(51,65,85,0.14)",cursor:previewing?"not-allowed":"pointer",fontSize:14,opacity:previewing?0.6:1}}>
+          {previewing?"Generating...":"Preview Snapshot"}
+        </button>
+        <button onClick={()=>onSendNow(s)} disabled={sending||!parsedRecipients.length} style={{borderRadius:10,background:"rgba(255,255,255,0.75)",color:SLATE,fontWeight:800,padding:"12px 16px",border:"1px solid rgba(51,65,85,0.14)",cursor:sending||!parsedRecipients.length?"not-allowed":"pointer",fontSize:14,opacity:sending||!parsedRecipients.length?0.6:1}}>
+          {sending?"Sending...":"Send Now"}
+        </button>
+        <button onClick={()=>onSave(s)} disabled={saving||!parsedRecipients.length} style={{borderRadius:10,background:ORANGE,color:"#fff",fontWeight:800,padding:"12px 24px",border:"none",cursor:saving||!parsedRecipients.length?"not-allowed":"pointer",fontSize:14,opacity:saving||!parsedRecipients.length?0.7:1,boxShadow:"0 4px 14px rgba(255,112,67,0.30)"}}>
+          {saving?"Saving...":"Save Schedule"}
+        </button>
       </div>
     </div>
-
-    <PreviewPanel report={report} previewData={previewData} loadingPreview={previewing} />
-
-    <div style={{display:"grid",gridTemplateColumns:"auto auto 1fr",gap:10}}>
-      <button onClick={()=>onPreview(s)} disabled={previewing} style={{borderRadius:10,background:"rgba(255,255,255,0.75)",color:SLATE,fontWeight:800,padding:"12px 16px",border:"1px solid rgba(51,65,85,0.14)",cursor:previewing?"not-allowed":"pointer",fontSize:14,opacity:previewing?0.6:1}}>
-        {previewing?"Generating...":"Preview Snapshot"}
-      </button>
-      <button onClick={()=>onSendNow(s)} disabled={sending||!parsedRecipients.length} style={{borderRadius:10,background:"rgba(255,255,255,0.75)",color:SLATE,fontWeight:800,padding:"12px 16px",border:"1px solid rgba(51,65,85,0.14)",cursor:sending||!parsedRecipients.length?"not-allowed":"pointer",fontSize:14,opacity:sending||!parsedRecipients.length?0.6:1}}>
-        {sending?"Sending...":"Send Now"}
-      </button>
-      <button onClick={()=>onSave(s)} disabled={saving||!parsedRecipients.length} style={{borderRadius:10,background:ORANGE,color:"#fff",fontWeight:800,padding:"12px 24px",border:"none",cursor:saving||!parsedRecipients.length?"not-allowed":"pointer",fontSize:14,opacity:saving||!parsedRecipients.length?0.7:1,boxShadow:"0 4px 14px rgba(255,112,67,0.30)"}}>
-        {saving?"Saving...":"Save Schedule"}
-      </button>
-    </div>
-  </div>;
+  );
 }
 
 export default function SnapshotDeliveryPage(){
@@ -437,7 +473,7 @@ export default function SnapshotDeliveryPage(){
         <button type="button" onClick={()=>setActiveTab("all")} style={{fontSize:12,fontWeight:700,color:MUTED,background:"none",border:"none",cursor:"pointer",padding:0}}>← All Reports</button>
         <div style={{fontSize:20,fontWeight:900,color:SLATE}}>{activeReport.fullLabel}</div>
       </div>
-      {loadingTabs[activeReport.key]?<div style={{textAlign:"center",padding:40,color:MUTED,fontSize:13}}>Loading schedule...</div>:<ReportScheduleEditor report={activeReport} schedule={schedules[activeReport.key]} onSave={handleSave} onSendNow={handleSendNow} onPreview={handlePreview} saving={savingTab===activeReport.key} sending={sendingTab===activeReport.key} previewing={previewingTab===activeReport.key} previewData={previewByTab[activeReport.key] || null} />}
+      {loadingTabs[activeReport.key]?<div style={{textAlign:"center",padding:40,color:MUTED,fontSize:13}}>Loading schedule...</div>:<ReportScheduleEditor report={activeReport} schedule={schedules[activeReport.key]} onSave={handleSave} onSendNow={handleSendNow} onPreview={handlePreview} saving={savingTab===activeReport.key} sending={sendingTab===activeReport.key} previewing={previewingTab===activeReport.key} previewData={previewByTab[activeReport.key] || null} isMobile={isMobile} />}
     </section>:null}
   </RecruiterLayout>;
 }
