@@ -249,7 +249,7 @@ function ReportScheduleEditor({report,schedule,onSave,onSendNow,onPreview,saving
       }
     : {
         display: "grid",
-        gridTemplateColumns: "1.1fr 0.9fr",
+        gridTemplateColumns: "1fr 1fr",
         gridTemplateAreas: `
           "head head"
           "recipients preview"
@@ -474,32 +474,43 @@ export default function SnapshotDeliveryPage(){
       </div>
 
       {activeTab==="all"
-        ? <section style={{...GLASS,borderRadius:18,padding:16}}>
-            <AllOverview schedules={schedules} onSelectReport={key=>setActiveTab(key)} />
-          </section>
-        : activeReport
-          ? <section style={{...GLASS,borderRadius:18,padding:16,marginTop:32}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                <button type="button" onClick={()=>setActiveTab("all")} style={{fontSize:12,fontWeight:700,color:MUTED,background:"none",border:"none",cursor:"pointer",padding:0}}>← All Reports</button>
-                <div style={{fontSize:20,fontWeight:900,color:SLATE}}>{activeReport.fullLabel}</div>
-              </div>
-              {loadingTabs[activeReport.key]
-                ? <div style={{textAlign:"center",padding:40,color:MUTED,fontSize:13}}>Loading schedule...</div>
-                : <ReportScheduleEditor
-                    report={activeReport}
-                    schedule={schedules[activeReport.key]}
-                    onSave={handleSave}
-                    onSendNow={handleSendNow}
-                    onPreview={handlePreview}
-                    saving={savingTab===activeReport.key}
-                    sending={sendingTab===activeReport.key}
-                    previewing={previewingTab===activeReport.key}
-                    previewData={previewByTab[activeReport.key] || null}
-                    isMobile={isMobile}
-                  />
+  ? <section style={{...GLASS,borderRadius:18,padding:16}}>
+      <AllOverview schedules={schedules} onSelectReport={key=>setActiveTab(key)} />
+    </section>
+  : activeReport
+    ? <div
+        style={
+          isMobile
+            ? {}
+            : {
+                width: "calc(100% + 260px)",
+                marginRight: "-260px",
               }
-            </section>
-          : null}
+        }
+      >
+        <section style={{...GLASS,borderRadius:18,padding:16,marginTop:32}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+            <button type="button" onClick={()=>setActiveTab("all")} style={{fontSize:12,fontWeight:700,color:MUTED,background:"none",border:"none",cursor:"pointer",padding:0}}>← All Reports</button>
+            <div style={{fontSize:20,fontWeight:900,color:SLATE}}>{activeReport.fullLabel}</div>
+          </div>
+          {loadingTabs[activeReport.key]
+            ? <div style={{textAlign:"center",padding:40,color:MUTED,fontSize:13}}>Loading schedule...</div>
+            : <ReportScheduleEditor
+                report={activeReport}
+                schedule={schedules[activeReport.key]}
+                onSave={handleSave}
+                onSendNow={handleSendNow}
+                onPreview={handlePreview}
+                saving={savingTab===activeReport.key}
+                sending={sendingTab===activeReport.key}
+                previewing={previewingTab===activeReport.key}
+                previewData={previewByTab[activeReport.key] || null}
+                isMobile={isMobile}
+              />
+          }
+        </section>
+      </div>
+    : null}
     </div>
   </RecruiterLayout>;
 }
