@@ -46,7 +46,7 @@ const MUTED = "#64748B";
 
 // desktop bleed settings
 const LEFT_BLEED = -(240 + 12);
-const RIGHT_BLEED = 0;
+const RIGHT_BLEED = -(240 + 12);
 const DESKTOP_REPORT_DROP = 72;
 
 // ─── Insight config ───────────────────────────────────────────────────────────
