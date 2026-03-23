@@ -424,7 +424,7 @@ function Body() {
     <RecruiterAnalyticsLayout
       title="Recruiter Analytics — ForgeTomorrow"
       pageTitle="Presentation Visuals"
-      pageSubtitle="Export-ready charts for QBRs and stakeholder reporting. Clean PNG downloads — white background, no watermarks, resize freely in your deck."
+      pageSubtitle="Clean, export-ready charts for QBRs and stakeholder reporting with white background and no watermarks."
       activeTab="presentation"
       filters={filters}
       onFilterChange={onFilterChange}
