@@ -808,7 +808,7 @@ model User {
   recruiterCalendarAsCandidate RecruiterCalendarItem[]        @relation("UserRecruiterCalendarCandidate")
   recruiterCalendarOwnedItems  RecruiterCalendarItem[]        @relation("UserRecruiterCalendarOwner")
   candidateAutomations         RecruiterCandidateAutomation[]
-  snapshotSchedule   		   SnapshotSchedule?
+  snapshotSchedules  		   SnapshotSchedule[]
   recruiterCandidatesAsUser    RecruiterCandidate[]           @relation("RecruiterCandidateCandidate")
   recruiterCandidatesOwned     RecruiterCandidate[]           @relation("RecruiterCandidateRecruiter")
   candidateExplainRuns         RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsCandidate")
@@ -1034,7 +1034,8 @@ model RecruiterCalendarItem {
 
 model SnapshotSchedule {
   id               Int      @id @default(autoincrement())
-  userId           String   @unique   // ← one row per user, keyed to User
+  userEmail        String
+  reportType       String   @default("executive")
   recipients       String   @default("")
   cadence          String   @default("weekly")
   timezone         String   @default("America/Chicago")
@@ -1046,11 +1047,14 @@ model SnapshotSchedule {
   monthlyWeekday   String?
   includePng       Boolean  @default(true)
   includeInsights  Boolean  @default(true)
-  sendToSelf       Boolean  @default(false)  // ← was missing entirely
+  sendToSelf       Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  user             User     @relation(fields: [userEmail], references: [email], onDelete: Cascade)
+ 
+  @@unique([userEmail, reportType])
+  @@index([userEmail])
+  @@index([reportType])
   @@map("snapshot_schedules")
 }
 
