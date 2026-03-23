@@ -468,12 +468,23 @@ export default function SnapshotDeliveryPage(){
       </div>
     </div>
 
-    {activeTab==="all"?<section style={{...GLASS,borderRadius:18,padding:16}}><AllOverview schedules={schedules} onSelectReport={key=>setActiveTab(key)} /></section>:activeReport?<section style={{...GLASS,borderRadius:18,padding:16}}>
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-        <button type="button" onClick={()=>setActiveTab("all")} style={{fontSize:12,fontWeight:700,color:MUTED,background:"none",border:"none",cursor:"pointer",padding:0}}>← All Reports</button>
-        <div style={{fontSize:20,fontWeight:900,color:SLATE}}>{activeReport.fullLabel}</div>
-      </div>
-      {loadingTabs[activeReport.key]?<div style={{textAlign:"center",padding:40,color:MUTED,fontSize:13}}>Loading schedule...</div>:<ReportScheduleEditor report={activeReport} schedule={schedules[activeReport.key]} onSave={handleSave} onSendNow={handleSendNow} onPreview={handlePreview} saving={savingTab===activeReport.key} sending={sendingTab===activeReport.key} previewing={previewingTab===activeReport.key} previewData={previewByTab[activeReport.key] || null} isMobile={isMobile} />}
-    </section>:null}
+        {activeTab==="all"?<section style={{...GLASS,borderRadius:18,padding:16}}><AllOverview schedules={schedules} onSelectReport={key=>setActiveTab(key)} /></section>:activeReport?<div
+      style={{
+        position: "relative",
+        marginTop: 16,
+        width: isMobile ? "100%" : "calc(100vw - 360px)",
+        maxWidth: isMobile ? "100%" : "1480px",
+        left: isMobile ? "auto" : "50%",
+        transform: isMobile ? "none" : "translateX(-50%)",
+      }}
+    >
+      <section style={{...GLASS,borderRadius:18,padding:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+          <button type="button" onClick={()=>setActiveTab("all")} style={{fontSize:12,fontWeight:700,color:MUTED,background:"none",border:"none",cursor:"pointer",padding:0}}>← All Reports</button>
+          <div style={{fontSize:20,fontWeight:900,color:SLATE}}>{activeReport.fullLabel}</div>
+        </div>
+        {loadingTabs[activeReport.key]?<div style={{textAlign:"center",padding:40,color:MUTED,fontSize:13}}>Loading schedule...</div>:<ReportScheduleEditor report={activeReport} schedule={schedules[activeReport.key]} onSave={handleSave} onSendNow={handleSendNow} onPreview={handlePreview} saving={savingTab===activeReport.key} sending={sendingTab===activeReport.key} previewing={previewingTab===activeReport.key} previewData={previewByTab[activeReport.key] || null} isMobile={isMobile} />}
+      </section>
+    </div>:null}
   </RecruiterLayout>;
 }
