@@ -449,42 +449,33 @@ export default function SnapshotDeliveryPage(){
   const rightRail=<div style={{display:"grid",gap:12}}><div style={{...GLASS_SOFT,borderRadius:12,padding:14}}><div style={{fontSize:10,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:8}}>Sponsored</div><div style={{borderRadius:12,border:"1px dashed rgba(100,116,139,0.24)",background:"rgba(255,255,255,0.60)",minHeight:180,display:"flex",alignItems:"center",justifyContent:"center",padding:16,textAlign:"center",color:"#94A3B8",fontSize:13,fontWeight:700}}>Reserved ad / sponsor panel</div></div></div>;
 
   return <RecruiterLayout title="Snapshot Delivery Center" pageTitle="Snapshot Delivery Center" pageSubtitle="Per-report delivery schedules. Each report has its own recipients, timing, and cadence." right={rightRail} activeNav="analytics">
-    <section style={{...GLASS,borderRadius:18,padding:16,textAlign:"center"}}>
-      <div style={{fontSize:24,fontWeight:900,color:ORANGE}}>Snapshot Delivery Center</div>
-      <div style={{fontSize:14,color:MUTED,marginTop:6,maxWidth:560,margin:"8px auto 0"}}>Each report has its own schedule. Set different recipients, timing, and cadence per report type — your settings never affect anyone else's.</div>
-    </section>
+    <div style={{display:"grid",gap:14,paddingTop:30}}>
+      <section style={{...GLASS,borderRadius:18,padding:16,textAlign:"center"}}>
+        <div style={{fontSize:24,fontWeight:900,color:ORANGE}}>Snapshot Delivery Center</div>
+        <div style={{fontSize:14,color:MUTED,marginTop:6,maxWidth:560,margin:"8px auto 0"}}>Each report has its own schedule. Set different recipients, timing, and cadence per report type — your settings never affect anyone else's.</div>
+      </section>
 
-    <div style={{...GLASS,borderRadius:18,padding:"12px 16px"}}>
-      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-        <PillButton active={activeTab==="all"} onClick={()=>setActiveTab("all")}>All Reports</PillButton>
-        {REPORTS.map(report=>{
-          const s=schedules[report.key];
-          const isActive=s?.recipients&&s.recipients.trim().length>0;
-          return <div key={report.key} style={{position:"relative"}}>
-            <PillButton active={activeTab===report.key} onClick={()=>setActiveTab(report.key)}>{report.label}</PillButton>
-            {isActive&&<div style={{position:"absolute",top:-2,right:-2,width:8,height:8,borderRadius:"50%",background:ORANGE,border:"2px solid white"}} />}
-          </div>;
-        })}
+      <div style={{...GLASS,borderRadius:18,padding:"12px 16px"}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          <PillButton active={activeTab==="all"} onClick={()=>setActiveTab("all")}>All Reports</PillButton>
+          {REPORTS.map(report=>{
+            const s=schedules[report.key];
+            const isActive=s?.recipients&&s.recipients.trim().length>0;
+            return <div key={report.key} style={{position:"relative"}}>
+              <PillButton active={activeTab===report.key} onClick={()=>setActiveTab(report.key)}>{report.label}</PillButton>
+              {isActive&&<div style={{position:"absolute",top:-2,right:-2,width:8,height:8,borderRadius:"50%",background:ORANGE,border:"2px solid white"}} />}
+            </div>;
+          })}
+        </div>
       </div>
-    </div>
 
-        {activeTab==="all"?<section style={{...GLASS,borderRadius:18,padding:16}}><AllOverview schedules={schedules} onSelectReport={key=>setActiveTab(key)} /></section>:activeReport?<div
-      style={{
-        position: "relative",
-        marginTop: 16,
-        width: isMobile ? "100%" : "calc(100vw - 360px)",
-        maxWidth: isMobile ? "100%" : "1480px",
-        left: isMobile ? "auto" : "50%",
-        transform: isMobile ? "none" : "translateX(-50%)",
-      }}
-    >
-      <section style={{...GLASS,borderRadius:18,padding:16}}>
+      {activeTab==="all"?<section style={{...GLASS,borderRadius:18,padding:16}}><AllOverview schedules={schedules} onSelectReport={key=>setActiveTab(key)} /></section>:activeReport?<section style={{...GLASS,borderRadius:18,padding:16}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
           <button type="button" onClick={()=>setActiveTab("all")} style={{fontSize:12,fontWeight:700,color:MUTED,background:"none",border:"none",cursor:"pointer",padding:0}}>← All Reports</button>
           <div style={{fontSize:20,fontWeight:900,color:SLATE}}>{activeReport.fullLabel}</div>
         </div>
         {loadingTabs[activeReport.key]?<div style={{textAlign:"center",padding:40,color:MUTED,fontSize:13}}>Loading schedule...</div>:<ReportScheduleEditor report={activeReport} schedule={schedules[activeReport.key]} onSave={handleSave} onSendNow={handleSendNow} onPreview={handlePreview} saving={savingTab===activeReport.key} sending={sendingTab===activeReport.key} previewing={previewingTab===activeReport.key} previewData={previewByTab[activeReport.key] || null} isMobile={isMobile} />}
-      </section>
-    </div>:null}
+      </section>:null}
+    </div>
   </RecruiterLayout>;
 }
