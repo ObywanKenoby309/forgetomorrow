@@ -32,6 +32,162 @@ function Textarea(props){return <textarea {...props} style={{width:"100%",minHei
 function PillButton({active,onClick,children,small}){return <button type="button" onClick={onClick} style={{borderRadius:999,padding:small?"6px 12px":"9px 16px",fontWeight:800,fontSize:small?12:13,border:"none",cursor:"pointer",background:active?ORANGE:"rgba(255,255,255,0.75)",color:active?"#fff":SLATE,whiteSpace:"nowrap"}}>{children}</button>;}
 function ToggleRow({checked,onChange,label,hint}){return <label style={{...GLASS_SOFT,borderRadius:12,padding:12,display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,cursor:"pointer"}}><div><div style={{fontSize:13,fontWeight:800,color:SLATE}}>{label}</div>{hint&&<div style={{fontSize:12,color:MUTED,marginTop:4,lineHeight:1.5}}>{hint}</div>}</div><input type="checkbox" checked={checked} onChange={onChange} /></label>;}
 
+function metricValue(value, suffix = "") {
+  if (value === null || value === undefined || value === "") return "—";
+  const num = Number(value);
+  if (!Number.isNaN(num)) return `${num.toLocaleString()}${suffix}`;
+  return `${value}${suffix}`;
+}
+
+function PreviewPanel({ report, previewData, loadingPreview }) {
+  if (loadingPreview) {
+    return (
+      <div style={{...GLASS,borderRadius:18,padding:16}}>
+        <div style={{fontSize:16,fontWeight:900,color:SLATE,marginBottom:8}}>Preview Snapshot</div>
+        <div style={{fontSize:13,color:MUTED}}>Generating preview...</div>
+      </div>
+    );
+  }
+
+  if (!previewData) return null;
+
+  const { kpis = {}, funnelData = [], sourcesData = [], activityData = [], previewInsight } = previewData;
+
+  const maxFunnel = Math.max(...funnelData.map((d) => Number(d.value || 0)), 1);
+  const totalSources = sourcesData.reduce((sum, item) => sum + Number(item.value || 0), 0) || 1;
+  const maxActivityMessages = Math.max(...activityData.map((d) => Number(d.messages || 0)), 1);
+  const maxActivityResponses = Math.max(...activityData.map((d) => Number(d.responses || 0)), 1);
+
+  return (
+    <div style={{...GLASS,borderRadius:18,padding:16,display:"grid",gap:16}}>
+      <div>
+        <div style={{fontSize:16,fontWeight:900,color:SLATE}}>Preview Snapshot</div>
+        <div style={{fontSize:13,color:MUTED,marginTop:4}}>
+          This is the report content that will be used for preview and send.
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3, minmax(0, 1fr))",gap:10}}>
+        <div style={{...GLASS_SOFT,borderRadius:12,padding:12}}>
+          <div style={{fontSize:10,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:MUTED}}>Job Views</div>
+          <div style={{fontSize:24,fontWeight:900,color:SLATE,marginTop:4}}>{metricValue(kpis.totalViews ?? kpis.jobViews)}</div>
+        </div>
+        <div style={{...GLASS_SOFT,borderRadius:12,padding:12}}>
+          <div style={{fontSize:10,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:MUTED}}>Applications</div>
+          <div style={{fontSize:24,fontWeight:900,color:SLATE,marginTop:4}}>{metricValue(kpis.totalApplies ?? kpis.applies)}</div>
+        </div>
+        <div style={{...GLASS_SOFT,borderRadius:12,padding:12}}>
+          <div style={{fontSize:10,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:MUTED}}>Conversion</div>
+          <div style={{fontSize:24,fontWeight:900,color:SLATE,marginTop:4}}>{metricValue(kpis.conversionRatePct ?? kpis.conversionRate, "%")}</div>
+        </div>
+        <div style={{...GLASS_SOFT,borderRadius:12,padding:12}}>
+          <div style={{fontSize:10,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:MUTED}}>Time to Fill</div>
+          <div style={{fontSize:24,fontWeight:900,color:SLATE,marginTop:4}}>{metricValue(kpis.avgTimeToFillDays ?? kpis.avgTimeToFill, " days")}</div>
+        </div>
+        <div style={{...GLASS_SOFT,borderRadius:12,padding:12}}>
+          <div style={{fontSize:10,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:MUTED}}>Interviews</div>
+          <div style={{fontSize:24,fontWeight:900,color:SLATE,marginTop:4}}>{metricValue(kpis.totalInterviews)}</div>
+        </div>
+        <div style={{...GLASS_SOFT,borderRadius:12,padding:12}}>
+          <div style={{fontSize:10,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:MUTED}}>Hires</div>
+          <div style={{fontSize:24,fontWeight:900,color:SLATE,marginTop:4}}>{metricValue(kpis.totalHires)}</div>
+        </div>
+      </div>
+
+      {previewInsight && (
+        <div style={{background:"rgba(255,112,67,0.08)",border:"1px solid rgba(255,112,67,0.20)",borderLeft:"4px solid #FF7043",borderRadius:12,padding:"14px 16px"}}>
+          <div style={{fontSize:11,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:ORANGE,marginBottom:8}}>AI Insight</div>
+          <div style={{fontSize:14,color:SLATE,lineHeight:1.65}}>{previewInsight}</div>
+        </div>
+      )}
+
+      {(report.key === "executive" || report.key === "funnel") && funnelData.length > 0 && (
+        <div style={{...GLASS_SOFT,borderRadius:14,padding:14}}>
+          <div style={{fontSize:13,fontWeight:900,color:SLATE,marginBottom:10}}>Application Funnel</div>
+          <div style={{display:"grid",gap:8}}>
+            {funnelData.map((item) => {
+              const pct = Math.round((Number(item.value || 0) / maxFunnel) * 100);
+              return (
+                <div key={item.stage} style={{display:"grid",gridTemplateColumns:"120px 1fr 60px",gap:10,alignItems:"center"}}>
+                  <div style={{fontSize:12,fontWeight:700,color:SLATE}}>{item.stage}</div>
+                  <div style={{height:16,background:"rgba(148,163,184,0.16)",borderRadius:999,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#F57C00,#FFB74D)",borderRadius:999}} />
+                  </div>
+                  <div style={{fontSize:12,fontWeight:800,color:SLATE,textAlign:"right"}}>{metricValue(item.value)}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {(report.key === "executive" || report.key === "sources") && sourcesData.length > 0 && (
+        <div style={{...GLASS_SOFT,borderRadius:14,padding:14}}>
+          <div style={{fontSize:13,fontWeight:900,color:SLATE,marginBottom:10}}>Source Performance</div>
+          <div style={{display:"grid",gap:8}}>
+            {sourcesData.map((item) => {
+              const pct = Math.round((Number(item.value || 0) / totalSources) * 100);
+              return (
+                <div key={item.name} style={{display:"grid",gridTemplateColumns:"140px 1fr 50px",gap:10,alignItems:"center"}}>
+                  <div style={{fontSize:12,fontWeight:700,color:SLATE}}>{item.name}</div>
+                  <div style={{height:16,background:"rgba(148,163,184,0.16)",borderRadius:999,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${pct}%`,background:"rgba(255,112,67,0.85)",borderRadius:999}} />
+                  </div>
+                  <div style={{fontSize:12,fontWeight:800,color:SLATE,textAlign:"right"}}>{pct}%</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {report.key === "activity" && activityData.length > 0 && (
+        <div style={{...GLASS_SOFT,borderRadius:14,padding:14}}>
+          <div style={{fontSize:13,fontWeight:900,color:SLATE,marginBottom:10}}>Recruiter Activity</div>
+          <div style={{display:"grid",gap:8}}>
+            {activityData.map((item) => {
+              const msgPct = Math.round((Number(item.messages || 0) / maxActivityMessages) * 100);
+              const rspPct = Math.round((Number(item.responses || 0) / maxActivityResponses) * 100);
+              return (
+                <div key={item.week} style={{display:"grid",gridTemplateColumns:"50px 1fr 1fr",gap:10,alignItems:"center"}}>
+                  <div style={{fontSize:12,fontWeight:700,color:SLATE}}>{item.week}</div>
+                  <div>
+                    <div style={{fontSize:10,color:MUTED,marginBottom:4}}>Applications</div>
+                    <div style={{height:14,background:"rgba(148,163,184,0.16)",borderRadius:999,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${msgPct}%`,background:"rgba(255,152,0,0.9)",borderRadius:999}} />
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,color:MUTED,marginBottom:4}}>Interviews</div>
+                    <div style={{height:14,background:"rgba(148,163,184,0.16)",borderRadius:999,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${rspPct}%`,background:"rgba(33,150,243,0.9)",borderRadius:999}} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {report.key === "time-to-fill" && (
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div style={{...GLASS_SOFT,borderRadius:12,padding:14,textAlign:"center"}}>
+            <div style={{fontSize:10,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:MUTED}}>Avg. Time to Fill</div>
+            <div style={{fontSize:34,fontWeight:900,color:ORANGE,marginTop:6}}>{metricValue(kpis.avgTimeToFillDays ?? kpis.avgTimeToFill)}</div>
+            <div style={{fontSize:12,color:MUTED,marginTop:2}}>days</div>
+          </div>
+          <div style={{...GLASS_SOFT,borderRadius:12,padding:14,textAlign:"center"}}>
+            <div style={{fontSize:10,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:MUTED}}>Total Hires</div>
+            <div style={{fontSize:34,fontWeight:900,color:SLATE,marginTop:6}}>{metricValue(kpis.totalHires)}</div>
+            <div style={{fontSize:12,color:MUTED,marginTop:2}}>this period</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AllOverview({schedules,onSelectReport}){
   return <div style={{display:"grid",gap:12}}>
     <div style={{fontSize:14,color:MUTED,marginBottom:4}}>Each report has its own schedule, recipients, and timing. Click any report to configure it.</div>
@@ -54,7 +210,7 @@ function AllOverview({schedules,onSelectReport}){
   </div>;
 }
 
-function ReportScheduleEditor({report,schedule,onSave,onSendNow,saving,sending}){
+function ReportScheduleEditor({report,schedule,onSave,onSendNow,onPreview,saving,sending,previewing,previewData}){
   const [s,setS]=useState(schedule||defaultSchedule(report.key));
   const [tzSearch,setTzSearch]=useState("");
   useEffect(()=>{setS(schedule||defaultSchedule(report.key));},[report.key,schedule]);
@@ -136,9 +292,18 @@ function ReportScheduleEditor({report,schedule,onSave,onSendNow,saving,sending})
       </div>
     </div>
 
-    <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10}}>
-      <button onClick={()=>onSendNow(s)} disabled={sending||!parsedRecipients.length} style={{borderRadius:10,background:"rgba(255,255,255,0.75)",color:SLATE,fontWeight:800,padding:"12px 16px",border:"1px solid rgba(51,65,85,0.14)",cursor:sending||!parsedRecipients.length?"not-allowed":"pointer",fontSize:14,opacity:sending||!parsedRecipients.length?0.6:1}}>{sending?"Sending...":"Send Now"}</button>
-      <button onClick={()=>onSave(s)} disabled={saving||!parsedRecipients.length} style={{borderRadius:10,background:ORANGE,color:"#fff",fontWeight:800,padding:"12px 24px",border:"none",cursor:saving||!parsedRecipients.length?"not-allowed":"pointer",fontSize:14,opacity:saving||!parsedRecipients.length?0.7:1,boxShadow:"0 4px 14px rgba(255,112,67,0.30)"}}>{saving?"Saving...":"Save Schedule"}</button>
+    <PreviewPanel report={report} previewData={previewData} loadingPreview={previewing} />
+
+    <div style={{display:"grid",gridTemplateColumns:"auto auto 1fr",gap:10}}>
+      <button onClick={()=>onPreview(s)} disabled={previewing} style={{borderRadius:10,background:"rgba(255,255,255,0.75)",color:SLATE,fontWeight:800,padding:"12px 16px",border:"1px solid rgba(51,65,85,0.14)",cursor:previewing?"not-allowed":"pointer",fontSize:14,opacity:previewing?0.6:1}}>
+        {previewing?"Generating...":"Preview Snapshot"}
+      </button>
+      <button onClick={()=>onSendNow(s)} disabled={sending||!parsedRecipients.length} style={{borderRadius:10,background:"rgba(255,255,255,0.75)",color:SLATE,fontWeight:800,padding:"12px 16px",border:"1px solid rgba(51,65,85,0.14)",cursor:sending||!parsedRecipients.length?"not-allowed":"pointer",fontSize:14,opacity:sending||!parsedRecipients.length?0.6:1}}>
+        {sending?"Sending...":"Send Now"}
+      </button>
+      <button onClick={()=>onSave(s)} disabled={saving||!parsedRecipients.length} style={{borderRadius:10,background:ORANGE,color:"#fff",fontWeight:800,padding:"12px 24px",border:"none",cursor:saving||!parsedRecipients.length?"not-allowed":"pointer",fontSize:14,opacity:saving||!parsedRecipients.length?0.7:1,boxShadow:"0 4px 14px rgba(255,112,67,0.30)"}}>
+        {saving?"Saving...":"Save Schedule"}
+      </button>
     </div>
   </div>;
 }
@@ -150,6 +315,8 @@ export default function SnapshotDeliveryPage(){
   const [loadingTabs,setLoadingTabs]=useState({});
   const [savingTab,setSavingTab]=useState(null);
   const [sendingTab,setSendingTab]=useState(null);
+  const [previewingTab,setPreviewingTab]=useState(null);
+  const [previewByTab,setPreviewByTab]=useState({});
 
   useEffect(()=>{const check=()=>setIsMobile(window.innerWidth<1024);check();window.addEventListener("resize",check);return()=>window.removeEventListener("resize",check);},[]);
 
@@ -173,19 +340,73 @@ export default function SnapshotDeliveryPage(){
     setSavingTab(null);
   },[]);
 
+  const handlePreview=useCallback(async(scheduleData)=>{
+    const { reportType } = scheduleData;
+    setPreviewingTab(reportType);
+    try{
+      const res=await fetch("/api/analytics/generate-snapshot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(scheduleData)});
+      const data=await res.json();
+      if(data.success){
+        setPreviewByTab(prev=>({...prev,[reportType]:data}));
+      } else {
+        alert(data.error||"Failed to generate preview");
+      }
+    }catch{
+      alert("Error generating preview");
+    }
+    setPreviewingTab(null);
+  },[]);
+
   const handleSendNow=useCallback(async(scheduleData)=>{
-    const{reportType,recipients}=scheduleData;
+    const{reportType,recipients,sendToSelf}=scheduleData;
     const parsedRecipients=recipients.split(",").map(r=>r.trim()).filter(Boolean);
     if(!parsedRecipients.length){alert("Add at least one recipient before sending.");return;}
+
     setSendingTab(reportType);
     try{
-      const res=await fetch("/api/analytics/send-snapshot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...scheduleData,recipients:parsedRecipients,reportingWindow:"Current period"})});
+      let snapshotPayload = previewByTab[reportType];
+
+      if(!snapshotPayload){
+        const previewRes=await fetch("/api/analytics/generate-snapshot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(scheduleData)});
+        const previewData=await previewRes.json();
+        if(!previewData.success){
+          alert(previewData.error||"Failed to generate snapshot data");
+          setSendingTab(null);
+          return;
+        }
+        snapshotPayload = previewData;
+        setPreviewByTab(prev=>({...prev,[reportType]:previewData}));
+      }
+
+      let finalRecipients = [...parsedRecipients];
+      if (sendToSelf) {
+        const selfEmail = snapshotPayload?.userEmail || "";
+        if (selfEmail && !finalRecipients.includes(selfEmail)) {
+          finalRecipients.push(selfEmail);
+        }
+      }
+
+      const res=await fetch("/api/analytics/send-snapshot",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          ...scheduleData,
+          ...snapshotPayload,
+          recipients: finalRecipients,
+          reportingWindow: snapshotPayload.reportingWindow || "Current period",
+          accountName: snapshotPayload.accountName || "ForgeTomorrow Demo Account",
+          recruiterName: snapshotPayload.recruiterName || "Recruiter Team",
+        })
+      });
+
       const data=await res.json();
       if(data.success)alert(`${REPORTS.find(r=>r.key===reportType)?.fullLabel||reportType} sent.`);
       else alert(data.error||"Failed to send");
-    }catch{alert("Error sending snapshot");}
+    }catch{
+      alert("Error sending snapshot");
+    }
     setSendingTab(null);
-  },[]);
+  },[previewByTab]);
 
   const activeReport=REPORTS.find(r=>r.key===activeTab);
 
@@ -216,7 +437,7 @@ export default function SnapshotDeliveryPage(){
         <button type="button" onClick={()=>setActiveTab("all")} style={{fontSize:12,fontWeight:700,color:MUTED,background:"none",border:"none",cursor:"pointer",padding:0}}>← All Reports</button>
         <div style={{fontSize:20,fontWeight:900,color:SLATE}}>{activeReport.fullLabel}</div>
       </div>
-      {loadingTabs[activeReport.key]?<div style={{textAlign:"center",padding:40,color:MUTED,fontSize:13}}>Loading schedule...</div>:<ReportScheduleEditor report={activeReport} schedule={schedules[activeReport.key]} onSave={handleSave} onSendNow={handleSendNow} saving={savingTab===activeReport.key} sending={sendingTab===activeReport.key} />}
+      {loadingTabs[activeReport.key]?<div style={{textAlign:"center",padding:40,color:MUTED,fontSize:13}}>Loading schedule...</div>:<ReportScheduleEditor report={activeReport} schedule={schedules[activeReport.key]} onSave={handleSave} onSendNow={handleSendNow} onPreview={handlePreview} saving={savingTab===activeReport.key} sending={sendingTab===activeReport.key} previewing={previewingTab===activeReport.key} previewData={previewByTab[activeReport.key] || null} />}
     </section>:null}
   </RecruiterLayout>;
 }
