@@ -33,11 +33,12 @@ export default function RecruiterCalendarPage() {
   return (
     <PlanProvider>
       <RecruiterLayout
-        title="Recruiter Calendar | ForgeTomorrow"
-        header={HeaderBox}
-        right={null}
-        activeNav="calendar"
-      >
+  title="Recruiter Calendar | ForgeTomorrow"
+  header={HeaderBox}
+  headerCard={false}
+  right={null}
+  activeNav="calendar"
+>
         <div style={{ width: '100%' }}>
           <RecruiterCalendar
             title="Month View"

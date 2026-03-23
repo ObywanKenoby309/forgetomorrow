@@ -402,7 +402,7 @@ export default function JobFormModal({
     : { label: "AI Add-on Locked", hint: "Upgrade to unlock JD optimization + ATS guidance." };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[clamp(20px,6vh,64px)] pb-6">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
@@ -410,7 +410,7 @@ export default function JobFormModal({
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white/85 backdrop-blur-xl shadow-2xl border border-white/40">
+      <div className="relative w-full max-w-4xl max-h-[84vh] overflow-y-auto rounded-2xl bg-white/85 backdrop-blur-xl shadow-2xl border border-white/40">
         {/* Premium top accent */}
         <div
           className="h-1 w-full"
@@ -765,7 +765,7 @@ export default function JobFormModal({
               <Field label="Description" required>
                 <div className="rounded-xl border border-slate-200 bg-white/70 backdrop-blur p-3">
                   <textarea
-                    className="border border-slate-200 rounded-xl px-3 py-2 w-full min-h-[200px] font-mono text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#FF7043]/35"
+                    className="border border-slate-200 rounded-xl px-3 py-2 w-full min-h-[160px] font-mono text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#FF7043]/35"
                     value={data.description}
                     onChange={(e) => setData((p) => ({ ...p, description: e.target.value }))}
                     disabled={isView}
