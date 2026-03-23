@@ -70,7 +70,7 @@ function PreviewPanel({ report, previewData, loadingPreview }) {
   const maxActivityResponses = Math.max(...activityData.map((d) => Number(d.responses || 0)), 1);
 
   return (
-    <div style={{...GLASS,borderRadius:18,padding:16,display:"grid",gap:16}}>
+    <div style={{...GLASS,borderRadius:18,padding:16,display:"grid",gap:16,height:"100%"}}>
       <div>
         <div style={{fontSize:16,fontWeight:900,color:SLATE}}>Preview Snapshot</div>
         <div style={{fontSize:13,color:MUTED,marginTop:4}}>
@@ -249,9 +249,9 @@ function ReportScheduleEditor({report,schedule,onSave,onSendNow,onPreview,saving
       }
     : {
         display: "grid",
-        gridTemplateColumns: "1.05fr 0.95fr",
+        gridTemplateColumns: "1.1fr 0.9fr",
         gridTemplateAreas: `
-          "desc desc"
+          "head head"
           "recipients preview"
           "schedule preview"
           "content preview"
@@ -263,8 +263,11 @@ function ReportScheduleEditor({report,schedule,onSave,onSendNow,onPreview,saving
 
   return (
     <div style={workspaceStyle}>
-      <div style={{...GLASS_SOFT,borderRadius:12,padding:"12px 14px", ...(isMobile ? {} : { gridArea: "desc" })}}>
-        <div style={{fontSize:13,color:MUTED,lineHeight:1.6}}>{report.description}</div>
+      <div style={{...(isMobile ? {} : { gridArea: "head" }), display:"grid", gridTemplateColumns:isMobile ? "1fr" : "1.1fr 0.9fr", gap:14, alignItems:"start"}}>
+        <div style={{...GLASS_SOFT,borderRadius:12,padding:"12px 14px"}}>
+          <div style={{fontSize:13,color:MUTED,lineHeight:1.6}}>{report.description}</div>
+        </div>
+        <div style={{display:isMobile ? "none" : "block"}} />
       </div>
 
       <div style={{...GLASS,borderRadius:18,padding:16, ...(isMobile ? {} : { gridArea: "recipients" })}}>
@@ -305,13 +308,7 @@ function ReportScheduleEditor({report,schedule,onSave,onSendNow,onPreview,saving
           <div><FieldLabel>Delivery time</FieldLabel><Input type="time" value={s.timeOfDay} onChange={e=>update({timeOfDay:e.target.value})} /></div>
           <div>
             {s.cadence==="weekly"&&<><FieldLabel>Day of week</FieldLabel><Select value={s.weeklyDay} onChange={e=>update({weeklyDay:e.target.value})}>{WEEKDAY_OPTIONS.map(d=><option key={d} value={d}>{d}</option>)}</Select></>}
-            {s.cadence==="monthly"&&<>
-              <FieldLabel>Monthly rule</FieldLabel>
-              <div style={{display:"flex",borderRadius:10,border:"1px solid rgba(51,65,85,0.14)",overflow:"hidden",marginBottom:10}}>
-                {[{value:"date",label:"Specific date"},{value:"ordinal",label:"Ordinal weekday"}].map(opt=><button key={opt.value} type="button" onClick={()=>update({monthlyMode:opt.value})} style={{flex:1,padding:"8px 10px",border:"none",background:s.monthlyMode===opt.value?SLATE:"transparent",color:s.monthlyMode===opt.value?"#fff":MUTED,fontWeight:800,fontSize:12,cursor:"pointer"}}>{opt.label}</button>)}
-              </div>
-              {s.monthlyMode==="date"?<Select value={s.monthlyDate} onChange={e=>update({monthlyDate:e.target.value})}>{Array.from({length:31},(_,i)=>i+1).map(d=><option key={d} value={String(d)}>{d}</option>)}</Select>:<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><Select value={s.monthlyOrdinal} onChange={e=>update({monthlyOrdinal:e.target.value})}>{ORDINAL_OPTIONS.map(o=><option key={o} value={o}>{o}</option>)}</Select><Select value={s.monthlyWeekday} onChange={e=>update({monthlyWeekday:e.target.value})}>{WEEKDAY_OPTIONS.map(d=><option key={d} value={d}>{d}</option>)}</Select></div>}
-            </>}
+            {s.cadence==="monthly"&&<><FieldLabel>Monthly rule</FieldLabel><div style={{display:"flex",borderRadius:10,border:"1px solid rgba(51,65,85,0.14)",overflow:"hidden",marginBottom:10}}>{[{value:"date",label:"Specific date"},{value:"ordinal",label:"Ordinal weekday"}].map(opt=><button key={opt.value} type="button" onClick={()=>update({monthlyMode:opt.value})} style={{flex:1,padding:"8px 10px",border:"none",background:s.monthlyMode===opt.value?SLATE:"transparent",color:s.monthlyMode===opt.value?"#fff":MUTED,fontWeight:800,fontSize:12,cursor:"pointer"}}>{opt.label}</button>)}</div>{s.monthlyMode==="date"?<Select value={s.monthlyDate} onChange={e=>update({monthlyDate:e.target.value})}>{Array.from({length:31},(_,i)=>i+1).map(d=><option key={d} value={String(d)}>{d}</option>)}</Select>:<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><Select value={s.monthlyOrdinal} onChange={e=>update({monthlyOrdinal:e.target.value})}>{ORDINAL_OPTIONS.map(o=><option key={o} value={o}>{o}</option>)}</Select><Select value={s.monthlyWeekday} onChange={e=>update({monthlyWeekday:e.target.value})}>{WEEKDAY_OPTIONS.map(d=><option key={d} value={d}>{d}</option>)}</Select></div>}</>}
             {s.cadence==="daily"&&<div style={{...GLASS_SOFT,borderRadius:10,padding:12,height:"100%",display:"flex",alignItems:"center"}}><div style={{fontSize:13,color:MUTED}}>Sends every day at the selected time.</div></div>}
           </div>
         </div>
@@ -481,8 +478,8 @@ export default function SnapshotDeliveryPage(){
             <AllOverview schedules={schedules} onSelectReport={key=>setActiveTab(key)} />
           </section>
         : activeReport
-          ? <section style={{...GLASS,borderRadius:18,padding:16,marginTop:140}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+          ? <section style={{...GLASS,borderRadius:18,padding:16,marginTop:32}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
                 <button type="button" onClick={()=>setActiveTab("all")} style={{fontSize:12,fontWeight:700,color:MUTED,background:"none",border:"none",cursor:"pointer",padding:0}}>← All Reports</button>
                 <div style={{fontSize:20,fontWeight:900,color:SLATE}}>{activeReport.fullLabel}</div>
               </div>
