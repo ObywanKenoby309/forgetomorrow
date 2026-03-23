@@ -235,7 +235,7 @@ export default function RecruiterCalendarEventForm({
         display: 'flex',
 		alignItems: 'flex-start',
 		justifyContent: 'center',
-		paddingTop: 100,
+		paddingTop: 'clamp(16px, 6vh, 60px)',
 		paddingBottom: 40,
 		paddingLeft: 16,
 		paddingRight: 16,

@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Job {
@@ -807,6 +808,7 @@ model User {
   recruiterCalendarAsCandidate RecruiterCalendarItem[]        @relation("UserRecruiterCalendarCandidate")
   recruiterCalendarOwnedItems  RecruiterCalendarItem[]        @relation("UserRecruiterCalendarOwner")
   candidateAutomations         RecruiterCandidateAutomation[]
+  snapshotSchedule   		   SnapshotSchedule?
   recruiterCandidatesAsUser    RecruiterCandidate[]           @relation("RecruiterCandidateCandidate")
   recruiterCandidatesOwned     RecruiterCandidate[]           @relation("RecruiterCandidateRecruiter")
   candidateExplainRuns         RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsCandidate")
@@ -1031,11 +1033,12 @@ model RecruiterCalendarItem {
 }
 
 model SnapshotSchedule {
-  id               Int      @id
-  recipients       String
-  cadence          String
-  timezone         String
-  timeOfDay        String
+  id               Int      @id @default(autoincrement())
+  userId           String   @unique   // ← one row per user, keyed to User
+  recipients       String   @default("")
+  cadence          String   @default("weekly")
+  timezone         String   @default("America/Chicago")
+  timeOfDay        String   @default("08:00")
   weeklyDay        String?
   monthlyMode      String?
   monthlyDate      String?
@@ -1043,7 +1046,12 @@ model SnapshotSchedule {
   monthlyWeekday   String?
   includePng       Boolean  @default(true)
   includeInsights  Boolean  @default(true)
+  sendToSelf       Boolean  @default(false)  // ← was missing entirely
+  createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("snapshot_schedules")
 }
 
 model SeekerCalendarItem {
