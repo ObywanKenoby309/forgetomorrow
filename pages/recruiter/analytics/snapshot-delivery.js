@@ -329,14 +329,7 @@ function ReportScheduleEditor({report,schedule,onSave,onSendNow,onPreview,saving
         <PreviewPanel report={report} previewData={previewData} loadingPreview={previewing} />
       </div>
 
-      <div style={{
-        ...(isMobile ? {} : { gridArea: "footer" }),
-        display:"flex",
-        gap:10,
-        justifyContent:"flex-start",
-        alignItems:"center",
-        flexWrap:"wrap"
-      }}>
+      <div style={{display:"grid",gridTemplateColumns:"auto auto 1fr",gap:10, ...(isMobile ? {} : { gridArea: "footer" })}}>
         <button onClick={()=>onPreview(s)} disabled={previewing} style={{borderRadius:10,background:"rgba(255,255,255,0.75)",color:SLATE,fontWeight:800,padding:"12px 16px",border:"1px solid rgba(51,65,85,0.14)",cursor:previewing?"not-allowed":"pointer",fontSize:14,opacity:previewing?0.6:1}}>
           {previewing?"Generating...":"Preview Snapshot"}
         </button>
@@ -456,7 +449,7 @@ export default function SnapshotDeliveryPage(){
   const rightRail=<div style={{display:"grid",gap:12}}><div style={{...GLASS_SOFT,borderRadius:12,padding:14}}><div style={{fontSize:10,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:8}}>Sponsored</div><div style={{borderRadius:12,border:"1px dashed rgba(100,116,139,0.24)",background:"rgba(255,255,255,0.60)",minHeight:180,display:"flex",alignItems:"center",justifyContent:"center",padding:16,textAlign:"center",color:"#94A3B8",fontSize:13,fontWeight:700}}>Reserved ad / sponsor panel</div></div></div>;
 
   return <RecruiterLayout title="Snapshot Delivery Center" pageTitle="Snapshot Delivery Center" pageSubtitle="Per-report delivery schedules. Each report has its own recipients, timing, and cadence." right={rightRail} activeNav="analytics">
-    <div style={{display:"grid",gap:14,paddingTop:60}}>
+    <div style={{display:"grid",gap:14,paddingTop:30}}>
       <section style={{...GLASS,borderRadius:18,padding:16,textAlign:"center"}}>
         <div style={{fontSize:24,fontWeight:900,color:ORANGE}}>Snapshot Delivery Center</div>
         <div style={{fontSize:14,color:MUTED,marginTop:6,maxWidth:560,margin:"8px auto 0"}}>Each report has its own schedule. Set different recipients, timing, and cadence per report type — your settings never affect anyone else's.</div>
