@@ -515,6 +515,7 @@ function Body() {
     </div>
   );
 
+  // ── Measuring shell — render nothing until we know screen size
   if (isMobile === null) {
     return (
       <RecruiterAnalyticsLayout
@@ -529,6 +530,7 @@ function Body() {
     );
   }
 
+  // ── Mobile layout
   if (isMobile) {
     return (
       <RecruiterAnalyticsLayout
@@ -599,6 +601,7 @@ function Body() {
     );
   }
 
+  // ── Desktop layout — right rail present, grid does the constraining
   const DesktopBlock = (
     <>
       <div
@@ -640,7 +643,6 @@ function Body() {
       activeTab="command"
       filters={filters}
       onFilterChange={onFilterChange}
-      hideDesktopRightRail
       isDesktop
     >
       {error && (
@@ -658,14 +660,12 @@ function Body() {
       )}
 
       <section
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(6, minmax(120px, 1fr))",
-    gap: 12,
-    maxWidth: 980,
-    margin: "0 auto",
-  }}
->
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(6, minmax(120px, 1fr))",
+          gap: 12,
+        }}
+      >
         <KPICard label="Total job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
         <KPICard label="Total applies" value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)} />
         <KPICard

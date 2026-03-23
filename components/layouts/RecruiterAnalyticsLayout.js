@@ -76,7 +76,6 @@ const GAP = 12;
 const PAD = 16;
 const LEFT_W = 240;
 const RIGHT_W = 240;
-const TOP_RIGHT_GUTTER = 120;
 
 // ─── Default right rail ───────────────────────────────────────────────────────
 function DefaultRightRail() {
@@ -393,15 +392,8 @@ export default function RecruiterAnalyticsLayout({
                 maxWidth: "100%",
               }}
             >
-              <section
-  style={{
-    ...GLASS,
-    borderRadius: 18,
-    padding: 16,
-    maxWidth: `calc(100% - ${TOP_RIGHT_GUTTER}px)`,
-    marginRight: "auto",
-  }}
->
+              {/* Title card — full width of content column, grid handles the constraint */}
+              <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
                 <AnalyticsHeader
                   suiteTitle={suiteTitle}
                   subtitle={pageSubtitle}
@@ -409,20 +401,14 @@ export default function RecruiterAnalyticsLayout({
                 />
               </section>
 
-              <div
-  style={{
-    maxWidth: `calc(100% - ${TOP_RIGHT_GUTTER}px)`,
-    marginRight: "auto",
-  }}
->
-  <AnalyticsFilterBar
-    activeTab={activeTab}
-    activeReport={activeReport}
-    filters={filters}
-    onFilterChange={onFilterChange}
-    onNavigate={handleNavigate}
-  />
-</div>
+              {/* Filter bar — full width of content column */}
+              <AnalyticsFilterBar
+                activeTab={activeTab}
+                activeReport={activeReport}
+                filters={filters}
+                onFilterChange={onFilterChange}
+                onNavigate={handleNavigate}
+              />
 
               {children}
             </div>
