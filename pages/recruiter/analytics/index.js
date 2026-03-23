@@ -658,12 +658,14 @@ function Body() {
       )}
 
       <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))",
-          gap: 12,
-        }}
-      >
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(6, minmax(120px, 1fr))",
+    gap: 12,
+    maxWidth: 980,
+    margin: "0 auto",
+  }}
+>
         <KPICard label="Total job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
         <KPICard label="Total applies" value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)} />
         <KPICard

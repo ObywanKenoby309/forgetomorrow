@@ -402,7 +402,7 @@ export default function JobFormModal({
     : { label: "AI Add-on Locked", hint: "Upgrade to unlock JD optimization + ATS guidance." };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[clamp(20px,6vh,64px)] pb-6">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[clamp(40px,10vh,100px)] pb-6">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
