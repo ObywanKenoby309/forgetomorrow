@@ -203,6 +203,7 @@ function locationLabelFromTimeZone(tz) {
 }
 
 function prettyTimeZoneLabel(tz) {
+  if (!tz) return "—";
   const friendly = TIMEZONE_LABEL_MAP[tz] || "Time Zone";
   const location = locationLabelFromTimeZone(tz);
   if (tz === "UTC") return "Coordinated Universal Time | UTC";
@@ -236,19 +237,20 @@ function buildTimeZoneGroups() {
   return groups.filter((group) => group.zones.length > 0);
 }
 
-function Section({ title, subtitle, children }) {
-  return (
-    <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>{title}</div>
-        {subtitle ? (
-          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>{subtitle}</div>
-        ) : null}
-      </div>
-      {children}
-    </section>
-  );
+// ─── Detect the current user's local timezone synchronously on module load.
+// This runs before any React effects so it can never be overwritten by async
+// API responses.
+function detectLocalTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Chicago";
+  } catch {
+    return "America/Chicago";
+  }
 }
+
+const LOCAL_TIMEZONE = detectLocalTimezone();
+
+// ─── Shared components ────────────────────────────────────────────────────────
 
 function FieldLabel({ children }) {
   return (
@@ -271,6 +273,7 @@ function Input(props) {
         fontSize: 13,
         padding: "10px 12px",
         outline: "none",
+        boxSizing: "border-box",
         ...(props.style || {}),
       }}
     />
@@ -290,6 +293,7 @@ function Select(props) {
         fontSize: 13,
         padding: "10px 12px",
         outline: "none",
+        boxSizing: "border-box",
         ...(props.style || {}),
       }}
     />
@@ -311,6 +315,7 @@ function Textarea(props) {
         padding: "10px 12px",
         resize: "vertical",
         outline: "none",
+        boxSizing: "border-box",
         ...(props.style || {}),
       }}
     />
@@ -362,6 +367,10 @@ function ToggleRow({ checked, onChange, label, hint }) {
   );
 }
 
+// ─── TimeZoneSelector ─────────────────────────────────────────────────────────
+// Receives the per-user detected timezone and the saved cron timezone separately.
+// Detection always wins the UI. The cron timezone is surfaced as read-only info.
+
 function TimeZoneSelector({
   isMobile,
   groups,
@@ -371,7 +380,7 @@ function TimeZoneSelector({
   setTimezone,
   timeZoneSearch,
   setTimeZoneSearch,
-  detectedTimezone,
+  savedCronTimezone,   // what's persisted server-side for the cron
 }) {
   const search = timeZoneSearch.trim().toLowerCase();
 
@@ -394,6 +403,23 @@ function TimeZoneSelector({
   }, [groups, search, timeZoneRegion]);
 
   const flatMatches = filteredGroups.flatMap((group) => group.zones);
+
+  // When user picks a timezone from the listbox, also sync the region pill
+  // so it doesn't look mismatched.
+  function handleTimezoneChange(tz) {
+    setTimezone(tz);
+    setTimeZoneRegion(regionFromTimeZone(tz));
+  }
+
+  // Snap back to browser-detected zone
+  function handleSnapToLocal() {
+    setTimezone(LOCAL_TIMEZONE);
+    setTimeZoneRegion(regionFromTimeZone(LOCAL_TIMEZONE));
+    setTimeZoneSearch("");
+  }
+
+  const isDeviatingFromLocal = timezone !== LOCAL_TIMEZONE;
+  const cronDiffersFromSelected = savedCronTimezone && savedCronTimezone !== timezone;
 
   return (
     <div
@@ -426,7 +452,11 @@ function TimeZoneSelector({
 
       <div style={{ gridColumn: "1 / -1" }}>
         <FieldLabel>Time zone</FieldLabel>
-        <Select value={timezone} onChange={(e) => setTimezone(e.target.value)} size={isMobile ? 1 : 8}>
+        <Select
+          value={timezone}
+          onChange={(e) => handleTimezoneChange(e.target.value)}
+          size={isMobile ? 1 : 8}
+        >
           {!search &&
             filteredGroups
               .filter((group) => group.zones.length > 0)
@@ -448,49 +478,110 @@ function TimeZoneSelector({
             ))}
         </Select>
 
-        <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
-          {detectedTimezone ? (
-            <div style={{ fontSize: 12, color: MUTED }}>
-              Detected current time zone:{" "}
-              <strong style={{ color: SLATE }}>{prettyTimeZoneLabel(detectedTimezone)}</strong>
-            </div>
-          ) : null}
+        {/* ── Status bar ── */}
+        <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
 
+          {/* Always show what we detected for this user */}
           <div style={{ fontSize: 12, color: MUTED }}>
-            Selected: <strong style={{ color: SLATE }}>{prettyTimeZoneLabel(timezone)}</strong>
+            📍 Detected your location as:{" "}
+            <strong style={{ color: SLATE }}>{prettyTimeZoneLabel(LOCAL_TIMEZONE)}</strong>
           </div>
+
+          {/* If they've manually deviated, offer a snap-back */}
+          {isDeviatingFromLocal && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontSize: 12, color: MUTED }}>
+                Selected:{" "}
+                <strong style={{ color: SLATE }}>{prettyTimeZoneLabel(timezone)}</strong>
+              </div>
+              <button
+                type="button"
+                onClick={handleSnapToLocal}
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: ORANGE,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  textDecoration: "underline",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                ↩ Use my location
+              </button>
+            </div>
+          )}
+
+          {/* Cron info — only shown if the saved cron differs from what's selected */}
+          {cronDiffersFromSelected && (
+            <div
+              style={{
+                ...GLASS_SOFT,
+                borderRadius: 8,
+                padding: "8px 12px",
+                fontSize: 12,
+                color: MUTED,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <span>⚙️</span>
+              <span>
+                Active cron is scheduled in{" "}
+                <strong style={{ color: SLATE }}>
+                  {prettyTimeZoneLabel(savedCronTimezone)}
+                </strong>
+                . Save Schedule to update it to your selected zone.
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function SnapshotDeliveryPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
+
+  // Recipients
   const [emails, setEmails] = useState("");
-  const [snapshotType, setSnapshotType] = useState("executive");
-  const [cadence, setCadence] = useState("weekly");
-  const [sending, setSending] = useState(false);
+  const [sendToSelf, setSendToSelf] = useState(false);
   const [savingRecipients, setSavingRecipients] = useState(false);
 
+  // Send-now
+  const [snapshotType, setSnapshotType] = useState("executive");
+  const [sending, setSending] = useState(false);
+
+  // Timezone — always boots from LOCAL_TIMEZONE, never overwritten by the API
   const timeZoneGroups = useMemo(() => buildTimeZoneGroups(), []);
-  const [timeZoneRegion, setTimeZoneRegion] = useState("Americas");
-  const [timezone, setTimezone] = useState("America/Chicago");
+  const [timezone, setTimezone] = useState(LOCAL_TIMEZONE);
+  const [timeZoneRegion, setTimeZoneRegion] = useState(regionFromTimeZone(LOCAL_TIMEZONE));
   const [timeZoneSearch, setTimeZoneSearch] = useState("");
-  const [detectedTimezone, setDetectedTimezone] = useState("");
+
+  // The timezone that's actually saved in the cron (read-only display)
+  const [savedCronTimezone, setSavedCronTimezone] = useState("");
+
+  // Schedule settings (restored from API, safe to overwrite)
+  const [cadence, setCadence] = useState("weekly");
   const [timeOfDay, setTimeOfDay] = useState("08:00");
   const [weeklyDay, setWeeklyDay] = useState("Monday");
-
   const [monthlyMode, setMonthlyMode] = useState("date");
   const [monthlyDate, setMonthlyDate] = useState("1");
   const [monthlyOrdinal, setMonthlyOrdinal] = useState("First");
   const [monthlyWeekday, setMonthlyWeekday] = useState("Monday");
 
+  // Attachment toggles
   const [includePng, setIncludePng] = useState(true);
   const [includeInsights, setIncludeInsights] = useState(true);
-  const [sendToSelf, setSendToSelf] = useState(false);
 
+  // ── Responsive
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
     check();
@@ -498,19 +589,11 @@ export default function SnapshotDeliveryPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  useEffect(() => {
-    try {
-      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-      if (detected) {
-        setDetectedTimezone(detected);
-        setTimezone(detected);
-        setTimeZoneRegion(regionFromTimeZone(detected));
-      }
-    } catch {
-      // keep defaults
-    }
-  }, []);
-
+  // ── Load saved schedule from API.
+  // IMPORTANT: we intentionally do NOT restore timezone/timeZoneRegion here.
+  // Each user's browser detects their own location at module load time (LOCAL_TIMEZONE).
+  // The saved timezone is stored separately as savedCronTimezone so we can display it
+  // without letting it stomp the current user's detected zone.
   useEffect(() => {
     let alive = true;
 
@@ -524,20 +607,24 @@ export default function SnapshotDeliveryPage() {
           return;
         }
 
-        const schedule = data.schedule;
+        const s = data.schedule;
 
-        setEmails(schedule.recipients || "");
-        setCadence(schedule.cadence || "weekly");
-        setTimezone(schedule.timezone || "America/Chicago");
-        setTimeZoneRegion(regionFromTimeZone(schedule.timezone || "America/Chicago"));
-        setTimeOfDay(schedule.timeOfDay || "08:00");
-        setWeeklyDay(schedule.weeklyDay || "Monday");
-        setMonthlyMode(schedule.monthlyMode || "date");
-        setMonthlyDate(schedule.monthlyDate || "1");
-        setMonthlyOrdinal(schedule.monthlyOrdinal || "First");
-        setMonthlyWeekday(schedule.monthlyWeekday || "Monday");
-        setIncludePng(!!schedule.includePng);
-        setIncludeInsights(!!schedule.includeInsights);
+        // ── Schedule settings — safe to restore for all users
+        setEmails(s.recipients || "");
+        setCadence(s.cadence || "weekly");
+        setTimeOfDay(s.timeOfDay || "08:00");
+        setWeeklyDay(s.weeklyDay || "Monday");
+        setMonthlyMode(s.monthlyMode || "date");
+        setMonthlyDate(s.monthlyDate || "1");
+        setMonthlyOrdinal(s.monthlyOrdinal || "First");
+        setMonthlyWeekday(s.monthlyWeekday || "Monday");
+        setIncludePng(s.includePng !== false); // default true
+        setIncludeInsights(s.includeInsights !== false); // default true
+
+        // ── Timezone — store for display only, do NOT set as the active selector value.
+        // The selector always starts on the current user's detected zone.
+        if (s.timezone) setSavedCronTimezone(s.timezone);
+
       } catch (err) {
         console.error("Failed to load snapshot schedule", err);
       } finally {
@@ -546,30 +633,36 @@ export default function SnapshotDeliveryPage() {
     }
 
     loadSchedule();
-
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
-
-  const currentRegionZones = useMemo(() => {
-    return timeZoneGroups.find((group) => group.region === timeZoneRegion)?.zones || [];
-  }, [timeZoneGroups, timeZoneRegion]);
-
-  useEffect(() => {
-    if (!currentRegionZones.length) return;
-    if (!currentRegionZones.includes(timezone)) {
-      setTimezone(currentRegionZones[0]);
-    }
-  }, [currentRegionZones, timezone]);
 
   const parsedRecipients = useMemo(() => {
     return emails
       .split(",")
-      .map((email) => email.trim())
+      .map((e) => e.trim())
       .filter(Boolean);
   }, [emails]);
 
+  // ── Build the common schedule payload used by all save/send calls
+  function buildSchedulePayload(overrides = {}) {
+    return {
+      recipients: emails,
+      cadence,
+      timezone,          // always the current user's selected (detected) zone
+      timeOfDay,
+      weeklyDay,
+      monthlyMode,
+      monthlyDate,
+      monthlyOrdinal,
+      monthlyWeekday,
+      includePng,
+      includeInsights,
+      sendToSelf,
+      ...overrides,
+    };
+  }
+
+  // ── Send Now
   const handleSend = async () => {
     if (!parsedRecipients.length) {
       alert("Enter at least one email recipient.");
@@ -577,26 +670,14 @@ export default function SnapshotDeliveryPage() {
     }
 
     setSending(true);
-
     try {
       const res = await fetch("/api/analytics/send-snapshot", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...buildSchedulePayload(),
           recipients: parsedRecipients,
           snapshotType,
-          includePng,
-          includeInsights,
-          timezone,
-          cadence,
-          timeOfDay,
-          weeklyDay,
-          monthlyMode,
-          monthlyDate,
-          monthlyOrdinal,
-          monthlyWeekday,
         }),
       });
 
@@ -610,10 +691,10 @@ export default function SnapshotDeliveryPage() {
     } catch {
       alert("Failed to send snapshot");
     }
-
     setSending(false);
   };
 
+  // ── Save recipients only (preserves existing schedule settings server-side)
   const handleSaveRecipients = async () => {
     if (!parsedRecipients.length) {
       alert("Enter at least one recipient before saving.");
@@ -624,20 +705,7 @@ export default function SnapshotDeliveryPage() {
       const res = await fetch("/api/analytics/save-snapshot-schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipients: emails,
-          // Preserve existing schedule settings
-          cadence,
-          timezone,
-          timeOfDay,
-          weeklyDay,
-          monthlyMode,
-          monthlyDate,
-          monthlyOrdinal,
-          monthlyWeekday,
-          includePng,
-          includeInsights,
-        }),
+        body: JSON.stringify(buildSchedulePayload()),
       });
       const data = await res.json();
       if (data.success) {
@@ -651,6 +719,7 @@ export default function SnapshotDeliveryPage() {
     setSavingRecipients(false);
   };
 
+  // ── Save full schedule (including timezone the user has selected)
   const handleSaveSchedule = async () => {
     if (!parsedRecipients.length) {
       alert("Add at least one recipient");
@@ -660,36 +729,25 @@ export default function SnapshotDeliveryPage() {
     try {
       const res = await fetch("/api/analytics/save-snapshot-schedule", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          recipients: emails,
-          cadence,
-          timezone,
-          timeOfDay,
-          weeklyDay,
-          monthlyMode,
-          monthlyDate,
-          monthlyOrdinal,
-          monthlyWeekday,
-          includePng,
-          includeInsights,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildSchedulePayload()),
       });
 
       const data = await res.json();
 
-      if (data.success) {
+      if (data?.success) {
+        // Update the displayed cron timezone to reflect what was just saved
+        setSavedCronTimezone(timezone);
         alert("Schedule saved");
       } else {
-        alert("Failed to save");
+        alert("Failed to save schedule");
       }
-    } catch (err) {
+    } catch {
       alert("Error saving schedule");
     }
   };
 
+  // ── Right rail
   const rightRail = (
     <div style={{ display: "grid", gap: 12 }}>
       <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
@@ -745,7 +803,7 @@ export default function SnapshotDeliveryPage() {
         </div>
       </section>
 
-      {/* ── Row 1: Recipients (left, 60%) + Send Now (right, 40%) ── */}
+      {/* ── Row 1: Recipients (60%) + Send Now (40%) ── */}
       <div
         style={{
           display: "grid",
@@ -754,12 +812,12 @@ export default function SnapshotDeliveryPage() {
           alignItems: "stretch",
         }}
       >
-        {/* Recipients — flex column so textarea grows to match Send Now height */}
+        {/* Recipients */}
         <section style={{ ...GLASS, borderRadius: 18, padding: 16, display: "flex", flexDirection: "column" }}>
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Recipients</div>
             <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
-              Enter emails separated by commas. These recipients are used for both one-time sends and recurring delivery.
+              Enter emails separated by commas. Used for both one-time sends and recurring delivery.
             </div>
           </div>
 
@@ -808,7 +866,9 @@ export default function SnapshotDeliveryPage() {
               {savingRecipients ? "Saving..." : "Save Recipients"}
             </button>
             <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: "10px 16px", textAlign: "center", minWidth: 80 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>Recipients</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Recipients
+              </div>
               <div style={{ fontSize: 26, fontWeight: 900, color: ORANGE, lineHeight: 1.1, marginTop: 2 }}>
                 {parsedRecipients.length}
               </div>
@@ -816,7 +876,7 @@ export default function SnapshotDeliveryPage() {
           </div>
         </section>
 
-        {/* Send Now — flex column so button pins to bottom */}
+        {/* Send Now */}
         <section style={{ ...GLASS, borderRadius: 18, padding: 16, display: "flex", flexDirection: "column" }}>
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Send Snapshot</div>
@@ -876,11 +936,13 @@ export default function SnapshotDeliveryPage() {
       {/* ── Row 2: Automated Delivery — full width ── */}
       <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
 
-        {/* Header row: title + cadence pills right */}
+        {/* Header: title + cadence pills */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Automated Delivery</div>
-            <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Build a recurring schedule with full timing details for global delivery.</div>
+            <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
+              Build a recurring schedule with full timing details for global delivery.
+            </div>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             {["daily", "weekly", "monthly"].map((type) => (
@@ -900,10 +962,10 @@ export default function SnapshotDeliveryPage() {
           setTimezone={setTimezone}
           timeZoneSearch={timeZoneSearch}
           setTimeZoneSearch={setTimeZoneSearch}
-          detectedTimezone={detectedTimezone}
+          savedCronTimezone={savedCronTimezone}
         />
 
-        {/* Delivery time + cadence-specific field — always same 2-col layout */}
+        {/* Delivery time + cadence-specific field */}
         <div
           style={{
             display: "grid",
@@ -917,7 +979,6 @@ export default function SnapshotDeliveryPage() {
             <Input type="time" value={timeOfDay} onChange={(e) => setTimeOfDay(e.target.value)} />
           </div>
 
-          {/* Right slot — swaps based on cadence, always occupies same space */}
           <div>
             {cadence === "weekly" && (
               <>
@@ -932,7 +993,6 @@ export default function SnapshotDeliveryPage() {
 
             {cadence === "monthly" && (
               <>
-                {/* Segmented control — Specific date vs Ordinal weekday */}
                 <FieldLabel>Monthly rule</FieldLabel>
                 <div style={{
                   display: "inline-flex",
@@ -969,7 +1029,6 @@ export default function SnapshotDeliveryPage() {
                   ))}
                 </div>
 
-                {/* Content swaps inline — no layout shift */}
                 {monthlyMode === "date" ? (
                   <>
                     <FieldLabel>Date of month</FieldLabel>
