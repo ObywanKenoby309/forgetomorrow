@@ -38,7 +38,7 @@ function renderCustomLabel(props) {
 
   if ((percent || 0) < 0.005) return null;
 
-  const radius = outerRadius + 18;
+  const radius = outerRadius + (percent < 0.03 ? 26 : 18);
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
@@ -52,7 +52,7 @@ function renderCustomLabel(props) {
   const y2 = cy + lineMidRadius * Math.sin(-midAngle * RADIAN);
 
   const isRightSide = x >= cx;
-  const x3 = isRightSide ? x + 10 : x - 10;
+  const x3 = isRightSide ? x + (percent < 0.03 ? 16 : 10) : x - (percent < 0.03 ? 16 : 10);
   const anchor = isRightSide ? "start" : "end";
 
   const labelColor = SOURCE_COLORS[name] || "#334155";
