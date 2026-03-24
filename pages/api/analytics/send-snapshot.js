@@ -22,6 +22,8 @@ const BORDER = "#E2E8F0";
 const PANEL = "#F8FAFC";
 const AI_BG = "#FFF7F3";
 const AI_BORDER = "#FBD5C6";
+const PAGE_BG = "#EDEFF2";
+const LOGO_URL = "https://www.forgetomorrow.com/images/logo-color.png";
 
 function esc(value) {
   return String(value ?? "")
@@ -37,10 +39,6 @@ function fmt(value, suffix = "", fallback = "—") {
   const num = Number(value);
   if (!Number.isNaN(num)) return `${num.toLocaleString()}${suffix}`;
   return `${value}${suffix}`;
-}
-
-function cap(value = "") {
-  return String(value).charAt(0).toUpperCase() + String(value).slice(1);
 }
 
 function getReportLabel(reportType) {
@@ -212,28 +210,6 @@ async function generateInsight(reportType, kpis, funnelData, sourcesData, activi
   return null;
 }
 
-function logoLockup() {
-  return `
-    <table cellpadding="0" cellspacing="0" border="0">
-      <tr>
-        <td style="vertical-align:middle;">
-          <div style="width:42px;height:42px;border:2px solid ${BRAND_ORANGE};border-radius:10px;display:flex;align-items:center;justify-content:center;color:${BRAND_ORANGE};font-size:18px;font-weight:900;line-height:1;">
-            FT
-          </div>
-        </td>
-        <td style="vertical-align:middle;padding-left:12px;">
-          <div style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND_ORANGE};margin-bottom:4px;">
-            ForgeTomorrow Analytics
-          </div>
-          <div style="font-size:24px;font-weight:900;color:#FFFFFF;line-height:1.15;">
-            Executive Snapshot
-          </div>
-        </td>
-      </tr>
-    </table>
-  `;
-}
-
 function emailWrapper(content, reportLabel, accountName, reportingWindow) {
   return `
 <!DOCTYPE html>
@@ -242,23 +218,83 @@ function emailWrapper(content, reportLabel, accountName, reportingWindow) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>${esc(reportLabel)}</title>
+  <style>
+    body, table, td, div, p, a { font-family: Arial, Helvetica, sans-serif !important; }
+    img { border: 0; outline: none; text-decoration: none; display: block; }
+    table { border-collapse: collapse; }
+    @media only screen and (max-width: 640px) {
+      .container { width: 100% !important; max-width: 100% !important; }
+      .mobile-pad { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack-column, .stack-column td {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .stack-column-cell {
+        display: block !important;
+        width: 100% !important;
+        padding-right: 0 !important;
+        padding-left: 0 !important;
+      }
+      .stack-top-gap {
+        padding-top: 14px !important;
+      }
+      .mobile-center {
+        text-align: left !important;
+      }
+      .metric-card {
+        width: 100% !important;
+      }
+      .metric-grid td {
+        display: inline-block !important;
+        width: 50% !important;
+        box-sizing: border-box !important;
+      }
+      .metric-grid .metric-full {
+        width: 100% !important;
+      }
+      .header-right {
+        padding-top: 12px !important;
+        text-align: left !important;
+      }
+    }
+  </style>
 </head>
-<body style="margin:0;padding:0;background:#EDEFF2;font-family:Arial,Helvetica,sans-serif;color:${TEXT};">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#EDEFF2;padding:28px 12px;">
+<body style="margin:0;padding:0;background:${PAGE_BG};font-family:Arial,Helvetica,sans-serif;color:${TEXT};">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PAGE_BG};">
     <tr>
-      <td align="center">
-        <table width="720" cellpadding="0" cellspacing="0" border="0" style="max-width:720px;width:100%;background:#FFFFFF;border-radius:16px;overflow:hidden;border:1px solid ${BORDER};">
+      <td align="center" style="padding:28px 12px;">
+        <table class="container" width="720" cellpadding="0" cellspacing="0" border="0" style="max-width:720px;width:100%;background:#FFFFFF;border-radius:16px;overflow:hidden;border:1px solid ${BORDER};">
           <tr>
-            <td style="background:${BRAND_DARK};padding:24px 28px 18px;border-bottom:4px solid ${BRAND_ORANGE};">
+            <td style="background:${BRAND_DARK};padding:24px 28px 18px;border-bottom:4px solid ${BRAND_ORANGE};" class="mobile-pad">
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td valign="top">
-                    ${logoLockup()}
+                <tr class="stack-column">
+                  <td valign="top" class="stack-column-cell">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td valign="middle" style="padding-right:12px;">
+                          <img src="${LOGO_URL}" alt="ForgeTomorrow" width="44" style="width:44px;height:auto;display:block;">
+                        </td>
+                        <td valign="middle">
+                          <div style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND_ORANGE};margin-bottom:4px;">
+                            ForgeTomorrow Analytics
+                          </div>
+                          <div style="font-size:24px;font-weight:900;color:#FFFFFF;line-height:1.15;">
+                            ${esc(reportLabel)}
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
-                  <td valign="top" align="right">
-                    <div style="font-size:11px;color:#CBD5E1;line-height:1.7;text-align:right;">
+                  <td valign="top" align="right" class="stack-column-cell header-right">
+                    <div style="font-size:11px;color:#CBD5E1;line-height:1.7;text-align:right;" class="mobile-center">
                       <div style="font-weight:700;color:#FFFFFF;">${esc(reportLabel)}</div>
-                      <div>${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
+                      <div>${new Date().toLocaleDateString("en-US", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}</div>
                       <div>${esc(reportingWindow || "Current period")}</div>
                     </div>
                   </td>
@@ -268,7 +304,7 @@ function emailWrapper(content, reportLabel, accountName, reportingWindow) {
           </tr>
 
           <tr>
-            <td style="padding:22px 28px 10px;">
+            <td style="padding:22px 28px 10px;" class="mobile-pad">
               <div style="font-size:24px;font-weight:900;color:${TEXT};margin-bottom:6px;">${esc(accountName || "Your Organization")}</div>
               <div style="font-size:13px;color:${MUTED};line-height:1.7;">
                 This report delivers a leadership-focused summary of recruiting performance, highlighting pipeline health, conversion strength, and the clearest next action for decision-makers.
@@ -277,13 +313,13 @@ function emailWrapper(content, reportLabel, accountName, reportingWindow) {
           </tr>
 
           <tr>
-            <td style="padding:0 28px 28px;">
+            <td style="padding:0 28px 28px;" class="mobile-pad">
               ${content}
             </td>
           </tr>
 
           <tr>
-            <td style="padding:18px 28px;background:#F8FAFC;border-top:1px solid ${BORDER};">
+            <td style="padding:18px 28px;background:#F8FAFC;border-top:1px solid ${BORDER};" class="mobile-pad">
               <div style="font-size:11px;color:#94A3B8;line-height:1.7;">
                 This report was generated by ForgeTomorrow Analytics.
                 Update your
@@ -308,30 +344,8 @@ function heroBlock(recruiterName, reportLabel, insight, kpis) {
     { label: "Conversion", value: fmt(kpis?.conversionRatePct ?? kpis?.conversionRate ?? 0, "%") },
     { label: "Interviews", value: fmt(kpis?.totalInterviews ?? 0) },
     { label: "Hires", value: fmt(kpis?.totalHires ?? 0) },
-    { label: "Time to Fill", value: fmt(kpis?.avgTimeToFillDays ?? kpis?.avgTimeToFill ?? 0, " days") },
+    { label: "Avg. Time to Fill", value: fmt(kpis?.avgTimeToFillDays ?? kpis?.avgTimeToFill ?? 0, " days") },
   ];
-
-  const rows = [
-    metrics.slice(0, 3),
-    metrics.slice(3, 6),
-  ]
-    .map(
-      (row) => `
-      <tr>
-        ${row
-          .map(
-            (m) => `
-          <td style="padding:6px;" width="33.33%">
-            <div style="background:${PANEL};border:1px solid ${BORDER};border-radius:12px;padding:14px 12px;text-align:center;">
-              <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:8px;">${esc(m.label)}</div>
-              <div style="font-size:24px;font-weight:900;color:${TEXT};line-height:1;">${esc(m.value)}</div>
-            </div>
-          </td>`
-          )
-          .join("")}
-      </tr>`
-    )
-    .join("");
 
   return `
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:22px;">
@@ -348,14 +362,41 @@ function heroBlock(recruiterName, reportLabel, insight, kpis) {
       <tr>
         <td style="padding-top:18px;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0">
-            <tr>
-              <td valign="top" width="58%" style="padding-right:10px;">
+            <tr class="stack-column">
+              <td valign="top" width="58%" style="padding-right:10px;" class="stack-column-cell">
                 <div style="font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:10px;">Performance Snapshot</div>
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                  ${rows}
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" class="metric-grid">
+                  <tr>
+                    ${metrics
+                      .slice(0, 3)
+                      .map(
+                        (m, idx) => `
+                      <td style="padding:6px;" width="33.33%" class="metric-card${idx === 2 ? " metric-full" : ""}">
+                        <div style="background:${PANEL};border:1px solid ${BORDER};border-radius:12px;padding:14px 12px;text-align:center;">
+                          <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:8px;">${esc(m.label)}</div>
+                          <div style="font-size:24px;font-weight:900;color:${TEXT};line-height:1.1;">${esc(m.value)}</div>
+                        </div>
+                      </td>`
+                      )
+                      .join("")}
+                  </tr>
+                  <tr>
+                    ${metrics
+                      .slice(3, 6)
+                      .map(
+                        (m, idx) => `
+                      <td style="padding:6px;" width="33.33%" class="metric-card${idx === 2 ? " metric-full" : ""}">
+                        <div style="background:${PANEL};border:1px solid ${BORDER};border-radius:12px;padding:14px 12px;text-align:center;">
+                          <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:8px;">${esc(m.label)}</div>
+                          <div style="font-size:24px;font-weight:900;color:${TEXT};line-height:1.1;">${esc(m.value)}</div>
+                        </div>
+                      </td>`
+                      )
+                      .join("")}
+                  </tr>
                 </table>
               </td>
-              <td valign="top" width="42%" style="padding-left:10px;">
+              <td valign="top" width="42%" style="padding-left:10px;" class="stack-column-cell stack-top-gap">
                 <div style="font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:10px;">AI Evaluation</div>
                 <div style="background:${AI_BG};border:1px solid ${AI_BORDER};border-left:4px solid ${BRAND_ORANGE};border-radius:12px;padding:16px 16px 16px 14px;">
                   <div style="font-size:12px;font-weight:800;color:${BRAND_ORANGE};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Leadership Readout</div>
@@ -515,22 +556,22 @@ function timeToFillBlock(kpis) {
   return sectionCard(`
     ${sectionTitle("Hiring Velocity", "Time-to-fill and downstream hiring output for the selected period.")}
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
-      <tr>
-        <td width="50%" style="padding:6px;">
+      <tr class="stack-column">
+        <td width="50%" style="padding:6px;" class="stack-column-cell">
           <div style="background:${PANEL};border:1px solid ${BORDER};border-radius:12px;padding:20px;text-align:center;">
             <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:8px;">Average Time to Fill</div>
             <div style="font-size:38px;font-weight:900;color:${BRAND_ORANGE};line-height:1;">${fmt(
-    kpis?.avgTimeToFillDays ?? kpis?.avgTimeToFill ?? 0
-  )}</div>
+              kpis?.avgTimeToFillDays ?? kpis?.avgTimeToFill ?? 0
+            )}</div>
             <div style="font-size:12px;color:${MUTED};margin-top:4px;">days</div>
           </div>
         </td>
-        <td width="50%" style="padding:6px;">
+        <td width="50%" style="padding:6px;" class="stack-column-cell stack-top-gap">
           <div style="background:${PANEL};border:1px solid ${BORDER};border-radius:12px;padding:20px;text-align:center;">
             <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:8px;">Total Hires</div>
             <div style="font-size:38px;font-weight:900;color:${TEXT};line-height:1;">${fmt(
-    kpis?.totalHires ?? 0
-  )}</div>
+              kpis?.totalHires ?? 0
+            )}</div>
             <div style="font-size:12px;color:${MUTED};margin-top:4px;">this period</div>
           </div>
         </td>
