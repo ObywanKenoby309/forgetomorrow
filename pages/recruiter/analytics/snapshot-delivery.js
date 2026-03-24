@@ -888,7 +888,7 @@ export default function SnapshotDeliveryPage() {
       pageSubtitle="Per-report delivery schedules. Each report has its own recipients, timing, and cadence."
       activeNav="analytics"
     >
-      <div style={{ display: "grid", gap: 14, paddingTop: 30 }}>
+      <div style={{ display: "grid", gap: 14, paddingTop: 0 }}>
         <div
           style={
             isMobile
@@ -940,7 +940,7 @@ export default function SnapshotDeliveryPage() {
         </div>
 
         {activeTab === "all" ? (
-          <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+          <section style={{ ...GLASS, borderRadius: 18, padding: 16,marginTop:-6 }}>
             <AllOverview schedules={schedules} onSelectReport={(key) => setActiveTab(key)} />
           </section>
         ) : activeReport ? (
