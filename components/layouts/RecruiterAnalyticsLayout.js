@@ -398,7 +398,7 @@ export default function RecruiterAnalyticsLayout({
             <aside
               style={{
                 gridArea: "right",
-                alignSelf: "stretch",
+                alignSelf: "start",
                 width: RIGHT_W,
                 minWidth: RIGHT_W,
                 maxWidth: RIGHT_W,
@@ -406,11 +406,15 @@ export default function RecruiterAnalyticsLayout({
                 boxSizing: "border-box",
                 position: "relative",
                 zIndex: 1,
-                ...GLASS,
                 borderRadius: 18,
-                padding: 16,
-                display: "flex",
-                flexDirection: "column",
+			    padding: 0,
+				display: "flex",
+				flexDirection: "column",
+				background: "transparent",
+				border: "none",
+				boxShadow: "none",
+				backdropFilter: "none",
+				WebkitBackdropFilter: "none",
               }}
             >
               {rightRail}
