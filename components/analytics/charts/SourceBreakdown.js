@@ -36,7 +36,7 @@ function renderCustomLabel(props) {
     name,
   } = props;
 
-  if ((percent || 0) < 0.04) return null;
+  if ((percent || 0) < 0.005) return null;
 
   const radius = outerRadius + 18;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
