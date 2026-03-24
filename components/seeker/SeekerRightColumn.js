@@ -1,6 +1,6 @@
 // components/seeker/SeekerRightColumn.jsx
 import React from "react";
-import Link from "next/link";
+import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 
 function Card({ title, children }) {
   return (
@@ -32,68 +32,10 @@ function Card({ title, children }) {
 
 export default function SeekerRightColumn({
   variant = "default",
-  showShortcuts = true,
 }) {
-  // Common shortcuts block
-  const Shortcuts = (
-    <Card title="Shortcuts">
-      <ul className="space-y-2">
-        <li>
-          <Link href="/pinned-jobs" className="text-[#FF7043] font-semibold">
-            Pinned Jobs
-          </Link>
-        </li>
-        <li>
-          <Link href="/applications" className="text-[#FF7043] font-semibold">
-            Applications
-          </Link>
-        </li>
-        <li>
-          <Link href="/open-creator" className="text-[#FF7043] font-semibold">
-            Open Creator
-          </Link>
-        </li>
-      </ul>
-    </Card>
-  );
-
-  // Feed-only extras
-  const Sponsored = (
-    <Card title="Sponsored">
-      <p className="text-sm text-gray-600">
-        Grow your reach. Promote your coaching or open roles on ForgeTomorrow.
-      </p>
-    </Card>
-  );
-
-  const LevelUp = (
-    <Card title="Level up">
-      <p className="text-sm text-gray-600">
-        Try Creator tools to polish your resume and portfolio.
-      </p>
-    </Card>
-  );
-
-  const ComingSoon = (
-    <Card title="Coming soon">
-      <p className="text-sm text-gray-600">
-        Contextual ads and partner offers will appear here.
-      </p>
-    </Card>
-  );
-
   return (
     <div className="grid gap-3">
-      {/* Hide shortcuts on the main feed page */}
-      {showShortcuts && variant !== "feed" && Shortcuts}
-
-      {variant === "feed" && (
-        <>
-          {Sponsored}
-          {LevelUp}
-          {ComingSoon}
-        </>
-      )}
+      <RightRailPlacementManager placement="default_right_rail" />
     </div>
   );
 }
