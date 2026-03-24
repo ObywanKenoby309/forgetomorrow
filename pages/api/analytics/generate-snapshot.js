@@ -103,10 +103,11 @@ export default async function handler(req, res) {
   try {
     const snapshot = buildDemoSnapshot(reportType);
     return res.status(200).json({
-      success: true,
-      reportType,
-      ...snapshot,
-    });
+  success: true,
+  reportType,
+  userEmail: session.user.email,
+  ...snapshot,
+});
   } catch (err) {
     console.error("generate-snapshot error:", err);
     return res.status(500).json({
