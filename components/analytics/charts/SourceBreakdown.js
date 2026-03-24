@@ -13,16 +13,16 @@ import {
   Legend,
 } from "recharts";
 
-const COLORS = [
-  "#FF9800",
-  "#2196F3",
-  "#4DB6AC",
-  "#FFB74D",
-  "#90A4AE",
-  "#7E57C2",
-  "#66BB6A",
-  "#29B6F6",
-];
+const SOURCE_COLORS = {
+  "ForgeTomorrow": "#FB923C",        // strong orange (brand aligned)
+  "Referrals": "#2563EB",            // strong blue
+  "Direct Outreach": "#0F766E",      // deeper teal
+  "Company Careers": "#B45309",      // FIXED (dark amber, readable)
+  "Staffing Partner": "#16A34A",     // green (darker)
+  "Talent Community": "#475569",     // slate (stronger than gray)
+  "University Outreach": "#7C3AED",  // purple (kept)
+  "Other": "#0891B2",                // stronger cyan
+};
 
 export default function SourceBreakdown({ data = [] }) {
   const [isMobile, setIsMobile] = useState(false);
@@ -47,20 +47,34 @@ export default function SourceBreakdown({ data = [] }) {
       <ResponsiveContainer width="100%" height="100%">
         <PieChart margin={isMobile ? { top: 0, right: 0, bottom: 0, left: 0 } : { top: 0, right: 0, bottom: 0, left: 0 }}>
           <Pie
-            data={data}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={isMobile ? 62 : 100}
-            innerRadius={isMobile ? 26 : 0}
-            label={isMobile ? false : ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-            labelLine={false}
-          >
-            {data.map((_, idx) => (
-              <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
-            ))}
-          </Pie>
+  data={data}
+  dataKey="value"
+  nameKey="name"
+  cx="50%"
+  cy="50%"
+  outerRadius={isMobile ? 62 : 100}
+  innerRadius={isMobile ? 26 : 0}
+  label={isMobile ? false : ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+  labelLine={false}
+>
+  {data.map((entry, idx) => (
+    <Cell
+      key={`cell-${idx}`}
+      fill={
+        {
+          ForgeTomorrow: "#FB923C",
+          Referrals: "#2563EB",
+          "Direct Outreach": "#0F766E",
+          "Company Careers": "#B45309",
+          "Staffing Partner": "#16A34A",
+          "Talent Community": "#475569",
+          "University Outreach": "#7C3AED",
+          Other: "#0891B2",
+        }[entry.name] || COLORS[idx % COLORS.length]
+      }
+    />
+  ))}
+</Pie>
 
           <Tooltip
             contentStyle={{ borderRadius: 10, borderColor: "#ECEFF1" }}
