@@ -61,10 +61,9 @@ export default function ExecutiveSnapshotCard({
         </div>
       </div>
 
-      {/* 🔥 BUTTON ROW (UPDATED) */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         <Link
-          href="/recruiter/analytics/reports"
+          href="/recruiter/analytics/reports?report=funnel"
           style={{
             textDecoration: "none",
             borderRadius: 999,
@@ -93,7 +92,6 @@ export default function ExecutiveSnapshotCard({
           Visuals
         </Link>
 
-        {/* ✅ NEW: ROUTE TO DELIVERY PAGE */}
         <Link
           href="/recruiter/analytics/snapshot-delivery"
           style={{
@@ -109,8 +107,6 @@ export default function ExecutiveSnapshotCard({
           Send Snapshot
         </Link>
       </div>
-
-      {/* ❌ REMOVED old button block */}
 
       <div style={{ display: "grid", gridTemplateColumns: compactStatColumns, gap: 10 }}>
         <StatTile
