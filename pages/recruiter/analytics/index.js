@@ -25,24 +25,24 @@ import { getFiltersFromQuery } from "@/lib/analytics/analyticsUtils";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const GLASS = {
-  border: "1px solid rgba(255,255,255,0.22)",
-  background: "rgba(255,255,255,0.68)",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "rgba(255,255,255,0.78)",
   boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
   backdropFilter: "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
 };
 
 const GLASS_SOFT = {
-  border: "1px solid rgba(255,255,255,0.18)",
-  background: "rgba(255,255,255,0.58)",
+  border: "1px solid rgba(0,0,0,0.06)",
+  background: "rgba(255,255,255,0.88)",
   boxShadow: "0 8px 22px rgba(15,23,42,0.10)",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
 };
 
 const ORANGE = "#FF7043";
-const SLATE = "#334155";
-const MUTED = "#64748B";
+const SLATE = "#1E293B";
+const MUTED = "#475569";
 
 // desktop bleed settings
 const LEFT_BLEED = -(240 + 12);
@@ -219,7 +219,7 @@ function InsightsSkeleton() {
             padding: 14,
             height: 80,
             opacity: 0.5,
-            background: "rgba(255,255,255,0.35)",
+            background: "rgba(255,255,255,0.50)",
           }}
         />
       ))}
@@ -254,7 +254,9 @@ function ReportCard({ title, description, href, value }) {
           >
             Full report
           </div>
-          <div style={{ fontSize: 15, fontWeight: 900, color: SLATE }}>{title}</div>
+          <div style={{ fontSize: 15, fontWeight: 900, color: SLATE, letterSpacing: "-0.2px" }}>
+            {title}
+          </div>
           <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>
             {description}
           </div>
@@ -361,8 +363,10 @@ function Body() {
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Recruiter Activity</div>
-          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE, letterSpacing: "-0.2px" }}>
+            Recruiter Activity
+          </div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4, lineHeight: 1.5 }}>
             Applications and interviews this window.
           </div>
         </div>
@@ -387,7 +391,9 @@ function Body() {
     <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
       <div style={{ marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Forge Insights</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE, letterSpacing: "-0.2px" }}>
+            Forge Insights
+          </div>
           <span
             style={{
               display: "inline-block",
@@ -399,7 +405,9 @@ function Body() {
             }}
           />
         </div>
-        <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>What matters most right now.</div>
+        <div style={{ fontSize: 13, color: MUTED, marginTop: 4, lineHeight: 1.5 }}>
+          What matters most right now.
+        </div>
       </div>
 
       {insightsLoading && !insights ? (
@@ -432,8 +440,10 @@ function Body() {
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Source Performance</div>
-          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE, letterSpacing: "-0.2px" }}>
+            Source Performance
+          </div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4, lineHeight: 1.5 }}>
             Channels producing the strongest outcomes.
           </div>
         </div>
@@ -466,8 +476,12 @@ function Body() {
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Application Funnel</div>
-          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Movement from interest to hire.</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE, letterSpacing: "-0.2px" }}>
+            Application Funnel
+          </div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4, lineHeight: 1.5 }}>
+            Movement from interest to hire.
+          </div>
         </div>
         <Link
           href="/recruiter/analytics/reports?report=funnel"
@@ -488,8 +502,10 @@ function Body() {
 
   const reportGatewaysCard = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
-      <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Report Gateways</div>
-      <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>
+      <div style={{ fontSize: 18, fontWeight: 900, color: SLATE, letterSpacing: "-0.2px" }}>
+        Report Gateways
+      </div>
+      <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12, lineHeight: 1.5 }}>
         Drill into dedicated reports for the why.
       </div>
       <div style={{ display: "grid", gap: 10 }}>
@@ -548,8 +564,8 @@ function Body() {
               style={{
                 borderRadius: 18,
                 border: "1px solid rgba(239,68,68,0.20)",
-                background: "rgba(254,242,242,0.86)",
-                color: "#B91C1C",
+                background: "rgba(254,242,242,0.92)",
+                color: "#991B1B",
                 padding: 16,
               }}
             >
@@ -650,8 +666,8 @@ function Body() {
           style={{
             borderRadius: 18,
             border: "1px solid rgba(239,68,68,0.20)",
-            background: "rgba(254,242,242,0.86)",
-            color: "#B91C1C",
+            background: "rgba(254,242,242,0.92)",
+            color: "#991B1B",
             padding: 16,
           }}
         >
@@ -683,7 +699,7 @@ function Body() {
       {isEnterprise ? <>{DesktopBlock}</> : <FeatureLock label="Full Analytics">{DesktopBlock}</FeatureLock>}
 
       {data?.meta?.refreshedAt && (
-        <div style={{ fontSize: 12, color: "#94A3B8", textAlign: "right" }}>
+        <div style={{ fontSize: 12, color: "#475569", textAlign: "right", fontWeight: 600 }}>
           Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
         </div>
       )}
