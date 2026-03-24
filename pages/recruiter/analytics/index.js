@@ -367,7 +367,7 @@ function Body() {
           </div>
         </div>
         <Link
-          href="/recruiter/analytics/recruiters"
+          href="/recruiter/analytics/reports?report=recruiters"
           style={{
             color: ORANGE,
             fontWeight: 800,
@@ -438,7 +438,7 @@ function Body() {
           </div>
         </div>
         <Link
-          href="/recruiter/analytics/sources"
+          href="/recruiter/analytics/reports?report=sources"
           style={{
             color: ORANGE,
             fontWeight: 800,
@@ -470,7 +470,7 @@ function Body() {
           <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Movement from interest to hire.</div>
         </div>
         <Link
-          href="/recruiter/analytics/funnel"
+          href="/recruiter/analytics/reports?report=funnel"
           style={{
             color: ORANGE,
             fontWeight: 800,
@@ -496,19 +496,19 @@ function Body() {
         <ReportCard
           title="Time-to-Fill"
           description="See which roles close fastest and where delays build."
-          href="/recruiter/analytics/time-to-fill"
+          href="/recruiter/analytics/reports?report=timeToFill"
           value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`}
         />
         <ReportCard
           title="Quality of Hire"
           description="Track post-hire quality signals once enough data exists."
-          href="/recruiter/analytics/quality-of-hire"
+          href="/recruiter/analytics/reports?report=qualityOfHire"
           value="Building"
         />
         <ReportCard
           title="Talent Intelligence"
           description="Compare source quality, match reasons, and role signals."
-          href="/recruiter/analytics/talent-intelligence"
+          href="/recruiter/analytics/reports?report=talentIntel"
           value={loading ? "…" : topSource?.name || "N/A"}
         />
       </div>
