@@ -80,29 +80,8 @@ const RIGHT_W = 240;
 // ─── Default right rail ───────────────────────────────────────────────────────
 function DefaultRightRail() {
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
-        <div
-          style={{
-            fontSize: 10,
-            fontWeight: 800,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: ORANGE,
-            marginBottom: 8,
-          }}
-        >
-          Recruiter Intel
-        </div>
-        <div style={{ fontSize: 16, fontWeight: 800, color: SLATE, marginBottom: 6 }}>
-          Executive Snapshot
-        </div>
-        <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6 }}>
-          Recruiter-facing guidance, quick tips, and contextual notes.
-        </div>
-      </div>
-
-      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
+    <div style={{ display: "grid", gap: 12, height: "100%" }}>
+      <div style={{ ...GLASS, borderRadius: 18, padding: 14, height: "100%" }}>
         <div
           style={{
             fontSize: 10,
@@ -120,7 +99,8 @@ function DefaultRightRail() {
             borderRadius: 12,
             border: "1px dashed rgba(100,116,139,0.24)",
             background: "rgba(255,255,255,0.60)",
-            minHeight: 180,
+            minHeight: 320,
+            height: "100%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -129,6 +109,7 @@ function DefaultRightRail() {
             color: "#94A3B8",
             fontSize: 13,
             fontWeight: 700,
+            boxSizing: "border-box",
           }}
         >
           Reserved ad / sponsor panel
@@ -418,7 +399,7 @@ export default function RecruiterAnalyticsLayout({
             <aside
               style={{
                 gridArea: "right",
-                alignSelf: "start",
+                alignSelf: "stretch",
                 width: RIGHT_W,
                 minWidth: RIGHT_W,
                 maxWidth: RIGHT_W,
@@ -429,6 +410,8 @@ export default function RecruiterAnalyticsLayout({
                 ...GLASS,
                 borderRadius: 18,
                 padding: 16,
+                display: "flex",
+                flexDirection: "column",
               }}
             >
               {rightRail}
