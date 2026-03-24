@@ -940,7 +940,7 @@ export default function SnapshotDeliveryPage() {
         </div>
 
         {activeTab === "all" ? (
-          <section style={{ ...GLASS, borderRadius: 18, padding: 16,marginTop:-6 }}>
+          <section style={{ ...GLASS, borderRadius: 18, padding: 16,marginTop:22 }}>
             <AllOverview schedules={schedules} onSelectReport={(key) => setActiveTab(key)} />
           </section>
         ) : activeReport ? (
