@@ -40,6 +40,82 @@ const PERSONA_DISPLAY = {
   },
 };
 
+const SYSTEM_INTAKE_MESSAGE =
+  'Thank you for contacting the ForgeTomorrow Support Center. An agent will respond to your message shortly.';
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function countWords(text) {
+  return String(text || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
+function getAgentSpokenName(personaId) {
+  if (personaId === 'timothy') return 'Tim';
+  return PERSONA_DISPLAY[personaId]?.name || 'Support';
+}
+
+function getPersonaIntro(personaId) {
+  switch (personaId) {
+    case 'daniel':
+      return 'Thank you for contacting the ForgeTomorrow Support Center. My name is Daniel. Please give me a moment to review your initial message.';
+    case 'mark':
+      return 'Thanks for reaching out to ForgeTomorrow Support. This is Mark. Give me a moment while I take a look at your message.';
+    case 'timothy':
+      return 'Thank you for contacting ForgeTomorrow Support. My name is Tim. Give me a moment to review what you sent over.';
+    case 'barbara':
+      return 'Thank you for contacting the ForgeTomorrow Support Center. My name is Barbara. Please allow me a moment to review your request.';
+    case 'marie':
+      return 'Hi there — thank you for reaching out to ForgeTomorrow Support. My name is Marie. Give me just a moment to review your message.';
+    default:
+      return 'Thank you for contacting the ForgeTomorrow Support Center. My name is Support. Please give me a moment to review your message.';
+  }
+}
+
+function formatEndUserTicketNumber(ticketId) {
+  const raw = String(ticketId || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  if (!raw) return null;
+  const suffix = raw.slice(-6).padStart(6, '0');
+  return `FT-${suffix}`;
+}
+
+function estimateHumanDelay({
+  userText = '',
+  replyText = '',
+  isFirstAgentReply = false,
+  isQuestionReply = false,
+}) {
+  const userWords = countWords(userText);
+  const replyWords = countWords(replyText);
+  const replyChars = String(replyText || '').length;
+  const sentenceCount =
+    String(replyText || '')
+      .split(/[.!?]+/)
+      .map((s) => s.trim())
+      .filter(Boolean).length || 1;
+
+  const readDelay = clamp(1200 + userWords * 120, 1200, 3800);
+  const thinkDelay = isFirstAgentReply
+    ? 900 + Math.floor(Math.random() * 1700)
+    : 500 + Math.floor(Math.random() * 1200);
+  const typingDelay = clamp(900 + replyWords * 95 + sentenceCount * 180, 900, 5200);
+  const complexityDelay =
+    (replyChars > 240 ? 450 : 0) +
+    (replyChars > 480 ? 650 : 0) +
+    (isQuestionReply ? 250 : 0);
+  const jitter = Math.floor(Math.random() * 1800);
+
+  return clamp(readDelay + thinkDelay + typingDelay + complexityDelay + jitter, 2200, 12000);
+}
+
 function SupportChatHeaderBox({ chrome, ticketId }) {
   const mode = String(chrome || '').toLowerCase();
 
@@ -60,6 +136,8 @@ function SupportChatHeaderBox({ chrome, ticketId }) {
       'Get help with coaching tools, client workflows, and platform questions. The right support persona will stay with you for this conversation.';
   }
 
+  const displayTicketId = formatEndUserTicketNumber(ticketId);
+
   return (
     <section className="px-4 pt-4 md:pt-6">
       <div className="max-w-5xl mx-auto rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-sm shadow-md px-5 py-4 md:px-8 md:py-6 text-center">
@@ -70,10 +148,10 @@ function SupportChatHeaderBox({ chrome, ticketId }) {
           {subtitle}
         </p>
 
-        {ticketId && (
+        {displayTicketId && (
           <p className="mt-2 text-[11px] text-slate-500">
             Ticket created for this chat:&nbsp;
-            <span className="font-mono">{ticketId}</span>
+            <span className="font-mono">{displayTicketId}</span>
           </p>
         )}
       </div>
@@ -105,11 +183,15 @@ Type your question or concern in your own words. We'll automatically route it to
   // A single support ticket per chat session
   const [ticketId, setTicketId] = useState(null);
 
+  const [typingPersonaId, setTypingPersonaId] = useState(null);
+
   const bottomRef = useRef(null);
 
   // ✅ Prevent jumpy auto-scroll: only scroll when user is near bottom
   const messagesRef = useRef(null);
   const shouldAutoScrollRef = useRef(true);
+  const hasShownIntakeRef = useRef(false);
+  const hasShownAgentIntroRef = useRef(false);
 
   const updateAutoScrollFlag = () => {
     const el = messagesRef.current;
@@ -141,12 +223,31 @@ Type your question or concern in your own words. We'll automatically route it to
       text: trimmed,
     };
 
+    const shouldShowIntake = !hasShownIntakeRef.current;
+    if (shouldShowIntake) {
+      hasShownIntakeRef.current = true;
+    }
+
     // User sent a message -> follow conversation
     shouldAutoScrollRef.current = true;
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => {
+      const next = [...prev, userMessage];
+
+      if (shouldShowIntake) {
+        next.push({
+          id: `system-intake-${Date.now()}`,
+          from: 'system',
+          text: SYSTEM_INTAKE_MESSAGE,
+        });
+      }
+
+      return next;
+    });
+
     setInput('');
     setLoading(true);
+    setTypingPersonaId(activePersonaId || null);
 
     try {
       const res = await fetch('/api/support/ask', {
@@ -177,17 +278,36 @@ Type your question or concern in your own words. We'll automatically route it to
         setActivePersonaId(data.personaId);
       }
 
+      setTypingPersonaId(resolvedPersonaId || null);
+
       const personaInfo = resolvedPersonaId ? PERSONA_DISPLAY[resolvedPersonaId] : null;
+      const isFirstAgentReply = !hasShownAgentIntroRef.current;
+      const introText = isFirstAgentReply ? getPersonaIntro(resolvedPersonaId) : '';
+      const replyText = data.reply || 'Our support team is here for you.';
+      const fullReplyText = introText ? `${introText}\n\n${replyText}` : replyText;
+
+      const delayMs = estimateHumanDelay({
+        userText: trimmed,
+        replyText: fullReplyText,
+        isFirstAgentReply,
+        isQuestionReply: /\?/.test(fullReplyText),
+      });
+
+      await sleep(delayMs);
 
       const botMessage = {
         id: `bot-${Date.now()}`,
         from: 'bot',
-        text: data.reply || 'Our support team is here for you.',
+        text: fullReplyText,
         personaId: resolvedPersonaId,
         personaName: personaInfo?.name || 'Support',
         personaRole: personaInfo?.role || '',
         intent: data.intent || 'general',
       };
+
+      if (isFirstAgentReply) {
+        hasShownAgentIntroRef.current = true;
+      }
 
       // Automatic ticket creation on FIRST successful response
       if (!ticketId) {
@@ -224,6 +344,7 @@ Type your question or concern in your own words. We'll automatically route it to
       console.error(err);
       setError(err.message || 'Something went wrong. Please try again.');
     } finally {
+      setTypingPersonaId(null);
       setLoading(false);
     }
   };
@@ -250,6 +371,10 @@ Type your question or concern in your own words. We'll automatically route it to
         return 'General';
     }
   };
+
+  const typingName = typingPersonaId
+    ? PERSONA_DISPLAY[typingPersonaId]?.name || 'Support'
+    : 'Support';
 
   return (
     <>
@@ -340,7 +465,7 @@ Type your question or concern in your own words. We'll automatically route it to
                 <div className="flex justify-start">
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     <div className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" />
-                    <span>Support is typing...</span>
+                    <span>{typingName} is typing...</span>
                   </div>
                 </div>
               )}
