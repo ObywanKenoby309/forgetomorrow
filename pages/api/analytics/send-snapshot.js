@@ -225,32 +225,10 @@ function emailWrapper(content, reportLabel, accountName, reportingWindow) {
     @media only screen and (max-width: 640px) {
       .container { width: 100% !important; max-width: 100% !important; }
       .mobile-pad { padding-left: 16px !important; padding-right: 16px !important; }
-      .stack-column, .stack-column td {
-        display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-      }
-      .stack-column-cell {
-        display: block !important;
-        width: 100% !important;
-        padding-right: 0 !important;
-        padding-left: 0 !important;
-      }
-      .stack-top-gap {
-        padding-top: 14px !important;
-      }
       .mobile-center {
         text-align: left !important;
       }
       .metric-card {
-        width: 100% !important;
-      }
-      .metric-grid td {
-        display: inline-block !important;
-        width: 50% !important;
-        box-sizing: border-box !important;
-      }
-      .metric-grid .metric-full {
         width: 100% !important;
       }
       .header-right {
@@ -355,7 +333,8 @@ function heroBlock(recruiterName, reportLabel, insight, kpis) {
           </div>
         </td>
       </tr>
-	       <tr>
+
+      <tr>
         <td style="padding-top:14px;padding-bottom:4px;">
           <div style="font-size:13px;color:${TEXT};line-height:1.6;font-weight:700;">
             ${fmt(kpis?.totalApplies ?? 0)} applications,
@@ -364,64 +343,77 @@ function heroBlock(recruiterName, reportLabel, insight, kpis) {
           </div>
         </td>
       </tr>
+
       <tr>
-        <td style="padding-top:6px;padding-bottom:2px;">
+        <td style="padding-top:6px;padding-bottom:14px;">
           <div style="font-size:12px;color:${MUTED};line-height:1.6;">
             Additional performance details are included below for deeper review.
           </div>
         </td>
-      </tr> 
+      </tr>
+
       <tr>
-        <td style="padding-top:18px;">
-          <table width="100%" cellpadding="0" cellspacing="0" border="0">
-            <tr class="stack-column">
-              <td valign="top" width="58%" style="padding-right:10px;" class="stack-column-cell">
-                <div style="font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:10px;">Performance Snapshot</div>
-                <table width="100%" cellpadding="0" cellspacing="0" border="0" class="metric-grid">
-                  <tr>
-                    ${metrics
-                      .slice(0, 3)
-                      .map(
-                        (m, idx) => `
-                      <td style="padding:6px;" width="33.33%" class="metric-card${idx === 2 ? " metric-full" : ""}">
-                        <div style="background:${PANEL};border:1px solid ${BORDER};border-radius:12px;padding:14px 12px;text-align:center;">
-                          <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:8px;">${esc(m.label)}</div>
-                          <div style="font-size:24px;font-weight:900;color:${TEXT};line-height:1.1;">${esc(m.value)}</div>
-                        </div>
-                      </td>`
-                      )
-                      .join("")}
-                  </tr>
-                  <tr>
-                    ${metrics
-                      .slice(3, 6)
-                      .map(
-                        (m, idx) => `
-                      <td style="padding:6px;" width="33.33%" class="metric-card${idx === 2 ? " metric-full" : ""}">
-                        <div style="background:${PANEL};border:1px solid ${BORDER};border-radius:12px;padding:14px 12px;text-align:center;">
-                          <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:8px;">${esc(m.label)}</div>
-                          <div style="font-size:24px;font-weight:900;color:${TEXT};line-height:1.1;">${esc(m.value)}</div>
-                        </div>
-                      </td>`
-                      )
-                      .join("")}
-                  </tr>
-                </table>
-              </td>
-              <td valign="top" width="42%" style="padding-left:10px;" class="stack-column-cell stack-top-gap">
-                <div style="font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:10px;">AI Evaluation</div>
-                <div style="background:${AI_BG};border:1px solid ${AI_BORDER};border-left:4px solid ${BRAND_ORANGE};border-radius:12px;padding:16px 16px 16px 14px;">
-                  <div style="font-size:12px;font-weight:800;color:${BRAND_ORANGE};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Leadership Readout</div>
-                  <div style="font-size:14px;line-height:1.7;color:${TEXT};">
-                    ${esc(insight)}
+        <td>
+          <div style="font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:10px;">Performance Snapshot</div>
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" class="metric-grid" style="margin-bottom:16px;">
+            <tr>
+              ${metrics
+                .slice(0, 3)
+                .map(
+                  (m) => `
+                <td style="padding:6px;" width="33.33%">
+                  <div style="background:${PANEL};border:1px solid ${BORDER};border-radius:12px;padding:14px 12px;text-align:center;">
+                    <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:8px;">${esc(m.label)}</div>
+                    <div style="font-size:24px;font-weight:900;color:${TEXT};line-height:1.1;">${esc(m.value)}</div>
                   </div>
-                </div>
-              </td>
+                </td>`
+                )
+                .join("")}
+            </tr>
+            <tr>
+              ${metrics
+                .slice(3, 6)
+                .map(
+                  (m) => `
+                <td style="padding:6px;" width="33.33%">
+                  <div style="background:${PANEL};border:1px solid ${BORDER};border-radius:12px;padding:14px 12px;text-align:center;">
+                    <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:8px;">${esc(m.label)}</div>
+                    <div style="font-size:24px;font-weight:900;color:${TEXT};line-height:1.1;">${esc(m.value)}</div>
+                  </div>
+                </td>`
+                )
+                .join("")}
             </tr>
           </table>
         </td>
       </tr>
-    </table>`;
+
+      <tr>
+        <td style="padding-top:2px;">
+  <div style="font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:10px;">
+    AI Evaluation
+  </div>
+
+  <div style="
+    display:block;
+    width:100%;
+    background:${AI_BG};
+    border:1px solid ${AI_BORDER};
+    border-left:4px solid ${BRAND_ORANGE};
+    border-radius:12px;
+    padding:16px 16px 16px 14px;
+  ">
+    <div style="font-size:12px;font-weight:800;color:${BRAND_ORANGE};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">
+      Leadership Readout
+    </div>
+
+    <div style="font-size:14px;line-height:1.7;color:${TEXT};">
+      ${esc(insight)}
+    </div>
+  </div>
+</td>
+</tr>
+</table>`;
 }
 
 function sectionTitle(title, subtitle = "") {
