@@ -191,25 +191,19 @@ function buildDemoAnalytics(state) {
   };
 }
 
-function hasMeaningfulAnalyticsData(payload) {
-  if (!payload || typeof payload !== "object") return false;
+function hasMeaningfulAnalyticsData(json) {
+  if (!json) return false;
 
-  const kpis = payload.kpis || {};
-  const hasKpiSignal = [
-    kpis.totalViews,
-    kpis.totalApplies,
-    kpis.conversionRatePct,
-    kpis.avgTimeToFillDays,
-    kpis.totalInterviews,
-    kpis.totalHires,
-    kpis.offerAcceptanceRatePct,
-  ].some((value) => toNumber(value, 0) > 0);
+  // must have real usable data
+  const hasKpis =
+    json?.kpis &&
+    typeof json.kpis.totalApplies === "number" &&
+    json.kpis.totalApplies > 0;
 
-  const hasArraySignal = [payload.funnel, payload.sources, payload.recruiterActivity].some(
-    (arr) => Array.isArray(arr) && arr.length > 0
-  );
+  const hasFunnel = Array.isArray(json?.funnel) && json.funnel.length > 0;
+  const hasSources = Array.isArray(json?.sources) && json.sources.length > 0;
 
-  return hasKpiSignal || hasArraySignal;
+  return hasKpis && (hasFunnel || hasSources);
 }
 
 // ─── Main recruiter analytics data ───────────────────────────────────────────
