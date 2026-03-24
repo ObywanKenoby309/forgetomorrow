@@ -453,26 +453,28 @@ function funnelBlock(funnelData) {
 
   const max = Math.max(...funnelData.map((d) => Number(d.value || 0)), 1);
 
-  const rows = funnelData
-    .map((stage) => {
-      const pct = Math.round((Number(stage.value || 0) / max) * 100);
-      return `
-        <tr>
-          <td width="120" style="padding:6px 12px 6px 0;font-size:12px;font-weight:700;color:${TEXT};white-space:nowrap;">${esc(
-            stage.stage || stage.name || ""
-          )}</td>
-          <td style="padding:6px 0;">
-            <div style="background:#EDF2F7;border-radius:999px;height:16px;overflow:hidden;">
-              <div style="background:linear-gradient(90deg,#F57C00,#FFB74D);height:16px;border-radius:999px;width:${pct}%;min-width:4px;"></div>
-            </div>
-          </td>
-          <td width="84" style="padding:6px 0 6px 10px;font-size:12px;font-weight:800;color:${TEXT};text-align:right;">
-            ${fmt(stage.value)}
-            <div style="font-size:10px;color:${MUTED};font-weight:700;margin-top:2px;">${pct}%</div>
-          </td>
-        </tr>`;
-    })
-    .join("");
+  const trimmedFunnel = funnelData.slice(0, 5);
+
+const rows = trimmedFunnel
+  .map((stage) => {
+    const pct = Math.round((Number(stage.value || 0) / max) * 100);
+    return `
+      <tr>
+        <td width="120" style="padding:6px 12px 6px 0;font-size:12px;font-weight:700;color:${TEXT};white-space:nowrap;">${esc(
+          stage.stage || stage.name || ""
+        )}</td>
+        <td style="padding:6px 0;">
+          <div style="background:#EDF2F7;border-radius:999px;height:16px;overflow:hidden;">
+            <div style="background:linear-gradient(90deg,#F57C00,#FFB74D);height:16px;border-radius:999px;width:${pct}%;min-width:4px;"></div>
+          </div>
+        </td>
+        <td width="84" style="padding:6px 0 6px 10px;font-size:12px;font-weight:800;color:${TEXT};text-align:right;">
+          ${fmt(stage.value)}
+          <div style="font-size:10px;color:${MUTED};font-weight:700;margin-top:2px;">${pct}%</div>
+        </td>
+      </tr>`;
+  })
+  .join("");
 
   return sectionCard(
     `${sectionTitle("Application Funnel", "Pipeline progression from initial visibility through hire.")}
@@ -491,7 +493,7 @@ function sourcesBlock(sourcesData) {
   const total = sourcesData.reduce((sum, s) => sum + Number(s.value || 0), 0) || 1;
 
   const rows = sourcesData
-    .slice(0, 8)
+    .slice(0, 5)
     .map((source) => {
       const pct = Math.round((Number(source.value || 0) / total) * 100);
       return `
@@ -527,7 +529,7 @@ function activityBlock(activityData) {
   const maxInts = Math.max(...activityData.map((d) => Number(d.responses || 0)), 1);
 
   const rows = activityData
-    .slice(-8)
+    .slice(-5)
     .map((item) => {
       const appPct = Math.round((Number(item.messages || 0) / maxApps) * 100);
       const intPct = Math.round((Number(item.responses || 0) / maxInts) * 100);
