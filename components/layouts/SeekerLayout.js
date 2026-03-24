@@ -435,7 +435,7 @@ export default function SeekerLayout({
                 ...(rightVariant === 'light' ? rightLight : rightDark),
               }}
             >
-              {right}
+              {right ? right : <RightRailPlacementManager placement="default_right_rail" />}
             </aside>
           ) : null}
 
