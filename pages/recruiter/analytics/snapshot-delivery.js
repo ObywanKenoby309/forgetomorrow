@@ -945,15 +945,14 @@ export default function SnapshotDeliveryPage() {
           </section>
         ) : activeReport ? (
           <section
-            style={{
-              ...GLASS,
-              borderRadius: 18,
-              padding: 16,
-              marginTop: 22,
-              width: isMobile ? "100%" : "calc(100% + 314px)",
-              marginRight: isMobile ? 0 : -314,
-            }}
-          >
+  style={{
+    ...GLASS,
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 22,
+    width: "100%",
+  }}
+>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <button
                 type="button"
