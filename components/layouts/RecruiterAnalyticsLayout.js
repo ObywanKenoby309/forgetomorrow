@@ -80,8 +80,8 @@ const RIGHT_W = 240;
 // ─── Default right rail ───────────────────────────────────────────────────────
 function DefaultRightRail() {
   return (
-    <div style={{ display: "grid", gap: 12, height: "100%" }}>
-      <div style={{ ...GLASS, borderRadius: 18, padding: 14, height: "100%" }}>
+    <div style={{ display: "grid", gap: 12 }}>
+      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
         <div
           style={{
             fontSize: 10,
@@ -99,8 +99,7 @@ function DefaultRightRail() {
             borderRadius: 12,
             border: "1px dashed rgba(100,116,139,0.24)",
             background: "rgba(255,255,255,0.60)",
-            minHeight: 320,
-            height: "100%",
+            minHeight: 420,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
