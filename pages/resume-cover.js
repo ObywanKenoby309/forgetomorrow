@@ -95,14 +95,14 @@ const TEMPLATES = [
   {
     key: 'reverse',
     name: 'Reverse Chronological',
-    tagline: 'Clean roles, companies, dates, and impact.',
-    helper: 'The gold standard for most roles.',
+    tagline: 'Built for structured screening.',
+	helper: 'Clear roles, timeline, and results. Best for most applications.',
   },
   {
     key: 'hybrid',
     name: 'Hybrid',
-    tagline: 'Key highlights up top, full history below.',
-    helper: 'Great for career pivots.',
+    tagline: 'Built for human review.',
+	helper: 'Highlights first, story second. Best for pivots and positioning.',
     pro: true,
   },
 ];
@@ -144,7 +144,7 @@ function TemplatePreviewModal({ open, onClose, tpl, buildCreateHref }) {
           padding: 24,
         }}
       >
-        <div style={{ fontWeight: 800, fontSize: 22, color: '#263238' }}>{tpl.name} — Preview</div>
+        <div style={{ fontWeight: 800, fontSize: 22, color: '#263238' }}>{tpl.name} Preview</div>
         <p style={{ color: SLATE, margin: '8px 0 16px' }}>{tpl.tagline}</p>
 
         <div
@@ -279,7 +279,7 @@ function ContinueCard({ type, title, subtitle, href, primary }) {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 10,
-          flexWrap: 'wrap',
+          flexWrap: 'nowrap',
         }}
       >
         <div style={{ fontSize: 12, color: '#546E7A', lineHeight: 1.5, fontWeight: 600 }}>
@@ -590,8 +590,7 @@ export default function ResumeCoverLanding() {
           fontWeight: 700,
         }}
       >
-        2 templates. 1 goal: Get you the interview. Reverse Chronological for recruiters.
-        System-optimized for automated screeners. No fluff. Only what works.
+        2 formats. 1 goal: get you seen. Reverse Chronological for structured review. Hybrid for fast human scanning. No fluff. Only what works.
       </p>
 
       <div
@@ -688,10 +687,13 @@ export default function ResumeCoverLanding() {
 
   const TemplatesSection = (
     <Card style={{ padding: 22 }}>
-      <div style={{ fontWeight: 800, fontSize: 18, color: '#263238' }}>Choose a format</div>
-      <p style={{ color: '#455A64', fontSize: 14, margin: '6px 0 18px', fontWeight: 700 }}>
-        Both survive ATS screening and read great to humans.
-      </p>
+      <div style={{ fontWeight: 900, fontSize: 20, color: '#263238' }}>
+  Pick your format
+</div>
+
+<p style={{ color: '#263238', fontSize: 14, margin: '6px 0 18px', fontWeight: 700 }}>
+  Reverse Chronological is built for structured screening. Hybrid is built for human review.
+</p>
 
       <div
         style={{
@@ -900,7 +902,7 @@ export default function ResumeCoverLanding() {
           type="button"
           onClick={() => setActiveDocPane('resume')}
           style={{
-            background: isResumeOpen ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.40)',
+            background: isResumeOpen ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.45)',
             border: isResumeOpen ? '1px solid rgba(255,112,67,0.45)' : '1px solid rgba(0,0,0,0.08)',
             borderRadius: 14,
             padding: 14,
@@ -908,6 +910,7 @@ export default function ResumeCoverLanding() {
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 180ms ease',
+			transform: isResumeOpen ? 'scale(1.01)' : 'scale(0.98)',
             display: 'grid',
             gridTemplateRows: '28px minmax(0, 1fr)',
             alignItems: 'start',
@@ -1021,7 +1024,7 @@ export default function ResumeCoverLanding() {
           type="button"
           onClick={() => setActiveDocPane('cover')}
           style={{
-            background: isCoverOpen ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.40)',
+            background: isCoverOpen ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.45)',
             border: isCoverOpen ? '1px solid rgba(255,112,67,0.45)' : '1px solid rgba(0,0,0,0.08)',
             borderRadius: 14,
             padding: 14,
@@ -1029,6 +1032,7 @@ export default function ResumeCoverLanding() {
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 180ms ease',
+			transform: isCoverOpen ? 'scale(1.01)' : 'scale(0.98)',
             display: 'grid',
             gridTemplateRows: '28px minmax(0, 1fr)',
             alignItems: 'start',
@@ -1206,19 +1210,21 @@ export default function ResumeCoverLanding() {
           ))
         ) : (
           <div
-            style={{
-              background: 'rgba(255,255,255,0.72)',
-              border: '1px solid rgba(0,0,0,0.08)',
-              borderRadius: 12,
-              padding: 12,
-              color: '#455A64',
-              fontSize: 14,
-              lineHeight: 1.55,
-              fontWeight: 600,
-            }}
-          >
-            No saved documents yet. Start with a resume or upload an existing one to continue here.
-          </div>
+  style={{
+    background: 'rgba(255,255,255,0.78)',
+    border: '1px solid rgba(0,0,0,0.10)',
+    borderRadius: 12,
+    padding: 14,
+    display: 'grid',
+    gap: 6,
+    color: '#455A64',
+    fontSize: 14,
+    lineHeight: 1.55,
+    fontWeight: 600,
+  }}
+>
+  No saved documents yet. Start with a resume or upload an existing one to continue here.
+</div>
         )}
       </div>
     </div>
@@ -1233,7 +1239,16 @@ export default function ResumeCoverLanding() {
       rightVariant="light"
       activeNav="resume-cover"
     >
-      <div style={{ width: '100%', padding: '0 16px', display: 'grid', gap: 20 }}>
+      <div
+  style={{
+    width: '100%',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: '0 8px',
+    display: 'grid',
+    gap: 20,
+  }}
+>
         {ATSContextBanner}
         {TemplatesSection}
         {DocumentsSection}
