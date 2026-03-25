@@ -10,15 +10,22 @@ import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import ContactsOrganizer from '@/components/ContactsOrganizer';
 
+const GLASS = {
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
 export default function SeekerContactsGatePage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || 'seeker').toLowerCase();
 
-  // preserve current chrome on internal links
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // choose layout by chrome; links always use seeker routes (with chrome)
   const Layout = useMemo(() => {
     switch (chrome) {
       case 'coach':
@@ -37,7 +44,6 @@ export default function SeekerContactsGatePage() {
 
   const homeHref = withChrome('/seeker-dashboard');
 
-  // 🔹 Live contacts state (no more fake people)
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -66,19 +72,18 @@ export default function SeekerContactsGatePage() {
   const HeaderBox = (
     <section
       style={{
-        background: 'white',
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        border: '1px solid #eee',
+        ...GLASS,
+        padding: '24px 16px',
         textAlign: 'center',
+        margin: '0 auto',
+        maxWidth: 1320,
       }}
     >
       <h1
         style={{
           margin: 0,
           color: '#FF7043',
-          fontSize: 24,
+          fontSize: 28,
           fontWeight: 800,
         }}
       >
@@ -86,9 +91,12 @@ export default function SeekerContactsGatePage() {
       </h1>
       <p
         style={{
-          margin: '6px auto 0',
-          color: '#607D8B',
-          maxWidth: 720,
+          margin: '8px auto 0',
+          color: '#546E7A',
+          maxWidth: 760,
+          fontSize: 15,
+          fontWeight: 500,
+          lineHeight: 1.55,
         }}
       >
         View all your connections and organize them with custom categories.{' '}
@@ -111,8 +119,13 @@ export default function SeekerContactsGatePage() {
         <title>ForgeTomorrow - Contacts</title>
       </Head>
 
-      {/* Center column, similar to Coaching Dashboard width */}
-      <div className="w-full max-w-5xl mx-auto px-2 md:px-0">
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 'none',
+          marginTop: 24,
+        }}
+      >
         <ContactsOrganizer contacts={contacts} loading={loading} />
       </div>
     </Layout>
