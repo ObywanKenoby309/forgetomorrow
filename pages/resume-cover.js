@@ -247,10 +247,10 @@ function ContinueCard({ type, title, subtitle, href, primary }) {
         borderRadius: 12,
         padding: 12,
         display: 'grid',
-        gap: 8,
+        gap: 10,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+      <div>
         <span
           style={{
             display: 'inline-flex',
@@ -267,18 +267,28 @@ function ContinueCard({ type, title, subtitle, href, primary }) {
         >
           {type}
         </span>
+      </div>
+
+      <div style={{ fontSize: 14, fontWeight: 800, color: '#263238', lineHeight: 1.4 }}>
+        {title}
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ fontSize: 12, color: '#546E7A', lineHeight: 1.5, fontWeight: 600 }}>
+          {subtitle}
+        </div>
 
         <SoftLink href={href} style={{ fontSize: 13, fontWeight: 800 }}>
           Open
         </SoftLink>
-      </div>
-
-      <div style={{ fontSize: 14, fontWeight: 800, color: '#263238', lineHeight: 1.35 }}>
-        {title}
-      </div>
-
-      <div style={{ fontSize: 12, color: '#546E7A', lineHeight: 1.5, fontWeight: 600 }}>
-        {subtitle}
       </div>
     </div>
   );
@@ -867,6 +877,10 @@ export default function ResumeCoverLanding() {
   const isResumeOpen = activeDocPane === 'resume';
   const isCoverOpen = activeDocPane === 'cover';
 
+  const documentsGridColumns = isResumeOpen
+    ? 'minmax(0, 1.25fr) minmax(220px, 0.75fr)'
+    : 'minmax(220px, 0.75fr) minmax(0, 1.25fr)';
+
   const DocumentsSection = (
     <Card style={{ padding: 22 }}>
       <div style={{ fontWeight: 800, fontSize: 18, color: '#263238' }}>Your documents</div>
@@ -877,9 +891,7 @@ export default function ResumeCoverLanding() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: isResumeOpen
-            ? 'minmax(0, 1.25fr) minmax(220px, 0.75fr)'
-            : 'minmax(220px, 0.75fr) minmax(0, 1.25fr)',
+          gridTemplateColumns: documentsGridColumns,
           gap: 16,
           alignItems: 'stretch',
         }}
@@ -896,9 +908,21 @@ export default function ResumeCoverLanding() {
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 180ms ease',
+            display: 'grid',
+            gridTemplateRows: '28px minmax(0, 1fr)',
+            alignItems: 'start',
           }}
         >
-          <div style={{ fontWeight: 800, color: isResumeOpen ? ORANGE : '#263238', marginBottom: 12 }}>
+          <div
+            style={{
+              height: 28,
+              display: 'flex',
+              alignItems: 'center',
+              fontWeight: 800,
+              color: isResumeOpen ? ORANGE : '#263238',
+              marginBottom: 12,
+            }}
+          >
             Resumes
           </div>
 
@@ -970,8 +994,24 @@ export default function ResumeCoverLanding() {
                 </div>
               ))
             ) : (
-              <div style={{ color: '#455A64', fontSize: 14, padding: '8px 0', fontWeight: 600 }}>
-                You have not created a resume yet. Start with Reverse Chronological to build your first version.
+              <div
+                style={{
+                  minHeight: 180,
+                  display: 'grid',
+                  placeItems: 'center',
+                  textAlign: 'center',
+                  color: '#455A64',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  lineHeight: 1.6,
+                  padding: '8px 16px',
+                }}
+              >
+                <div>
+                  You have not created a resume yet.
+                  <br />
+                  Start with Reverse Chronological to build your first version.
+                </div>
               </div>
             )}
           </div>
@@ -989,9 +1029,21 @@ export default function ResumeCoverLanding() {
             textAlign: 'left',
             cursor: 'pointer',
             transition: 'all 180ms ease',
+            display: 'grid',
+            gridTemplateRows: '28px minmax(0, 1fr)',
+            alignItems: 'start',
           }}
         >
-          <div style={{ fontWeight: 800, color: isCoverOpen ? ORANGE : '#263238', marginBottom: 12 }}>
+          <div
+            style={{
+              height: 28,
+              display: 'flex',
+              alignItems: 'center',
+              fontWeight: 800,
+              color: isCoverOpen ? ORANGE : '#263238',
+              marginBottom: 12,
+            }}
+          >
             Cover Letters
           </div>
 
@@ -1063,22 +1115,32 @@ export default function ResumeCoverLanding() {
                 </div>
               ))
             ) : (
-              <div style={{ paddingTop: 8 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#607D8B' }}>No cover letter yet</div>
-                <div style={{ fontSize: 13, color: '#546E7A', marginTop: 4, lineHeight: 1.5, fontWeight: 600 }}>
-                  Add one to stand out on your application.
-                </div>
+              <div
+                style={{
+                  minHeight: 180,
+                  display: 'grid',
+                  placeItems: 'center',
+                  textAlign: 'center',
+                  padding: '8px 16px',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#607D8B' }}>No cover letter yet</div>
+                  <div style={{ fontSize: 13, color: '#546E7A', marginTop: 6, lineHeight: 1.5, fontWeight: 600 }}>
+                    Add one to stand out on your application.
+                  </div>
 
-                <div style={{ marginTop: 14 }}>
-                  <PrimaryButton
-                    href={buildCoverCreateHref()}
-                    style={{
-                      minWidth: 150,
-                      padding: '10px 16px',
-                    }}
-                  >
-                    + Create
-                  </PrimaryButton>
+                  <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center' }}>
+                    <PrimaryButton
+                      href={buildCoverCreateHref()}
+                      style={{
+                        minWidth: 150,
+                        padding: '10px 16px',
+                      }}
+                    >
+                      + Create
+                    </PrimaryButton>
+                  </div>
                 </div>
               </div>
             )}
@@ -1171,7 +1233,7 @@ export default function ResumeCoverLanding() {
       rightVariant="light"
       activeNav="resume-cover"
     >
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px', display: 'grid', gap: 20 }}>
+      <div style={{ width: '100%', padding: '0 16px', display: 'grid', gap: 20 }}>
         {ATSContextBanner}
         {TemplatesSection}
         {DocumentsSection}
