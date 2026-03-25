@@ -1067,7 +1067,7 @@ function NewJobsUI() {
           </div>
           <JobPagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </section>
-        <section aria-label="Selected job details" style={{ position: 'sticky', top: 16, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
+        <section aria-label="Selected job details" style={{ position: 'sticky', top: 16, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <JobDetailPanel job={selectedJob} getJobStatus={getJobStatus} isInternalJob={isInternalJob} getJobTier={getJobTier} isJobPinned={isJobPinned} hasApplied={hasAppliedToSelected} isPaidUser={isPaidUser} onApply={handleApplyClick} onResumeAlign={handleResumeAlign} onImproveResume={handleImproveResume} />
         </section>
       </div>
