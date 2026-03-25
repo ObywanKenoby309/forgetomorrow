@@ -752,8 +752,8 @@ function OldJobsUI() {
                           {selectedSourceLabel && <span style={{ padding: '2px 8px', borderRadius: 999, border: '1px solid #CFD8DC', fontSize: 12, backgroundColor: selectedIsDark ? 'rgba(38,50,56,0.8)' : 'transparent', color: selectedIsDark ? '#ECEFF1' : '#455A64' }}>Source: {selectedSourceLabel}</span>}
                         </div>
                       </CardHeader>
-                      <CardContent style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4, maxHeight: '58vh' }}>
+                      <CardContent style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, overflow: 'hidden', minHeight: 0 }}>
+						<div style={{ flex: 1, overflowY: 'auto', paddingRight: 4, minHeight: 0 }}>
                           {(() => {
                             const raw = stripMarkdown((selectedJob.description || '').replace(/<[^>]*>/g, ''));
                             const paragraphs = raw.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
