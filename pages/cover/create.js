@@ -5,7 +5,6 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import { ResumeContext } from '@/context/ResumeContext';
 import { extractTextFromFile } from '@/lib/jd/ingest';
-import BulkExportCTA from '@/components/BulkExportCTA';
 import CoverPDFButton from '@/components/cover-letter/export/CoverPDFButton';
 
 const CoverLetterTemplate = dynamic(
@@ -989,10 +988,6 @@ CLOSING: ...
             Designed PDF
           </div>
         </CoverPDFButton>
-      </div>
-
-      <div className="mt-6 max-w-4xl mx-auto">
-        <BulkExportCTA />
       </div>
 
       {showToast && (
