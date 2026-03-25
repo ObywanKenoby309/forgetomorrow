@@ -1,5 +1,5 @@
 // components/cover-letter/CoverLetterTemplate.js
-// THE FORGE LETTER — FINAL, PRINT-SAFE, HR-APPROVED
+// THE FORGE LETTER - FINAL, PRINT-SAFE, HR-APPROVED
 import React from 'react';
 
 export default function CoverLetterTemplate({ data }) {
@@ -25,13 +25,13 @@ export default function CoverLetterTemplate({ data }) {
 
   const bodyLines = body
     .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0);
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
 
   return (
     <div
       style={{
-        fontFamily: 'Helvetica Neue',  // ONLY THIS — NO FALLBACKS
+        fontFamily: 'Helvetica Neue',
         fontSize: 11,
         lineHeight: 1.6,
         color: '#1f2937',
@@ -39,8 +39,8 @@ export default function CoverLetterTemplate({ data }) {
         margin: '0 auto',
       }}
     >
-      {/* HEADER — TOP RIGHT */}
-      <div style={{ marginBottom: 40, textAlign: 'right' }}>
+      {/* HEADER - TOP LEFT */}
+      <div style={{ marginBottom: 40, textAlign: 'left' }}>
         <div style={{ fontWeight: 700, fontSize: 13 }}>{fullName}</div>
         {(contact || portfolio) && (
           <div style={{ fontSize: 10, color: '#6b7280', marginTop: 4 }}>
@@ -73,7 +73,7 @@ export default function CoverLetterTemplate({ data }) {
         </p>
       )}
 
-      {/* BODY — AUTO BULLETS */}
+      {/* BODY - AUTO BULLETS */}
       {bodyLines.length > 0 && (
         <div style={{ margin: '16px 0' }}>
           {bodyLines.map((line, i) => (
