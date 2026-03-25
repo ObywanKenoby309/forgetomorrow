@@ -46,8 +46,8 @@ function Banner({ children, tone = 'orange' }) {
         ...toneStyles,
         borderRadius: 12,
         padding: 14,
-        fontSize: 15,
-        fontWeight: 600,
+        fontSize: 14,
+        fontWeight: 700,
       }}
     >
       {children}
@@ -88,7 +88,7 @@ function Section({ title, open, onToggle, children, required = false, dense = fa
             : 'linear-gradient(180deg, rgba(0,0,0,0.03), rgba(255,255,255,0))',
           textAlign: 'left',
           fontWeight: dense ? 900 : 900,
-          fontSize: dense ? 14 : 16,
+          fontSize: dense ? 13 : 15,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -99,9 +99,11 @@ function Section({ title, open, onToggle, children, required = false, dense = fa
         aria-expanded={open ? 'true' : 'false'}
       >
         <span style={{ minWidth: 0 }}>
-          <span style={{ color: required ? ORANGE : '#1F2937' }}>{title}</span>
+          <span style={{ color: required ? ORANGE : '#111827', fontWeight: 900 }}>
+  {title}
+</span>
           {!!subtitle && (
-            <div style={{ marginTop: 4, color: '#475569', fontSize: 12, fontWeight: 700 }}>
+            <div style={{ marginTop: 4, color: '#334155', fontSize: 12, fontWeight: 700 }}>
               {subtitle}
             </div>
           )}
@@ -181,7 +183,7 @@ function LanguagesInlineSection({ languages, setLanguages }) {
         <input
           value={val}
           onChange={(e) => setVal(e.target.value)}
-          placeholder="Add a language (e.g., English — Native)"
+          placeholder="Add a language (e.g., English - Native)"
           style={{
             flex: 1,
             border: '1px solid rgba(0,0,0,0.12)',
@@ -254,7 +256,7 @@ function LanguagesInlineSection({ languages, setLanguages }) {
         </div>
       )}
       <div style={{ fontSize: 12, color: '#6B7280' }}>
-        Tip: use “Language — Proficiency” format (example: “Spanish — Professional”).
+        Tip: use “Language - Proficiency” format (example: “Spanish — Professional”).
       </div>
     </div>
   );
@@ -854,11 +856,23 @@ export default function CreateResumePage() {
       }}
       aria-label="Resume Builder header"
     >
-      <h1 style={{ margin: 0, color: ORANGE, fontSize: 22, fontWeight: 900 }}>Resume Builder</h1>
-      <p style={{ margin: '8px auto 0', color: '#455A64', maxWidth: 860, fontWeight: 700, lineHeight: 1.35 }}>
-        2 templates. 1 goal: Get you the interview. <strong>Reverse Chronological</strong> for recruiters.{' '}
-        <strong>System-Optimized</strong> for automated screeners. No fluff. Only what works.
-      </p>
+      <h1 style={{ margin: 0, color: ORANGE, fontSize: 24, fontWeight: 900 }}>
+  Resume Builder
+</h1>
+
+<p
+  style={{
+    margin: '8px auto 0',
+    color: '#263238',
+    maxWidth: 860,
+    fontWeight: 700,
+    fontSize: 14,
+    lineHeight: 1.4,
+  }}
+>
+  2 formats. 1 goal: get you seen. <strong>Reverse Chronological</strong> for structured review.
+  <strong> Hybrid</strong> for fast human scanning. No fluff. Only what works.
+</p>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
         <button
@@ -896,7 +910,7 @@ export default function CreateResumePage() {
 
   const Footer = (
     <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
-      Tip: System-optimized formatting improves compatibility with automated screeners. <em>Results vary by role and market.</em>
+      Tip: Structured formatting improves compatibility with hiring systems. <em>Results vary by role and market.</em>
     </div>
   );
 
@@ -1461,8 +1475,8 @@ export default function CreateResumePage() {
                 background: 'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',
                 color: 'white',
                 fontWeight: 900,
-                fontSize: 14,
-                letterSpacing: 0.6,
+                fontSize: 13,
+                letterSpacing: 0.4,
                 textAlign: 'center',
               }}
             >
