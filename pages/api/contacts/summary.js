@@ -57,15 +57,14 @@ export default async function handler(req, res) {
 
     // 2) Categories + assignments
     const [categories, assignments] = await Promise.all([
-      prisma.contactCategory.findMany({
-        where: { userId },
-        orderBy: { name: 'asc' },
-      }),
-      prisma.contactCategoryAssignment.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-      }),
-    ]);
+  prisma.contactCategory.findMany({
+    where: { userId },
+    orderBy: { name: 'asc' },
+  }),
+  prisma.contactCategoryAssignment.findMany({
+    where: { userId },
+  }),
+]);
 
     // 3) Incoming requests
     const incomingRequests = await prisma.contactRequest.findMany({
