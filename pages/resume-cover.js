@@ -3,10 +3,9 @@ import React, { useRef, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import ResumeRightRail from '@/components/resume/ResumeRightRail';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { getClientSession } from '@/lib/auth-client';
-import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
+import { extractTextFromFile } from '@/lib/jd/ingest';
 
 const ORANGE = '#FF7043';
 const SLATE = '#455A64';
@@ -220,14 +219,7 @@ function formatDate(value) {
 }
 
 function getItemTitle(item, fallback) {
-  return (
-    item?.name ||
-    item?.title ||
-    item?.resumeName ||
-    item?.coverName ||
-    item?.label ||
-    fallback
-  );
+  return item?.name || item?.title || item?.resumeName || item?.coverName || item?.label || fallback;
 }
 
 function getUpdatedLabel(item) {
@@ -246,6 +238,52 @@ function buildCoverOpenHref(buildCoverCreateHref, item) {
   return buildCoverCreateHref({ coverId: item.id });
 }
 
+function ContinueCard({ type, title, subtitle, href, primary }) {
+  return (
+    <div
+      style={{
+        background: primary ? 'rgba(255,247,243,0.94)' : 'rgba(255,255,255,0.72)',
+        border: primary ? '1px solid rgba(255,112,67,0.34)' : '1px solid rgba(0,0,0,0.08)',
+        borderRadius: 12,
+        padding: 12,
+        display: 'grid',
+        gap: 8,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '4px 8px',
+            borderRadius: 999,
+            fontSize: 10,
+            fontWeight: 900,
+            letterSpacing: 0.4,
+            color: primary ? ORANGE : '#455A64',
+            background: primary ? '#FFF1EB' : 'rgba(69,90,100,0.10)',
+            border: primary ? '1px solid rgba(255,112,67,0.25)' : '1px solid rgba(0,0,0,0.05)',
+          }}
+        >
+          {type}
+        </span>
+
+        <SoftLink href={href} style={{ fontSize: 13, fontWeight: 800 }}>
+          Open
+        </SoftLink>
+      </div>
+
+      <div style={{ fontSize: 14, fontWeight: 800, color: '#263238', lineHeight: 1.35 }}>
+        {title}
+      </div>
+
+      <div style={{ fontSize: 12, color: '#546E7A', lineHeight: 1.5, fontWeight: 600 }}>
+        {subtitle}
+      </div>
+    </div>
+  );
+}
+
 export default function ResumeCoverLanding() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
@@ -255,7 +293,6 @@ export default function ResumeCoverLanding() {
   const fileRef = useRef(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTpl, setPreviewTpl] = useState(null);
-  const [user, setUser] = useState(null);
 
   const [tier, setTier] = useState('basic');
   const [usage, setUsage] = useState({ used: 0, limit: 3 });
@@ -271,6 +308,7 @@ export default function ResumeCoverLanding() {
   const [atsPack, setAtsPack] = useState(null);
   const [atsSource, setAtsSource] = useState(null);
   const [jobContext, setJobContext] = useState(null);
+  const [activeDocPane, setActiveDocPane] = useState('resume');
 
   useEffect(() => {
     async function init() {
@@ -278,8 +316,6 @@ export default function ResumeCoverLanding() {
         const session = await getClientSession();
 
         if (session?.user) {
-          setUser(session.user);
-
           try {
             const res = await fetch('/api/resume/list');
             if (res.ok) {
@@ -418,8 +454,7 @@ export default function ResumeCoverLanding() {
       console.error('[resume-cover] Resume upload error', err);
       setUploadState({
         status: 'error',
-        message:
-          'Something went wrong while uploading your resume. You can still continue to the builder.',
+        message: 'Something went wrong while uploading your resume. You can still continue to the builder.',
       });
     }
 
@@ -486,21 +521,47 @@ export default function ResumeCoverLanding() {
     });
   }, [savedCovers]);
 
+  const continueItems = useMemo(() => {
+    const resumes = sortedResumes.slice(0, 2).map((item, index) => ({
+      id: `resume-${item?.id || index}`,
+      type: 'RESUME',
+      title: getItemTitle(item, `Resume ${index + 1}`),
+      subtitle: getUpdatedLabel(item),
+      href: buildResumeOpenHref(buildCreateHref, item),
+      primary: !!item?.isPrimary,
+      updatedAt: item?.updatedAt || item?.createdAt || item?.date || item?.lastUpdated || '',
+    }));
+
+    const covers = sortedCovers.slice(0, 2).map((item, index) => ({
+      id: `cover-${item?.id || index}`,
+      type: 'COVER',
+      title: getItemTitle(item, `Cover Letter ${index + 1}`),
+      subtitle: getUpdatedLabel(item),
+      href: buildCoverOpenHref(buildCoverCreateHref, item),
+      primary: !!item?.isPrimary,
+      updatedAt: item?.updatedAt || item?.createdAt || item?.date || item?.lastUpdated || '',
+    }));
+
+    return [...resumes, ...covers]
+      .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
+      .slice(0, 4);
+  }, [sortedResumes, sortedCovers]);
+
   const HeaderHero = (
     <Card
       style={{
         textAlign: 'center',
-        background: 'linear-gradient(180deg, #EFD7C3 0%, #E7C8B0 100%)',
-        border: '1px solid rgba(255,112,67,0.22)',
-        boxShadow: '0 10px 30px rgba(255,112,67,0.14)',
         padding: '20px 18px 16px',
+        background: 'rgba(255,255,255,0.60)',
+        border: '1px solid rgba(255,255,255,0.22)',
+        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
       }}
       aria-label="Resume builder overview"
     >
       <h1
         style={{
-          color: ORANGE,
-          fontSize: 22,
+          color: '#263238',
+          fontSize: 24,
           lineHeight: 1.15,
           fontWeight: 800,
           margin: 0,
@@ -511,10 +572,10 @@ export default function ResumeCoverLanding() {
 
       <p
         style={{
-          color: '#385461',
+          color: '#37474F',
           margin: '10px auto 0',
           fontSize: 15,
-          lineHeight: 1.45,
+          lineHeight: 1.5,
           maxWidth: 820,
           fontWeight: 700,
         }}
@@ -574,8 +635,8 @@ export default function ResumeCoverLanding() {
           style={{
             marginTop: 12,
             fontSize: 14,
-            color: uploadState.status === 'error' ? '#B71C1C' : '#2E7D32',
-            fontWeight: 700,
+            color: uploadState.status === 'error' ? '#B71C1C' : '#1B5E20',
+            fontWeight: 800,
           }}
         >
           {uploadState.message}
@@ -583,7 +644,7 @@ export default function ResumeCoverLanding() {
       )}
 
       {tier === 'basic' && usage && typeof usage.used === 'number' && (
-        <div style={{ marginTop: 12, color: '#6B7C86', fontSize: 13, fontWeight: 600 }}>
+        <div style={{ marginTop: 12, color: '#455A64', fontSize: 13, fontWeight: 700 }}>
           Free tier: {usage.used}/{usage.limit === Infinity ? '∞' : usage.limit} AI generations used
         </div>
       )}
@@ -604,11 +665,11 @@ export default function ResumeCoverLanding() {
         <div style={{ fontWeight: 800, fontSize: 16, color: '#1A4B8F', marginBottom: 4 }}>
           We’ve loaded screening insights for this job
         </div>
-        <p style={{ margin: '4px 0', fontSize: 14, color: '#37474F', fontWeight: 600 }}>
+        <p style={{ margin: '4px 0', fontSize: 14, color: '#263238', fontWeight: 700 }}>
           <strong>{atsPack.job.title}</strong> at <strong>{atsPack.job.company}</strong>
           {atsPack.job.location ? ` — ${atsPack.job.location}` : ''}
         </p>
-        <p style={{ margin: '4px 0 0', fontSize: 13, color: '#546E7A', lineHeight: 1.55 }}>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: '#455A64', lineHeight: 1.55, fontWeight: 600 }}>
           When you open the builder, we’ll surface these recommendations so you can tune your resume
           before you export or apply.
         </p>
@@ -618,7 +679,7 @@ export default function ResumeCoverLanding() {
   const TemplatesSection = (
     <Card style={{ padding: 22 }}>
       <div style={{ fontWeight: 800, fontSize: 18, color: '#263238' }}>Choose a format</div>
-      <p style={{ color: '#546E7A', fontSize: 14, margin: '6px 0 18px', fontWeight: 600 }}>
+      <p style={{ color: '#455A64', fontSize: 14, margin: '6px 0 18px', fontWeight: 700 }}>
         Both survive ATS screening and read great to humans.
       </p>
 
@@ -637,11 +698,11 @@ export default function ResumeCoverLanding() {
             index === 0
               ? {
                   border: '2px solid rgba(255,112,67,0.85)',
-                  background: 'rgba(255,249,246,0.92)',
+                  background: 'rgba(255,249,246,0.94)',
                   boxShadow: '0 8px 20px rgba(255,112,67,0.08)',
                 }
               : {
-                  background: 'rgba(255,255,255,0.52)',
+                  background: 'rgba(255,255,255,0.68)',
                 };
 
           return (
@@ -686,18 +747,18 @@ export default function ResumeCoverLanding() {
                 {tpl.name}
               </div>
 
-              <p style={{ color: '#455A64', fontSize: 13, margin: '10px 0 2px', lineHeight: 1.5, fontWeight: 600 }}>
+              <p style={{ color: '#37474F', fontSize: 13, margin: '10px 0 2px', lineHeight: 1.5, fontWeight: 700 }}>
                 {tpl.tagline}
               </p>
 
-              <p style={{ color: '#546E7A', fontSize: 13, margin: '0 0 14px', lineHeight: 1.5 }}>
+              <p style={{ color: '#455A64', fontSize: 13, margin: '0 0 14px', lineHeight: 1.5, fontWeight: 600 }}>
                 {tpl.helper}
               </p>
 
               <div
                 style={{
                   height: 120,
-                  background: 'rgba(255,255,255,0.72)',
+                  background: 'rgba(255,255,255,0.82)',
                   borderRadius: 10,
                   border: '1px solid rgba(0,0,0,0.07)',
                   marginBottom: 14,
@@ -787,14 +848,14 @@ export default function ResumeCoverLanding() {
       <div
         style={{
           marginTop: 22,
-          background: 'rgba(255,243,239,0.88)',
+          background: 'rgba(255,243,239,0.92)',
           border: '1px solid #FFE0D6',
           borderRadius: 14,
           padding: '14px 16px',
         }}
       >
         <div style={{ fontWeight: 800, color: ORANGE, marginBottom: 6 }}>Why only two formats?</div>
-        <p style={{ margin: 0, color: '#5D4037', lineHeight: 1.6, fontSize: 14 }}>
+        <p style={{ margin: 0, color: '#5D4037', lineHeight: 1.6, fontSize: 14, fontWeight: 600 }}>
           Reverse-Chronological and Hybrid are the only layouts that consistently clear automated
           screening AND hold up to recruiter eyes. Functional resumes, infographic resumes, and creative
           layouts cause silent drop-offs. We don&apos;t offer them.
@@ -803,35 +864,47 @@ export default function ResumeCoverLanding() {
     </Card>
   );
 
+  const isResumeOpen = activeDocPane === 'resume';
+  const isCoverOpen = activeDocPane === 'cover';
+
   const DocumentsSection = (
     <Card style={{ padding: 22 }}>
       <div style={{ fontWeight: 800, fontSize: 18, color: '#263238' }}>Your documents</div>
-      <p style={{ color: '#546E7A', fontSize: 14, margin: '6px 0 18px', fontWeight: 600 }}>
-        Choose your strongest approach to applications and your portfolio
+      <p style={{ color: '#455A64', fontSize: 14, margin: '6px 0 18px', fontWeight: 700 }}>
+        Choose your strongest approach to applications and your portfolio.
       </p>
 
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.2fr) minmax(260px, 0.8fr)',
+          gridTemplateColumns: isResumeOpen
+            ? 'minmax(0, 1.25fr) minmax(220px, 0.75fr)'
+            : 'minmax(220px, 0.75fr) minmax(0, 1.25fr)',
           gap: 16,
           alignItems: 'stretch',
         }}
       >
-        <div
+        <button
+          type="button"
+          onClick={() => setActiveDocPane('resume')}
           style={{
-            background: 'rgba(255,255,255,0.55)',
-            border: '1px solid rgba(255,112,67,0.45)',
+            background: isResumeOpen ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.40)',
+            border: isResumeOpen ? '1px solid rgba(255,112,67,0.45)' : '1px solid rgba(0,0,0,0.08)',
             borderRadius: 14,
             padding: 14,
             minWidth: 0,
+            textAlign: 'left',
+            cursor: 'pointer',
+            transition: 'all 180ms ease',
           }}
         >
-          <div style={{ fontWeight: 800, color: ORANGE, marginBottom: 12 }}>Resumes</div>
+          <div style={{ fontWeight: 800, color: isResumeOpen ? ORANGE : '#263238', marginBottom: 12 }}>
+            Resumes
+          </div>
 
           <div
             style={{
-              maxHeight: 210,
+              maxHeight: 230,
               overflowY: 'auto',
               paddingRight: 6,
             }}
@@ -848,14 +921,15 @@ export default function ResumeCoverLanding() {
                     padding: '12px 0',
                     borderBottom: index === sortedResumes.length - 1 ? 'none' : '1px solid rgba(0,0,0,0.08)',
                     flexWrap: 'wrap',
+                    opacity: isResumeOpen ? 1 : 0.9,
                   }}
                 >
                   <div style={{ minWidth: 0, flex: '1 1 220px' }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#263238' }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#263238' }}>
                       {getItemTitle(resume, `Resume ${index + 1}`)}
                     </div>
 
-                    <div style={{ fontSize: 12, color: '#78909C', marginTop: 4 }}>
+                    <div style={{ fontSize: 12, color: '#546E7A', marginTop: 4, fontWeight: 600 }}>
                       Resume · {getUpdatedLabel(resume)}
                     </div>
                   </div>
@@ -896,27 +970,34 @@ export default function ResumeCoverLanding() {
                 </div>
               ))
             ) : (
-              <div style={{ color: '#607D8B', fontSize: 14, padding: '8px 0' }}>
+              <div style={{ color: '#455A64', fontSize: 14, padding: '8px 0', fontWeight: 600 }}>
                 You have not created a resume yet. Start with Reverse Chronological to build your first version.
               </div>
             )}
           </div>
-        </div>
+        </button>
 
-        <div
+        <button
+          type="button"
+          onClick={() => setActiveDocPane('cover')}
           style={{
-            background: 'rgba(255,255,255,0.42)',
-            border: '1px solid rgba(0,0,0,0.08)',
+            background: isCoverOpen ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.40)',
+            border: isCoverOpen ? '1px solid rgba(255,112,67,0.45)' : '1px solid rgba(0,0,0,0.08)',
             borderRadius: 14,
             padding: 14,
             minWidth: 0,
+            textAlign: 'left',
+            cursor: 'pointer',
+            transition: 'all 180ms ease',
           }}
         >
-          <div style={{ fontWeight: 800, color: '#263238', marginBottom: 12 }}>Cover Letters</div>
+          <div style={{ fontWeight: 800, color: isCoverOpen ? ORANGE : '#263238', marginBottom: 12 }}>
+            Cover Letters
+          </div>
 
           <div
             style={{
-              maxHeight: 210,
+              maxHeight: 230,
               overflowY: 'auto',
               paddingRight: 6,
             }}
@@ -933,14 +1014,15 @@ export default function ResumeCoverLanding() {
                     padding: '12px 0',
                     borderBottom: index === sortedCovers.length - 1 ? 'none' : '1px solid rgba(0,0,0,0.08)',
                     flexWrap: 'wrap',
+                    opacity: isCoverOpen ? 1 : 0.9,
                   }}
                 >
                   <div style={{ minWidth: 0, flex: '1 1 180px' }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#263238' }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#263238' }}>
                       {getItemTitle(cover, `Cover Letter ${index + 1}`)}
                     </div>
 
-                    <div style={{ fontSize: 12, color: '#78909C', marginTop: 4 }}>
+                    <div style={{ fontSize: 12, color: '#546E7A', marginTop: 4, fontWeight: 600 }}>
                       Cover letter · {getUpdatedLabel(cover)}
                     </div>
                   </div>
@@ -982,9 +1064,9 @@ export default function ResumeCoverLanding() {
               ))
             ) : (
               <div style={{ paddingTop: 8 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#B0BEC5' }}>No cover letter yet</div>
-                <div style={{ fontSize: 13, color: '#90A4AE', marginTop: 4, lineHeight: 1.5 }}>
-                  Add one to stand out on your application
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#607D8B' }}>No cover letter yet</div>
+                <div style={{ fontSize: 13, color: '#546E7A', marginTop: 4, lineHeight: 1.5, fontWeight: 600 }}>
+                  Add one to stand out on your application.
                 </div>
 
                 <div style={{ marginTop: 14 }}>
@@ -1001,7 +1083,7 @@ export default function ResumeCoverLanding() {
               </div>
             )}
           </div>
-        </div>
+        </button>
       </div>
     </Card>
   );
@@ -1014,6 +1096,9 @@ export default function ResumeCoverLanding() {
           padding: 14,
           minWidth: 0,
           overflow: 'hidden',
+          minHeight: 250,
+          display: 'grid',
+          alignContent: 'start',
         }}
       >
         <div
@@ -1036,11 +1121,43 @@ export default function ResumeCoverLanding() {
       <div
         style={{
           ...GLASS,
-          padding: 8,
+          padding: 14,
           minWidth: 0,
+          display: 'grid',
+          gap: 12,
         }}
       >
-        <ResumeRightRail savedResumes={savedResumes} usage={usage} tier={tier} />
+        <div style={{ fontWeight: 800, color: '#263238', fontSize: 16 }}>
+          Continue Where You Left Off
+        </div>
+
+        {continueItems.length ? (
+          continueItems.map((item) => (
+            <ContinueCard
+              key={item.id}
+              type={item.type}
+              title={item.title}
+              subtitle={item.subtitle}
+              href={item.href}
+              primary={item.primary}
+            />
+          ))
+        ) : (
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.72)',
+              border: '1px solid rgba(0,0,0,0.08)',
+              borderRadius: 12,
+              padding: 12,
+              color: '#455A64',
+              fontSize: 14,
+              lineHeight: 1.55,
+              fontWeight: 600,
+            }}
+          >
+            No saved documents yet. Start with a resume or upload an existing one to continue here.
+          </div>
+        )}
       </div>
     </div>
   );
