@@ -23,9 +23,9 @@ function Banner({ children }) {
         border: '1px solid #FFCC80',
         borderRadius: 12,
         padding: 14,
-        fontSize: 15,
+        fontSize: 14,
         color: '#E65100',
-        fontWeight: 600,
+        fontWeight: 700,
       }}
     >
       {children}
@@ -81,11 +81,11 @@ function Section({
         aria-expanded={open ? 'true' : 'false'}
       >
         <div style={{ display: 'grid', gap: 4 }}>
-          <div style={{ fontWeight: 900, fontSize: 16, color: '#111827' }}>
-            <span style={{ color: required ? ORANGE : '#111827' }}>{title}</span>
+          <div style={{ fontWeight: 900, fontSize: 15, color: '#111827' }}>
+            <span style={{ color: required ? ORANGE : '#111827', fontWeight: 900 }}>{title}</span>
           </div>
           {subtitle ? (
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#6B7280' }}>{subtitle}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#334155' }}>{subtitle}</div>
           ) : null}
         </div>
 
@@ -525,58 +525,67 @@ CLOSING: ...
   };
 
   // HEADER
-  // HEADER
-const Header = (
-  <section
-    style={{
-      borderRadius: 14,
-      border: '1px solid rgba(255,255,255,0.22)',
-      background: 'rgba(255,255,255,0.58)',
-      boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      padding: 18,
-      textAlign: 'center',
-    }}
-    aria-label="Cover Letter Builder header"
-  >
-    <h1 style={{ margin: 0, color: ORANGE, fontSize: 22, fontWeight: 900 }}>Cover Builder</h1>
-    <p style={{ margin: '8px auto 0', color: '#455A64', maxWidth: 860, fontWeight: 700, lineHeight: 1.35 }}>
-      1 letter. 3 bullets. 100% tailored. No generic paragraphs. Only your real wins. Beats 3-paragraph letters every time.
-    </p>
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
-      <button
-        onClick={() => router.push(withChrome('/resume/create'))}
+  const Header = (
+    <section
+      style={{
+        borderRadius: 14,
+        border: '1px solid rgba(255,255,255,0.22)',
+        background: 'rgba(255,255,255,0.58)',
+        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        padding: 18,
+        textAlign: 'center',
+      }}
+      aria-label="Cover Letter Builder header"
+    >
+      <h1 style={{ margin: 0, color: ORANGE, fontSize: 24, fontWeight: 900 }}>Cover Builder</h1>
+      <p
         style={{
-          borderRadius: 999,
-          padding: '10px 14px',
-          background: 'rgba(255,255,255,0.75)',
-          color: '#334155',
-          border: '1px solid rgba(0,0,0,0.10)',
-          fontWeight: 900,
-          cursor: 'pointer',
+          margin: '8px auto 0',
+          color: '#263238',
+          maxWidth: 860,
+          fontWeight: 700,
+          fontSize: 14,
+          lineHeight: 1.4,
         }}
       >
-        1. Resume
-      </button>
-      <span style={{ width: 46, height: 1, background: 'rgba(0,0,0,0.12)' }} />
-      <button
-        onClick={() => router.push(withChrome('/cover/create'))}
-        style={{
-          borderRadius: 999,
-          padding: '10px 14px',
-          background: ORANGE,
-          color: 'white',
-          border: '1px solid rgba(255,112,67,0.55)',
-          fontWeight: 900,
-          cursor: 'pointer',
-        }}
-      >
-        2. Cover Letter
-      </button>
-    </div>
-  </section>
-);
+        1 letter. 3 bullets. 100% tailored. No generic paragraphs. Only your real wins. Beats
+        3-paragraph letters every time.
+      </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+        <button
+          onClick={() => router.push(withChrome('/resume/create'))}
+          style={{
+            borderRadius: 999,
+            padding: '10px 14px',
+            background: 'rgba(255,255,255,0.75)',
+            color: '#334155',
+            border: '1px solid rgba(0,0,0,0.10)',
+            fontWeight: 900,
+            cursor: 'pointer',
+          }}
+        >
+          1. Resume
+        </button>
+        <span style={{ width: 46, height: 1, background: 'rgba(0,0,0,0.12)' }} />
+        <button
+          onClick={() => router.push(withChrome('/cover/create'))}
+          style={{
+            borderRadius: 999,
+            padding: '10px 14px',
+            background: ORANGE,
+            color: 'white',
+            border: '1px solid rgba(255,112,67,0.55)',
+            fontWeight: 900,
+            cursor: 'pointer',
+          }}
+        >
+          2. Cover Letter
+        </button>
+      </div>
+    </section>
+  );
 
   const Footer = (
     <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
@@ -652,7 +661,7 @@ const Header = (
 
           <Section
             title="Required"
-            subtitle="Start here — identity + job targets"
+            subtitle="Start here - identity + job targets"
             open={openRequired}
             onToggle={() => setOpenRequired((v) => !v)}
             required
@@ -829,7 +838,7 @@ const Header = (
 
           <Section
             title="Tailor to Job"
-            subtitle="Add job fire — paste or upload, then run AI tailor"
+            subtitle="Add job fire - paste or upload, then run AI tailor"
             open={openTailor}
             onToggle={() => setOpenTailor((v) => !v)}
             tone="muted"
