@@ -1,4 +1,5 @@
 // pages/resume-cover.js — Resume + cover landing with job insights context
+// updated for unified layout
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
