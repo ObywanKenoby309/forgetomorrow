@@ -14,10 +14,12 @@ function Card({ children, style }) {
   return (
     <section
       style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 18,
-        boxShadow: '0 8px 28px rgba(0,0,0,0.08)',
+        background: 'rgba(255,255,255,0.58)',
+        border: '1px solid rgba(255,255,255,0.22)',
+        borderRadius: 14,
+        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         padding: 18,
         ...style,
       }}
