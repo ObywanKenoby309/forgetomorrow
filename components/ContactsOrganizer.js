@@ -215,11 +215,58 @@ export default function ContactsOrganizer({
     }
   };
 
-  const addAndAssignFromCard = async (contactId, name) => {
-    const trimmed = String(name || '').trim();
-    if (!trimmed || trimmed === 'Unassigned') return;
-    await assignContact(contactId, trimmed);
-  };
+  const addAndAssignFromCard = async (contactId, categoryName) => {
+  const trimmed = String(categoryName || '').trim();
+  if (!contactId || !trimmed) return;
+
+  try {
+    const res = await fetch('/api/contacts/assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contactId,
+        categoryName: trimmed,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || 'Assign failed');
+
+    const assignment = data.assignment;
+
+    // ✅ Update assignments
+    setLocalAssignments((prev) => {
+      const existing = prev.find((row) => row.contactId === contactId);
+      if (existing) {
+        return prev.map((row) =>
+          row.contactId === contactId ? assignment : row
+        );
+      }
+      return [...prev, assignment];
+    });
+
+    // ✅ Ensure category exists locally
+    if (trimmed.toLowerCase() !== 'unassigned') {
+      setLocalCategories((prev) => {
+        const exists = prev.some(
+          (c) => c.id === assignment.categoryId
+        );
+        if (exists) return prev;
+
+        return [
+          ...prev,
+          {
+            id: assignment.categoryId,
+            name: trimmed,
+          },
+        ];
+      });
+    }
+
+  } catch (err) {
+    console.error('addAndAssignFromCard failed:', err);
+  }
+};
 
   const toggleCategory = (name) => {
     if (name === 'Unassigned') return;
