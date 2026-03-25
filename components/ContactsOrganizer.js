@@ -41,8 +41,6 @@ export default function ContactsOrganizer({
 }) {
   const [openMap, setOpenMap] = useState({});
   const [globalNewCat, setGlobalNewCat] = useState('');
-
-  // Local optimistic copies until write routes are added
   const [localCategories, setLocalCategories] = useState([]);
   const [localAssignments, setLocalAssignments] = useState([]);
 
@@ -117,133 +115,110 @@ export default function ContactsOrganizer({
     const trimmed = String(name || '').trim();
     if (!trimmed || trimmed === 'Unassigned') return;
 
-    const exists = localCategories.some(
-      (cat) => String(cat?.name || '').toLowerCase() === trimmed.toLowerCase()
-    );
-    if (exists) return;
+    try {
+      const res = await fetch('/api/contacts/category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed }),
+      });
 
-    // optimistic only until POST route exists
-    const tempCategory = {
-      id: `temp-${Date.now()}`,
-      name: trimmed,
-    };
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed to create category');
 
-    setLocalCategories((prev) => [...prev, tempCategory]);
-    setOpenMap((prev) => ({ ...prev, [trimmed]: false }));
+      setLocalCategories((prev) => {
+        const exists = prev.some(
+          (c) =>
+            c.id === data.category.id ||
+            String(c.name || '').toLowerCase() === String(data.category.name || '').toLowerCase()
+        );
+        if (exists) return prev;
+        return [...prev, data.category];
+      });
+
+      setOpenMap((prev) => ({ ...prev, [trimmed]: false }));
+    } catch (err) {
+      console.error('addCategory failed:', err);
+    }
   };
 
   const deleteCategory = async (name) => {
     const trimmed = String(name || '').trim();
     if (!trimmed || trimmed === 'Unassigned') return;
 
-    const category = localCategories.find((cat) => cat?.name === trimmed);
-    if (!category) return;
+    try {
+      const res = await fetch('/api/contacts/category', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed }),
+      });
 
-    setLocalCategories((prev) => prev.filter((cat) => cat?.name !== trimmed));
-    setLocalAssignments((prev) =>
-      prev.map((row) =>
-        row.categoryId === category.id
-          ? {
-              ...row,
-              categoryId: null,
-            }
-          : row
-      )
-    );
-    setOpenMap((prev) => {
-      const next = { ...prev };
-      delete next[trimmed];
-      return next;
-    });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Delete failed');
+
+      setLocalCategories((prev) => prev.filter((cat) => cat.name !== trimmed));
+
+      setLocalAssignments((prev) =>
+        prev.map((row) =>
+          row.categoryId === data.deletedCategoryId
+            ? { ...row, categoryId: null }
+            : row
+        )
+      );
+
+      setOpenMap((prev) => {
+        const next = { ...prev };
+        delete next[trimmed];
+        return next;
+      });
+    } catch (err) {
+      console.error('deleteCategory failed:', err);
+    }
   };
 
   const assignContact = async (contactId, categoryName) => {
     if (!contactId) return;
 
-    if (categoryName === 'Unassigned') {
+    try {
+      const res = await fetch('/api/contacts/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactId,
+          categoryName,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Assign failed');
+
+      const assignment = data.assignment;
+
       setLocalAssignments((prev) => {
         const existing = prev.find((row) => row.contactId === contactId);
         if (existing) {
-          return prev.map((row) =>
-            row.contactId === contactId ? { ...row, categoryId: null } : row
-          );
+          return prev.map((row) => (row.contactId === contactId ? assignment : row));
         }
-        return [
-          ...prev,
-          {
-            id: `temp-assign-${Date.now()}`,
-            contactId,
-            categoryId: null,
-          },
-        ];
+        return [...prev, assignment];
       });
-      return;
-    }
 
-    let category = localCategories.find((cat) => cat?.name === categoryName);
-
-    if (!category) {
-      category = {
-        id: `temp-${Date.now()}`,
-        name: categoryName,
-      };
-      setLocalCategories((prev) => [...prev, category]);
-      setOpenMap((prev) => ({ ...prev, [categoryName]: false }));
-    }
-
-    setLocalAssignments((prev) => {
-      const existing = prev.find((row) => row.contactId === contactId);
-      if (existing) {
-        return prev.map((row) =>
-          row.contactId === contactId ? { ...row, categoryId: category.id } : row
-        );
+      if (categoryName && categoryName !== 'Unassigned') {
+        setLocalCategories((prev) => {
+          const exists = prev.some(
+            (c) => String(c.name || '').toLowerCase() === String(categoryName).toLowerCase()
+          );
+          if (exists) return prev;
+          return [...prev, { id: assignment.categoryId, name: categoryName }];
+        });
       }
-      return [
-        ...prev,
-        {
-          id: `temp-assign-${Date.now()}`,
-          contactId,
-          categoryId: category.id,
-        },
-      ];
-    });
+    } catch (err) {
+      console.error('assignContact failed:', err);
+    }
   };
 
   const addAndAssignFromCard = async (contactId, name) => {
     const trimmed = String(name || '').trim();
     if (!trimmed || trimmed === 'Unassigned') return;
-
-    const existingCategory = localCategories.find((cat) => cat?.name === trimmed);
-
-    if (!existingCategory) {
-      const newCategory = {
-        id: `temp-${Date.now()}`,
-        name: trimmed,
-      };
-      setLocalCategories((prev) => [...prev, newCategory]);
-      setOpenMap((prev) => ({ ...prev, [trimmed]: false }));
-
-      setLocalAssignments((prev) => {
-        const existing = prev.find((row) => row.contactId === contactId);
-        if (existing) {
-          return prev.map((row) =>
-            row.contactId === contactId ? { ...row, categoryId: newCategory.id } : row
-          );
-        }
-        return [
-          ...prev,
-          {
-            id: `temp-assign-${Date.now()}`,
-            contactId,
-            categoryId: newCategory.id,
-          },
-        ];
-      });
-
-      return;
-    }
-
-    assignContact(contactId, trimmed);
+    await assignContact(contactId, trimmed);
   };
 
   const toggleCategory = (name) => {
@@ -320,8 +295,8 @@ export default function ContactsOrganizer({
             />
             <button
               type="button"
-              onClick={() => {
-                addCategory(globalNewCat);
+              onClick={async () => {
+                await addCategory(globalNewCat);
                 setGlobalNewCat('');
               }}
               style={{
@@ -716,8 +691,8 @@ function AddAndAssignInline({ onAdd }) {
       />
       <button
         type="button"
-        onClick={() => {
-          onAdd(val);
+        onClick={async () => {
+          await onAdd(val);
           setVal('');
         }}
         style={{

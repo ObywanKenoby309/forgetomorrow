@@ -45,6 +45,8 @@ export default function SeekerContactsGatePage() {
   const homeHref = withChrome('/seeker-dashboard');
 
   const [contacts, setContacts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,13 +56,21 @@ export default function SeekerContactsGatePage() {
         if (!res.ok) {
           console.error('contacts/summary failed in /seeker/contacts', await res.text());
           setContacts([]);
+          setCategories([]);
+          setAssignments([]);
           return;
         }
+
         const data = await res.json();
+
         setContacts(data.contacts || []);
+        setCategories(data.categories || []);
+        setAssignments(data.assignments || []);
       } catch (err) {
         console.error('contacts/summary error in /seeker/contacts', err);
         setContacts([]);
+        setCategories([]);
+        setAssignments([]);
       } finally {
         setLoading(false);
       }
@@ -126,7 +136,12 @@ export default function SeekerContactsGatePage() {
           marginTop: 24,
         }}
       >
-        <ContactsOrganizer contacts={contacts} loading={loading} />
+        <ContactsOrganizer
+          contacts={contacts}
+          categories={categories}
+          assignments={assignments}
+          loading={loading}
+        />
       </div>
     </Layout>
   );
