@@ -1,26 +1,30 @@
 // pages/resume-cover.js — Resume + cover landing with job insights context
-// updated for unified layout
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import ResumeRightRail from '@/components/resume/ResumeRightRail';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { getClientSession } from '@/lib/auth-client';
 import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
 
 const ORANGE = '#FF7043';
 const SLATE = '#455A64';
 
+const GLASS = {
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
 function Card({ children, style }) {
   return (
     <section
       style={{
-        background: 'rgba(255,255,255,0.58)',
-        border: '1px solid rgba(255,255,255,0.22)',
-        borderRadius: 14,
-        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
+        ...GLASS,
         padding: 18,
         ...style,
       }}
@@ -571,6 +575,7 @@ export default function ResumeCoverLanding() {
             marginTop: 12,
             fontSize: 14,
             color: uploadState.status === 'error' ? '#B71C1C' : '#2E7D32',
+            fontWeight: 700,
           }}
         >
           {uploadState.message}
@@ -578,7 +583,7 @@ export default function ResumeCoverLanding() {
       )}
 
       {tier === 'basic' && usage && typeof usage.used === 'number' && (
-        <div style={{ marginTop: 12, color: '#6B7C86', fontSize: 13 }}>
+        <div style={{ marginTop: 12, color: '#6B7C86', fontSize: 13, fontWeight: 600 }}>
           Free tier: {usage.used}/{usage.limit === Infinity ? '∞' : usage.limit} AI generations used
         </div>
       )}
@@ -599,11 +604,11 @@ export default function ResumeCoverLanding() {
         <div style={{ fontWeight: 800, fontSize: 16, color: '#1A4B8F', marginBottom: 4 }}>
           We’ve loaded screening insights for this job
         </div>
-        <p style={{ margin: '4px 0', fontSize: 14, color: '#37474F' }}>
+        <p style={{ margin: '4px 0', fontSize: 14, color: '#37474F', fontWeight: 600 }}>
           <strong>{atsPack.job.title}</strong> at <strong>{atsPack.job.company}</strong>
           {atsPack.job.location ? ` — ${atsPack.job.location}` : ''}
         </p>
-        <p style={{ margin: '4px 0 0', fontSize: 13, color: '#607D8B' }}>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: '#546E7A', lineHeight: 1.55 }}>
           When you open the builder, we’ll surface these recommendations so you can tune your resume
           before you export or apply.
         </p>
@@ -613,7 +618,7 @@ export default function ResumeCoverLanding() {
   const TemplatesSection = (
     <Card style={{ padding: 22 }}>
       <div style={{ fontWeight: 800, fontSize: 18, color: '#263238' }}>Choose a format</div>
-      <p style={{ color: '#78909C', fontSize: 14, margin: '6px 0 18px' }}>
+      <p style={{ color: '#546E7A', fontSize: 14, margin: '6px 0 18px', fontWeight: 600 }}>
         Both survive ATS screening and read great to humans.
       </p>
 
@@ -632,16 +637,18 @@ export default function ResumeCoverLanding() {
             index === 0
               ? {
                   border: '2px solid rgba(255,112,67,0.85)',
-                  background: '#FFF9F6',
+                  background: 'rgba(255,249,246,0.92)',
                   boxShadow: '0 8px 20px rgba(255,112,67,0.08)',
                 }
-              : {};
+              : {
+                  background: 'rgba(255,255,255,0.52)',
+                };
 
           return (
             <div
               key={tpl.key}
               style={{
-                border: '1px solid #E8E8E8',
+                border: '1px solid rgba(0,0,0,0.08)',
                 borderRadius: 18,
                 padding: 18,
                 position: 'relative',
@@ -679,20 +686,20 @@ export default function ResumeCoverLanding() {
                 {tpl.name}
               </div>
 
-              <p style={{ color: '#607D8B', fontSize: 13, margin: '10px 0 2px', lineHeight: 1.5 }}>
+              <p style={{ color: '#455A64', fontSize: 13, margin: '10px 0 2px', lineHeight: 1.5, fontWeight: 600 }}>
                 {tpl.tagline}
               </p>
 
-              <p style={{ color: '#78909C', fontSize: 13, margin: '0 0 14px', lineHeight: 1.5 }}>
+              <p style={{ color: '#546E7A', fontSize: 13, margin: '0 0 14px', lineHeight: 1.5 }}>
                 {tpl.helper}
               </p>
 
               <div
                 style={{
                   height: 120,
-                  background: '#F7F7F7',
+                  background: 'rgba(255,255,255,0.72)',
                   borderRadius: 10,
-                  border: '1px solid #EAEAEA',
+                  border: '1px solid rgba(0,0,0,0.07)',
                   marginBottom: 14,
                   overflow: 'hidden',
                   display: 'flex',
@@ -780,7 +787,7 @@ export default function ResumeCoverLanding() {
       <div
         style={{
           marginTop: 22,
-          background: '#FFF3EF',
+          background: 'rgba(255,243,239,0.88)',
           border: '1px solid #FFE0D6',
           borderRadius: 14,
           padding: '14px 16px',
@@ -799,176 +806,242 @@ export default function ResumeCoverLanding() {
   const DocumentsSection = (
     <Card style={{ padding: 22 }}>
       <div style={{ fontWeight: 800, fontSize: 18, color: '#263238' }}>Your documents</div>
-      <p style={{ color: '#90A4AE', fontSize: 14, margin: '6px 0 18px' }}>
-        The primary versions are what recruiters see on your profile.
+      <p style={{ color: '#546E7A', fontSize: 14, margin: '6px 0 18px', fontWeight: 600 }}>
+        Choose your strongest approach to applications and your portfolio
       </p>
 
-      <div style={{ display: 'grid', gap: 0 }}>
-        {sortedResumes.length ? (
-          sortedResumes.map((resume, index) => (
-            <div
-              key={resume.id || `resume-${index}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 16,
-                padding: '14px 0',
-                borderBottom: '1px solid #ECECEC',
-                flexWrap: 'wrap',
-              }}
-            >
-              <div style={{ minWidth: 0, flex: '1 1 280px' }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#263238' }}>
-                  {getItemTitle(resume, `Resume ${index + 1}`)}
-                </div>
-                <div style={{ fontSize: 13, color: '#78909C', marginTop: 4 }}>
-                  Resume · {getUpdatedLabel(resume)}
-                </div>
-              </div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1.2fr) minmax(260px, 0.8fr)',
+          gap: 16,
+          alignItems: 'stretch',
+        }}
+      >
+        <div
+          style={{
+            background: 'rgba(255,255,255,0.55)',
+            border: '1px solid rgba(255,112,67,0.45)',
+            borderRadius: 14,
+            padding: 14,
+            minWidth: 0,
+          }}
+        >
+          <div style={{ fontWeight: 800, color: ORANGE, marginBottom: 12 }}>Resumes</div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  flexWrap: 'wrap',
-                  justifyContent: 'flex-end',
-                }}
-              >
-                {resume?.isPrimary ? (
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 900,
-                      color: ORANGE,
-                      border: '1px solid #FFD1C2',
-                      background: '#FFF3EF',
-                      borderRadius: 999,
-                      padding: '5px 12px',
-                      letterSpacing: 0.4,
-                    }}
-                  >
-                    PRIMARY
-                  </span>
-                ) : null}
-
-                <SoftLink
-                  href={buildResumeOpenHref(buildCreateHref, resume)}
-                  style={{ fontSize: 14, fontWeight: 800 }}
-                >
-                  Open
-                </SoftLink>
-              </div>
-            </div>
-          ))
-        ) : (
           <div
             style={{
-              padding: '8px 0 18px',
-              borderBottom: '1px solid #ECECEC',
-              color: '#78909C',
-              fontSize: 14,
+              maxHeight: 210,
+              overflowY: 'auto',
+              paddingRight: 6,
             }}
           >
-            You have not created a resume yet. Start with Reverse Chronological to build your first version.
-          </div>
-        )}
+            {sortedResumes.length ? (
+              sortedResumes.map((resume, index) => (
+                <div
+                  key={resume.id || `resume-${index}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    padding: '12px 0',
+                    borderBottom: index === sortedResumes.length - 1 ? 'none' : '1px solid rgba(0,0,0,0.08)',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div style={{ minWidth: 0, flex: '1 1 220px' }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#263238' }}>
+                      {getItemTitle(resume, `Resume ${index + 1}`)}
+                    </div>
 
-        {sortedCovers.length ? (
-          sortedCovers.map((cover, index) => (
-            <div
-              key={cover.id || `cover-${index}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 16,
-                padding: '14px 0',
-                borderBottom: index === sortedCovers.length - 1 ? 'none' : '1px solid #ECECEC',
-                flexWrap: 'wrap',
-              }}
-            >
-              <div style={{ minWidth: 0, flex: '1 1 280px' }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#263238' }}>
-                  {getItemTitle(cover, `Cover Letter ${index + 1}`)}
-                </div>
-                <div style={{ fontSize: 13, color: '#78909C', marginTop: 4 }}>
-                  Cover letter · {getUpdatedLabel(cover)}
-                </div>
-              </div>
+                    <div style={{ fontSize: 12, color: '#78909C', marginTop: 4 }}>
+                      Resume · {getUpdatedLabel(resume)}
+                    </div>
+                  </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  flexWrap: 'wrap',
-                  justifyContent: 'flex-end',
-                }}
-              >
-                {cover?.isPrimary ? (
-                  <span
+                  <div
                     style={{
-                      fontSize: 11,
-                      fontWeight: 900,
-                      color: ORANGE,
-                      border: '1px solid #FFD1C2',
-                      background: '#FFF3EF',
-                      borderRadius: 999,
-                      padding: '5px 12px',
-                      letterSpacing: 0.4,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      flexWrap: 'wrap',
+                      justifyContent: 'flex-end',
                     }}
                   >
-                    PRIMARY
-                  </span>
-                ) : null}
+                    {resume?.isPrimary ? (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 900,
+                          color: ORANGE,
+                          border: '1px solid #FFD1C2',
+                          background: '#FFF3EF',
+                          borderRadius: 999,
+                          padding: '5px 10px',
+                          letterSpacing: 0.4,
+                        }}
+                      >
+                        PRIMARY
+                      </span>
+                    ) : null}
 
-                <SoftLink
-                  href={buildCoverOpenHref(buildCoverCreateHref, cover)}
-                  style={{ fontSize: 14, fontWeight: 800 }}
-                >
-                  Open
-                </SoftLink>
+                    <SoftLink
+                      href={buildResumeOpenHref(buildCreateHref, resume)}
+                      style={{ fontSize: 13, fontWeight: 800 }}
+                    >
+                      Open
+                    </SoftLink>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{ color: '#607D8B', fontSize: 14, padding: '8px 0' }}>
+                You have not created a resume yet. Start with Reverse Chronological to build your first version.
               </div>
-            </div>
-          ))
-        ) : (
+            )}
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: 'rgba(255,255,255,0.42)',
+            border: '1px solid rgba(0,0,0,0.08)',
+            borderRadius: 14,
+            padding: 14,
+            minWidth: 0,
+          }}
+        >
+          <div style={{ fontWeight: 800, color: '#263238', marginBottom: 12 }}>Cover Letters</div>
+
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 16,
-              padding: '16px 0 4px',
-              flexWrap: 'wrap',
+              maxHeight: 210,
+              overflowY: 'auto',
+              paddingRight: 6,
             }}
           >
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#B0BEC5' }}>No cover letter yet</div>
-              <div style={{ fontSize: 13, color: '#90A4AE', marginTop: 4 }}>
-                Add one to stand out on your profile
-              </div>
-            </div>
+            {sortedCovers.length ? (
+              sortedCovers.map((cover, index) => (
+                <div
+                  key={cover.id || `cover-${index}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    padding: '12px 0',
+                    borderBottom: index === sortedCovers.length - 1 ? 'none' : '1px solid rgba(0,0,0,0.08)',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div style={{ minWidth: 0, flex: '1 1 180px' }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#263238' }}>
+                      {getItemTitle(cover, `Cover Letter ${index + 1}`)}
+                    </div>
 
-            <PrimaryButton
-              href={buildCoverCreateHref()}
-              style={{
-                minWidth: 160,
-                padding: '10px 16px',
-              }}
-            >
-              + Create
-            </PrimaryButton>
+                    <div style={{ fontSize: 12, color: '#78909C', marginTop: 4 }}>
+                      Cover letter · {getUpdatedLabel(cover)}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      flexWrap: 'wrap',
+                      justifyContent: 'flex-end',
+                    }}
+                  >
+                    {cover?.isPrimary ? (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 900,
+                          color: ORANGE,
+                          border: '1px solid #FFD1C2',
+                          background: '#FFF3EF',
+                          borderRadius: 999,
+                          padding: '5px 10px',
+                          letterSpacing: 0.4,
+                        }}
+                      >
+                        PRIMARY
+                      </span>
+                    ) : null}
+
+                    <SoftLink
+                      href={buildCoverOpenHref(buildCoverCreateHref, cover)}
+                      style={{ fontSize: 13, fontWeight: 800 }}
+                    >
+                      Open
+                    </SoftLink>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{ paddingTop: 8 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#B0BEC5' }}>No cover letter yet</div>
+                <div style={{ fontSize: 13, color: '#90A4AE', marginTop: 4, lineHeight: 1.5 }}>
+                  Add one to stand out on your application
+                </div>
+
+                <div style={{ marginTop: 14 }}>
+                  <PrimaryButton
+                    href={buildCoverCreateHref()}
+                    style={{
+                      minWidth: 150,
+                      padding: '10px 16px',
+                    }}
+                  >
+                    + Create
+                  </PrimaryButton>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </Card>
   );
 
   const RightRail = (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <ResumeRightRail savedResumes={savedResumes} usage={usage} tier={tier} />
+    <div style={{ display: 'grid', gap: 12, minWidth: 0 }}>
+      <div
+        style={{
+          ...GLASS,
+          padding: 14,
+          minWidth: 0,
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 800,
+            color: '#263238',
+            marginBottom: 10,
+            textAlign: 'center',
+            fontSize: 15,
+          }}
+        >
+          Right Rail Ad Manager
+        </div>
+
+        <div style={{ minWidth: 0 }}>
+          <RightRailPlacementManager slot="right_rail_1" />
+        </div>
+      </div>
+
+      <div
+        style={{
+          ...GLASS,
+          padding: 8,
+          minWidth: 0,
+        }}
+      >
+        <ResumeRightRail savedResumes={savedResumes} usage={usage} tier={tier} />
+      </div>
     </div>
   );
 
@@ -976,7 +1049,9 @@ export default function ResumeCoverLanding() {
     <SeekerLayout
       title="Resume Builder | ForgeTomorrow"
       header={HeaderHero}
+      headerCard={false}
       right={RightRail}
+      rightVariant="light"
       activeNav="resume-cover"
     >
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px', display: 'grid', gap: 20 }}>
