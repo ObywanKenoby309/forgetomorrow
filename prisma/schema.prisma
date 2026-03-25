@@ -778,6 +778,8 @@ model User {
   contactRequestsReceived      ContactRequest[]               @relation("UserContactRequestsTo")
   contactsAsContact            Contact[]                      @relation("UserContactsAsContact")
   contacts                     Contact[]                      @relation("UserContacts")
+  contactCategories          ContactCategory[]
+  contactCategoryAssignments ContactCategoryAssignment[]
   conversationParticipants     ConversationParticipant[]      @relation("UserConversationParticipants")
   reportsReceived              ConversationReport[]           @relation("UserReportsAsReported")
   reportsFiled                 ConversationReport[]           @relation("UserReportsAsReporter")
@@ -835,6 +837,29 @@ model User {
   workflowRulesCreated         WorkflowRule[]                 @relation("WorkflowRuleCreator")
 
   @@map("users")
+}
+
+model ContactCategory {
+  id          String                      @id @default(cuid())
+  userId      String
+  name        String
+  createdAt   DateTime                    @default(now())
+  user        User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments ContactCategoryAssignment[]
+
+  @@unique([userId, name])
+}
+
+model ContactCategoryAssignment {
+  id         String           @id @default(cuid())
+  userId     String
+  contactId  String
+  categoryId String?
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category ContactCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, contactId])
 }
 
 model Candidate {

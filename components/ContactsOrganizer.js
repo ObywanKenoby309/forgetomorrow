@@ -1,8 +1,6 @@
 // components/ContactsOrganizer.js
 import React, { useEffect, useMemo, useState } from 'react';
 
-const LS_KEY = 'seekerContactsOrganizerV1';
-
 const GLASS = {
   borderRadius: 14,
   border: '1px solid rgba(255,255,255,0.22)',
@@ -11,9 +9,6 @@ const GLASS = {
   backdropFilter: 'blur(10px)',
   WebkitBackdropFilter: 'blur(10px)',
 };
-
-const normalizeCats = (cats) =>
-  Array.from(new Set((cats || []).map((c) => (c || '').trim()).filter(Boolean)));
 
 function getContactImage(contact) {
   return (
@@ -40,108 +35,215 @@ function getInitials(name) {
 export default function ContactsOrganizer({
   contacts = [],
   loading = false,
+  categories = [],
+  assignments = [],
   onViewProfile = () => {},
 }) {
-  const [categories, setCategories] = useState(['Favorites']);
-  const [assignments, setAssignments] = useState({});
   const [openMap, setOpenMap] = useState({});
   const [globalNewCat, setGlobalNewCat] = useState('');
 
+  // Local optimistic copies until write routes are added
+  const [localCategories, setLocalCategories] = useState([]);
+  const [localAssignments, setLocalAssignments] = useState([]);
+
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed.categories)) setCategories(normalizeCats(parsed.categories));
-        if (parsed.assignments && typeof parsed.assignments === 'object') setAssignments(parsed.assignments);
+    setLocalCategories(Array.isArray(categories) ? categories : []);
+  }, [categories]);
+
+  useEffect(() => {
+    setLocalAssignments(Array.isArray(assignments) ? assignments : []);
+  }, [assignments]);
+
+  const sortedCategories = useMemo(() => {
+    return [...localCategories].sort((a, b) =>
+      String(a?.name || '').localeCompare(String(b?.name || ''))
+    );
+  }, [localCategories]);
+
+  const categoryIdToName = useMemo(() => {
+    const map = new Map();
+    sortedCategories.forEach((cat) => {
+      if (cat?.id) map.set(cat.id, cat.name);
+    });
+    return map;
+  }, [sortedCategories]);
+
+  const contactIdToCategoryId = useMemo(() => {
+    const map = new Map();
+    localAssignments.forEach((row) => {
+      if (row?.contactId) {
+        map.set(row.contactId, row.categoryId || null);
       }
-    } catch (_) {}
-  }, []);
+    });
+    return map;
+  }, [localAssignments]);
 
   useEffect(() => {
     setOpenMap((prev) => {
       const next = { ...prev };
-      categories.forEach((c) => {
-        if (!(c in next)) next[c] = false;
+      sortedCategories.forEach((cat) => {
+        const name = cat?.name;
+        if (name && !(name in next)) next[name] = false;
       });
       Object.keys(next).forEach((k) => {
-        if (!categories.includes(k)) delete next[k];
+        if (!sortedCategories.some((cat) => cat?.name === k)) delete next[k];
       });
       return next;
     });
-  }, [categories]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify({ categories, assignments }));
-    } catch (_) {}
-  }, [categories, assignments]);
-
-  const sortedCategories = useMemo(
-    () => [...categories].sort((a, b) => a.localeCompare(b)),
-    [categories]
-  );
+  }, [sortedCategories]);
 
   const groups = useMemo(() => {
     const map = { Unassigned: [] };
-    sortedCategories.forEach((c) => {
-      map[c] = [];
+
+    sortedCategories.forEach((cat) => {
+      if (cat?.name) map[cat.name] = [];
     });
 
-    contacts.forEach((c) => {
-      const cat = assignments[c.id];
-      if (cat && sortedCategories.includes(cat)) {
-        map[cat].push(c);
+    contacts.forEach((contact) => {
+      const categoryId = contactIdToCategoryId.get(contact.id) || null;
+      const categoryName = categoryId ? categoryIdToName.get(categoryId) : null;
+
+      if (categoryName && map[categoryName]) {
+        map[categoryName].push(contact);
       } else {
-        map.Unassigned.push(c);
+        map.Unassigned.push(contact);
       }
     });
 
     return map;
-  }, [contacts, assignments, sortedCategories]);
+  }, [contacts, sortedCategories, contactIdToCategoryId, categoryIdToName]);
 
-  const addCategory = (name) => {
-    const n = (name || '').trim();
-    if (!n || n === 'Unassigned') return;
-    if (categories.includes(n)) return;
-    setCategories((prev) => normalizeCats([...prev, n]));
-    setOpenMap((prev) => ({ ...prev, [n]: false }));
+  const addCategory = async (name) => {
+    const trimmed = String(name || '').trim();
+    if (!trimmed || trimmed === 'Unassigned') return;
+
+    const exists = localCategories.some(
+      (cat) => String(cat?.name || '').toLowerCase() === trimmed.toLowerCase()
+    );
+    if (exists) return;
+
+    // optimistic only until POST route exists
+    const tempCategory = {
+      id: `temp-${Date.now()}`,
+      name: trimmed,
+    };
+
+    setLocalCategories((prev) => [...prev, tempCategory]);
+    setOpenMap((prev) => ({ ...prev, [trimmed]: false }));
   };
 
-  const deleteCategory = (name) => {
-    if (!name || name === 'Unassigned') return;
-    setCategories((prev) => prev.filter((c) => c !== name));
-    setAssignments((prev) => {
-      const next = { ...prev };
-      for (const [cid, cat] of Object.entries(prev)) {
-        if (cat === name) next[cid] = null;
-      }
-      return next;
-    });
+  const deleteCategory = async (name) => {
+    const trimmed = String(name || '').trim();
+    if (!trimmed || trimmed === 'Unassigned') return;
+
+    const category = localCategories.find((cat) => cat?.name === trimmed);
+    if (!category) return;
+
+    setLocalCategories((prev) => prev.filter((cat) => cat?.name !== trimmed));
+    setLocalAssignments((prev) =>
+      prev.map((row) =>
+        row.categoryId === category.id
+          ? {
+              ...row,
+              categoryId: null,
+            }
+          : row
+      )
+    );
     setOpenMap((prev) => {
       const next = { ...prev };
-      delete next[name];
+      delete next[trimmed];
       return next;
     });
   };
 
-  const assignContact = (contactId, catName) => {
-    if (catName === 'Unassigned') {
-      setAssignments((prev) => ({ ...prev, [contactId]: null }));
-    } else {
-      if (!categories.includes(catName)) addCategory(catName);
-      setAssignments((prev) => ({ ...prev, [contactId]: catName }));
+  const assignContact = async (contactId, categoryName) => {
+    if (!contactId) return;
+
+    if (categoryName === 'Unassigned') {
+      setLocalAssignments((prev) => {
+        const existing = prev.find((row) => row.contactId === contactId);
+        if (existing) {
+          return prev.map((row) =>
+            row.contactId === contactId ? { ...row, categoryId: null } : row
+          );
+        }
+        return [
+          ...prev,
+          {
+            id: `temp-assign-${Date.now()}`,
+            contactId,
+            categoryId: null,
+          },
+        ];
+      });
+      return;
     }
+
+    let category = localCategories.find((cat) => cat?.name === categoryName);
+
+    if (!category) {
+      category = {
+        id: `temp-${Date.now()}`,
+        name: categoryName,
+      };
+      setLocalCategories((prev) => [...prev, category]);
+      setOpenMap((prev) => ({ ...prev, [categoryName]: false }));
+    }
+
+    setLocalAssignments((prev) => {
+      const existing = prev.find((row) => row.contactId === contactId);
+      if (existing) {
+        return prev.map((row) =>
+          row.contactId === contactId ? { ...row, categoryId: category.id } : row
+        );
+      }
+      return [
+        ...prev,
+        {
+          id: `temp-assign-${Date.now()}`,
+          contactId,
+          categoryId: category.id,
+        },
+      ];
+    });
   };
 
-  const addAndAssignFromCard = (contactId, name) => {
-    const n = (name || '').trim();
-    if (!n || n === 'Unassigned') return;
-    if (!categories.includes(n)) {
-      setCategories((prev) => normalizeCats([...prev, n]));
-      setOpenMap((prev) => ({ ...prev, [n]: false }));
+  const addAndAssignFromCard = async (contactId, name) => {
+    const trimmed = String(name || '').trim();
+    if (!trimmed || trimmed === 'Unassigned') return;
+
+    const existingCategory = localCategories.find((cat) => cat?.name === trimmed);
+
+    if (!existingCategory) {
+      const newCategory = {
+        id: `temp-${Date.now()}`,
+        name: trimmed,
+      };
+      setLocalCategories((prev) => [...prev, newCategory]);
+      setOpenMap((prev) => ({ ...prev, [trimmed]: false }));
+
+      setLocalAssignments((prev) => {
+        const existing = prev.find((row) => row.contactId === contactId);
+        if (existing) {
+          return prev.map((row) =>
+            row.contactId === contactId ? { ...row, categoryId: newCategory.id } : row
+          );
+        }
+        return [
+          ...prev,
+          {
+            id: `temp-assign-${Date.now()}`,
+            contactId,
+            categoryId: newCategory.id,
+          },
+        ];
+      });
+
+      return;
     }
-    setAssignments((prev) => ({ ...prev, [contactId]: n }));
+
+    assignContact(contactId, trimmed);
   };
 
   const toggleCategory = (name) => {
@@ -256,9 +358,9 @@ export default function ContactsOrganizer({
 
         {sortedCategories.map((cat) => (
           <CategoryBlock
-            key={cat}
-            name={cat}
-            contacts={groups[cat]}
+            key={cat.id || cat.name}
+            name={cat.name}
+            contacts={groups[cat.name] || []}
             categories={sortedCategories}
             onAssign={assignContact}
             onAddAndAssign={addAndAssignFromCard}
@@ -266,8 +368,8 @@ export default function ContactsOrganizer({
             deletable
             onDeleteCategory={deleteCategory}
             collapsible
-            isOpen={!!openMap[cat]}
-            onToggle={() => toggleCategory(cat)}
+            isOpen={!!openMap[cat.name]}
+            onToggle={() => toggleCategory(cat.name)}
           />
         ))}
       </section>
@@ -575,8 +677,8 @@ function ContactCard({
         >
           <option value="Unassigned">Unassigned</option>
           {categories.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
+            <option key={cat.id || cat.name} value={cat.name}>
+              {cat.name}
             </option>
           ))}
         </select>

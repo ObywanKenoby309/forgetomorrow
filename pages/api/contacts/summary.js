@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
     const userId = session.user.id;
 
-    // 1) Contacts (everyone you're connected to, regardless of who initiated)
+    // 1) Contacts
     const contactsRows = await prisma.contact.findMany({
       where: {
         OR: [{ userId }, { contactUserId: userId }],
@@ -29,37 +29,45 @@ export default async function handler(req, res) {
       orderBy: { createdAt: 'desc' },
     });
 
-    // 🔹 Dedupe by the "other user id" so each connection shows once per side
     const contactsMap = new Map();
 
     for (const c of contactsRows) {
       const other = c.userId === userId ? c.contactUser : c.user;
-      if (!other) continue;
+      if (!other?.id) continue;
 
-      const otherId = other.id;
-      if (!otherId) continue;
-
-      if (!contactsMap.has(otherId)) {
+      if (!contactsMap.has(other.id)) {
         const name =
           other.name ||
           [other.firstName, other.lastName].filter(Boolean).join(' ') ||
           'Member';
 
-        contactsMap.set(otherId, {
-  id: otherId, // keep using the other user's id as before
-  slug: other.slug || null,
-  name,
-  headline: other.headline || '',
-  location: other.location || '',
-  status: other.status || '',
-  avatarUrl: other.avatarUrl || other.image || null,
+        contactsMap.set(other.id, {
+          id: other.id,
+          slug: other.slug || null,
+          name,
+          headline: other.headline || '',
+          location: other.location || '',
+          status: other.status || '',
+          avatarUrl: other.avatarUrl || other.image || null,
         });
       }
     }
 
     const contacts = Array.from(contactsMap.values());
 
-    // 2) Incoming requests (to you, pending)
+    // 2) Categories + assignments
+    const [categories, assignments] = await Promise.all([
+      prisma.contactCategory.findMany({
+        where: { userId },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.contactCategoryAssignment.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    // 3) Incoming requests
     const incomingRequests = await prisma.contactRequest.findMany({
       where: { toUserId: userId, status: 'PENDING' },
       orderBy: { createdAt: 'desc' },
@@ -74,7 +82,7 @@ export default async function handler(req, res) {
             where: { id: { in: incomingFromIds } },
             select: {
               id: true,
-			  slug: true,
+              slug: true,
               name: true,
               firstName: true,
               lastName: true,
@@ -82,11 +90,12 @@ export default async function handler(req, res) {
               location: true,
               status: true,
               avatarUrl: true,
+              image: true,
             },
           });
 
     const incoming = incomingRequests.map((r) => {
-      const u = incomingUsers.find((u) => u.id === r.fromUserId);
+      const u = incomingUsers.find((x) => x.id === r.fromUserId);
       const name =
         u?.name ||
         [u?.firstName, u?.lastName].filter(Boolean).join(' ') ||
@@ -97,28 +106,28 @@ export default async function handler(req, res) {
         requestId: r.id,
         createdAt: r.createdAt,
         from: u
-		  ? {
-			  id: u.id,
-			  slug: u.slug || null,
-			  name,
-			  headline: u.headline || '',
-			  location: u.location || '',
-			  status: u.status || '',
-			  avatarUrl: u.avatarUrl || null,
+          ? {
+              id: u.id,
+              slug: u.slug || null,
+              name,
+              headline: u.headline || '',
+              location: u.location || '',
+              status: u.status || '',
+              avatarUrl: u.avatarUrl || u.image || null,
             }
           : {
               id: r.fromUserId,
-			  slug: null,
-			  name: 'Member',
-			  headline: '',
-			  location: '',
-			  status: '',
-			  avatarUrl: null,
+              slug: null,
+              name: 'Member',
+              headline: '',
+              location: '',
+              status: '',
+              avatarUrl: null,
             },
       };
     });
 
-    // 3) Outgoing requests (from you, pending)
+    // 4) Outgoing requests
     const outgoingRequests = await prisma.contactRequest.findMany({
       where: { fromUserId: userId, status: 'PENDING' },
       orderBy: { createdAt: 'desc' },
@@ -133,7 +142,7 @@ export default async function handler(req, res) {
             where: { id: { in: outgoingToIds } },
             select: {
               id: true,
-			  slug: true,
+              slug: true,
               name: true,
               firstName: true,
               lastName: true,
@@ -141,11 +150,12 @@ export default async function handler(req, res) {
               location: true,
               status: true,
               avatarUrl: true,
+              image: true,
             },
           });
 
     const outgoing = outgoingRequests.map((r) => {
-      const u = outgoingUsers.find((u) => u.id === r.toUserId);
+      const u = outgoingUsers.find((x) => x.id === r.toUserId);
       const name =
         u?.name ||
         [u?.firstName, u?.lastName].filter(Boolean).join(' ') ||
@@ -156,18 +166,18 @@ export default async function handler(req, res) {
         requestId: r.id,
         createdAt: r.createdAt,
         to: u
-		  ? {
-			  id: u.id,
-			  slug: u.slug || null,
-			  name,
-			  headline: u.headline || '',
-			  location: u.location || '',
-			  status: u.status || '',
-			  avatarUrl: u.avatarUrl || null,
+          ? {
+              id: u.id,
+              slug: u.slug || null,
+              name,
+              headline: u.headline || '',
+              location: u.location || '',
+              status: u.status || '',
+              avatarUrl: u.avatarUrl || u.image || null,
             }
           : {
               id: r.toUserId,
-			  slug: null,
+              slug: null,
               name: 'Member',
               headline: '',
               location: '',
@@ -180,6 +190,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       contacts,
+      categories,
+      assignments,
       incoming,
       outgoing,
     });
