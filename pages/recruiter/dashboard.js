@@ -883,13 +883,7 @@ function DashboardBody() {
         />
 
         {/* KPI Section - tightened glass backing to match Image 1 */}
-        <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: "16px 16px 20px 16px", gridColumn: "1 / 2", gridRow: "2" }}>
-          <div style={GLASS_TINT} />
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ fontSize: 18, fontWeight: 900, color: "#FF7043", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
-              KPIs
-            </div>
-          </div>
+        <section style={{ ...GLASS, padding: "12px 16px 16px 16px", gridColumn: "1 / 2", gridRow: "2" }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {isLoading && !analyticsData
               ? Array.from({ length: 4 }).map((_, idx) => (
