@@ -92,11 +92,13 @@ const ORANGE_HEADING_LIFT = {
 };
 
 const WHITE_CARD = {
-  background: "rgba(255,255,255,0.92)",
+  background: "rgba(255,255,255,0.97)",
   border: "1px solid rgba(255,255,255,0.60)",
   borderRadius: 14,
   boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
   boxSizing: "border-box",
+  position: "relative",
+  zIndex: 1,
 };
 
 const GAP = 16;
@@ -387,7 +389,6 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
   }
   return (
     <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
-      <div style={GLASS_TINT} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
         <h2
           style={{
@@ -892,7 +893,6 @@ function DashboardBody() {
 
         {/* KPI Section */}
         <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: "12px 16px 16px 16px", gridColumn: "1 / 2", gridRow: "2" }}>
-          <div style={GLASS_TINT} />
           <div className="flex items-center justify-between mb-3">
             <h2
               style={{
