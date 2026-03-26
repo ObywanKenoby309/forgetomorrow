@@ -25,6 +25,7 @@ import { getTimeGreeting } from "@/lib/dashboardGreeting";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
 import FeatureLock from "@/components/recruiter/FeatureLock";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
+import RecruiterTitleCard from "@/components/recruiter/RecruiterTitleCard";
 
 function safeText(v) {
   return typeof v === "string" ? v : v == null ? "" : String(v);
@@ -177,7 +178,6 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
     { key: "awaiting_feedback", title: "Awaiting Feedback",    emptyText: "No hiring manager feedback pending.",   href: "/action-center?scope=RECRUITER&tab=AWAITING_FEEDBACK", items: buckets.awaiting_feedback, icon: "🔄" },
   ];
 
-  // Sort: non-zero first
   const sortedTiles = [...tiles].sort((a, b) => {
     const aHas = a.items.length > 0 ? 1 : 0;
     const bHas = b.items.length > 0 ? 1 : 0;
@@ -188,9 +188,16 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
     if (initialLoading) {
       return (
         <div style={{ display: "grid", gap: 8 }}>
-          {[1,2,3,4].map(i => (
-            <div key={i} style={{ height: 64, borderRadius: 12,
-              background: "rgba(255,255,255,0.70)", border: "1px solid rgba(0,0,0,0.06)" }} />
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              style={{
+                height: 64,
+                borderRadius: 12,
+                background: "rgba(255,255,255,0.70)",
+                border: "1px solid rgba(0,0,0,0.06)",
+              }}
+            />
           ))}
         </div>
       );
@@ -205,19 +212,22 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
             <div style={{ fontSize: 16, fontWeight: 900, color: "#FF7043", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
               Action Center
             </div>
-            <div style={{
-              fontSize: 12,
-              color: totalActions > 0 ? "#FF7043" : "#243B63",
-              fontWeight: totalActions > 0 ? 700 : 600,
-              marginTop: 3,
-              lineHeight: 1.45,
-            }}>
+            <div
+              style={{
+                fontSize: 12,
+                color: totalActions > 0 ? "#FF7043" : "#243B63",
+                fontWeight: totalActions > 0 ? 700 : 600,
+                marginTop: 3,
+                lineHeight: 1.45,
+              }}
+            >
               {totalActions > 0
                 ? `${totalActions} item${totalActions !== 1 ? "s" : ""} need your attention`
                 : "You're all caught up"}
             </div>
           </div>
-          <Link href={`/action-center?scope=RECRUITER${chromeQuery ? `&chrome=${chromeQuery}` : ""}`}
+          <Link
+            href={`/action-center?scope=RECRUITER${chromeQuery ? `&chrome=${chromeQuery}` : ""}`}
             style={{
               fontSize: 12,
               fontWeight: 800,
@@ -228,75 +238,111 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
               border: "1px solid rgba(255,112,67,0.30)",
               background: "rgba(255,112,67,0.08)",
               lineHeight: 1.2,
-            }}>
+            }}
+          >
             View all
           </Link>
         </div>
 
         <div style={{ display: "grid", gap: 8 }}>
-          {sortedTiles.map(tile => {
+          {sortedTiles.map((tile) => {
             const hasItems = tile.items.length > 0;
             const link = `${tile.href}${chromeQuery ? `&chrome=${chromeQuery}` : ""}`;
             return (
-              <Link key={tile.key} href={link} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "12px 14px", borderRadius: 12, textDecoration: "none",
-                background: hasItems ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)",
-                border: hasItems ? "1px solid rgba(255,112,67,0.22)" : "1px solid rgba(0,0,0,0.06)",
-                boxShadow: hasItems ? "0 4px 12px rgba(0,0,0,0.08)" : "none",
-                transition: "all 150ms ease",
-              }}>
-                {/* Icon */}
-                <div style={{
-                  width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                  background: hasItems ? "rgba(255,112,67,0.10)" : "rgba(0,0,0,0.04)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 18,
-                }}>
+              <Link
+                key={tile.key}
+                href={link}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  textDecoration: "none",
+                  background: hasItems ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)",
+                  border: hasItems ? "1px solid rgba(255,112,67,0.22)" : "1px solid rgba(0,0,0,0.06)",
+                  boxShadow: hasItems ? "0 4px 12px rgba(0,0,0,0.08)" : "none",
+                  transition: "all 150ms ease",
+                }}
+              >
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    flexShrink: 0,
+                    background: hasItems ? "rgba(255,112,67,0.10)" : "rgba(0,0,0,0.04)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 18,
+                  }}
+                >
                   {tile.icon}
                 </div>
 
-                {/* Text */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: 13,
-                    fontWeight: 900,
-                    color: hasItems ? "#112033" : "#90A4AE",
-                    lineHeight: 1.3,
-                    letterSpacing: "-0.01em",
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 900,
+                      color: hasItems ? "#112033" : "#90A4AE",
+                      lineHeight: 1.3,
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
                     {tile.title}
                   </div>
-                  <div style={{
-                    fontSize: 12,
-                    marginTop: 3,
-                    color: hasItems ? "#546E7A" : "#B0BEC5",
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    lineHeight: 1.4,
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      marginTop: 3,
+                      color: hasItems ? "#546E7A" : "#B0BEC5",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      lineHeight: 1.4,
+                    }}
+                  >
                     {hasItems ? (tile.items[0].title || "View item") : tile.emptyText}
                   </div>
                 </div>
 
-                {/* Badge or check */}
                 {hasItems ? (
-                  <div style={{
-                    minWidth: 28, height: 28, borderRadius: 999, flexShrink: 0,
-                    background: "#FF7043", color: "white",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 13, fontWeight: 900,
-                    boxShadow: "0 4px 10px rgba(255,112,67,0.40)",
-                    lineHeight: 1,
-                  }}>
+                  <div
+                    style={{
+                      minWidth: 28,
+                      height: 28,
+                      borderRadius: 999,
+                      flexShrink: 0,
+                      background: "#FF7043",
+                      color: "white",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 13,
+                      fontWeight: 900,
+                      boxShadow: "0 4px 10px rgba(255,112,67,0.40)",
+                      lineHeight: 1,
+                    }}
+                  >
                     {tile.items.length}
                   </div>
                 ) : (
-                  <div style={{
-                    width: 24, height: 24, borderRadius: 999, flexShrink: 0,
-                    background: "rgba(0,0,0,0.04)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 14, color: "#B0BEC5",
-                  }}>
+                  <div
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 999,
+                      flexShrink: 0,
+                      background: "rgba(0,0,0,0.04)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 14,
+                      color: "#B0BEC5",
+                    }}
+                  >
                     ✓
                   </div>
                 )}
@@ -308,7 +354,6 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
     );
   }
 
-  // Desktop
   return (
     <section className="rounded-xl border bg-white p-4">
       <div className="flex items-center justify-between gap-3 mb-4">
@@ -332,13 +377,15 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
             <div key={idx} className="rounded-lg border bg-white p-4 min-h-[170px] animate-pulse flex flex-col">
               <div className="h-5 w-40 bg-slate-200 rounded" />
               <div className="h-3 w-56 bg-slate-200 rounded mt-8" />
-              <div className="mt-auto pt-4 flex justify-end"><div className="h-9 w-24 bg-slate-200 rounded" /></div>
+              <div className="mt-auto pt-4 flex justify-end">
+                <div className="h-9 w-24 bg-slate-200 rounded" />
+              </div>
             </div>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {tiles.map(t => <ActionTile key={t.key} {...t} chromeQuery={chromeQuery} />)}
+          {tiles.map((t) => <ActionTile key={t.key} {...t} chromeQuery={chromeQuery} />)}
         </div>
       )}
     </section>
@@ -387,157 +434,160 @@ function DashboardBody() {
   const primarySource = sourcesArray[0] || null;
 
   const stats = [
-    { label: "Total Views",    value: kpis ? (kpis.totalViews ?? 0)                                                           : "—", href: "/recruiter/analytics" },
-    { label: "Total Applies",  value: kpis ? (kpis.totalApplies ?? 0)                                                         : "—", href: "/recruiter/analytics" },
-    { label: "Time-to-Fill",   value: kpis ? (typeof kpis.avgTimeToFillDays === "number" ? `${kpis.avgTimeToFillDays}d` : "—") : "—", href: "/recruiter/analytics" },
-    { label: "View→Apply",     value: kpis ? (typeof kpis.conversionRatePct === "number" ? `${kpis.conversionRatePct}%` : "—") : "—", href: "/recruiter/analytics" },
+    { label: "Total Views", value: kpis ? (kpis.totalViews ?? 0) : "—", href: "/recruiter/analytics" },
+    { label: "Total Applies", value: kpis ? (kpis.totalApplies ?? 0) : "—", href: "/recruiter/analytics" },
+    { label: "Time-to-Fill", value: kpis ? (typeof kpis.avgTimeToFillDays === "number" ? `${kpis.avgTimeToFillDays}d` : "—") : "—", href: "/recruiter/analytics" },
+    { label: "View→Apply", value: kpis ? (typeof kpis.conversionRatePct === "number" ? `${kpis.conversionRatePct}%` : "—") : "—", href: "/recruiter/analytics" },
   ];
 
   const topCandidates = Array.isArray(analyticsData?.topCandidates) ? analyticsData.topCandidates : [];
   const topApplySourceLabel = primarySource?.name || "Forge";
   const topApplySourcePercent = primarySource && kpis?.totalApplies
-    ? Math.round((primarySource.value / Math.max(kpis.totalApplies, 1)) * 100) : 100;
+    ? Math.round((primarySource.value / Math.max(kpis.totalApplies, 1)) * 100)
+    : 100;
   const analyticsSnapshot = kpis ? {
     timeToHireDays: kpis.avgTimeToFillDays ?? 0,
-    topApplySourceLabel, topApplySourcePercent,
+    topApplySourceLabel,
+    topApplySourcePercent,
     conversionViewToApply: kpis.conversionRatePct ?? 0,
   } : null;
 
   if (isMobile === null) return <div style={{ minHeight: 200 }} />;
   const greeting = getTimeGreeting();
 
-  // ── MOBILE ────────────────────────────────────────────────────────────────
   if (isMobile) {
-    const greeting = getTimeGreeting();
-
     return (
       <div style={{ width: "100%", boxSizing: "border-box" }}>
         {error && (
-          <div style={{
-            background: "rgba(254,226,226,0.90)",
-            border: "1px solid rgba(239,68,68,0.25)",
-            borderRadius: 10,
-            padding: "10px 14px",
-            fontSize: 12,
-            color: "#B91C1C",
-            marginBottom: 12,
-            lineHeight: 1.5,
-            fontWeight: 600,
-          }}>
+          <div
+            style={{
+              background: "rgba(254,226,226,0.90)",
+              border: "1px solid rgba(239,68,68,0.25)",
+              borderRadius: 10,
+              padding: "10px 14px",
+              fontSize: 12,
+              color: "#B91C1C",
+              marginBottom: 12,
+              lineHeight: 1.5,
+              fontWeight: 600,
+            }}
+          >
             {error}
           </div>
         )}
 
         <div style={{ display: "grid", gap: GAP }}>
+          <RecruiterTitleCard
+            greeting={greeting}
+            title="Recruiter Dashboard"
+            subtitle="Your hiring pipeline at a glance. Act on what matters most today."
+            isMobile
+          />
 
-          {/* ── 1. Greeting + context — sets the tone immediately ── */}
-          <section style={{ ...GLASS, padding: "18px 20px" }}>
-            <div style={{
-              fontSize: 10,
-              fontWeight: 800,
-              color: "#243B63",
-              marginBottom: 5,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              lineHeight: 1.2,
-            }}>
-              {greeting}
-            </div>
-            <h1 style={{
-              margin: "0 auto",
-              textAlign: "center",
-              fontSize: 22,
-              fontWeight: 900,
-              color: "#FF7043",
-              lineHeight: 1.1,
-              letterSpacing: "-0.02em",
-            }}>
-              Recruiter Dashboard
-            </h1>
-            <p style={{
-              margin: "8px auto 0",
-              textAlign: "center",
-              fontSize: 13,
-              color: "#546E7A",
-              fontWeight: 600,
-              lineHeight: 1.6,
-              maxWidth: 520,
-            }}>
-              Your hiring pipeline at a glance. Act on what matters most today.
-            </p>
-          </section>
-
-          {/* ── 2. Action Center — FIRST, most important ── */}
           <section style={{ ...GLASS, padding: 16 }}>
             <RecruiterActionCenterSection chromeQuery={chromeQuery} isMobile={true} />
           </section>
 
-          {/* ── 3. KPI strip — horizontal scroll, compact ── */}
           <section style={{ ...GLASS, padding: "12px 0 12px 12px", overflow: "hidden" }}>
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              paddingRight: 12, marginBottom: 10
-            }}>
-              <span style={{
-                fontSize: 11,
-                fontWeight: 800,
-                color: "#112033",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                lineHeight: 1.2,
-              }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingRight: 12,
+                marginBottom: 10,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: "#112033",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  lineHeight: 1.2,
+                }}
+              >
                 Last 30 Days
               </span>
-              <Link href="/recruiter/analytics"
+              <Link
+                href="/recruiter/analytics"
                 style={{
                   fontSize: 12,
                   fontWeight: 800,
                   color: "#FF7043",
                   textDecoration: "none",
                   lineHeight: 1.2,
-                }}>
+                }}
+              >
                 Full analytics →
               </Link>
             </div>
-            <div style={{
-              display: "flex", gap: 8, overflowX: "auto",
-              paddingRight: 12, paddingBottom: 4,
-              scrollbarWidth: "none", msOverflowStyle: "none"
-            }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                overflowX: "auto",
+                paddingRight: 12,
+                paddingBottom: 4,
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+              }}
+            >
               <style>{`.kpi-scroll::-webkit-scrollbar{display:none}`}</style>
               {isLoading && !analyticsData ? (
-                [1,2,3,4].map(i => (
-                  <div key={i} style={{
-                    flexShrink: 0, width: 110, height: 72, borderRadius: 12,
-                    background: "rgba(255,255,255,0.70)", border: "1px solid rgba(0,0,0,0.06)"
-                  }} />
+                [1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      flexShrink: 0,
+                      width: 110,
+                      height: 72,
+                      borderRadius: 12,
+                      background: "rgba(255,255,255,0.70)",
+                      border: "1px solid rgba(0,0,0,0.06)",
+                    }}
+                  />
                 ))
               ) : (
-                stats.map(t => (
-                  <Link key={t.label} href={t.href} style={{
-                    flexShrink: 0, width: 110,
-                    ...WHITE_CARD, padding: "10px 12px",
-                    textDecoration: "none", display: "block",
-                  }}>
-                    <div style={{
-                      fontSize: 10,
-                      fontWeight: 800,
-                      color: "#FF7043",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      lineHeight: 1.2,
-                    }}>
+                stats.map((t) => (
+                  <Link
+                    key={t.label}
+                    href={t.href}
+                    style={{
+                      flexShrink: 0,
+                      width: 110,
+                      ...WHITE_CARD,
+                      padding: "10px 12px",
+                      textDecoration: "none",
+                      display: "block",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 800,
+                        color: "#FF7043",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        lineHeight: 1.2,
+                      }}
+                    >
                       {t.label}
                     </div>
-                    <div style={{
-                      fontSize: 24,
-                      fontWeight: 900,
-                      color: "#112033",
-                      lineHeight: 1.05,
-                      marginTop: 5,
-                      letterSpacing: "-0.02em",
-                    }}>
+                    <div
+                      style={{
+                        fontSize: 24,
+                        fontWeight: 900,
+                        color: "#112033",
+                        lineHeight: 1.05,
+                        marginTop: 5,
+                        letterSpacing: "-0.02em",
+                      }}
+                    >
                       {t.value}
                     </div>
                   </Link>
@@ -546,20 +596,21 @@ function DashboardBody() {
             </div>
           </section>
 
-          {/* ── 4. Top Candidates ── */}
           <section style={{ ...GLASS, padding: 16 }}>
-            <div style={{ display: "flex", alignItems: "center",
-              justifyContent: "space-between", marginBottom: 12 }}>
-              <span style={{
-                fontSize: 15,
-                fontWeight: 900,
-                color: "#112033",
-                lineHeight: 1.25,
-                letterSpacing: "-0.01em",
-              }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <span
+                style={{
+                  fontSize: 15,
+                  fontWeight: 900,
+                  color: "#112033",
+                  lineHeight: 1.25,
+                  letterSpacing: "-0.01em",
+                }}
+              >
                 Top Candidates
               </span>
-              <Link href="/recruiter/candidate-center"
+              <Link
+                href="/recruiter/candidate-center"
                 style={{
                   fontSize: 12,
                   fontWeight: 800,
@@ -570,14 +621,17 @@ function DashboardBody() {
                   border: "1px solid rgba(255,112,67,0.25)",
                   background: "rgba(255,112,67,0.08)",
                   lineHeight: 1.2,
-                }}>
+                }}
+              >
                 View all
               </Link>
             </div>
             <div style={{ ...WHITE_CARD, padding: 12 }}>
               {isLoading && !analyticsData ? (
                 <div style={{ display: "grid", gap: 8 }}>
-                  {[1,2,3].map(i => <div key={i} style={{ height: 14, background: "rgba(0,0,0,0.07)", borderRadius: 6, width: `${70 + i * 8}%` }} />)}
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} style={{ height: 14, background: "rgba(0,0,0,0.07)", borderRadius: 6, width: `${70 + i * 8}%` }} />
+                  ))}
                 </div>
               ) : isEnterprise ? (
                 topCandidates.length === 0 ? (
@@ -586,40 +640,52 @@ function DashboardBody() {
                   </div>
                 ) : (
                   <div style={{ display: "grid", gap: 10 }}>
-                    {topCandidates.slice(0, 5).map(c => (
-                      <div key={`${c.id||c.email||c.name}-${c.title}`}
-                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    {topCandidates.slice(0, 5).map((c) => (
+                      <div
+                        key={`${c.id || c.email || c.name}-${c.title}`}
+                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}
+                      >
                         <div style={{ minWidth: 0 }}>
-                          <div style={{
-                            fontSize: 13,
-                            fontWeight: 800,
-                            color: "#112033",
-                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                            lineHeight: 1.35,
-                          }}>
+                          <div
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 800,
+                              color: "#112033",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              lineHeight: 1.35,
+                            }}
+                          >
                             {c.name}
                           </div>
-                          <div style={{
-                            fontSize: 11,
-                            color: "#607D8B",
-                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                            lineHeight: 1.45,
-                            marginTop: 2,
-                          }}>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: "#607D8B",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              lineHeight: 1.45,
+                              marginTop: 2,
+                            }}
+                          >
                             {c.title}
                           </div>
                         </div>
-                        <div style={{
-                          flexShrink: 0,
-                          fontSize: 12,
-                          fontWeight: 800,
-                          color: "#FF7043",
-                          background: "rgba(255,112,67,0.10)",
-                          padding: "3px 8px",
-                          borderRadius: 999,
-                          border: "1px solid rgba(255,112,67,0.20)",
-                          lineHeight: 1.2,
-                        }}>
+                        <div
+                          style={{
+                            flexShrink: 0,
+                            fontSize: 12,
+                            fontWeight: 800,
+                            color: "#FF7043",
+                            background: "rgba(255,112,67,0.10)",
+                            padding: "3px 8px",
+                            borderRadius: 999,
+                            border: "1px solid rgba(255,112,67,0.20)",
+                            lineHeight: 1.2,
+                          }}
+                        >
                           {c.matchPercent}%
                         </div>
                       </div>
@@ -636,33 +702,35 @@ function DashboardBody() {
             </div>
           </section>
 
-          {/* ── 5. Pipeline + Trends side by side (2 col) ── */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: GAP }}>
             <section style={{ ...GLASS, padding: 14 }}>
-              <div style={{ display: "flex", alignItems: "center",
-                justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{
-                  fontSize: 13,
-                  fontWeight: 900,
-                  color: "#112033",
-                  lineHeight: 1.25,
-                  letterSpacing: "-0.01em",
-                }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 900,
+                    color: "#112033",
+                    lineHeight: 1.25,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
                   Pipeline
                 </span>
-                <Link href="/recruiter/candidate-center"
+                <Link
+                  href="/recruiter/candidate-center"
                   style={{
                     fontSize: 11,
                     fontWeight: 800,
                     color: "#FF7043",
                     textDecoration: "none",
                     lineHeight: 1.2,
-                  }}>
+                  }}
+                >
                   Open →
                 </Link>
               </div>
               <div style={{ display: "grid", gap: 7 }}>
-                {["New applicants", "Stuck in stage", "Interviews this week", "Offers pending"].map(item => (
+                {["New applicants", "Stuck in stage", "Interviews this week", "Offers pending"].map((item) => (
                   <div key={item} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <div style={{ width: 6, height: 6, borderRadius: 999, background: "#FF7043", flexShrink: 0 }} />
                     <span style={{ fontSize: 11, color: "#37474F", lineHeight: 1.4 }}>{item}</span>
@@ -672,30 +740,33 @@ function DashboardBody() {
             </section>
 
             <section style={{ ...GLASS, padding: 14 }}>
-              <div style={{ display: "flex", alignItems: "center",
-                justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{
-                  fontSize: 13,
-                  fontWeight: 900,
-                  color: "#112033",
-                  lineHeight: 1.25,
-                  letterSpacing: "-0.01em",
-                }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 900,
+                    color: "#112033",
+                    lineHeight: 1.25,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
                   Trends
                 </span>
-                <Link href="/recruiter/analytics"
+                <Link
+                  href="/recruiter/analytics"
                   style={{
                     fontSize: 11,
                     fontWeight: 800,
                     color: "#FF7043",
                     textDecoration: "none",
                     lineHeight: 1.2,
-                  }}>
+                  }}
+                >
                   Charts →
                 </Link>
               </div>
               <div style={{ display: "grid", gap: 7 }}>
-                {["Views vs Applies", "Time-to-fill", "Funnel drop-off", "Period vs prior"].map(item => (
+                {["Views vs Applies", "Time-to-fill", "Funnel drop-off", "Period vs prior"].map((item) => (
                   <div key={item} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <div style={{ width: 6, height: 6, borderRadius: 999, background: "#1A4B8F", flexShrink: 0 }} />
                     <span style={{ fontSize: 11, color: "#37474F", lineHeight: 1.4 }}>{item}</span>
@@ -705,16 +776,17 @@ function DashboardBody() {
             </section>
           </div>
 
-          {/* ── 6. Health Snapshot ── */}
           <section style={{ ...GLASS, padding: 16 }}>
-            <div style={{
-              fontSize: 15,
-              fontWeight: 900,
-              color: "#112033",
-              marginBottom: 10,
-              lineHeight: 1.25,
-              letterSpacing: "-0.01em",
-            }}>
+            <div
+              style={{
+                fontSize: 15,
+                fontWeight: 900,
+                color: "#112033",
+                marginBottom: 10,
+                lineHeight: 1.25,
+                letterSpacing: "-0.01em",
+              }}
+            >
               Health Snapshot
             </div>
             <div style={{ ...WHITE_CARD, padding: 12 }}>
@@ -722,17 +794,17 @@ function DashboardBody() {
                 analyticsSnapshot ? (
                   <div style={{ display: "grid", gap: 8 }}>
                     {[
-                      { label: "Time-to-Hire",    value: `${analyticsSnapshot.timeToHireDays} days` },
-                      { label: "Top Source",       value: `${analyticsSnapshot.topApplySourceLabel} (${analyticsSnapshot.topApplySourcePercent}%)` },
-                      { label: "Conversion",       value: `${analyticsSnapshot.conversionViewToApply}%` },
-                    ].map(row => (
-                      <div key={row.label} style={{ display: "flex", alignItems: "center",
-                        justifyContent: "space-between", gap: 8 }}>
+                      { label: "Time-to-Hire", value: `${analyticsSnapshot.timeToHireDays} days` },
+                      { label: "Top Source", value: `${analyticsSnapshot.topApplySourceLabel} (${analyticsSnapshot.topApplySourcePercent}%)` },
+                      { label: "Conversion", value: `${analyticsSnapshot.conversionViewToApply}%` },
+                    ].map((row) => (
+                      <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                         <span style={{ fontSize: 12, color: "#607D8B", lineHeight: 1.45 }}>{row.label}</span>
                         <span style={{ fontSize: 13, fontWeight: 800, color: "#112033", lineHeight: 1.35 }}>{row.value}</span>
                       </div>
                     ))}
-                    <Link href="/recruiter/analytics"
+                    <Link
+                      href="/recruiter/analytics"
                       style={{
                         color: "#FF7043",
                         fontWeight: 800,
@@ -741,7 +813,8 @@ function DashboardBody() {
                         display: "block",
                         textDecoration: "none",
                         lineHeight: 1.25,
-                      }}>
+                      }}
+                    >
                       Open Analytics →
                     </Link>
                   </div>
@@ -760,30 +833,29 @@ function DashboardBody() {
             </div>
           </section>
 
-          {/* ── 7. Sponsored — last, lowest priority ── */}
           <section style={{ ...GLASS, padding: 12 }}>
             <div style={{ ...WHITE_CARD, padding: 16, minHeight: 100 }}>
-              <div style={{
-                fontWeight: 800,
-                color: "#90A4AE",
-                marginBottom: 6,
-                fontSize: 10,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                lineHeight: 1.2,
-              }}>
+              <div
+                style={{
+                  fontWeight: 800,
+                  color: "#90A4AE",
+                  marginBottom: 6,
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  lineHeight: 1.2,
+                }}
+              >
                 Sponsored
               </div>
               <div style={{ fontSize: 13, color: "#B0BEC5", lineHeight: 1.5 }}>Ad space</div>
             </div>
           </section>
-
         </div>
       </div>
     );
   }
 
-  // ── DESKTOP (original, untouched layout; readability only) ─────────────────
   return (
     <div style={{ width: "100%", padding: 0, margin: 0, paddingRight: 16, boxSizing: "border-box" }}>
       {error && (
@@ -794,53 +866,26 @@ function DashboardBody() {
           {error}
         </div>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_COL_WIDTH}px`,
-        gridTemplateRows: "auto auto auto auto", gap: GAP, width: "100%", minWidth: 0, boxSizing: "border-box" }}>
-
-        <section
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_COL_WIDTH}px`,
+          gridTemplateRows: "auto auto auto auto",
+          gap: GAP,
+          width: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+        }}
+      >
+        <RecruiterTitleCard
+          greeting={greeting}
+          title="Recruiter Dashboard"
+          subtitle="At-a-glance health for your roles, candidate flow, and where action is needed."
           style={{
-            ...GLASS,
-            padding: 16,
-            textAlign: "center",
             gridColumn: "1 / 2",
             gridRow: "1",
-            boxSizing: "border-box",
           }}
-        >
-          <div style={{
-            fontSize: 10,
-            fontWeight: 800,
-            color: "#243B63",
-            marginBottom: 5,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            lineHeight: 1.2,
-          }}>
-            {greeting}
-          </div>
-
-          <h1 style={{
-            margin: 0,
-            color: "#FF7043",
-            fontSize: 22,
-            fontWeight: 900,
-            lineHeight: 1.1,
-            letterSpacing: "-0.02em",
-          }}>
-            Recruiter Dashboard
-          </h1>
-
-          <p style={{
-            margin: "7px auto 0",
-            color: "#4A5D73",
-            maxWidth: 740,
-            fontSize: 13,
-            fontWeight: 600,
-            lineHeight: 1.6,
-          }}>
-            At-a-glance health for your roles, candidate flow, and where action is needed.
-          </p>
-        </section>
+        />
 
         <section style={{ ...WHITE_CARD, padding: 16, gridColumn: "1 / 2", gridRow: "2" }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -851,40 +896,49 @@ function DashboardBody() {
                     <div className="h-7 w-10 bg-slate-200 rounded" />
                   </div>
                 ))
-              : stats.map(t => (
-                  <Link key={t.label} href={t.href}
+              : stats.map((t) => (
+                  <Link
+                    key={t.label}
+                    href={t.href}
                     className="rounded-lg border bg-white p-4 hover:bg-slate-50 transition"
-                    style={{ textDecoration: "none" }}>
-                    <div style={{
-                      fontSize: 10,
-                      fontWeight: 800,
-                      color: "#FF7043",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                      lineHeight: 1.2,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}>
+                    style={{ textDecoration: "none" }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 800,
+                        color: "#FF7043",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        lineHeight: 1.2,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
                       {t.label}
                     </div>
-                    <div style={{
-                      fontSize: 24,
-                      fontWeight: 900,
-                      marginTop: 5,
-                      color: "#0F172A",
-                      lineHeight: 1.05,
-                      letterSpacing: "-0.02em",
-                    }}>
+                    <div
+                      style={{
+                        fontSize: 24,
+                        fontWeight: 900,
+                        marginTop: 5,
+                        color: "#0F172A",
+                        lineHeight: 1.05,
+                        letterSpacing: "-0.02em",
+                      }}
+                    >
                       {t.value}
                     </div>
-                    <div style={{
-                      fontSize: 12,
-                      color: "#64748B",
-                      marginTop: 3,
-                      lineHeight: 1.4,
-                      fontWeight: 500,
-                    }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "#64748B",
+                        marginTop: 3,
+                        lineHeight: 1.4,
+                        fontWeight: 500,
+                      }}
+                    >
                       View details
                     </div>
                   </Link>
@@ -896,8 +950,17 @@ function DashboardBody() {
           <RecruiterActionCenterSection chromeQuery={chromeQuery} isMobile={false} />
         </div>
 
-        <aside style={{ ...DARK_RAIL, gridColumn: "2 / 3", gridRow: "1 / 4",
-          display: "flex", flexDirection: "column", gap: GAP, alignSelf: "stretch" }}>
+        <aside
+          style={{
+            ...DARK_RAIL,
+            gridColumn: "2 / 3",
+            gridRow: "1 / 4",
+            display: "flex",
+            flexDirection: "column",
+            gap: GAP,
+            alignSelf: "stretch",
+          }}
+        >
           <div style={{ ...WHITE_CARD, padding: 16, flex: 2, minHeight: 180 }}>
             <div style={{ fontSize: 15, fontWeight: 900, marginBottom: 8, color: "#0F172A", lineHeight: 1.25, letterSpacing: "-0.01em" }}>
               Sponsored
@@ -938,10 +1001,18 @@ function DashboardBody() {
           </div>
         </aside>
 
-        <div style={{ gridColumn: "1 / -1", gridRow: "4", display: "grid",
-          gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
-          gap: GAP, marginLeft: -252, boxSizing: "border-box", minWidth: 0 }}>
-
+        <div
+          style={{
+            gridColumn: "1 / -1",
+            gridRow: "4",
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
+            gap: GAP,
+            marginLeft: -252,
+            boxSizing: "border-box",
+            minWidth: 0,
+          }}
+        >
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div className="flex items-center justify-between mb-3">
               <h2 style={{ fontSize: 18, fontWeight: 900, color: "#FF7043", lineHeight: 1.25, letterSpacing: "-0.01em", margin: 0 }}>
@@ -964,8 +1035,8 @@ function DashboardBody() {
                 </div>
               ) : (
                 <ul style={{ fontSize: 13, display: "grid", gap: 8, color: "#334155", lineHeight: 1.55, paddingLeft: 0, margin: 0, listStyle: "none" }}>
-                  {topCandidates.slice(0, 5).map(c => (
-                    <li key={`${c.id||c.email||c.name}-${c.title}`}>• {c.name} — {c.title} ({c.matchPercent}% match)</li>
+                  {topCandidates.slice(0, 5).map((c) => (
+                    <li key={`${c.id || c.email || c.name}-${c.title}`}>• {c.name} — {c.title} ({c.matchPercent}% match)</li>
                   ))}
                 </ul>
               )
