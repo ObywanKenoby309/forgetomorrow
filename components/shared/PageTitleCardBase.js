@@ -49,18 +49,22 @@ export default function PageTitleCardBase({
         ) : null}
 
         <h1
-          style={{
-            margin: isMobile ? "0 auto" : 0,
-            textAlign: "center",
-            fontSize: 22,
-            fontWeight: 900,
-            color: titleColor,
-            lineHeight: 1.1,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          {title}
-        </h1>
+  style={{
+    margin: isMobile ? "0 auto" : 0,
+    textAlign: "center",
+    fontSize: 22,
+    fontWeight: 900,
+    color: titleColor,
+    lineHeight: 1.1,
+    letterSpacing: "-0.01em",
+    textShadow: `
+      0 1px 0 rgba(255,255,255,0.35),
+      0 1px 2px rgba(0,0,0,0.08)
+    `,
+  }}
+>
+  {title}
+</h1>
 
         {subtitle ? (
           <p
