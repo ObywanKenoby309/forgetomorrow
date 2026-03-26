@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider } from "@/context/PlanContext";
 import CoachingLayout from "@/components/layouts/CoachingLayout";
-import RecruiterTitleCard from "@/components/coaching/CoachingTitleCard";
+import CoachingTitleCard from "@/components/coaching/CoachingTitleCard";
 import MessageThread from "@/components/recruiter/MessageThread";
 import SavedReplies from "@/components/recruiter/SavedReplies";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
