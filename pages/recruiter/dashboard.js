@@ -1109,7 +1109,6 @@ function DashboardBody() {
           }}
         >
           <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
-            <div style={GLASS_TINT} />
             <div className="flex items-center justify-between mb-3">
   <h2
     style={{
@@ -1166,7 +1165,6 @@ function DashboardBody() {
             </div>
           </section>
           <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
-            <div style={GLASS_TINT} />
             <div className="flex items-center justify-between mb-3">
   <h2
     style={{
@@ -1206,7 +1204,6 @@ function DashboardBody() {
             </div>
           </section>
           <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
-            <div style={GLASS_TINT} />
             <div className="flex items-center justify-between mb-3">
   <h3
     style={{
