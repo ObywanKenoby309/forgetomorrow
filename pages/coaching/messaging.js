@@ -3,10 +3,49 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider } from "@/context/PlanContext";
 import CoachingLayout from "@/components/layouts/CoachingLayout";
+import RecruiterTitleCard from "@/components/coaching/CoachingTitleCard";
 import MessageThread from "@/components/recruiter/MessageThread";
 import SavedReplies from "@/components/recruiter/SavedReplies";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
+import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import { SecondaryButton } from "@/components/ui/Buttons";
+import { getTimeGreeting } from "@/lib/dashboardGreeting";
+
+/* ---------------------------------------------
+   VISUAL SYSTEM
+---------------------------------------------- */
+const GLASS = {
+  borderRadius: 18,
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(255,255,255,0.68)",
+  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+};
+
+const GLASS_OVERLAY = {
+  position: "relative",
+  overflow: "hidden",
+};
+
+const WHITE_CARD = {
+  background: "rgba(255,255,255,0.97)",
+  border: "1px solid rgba(255,255,255,0.60)",
+  borderRadius: 14,
+  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+  boxSizing: "border-box",
+  position: "relative",
+  zIndex: 1,
+};
+
+const ORANGE = "#FF7043";
+const MUTED = "#64748B";
+const ORANGE_HEADING_LIFT = {
+  textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
+  fontWeight: 900,
+  position: "relative",
+  zIndex: 1,
+};
 
 /* ---------------------------------------------
    CLIENT SESSION (DIRECT)
@@ -33,80 +72,83 @@ async function getSessionDirect(timeoutMs = 4000) {
 }
 
 /* ---------------------------------------------
-   HEADER CARD WRAPPER
+   PAGE ACTION BAR
 ---------------------------------------------- */
-function HeaderCard({ children }) {
+function MessagingActionBar({ onOpenBulk }) {
   return (
-    <section
-      style={{
-        background: "white",
-        border: "1px solid #eee",
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-        textAlign: "center",
-      }}
-    >
-      {children}
+    <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h2
+            style={{
+              fontSize: 18,
+              fontWeight: 900,
+              color: ORANGE,
+              lineHeight: 1.25,
+              letterSpacing: "-0.01em",
+              margin: 0,
+              ...ORANGE_HEADING_LIFT,
+            }}
+          >
+            Coach Messaging
+          </h2>
+          <p
+            style={{
+              margin: "6px 0 0",
+              fontSize: 13,
+              color: MUTED,
+              lineHeight: 1.55,
+            }}
+          >
+            Communicate with your clients and seekers in one place. Send one-to-one
+            messages or group updates to support the people you’re actively coaching.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <SecondaryButton onClick={onOpenBulk}>Group Message</SecondaryButton>
+        </div>
+      </div>
     </section>
   );
 }
 
 /* ---------------------------------------------
-   HEADER BAR
----------------------------------------------- */
-function HeaderBar({ onOpenBulk }) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3">
-      <div className="hidden md:block" />
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-[#FF7043]">Messaging</h1>
-        <p className="text-sm text-slate-600 mt-1 max-w-xl mx-auto">
-          Communicate with your clients and seekers in one place. Send one-to-one
-          messages or group updates to support the people you’re actively coaching.
-        </p>
-      </div>
-      <div className="justify-self-center md:justify-self-end">
-        <SecondaryButton onClick={onOpenBulk}>Group Message</SecondaryButton>
-      </div>
-    </div>
-  );
-}
-
-/* ---------------------------------------------
-   RIGHT SIDEBAR
+   RIGHT SIDEBAR CARD
 ---------------------------------------------- */
 function RightToolsCard() {
   return (
-    <div className="rounded-lg border bg-white p-4">
-      <div className="font-medium mb-2">Tips</div>
-      <div className="text-sm text-slate-600 space-y-2">
-        <p>Group messages work best for updates, reminders, and shared guidance.</p>
-        <p>Saved replies can help with common check-ins - personal notes still matter.</p>
+    <div
+      style={{
+        ...GLASS,
+        padding: 14,
+        minHeight: 160,
+        width: "100%",
+        boxSizing: "border-box",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: "#94A3B8",
+          marginBottom: 8,
+        }}
+      >
+        Sponsored
       </div>
-    </div>
-  );
-}
-
-function RightRail() {
-  return (
-    <div className="space-y-4">
-      <RightToolsCard />
-
-      <div className="rounded-lg border bg-white p-4">
-        <div className="font-medium mb-2">Sponsored</div>
-        <div className="text-sm text-slate-600">
-          Your advertisement could be here.
-          <br />
-          Contact{" "}
-          <a
-            href="mailto:sales@forgetomorrow.com"
-            className="text-[#FF7043] underline"
-          >
-            sales@forgetomorrow.com
-          </a>
-          .
-        </div>
+      <div style={{ ...WHITE_CARD, minHeight: 180, padding: 12 }}>
+        <RightRailPlacementManager slot="right_rail_1" />
       </div>
     </div>
   );
@@ -135,13 +177,11 @@ function Body({
     if (!initialThreadId) return;
     if (!prefillText || !prefillText.trim()) return;
 
-    // Use the MessageThread imperative insert if available (React-state safe)
     if (threadRef?.current?.insertText) {
       threadRef.current.insertText(prefillText);
       return;
     }
 
-    // Fallback (legacy)
     const el = document.querySelector('input[placeholder="Type a message…"]');
     if (el && !el.value) {
       el.value = prefillText;
@@ -151,82 +191,157 @@ function Body({
   }, [initialThreadId, prefillText, threadRef]);
 
   return (
-    <main className="space-y-6">
-      <div className="mb-2 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-          How messaging works
-        </p>
-        <p className="mt-1">
-          Start conversations from a client or seeker profile by clicking{" "}
-          <span className="font-semibold">Message</span>. You can also send group
-          updates for newsletters, reminders, or shared guidance. All replies stay
-          organized here so you can focus on coaching.
-        </p>
-      </div>
+    <main style={{ display: "grid", gap: 16 }}>
+      <MessagingActionBar onOpenBulk={() => setBulkOpen(true)} />
 
-      <MessageThread
-        ref={threadRef}
-        threads={threads}
-        initialThreadId={initialThreadId || threads[0]?.id}
-        onSend={onSend}
-        persona="recruiter"
-        personaLabel="Coach"
-        otherLabel="client"
-        inboxTitle="Coach Inbox"
-        inboxDescription={
-          <p className="mt-1 text-[11px] text-slate-500 leading-snug">
-            Conversations you start as a <span className="font-semibold">Coach</span>{" "}
-            will show here. Personal DMs live in{" "}
-            <span className="font-semibold">The Signal</span>.
+      <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+        <div style={{ ...WHITE_CARD, padding: 14 }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 11,
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: MUTED,
+              lineHeight: 1.2,
+            }}
+          >
+            How messaging works
           </p>
-        }
-        emptyTitle="No coach conversations yet"
-        emptyBody={
-          <>
-            <p className="max-w-md text-xs text-slate-500">
-              This inbox is for conversations you start as{" "}
-              <span className="font-semibold">Coach</span>. To begin, open a client
-              profile and click Message. When they reply, the full thread will appear here.
-            </p>
-            <p className="max-w-md text-[11px] text-slate-400">
-              Personal one-to-one messages still flow through{" "}
-              <span className="font-semibold">The Signal</span>.
-            </p>
-          </>
-        }
-        onActiveThreadChange={onActiveThreadChange}
-        isBlocked={isBlocked}
-        showHeaderActions={true}
-        onDelete={onDelete}
-        onReport={onReport}
-        onBlock={onBlock}
-        headerActionsLabel={{
-          delete: "Delete",
-          report: "Report",
-          block: "Block",
-          blocked: "Blocked",
-        }}
-      />
+          <p
+            style={{
+              margin: "8px 0 0",
+              fontSize: 13,
+              color: "#475569",
+              lineHeight: 1.6,
+            }}
+          >
+            Start conversations from a client or seeker profile by clicking{" "}
+            <span style={{ fontWeight: 700 }}>Message</span>. You can also send group
+            updates for newsletters, reminders, or shared guidance. All replies stay
+            organized here so you can focus on coaching.
+          </p>
+        </div>
+      </section>
 
-      <SavedReplies
-        persona="coach"
-        title="Saved Replies (Coach)"
-        onInsert={(text) => {
-          // ✅ Primary: use MessageThread insertText so it persists and Send works
-          if (threadRef?.current?.insertText) {
-            threadRef.current.insertText(text);
-            return;
-          }
+      <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 12,
+            gap: 12,
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 18,
+              fontWeight: 900,
+              color: ORANGE,
+              lineHeight: 1.25,
+              letterSpacing: "-0.01em",
+              margin: 0,
+              ...ORANGE_HEADING_LIFT,
+            }}
+          >
+            Conversations
+          </h2>
+        </div>
 
-          // Fallback (legacy)
-          const el = document.querySelector('input[placeholder="Type a message…"]');
-          if (el) {
-            el.value = el.value ? `${el.value} ${text}` : text;
-            el.dispatchEvent(new Event("input", { bubbles: true }));
-            el.focus();
-          }
-        }}
-      />
+        <div style={{ ...WHITE_CARD, padding: 12 }}>
+          <MessageThread
+            ref={threadRef}
+            threads={threads}
+            initialThreadId={initialThreadId || threads[0]?.id}
+            onSend={onSend}
+            persona="coach"
+            personaLabel="Coach"
+            otherLabel="client"
+            inboxTitle="Coach Inbox"
+            inboxDescription={
+              <p className="mt-1 text-[11px] text-slate-500 leading-snug">
+                Conversations you start as a <span className="font-semibold">Coach</span>{" "}
+                will show here. Personal DMs live in{" "}
+                <span className="font-semibold">The Signal</span>.
+              </p>
+            }
+            emptyTitle="No coach conversations yet"
+            emptyBody={
+              <>
+                <p className="max-w-md text-xs text-slate-500">
+                  This inbox is for conversations you start as{" "}
+                  <span className="font-semibold">Coach</span>. To begin, open a client
+                  profile and click Message. When they reply, the full thread will appear here.
+                </p>
+                <p className="max-w-md text-[11px] text-slate-400">
+                  Personal one-to-one messages still flow through{" "}
+                  <span className="font-semibold">The Signal</span>.
+                </p>
+              </>
+            }
+            onActiveThreadChange={onActiveThreadChange}
+            isBlocked={isBlocked}
+            showHeaderActions={true}
+            onDelete={onDelete}
+            onReport={onReport}
+            onBlock={onBlock}
+            headerActionsLabel={{
+              delete: "Delete",
+              report: "Report",
+              block: "Block",
+              blocked: "Blocked",
+            }}
+          />
+        </div>
+      </section>
+
+      <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 12,
+            gap: 12,
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 18,
+              fontWeight: 900,
+              color: ORANGE,
+              lineHeight: 1.25,
+              letterSpacing: "-0.01em",
+              margin: 0,
+              ...ORANGE_HEADING_LIFT,
+            }}
+          >
+            Saved Replies
+          </h2>
+        </div>
+
+        <div style={{ ...WHITE_CARD, padding: 12 }}>
+          <SavedReplies
+            persona="coach"
+            title="Saved Replies (Coach)"
+            onInsert={(text) => {
+              if (threadRef?.current?.insertText) {
+                threadRef.current.insertText(text);
+                return;
+              }
+
+              const el = document.querySelector('input[placeholder="Type a message…"]');
+              if (el) {
+                el.value = el.value ? `${el.value} ${text}` : text;
+                el.dispatchEvent(new Event("input", { bubbles: true }));
+                el.focus();
+              }
+            }}
+          />
+        </div>
+      </section>
 
       <BulkMessageModal
         open={bulkOpen}
@@ -253,16 +368,12 @@ export default function CoachMessagingPage() {
 
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
-
-  // slow-session hint (does NOT break loading)
   const [slowSession, setSlowSession] = useState(false);
   const [sessionError, setSessionError] = useState("");
 
-  // active thread tracking (for polling + actions)
   const [activeThread, setActiveThread] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
 
-  // ✅ NEW: ref to MessageThread for safe insertText()
   const threadRef = useRef(null);
 
   const queryConversationId =
@@ -353,7 +464,7 @@ export default function CoachMessagingPage() {
 
               const mappedMessages = msgs.map((m) => ({
                 id: m.id,
-                from: m.senderId === currentUserId ? "recruiter" : "candidate",
+                from: m.senderId === currentUserId ? "coach" : "client",
                 text: m.text,
                 ts: m.timeIso || new Date().toISOString(),
                 status: "read",
@@ -410,7 +521,6 @@ export default function CoachMessagingPage() {
     };
   }, [queryConversationId, currentUserId]);
 
-  // Poll messages for the active conversation so replies appear without refresh
   useEffect(() => {
     if (!currentUserId) return;
     if (!activeThread?.id) return;
@@ -426,7 +536,7 @@ export default function CoachMessagingPage() {
 
         const mapped = msgs.map((m) => ({
           id: m.id,
-          from: m.senderId === currentUserId ? "recruiter" : "candidate",
+          from: m.senderId === currentUserId ? "coach" : "client",
           text: m.text,
           ts: m.timeIso || new Date().toISOString(),
           status: "read",
@@ -445,9 +555,7 @@ export default function CoachMessagingPage() {
                 }
           )
         );
-      } catch {
-        // keep quiet
-      }
+      } catch {}
     };
 
     const initial = setTimeout(() => tick(), 800);
@@ -489,7 +597,7 @@ export default function CoachMessagingPage() {
 
       const newMsg = {
         id: msg?.id ?? `m-${Date.now()}`,
-        from: "recruiter",
+        from: "coach",
         text: msg?.text ?? trimmed,
         ts: msg?.timeIso || new Date().toISOString(),
         status: "sent",
@@ -534,7 +642,6 @@ export default function CoachMessagingPage() {
     }
   };
 
-  // actions (parity with Signal)
   const handleDelete = async () => {
     if (!activeThread?.id) return;
     const confirmed = window.confirm(
@@ -635,29 +742,50 @@ export default function CoachMessagingPage() {
     }
   };
 
+  const greeting = getTimeGreeting();
+
+  const HeaderBox = (
+    <CoachingTitleCard
+      greeting={greeting}
+      title="Messaging"
+      subtitle="Manage coach conversations, saved replies, and group outreach in one place."
+      compact
+    />
+  );
+
   if (loadingUser) {
     return (
       <PlanProvider>
         <CoachingLayout
           title="Messaging — ForgeTomorrow"
-          header={
-            <HeaderCard>
-              <HeaderBar onOpenBulk={() => {}} />
-            </HeaderCard>
-          }
-          right={<RightRail />}
+          header={HeaderBox}
+          headerCard={false}
+          right={<RightToolsCard />}
           activeNav="coach-messages"
           footer={null}
         >
-          <div className="h-64 flex flex-col items-center justify-center text-slate-500">
-            <div>Loading…</div>
-
-            {slowSession && (
-              <div className="mt-2 text-[11px] text-slate-400">
-                Session is taking longer than expected. This usually resolves within a few seconds.
-              </div>
-            )}
-          </div>
+          <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+            <div
+              style={{
+                ...WHITE_CARD,
+                minHeight: 256,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                color: MUTED,
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              <div>Loading…</div>
+              {slowSession ? (
+                <div style={{ marginTop: 8, fontSize: 11, color: "#94A3B8", fontWeight: 500 }}>
+                  Session is taking longer than expected. This usually resolves within a few seconds.
+                </div>
+              ) : null}
+            </div>
+          </section>
         </CoachingLayout>
       </PlanProvider>
     );
@@ -668,37 +796,54 @@ export default function CoachMessagingPage() {
       <PlanProvider>
         <CoachingLayout
           title="Messaging — ForgeTomorrow"
-          header={
-            <HeaderCard>
-              <HeaderBar onOpenBulk={() => {}} />
-            </HeaderCard>
-          }
-          right={<RightRail />}
+          header={HeaderBox}
+          headerCard={false}
+          right={<RightToolsCard />}
           activeNav="coach-messages"
           footer={null}
         >
-          <div className="rounded-lg border bg-white p-4">
-            <div className="font-semibold text-slate-800">
-              Session failed to load
+          <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+            <div style={{ ...WHITE_CARD, padding: 16 }}>
+              <div style={{ fontWeight: 800, fontSize: 16, color: "#0F172A" }}>
+                Session failed to load
+              </div>
+              <p style={{ marginTop: 6, fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
+                {sessionError || "We could not resolve your session."}
+              </p>
+              <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
+                <button
+                  style={{
+                    borderRadius: 10,
+                    background: "#0F172A",
+                    color: "white",
+                    padding: "10px 14px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => window.location.reload()}
+                >
+                  Retry
+                </button>
+                <button
+                  style={{
+                    borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.12)",
+                    background: "white",
+                    color: "#0F172A",
+                    padding: "10px 14px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => router.push("/auth/signin")}
+                >
+                  Sign in
+                </button>
+              </div>
             </div>
-            <p className="mt-1 text-sm text-slate-600">
-              {sessionError || "We could not resolve your session."}
-            </p>
-            <div className="mt-3 flex gap-2">
-              <button
-                className="rounded-md bg-black text-white px-3 py-2 text-sm"
-                onClick={() => window.location.reload()}
-              >
-                Retry
-              </button>
-              <button
-                className="rounded-md border px-3 py-2 text-sm"
-                onClick={() => router.push("/auth/signin")}
-              >
-                Sign in
-              </button>
-            </div>
-          </div>
+          </section>
         </CoachingLayout>
       </PlanProvider>
     );
@@ -708,12 +853,9 @@ export default function CoachMessagingPage() {
     <PlanProvider>
       <CoachingLayout
         title="Messaging — ForgeTomorrow"
-        header={
-          <HeaderCard>
-            <HeaderBar onOpenBulk={() => setBulkOpen(true)} />
-          </HeaderCard>
-        }
-        right={<RightRail />}
+        header={HeaderBox}
+        headerCard={false}
+        right={<RightToolsCard />}
         activeNav="coach-messages"
         footer={null}
       >

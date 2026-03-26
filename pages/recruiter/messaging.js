@@ -1,13 +1,51 @@
 // pages/recruiter/messaging.js
-// updated to fix loading issue
+// updated to match new recruiter visual standard
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
+import RecruiterTitleCard from "@/components/recruiter/RecruiterTitleCard";
 import MessageThread from "@/components/recruiter/MessageThread";
 import SavedReplies from "@/components/recruiter/SavedReplies";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
+import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import { SecondaryButton } from "@/components/ui/Buttons";
+import { getTimeGreeting } from "@/lib/dashboardGreeting";
+
+/* ---------------------------------------------
+   VISUAL SYSTEM
+---------------------------------------------- */
+const GLASS = {
+  borderRadius: 18,
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(255,255,255,0.68)",
+  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+};
+
+const GLASS_OVERLAY = {
+  position: "relative",
+  overflow: "hidden",
+};
+
+const WHITE_CARD = {
+  background: "rgba(255,255,255,0.97)",
+  border: "1px solid rgba(255,255,255,0.60)",
+  borderRadius: 14,
+  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+  boxSizing: "border-box",
+  position: "relative",
+  zIndex: 1,
+};
+
+const ORANGE = "#FF7043";
+const ORANGE_HEADING_LIFT = {
+  textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
+  fontWeight: 900,
+  position: "relative",
+  zIndex: 1,
+};
 
 /* ---------------------------------------------
    CLIENT SESSION (DIRECT)
@@ -34,43 +72,71 @@ async function getSessionDirect(timeoutMs = 4000) {
 }
 
 /* ---------------------------------------------
-   HEADER BAR
+   PAGE ACTION BAR
 ---------------------------------------------- */
-function HeaderBar({ onOpenBulk }) {
+function MessagingActionBar({ onOpenBulk }) {
   const { isEnterprise } = usePlan();
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3">
-      <div className="hidden md:block" />
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-[#FF7043]">Messaging</h1>
-        <p className="text-sm text-slate-600 mt-1 max-w-xl mx-auto">
-          View and reply to candidate conversations, or send bulk messages with
-          Enterprise.
-        </p>
-      </div>
-      <div className="justify-self-center md:justify-self-end">
-        {isEnterprise ? (
-          <SecondaryButton onClick={onOpenBulk}>Bulk Message</SecondaryButton>
-        ) : (
-          <span className="relative inline-block align-middle group">
-            <SecondaryButton onClick={(e) => e.preventDefault()}>
-              Bulk Message
-            </SecondaryButton>
-            <span
-              className="
-                absolute -top-10 right-0 hidden group-hover:block
-                whitespace-nowrap rounded-md border bg-white px-3 py-1 text-xs
-                shadow-md text-slate-700
-              "
-              style={{ zIndex: 30 }}
-            >
-              🔒 Upgrade to use Bulk Messaging
+    <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h2
+            style={{
+              fontSize: 18,
+              fontWeight: 900,
+              color: ORANGE,
+              lineHeight: 1.25,
+              letterSpacing: "-0.01em",
+              margin: 0,
+              ...ORANGE_HEADING_LIFT,
+            }}
+          >
+            Recruiter Messaging
+          </h2>
+          <p
+            style={{
+              margin: "6px 0 0",
+              fontSize: 13,
+              color: "#64748B",
+              lineHeight: 1.55,
+            }}
+          >
+            View and reply to candidate conversations, or send bulk messages with Enterprise.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {isEnterprise ? (
+            <SecondaryButton onClick={onOpenBulk}>Bulk Message</SecondaryButton>
+          ) : (
+            <span className="relative inline-block align-middle group">
+              <SecondaryButton onClick={(e) => e.preventDefault()}>
+                Bulk Message
+              </SecondaryButton>
+              <span
+                className="
+                  absolute -top-10 right-0 hidden group-hover:block
+                  whitespace-nowrap rounded-md border bg-white px-3 py-1 text-xs
+                  shadow-md text-slate-700
+                "
+                style={{ zIndex: 30 }}
+              >
+                🔒 Upgrade to use Bulk Messaging
+              </span>
             </span>
-          </span>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -79,11 +145,29 @@ function HeaderBar({ onOpenBulk }) {
 ---------------------------------------------- */
 function RightToolsCard() {
   return (
-    <div className="rounded-lg border bg-white p-4">
-      <div className="font-medium mb-2">Tips</div>
-      <div className="text-sm text-slate-600 space-y-2">
-        <p>Keep bulk messages short and personalized.</p>
-        <p>Use saved replies to speed up responses.</p>
+    <div
+      style={{
+        ...GLASS,
+        padding: 14,
+        minHeight: 160,
+        width: "100%",
+        boxSizing: "border-box",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: "#94A3B8",
+          marginBottom: 8,
+        }}
+      >
+        Sponsored
+      </div>
+      <div style={{ ...WHITE_CARD, minHeight: 180, padding: 12 }}>
+        <RightRailPlacementManager slot="right_rail_1" />
       </div>
     </div>
   );
@@ -126,53 +210,127 @@ function Body({
   }, [initialThreadId, prefillText]);
 
   return (
-    <main className="space-y-6">
-      <div className="mb-2 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-          How messaging works
-        </p>
-        <p className="mt-1">
-          To start a new conversation, open your{" "}
-          <span className="font-semibold">Candidates</span> view and click{" "}
-          <span className="font-mono text-[11px]">Message</span> on any card.
-          We&apos;ll ask whether to use your{" "}
-          <span className="font-semibold">Recruiter inbox</span> or your{" "}
-          <span className="font-semibold">Signal (personal)</span> inbox, and
-          that thread will appear here.
-        </p>
-      </div>
+    <main style={{ display: "grid", gap: 16 }}>
+      <MessagingActionBar onOpenBulk={() => setBulkOpen(true)} />
 
-      <MessageThread
-        threads={threads}
-        initialThreadId={initialThreadId || threads[0]?.id}
-        onSend={onSend}
-        persona="recruiter"
-        personaLabel="Recruiter"
-        otherLabel="candidate"
-        showHeaderActions={true}
-        onDelete={onDelete}
-        onReport={onReport}
-        onBlock={onBlock}
-        isBlocked={isBlocked}
-        onActiveThreadChange={onActiveThreadChange}
-        headerActionsLabel={{
-          delete: "Delete",
-          report: "Report",
-          block: "Block",
-          blocked: "Blocked",
-        }}
-      />
+      <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+        <div style={{ ...WHITE_CARD, padding: 14 }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 11,
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: "#64748B",
+              lineHeight: 1.2,
+            }}
+          >
+            How messaging works
+          </p>
+          <p
+            style={{
+              margin: "8px 0 0",
+              fontSize: 13,
+              color: "#475569",
+              lineHeight: 1.6,
+            }}
+          >
+            To start a new conversation, open your <span style={{ fontWeight: 700 }}>Candidates</span> view and click{" "}
+            <span style={{ fontFamily: "monospace", fontSize: 12 }}>Message</span> on any card. We&apos;ll ask whether to use
+            your <span style={{ fontWeight: 700 }}>Recruiter inbox</span> or your{" "}
+            <span style={{ fontWeight: 700 }}>Signal (personal)</span> inbox, and that thread will appear here.
+          </p>
+        </div>
+      </section>
 
-      <SavedReplies
-        onInsert={(text) => {
-          const el = document.querySelector('input[placeholder="Type a message…"]');
-          if (el) {
-            el.value = el.value ? `${el.value} ${text}` : text;
-            el.dispatchEvent(new Event("input", { bubbles: true }));
-            el.focus();
-          }
-        }}
-      />
+      <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 12,
+            gap: 12,
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 18,
+              fontWeight: 900,
+              color: ORANGE,
+              lineHeight: 1.25,
+              letterSpacing: "-0.01em",
+              margin: 0,
+              ...ORANGE_HEADING_LIFT,
+            }}
+          >
+            Conversations
+          </h2>
+        </div>
+
+        <div style={{ ...WHITE_CARD, padding: 12 }}>
+          <MessageThread
+            threads={threads}
+            initialThreadId={initialThreadId || threads[0]?.id}
+            onSend={onSend}
+            persona="recruiter"
+            personaLabel="Recruiter"
+            otherLabel="candidate"
+            showHeaderActions={true}
+            onDelete={onDelete}
+            onReport={onReport}
+            onBlock={onBlock}
+            isBlocked={isBlocked}
+            onActiveThreadChange={onActiveThreadChange}
+            headerActionsLabel={{
+              delete: "Delete",
+              report: "Report",
+              block: "Block",
+              blocked: "Blocked",
+            }}
+          />
+        </div>
+      </section>
+
+      <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 12,
+            gap: 12,
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 18,
+              fontWeight: 900,
+              color: ORANGE,
+              lineHeight: 1.25,
+              letterSpacing: "-0.01em",
+              margin: 0,
+              ...ORANGE_HEADING_LIFT,
+            }}
+          >
+            Saved Replies
+          </h2>
+        </div>
+
+        <div style={{ ...WHITE_CARD, padding: 12 }}>
+          <SavedReplies
+            onInsert={(text) => {
+              const el = document.querySelector('input[placeholder="Type a message…"]');
+              if (el) {
+                el.value = el.value ? `${el.value} ${text}` : text;
+                el.dispatchEvent(new Event("input", { bubbles: true }));
+                el.focus();
+              }
+            }}
+          />
+        </div>
+      </section>
 
       {isEnterprise && (
         <BulkMessageModal
@@ -210,13 +368,11 @@ export default function MessagingPage() {
   const prefillText =
     typeof router.query.prefill === "string" ? router.query.prefill : "";
 
-  // NEW: allow candidates (or pools) to link by candidate user id (auto-open if exists)
   const candidateUserIdFromQuery =
     typeof router.query.candidateUserId === "string"
       ? router.query.candidateUserId
       : null;
 
-  // ✅ NEW: prevent repeated "create conversation" loops
   const [didAutoCreateConversation, setDidAutoCreateConversation] = useState(false);
 
   useEffect(() => {
@@ -274,7 +430,6 @@ export default function MessagingPage() {
     return res.json();
   }
 
-  // ✅ NEW: helper to create or get a conversation for recruiter channel
   async function createConversationForCandidateUserId(recipientId) {
     const rid = String(recipientId || "").trim();
     if (!rid) return null;
@@ -345,7 +500,6 @@ export default function MessagingPage() {
                 snippet: conv.lastMessage || lastMsg?.text || "",
                 unread: typeof conv.unread === "number" ? conv.unread : 0,
                 messages: mappedMessages,
-                // ✅ minimal: support either shape so candidateUserId matching works reliably
                 otherUserId: conv.otherUserId || conv.otherUser?.id || null,
                 otherAvatarUrl:
                   conv.otherAvatarUrl || conv.otherUser?.avatarUrl || null,
@@ -372,7 +526,6 @@ export default function MessagingPage() {
 
         const fallbackId = threadsWithMessages[0]?.id || null;
 
-        // 1) If explicit conversation id is present, honor it
         if (queryConversationId) {
           const match = threadsWithMessages.find(
             (t) => String(t.id) === String(queryConversationId)
@@ -381,20 +534,17 @@ export default function MessagingPage() {
           return;
         }
 
-        // 2) If candidateUserId is provided, try to auto-open existing thread by otherUserId
         if (candidateUserIdFromQuery) {
           const match = threadsWithMessages.find(
             (t) =>
               String(t.otherUserId || "") === String(candidateUserIdFromQuery)
           );
 
-          // ✅ If thread exists, open it
           if (match) {
             setInitialThreadId(match.id);
             return;
           }
 
-          // ✅ If no thread exists yet, create one once and open it
           if (!didAutoCreateConversation) {
             setDidAutoCreateConversation(true);
 
@@ -403,7 +553,6 @@ export default function MessagingPage() {
             );
             if (conv?.id) {
               setInitialThreadId(conv.id);
-              // next run of polling/refresh will pull messages; keep UI consistent now
               setThreads((prev) => {
                 const exists = prev.some(
                   (t) => String(t.id) === String(conv.id)
@@ -430,12 +579,10 @@ export default function MessagingPage() {
             }
           }
 
-          // fallback
           setInitialThreadId(fallbackId);
           return;
         }
 
-        // 3) Default
         setInitialThreadId(fallbackId);
       } catch (err) {
         console.error("Failed to load recruiter threads:", err);
@@ -453,7 +600,6 @@ export default function MessagingPage() {
     didAutoCreateConversation,
   ]);
 
-  // ✅ Poll messages for the active conversation
   useEffect(() => {
     if (!currentUserId) return;
     if (!activeThread?.id) return;
@@ -490,9 +636,7 @@ export default function MessagingPage() {
                 }
           )
         );
-      } catch {
-        // keep quiet
-      }
+      } catch {}
     };
 
     const initial = setTimeout(() => tick(), 800);
@@ -545,7 +689,6 @@ export default function MessagingPage() {
     }
   };
 
-  // ✅ actions (parity with Signal)
   const handleDelete = async () => {
     if (!activeThread?.id) return;
     const confirmed = window.confirm(
@@ -643,18 +786,43 @@ export default function MessagingPage() {
     }
   };
 
+  const greeting = getTimeGreeting();
+
+  const HeaderBox = (
+    <RecruiterTitleCard
+      greeting={greeting}
+      title="Messaging"
+      subtitle="Manage recruiter conversations, saved replies, and outreach in one place."
+      compact
+    />
+  );
+
   if (loadingUser) {
     return (
       <PlanProvider>
         <RecruiterLayout
           title="Messaging — ForgeTomorrow"
-          header={<HeaderBar onOpenBulk={() => {}} />}
+          header={HeaderBox}
+          headerCard={false}
           right={<RightToolsCard />}
           activeNav="messaging"
         >
-          <div className="h-64 flex items-center justify-center text-slate-500">
-            Loading…
-          </div>
+          <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+            <div
+              style={{
+                ...WHITE_CARD,
+                minHeight: 256,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: MUTED,
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              Loading…
+            </div>
+          </section>
         </RecruiterLayout>
       </PlanProvider>
     );
@@ -665,32 +833,53 @@ export default function MessagingPage() {
       <PlanProvider>
         <RecruiterLayout
           title="Messaging — ForgeTomorrow"
-          header={<HeaderBar onOpenBulk={() => {}} />}
+          header={HeaderBox}
+          headerCard={false}
           right={<RightToolsCard />}
           activeNav="messaging"
         >
-          <div className="rounded-lg border bg-white p-4">
-            <div className="font-semibold text-slate-800">
-              Session failed to load
+          <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+            <div style={{ ...WHITE_CARD, padding: 16 }}>
+              <div style={{ fontWeight: 800, fontSize: 16, color: "#0F172A" }}>
+                Session failed to load
+              </div>
+              <p style={{ marginTop: 6, fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
+                {sessionError || "We could not resolve your session."}
+              </p>
+              <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
+                <button
+                  style={{
+                    borderRadius: 10,
+                    background: "#0F172A",
+                    color: "white",
+                    padding: "10px 14px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => window.location.reload()}
+                >
+                  Retry
+                </button>
+                <button
+                  style={{
+                    borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.12)",
+                    background: "white",
+                    color: "#0F172A",
+                    padding: "10px 14px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => router.push("/auth/signin")}
+                >
+                  Sign in
+                </button>
+              </div>
             </div>
-            <p className="mt-1 text-sm text-slate-600">
-              {sessionError || "We could not resolve your session."}
-            </p>
-            <div className="mt-3 flex gap-2">
-              <button
-                className="rounded-md bg-black text-white px-3 py-2 text-sm"
-                onClick={() => window.location.reload()}
-              >
-                Retry
-              </button>
-              <button
-                className="rounded-md border px-3 py-2 text-sm"
-                onClick={() => router.push("/auth/signin")}
-              >
-                Sign in
-              </button>
-            </div>
-          </div>
+          </section>
         </RecruiterLayout>
       </PlanProvider>
     );
@@ -700,14 +889,15 @@ export default function MessagingPage() {
     <PlanProvider>
       <RecruiterLayout
         title="Messaging — ForgeTomorrow"
-        header={<HeaderBar onOpenBulk={() => setBulkOpen(true)} />}
+        header={HeaderBox}
+        headerCard={false}
         right={<RightToolsCard />}
         activeNav="messaging"
       >
         <Body
           threads={threads}
           onSend={onSend}
-          candidatesFlat={[]} // unchanged
+          candidatesFlat={[]}
           bulkOpen={bulkOpen}
           setBulkOpen={setBulkOpen}
           initialThreadId={initialThreadId}
