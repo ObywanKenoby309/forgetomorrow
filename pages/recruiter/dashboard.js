@@ -1,21 +1,21 @@
 // pages/recruiter/dashboard.js
 // Layout strategy — mirrors Seeker dashboard blueprint exactly:
-//   - RecruiterLayout receives NO header prop, NO right prop
-//   - contentFullBleed passed to RecruiterLayout so main content overflowX clipping
-//     is removed for this page only (other recruiter pages unaffected)
-//   - DashboardBody owns the full internal grid
-//   - Right rail (Sponsored + Health Snapshot) lives INSIDE the internal grid
-//   - Bottom 3 cards use marginLeft: -252 to extend under sidebar
+// - RecruiterLayout receives NO header prop, NO right prop
+// - contentFullBleed passed to RecruiterLayout so main content overflowX clipping
+// is removed for this page only (other recruiter pages unaffected)
+// - DashboardBody owns the full internal grid
+// - Right rail (Sponsored + Health Snapshot) lives INSIDE the internal grid
+// - Bottom 3 cards use marginLeft: -252 to extend under sidebar
 //
 // Visual structure:
 // ┌─────────────────────────────┬──────────────┐
-// │ Title Card       (row 1)    │  Sponsored   │
-// ├─────────────────────────────│  (rows 1-3)  │
-// │ KPI Row          (row 2)    │              │
-// ├─────────────────────────────│  Health      │
-// │ Action Center    (row 3)    │  Snapshot    │
+// │ Title Card (row 1) │ Sponsored │
+// ├─────────────────────────────│ (rows 1-3) │
+// │ KPI Row (row 2) │ │
+// ├─────────────────────────────│ Health │
+// │ Action Center (row 3) │ Snapshot │
 // ├─────────────────────────────┴──────────────┤
-// │ Top Candidates │ Pipeline Health │ Trends  │  ← full width incl. under sidebar
+// │ Top Candidates │ Pipeline Health │ Trends │ ← full width incl. under sidebar
 // └────────────────────────────────────────────┘
 
 import { useEffect, useMemo, useState } from "react";
@@ -78,7 +78,7 @@ const GLASS_TINT = {
   position: "absolute",
   inset: 0,
   borderRadius: 18,
-  background: "rgba(15, 23, 42, 0.18)",   // subtle dark stabilizer — keeps glass look
+  background: "rgba(15, 23, 42, 0.28)", // subtle dark stabilizer — keeps glass look
   pointerEvents: "none",
   zIndex: 0,
 };
@@ -86,7 +86,7 @@ const GLASS_TINT = {
 // NEW: Orange text lift — only for the specific headings you want improved
 const ORANGE_HEADING_LIFT = {
   textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
-  fontWeight: 900,           // already 900 in most places, but forces it
+  fontWeight: 900, // already 900 in most places, but forces it
   position: "relative",
   zIndex: 1,
 };
@@ -106,7 +106,6 @@ const RIGHT_COL_WIDTH = 280;
 function ActionTile({ title, emptyText, items, href, chromeQuery }) {
   const list = Array.isArray(items) ? items : [];
   const link = `${href}${chromeQuery ? `&chrome=${chromeQuery}` : ""}`;
-
   return (
     <div
       style={{
@@ -128,7 +127,6 @@ function ActionTile({ title, emptyText, items, href, chromeQuery }) {
       >
         {title}
       </div>
-
       <div style={{ marginTop: 18, flex: 1 }}>
         {list.length === 0 ? (
           <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.55 }}>{emptyText}</div>
@@ -142,7 +140,6 @@ function ActionTile({ title, emptyText, items, href, chromeQuery }) {
           </div>
         )}
       </div>
-
       <div style={{ marginTop: "auto", paddingTop: 14, display: "flex", justifyContent: "flex-end" }}>
         <a
           href={link}
@@ -170,7 +167,6 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
   const [items, setItems] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
   useEffect(() => {
     let alive = true;
     const load = async (isInitial = false) => {
@@ -200,7 +196,6 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
       clearInterval(t);
     };
   }, []);
-
   const buckets = useMemo(() => {
     const b = { stalled: [], awaiting_feedback: [], unread_replies: [], upcoming: [] };
     for (const n of Array.isArray(items) ? items : []) {
@@ -215,20 +210,17 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
       upcoming: b.upcoming.slice(0, 3),
     };
   }, [items]);
-
   const tiles = [
     { key: "unread_replies", title: "Unread Replies", emptyText: "No unread candidate replies.", href: "/action-center?scope=RECRUITER&tab=UNREAD_REPLIES", items: buckets.unread_replies, icon: "💬" },
     { key: "upcoming", title: "Upcoming Interviews", emptyText: "No upcoming interviews or conflicts.", href: "/action-center?scope=RECRUITER&tab=UPCOMING", items: buckets.upcoming, icon: "📅" },
     { key: "stalled", title: "Stalled Candidates", emptyText: "No stalled candidates right now.", href: "/action-center?scope=RECRUITER&tab=STALLED", items: buckets.stalled, icon: "⚠️" },
     { key: "awaiting_feedback", title: "Awaiting Feedback", emptyText: "No hiring manager feedback pending.", href: "/action-center?scope=RECRUITER&tab=AWAITING_FEEDBACK", items: buckets.awaiting_feedback, icon: "🔄" },
   ];
-
   const sortedTiles = [...tiles].sort((a, b) => {
     const aHas = a.items.length > 0 ? 1 : 0;
     const bHas = b.items.length > 0 ? 1 : 0;
     return bHas - aHas;
   });
-
   if (isMobile) {
     if (initialLoading) {
       return (
@@ -247,9 +239,7 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
         </div>
       );
     }
-
     const totalActions = tiles.reduce((sum, t) => sum + t.items.length, 0);
-
     return (
       <div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -288,7 +278,6 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
             View all
           </Link>
         </div>
-
         <div style={{ display: "grid", gap: 8 }}>
           {sortedTiles.map((tile) => {
             const hasItems = tile.items.length > 0;
@@ -325,7 +314,6 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
                 >
                   {tile.icon}
                 </div>
-
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
@@ -352,7 +340,6 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
                     {hasItems ? (tile.items[0].title || "View item") : tile.emptyText}
                   </div>
                 </div>
-
                 {hasItems ? (
                   <div
                     style={{
@@ -398,8 +385,7 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
       </div>
     );
   }
-
-return (
+  return (
     <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
       <div style={GLASS_TINT} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
@@ -426,7 +412,6 @@ return (
           </a>
         </div>
       </div>
-
       {initialLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, idx) => (
@@ -462,19 +447,16 @@ function DashboardBody() {
   const router = useRouter();
   const chromeQuery = normalizeRecruiterChrome(router?.query?.chrome) || "recruiter-smb";
   const { isEnterprise } = usePlan();
-
   const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMobile, setIsMobile] = useState(null);
-
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
-
   useEffect(() => {
     let isMounted = true;
     async function fetchDashboard() {
@@ -498,34 +480,28 @@ function DashboardBody() {
       isMounted = false;
     };
   }, []);
-
   const kpis = analyticsData?.kpis || null;
   const sourcesArray = Array.isArray(analyticsData?.sources) ? analyticsData.sources : [];
   const primarySource = sourcesArray[0] || null;
-
   const stats = [
     { label: "Total Views", value: kpis ? (kpis.totalViews ?? 0) : "—", href: "/recruiter/analytics" },
     { label: "Total Applies", value: kpis ? (kpis.totalApplies ?? 0) : "—", href: "/recruiter/analytics" },
     { label: "Time-to-Fill", value: kpis ? (typeof kpis.avgTimeToFillDays === "number" ? `${kpis.avgTimeToFillDays}d` : "—") : "—", href: "/recruiter/analytics" },
     { label: "View→Apply", value: kpis ? (typeof kpis.conversionRatePct === "number" ? `${kpis.conversionRatePct}%` : "—") : "—", href: "/recruiter/analytics" },
   ];
-
   const topCandidates = Array.isArray(analyticsData?.topCandidates) ? analyticsData.topCandidates : [];
   const topApplySourceLabel = primarySource?.name || "Forge";
   const topApplySourcePercent = primarySource && kpis?.totalApplies
     ? Math.round((primarySource.value / Math.max(kpis.totalApplies, 1)) * 100)
     : 100;
-
   const analyticsSnapshot = kpis ? {
     timeToHireDays: kpis.avgTimeToFillDays ?? 0,
     topApplySourceLabel,
     topApplySourcePercent,
     conversionViewToApply: kpis.conversionRatePct ?? 0,
   } : null;
-
   if (isMobile === null) return <div style={{ minHeight: 200 }} />;
   const greeting = getTimeGreeting();
-
   if (isMobile) {
     return (
       <div style={{ width: "100%", boxSizing: "border-box" }}>
@@ -546,7 +522,6 @@ function DashboardBody() {
             {error}
           </div>
         )}
-
         <div style={{ display: "grid", gap: GAP }}>
           <RecruiterTitleCard
             greeting={greeting}
@@ -554,11 +529,9 @@ function DashboardBody() {
             subtitle="Your hiring pipeline at a glance. Act on what matters most today."
             isMobile
           />
-
           <section style={{ ...GLASS, padding: 16 }}>
             <RecruiterActionCenterSection chromeQuery={chromeQuery} isMobile />
           </section>
-
           <section style={{ ...GLASS, padding: "12px 0 12px 12px", overflow: "hidden" }}>
             <div
               style={{
@@ -594,7 +567,6 @@ function DashboardBody() {
                 Full analytics →
               </Link>
             </div>
-
             <div
               style={{
                 display: "flex",
@@ -667,7 +639,6 @@ function DashboardBody() {
               )}
             </div>
           </section>
-
           <section style={{ ...GLASS, padding: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <span
@@ -773,7 +744,6 @@ function DashboardBody() {
               )}
             </div>
           </section>
-
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: GAP }}>
             <section style={{ ...GLASS, padding: 14 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -793,7 +763,6 @@ function DashboardBody() {
                 ))}
               </div>
             </section>
-
             <section style={{ ...GLASS, padding: 14 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                 <span style={{ fontSize: 13, fontWeight: 900, color: "#112033", lineHeight: 1.25, letterSpacing: "-0.01em" }}>
@@ -813,7 +782,6 @@ function DashboardBody() {
               </div>
             </section>
           </div>
-
           <section style={{ ...GLASS, padding: 16 }}>
             <div style={{ fontSize: 15, fontWeight: 900, color: "#112033", marginBottom: 10, lineHeight: 1.25, letterSpacing: "-0.01em" }}>
               Health Snapshot
@@ -861,7 +829,6 @@ function DashboardBody() {
               )}
             </div>
           </section>
-
           <section style={{ ...GLASS, padding: 12 }}>
             <div style={{ ...WHITE_CARD, padding: 16, minHeight: 100 }}>
               <div
@@ -884,7 +851,6 @@ function DashboardBody() {
       </div>
     );
   }
-
   return (
     <div style={{ width: "100%", padding: 0, margin: 0, paddingRight: 16, boxSizing: "border-box" }}>
       {error && (
@@ -895,7 +861,6 @@ function DashboardBody() {
           {error}
         </div>
       )}
-
       <div
         style={{
           display: "grid",
@@ -916,8 +881,7 @@ function DashboardBody() {
             gridRow: "1",
           }}
         />
-
-        <section style={{ ...GLASS, padding: 16, gridColumn: "1 / 2", gridRow: "2" }}>
+        <section style={{ ...GLASS, padding: "12px 16px 20px 16px", gridColumn: "1 / 2", gridRow: "2" }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {isLoading && !analyticsData
               ? Array.from({ length: 4 }).map((_, idx) => (
@@ -940,7 +904,7 @@ function DashboardBody() {
                     href={t.href}
                     style={{
                       ...WHITE_CARD,
-                      padding: 16,
+                      padding: "14px 16px",
                       minHeight: 108,
                       textDecoration: "none",
                       display: "flex",
@@ -948,7 +912,7 @@ function DashboardBody() {
                       justifyContent: "space-between",
                     }}
                   >
-                    <div>
+                    <div style={{ textAlign: "center", width: "100%" }}>
                       <div
                         style={{
                           fontSize: 10,
@@ -984,6 +948,9 @@ function DashboardBody() {
                         marginTop: 10,
                         lineHeight: 1.4,
                         fontWeight: 500,
+                        alignSelf: "flex-end",
+                        width: "100%",
+                        textAlign: "right",
                       }}
                     >
                       View details
@@ -992,11 +959,9 @@ function DashboardBody() {
                 ))}
           </div>
         </section>
-
         <div style={{ gridColumn: "1 / 2", gridRow: "3" }}>
           <RecruiterActionCenterSection chromeQuery={chromeQuery} isMobile={false} />
         </div>
-
         <aside
           style={{
             gridColumn: "2 / 3",
@@ -1047,12 +1012,10 @@ function DashboardBody() {
               Reserved ad / sponsor panel
             </div>
           </div>
-
           <div style={{ ...GLASS, padding: 16, flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 900, marginBottom: 8, color: "#0F172A", lineHeight: 1.25, letterSpacing: "-0.01em" }}>
               Health Snapshot
             </div>
-
             {isEnterprise ? (
               analyticsSnapshot ? (
                 <div style={{ ...WHITE_CARD, padding: 14, fontSize: 13, display: "grid", gap: 8, color: "#334155", lineHeight: 1.55 }}>
@@ -1082,7 +1045,6 @@ function DashboardBody() {
             )}
           </div>
         </aside>
-
         <div
           style={{
             gridColumn: "1 / -1",
@@ -1098,24 +1060,32 @@ function DashboardBody() {
           <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
             <div style={GLASS_TINT} />
             <div className="flex items-center justify-between mb-3">
-  <h2 
-    style={{ 
-      fontSize: 18, 
-      fontWeight: 900, 
-      color: "#FF7043", 
-      lineHeight: 1.25, 
-      letterSpacing: "-0.01em", 
+  <h2
+    style={{
+      fontSize: 18,
+      fontWeight: 900,
+      color: "#FF7043",
+      lineHeight: 1.25,
+      letterSpacing: "-0.01em",
       margin: 0,
-      ...ORANGE_HEADING_LIFT 
+      ...ORANGE_HEADING_LIFT
     }}
   >
     Top Candidate Recommendations
   </h2>
-  <Link href="/recruiter/candidate-center" style={{ color: "#FF7043", fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>
+  <Link 
+    href="/recruiter/candidate-center" 
+    style={{ 
+      color: "#FF7043", 
+      fontWeight: 800, 
+      fontSize: 13, 
+      lineHeight: 1.2,
+      ...ORANGE_HEADING_LIFT 
+    }}
+  >
     View all
   </Link>
 </div>
-
             <div style={{ ...WHITE_CARD, padding: 14 }}>
               {isLoading && !analyticsData ? (
                 <ul className="text-sm grid gap-2 animate-pulse">
@@ -1144,28 +1114,35 @@ function DashboardBody() {
               )}
             </div>
           </section>
-
           <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
             <div style={GLASS_TINT} />
             <div className="flex items-center justify-between mb-3">
-  <h2 
-    style={{ 
-      fontSize: 18, 
-      fontWeight: 900, 
-      color: "#FF7043", 
-      lineHeight: 1.25, 
-      letterSpacing: "-0.01em", 
+  <h2
+    style={{
+      fontSize: 18,
+      fontWeight: 900,
+      color: "#FF7043",
+      lineHeight: 1.25,
+      letterSpacing: "-0.01em",
       margin: 0,
-      ...ORANGE_HEADING_LIFT 
+      ...ORANGE_HEADING_LIFT
     }}
   >
     Pipeline Health
   </h2>
-  <Link href="/recruiter/candidate-center" style={{ color: "#FF7043", fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>
+  <Link 
+    href="/recruiter/candidate-center" 
+    style={{ 
+      color: "#FF7043", 
+      fontWeight: 800, 
+      fontSize: 13, 
+      lineHeight: 1.2,
+      ...ORANGE_HEADING_LIFT 
+    }}
+  >
     Open pipeline
   </Link>
 </div>
-
             <div style={{ ...WHITE_CARD, padding: 14, fontSize: 13, color: "#334155", display: "grid", gap: 8, lineHeight: 1.55 }}>
               <div style={{ color: "#64748B" }}>This panel becomes your "where do I act today?" view.</div>
               <div>• New applicants needing review</div>
@@ -1177,28 +1154,35 @@ function DashboardBody() {
               </div>
             </div>
           </section>
-
           <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
             <div style={GLASS_TINT} />
             <div className="flex items-center justify-between mb-3">
-  <h3 
-    style={{ 
-      fontSize: 16, 
-      fontWeight: 900, 
-      color: "#FF7043", 
-      lineHeight: 1.25, 
-      letterSpacing: "-0.01em", 
+  <h3
+    style={{
+      fontSize: 16,
+      fontWeight: 900,
+      color: "#FF7043",
+      lineHeight: 1.25,
+      letterSpacing: "-0.01em",
       margin: 0,
-      ...ORANGE_HEADING_LIFT 
+      ...ORANGE_HEADING_LIFT
     }}
   >
     Trends
   </h3>
-  <Link href="/recruiter/analytics" style={{ color: "#FF7043", fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>
+  <Link 
+    href="/recruiter/analytics" 
+    style={{ 
+      color: "#FF7043", 
+      fontWeight: 800, 
+      fontSize: 13, 
+      lineHeight: 1.2,
+      ...ORANGE_HEADING_LIFT 
+    }}
+  >
     View charts
   </Link>
 </div>
-
             <div style={{ ...WHITE_CARD, padding: 14, fontSize: 13, color: "#334155", display: "grid", gap: 8, lineHeight: 1.55 }}>
               <div style={{ color: "#64748B" }}>Trendline / chart goes here.</div>
               <div>• Views vs Applies (last 7 / 30 / 90)</div>
