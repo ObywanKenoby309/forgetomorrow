@@ -324,8 +324,7 @@ export default function RecruiterAnalyticsLayout({
               }}
             >
               {/* Title card — full width of content column, grid handles the constraint */}
-              <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-                <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+<section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
   <TitleCard
     title={suiteTitle}
     subtitle={
