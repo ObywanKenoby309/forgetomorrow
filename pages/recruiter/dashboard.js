@@ -67,6 +67,30 @@ const GLASS = {
   WebkitBackdropFilter: "blur(12px)",
 };
 
+// NEW: Targeted overlay for better glass readability (very light dark tint)
+const GLASS_OVERLAY = {
+  position: "relative",
+  overflow: "hidden",
+};
+
+// NEW: Inner tint layer (placed behind content, inside blur)
+const GLASS_TINT = {
+  position: "absolute",
+  inset: 0,
+  borderRadius: 18,
+  background: "rgba(15, 23, 42, 0.18)",   // subtle dark stabilizer — keeps glass look
+  pointerEvents: "none",
+  zIndex: 0,
+};
+
+// NEW: Orange text lift — only for the specific headings you want improved
+const ORANGE_HEADING_LIFT = {
+  textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
+  fontWeight: 900,           // already 900 in most places, but forces it
+  position: "relative",
+  zIndex: 1,
+};
+
 const WHITE_CARD = {
   background: "rgba(255,255,255,0.92)",
   border: "1px solid rgba(0,0,0,0.08)",
@@ -375,8 +399,9 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
     );
   }
 
-  return (
-    <section style={{ ...GLASS, padding: 16 }}>
+return (
+    <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+      <div style={GLASS_TINT} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
         <div style={{ fontSize: 18, fontWeight: 900, color: "#FF7043", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
           Action Center
@@ -1070,15 +1095,26 @@ function DashboardBody() {
             minWidth: 0,
           }}
         >
-          <section style={{ ...GLASS, padding: 16 }}>
+          <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+            <div style={GLASS_TINT} />
             <div className="flex items-center justify-between mb-3">
-              <h2 style={{ fontSize: 18, fontWeight: 900, color: "#FF7043", lineHeight: 1.25, letterSpacing: "-0.01em", margin: 0 }}>
-                Top Candidate Recommendations
-              </h2>
-              <Link href="/recruiter/candidate-center" style={{ color: "#FF7043", fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>
-                View all
-              </Link>
-            </div>
+  <h2 
+    style={{ 
+      fontSize: 18, 
+      fontWeight: 900, 
+      color: "#FF7043", 
+      lineHeight: 1.25, 
+      letterSpacing: "-0.01em", 
+      margin: 0,
+      ...ORANGE_HEADING_LIFT 
+    }}
+  >
+    Top Candidate Recommendations
+  </h2>
+  <Link href="/recruiter/candidate-center" style={{ color: "#FF7043", fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>
+    View all
+  </Link>
+</div>
 
             <div style={{ ...WHITE_CARD, padding: 14 }}>
               {isLoading && !analyticsData ? (
@@ -1109,15 +1145,26 @@ function DashboardBody() {
             </div>
           </section>
 
-          <section style={{ ...GLASS, padding: 16 }}>
+          <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+            <div style={GLASS_TINT} />
             <div className="flex items-center justify-between mb-3">
-              <h2 style={{ fontSize: 18, fontWeight: 900, color: "#FF7043", lineHeight: 1.25, letterSpacing: "-0.01em", margin: 0 }}>
-                Pipeline Health
-              </h2>
-              <Link href="/recruiter/candidate-center" style={{ color: "#FF7043", fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>
-                Open pipeline
-              </Link>
-            </div>
+  <h2 
+    style={{ 
+      fontSize: 18, 
+      fontWeight: 900, 
+      color: "#FF7043", 
+      lineHeight: 1.25, 
+      letterSpacing: "-0.01em", 
+      margin: 0,
+      ...ORANGE_HEADING_LIFT 
+    }}
+  >
+    Pipeline Health
+  </h2>
+  <Link href="/recruiter/candidate-center" style={{ color: "#FF7043", fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>
+    Open pipeline
+  </Link>
+</div>
 
             <div style={{ ...WHITE_CARD, padding: 14, fontSize: 13, color: "#334155", display: "grid", gap: 8, lineHeight: 1.55 }}>
               <div style={{ color: "#64748B" }}>This panel becomes your "where do I act today?" view.</div>
@@ -1131,15 +1178,26 @@ function DashboardBody() {
             </div>
           </section>
 
-          <section style={{ ...GLASS, padding: 16 }}>
+          <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+            <div style={GLASS_TINT} />
             <div className="flex items-center justify-between mb-3">
-              <h3 style={{ fontSize: 16, fontWeight: 900, color: "#FF7043", lineHeight: 1.25, letterSpacing: "-0.01em", margin: 0 }}>
-                Trends
-              </h3>
-              <Link href="/recruiter/analytics" style={{ color: "#FF7043", fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>
-                View charts
-              </Link>
-            </div>
+  <h3 
+    style={{ 
+      fontSize: 16, 
+      fontWeight: 900, 
+      color: "#FF7043", 
+      lineHeight: 1.25, 
+      letterSpacing: "-0.01em", 
+      margin: 0,
+      ...ORANGE_HEADING_LIFT 
+    }}
+  >
+    Trends
+  </h3>
+  <Link href="/recruiter/analytics" style={{ color: "#FF7043", fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>
+    View charts
+  </Link>
+</div>
 
             <div style={{ ...WHITE_CARD, padding: 14, fontSize: 13, color: "#334155", display: "grid", gap: 8, lineHeight: 1.55 }}>
               <div style={{ color: "#64748B" }}>Trendline / chart goes here.</div>

@@ -64,6 +64,16 @@ export default function PageTitleCardBase({
   0 0 48px rgba(255,255,255,0.16),
   0 1px 2px rgba(0,0,0,0.12)
     `,
+// Targeted readability lift for orange on glass — keeps exact color
+    textShadow: `
+      0 2px 4px rgba(15,23,42,0.75),
+      0 1px 3px rgba(0,0,0,0.55),
+      0 0 8px rgba(255,255,255,0.35),
+      0 0 18px rgba(255,255,255,0.28),
+      0 0 32px rgba(255,255,255,0.22),
+      0 0 48px rgba(255,255,255,0.16),
+      0 1px 2px rgba(0,0,0,0.12)
+    `,	
   }}
 >
   {title}
