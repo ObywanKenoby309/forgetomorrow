@@ -389,9 +389,19 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
     <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
       <div style={GLASS_TINT} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
-        <div style={{ fontSize: 18, fontWeight: 900, color: "#FF7043", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+        <h2
+          style={{
+            fontSize: 18,
+            fontWeight: 900,
+            color: "#FF7043",
+            lineHeight: 1.25,
+            letterSpacing: "-0.01em",
+            margin: 0,
+            ...ORANGE_HEADING_LIFT,
+          }}
+        >
           Action Center
-        </div>
+        </h2>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {refreshing ? <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.4 }}>Updating…</div> : null}
           <a
@@ -875,15 +885,45 @@ function DashboardBody() {
         <RecruiterTitleCard
           greeting={greeting}
           title="Recruiter Dashboard"
-          subtitle="At-a-glance health for your roles, candidate flow, and where action is needed."
+          subtitle="Your hiring pipeline at a glance."
+          compact
           style={{
             gridColumn: "1 / 2",
             gridRow: "1",
           }}
         />
 
-        {/* KPI Section - tightened glass backing to match Image 1 */}
-        <section style={{ ...GLASS, padding: "12px 16px 16px 16px", gridColumn: "1 / 2", gridRow: "2" }}>
+        {/* KPI Section */}
+        <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: "12px 16px 16px 16px", gridColumn: "1 / 2", gridRow: "2" }}>
+          <div style={GLASS_TINT} />
+          <div className="flex items-center justify-between mb-3">
+            <h2
+              style={{
+                fontSize: 18,
+                fontWeight: 900,
+                color: "#FF7043",
+                lineHeight: 1.25,
+                letterSpacing: "-0.01em",
+                margin: 0,
+                ...ORANGE_HEADING_LIFT,
+              }}
+            >
+              KPIs
+            </h2>
+            <Link
+              href="/recruiter/analytics"
+              style={{
+                color: "#FF7043",
+                fontWeight: 800,
+                fontSize: 13,
+                lineHeight: 1.2,
+                textDecoration: "none",
+                ...ORANGE_HEADING_LIFT,
+              }}
+            >
+              Full analytics →
+            </Link>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {isLoading && !analyticsData
               ? Array.from({ length: 4 }).map((_, idx) => (
@@ -969,7 +1009,7 @@ function DashboardBody() {
         <aside
           style={{
             gridColumn: "2 / 3",
-            gridRow: "1 / 4",
+            gridRow: "1 / 3",
             display: "flex",
             flexDirection: "column",
             gap: GAP,
@@ -986,7 +1026,7 @@ function DashboardBody() {
             boxSizing: "border-box",
           }}
         >
-          <div style={{ ...GLASS, padding: 14, flex: 2, minHeight: 180 }}>
+          <div style={{ ...GLASS, padding: 14 }}>
             <div
               style={{
                 fontSize: 10,
@@ -1002,7 +1042,7 @@ function DashboardBody() {
             <div
               style={{
                 ...WHITE_CARD,
-                minHeight: 420,
+                minHeight: 180,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1016,7 +1056,17 @@ function DashboardBody() {
               Reserved ad / sponsor panel
             </div>
           </div>
-          <div style={{ ...GLASS, padding: 16, flex: 1 }}>
+        </aside>
+
+        <div
+          style={{
+            gridColumn: "2 / 3",
+            gridRow: "3",
+            ...GLASS,
+            padding: 16,
+            boxSizing: "border-box",
+          }}
+        >
             <div style={{ fontSize: 15, fontWeight: 900, marginBottom: 8, color: "#0F172A", lineHeight: 1.25, letterSpacing: "-0.01em" }}>
               Health Snapshot
             </div>
@@ -1047,8 +1097,7 @@ function DashboardBody() {
                 </div>
               </FeatureLock>
             )}
-          </div>
-        </aside>
+        </div>
 
         <div
           style={{
