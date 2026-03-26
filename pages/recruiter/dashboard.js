@@ -484,10 +484,10 @@ function DashboardBody() {
   const sourcesArray = Array.isArray(analyticsData?.sources) ? analyticsData.sources : [];
   const primarySource = sourcesArray[0] || null;
   const stats = [
-    { label: "Total Views", value: kpis ? (kpis.totalViews ?? 0) : "—", href: "/recruiter/analytics" },
-    { label: "Total Applies", value: kpis ? (kpis.totalApplies ?? 0) : "—", href: "/recruiter/analytics" },
-    { label: "Time-to-Fill", value: kpis ? (typeof kpis.avgTimeToFillDays === "number" ? `${kpis.avgTimeToFillDays}d` : "—") : "—", href: "/recruiter/analytics" },
-    { label: "View→Apply", value: kpis ? (typeof kpis.conversionRatePct === "number" ? `${kpis.conversionRatePct}%` : "—") : "—", href: "/recruiter/analytics" },
+    { label: "TOTAL VIEWS", value: kpis ? (kpis.totalViews ?? 0) : "—", href: "/recruiter/analytics" },
+    { label: "TOTAL APPLIES", value: kpis ? (kpis.totalApplies ?? 0) : "—", href: "/recruiter/analytics" },
+    { label: "TIME-TO-FILL", value: kpis ? (typeof kpis.avgTimeToFillDays === "number" ? `${kpis.avgTimeToFillDays}d` : "—") : "—", href: "/recruiter/analytics" },
+    { label: "VIEW→APPLY", value: kpis ? (typeof kpis.conversionRatePct === "number" ? `${kpis.conversionRatePct}%` : "—") : "—", href: "/recruiter/analytics" },
   ];
   const topCandidates = Array.isArray(analyticsData?.topCandidates) ? analyticsData.topCandidates : [];
   const topApplySourceLabel = primarySource?.name || "Forge";
@@ -881,7 +881,15 @@ function DashboardBody() {
             gridRow: "1",
           }}
         />
-        <section style={{ ...GLASS, padding: "12px 16px 20px 16px", gridColumn: "1 / 2", gridRow: "2" }}>
+
+        {/* KPI Section - tightened glass backing to match Image 1 */}
+        <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: "16px 16px 20px 16px", gridColumn: "1 / 2", gridRow: "2" }}>
+          <div style={GLASS_TINT} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ fontSize: 18, fontWeight: 900, color: "#FF7043", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+              KPIs
+            </div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {isLoading && !analyticsData
               ? Array.from({ length: 4 }).map((_, idx) => (
@@ -959,9 +967,11 @@ function DashboardBody() {
                 ))}
           </div>
         </section>
+
         <div style={{ gridColumn: "1 / 2", gridRow: "3" }}>
           <RecruiterActionCenterSection chromeQuery={chromeQuery} isMobile={false} />
         </div>
+
         <aside
           style={{
             gridColumn: "2 / 3",
@@ -1045,6 +1055,7 @@ function DashboardBody() {
             )}
           </div>
         </aside>
+
         <div
           style={{
             gridColumn: "1 / -1",
