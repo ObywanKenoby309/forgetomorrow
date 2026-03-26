@@ -93,7 +93,7 @@ const ORANGE_HEADING_LIFT = {
 
 const WHITE_CARD = {
   background: "rgba(255,255,255,0.92)",
-  border: "1px solid rgba(0,0,0,0.08)",
+  border: "1px solid rgba(255,255,255,0.60)",
   borderRadius: 14,
   boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
   boxSizing: "border-box",
@@ -408,14 +408,11 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
             href={`/action-center?scope=RECRUITER${chromeQuery ? `&chrome=${chromeQuery}` : ""}`}
             style={{
               fontSize: 13,
-              fontWeight: 700,
-              color: "#334155",
+              fontWeight: 800,
+              color: "#FF7043",
               lineHeight: 1.2,
               textDecoration: "none",
-              border: "1px solid rgba(0,0,0,0.10)",
-              borderRadius: 10,
-              padding: "10px 14px",
-              background: "rgba(255,255,255,0.86)",
+              ...ORANGE_HEADING_LIFT,
             }}
           >
             View all
@@ -1026,7 +1023,7 @@ function DashboardBody() {
             boxSizing: "border-box",
           }}
         >
-          <div style={{ ...GLASS, padding: 14 }}>
+          <div style={{ ...GLASS, padding: 14, flex: 1 }}>
             <div
               style={{
                 fontSize: 10,
@@ -1067,9 +1064,9 @@ function DashboardBody() {
             boxSizing: "border-box",
           }}
         >
-            <div style={{ fontSize: 15, fontWeight: 900, marginBottom: 8, color: "#0F172A", lineHeight: 1.25, letterSpacing: "-0.01em" }}>
-              Health Snapshot
-            </div>
+          <div style={{ fontSize: 15, fontWeight: 900, marginBottom: 8, color: "#0F172A", lineHeight: 1.25, letterSpacing: "-0.01em" }}>
+            Health Snapshot
+          </div>
             {isEnterprise ? (
               analyticsSnapshot ? (
                 <div style={{ ...WHITE_CARD, padding: 14, fontSize: 13, display: "grid", gap: 8, color: "#334155", lineHeight: 1.55 }}>
