@@ -207,7 +207,7 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
             </div>
             <div style={{
               fontSize: 12,
-              color: totalActions > 0 ? "#FF7043" : "#90A4AE",
+              color: totalActions > 0 ? "#FF7043" : "#243B63",
               fontWeight: totalActions > 0 ? 700 : 600,
               marginTop: 3,
               lineHeight: 1.45,
@@ -435,7 +435,7 @@ function DashboardBody() {
             <div style={{
               fontSize: 10,
               fontWeight: 800,
-              color: "#90A4AE",
+              color: "#243B63",
               marginBottom: 5,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
@@ -810,7 +810,7 @@ function DashboardBody() {
           <div style={{
             fontSize: 10,
             fontWeight: 800,
-            color: "#90A4AE",
+            color: "#243B63",
             marginBottom: 5,
             textTransform: "uppercase",
             letterSpacing: "0.08em",
@@ -832,10 +832,10 @@ function DashboardBody() {
 
           <p style={{
             margin: "7px auto 0",
-            color: "#607D8B",
+            color: "#4A5D73",
             maxWidth: 740,
             fontSize: 13,
-            fontWeight: 500,
+            fontWeight: 600,
             lineHeight: 1.6,
           }}>
             At-a-glance health for your roles, candidate flow, and where action is needed.
