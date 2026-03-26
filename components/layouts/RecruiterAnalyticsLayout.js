@@ -29,7 +29,6 @@ import RecruiterSidebar from "@/components/recruiter/RecruiterSidebar";
 import MobileBottomBar from "@/components/mobile/MobileBottomBar";
 import SupportFloatingButton from "@/components/SupportFloatingButton";
 import AnalyticsFilterBar from "@/components/analytics/AnalyticsFilterBar";
-import TitleCard from "@/components/recruiter/TitleCard";
 
 // ─── Isomorphic layout effect ─────────────────────────────────────────────────
 const useIsomorphicLayoutEffect =
@@ -115,6 +114,66 @@ function DefaultRightRail() {
           Reserved ad / sponsor panel
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Analytics title card ─────────────────────────────────────────────────────
+function AnalyticsTitleCard({
+  title,
+  subtitle,
+  description,
+}) {
+  return (
+    <div style={{ textAlign: "center" }}>
+      <h1
+        style={{
+          margin: 0,
+          textAlign: "center",
+          fontSize: 28,
+          fontWeight: 900,
+          color: ORANGE,
+          lineHeight: 1.05,
+          letterSpacing: "-0.02em",
+          textShadow: `
+            0 0 8px rgba(255,255,255,0.35),
+            0 0 18px rgba(255,255,255,0.28),
+            0 0 32px rgba(255,255,255,0.22),
+            0 0 48px rgba(255,255,255,0.16),
+            0 1px 2px rgba(0,0,0,0.12)
+          `,
+        }}
+      >
+        {title}
+      </h1>
+
+      <div
+        style={{
+          fontSize: 22,
+          fontWeight: 900,
+          color: SLATE,
+          lineHeight: 1.1,
+          marginTop: 2,
+          letterSpacing: "-0.01em",
+        }}
+      >
+        {subtitle}
+      </div>
+
+      <p
+        style={{
+          fontSize: 14,
+          color: "#475569",
+          marginTop: 8,
+          maxWidth: 760,
+          marginLeft: "auto",
+          marginRight: "auto",
+          lineHeight: 1.6,
+          fontWeight: 600,
+        }}
+      >
+        {description}
+      </p>
     </div>
   );
 }
@@ -260,6 +319,13 @@ export default function RecruiterAnalyticsLayout({
 
   const rightRail = right || <DefaultRightRail />;
 
+  const activeLabel =
+    activeTab === "command"
+      ? "Command Center"
+      : activeTab === "reports"
+        ? "Report Details"
+        : "Presentation Visuals";
+
   return (
     <>
       <Head>
@@ -323,22 +389,14 @@ export default function RecruiterAnalyticsLayout({
                 maxWidth: "100%",
               }}
             >
-              {/* Title card — full width of content column, grid handles the constraint */}
-<section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-  <TitleCard
-    title={suiteTitle}
-    subtitle={
-      activeTab === "command"
-        ? "Command Center"
-        : activeTab === "reports"
-          ? "Report Details"
-          : "Presentation Visuals"
-    }
-    description={pageSubtitle}
-  />
-</section>
+              <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+                <AnalyticsTitleCard
+                  title={suiteTitle}
+                  subtitle={activeLabel}
+                  description={pageSubtitle}
+                />
+              </section>
 
-              {/* Filter bar — full width of content column */}
               <AnalyticsFilterBar
                 activeTab={activeTab}
                 activeReport={activeReport}
@@ -364,14 +422,14 @@ export default function RecruiterAnalyticsLayout({
                 position: "relative",
                 zIndex: 1,
                 borderRadius: 18,
-			    padding: 0,
-				display: "flex",
-				flexDirection: "column",
-				background: "transparent",
-				border: "none",
-				boxShadow: "none",
-				backdropFilter: "none",
-				WebkitBackdropFilter: "none",
+                padding: 0,
+                display: "flex",
+                flexDirection: "column",
+                background: "transparent",
+                border: "none",
+                boxShadow: "none",
+                backdropFilter: "none",
+                WebkitBackdropFilter: "none",
               }}
             >
               {rightRail}
