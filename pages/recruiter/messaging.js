@@ -40,6 +40,7 @@ const WHITE_CARD = {
 };
 
 const ORANGE = "#FF7043";
+const MUTED = "#64748B";
 const ORANGE_HEADING_LIFT = {
   textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
   fontWeight: 900,
@@ -106,7 +107,7 @@ function MessagingActionBar({ onOpenBulk }) {
             style={{
               margin: "6px 0 0",
               fontSize: 13,
-              color: "#64748B",
+              color: MUTED,
               lineHeight: 1.55,
             }}
           >
@@ -222,7 +223,7 @@ function Body({
               fontWeight: 800,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "#64748B",
+              color: MUTED,
               lineHeight: 1.2,
             }}
           >
