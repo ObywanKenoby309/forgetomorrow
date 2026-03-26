@@ -58,8 +58,10 @@ export default function PageTitleCardBase({
     lineHeight: 1.1,
     letterSpacing: "-0.01em",
     textShadow: `
-      0 1px 0 rgba(255,255,255,0.35),
-      0 1px 2px rgba(0,0,0,0.08)
+  0 0 6px rgba(255,255,255,0.35),
+  0 0 12px rgba(255,255,255,0.25),
+  0 0 20px rgba(255,255,255,0.18),
+  0 1px 2px rgba(0,0,0,0.15)
     `,
   }}
 >
