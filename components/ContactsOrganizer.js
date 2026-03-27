@@ -72,15 +72,16 @@ export default function ContactsOrganizer({
       ? [{ id: 'sys-clients', name: 'Clients', isSystem: true }]
       : [];
 
-  const systemCategories = [
+ const systemCategories = [
     ...baseSystemCategories,
     ...recruiterSystemCategories,
     ...coachSystemCategories,
   ];
 
-  const merged = [...systemCategories];
+  // real DB categories win; system categories only fill gaps
+  const merged = [...incoming];
 
-  incoming.forEach((cat) => {
+  systemCategories.forEach((cat) => {
     const exists = merged.some(
       (c) => String(c.name || '').toLowerCase() === String(cat.name || '').toLowerCase()
     );
@@ -244,13 +245,30 @@ export default function ContactsOrganizer({
         return [...prev, assignment];
       });
 
-      if (categoryName && categoryName !== 'Unassigned') {
+            if (categoryName && categoryName !== 'Unassigned') {
         setLocalCategories((prev) => {
-          const exists = prev.some(
+          const existing = prev.find(
             (c) => String(c.name || '').toLowerCase() === String(categoryName).toLowerCase()
           );
-          if (exists) return prev;
-          return [...prev, { id: assignment.categoryId, name: categoryName }];
+
+          if (existing) {
+            return prev.map((c) =>
+              String(c.name || '').toLowerCase() === String(categoryName).toLowerCase()
+                ? {
+                    ...c,
+                    id: assignment.categoryId || c.id,
+                  }
+                : c
+            );
+          }
+
+          return [
+            ...prev,
+            {
+              id: assignment.categoryId,
+              name: categoryName,
+            },
+          ];
         });
       }
     } catch (err) {
