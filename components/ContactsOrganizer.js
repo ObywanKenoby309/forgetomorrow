@@ -298,14 +298,35 @@ export default function ContactsOrganizer({
 
     // ✅ Update assignments
     setLocalAssignments((prev) => {
-      const existing = prev.find((row) => row.contactId === contactId);
-      if (existing) {
-        return prev.map((row) =>
-          row.contactId === contactId ? assignment : row
-        );
-      }
-      return [...prev, assignment];
-    });
+  const resolvedContactId = String(assignment?.contactId || contactId);
+
+  const existing = prev.find(
+    (row) =>
+      String(row.contactId) === resolvedContactId ||
+      String(row.contactId) === String(contactId)
+  );
+
+  if (existing) {
+    return prev.map((row) =>
+      String(row.contactId) === resolvedContactId ||
+      String(row.contactId) === String(contactId)
+        ? {
+            ...row,
+            ...assignment,
+            contactId: resolvedContactId,
+          }
+        : row
+    );
+  }
+
+  return [
+    ...prev,
+    {
+      ...assignment,
+      contactId: resolvedContactId,
+    },
+  ];
+});
 
     // ✅ Ensure category exists locally
     if (trimmed.toLowerCase() !== 'unassigned') {
