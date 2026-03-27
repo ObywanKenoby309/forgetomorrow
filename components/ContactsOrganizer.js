@@ -112,10 +112,12 @@ export default function ContactsOrganizer({
   const contactIdToCategoryId = useMemo(() => {
     const map = new Map();
     localAssignments.forEach((row) => {
-      if (row?.contactId) {
-        map.set(row.contactId, row.categoryId || null);
-      }
-    });
+  if (!row?.contactId) return;
+
+  const key = String(row.contactId);
+
+  map.set(key, row.categoryId || null);
+});
     return map;
   }, [localAssignments]);
 
@@ -141,7 +143,8 @@ export default function ContactsOrganizer({
     });
 
     contacts.forEach((contact) => {
-      const categoryId = contactIdToCategoryId.get(contact.id) || null;
+      const categoryId =
+		contactIdToCategoryId.get(String(contact.id)) || null;
       const categoryName = categoryId ? categoryIdToName.get(categoryId) : null;
 
       if (categoryName && map[categoryName]) {
