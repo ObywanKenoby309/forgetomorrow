@@ -48,6 +48,11 @@ function normId(v) {
  * - showHeaderActions?: boolean (default false)
  * - headerActionsLabel?: { delete?: string, report?: string, block?: string, blocked?: string }
  *
+ * NEW UI-only (non-breaking):
+ * - inboxAction?: ReactNode
+ * - hideInboxDescription?: boolean
+ * - hideThreadSnippets?: boolean
+ *
  * NEW (non-breaking via ref):
  * - ref exposes:
  *   - insertText(text, opts?: { mode?: 'append'|'replace', spacer?: string })
@@ -60,7 +65,7 @@ const MessageThread = forwardRef(function MessageThread(
     initialThreadId,
     onSend,
 
-    // ✅ safe defaults keep recruiter behavior exactly as-is
+    // safe defaults
     persona = "recruiter",
     personaLabel = "Recruiter",
     otherLabel = "candidate",
@@ -71,7 +76,7 @@ const MessageThread = forwardRef(function MessageThread(
     emptyFootnote,
     inputPlaceholderEmpty,
 
-    // ✅ new (safe)
+    // new safe callbacks / behavior
     onActiveThreadChange,
     otherAvatarKey = "otherAvatarUrl",
     isBlocked = false,
@@ -80,16 +85,19 @@ const MessageThread = forwardRef(function MessageThread(
     onBlock,
     showHeaderActions = false,
     headerActionsLabel = {},
+
+    // UI-only additions
+    inboxAction = null,
+    hideInboxDescription = false,
+    hideThreadSnippets = false,
   },
   ref
 ) {
-  // ✅ initial selection
   const [activeId, setActiveId] = useState(() => {
     const first = initialThreadId ?? threads[0]?.id ?? null;
     return normId(first);
   });
 
-  // ✅ Track last initialThreadId so we only apply it when it actually changes
   const lastInitRef = useRef(normId(initialThreadId));
 
   const active = useMemo(() => {
@@ -106,7 +114,6 @@ const MessageThread = forwardRef(function MessageThread(
   const hasThreads = threads.length > 0;
   const canCompose = hasThreads && !!active && !isBlocked;
 
-  // ✅ expose safe imperative API for SavedReplies / prefill / etc.
   useImperativeHandle(
     ref,
     () => ({
@@ -114,7 +121,7 @@ const MessageThread = forwardRef(function MessageThread(
         const t = typeof text === "string" ? text : "";
         if (!t) return;
 
-        const mode = opts.mode || "replace"; // default to replace to match expected "Insert"
+        const mode = opts.mode || "replace";
         const spacer = typeof opts.spacer === "string" ? opts.spacer : " ";
 
         setDraft((prev) => {
@@ -123,11 +130,9 @@ const MessageThread = forwardRef(function MessageThread(
             if (!base.trim()) return t;
             return `${base}${spacer}${t}`;
           }
-          // replace
           return t;
         });
 
-        // focus after state update
         setTimeout(() => {
           try {
             inputRef.current?.focus?.();
@@ -151,26 +156,17 @@ const MessageThread = forwardRef(function MessageThread(
     []
   );
 
-  /**
-   * 🔁 Sync rules (important):
-   * - If initialThreadId changes (new deep-link), set active to it.
-   * - Else, keep user-selected activeId as long as it still exists.
-   * - If activeId is missing (e.g., after delete or refresh), fall back to first thread.
-   */
   useEffect(() => {
     const initNorm = normId(initialThreadId);
     const lastInit = lastInitRef.current;
-
     const firstThreadId = normId(threads[0]?.id ?? null);
 
-    // If initialThreadId changed, honor it exactly once
     if (initNorm && initNorm !== lastInit) {
       lastInitRef.current = initNorm;
       setActiveId(initNorm);
       return;
     }
 
-    // If current activeId no longer exists, fall back
     const activeNorm = normId(activeId);
     const activeStillExists =
       activeNorm && threads.some((t) => normId(t.id) === activeNorm);
@@ -180,21 +176,18 @@ const MessageThread = forwardRef(function MessageThread(
     }
   }, [initialThreadId, threads, activeId]);
 
-  // ✅ notify parent when active thread changes (for polling, actions, etc.)
   useEffect(() => {
     if (!onActiveThreadChange) return;
     if (!active) return;
     onActiveThreadChange(active);
   }, [activeId, active, onActiveThreadChange]);
 
-  // Auto-scroll to bottom when switching threads or adding messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [activeId, active?.messages?.length]);
 
-  // Reset fake “typing” when thread changes
   useEffect(() => {
     let t;
     if (activeId) t = setTimeout(() => setIsTypingVisible(false), 0);
@@ -250,14 +243,19 @@ const MessageThread = forwardRef(function MessageThread(
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* Threads list */}
-      <aside className="md:col-span-1 rounded-lg border bg-white divide-y">
+      <aside className="md:col-span-1 rounded-lg border bg-white divide-y overflow-hidden">
         <div className="px-4 py-3 border-b bg-slate-50">
           <div className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
             {inboxTitle}
           </div>
-          <p className="mt-1 text-[11px] text-slate-500 leading-snug">
-            {inboxDescription || defaultInboxDescription}
-          </p>
+
+          {!!inboxAction && <div className="mt-2">{inboxAction}</div>}
+
+          {!hideInboxDescription && (
+            <p className="mt-1 text-[11px] text-slate-500 leading-snug">
+              {inboxDescription || defaultInboxDescription}
+            </p>
+          )}
         </div>
 
         {!hasThreads && (
@@ -305,9 +303,12 @@ const MessageThread = forwardRef(function MessageThread(
                       </span>
                     ) : null}
                   </div>
-                  <div className="text-xs text-slate-500 truncate">
-                    {t.snippet || "No messages yet."}
-                  </div>
+
+                  {!hideThreadSnippets && (
+                    <div className="text-xs text-slate-500 truncate">
+                      {t.snippet || "No messages yet."}
+                    </div>
+                  )}
                 </div>
               </div>
             </button>

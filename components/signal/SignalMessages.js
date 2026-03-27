@@ -653,7 +653,7 @@ export default function SignalMessages() {
           className={`${softCard} rounded-xl p-4 ${isMobileChat ? 'hidden md:block' : 'block'}`}
         >
           <div className="flex items-center justify-between gap-2 mb-3">
-            <h2 className="text-sm font-extrabold text-gray-900">Conversations</h2>
+            <h2 className="text-sm font-extrabold text-gray-900">Messages</h2>
             <button
               type="button"
               onClick={fetchThreads}
@@ -746,9 +746,7 @@ export default function SignalMessages() {
                           <p className="text-sm font-extrabold text-gray-900 truncate">
                             {t.title}
                           </p>
-                          <p className="text-xs text-gray-600 truncate">
-                            {t.lastMessage || '—'}
-                          </p>
+                          {/* REMOVED snippet to match recruiter/coach */}
                         </div>
 
                         <div className="text-[10px] text-gray-500 whitespace-nowrap pt-1">

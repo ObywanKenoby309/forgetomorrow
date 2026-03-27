@@ -73,75 +73,6 @@ async function getSessionDirect(timeoutMs = 4000) {
 }
 
 /* ---------------------------------------------
-   PAGE ACTION BAR
----------------------------------------------- */
-function MessagingActionBar({ onOpenBulk }) {
-  const { isEnterprise } = usePlan();
-
-  return (
-    <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <div>
-          <h2
-            style={{
-              fontSize: 18,
-              fontWeight: 900,
-              color: ORANGE,
-              lineHeight: 1.25,
-              letterSpacing: "-0.01em",
-              margin: 0,
-              ...ORANGE_HEADING_LIFT,
-            }}
-          >
-            Recruiter Messaging
-          </h2>
-          <p
-            style={{
-              margin: "6px 0 0",
-              fontSize: 13,
-              color: MUTED,
-              lineHeight: 1.55,
-            }}
-          >
-            View and reply to candidate conversations, or send bulk messages with Enterprise.
-          </p>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {isEnterprise ? (
-            <SecondaryButton onClick={onOpenBulk}>Bulk Message</SecondaryButton>
-          ) : (
-            <span className="relative inline-block align-middle group">
-              <SecondaryButton onClick={(e) => e.preventDefault()}>
-                Bulk Message
-              </SecondaryButton>
-              <span
-                className="
-                  absolute -top-10 right-0 hidden group-hover:block
-                  whitespace-nowrap rounded-md border bg-white px-3 py-1 text-xs
-                  shadow-md text-slate-700
-                "
-                style={{ zIndex: 30 }}
-              >
-                🔒 Upgrade to use Bulk Messaging
-              </span>
-            </span>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ---------------------------------------------
    RIGHT SIDEBAR CARD
 ---------------------------------------------- */
 function RightToolsCard() {
@@ -210,41 +141,28 @@ function Body({
     }
   }, [initialThreadId, prefillText]);
 
+  const bulkCTA = isEnterprise ? (
+    <SecondaryButton onClick={() => setBulkOpen(true)}>Bulk Message</SecondaryButton>
+  ) : (
+    <span className="relative inline-block align-middle group">
+      <SecondaryButton onClick={(e) => e.preventDefault()}>
+        Bulk Message
+      </SecondaryButton>
+      <span
+        className="
+          absolute -top-10 right-0 hidden group-hover:block
+          whitespace-nowrap rounded-md border bg-white px-3 py-1 text-xs
+          shadow-md text-slate-700
+        "
+        style={{ zIndex: 30 }}
+      >
+        🔒 Upgrade to use Bulk Messaging
+      </span>
+    </span>
+  );
+
   return (
     <main style={{ display: "grid", gap: 16 }}>
-      <MessagingActionBar onOpenBulk={() => setBulkOpen(true)} />
-
-      <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
-        <div style={{ ...WHITE_CARD, padding: 14 }}>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 11,
-              fontWeight: 800,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: MUTED,
-              lineHeight: 1.2,
-            }}
-          >
-            How messaging works
-          </p>
-          <p
-            style={{
-              margin: "8px 0 0",
-              fontSize: 13,
-              color: "#475569",
-              lineHeight: 1.6,
-            }}
-          >
-            To start a new conversation, open your <span style={{ fontWeight: 700 }}>Candidates</span> view and click{" "}
-            <span style={{ fontFamily: "monospace", fontSize: 12 }}>Message</span> on any card. We&apos;ll ask whether to use
-            your <span style={{ fontWeight: 700 }}>Recruiter inbox</span> or your{" "}
-            <span style={{ fontWeight: 700 }}>Signal (personal)</span> inbox, and that thread will appear here.
-          </p>
-        </div>
-      </section>
-
       <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
         <div
           style={{
@@ -278,6 +196,10 @@ function Body({
             persona="recruiter"
             personaLabel="Recruiter"
             otherLabel="candidate"
+            inboxTitle="Recruiter Inbox"
+            inboxAction={bulkCTA}
+            hideInboxDescription={true}
+            hideThreadSnippets={true}
             showHeaderActions={true}
             onDelete={onDelete}
             onReport={onReport}
@@ -792,7 +714,7 @@ export default function MessagingPage() {
   const HeaderBox = (
     <RecruiterTitleCard
       greeting={greeting}
-      title="Messaging"
+      title="Recruiter Messaging"
       subtitle="Manage recruiter conversations, saved replies, and outreach in one place."
       compact
     />
