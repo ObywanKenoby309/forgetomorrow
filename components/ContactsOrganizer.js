@@ -54,8 +54,6 @@ export default function ContactsOrganizer({
   const [localCategories, setLocalCategories] = useState([]);
   const [localAssignments, setLocalAssignments] = useState([]);
 
-  // Categories come from DB already seeded with system categories (real cuids).
-  // We only filter by chrome to control which ones are visible — never inject fake ids.
   useEffect(() => {
     const incoming = Array.isArray(categories) ? categories : [];
 
@@ -67,7 +65,6 @@ export default function ContactsOrganizer({
       visibleSystemNames.add('clients');
     }
 
-    // Keep all non-system categories, plus only the system ones relevant to this chrome.
     const filtered = incoming.filter((cat) => {
       const lower = String(cat.name || '').toLowerCase();
       const isSystem = SYSTEM_CATEGORY_NAMES.map((n) => n.toLowerCase()).includes(lower);
@@ -88,7 +85,6 @@ export default function ContactsOrganizer({
     );
   }, [localCategories]);
 
-  // categoryIdToName: real DB cuid → category name
   const categoryIdToName = useMemo(() => {
     const map = new Map();
     sortedCategories.forEach((cat) => {
@@ -97,7 +93,6 @@ export default function ContactsOrganizer({
     return map;
   }, [sortedCategories]);
 
-  // contactIdToCategoryId: Contact row cuid → category DB cuid
   const contactIdToCategoryId = useMemo(() => {
     const map = new Map();
     localAssignments.forEach((row) => {
@@ -221,13 +216,10 @@ export default function ContactsOrganizer({
       const { assignment, category } = data;
       const resolvedContactId = String(assignment?.contactId || contactId);
 
-      // Atomically update both assignments AND categories from the single API response.
-      // This ensures categoryIdToName and contactIdToCategoryId are always in sync.
       if (category) {
         setLocalCategories((prev) => {
           const existsById = prev.some((c) => c.id === category.id);
           if (existsById) return prev;
-          // Replace any same-named entry (e.g. the old sys-* stub) with the real DB row
           const withoutSameName = prev.filter(
             (c) => String(c.name || '').toLowerCase() !== String(category.name || '').toLowerCase()
           );
@@ -314,8 +306,6 @@ export default function ContactsOrganizer({
     setOpenMap((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
-  // ─── Everything below this line is UNCHANGED from your original ───────────
-
   if (loading) {
     return (
       <div style={{ ...GLASS, padding: 20 }}>
@@ -401,137 +391,6 @@ export default function ContactsOrganizer({
             onToggle={() => toggleCategory(cat.name)}
           />
         ))}
-      </section>
-    </div>
-  );
-}
-
-  const toggleCategory = (name) => {
-    if (name === 'Unassigned') return;
-    setOpenMap((prev) => ({ ...prev, [name]: !prev[name] }));
-  };
-
-  if (loading) {
-    return (
-      <div style={{ ...GLASS, padding: 20 }}>
-        <p style={{ margin: 0, color: '#607D8B', fontStyle: 'italic' }}>
-          Loading your contacts…
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ display: 'grid', gap: 20, width: '100%' }}>
-      <section
-        style={{
-          ...GLASS,
-          padding: 18,
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <div>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 20,
-                fontWeight: 800,
-                color: '#263238',
-              }}
-            >
-              Manage Categories
-            </h2>
-            <div
-              style={{
-                marginTop: 4,
-                fontSize: 13,
-                color: '#607D8B',
-              }}
-            >
-              Total contacts: <span style={{ fontWeight: 700 }}>{contacts.length}</span>
-            </div>
-          </div>
-
-          <div
-            style={{
-              marginLeft: 'auto',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 10,
-              alignItems: 'center',
-            }}
-          >
-            <input
-              value={globalNewCat}
-              onChange={(e) => setGlobalNewCat(e.target.value)}
-              placeholder="New category"
-              className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300"
-              style={{
-                minWidth: 220,
-                background: 'rgba(255,255,255,0.9)',
-              }}
-            />
-            <button
-              type="button"
-              onClick={async () => {
-                await addCategory(globalNewCat);
-                setGlobalNewCat('');
-              }}
-              style={{
-                padding: '10px 14px',
-                borderRadius: 10,
-                border: '1px solid rgba(255,112,67,0.28)',
-                background: '#FF7043',
-                color: '#fff',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 6px 16px rgba(255,112,67,0.22)',
-              }}
-            >
-              Add Category
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section style={{ display: 'grid', gap: 20 }}>
-        <CategoryBlock
-          name="Unassigned"
-          contacts={groups.Unassigned}
-          categories={sortedCategories}
-          onAssign={assignContact}
-          onAddAndAssign={addAndAssignFromCard}
-          onViewProfile={onViewProfile}
-          deletable={false}
-          onDeleteCategory={deleteCategory}
-          collapsible={false}
-          isOpen
-          onToggle={() => {}}
-        />
-
-        {sortedCategories.map((cat) => (
-		  <CategoryBlock
-			key={cat.id || cat.name}
-			name={cat.name}
-			contacts={groups[cat.name] || []}
-			categories={sortedCategories}
-			onAssign={assignContact}
-			onAddAndAssign={addAndAssignFromCard}
-			onViewProfile={onViewProfile}
-			deletable={!cat?.isSystem}
-			onDeleteCategory={deleteCategory}
-			collapsible
-			isOpen={!!openMap[cat.name]}
-			onToggle={() => toggleCategory(cat.name)}
-		  />
-		))}
       </section>
     </div>
   );
@@ -645,12 +504,7 @@ function CategoryBlock({
   );
 
   return (
-    <div
-      style={{
-        ...GLASS,
-        padding: 18,
-      }}
-    >
+    <div style={{ ...GLASS, padding: 18 }}>
       {Header}
 
       <div
@@ -658,13 +512,7 @@ function CategoryBlock({
         className={collapsible ? (isOpen ? 'block' : 'hidden') : 'block'}
       >
         {contacts.length === 0 ? (
-          <div
-            style={{
-              color: '#607D8B',
-              fontStyle: 'italic',
-              padding: '6px 2px 2px',
-            }}
-          >
+          <div style={{ color: '#607D8B', fontStyle: 'italic', padding: '6px 2px 2px' }}>
             No contacts in this category.
           </div>
         ) : (
@@ -772,24 +620,10 @@ function ContactCard({
           )}
 
           <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontWeight: 800,
-                fontSize: 16,
-                color: '#263238',
-                lineHeight: 1.25,
-              }}
-            >
+            <div style={{ fontWeight: 800, fontSize: 16, color: '#263238', lineHeight: 1.25 }}>
               {displayName}
             </div>
-            <div
-              style={{
-                marginTop: 4,
-                fontSize: 13,
-                color: '#607D8B',
-                lineHeight: 1.4,
-              }}
-            >
+            <div style={{ marginTop: 4, fontSize: 13, color: '#607D8B', lineHeight: 1.4 }}>
               {subtitle}
             </div>
           </div>
@@ -814,14 +648,7 @@ function ContactCard({
         </button>
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          gap: 10,
-          alignItems: 'center',
-          flexWrap: 'wrap',
-        }}
-      >
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <select
           value={currentCategory === 'Unassigned' ? 'Unassigned' : currentCategory}
           onChange={(e) => onAssign(contact.id, e.target.value)}
@@ -853,14 +680,7 @@ function AddAndAssignInline({ onAdd }) {
   const [val, setVal] = useState('');
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        gap: 10,
-        alignItems: 'center',
-        flexWrap: 'wrap',
-      }}
-    >
+    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
       <input
         value={val}
         onChange={(e) => setVal(e.target.value)}
