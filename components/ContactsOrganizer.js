@@ -53,7 +53,7 @@ export default function ContactsOrganizer({
   const incoming = Array.isArray(categories) ? categories : [];
 
   // 🔒 TEMP SAFETY FLAG
-  const ENABLE_SYSTEM_CATEGORIES = false;
+  const ENABLE_SYSTEM_CATEGORIES = true;
 
   if (!ENABLE_SYSTEM_CATEGORIES) {
     setLocalCategories(incoming);
