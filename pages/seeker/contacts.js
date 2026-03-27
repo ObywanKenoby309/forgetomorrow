@@ -137,10 +137,11 @@ export default function SeekerContactsGatePage() {
         }}
       >
         <ContactsOrganizer
-          contacts={contacts}
-          categories={categories}
-          assignments={assignments}
-          loading={loading}
+		  chrome={chrome}
+		  contacts={contacts}
+		  categories={categories}
+		  assignments={assignments}
+		  loading={loading}
         />
       </div>
     </Layout>

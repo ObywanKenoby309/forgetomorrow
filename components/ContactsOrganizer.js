@@ -1,5 +1,6 @@
 // components/ContactsOrganizer.js
 import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
 
 const GLASS = {
   borderRadius: 14,
@@ -33,20 +34,61 @@ function getInitials(name) {
 }
 
 export default function ContactsOrganizer({
+  chrome = 'seeker',
   contacts = [],
   loading = false,
   categories = [],
   assignments = [],
   onViewProfile = () => {},
 }) {
+  const router = useRouter();
+  const chromeFromRoute = router.query?.chrome;
+  const effectiveChrome = chromeFromRoute || chrome;
   const [openMap, setOpenMap] = useState({});
   const [globalNewCat, setGlobalNewCat] = useState('');
   const [localCategories, setLocalCategories] = useState([]);
   const [localAssignments, setLocalAssignments] = useState([]);
 
   useEffect(() => {
-    setLocalCategories(Array.isArray(categories) ? categories : []);
-  }, [categories]);
+  const incoming = Array.isArray(categories) ? categories : [];
+
+  // 🔒 TEMP SAFETY FLAG
+  const ENABLE_SYSTEM_CATEGORIES = false;
+
+  if (!ENABLE_SYSTEM_CATEGORIES) {
+    setLocalCategories(incoming);
+    return;
+  }
+
+  const baseSystemCategories = [{ id: 'sys-personal', name: 'Personal', isSystem: true }];
+
+  const recruiterSystemCategories =
+    effectiveChrome === 'recruiter-smb' || effectiveChrome === 'recruiter-ent'
+      ? [{ id: 'sys-candidates', name: 'Candidates', isSystem: true }]
+      : [];
+
+  const coachSystemCategories =
+    effectiveChrome === 'coach'
+      ? [{ id: 'sys-clients', name: 'Clients', isSystem: true }]
+      : [];
+
+  const systemCategories = [
+    ...baseSystemCategories,
+    ...recruiterSystemCategories,
+    ...coachSystemCategories,
+  ];
+
+  const merged = [...systemCategories];
+
+  incoming.forEach((cat) => {
+    const exists = merged.some(
+      (c) => String(c.name || '').toLowerCase() === String(cat.name || '').toLowerCase()
+    );
+    if (!exists) merged.push(cat);
+  });
+
+  setLocalCategories(merged);
+}, [categories, effectiveChrome]);
 
   useEffect(() => {
     setLocalAssignments(Array.isArray(assignments) ? assignments : []);
@@ -113,7 +155,8 @@ export default function ContactsOrganizer({
 
   const addCategory = async (name) => {
     const trimmed = String(name || '').trim();
-    if (!trimmed || trimmed === 'Unassigned') return;
+	const lockedNames = ['unassigned', 'personal', 'candidates', 'clients'];
+	if (!trimmed || lockedNames.includes(trimmed.toLowerCase())) return;
 
     try {
       const res = await fetch('/api/contacts/category', {
@@ -217,7 +260,8 @@ export default function ContactsOrganizer({
 
   const addAndAssignFromCard = async (contactId, categoryName) => {
   const trimmed = String(categoryName || '').trim();
-  if (!contactId || !trimmed) return;
+  const lockedNames = ['unassigned', 'personal', 'candidates', 'clients'];
+  if (!contactId || !trimmed || lockedNames.includes(trimmed.toLowerCase())) return;
 
   try {
     const res = await fetch('/api/contacts/assign', {
@@ -379,21 +423,21 @@ export default function ContactsOrganizer({
         />
 
         {sortedCategories.map((cat) => (
-          <CategoryBlock
-            key={cat.id || cat.name}
-            name={cat.name}
-            contacts={groups[cat.name] || []}
-            categories={sortedCategories}
-            onAssign={assignContact}
-            onAddAndAssign={addAndAssignFromCard}
-            onViewProfile={onViewProfile}
-            deletable
-            onDeleteCategory={deleteCategory}
-            collapsible
-            isOpen={!!openMap[cat.name]}
-            onToggle={() => toggleCategory(cat.name)}
-          />
-        ))}
+		  <CategoryBlock
+			key={cat.id || cat.name}
+			name={cat.name}
+			contacts={groups[cat.name] || []}
+			categories={sortedCategories}
+			onAssign={assignContact}
+			onAddAndAssign={addAndAssignFromCard}
+			onViewProfile={onViewProfile}
+			deletable={!cat?.isSystem}
+			onDeleteCategory={deleteCategory}
+			collapsible
+			isOpen={!!openMap[cat.name]}
+			onToggle={() => toggleCategory(cat.name)}
+		  />
+		))}
       </section>
     </div>
   );
