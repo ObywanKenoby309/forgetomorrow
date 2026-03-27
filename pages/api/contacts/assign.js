@@ -29,18 +29,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'contactId is required' });
     }
 
-    // Safety: only assign your real contact records
+        // Safety: accept either the contact row id OR the contactUserId,
+    // but always resolve to the real contact row id for assignments.
     const existingContact = await prisma.contact.findFirst({
       where: {
-        id: contactId,
         userId,
+        OR: [
+          { id: contactId },
+          { contactUserId: contactId },
+        ],
       },
-      select: { id: true },
+      select: { id: true, contactUserId: true },
     });
 
     if (!existingContact) {
       return res.status(404).json({ error: 'Contact not found' });
     }
+
+    const resolvedContactId = existingContact.id;
 
     let categoryId = categoryIdRaw ? normalizeValue(categoryIdRaw) : null;
 
@@ -68,11 +74,11 @@ export default async function handler(req, res) {
       }
     }
 
-    const assignment = await prisma.contactCategoryAssignment.upsert({
+        const assignment = await prisma.contactCategoryAssignment.upsert({
       where: {
         userId_contactId: {
           userId,
-          contactId,
+          contactId: resolvedContactId,
         },
       },
       update: {
@@ -80,7 +86,7 @@ export default async function handler(req, res) {
       },
       create: {
         userId,
-        contactId,
+        contactId: resolvedContactId,
         categoryId: categoryId || null,
       },
     });
