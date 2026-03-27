@@ -29,13 +29,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'contactId is required' });
     }
 
-    // Safety: only assign your real contacts
+    // Safety: only assign your real contact records
     const existingContact = await prisma.contact.findFirst({
       where: {
-        OR: [
-          { userId, contactUserId: contactId },
-          { userId: contactId, contactUserId: userId },
-        ],
+        id: contactId,
+        userId,
       },
       select: { id: true },
     });
