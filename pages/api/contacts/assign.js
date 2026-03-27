@@ -3,8 +3,26 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
+// System categories that must always exist in the DB.
+// These are seeded on first assignment so the UI always gets real cuids.
+const SYSTEM_CATEGORY_NAMES = ['Personal', 'Candidates', 'Clients'];
+
 function normalizeValue(v) {
   return String(v || '').trim();
+}
+
+async function ensureSystemCategories(userId) {
+  // Upsert all system categories for this user so they always have real DB ids.
+  const results = await Promise.all(
+    SYSTEM_CATEGORY_NAMES.map((name) =>
+      prisma.contactCategory.upsert({
+        where: { userId_name: { userId, name } },
+        update: {},
+        create: { userId, name },
+      })
+    )
+  );
+  return results;
 }
 
 export default async function handler(req, res) {
@@ -19,6 +37,7 @@ export default async function handler(req, res) {
   }
 
   const userId = session.user.id;
+  const accountKey = session.user.accountKey || null;
 
   try {
     const contactId = normalizeValue(req.body?.contactId);
@@ -29,8 +48,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'contactId is required' });
     }
 
-        // Safety: accept either the contact row id OR the contactUserId,
-    // but always resolve to the real contact row id for assignments.
+    // Resolve to the real Contact row id (accepts either Contact.id or contactUserId)
     const existingContact = await prisma.contact.findFirst({
       where: {
         userId,
@@ -49,32 +67,23 @@ export default async function handler(req, res) {
     const resolvedContactId = existingContact.id;
 
     let categoryId = categoryIdRaw ? normalizeValue(categoryIdRaw) : null;
+    let resolvedCategory = null;
 
-    if (!categoryId && categoryName && categoryName.toLowerCase() !== 'unassigned') {
-      const existingCategory = await prisma.contactCategory.findFirst({
-        where: {
-          userId,
-          name: {
-            equals: categoryName,
-            mode: 'insensitive',
-          },
-        },
+    if (categoryName && categoryName.toLowerCase() !== 'unassigned') {
+      // Always upsert — this handles both system categories and user-created ones
+      resolvedCategory = await prisma.contactCategory.upsert({
+        where: { userId_name: { userId, name: categoryName } },
+        update: {},
+        create: { userId, name: categoryName },
       });
-
-      if (existingCategory) {
-        categoryId = existingCategory.id;
-      } else {
-        const newCategory = await prisma.contactCategory.create({
-          data: {
-            userId,
-            name: categoryName,
-          },
-        });
-        categoryId = newCategory.id;
-      }
+      categoryId = resolvedCategory.id;
+    } else if (categoryId) {
+      resolvedCategory = await prisma.contactCategory.findFirst({
+        where: { id: categoryId, userId },
+      });
     }
 
-        const assignment = await prisma.contactCategoryAssignment.upsert({
+    const assignment = await prisma.contactCategoryAssignment.upsert({
       where: {
         userId_contactId: {
           userId,
@@ -86,12 +95,22 @@ export default async function handler(req, res) {
       },
       create: {
         userId,
+		accountKey,
         contactId: resolvedContactId,
         categoryId: categoryId || null,
       },
     });
 
-    return res.status(200).json({ ok: true, assignment });
+    // Return the full assignment AND the resolved category so the UI can
+    // update both localAssignments and localCategories atomically from one response.
+    return res.status(200).json({
+      ok: true,
+      assignment: {
+        ...assignment,
+        contactId: resolvedContactId, // always the Contact row cuid
+      },
+      category: resolvedCategory || null,
+    });
   } catch (err) {
     console.error('contacts/assign error:', err);
     return res.status(500).json({ error: 'Internal server error' });

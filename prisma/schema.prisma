@@ -41,6 +41,7 @@ model Job {
   interviews          Interview[]
   views               JobView[]
   organization        Organization?            @relation("OrganizationJobs", fields: [accountKey], references: [accountKey])
+  candidateGroups     CandidateGroup[]
   user                User                     @relation(fields: [userId], references: [id])
   offers              Offer[]
   hireQualityRecords  HireQuality[]
@@ -56,38 +57,38 @@ model Job {
 }
 
 model Application {
-  id             Int                       @id @default(autoincrement())
-  userId         String
-  jobId          Int?
-  resumeId       Int?
-  coverId        Int?
-  appliedAt      DateTime                  @default(now())
-  updatedAt      DateTime                  @updatedAt
-  status         ApplicationStatus         @default(Applied)
-  company        String?
-  location       String?
-  title          String?
-  url            String?
-  notes          String?
-  accountKey     String?
-  submittedAt    DateTime?
-  templateId     String?
-  recruiterNotes String?
-  seekerNotes    String?
-  answers        ApplicationAnswer[]
-  assessment     ApplicationAssessment?
-  consent        ApplicationConsent?
-  expectations   ApplicationExpectations?
-  packetExports  ApplicationPacketExport[]
-  selfId         ApplicationSelfId?
-  cover          Cover?                    @relation(fields: [coverId], references: [id])
-  job            Job?                      @relation(fields: [jobId], references: [id])
-  resume         Resume?                   @relation(fields: [resumeId], references: [id])
-  template       ApplicationTemplate?      @relation(fields: [templateId], references: [id])
-  user           User                      @relation(fields: [userId], references: [id])
-  source         ApplicationSource  	   @default(FORGETOMORROW)
+  id                  Int                       @id @default(autoincrement())
+  userId              String
+  jobId               Int?
+  resumeId            Int?
+  coverId             Int?
+  appliedAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  status              ApplicationStatus         @default(Applied)
+  company             String?
+  location            String?
+  title               String?
+  url                 String?
+  notes               String?
+  accountKey          String?
+  submittedAt         DateTime?
+  templateId          String?
+  recruiterNotes      String?
+  seekerNotes         String?
+  answers             ApplicationAnswer[]
+  assessment          ApplicationAssessment?
+  consent             ApplicationConsent?
+  expectations        ApplicationExpectations?
+  packetExports       ApplicationPacketExport[]
+  selfId              ApplicationSelfId?
+  cover               Cover?                    @relation(fields: [coverId], references: [id])
+  job                 Job?                      @relation(fields: [jobId], references: [id])
+  resume              Resume?                   @relation(fields: [resumeId], references: [id])
+  template            ApplicationTemplate?      @relation(fields: [templateId], references: [id])
+  user                User                      @relation(fields: [userId], references: [id])
+  source              ApplicationSource         @default(FORGETOMORROW)
   externalCandidateId String?
-  externalCandidate   ExternalCandidate?   @relation(fields: [externalCandidateId], references: [id])
+  externalCandidate   ExternalCandidate?        @relation(fields: [externalCandidateId], references: [id])
 
   @@unique([userId, jobId], name: "user_job_unique")
   @@index([accountKey])
@@ -778,8 +779,8 @@ model User {
   contactRequestsReceived      ContactRequest[]               @relation("UserContactRequestsTo")
   contactsAsContact            Contact[]                      @relation("UserContactsAsContact")
   contacts                     Contact[]                      @relation("UserContacts")
-  contactCategories          ContactCategory[]
-  contactCategoryAssignments ContactCategoryAssignment[]
+  contactCategories            ContactCategory[]
+  contactCategoryAssignments   ContactCategoryAssignment[]
   conversationParticipants     ConversationParticipant[]      @relation("UserConversationParticipants")
   reportsReceived              ConversationReport[]           @relation("UserReportsAsReported")
   reportsFiled                 ConversationReport[]           @relation("UserReportsAsReporter")
@@ -810,7 +811,7 @@ model User {
   recruiterCalendarAsCandidate RecruiterCalendarItem[]        @relation("UserRecruiterCalendarCandidate")
   recruiterCalendarOwnedItems  RecruiterCalendarItem[]        @relation("UserRecruiterCalendarOwner")
   candidateAutomations         RecruiterCandidateAutomation[]
-  snapshotSchedules  		   SnapshotSchedule[]
+  snapshotSchedules            SnapshotSchedule[]
   recruiterCandidatesAsUser    RecruiterCandidate[]           @relation("RecruiterCandidateCandidate")
   recruiterCandidatesOwned     RecruiterCandidate[]           @relation("RecruiterCandidateRecruiter")
   candidateExplainRuns         RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsCandidate")
@@ -842,6 +843,7 @@ model User {
 model ContactCategory {
   id          String                      @id @default(cuid())
   userId      String
+  accountKey String?
   name        String
   createdAt   DateTime                    @default(now())
   user        User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -851,8 +853,9 @@ model ContactCategory {
 }
 
 model ContactCategoryAssignment {
-  id         String           @id @default(cuid())
+  id         String  @id @default(cuid())
   userId     String
+  accountKey String?
   contactId  String
   categoryId String?
 
@@ -899,26 +902,61 @@ model Candidate {
 }
 
 model RecruiterCandidate {
-  id              String    @id @default(cuid())
-  recruiterUserId String
-  candidateUserId String
-  accountKey      String
-  tags            Json?
-  notes           String?
-  pipelineStage   String?
-  lastContacted   DateTime?
-  lastSeen        DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  skills          Json?
-  candidate       User      @relation("RecruiterCandidateCandidate", fields: [candidateUserId], references: [id], onDelete: Cascade)
-  recruiter       User      @relation("RecruiterCandidateRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  id               String                 @id @default(cuid())
+  recruiterUserId  String
+  candidateUserId  String
+  accountKey       String
+  tags             Json?
+  notes            String?
+  pipelineStage    String?
+  lastContacted    DateTime?
+  lastSeen         DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  skills           Json?
+  candidate        User                   @relation("RecruiterCandidateCandidate", fields: [candidateUserId], references: [id], onDelete: Cascade)
+  recruiter        User                   @relation("RecruiterCandidateRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  groupMemberships CandidateGroupMember[]
 
   @@unique([recruiterUserId, candidateUserId, accountKey])
   @@index([recruiterUserId])
   @@index([candidateUserId])
   @@index([accountKey])
   @@map("recruiter_candidates")
+}
+
+model CandidateGroup {
+  id         String  @id @default(cuid())
+  accountKey String
+  name       String
+  jobId      Int? // optional link to Job
+  isSystem   Boolean @default(false) // true for job-created groups
+  status     String  @default("active") // active | closed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members CandidateGroupMember[]
+
+  job Job? @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([accountKey])
+  @@index([jobId])
+}
+
+model CandidateGroupMember {
+  id                   String @id @default(cuid())
+  groupId              String
+  recruiterCandidateId String
+
+  addedByUserId String
+  createdAt     DateTime @default(now())
+
+  group              CandidateGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  recruiterCandidate RecruiterCandidate @relation(fields: [recruiterCandidateId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, recruiterCandidateId])
+  @@index([groupId])
 }
 
 model ExternalCandidate {
@@ -1058,25 +1096,25 @@ model RecruiterCalendarItem {
 }
 
 model SnapshotSchedule {
-  id               Int      @id @default(autoincrement())
-  userEmail        String
-  reportType       String   @default("executive")
-  recipients       String   @default("")
-  cadence          String   @default("weekly")
-  timezone         String   @default("America/Chicago")
-  timeOfDay        String   @default("08:00")
-  weeklyDay        String?
-  monthlyMode      String?
-  monthlyDate      String?
-  monthlyOrdinal   String?
-  monthlyWeekday   String?
-  includePng       Boolean  @default(true)
-  includeInsights  Boolean  @default(true)
-  sendToSelf       Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userEmail], references: [email], onDelete: Cascade)
- 
+  id              Int      @id @default(autoincrement())
+  userEmail       String
+  reportType      String   @default("executive")
+  recipients      String   @default("")
+  cadence         String   @default("weekly")
+  timezone        String   @default("America/Chicago")
+  timeOfDay       String   @default("08:00")
+  weeklyDay       String?
+  monthlyMode     String?
+  monthlyDate     String?
+  monthlyOrdinal  String?
+  monthlyWeekday  String?
+  includePng      Boolean  @default(true)
+  includeInsights Boolean  @default(true)
+  sendToSelf      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userEmail], references: [email], onDelete: Cascade)
+
   @@unique([userEmail, reportType])
   @@index([userEmail])
   @@index([reportType])

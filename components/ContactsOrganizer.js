@@ -11,6 +11,11 @@ const GLASS = {
   WebkitBackdropFilter: 'blur(10px)',
 };
 
+// System category names that cannot be deleted.
+// Their IDs now come from the DB (seeded by the categories API), not fake strings.
+const SYSTEM_CATEGORY_NAMES = ['Personal', 'Candidates', 'Clients'];
+const LOCKED_NAMES = ['unassigned', 'personal', 'candidates', 'clients'];
+
 function getContactImage(contact) {
   return (
     contact?.avatarUrl ||
@@ -27,7 +32,6 @@ function getInitials(name) {
     .trim()
     .split(/\s+/)
     .filter(Boolean);
-
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
@@ -44,52 +48,35 @@ export default function ContactsOrganizer({
   const router = useRouter();
   const chromeFromRoute = router.query?.chrome;
   const effectiveChrome = chromeFromRoute || chrome;
+
   const [openMap, setOpenMap] = useState({});
   const [globalNewCat, setGlobalNewCat] = useState('');
   const [localCategories, setLocalCategories] = useState([]);
   const [localAssignments, setLocalAssignments] = useState([]);
 
+  // Categories come from DB already seeded with system categories (real cuids).
+  // We only filter by chrome to control which ones are visible — never inject fake ids.
   useEffect(() => {
-  const incoming = Array.isArray(categories) ? categories : [];
+    const incoming = Array.isArray(categories) ? categories : [];
 
-  // 🔒 TEMP SAFETY FLAG
-  const ENABLE_SYSTEM_CATEGORIES = true;
+    const visibleSystemNames = new Set(['personal']);
+    if (effectiveChrome === 'recruiter-smb' || effectiveChrome === 'recruiter-ent') {
+      visibleSystemNames.add('candidates');
+    }
+    if (effectiveChrome === 'coach') {
+      visibleSystemNames.add('clients');
+    }
 
-  if (!ENABLE_SYSTEM_CATEGORIES) {
-    setLocalCategories(incoming);
-    return;
-  }
+    // Keep all non-system categories, plus only the system ones relevant to this chrome.
+    const filtered = incoming.filter((cat) => {
+      const lower = String(cat.name || '').toLowerCase();
+      const isSystem = SYSTEM_CATEGORY_NAMES.map((n) => n.toLowerCase()).includes(lower);
+      if (!isSystem) return true;
+      return visibleSystemNames.has(lower);
+    });
 
-  const baseSystemCategories = [{ id: 'sys-personal', name: 'Personal', isSystem: true }];
-
-  const recruiterSystemCategories =
-    effectiveChrome === 'recruiter-smb' || effectiveChrome === 'recruiter-ent'
-      ? [{ id: 'sys-candidates', name: 'Candidates', isSystem: true }]
-      : [];
-
-  const coachSystemCategories =
-    effectiveChrome === 'coach'
-      ? [{ id: 'sys-clients', name: 'Clients', isSystem: true }]
-      : [];
-
- const systemCategories = [
-    ...baseSystemCategories,
-    ...recruiterSystemCategories,
-    ...coachSystemCategories,
-  ];
-
-  // real DB categories win; system categories only fill gaps
-  const merged = [...incoming];
-
-  systemCategories.forEach((cat) => {
-    const exists = merged.some(
-      (c) => String(c.name || '').toLowerCase() === String(cat.name || '').toLowerCase()
-    );
-    if (!exists) merged.push(cat);
-  });
-
-  setLocalCategories(merged);
-}, [categories, effectiveChrome]);
+    setLocalCategories(filtered);
+  }, [categories, effectiveChrome]);
 
   useEffect(() => {
     setLocalAssignments(Array.isArray(assignments) ? assignments : []);
@@ -101,23 +88,22 @@ export default function ContactsOrganizer({
     );
   }, [localCategories]);
 
+  // categoryIdToName: real DB cuid → category name
   const categoryIdToName = useMemo(() => {
     const map = new Map();
     sortedCategories.forEach((cat) => {
-      if (cat?.id) map.set(cat.id, cat.name);
+      if (cat?.id) map.set(String(cat.id), cat.name);
     });
     return map;
   }, [sortedCategories]);
 
+  // contactIdToCategoryId: Contact row cuid → category DB cuid
   const contactIdToCategoryId = useMemo(() => {
     const map = new Map();
     localAssignments.forEach((row) => {
-  if (!row?.contactId) return;
-
-  const key = String(row.contactId);
-
-  map.set(key, row.categoryId || null);
-});
+      if (!row?.contactId) return;
+      map.set(String(row.contactId), row.categoryId || null);
+    });
     return map;
   }, [localAssignments]);
 
@@ -137,17 +123,15 @@ export default function ContactsOrganizer({
 
   const groups = useMemo(() => {
     const map = { Unassigned: [] };
-
     sortedCategories.forEach((cat) => {
       if (cat?.name) map[cat.name] = [];
     });
 
     contacts.forEach((contact) => {
-      const categoryId =
-		contactIdToCategoryId.get(String(contact.id)) || null;
-      const categoryName = categoryId ? categoryIdToName.get(categoryId) : null;
+      const categoryId = contactIdToCategoryId.get(String(contact.id)) || null;
+      const categoryName = categoryId ? categoryIdToName.get(String(categoryId)) : null;
 
-      if (categoryName && map[categoryName]) {
+      if (categoryName && map[categoryName] !== undefined) {
         map[categoryName].push(contact);
       } else {
         map.Unassigned.push(contact);
@@ -159,8 +143,7 @@ export default function ContactsOrganizer({
 
   const addCategory = async (name) => {
     const trimmed = String(name || '').trim();
-	const lockedNames = ['unassigned', 'personal', 'candidates', 'clients'];
-	if (!trimmed || lockedNames.includes(trimmed.toLowerCase())) return;
+    if (!trimmed || LOCKED_NAMES.includes(trimmed.toLowerCase())) return;
 
     try {
       const res = await fetch('/api/contacts/category', {
@@ -190,7 +173,7 @@ export default function ContactsOrganizer({
 
   const deleteCategory = async (name) => {
     const trimmed = String(name || '').trim();
-    if (!trimmed || trimmed === 'Unassigned') return;
+    if (!trimmed || trimmed === 'Unassigned' || LOCKED_NAMES.includes(trimmed.toLowerCase())) return;
 
     try {
       const res = await fetch('/api/contacts/category', {
@@ -229,153 +212,199 @@ export default function ContactsOrganizer({
       const res = await fetch('/api/contacts/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contactId,
-          categoryName,
-        }),
+        body: JSON.stringify({ contactId, categoryName }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Assign failed');
 
-      const assignment = data.assignment;
+      const { assignment, category } = data;
+      const resolvedContactId = String(assignment?.contactId || contactId);
 
-      setLocalAssignments((prev) => {
-  const resolvedContactId = String(assignment?.contactId || contactId);
-
-  const existing = prev.find(
-    (row) =>
-      String(row.contactId) === resolvedContactId ||
-      String(row.contactId) === String(contactId)
-  );
-
-  if (existing) {
-    return prev.map((row) =>
-      String(row.contactId) === resolvedContactId ||
-      String(row.contactId) === String(contactId)
-        ? {
-            ...row,
-            ...assignment,
-            contactId: resolvedContactId,
-          }
-        : row
-    );
-  }
-
-  return [
-    ...prev,
-    {
-      ...assignment,
-      contactId: resolvedContactId,
-    },
-  ];
-});
-
-            if (categoryName && categoryName !== 'Unassigned') {
+      // Atomically update both assignments AND categories from the single API response.
+      // This ensures categoryIdToName and contactIdToCategoryId are always in sync.
+      if (category) {
         setLocalCategories((prev) => {
-          const existing = prev.find(
-            (c) => String(c.name || '').toLowerCase() === String(categoryName).toLowerCase()
+          const existsById = prev.some((c) => c.id === category.id);
+          if (existsById) return prev;
+          // Replace any same-named entry (e.g. the old sys-* stub) with the real DB row
+          const withoutSameName = prev.filter(
+            (c) => String(c.name || '').toLowerCase() !== String(category.name || '').toLowerCase()
           );
-
-          if (existing) {
-            return prev.map((c) =>
-              String(c.name || '').toLowerCase() === String(categoryName).toLowerCase()
-                ? {
-                    ...c,
-                    id: assignment.categoryId || c.id,
-                  }
-                : c
-            );
-          }
-
-          return [
-            ...prev,
-            {
-              id: assignment.categoryId,
-              name: categoryName,
-            },
-          ];
+          return [...withoutSameName, category];
         });
       }
+
+      setLocalAssignments((prev) => {
+        const existing = prev.find(
+          (row) =>
+            String(row.contactId) === resolvedContactId ||
+            String(row.contactId) === String(contactId)
+        );
+
+        if (existing) {
+          return prev.map((row) =>
+            String(row.contactId) === resolvedContactId ||
+            String(row.contactId) === String(contactId)
+              ? { ...row, ...assignment, contactId: resolvedContactId }
+              : row
+          );
+        }
+
+        return [...prev, { ...assignment, contactId: resolvedContactId }];
+      });
     } catch (err) {
       console.error('assignContact failed:', err);
     }
   };
 
   const addAndAssignFromCard = async (contactId, categoryName) => {
-  const trimmed = String(categoryName || '').trim();
-  const lockedNames = ['unassigned', 'personal', 'candidates', 'clients'];
-  if (!contactId || !trimmed || lockedNames.includes(trimmed.toLowerCase())) return;
+    const trimmed = String(categoryName || '').trim();
+    if (!contactId || !trimmed || LOCKED_NAMES.includes(trimmed.toLowerCase())) return;
 
-  try {
-    const res = await fetch('/api/contacts/assign', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contactId,
-        categoryName: trimmed,
-      }),
-    });
+    try {
+      const res = await fetch('/api/contacts/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactId, categoryName: trimmed }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error || 'Assign failed');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Assign failed');
 
-    const assignment = data.assignment;
+      const { assignment, category } = data;
+      const resolvedContactId = String(assignment?.contactId || contactId);
 
-    // ✅ Update assignments
-    setLocalAssignments((prev) => {
-  const resolvedContactId = String(assignment?.contactId || contactId);
+      if (category) {
+        setLocalCategories((prev) => {
+          const existsById = prev.some((c) => c.id === category.id);
+          if (existsById) return prev;
+          const withoutSameName = prev.filter(
+            (c) => String(c.name || '').toLowerCase() !== String(category.name || '').toLowerCase()
+          );
+          return [...withoutSameName, category];
+        });
+      }
 
-  const existing = prev.find(
-    (row) =>
-      String(row.contactId) === resolvedContactId ||
-      String(row.contactId) === String(contactId)
-  );
+      setLocalAssignments((prev) => {
+        const existing = prev.find(
+          (row) =>
+            String(row.contactId) === resolvedContactId ||
+            String(row.contactId) === String(contactId)
+        );
 
-  if (existing) {
-    return prev.map((row) =>
-      String(row.contactId) === resolvedContactId ||
-      String(row.contactId) === String(contactId)
-        ? {
-            ...row,
-            ...assignment,
-            contactId: resolvedContactId,
-          }
-        : row
+        if (existing) {
+          return prev.map((row) =>
+            String(row.contactId) === resolvedContactId ||
+            String(row.contactId) === String(contactId)
+              ? { ...row, ...assignment, contactId: resolvedContactId }
+              : row
+          );
+        }
+
+        return [...prev, { ...assignment, contactId: resolvedContactId }];
+      });
+    } catch (err) {
+      console.error('addAndAssignFromCard failed:', err);
+    }
+  };
+
+  const toggleCategory = (name) => {
+    if (name === 'Unassigned') return;
+    setOpenMap((prev) => ({ ...prev, [name]: !prev[name] }));
+  };
+
+  // ─── Everything below this line is UNCHANGED from your original ───────────
+
+  if (loading) {
+    return (
+      <div style={{ ...GLASS, padding: 20 }}>
+        <p style={{ margin: 0, color: '#607D8B', fontStyle: 'italic' }}>
+          Loading your contacts…
+        </p>
+      </div>
     );
   }
 
-  return [
-    ...prev,
-    {
-      ...assignment,
-      contactId: resolvedContactId,
-    },
-  ];
-});
+  return (
+    <div style={{ display: 'grid', gap: 20, width: '100%' }}>
+      <section style={{ ...GLASS, padding: 18 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#263238' }}>
+              Manage Categories
+            </h2>
+            <div style={{ marginTop: 4, fontSize: 13, color: '#607D8B' }}>
+              Total contacts: <span style={{ fontWeight: 700 }}>{contacts.length}</span>
+            </div>
+          </div>
 
-    // ✅ Ensure category exists locally
-    if (trimmed.toLowerCase() !== 'unassigned') {
-      setLocalCategories((prev) => {
-        const exists = prev.some(
-          (c) => c.id === assignment.categoryId
-        );
-        if (exists) return prev;
+          <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+            <input
+              value={globalNewCat}
+              onChange={(e) => setGlobalNewCat(e.target.value)}
+              placeholder="New category"
+              className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300"
+              style={{ minWidth: 220, background: 'rgba(255,255,255,0.9)' }}
+            />
+            <button
+              type="button"
+              onClick={async () => {
+                await addCategory(globalNewCat);
+                setGlobalNewCat('');
+              }}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 10,
+                border: '1px solid rgba(255,112,67,0.28)',
+                background: '#FF7043',
+                color: '#fff',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 6px 16px rgba(255,112,67,0.22)',
+              }}
+            >
+              Add Category
+            </button>
+          </div>
+        </div>
+      </section>
 
-        return [
-          ...prev,
-          {
-            id: assignment.categoryId,
-            name: trimmed,
-          },
-        ];
-      });
-    }
+      <section style={{ display: 'grid', gap: 20 }}>
+        <CategoryBlock
+          name="Unassigned"
+          contacts={groups.Unassigned}
+          categories={sortedCategories}
+          onAssign={assignContact}
+          onAddAndAssign={addAndAssignFromCard}
+          onViewProfile={onViewProfile}
+          deletable={false}
+          onDeleteCategory={deleteCategory}
+          collapsible={false}
+          isOpen
+          onToggle={() => {}}
+        />
 
-  } catch (err) {
-    console.error('addAndAssignFromCard failed:', err);
-  }
-};
+        {sortedCategories.map((cat) => (
+          <CategoryBlock
+            key={cat.id || cat.name}
+            name={cat.name}
+            contacts={groups[cat.name] || []}
+            categories={sortedCategories}
+            onAssign={assignContact}
+            onAddAndAssign={addAndAssignFromCard}
+            onViewProfile={onViewProfile}
+            deletable={!SYSTEM_CATEGORY_NAMES.map((n) => n.toLowerCase()).includes(String(cat.name || '').toLowerCase())}
+            onDeleteCategory={deleteCategory}
+            collapsible
+            isOpen={!!openMap[cat.name]}
+            onToggle={() => toggleCategory(cat.name)}
+          />
+        ))}
+      </section>
+    </div>
+  );
+}
 
   const toggleCategory = (name) => {
     if (name === 'Unassigned') return;

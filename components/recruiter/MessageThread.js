@@ -52,6 +52,11 @@ function normId(v) {
  * - inboxAction?: ReactNode
  * - hideInboxDescription?: boolean
  * - hideThreadSnippets?: boolean
+ * - onOpenSavedReplies?: () => void
+ * - onOpenBulkMessage?: () => void
+ * - showInboxToolButtons?: boolean
+ * - savedRepliesLabel?: string
+ * - bulkMessageLabel?: string
  *
  * NEW (non-breaking via ref):
  * - ref exposes:
@@ -90,6 +95,11 @@ const MessageThread = forwardRef(function MessageThread(
     inboxAction = null,
     hideInboxDescription = false,
     hideThreadSnippets = false,
+    onOpenSavedReplies,
+    onOpenBulkMessage,
+    showInboxToolButtons = false,
+    savedRepliesLabel = "Saved Replies",
+    bulkMessageLabel = "Bulk Message",
   },
   ref
 ) {
@@ -240,16 +250,43 @@ const MessageThread = forwardRef(function MessageThread(
   const blockLabel = headerActionsLabel.block || "Block";
   const blockedLabel = headerActionsLabel.blocked || "Blocked";
 
+  const inboxToolButtonStyle =
+    "inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700 hover:bg-slate-50";
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* Threads list */}
       <aside className="md:col-span-1 rounded-lg border bg-white divide-y overflow-hidden">
         <div className="px-4 py-3 border-b bg-slate-50">
-          <div className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
-            {inboxTitle}
-          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-xs font-semibold tracking-wide text-slate-600 uppercase whitespace-nowrap">
+              {inboxTitle}
+            </div>
 
-          {!!inboxAction && <div className="mt-2">{inboxAction}</div>}
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {showInboxToolButtons && !!onOpenSavedReplies && (
+                <button
+                  type="button"
+                  onClick={onOpenSavedReplies}
+                  className={inboxToolButtonStyle}
+                >
+                  {savedRepliesLabel}
+                </button>
+              )}
+
+              {showInboxToolButtons && !!onOpenBulkMessage && (
+                <button
+                  type="button"
+                  onClick={onOpenBulkMessage}
+                  className={inboxToolButtonStyle}
+                >
+                  {bulkMessageLabel}
+                </button>
+              )}
+
+              {!!inboxAction && inboxAction}
+            </div>
+          </div>
 
           {!hideInboxDescription && (
             <p className="mt-1 text-[11px] text-slate-500 leading-snug">

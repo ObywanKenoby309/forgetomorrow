@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
+// These are seeded into the DB on every categories fetch so the UI always
+// receives real cuids — no more 'sys-candidates' fake IDs.
+const SYSTEM_CATEGORY_NAMES = ['Personal', 'Candidates', 'Clients'];
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -14,9 +18,22 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
+  const userId = session.user.id;
+
   try {
+    // Seed system categories so they always exist with real DB ids.
+    await Promise.all(
+      SYSTEM_CATEGORY_NAMES.map((name) =>
+        prisma.contactCategory.upsert({
+          where: { userId_name: { userId, name } },
+          update: {},
+          create: { userId, name },
+        })
+      )
+    );
+
     const categories = await prisma.contactCategory.findMany({
-      where: { userId: session.user.id },
+      where: { userId },
       orderBy: { name: 'asc' },
     });
 
