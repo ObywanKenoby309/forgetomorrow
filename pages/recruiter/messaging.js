@@ -1,6 +1,5 @@
 // pages/recruiter/messaging.js
-// updated to match new recruiter visual standard
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
@@ -121,8 +120,10 @@ function Body({
   onDelete,
   onReport,
   onBlock,
+  threadRef,
 }) {
   const { isEnterprise } = usePlan();
+  const [savedRepliesOpen, setSavedRepliesOpen] = useState(false);
 
   const onBulkSend = (ids, text) => {
     console.log("BULK SEND", { ids, text });
@@ -133,12 +134,12 @@ function Body({
     if (!initialThreadId) return;
     if (!prefillText || !prefillText.trim()) return;
 
-    const el = document.querySelector('input[placeholder="Type a message…"]');
-    if (el && !el.value) {
-      el.value = prefillText;
-      el.dispatchEvent(new Event("input", { bubbles: true }));
-      el.focus();
-    }
+    setTimeout(() => {
+      try {
+        threadRef?.current?.setDraftText(prefillText);
+        threadRef?.current?.focusComposer();
+      } catch {}
+    }, 100);
   }, [initialThreadId, prefillText]);
 
   const bulkCTA = isEnterprise ? (
@@ -190,6 +191,7 @@ function Body({
 
         <div style={{ ...WHITE_CARD, padding: 12 }}>
           <MessageThread
+            ref={threadRef}
             threads={threads}
             initialThreadId={initialThreadId || threads[0]?.id}
             onSend={onSend}
@@ -212,47 +214,32 @@ function Body({
               block: "Block",
               blocked: "Blocked",
             }}
+            showInboxToolButtons={true}
+            onOpenSavedReplies={() => setSavedRepliesOpen((v) => !v)}
+            savedRepliesLabel="Saved Replies"
           />
         </div>
-      </section>
 
-      <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 12,
-            gap: 12,
-          }}
-        >
-          <h2
+        {/* Saved Replies inline panel — shown/hidden by the tab button */}
+        {savedRepliesOpen && (
+          <div
             style={{
-              fontSize: 18,
-              fontWeight: 900,
-              color: ORANGE,
-              lineHeight: 1.25,
-              letterSpacing: "-0.01em",
-              margin: 0,
-              ...ORANGE_HEADING_LIFT,
+              ...WHITE_CARD,
+              marginTop: 10,
+              padding: 12,
             }}
           >
-            Saved Replies
-          </h2>
-        </div>
-
-        <div style={{ ...WHITE_CARD, padding: 12 }}>
-          <SavedReplies
-            onInsert={(text) => {
-              const el = document.querySelector('input[placeholder="Type a message…"]');
-              if (el) {
-                el.value = el.value ? `${el.value} ${text}` : text;
-                el.dispatchEvent(new Event("input", { bubbles: true }));
-                el.focus();
-              }
-            }}
-          />
-        </div>
+            <SavedReplies
+              onInsert={(text) => {
+                try {
+                  threadRef?.current?.insertText(text, { mode: "append", spacer: " " });
+                  threadRef?.current?.focusComposer();
+                } catch {}
+                setSavedRepliesOpen(false);
+              }}
+            />
+          </div>
+        )}
       </section>
 
       {isEnterprise && (
@@ -275,6 +262,7 @@ export default function MessagingPage() {
   const [threads, setThreads] = useState([]);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [initialThreadId, setInitialThreadId] = useState(null);
+  const threadRef = useRef(null);
 
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -833,6 +821,7 @@ export default function MessagingPage() {
           onDelete={handleDelete}
           onReport={handleReport}
           onBlock={handleBlock}
+          threadRef={threadRef}
         />
       </RecruiterLayout>
     </PlanProvider>
