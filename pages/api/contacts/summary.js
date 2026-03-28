@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
+const SYSTEM_CATEGORY_NAMES = ['Personal', 'Candidates', 'Clients'];
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -18,53 +20,68 @@ export default async function handler(req, res) {
     const userId = session.user.id;
 
     // 1) Contacts
+    // IMPORTANT: contact.id is the Contact ROW cuid — this is what assignments
+    // are keyed against. We must return it as `id`, not the other user's User.id.
     const contactsRows = await prisma.contact.findMany({
-      where: {
-        OR: [{ userId }, { contactUserId: userId }],
-      },
+      where: { userId },  // only rows where this user is the owner
       include: {
-        user: true,
-        contactUser: true,
+        contactUser: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            headline: true,
+            location: true,
+            status: true,
+            avatarUrl: true,
+            image: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    const contactsMap = new Map();
+    const contacts = contactsRows.map((c) => {
+      const other = c.contactUser;
+      const name =
+        other?.name ||
+        [other?.firstName, other?.lastName].filter(Boolean).join(' ') ||
+        'Member';
 
-    for (const c of contactsRows) {
-      const other = c.userId === userId ? c.contactUser : c.user;
-      if (!other?.id) continue;
+      return {
+        id: c.id,                          // ← Contact row cuid (matches assignments)
+        userId: c.contactUserId,           // ← the other person's User.id (for profile links etc)
+        slug: other?.slug || null,
+        name,
+        headline: other?.headline || '',
+        location: other?.location || '',
+        status: other?.status || '',
+        avatarUrl: other?.avatarUrl || other?.image || null,
+      };
+    });
 
-      if (!contactsMap.has(other.id)) {
-        const name =
-          other.name ||
-          [other.firstName, other.lastName].filter(Boolean).join(' ') ||
-          'Member';
+    // 2) Seed system categories so they always have real DB ids, then fetch all
+    await Promise.all(
+      SYSTEM_CATEGORY_NAMES.map((name) =>
+        prisma.contactCategory.upsert({
+          where: { userId_name: { userId, name } },
+          update: {},
+          create: { userId, name },
+        })
+      )
+    );
 
-        contactsMap.set(other.id, {
-          id: other.id,
-          slug: other.slug || null,
-          name,
-          headline: other.headline || '',
-          location: other.location || '',
-          status: other.status || '',
-          avatarUrl: other.avatarUrl || other.image || null,
-        });
-      }
-    }
-
-    const contacts = Array.from(contactsMap.values());
-
-    // 2) Categories + assignments
     const [categories, assignments] = await Promise.all([
-  prisma.contactCategory.findMany({
-    where: { userId },
-    orderBy: { name: 'asc' },
-  }),
-  prisma.contactCategoryAssignment.findMany({
-    where: { userId },
-  }),
-]);
+      prisma.contactCategory.findMany({
+        where: { userId },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.contactCategoryAssignment.findMany({
+        where: { userId },
+      }),
+    ]);
 
     // 3) Incoming requests
     const incomingRequests = await prisma.contactRequest.findMany({
