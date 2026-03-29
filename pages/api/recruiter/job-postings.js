@@ -12,8 +12,9 @@ function readCookie(req, name) {
     const raw = req.headers?.cookie || "";
     const parts = raw.split(";").map((p) => p.trim());
     for (const p of parts) {
-      if (p.startsWith(name + "="))
+      if (p.startsWith(name + "=")) {
         return decodeURIComponent(p.slice(name.length + 1));
+      }
     }
     return "";
   } catch {
@@ -21,7 +22,7 @@ function readCookie(req, name) {
   }
 }
 
-// ✅ Minimal fix: make Prisma payload JSON-safe (BigInt -> string)
+// ✅ Keep Prisma payload JSON-safe (BigInt -> string)
 function jsonSafe(value) {
   if (value === null || value === undefined) return value;
 
@@ -30,7 +31,6 @@ function jsonSafe(value) {
   if (t === "bigint") return value.toString();
   if (t === "string" || t === "number" || t === "boolean") return value;
 
-  // Preserve Date objects (JSON.stringify will handle them as ISO strings)
   if (value instanceof Date) return value;
 
   if (Array.isArray(value)) return value.map(jsonSafe);
@@ -41,7 +41,6 @@ function jsonSafe(value) {
     return out;
   }
 
-  // fallback (functions/symbols shouldn't appear in API payloads)
   return value;
 }
 
@@ -49,14 +48,12 @@ async function resolveEffectiveRecruiter(req, session) {
   const sessionEmail = String(session?.user?.email || "")
     .trim()
     .toLowerCase();
+
   if (!sessionEmail) return null;
 
   const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
-
-  // Default: real logged-in user
   let effectiveUserId = null;
 
-  // If platform admin + impersonation cookie exists, use targetUserId
   if (isPlatformAdmin) {
     const imp = readCookie(req, "ft_imp");
     if (imp) {
@@ -83,6 +80,7 @@ async function resolveEffectiveRecruiter(req, session) {
     where: { email: sessionEmail },
     select: { id: true, email: true, role: true, accountKey: true },
   });
+
   return u?.id ? u : null;
 }
 
@@ -94,7 +92,6 @@ async function requireRecruiterSession(req, res) {
     return null;
   }
 
-  // Optional basic role gate — allow Recruiter/Admin/Platform Admin
   const role = String(session.user?.role || "SEEKER");
   const isPlatformAdmin = !!session.user?.isPlatformAdmin;
 
@@ -106,7 +103,6 @@ async function requireRecruiterSession(req, res) {
   return session;
 }
 
-// Derived seeker-facing meta from status
 function buildSeekerMeta(job) {
   const status = job.status || "Draft";
 
@@ -153,22 +149,15 @@ function shapeJob(job, { lite = false } = {}) {
     accountKey: job.accountKey,
     userId: job.userId,
     createdAt: job.createdAt,
-
-    // ✅ recruiter-defined additional questions (job-scoped JSON)
     additionalQuestions: job.additionalQuestions ?? null,
-
-    // template support
     isTemplate: Boolean(job.isTemplate),
     templateName: job.templateName || null,
-
-    // These may be undefined on this model; that’s fine.
     origin: job.origin,
     source: job.source,
     publishedat: job.publishedat,
   };
 
   if (lite) {
-    // keep it small for dropdowns
     return {
       id: base.id,
       title: base.title,
@@ -194,22 +183,171 @@ function shapeJob(job, { lite = false } = {}) {
   };
 }
 
-// Helper to avoid writing `null` into text columns
 function safeText(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
   return String(value);
+}
+
+function buildJobGroupName(jobId, title) {
+  return `Job ${jobId} - ${safeText(title).trim()}`;
+}
+
+async function ensureRecruiterJobStructures({
+  accountKey,
+  jobId,
+  jobTitle,
+}) {
+  if (!accountKey || !jobId) return null;
+
+  const groupName = buildJobGroupName(jobId, jobTitle);
+
+  let candidateGroup = await prisma.candidateGroup.findFirst({
+    where: {
+      accountKey,
+      jobId,
+    },
+    select: {
+      id: true,
+      accountKey: true,
+      jobId: true,
+      name: true,
+      status: true,
+    },
+  });
+
+  if (!candidateGroup) {
+    candidateGroup = await prisma.candidateGroup.create({
+      data: {
+        accountKey,
+        jobId,
+        name: groupName,
+        isSystem: true,
+        status: "active",
+      },
+      select: {
+        id: true,
+        accountKey: true,
+        jobId: true,
+        name: true,
+        status: true,
+      },
+    });
+  } else if (
+    candidateGroup.name !== groupName ||
+    candidateGroup.status !== "active"
+  ) {
+    candidateGroup = await prisma.candidateGroup.update({
+      where: { id: candidateGroup.id },
+      data: {
+        name: groupName,
+        status: "active",
+      },
+      select: {
+        id: true,
+        accountKey: true,
+        jobId: true,
+        name: true,
+        status: true,
+      },
+    });
+  }
+
+  const orgMembers = await prisma.organizationMember.findMany({
+    where: { accountKey },
+    select: { userId: true },
+  });
+
+  const recruiterUserIds = [
+    ...new Set(
+      (orgMembers || [])
+        .map((m) => String(m.userId || ""))
+        .filter(Boolean)
+    ),
+  ];
+
+  for (const recruiterUserId of recruiterUserIds) {
+    let parentCategory = await prisma.contactCategory.findFirst({
+      where: {
+        userId: recruiterUserId,
+        accountKey,
+        name: "Candidates",
+        parentCategoryId: null,
+      },
+      select: { id: true },
+    });
+
+    if (!parentCategory) {
+      parentCategory = await prisma.contactCategory.create({
+        data: {
+          userId: recruiterUserId,
+          accountKey,
+          name: "Candidates",
+          parentCategoryId: null,
+        },
+        select: { id: true },
+      });
+    }
+
+    const existingJobCategory = await prisma.contactCategory.findFirst({
+      where: {
+        userId: recruiterUserId,
+        accountKey,
+        parentCategoryId: parentCategory.id,
+        name: groupName,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    if (!existingJobCategory) {
+      await prisma.contactCategory.create({
+        data: {
+          userId: recruiterUserId,
+          accountKey,
+          name: groupName,
+          parentCategoryId: parentCategory.id,
+        },
+      });
+    }
+  }
+
+  return candidateGroup;
+}
+
+async function closeRecruiterJobStructures({
+  accountKey,
+  jobId,
+}) {
+  if (!accountKey || !jobId) return;
+
+  const existingGroup = await prisma.candidateGroup.findFirst({
+    where: {
+      accountKey,
+      jobId,
+    },
+    select: { id: true, status: true },
+  });
+
+  if (existingGroup?.id && existingGroup.status !== "closed") {
+    await prisma.candidateGroup.update({
+      where: { id: existingGroup.id },
+      data: { status: "closed" },
+    });
+  }
 }
 
 export default async function handler(req, res) {
   const session = await requireRecruiterSession(req, res);
   if (!session) return;
 
-  // Impersonation-aware effective user + org key (NO FALLBACK)
   const effective = await resolveEffectiveRecruiter(req, session);
 
   if (!effective?.id) {
     return res.status(404).json({ error: "User not found" });
   }
+
   if (!effective.accountKey) {
     return res.status(404).json({ error: "accountKey not found" });
   }
@@ -219,7 +357,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      const kind = String(req.query?.kind || "jobs"); // "jobs" | "templates" | "all"
+      const kind = String(req.query?.kind || "jobs");
       const lite = String(req.query?.lite || "") === "1";
 
       const where = { accountKey: recruiterAccountKey };
@@ -228,7 +366,7 @@ export default async function handler(req, res) {
         where.isTemplate = true;
       } else if (kind === "jobs") {
         where.isTemplate = false;
-      } // "all" returns everything
+      }
 
       const jobs = await prisma.job.findMany({
         where,
@@ -250,15 +388,9 @@ export default async function handler(req, res) {
         description,
         status = "Draft",
         urgent = false,
-
-        // template support
         isTemplate = false,
         templateName = null,
-
-        // ✅ recruiter-defined additional questions (job-scoped JSON)
         additionalQuestions = null,
-
-        // allow overwrite when saving template by same name
         overwrite = false,
       } = req.body || {};
 
@@ -282,7 +414,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // if templateName already exists in this org, require overwrite=true
       if (templateFlag) {
         const existingTpl = await prisma.job.findFirst({
           where: {
@@ -314,21 +445,12 @@ export default async function handler(req, res) {
               type: safeText(type, ""),
               compensation: safeText(compensation, ""),
               description: safeText(description),
-
-              // ✅ store custom questions on templates too (so "Use Template" carries them)
               additionalQuestions: additionalQuestions ?? null,
-
-              // templates are always Draft for safety
               status: "Draft",
               urgent: false,
-
               isTemplate: true,
               templateName: templateNameClean,
-
-              // keep org scope enforced
               accountKey: recruiterAccountKey,
-
-              // treat saver as last editor
               userId: effectiveUserId,
             },
           });
@@ -346,25 +468,23 @@ export default async function handler(req, res) {
           type: safeText(type, ""),
           compensation: safeText(compensation, ""),
           description: safeText(description),
-
-          // ✅ recruiter-defined additional questions (job-scoped JSON)
           additionalQuestions: additionalQuestions ?? null,
-
-          // templates are always Draft for safety
           status: templateFlag ? "Draft" : status,
           urgent: templateFlag ? false : Boolean(urgent),
-
-          // creator is the effective user (impersonated target if active)
           userId: effectiveUserId,
-
-          // ALWAYS enforce org scope from DB user (ignore session/body)
           accountKey: recruiterAccountKey,
-
-          // template columns
           isTemplate: templateFlag,
           templateName: templateFlag ? templateNameClean : null,
         },
       });
+
+      if (!templateFlag && String(job.status) === "Open") {
+        await ensureRecruiterJobStructures({
+          accountKey: recruiterAccountKey,
+          jobId: job.id,
+          jobTitle: job.title,
+        });
+      }
 
       return res.status(201).json(jsonSafe({ job: shapeJob(job) }));
     }
@@ -381,11 +501,7 @@ export default async function handler(req, res) {
         type,
         compensation,
         description,
-
-        // ✅ recruiter-defined additional questions (job-scoped JSON)
         additionalQuestions,
-
-        // template support
         templateName,
       } = req.body || {};
 
@@ -393,7 +509,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Job id is required." });
       }
 
-      // Ensure job is in THIS org (not just owned by user)
       const existing = await prisma.job.findFirst({
         where: { id: Number(id), accountKey: recruiterAccountKey },
       });
@@ -424,13 +539,10 @@ export default async function handler(req, res) {
             description !== undefined
               ? safeText(description)
               : existing.description,
-
-          // ✅ preserve unless explicitly provided
           additionalQuestions:
             additionalQuestions !== undefined
               ? additionalQuestions
               : existing.additionalQuestions,
-
           status: existing.isTemplate ? "Draft" : nextStatus,
           urgent:
             existing.isTemplate
@@ -438,8 +550,6 @@ export default async function handler(req, res) {
               : typeof urgent === "boolean"
               ? urgent
               : existing.urgent,
-
-          // allow renaming template (safe)
           templateName:
             templateName !== undefined
               ? safeText(templateName, "").trim() || null
@@ -447,10 +557,24 @@ export default async function handler(req, res) {
         },
       });
 
+      if (!updated.isTemplate) {
+        if (String(updated.status) === "Open") {
+          await ensureRecruiterJobStructures({
+            accountKey: recruiterAccountKey,
+            jobId: updated.id,
+            jobTitle: updated.title,
+          });
+        } else if (String(updated.status) === "Closed") {
+          await closeRecruiterJobStructures({
+            accountKey: recruiterAccountKey,
+            jobId: updated.id,
+          });
+        }
+      }
+
       return res.status(200).json(jsonSafe({ job: shapeJob(updated) }));
     }
 
-    // ✅ DELETE for templates (org-scoped; templates only)
     if (req.method === "DELETE") {
       const { id } = req.body || {};
 
@@ -460,7 +584,7 @@ export default async function handler(req, res) {
 
       const existing = await prisma.job.findFirst({
         where: { id: Number(id), accountKey: recruiterAccountKey },
-        select: { id: true, isTemplate: true, templateName: true, title: true },
+        select: { id: true, isTemplate: true },
       });
 
       if (!existing) {

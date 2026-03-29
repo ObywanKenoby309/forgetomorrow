@@ -841,15 +841,22 @@ model User {
 }
 
 model ContactCategory {
-  id          String                      @id @default(cuid())
-  userId      String
-  accountKey String?
-  name        String
-  createdAt   DateTime                    @default(now())
+  id               String   @id @default(cuid())
+  userId           String
+  accountKey       String?
+  name             String
+  parentCategoryId String?
+  createdAt        DateTime @default(now())
+
   user        User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent      ContactCategory?            @relation("ContactCategoryHierarchy", fields: [parentCategoryId], references: [id], onDelete: SetNull)
+  children    ContactCategory[]           @relation("ContactCategoryHierarchy")
   assignments ContactCategoryAssignment[]
 
-  @@unique([userId, name])
+  @@unique([userId, parentCategoryId, name])
+  @@index([userId])
+  @@index([accountKey])
+  @@index([parentCategoryId])
 }
 
 model ContactCategoryAssignment {
@@ -862,7 +869,11 @@ model ContactCategoryAssignment {
   user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   category ContactCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  @@unique([userId, contactId])
+  @@unique([userId, contactId, categoryId])
+  @@index([userId])
+  @@index([accountKey])
+  @@index([contactId])
+  @@index([categoryId])
 }
 
 model Candidate {

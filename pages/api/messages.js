@@ -1,16 +1,12 @@
 // pages/api/messages.js
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "./auth/[...nextauth]";
 import prisma from "@/lib/prisma";
 
-/**
- * DEV-ONLY AUTH STUB
- * ------------------
- * For now we read the current user ID from the `x-user-id` header.
- * In production, replace this with your real NextAuth / session logic.
- */
-function getCurrentUserId(req) {
-  const raw = req.headers["x-user-id"] || req.headers["X-User-Id"];
-  if (!raw || typeof raw !== "string") return null;
-  return raw;
+async function getCurrentUserId(req, res) {
+  const session = await getServerSession(req, res, authOptions);
+  const id = session?.user?.id || session?.user?.sub || null;
+  return typeof id === "string" && id.length > 0 ? id : null;
 }
 
 /**
@@ -34,7 +30,7 @@ function safeSnippet(text, max = 140) {
 }
 
 export default async function handler(req, res) {
-  const userId = getCurrentUserId(req);
+  const userId = await getCurrentUserId(req, res);
 
   if (!userId) {
     return res

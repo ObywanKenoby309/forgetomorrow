@@ -263,7 +263,9 @@ const MessageThread = forwardRef(function MessageThread(
               {inboxTitle}
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap justify-end">
+            <div className="flex items-center gap-2 justify-end">
+              {!!inboxAction && inboxAction}
+
               {showInboxToolButtons && !!onOpenSavedReplies && (
                 <button
                   type="button"
@@ -273,18 +275,6 @@ const MessageThread = forwardRef(function MessageThread(
                   {savedRepliesLabel}
                 </button>
               )}
-
-              {showInboxToolButtons && !!onOpenBulkMessage && (
-                <button
-                  type="button"
-                  onClick={onOpenBulkMessage}
-                  className={inboxToolButtonStyle}
-                >
-                  {bulkMessageLabel}
-                </button>
-              )}
-
-              {!!inboxAction && inboxAction}
             </div>
           </div>
 
