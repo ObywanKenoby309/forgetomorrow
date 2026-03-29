@@ -433,7 +433,6 @@ export default function CoachMessagingPage() {
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {}),
-        "x-user-id": currentUserId,
       },
     });
 

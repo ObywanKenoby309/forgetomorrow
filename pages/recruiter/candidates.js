@@ -15,8 +15,6 @@ import WhyInfo from "../../components/recruiter/WhyInfo";
 import PersonaChoiceModal from "../../components/common/PersonaChoiceModal";
 import CandidateTargetingPanel from "../../components/recruiter/CandidateTargetingPanel";
 
-const RECRUITER_DEV_USER_ID = "cmic534oy0000bv2gsjrl83al";
-
 async function getSessionDirect(timeoutMs = 4000) {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), timeoutMs);
@@ -1229,15 +1227,15 @@ function Body() {
 
   const startConversation = async (candidate, channel) => {
     if (!candidate) return;
-    const resolvedRecruiterId = recruiterUserId || RECRUITER_DEV_USER_ID || null;
-    if (!resolvedRecruiterId) { alert("We couldn't load your session yet. Please refresh and try again."); return; }
+    if (!recruiterUserId) { alert("We couldn't load your session yet. Please refresh and try again."); return; }
     try {
       const recipientId = candidate.userId || candidate.id;
       const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-user-id": resolvedRecruiterId },
-        body: JSON.stringify({ recipientId, channel }),
-      });
+  method: "POST",
+  credentials: "include",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ recipientId, channel }),
+});
       if (!res.ok) { alert("We couldn't open a conversation yet. Please try again in a moment."); return; }
       const json = await res.json();
       const conv = json?.conversation;

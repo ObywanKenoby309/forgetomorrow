@@ -327,10 +327,9 @@ export default function MessagingPage() {
     const res = await fetch(url, {
       ...options,
       headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-        "x-user-id": currentUserId,
-      },
+	  "Content-Type": "application/json",
+	  ...(options.headers || {}),
+	},
     });
 
     if (!res.ok) {
@@ -348,9 +347,8 @@ export default function MessagingPage() {
     const res = await fetch("/api/conversations", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "x-user-id": currentUserId,
-      },
+		"Content-Type": "application/json",
+	  },
       body: JSON.stringify({
         recipientId: rid,
         channel: "recruiter",
