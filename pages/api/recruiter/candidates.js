@@ -554,12 +554,14 @@ export default async function handler(req, res) {
       })
     );
   } catch (err) {
-    console.error("[api/recruiter/candidates] error:", err);
-    return res.status(500).json({
+  console.error("[api/recruiter/candidates] error:", err);
+  return res.status(500).json(
+    jsonSafe({
       error: "Unexpected error while loading recruiter candidates.",
       detail: err?.message || null,
       code: err?.code || null,
       meta: err?.meta || null,
-    });
-  }
+    })
+  );
+}
 }
