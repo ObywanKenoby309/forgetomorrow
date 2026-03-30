@@ -47,6 +47,58 @@ const ORANGE_HEADING_LIFT = {
   zIndex: 1,
 };
 
+function normId(v) {
+  if (v === null || v === undefined) return null;
+  return String(v);
+}
+
+function dedupeCandidatesFlat(list) {
+  const out = [];
+  const seen = new Set();
+
+  for (const item of Array.isArray(list) ? list : []) {
+    const key = normId(item?.userId || item?.id);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+
+  return out;
+}
+
+function mergeThreadsWithGhostCandidates(threads, candidatesFlat) {
+  const baseThreads = Array.isArray(threads) ? threads : [];
+  const candidates = dedupeCandidatesFlat(candidatesFlat);
+
+  const seenOtherUserIds = new Set(
+    baseThreads
+      .map((t) => normId(t?.otherUserId))
+      .filter(Boolean)
+  );
+
+  const ghostThreads = candidates
+    .filter((c) => {
+      const userId = normId(c?.userId || c?.id);
+      if (!userId) return false;
+      if (c?.conversationId) return false;
+      return !seenOtherUserIds.has(userId);
+    })
+    .map((c) => ({
+      id: `ghost-${String(c.userId || c.id)}`,
+      candidate: c.name || c.email || "Candidate",
+      snippet: "",
+      unread: 0,
+      messages: [],
+      otherUserId: String(c.userId || c.id),
+      otherAvatarUrl: c.avatarUrl || null,
+      isGhost: true,
+      jobGroupName: c.jobGroupName || "",
+      groupStatus: c.groupStatus || "active",
+    }));
+
+  return [...baseThreads, ...ghostThreads];
+}
+
 /* ---------------------------------------------
    CLIENT SESSION (DIRECT)
 ---------------------------------------------- */
@@ -140,7 +192,7 @@ function Body({
         threadRef?.current?.focusComposer();
       } catch {}
     }, 100);
-  }, [initialThreadId, prefillText]);
+  }, [initialThreadId, prefillText, threadRef]);
 
   const bulkCTA = isEnterprise ? (
     <SecondaryButton onClick={() => setBulkOpen(true)}>Bulk Message</SecondaryButton>
@@ -220,7 +272,6 @@ function Body({
           />
         </div>
 
-        {/* Saved Replies inline panel — shown/hidden by the tab button */}
         {savedRepliesOpen && (
           <div
             style={{
@@ -260,6 +311,8 @@ function Body({
 export default function MessagingPage() {
   const router = useRouter();
   const [threads, setThreads] = useState([]);
+  const [jobGroups, setJobGroups] = useState([]);
+  const [candidatesFlat, setCandidatesFlat] = useState([]);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [initialThreadId, setInitialThreadId] = useState(null);
   const threadRef = useRef(null);
@@ -270,6 +323,8 @@ export default function MessagingPage() {
 
   const [activeThread, setActiveThread] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
+
+  const creatingConversationForUserIdRef = useRef(null);
 
   const queryConversationId =
     (router.query.c && String(router.query.c)) ||
@@ -326,10 +381,11 @@ export default function MessagingPage() {
 
     const res = await fetch(url, {
       ...options,
+      credentials: "include",
       headers: {
-	  "Content-Type": "application/json",
-	  ...(options.headers || {}),
-	},
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
     });
 
     if (!res.ok) {
@@ -346,9 +402,10 @@ export default function MessagingPage() {
 
     const res = await fetch("/api/conversations", {
       method: "POST",
+      credentials: "include",
       headers: {
-		"Content-Type": "application/json",
-	  },
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         recipientId: rid,
         channel: "recruiter",
@@ -368,6 +425,34 @@ export default function MessagingPage() {
     const json = await res.json().catch(() => ({}));
     return json?.conversation || null;
   }
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    let cancelled = false;
+
+    async function loadCandidateVisibility() {
+      try {
+        const data = await fetchJson("/api/recruiter/candidates");
+        if (cancelled) return;
+
+        setJobGroups(Array.isArray(data?.jobGroups) ? data.jobGroups : []);
+        setCandidatesFlat(
+          dedupeCandidatesFlat(Array.isArray(data?.candidatesFlat) ? data.candidatesFlat : [])
+        );
+      } catch (err) {
+        console.error("Failed to load recruiter candidate visibility:", err);
+        if (!cancelled) {
+          setJobGroups([]);
+          setCandidatesFlat([]);
+        }
+      }
+    }
+
+    loadCandidateVisibility();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId]);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -412,6 +497,7 @@ export default function MessagingPage() {
                 otherUserId: conv.otherUserId || conv.otherUser?.id || null,
                 otherAvatarUrl:
                   conv.otherAvatarUrl || conv.otherUser?.avatarUrl || null,
+                isGhost: false,
               };
             } catch (err) {
               console.error("Failed to load messages for", conv.id, err);
@@ -424,6 +510,7 @@ export default function MessagingPage() {
                 otherUserId: conv.otherUserId || conv.otherUser?.id || null,
                 otherAvatarUrl:
                   conv.otherAvatarUrl || conv.otherUser?.avatarUrl || null,
+                isGhost: false,
               };
             }
           })
@@ -431,12 +518,31 @@ export default function MessagingPage() {
 
         if (cancelled) return;
 
-        setThreads(threadsWithMessages);
+        setThreads((prev) => {
+          const merged = mergeThreadsWithGhostCandidates(
+            threadsWithMessages,
+            candidatesFlat.length ? candidatesFlat : prev.filter((t) => t.isGhost).map((t) => ({
+              userId: t.otherUserId,
+              id: t.otherUserId,
+              name: t.candidate,
+              avatarUrl: t.otherAvatarUrl,
+              conversationId: null,
+              groupStatus: t.groupStatus || "active",
+              jobGroupName: t.jobGroupName || "",
+            }))
+          );
+          return merged;
+        });
 
-        const fallbackId = threadsWithMessages[0]?.id || null;
+        const mergedNow = mergeThreadsWithGhostCandidates(
+          threadsWithMessages,
+          candidatesFlat
+        );
+
+        const fallbackId = mergedNow[0]?.id || null;
 
         if (queryConversationId) {
-          const match = threadsWithMessages.find(
+          const match = mergedNow.find(
             (t) => String(t.id) === String(queryConversationId)
           );
           setInitialThreadId(match ? match.id : fallbackId);
@@ -444,48 +550,68 @@ export default function MessagingPage() {
         }
 
         if (candidateUserIdFromQuery) {
-          const match = threadsWithMessages.find(
+          const match = mergedNow.find(
             (t) =>
               String(t.otherUserId || "") === String(candidateUserIdFromQuery)
           );
 
           if (match) {
             setInitialThreadId(match.id);
-            return;
-          }
 
-          if (!didAutoCreateConversation) {
-            setDidAutoCreateConversation(true);
+            if (match.isGhost && !didAutoCreateConversation) {
+              setDidAutoCreateConversation(true);
+              const conv = await createConversationForCandidateUserId(
+                candidateUserIdFromQuery
+              );
 
-            const conv = await createConversationForCandidateUserId(
-              candidateUserIdFromQuery
-            );
-            if (conv?.id) {
-              setInitialThreadId(conv.id);
-              setThreads((prev) => {
-                const exists = prev.some(
-                  (t) => String(t.id) === String(conv.id)
-                );
-                if (exists) return prev;
-                return [
-                  {
-                    id: conv.id,
-                    candidate: conv.name || "Conversation",
-                    snippet: "",
-                    unread: 0,
-                    messages: [],
-                    otherUserId:
-                      conv.otherUserId ||
-                      conv.otherUser?.id ||
-                      candidateUserIdFromQuery,
-                    otherAvatarUrl:
-                      conv.otherAvatarUrl || conv.otherUser?.avatarUrl || null,
-                  },
-                  ...prev,
-                ];
-              });
-              return;
+              if (conv?.id) {
+                const candidateMeta =
+                  candidatesFlat.find(
+                    (c) =>
+                      String(c.userId || c.id || "") ===
+                      String(candidateUserIdFromQuery)
+                  ) || null;
+
+                const newThread = {
+                  id: conv.id,
+                  candidate:
+                    candidateMeta?.name ||
+                    match.candidate ||
+                    conv.name ||
+                    "Conversation",
+                  snippet: "",
+                  unread: 0,
+                  messages: [],
+                  otherUserId:
+                    conv.otherUserId ||
+                    conv.otherUser?.id ||
+                    candidateUserIdFromQuery,
+                  otherAvatarUrl:
+                    candidateMeta?.avatarUrl ||
+                    conv.otherAvatarUrl ||
+                    conv.otherUser?.avatarUrl ||
+                    null,
+                  isGhost: false,
+                };
+
+                setThreads((prev) => {
+                  const withoutGhost = prev.filter(
+                    (t) =>
+                      String(t.otherUserId || "") !==
+                      String(candidateUserIdFromQuery)
+                  );
+                  const exists = withoutGhost.some(
+                    (t) => String(t.id) === String(conv.id)
+                  );
+                  if (exists) return withoutGhost;
+                  return [newThread, ...withoutGhost];
+                });
+
+                setInitialThreadId(conv.id);
+              }
             }
+
+            return;
           }
 
           setInitialThreadId(fallbackId);
@@ -507,11 +633,13 @@ export default function MessagingPage() {
     candidateUserIdFromQuery,
     currentUserId,
     didAutoCreateConversation,
+    candidatesFlat,
   ]);
 
   useEffect(() => {
     if (!currentUserId) return;
     if (!activeThread?.id) return;
+    if (String(activeThread.id).startsWith("ghost-")) return;
 
     let cancelled = false;
 
@@ -562,11 +690,60 @@ export default function MessagingPage() {
     if (!text || !String(text).trim()) return;
     const trimmed = text.trim();
 
+    const thread = threads.find((t) => String(t.id) === String(threadId)) || null;
+    if (!thread) return;
+
+    let effectiveThreadId = threadId;
+
+    if (thread.isGhost && thread.otherUserId) {
+      if (
+        creatingConversationForUserIdRef.current &&
+        String(creatingConversationForUserIdRef.current) ===
+          String(thread.otherUserId)
+      ) {
+        return;
+      }
+
+      creatingConversationForUserIdRef.current = String(thread.otherUserId);
+
+      try {
+        const conv = await createConversationForCandidateUserId(thread.otherUserId);
+        if (!conv?.id) return;
+
+        effectiveThreadId = conv.id;
+
+        const newThread = {
+          id: conv.id,
+          candidate: thread.candidate,
+          snippet: "",
+          unread: 0,
+          messages: [],
+          otherUserId: conv.otherUserId || conv.otherUser?.id || thread.otherUserId,
+          otherAvatarUrl:
+            conv.otherAvatarUrl || conv.otherUser?.avatarUrl || thread.otherAvatarUrl || null,
+          isGhost: false,
+        };
+
+        setThreads((prev) => {
+          const filtered = prev.filter(
+            (t) => String(t.id) !== String(thread.id)
+          );
+          const exists = filtered.some((t) => String(t.id) === String(conv.id));
+          if (exists) return filtered;
+          return [newThread, ...filtered];
+        });
+
+        setInitialThreadId(conv.id);
+      } finally {
+        creatingConversationForUserIdRef.current = null;
+      }
+    }
+
     try {
       const data = await fetchJson("/api/messages", {
         method: "POST",
         body: JSON.stringify({
-          conversationId: threadId,
+          conversationId: effectiveThreadId,
           content: trimmed,
           channel: "recruiter",
         }),
@@ -584,12 +761,13 @@ export default function MessagingPage() {
 
       setThreads((prev) =>
         prev.map((t) =>
-          t.id !== threadId
+          String(t.id) !== String(effectiveThreadId)
             ? t
             : {
                 ...t,
                 snippet: trimmed,
-                messages: [...t.messages, newMsg],
+                messages: [...(Array.isArray(t.messages) ? t.messages : []), newMsg],
+                isGhost: false,
               }
         )
       );
@@ -600,6 +778,13 @@ export default function MessagingPage() {
 
   const handleDelete = async () => {
     if (!activeThread?.id) return;
+    if (String(activeThread.id).startsWith("ghost-")) {
+      setThreads((prev) => prev.filter((t) => String(t.id) !== String(activeThread.id)));
+      setActiveThread(null);
+      setIsBlocked(false);
+      return;
+    }
+
     const confirmed = window.confirm(
       "Delete this conversation for both participants? This cannot be undone."
     );
@@ -609,6 +794,7 @@ export default function MessagingPage() {
       const res = await fetch("/api/signal/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ conversationId: activeThread.id }),
       });
       if (!res.ok) {
@@ -628,6 +814,7 @@ export default function MessagingPage() {
 
   const handleReport = async () => {
     if (!activeThread?.id || !activeThread?.otherUserId) return;
+    if (String(activeThread.id).startsWith("ghost-")) return;
 
     const reason = window.prompt(
       "Tell us briefly what happened. This will go to the ForgeTomorrow support team."
@@ -638,6 +825,7 @@ export default function MessagingPage() {
       const res = await fetch("/api/signal/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           conversationId: activeThread.id,
           targetUserId: activeThread.otherUserId,
@@ -660,6 +848,7 @@ export default function MessagingPage() {
 
   const handleBlock = async () => {
     if (!activeThread?.otherUserId) return;
+    if (String(activeThread.id).startsWith("ghost-")) return;
 
     const reason = window.prompt(
       "Optional: Why are you blocking this member? (This helps moderation)"
@@ -673,6 +862,7 @@ export default function MessagingPage() {
       const res = await fetch("/api/signal/block", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           targetUserId: activeThread.otherUserId,
           reason: reason?.trim() || null,
@@ -705,6 +895,8 @@ export default function MessagingPage() {
       compact
     />
   );
+
+  const visibleThreads = mergeThreadsWithGhostCandidates(threads, candidatesFlat);
 
   if (loadingUser) {
     return (
@@ -804,16 +996,73 @@ export default function MessagingPage() {
         activeNav="messaging"
       >
         <Body
-          threads={threads}
+          threads={visibleThreads}
           onSend={onSend}
-          candidatesFlat={[]}
+          candidatesFlat={candidatesFlat}
           bulkOpen={bulkOpen}
           setBulkOpen={setBulkOpen}
           initialThreadId={initialThreadId}
           prefillText={prefillText}
-          onActiveThreadChange={(t) => {
+          onActiveThreadChange={async (t) => {
             setActiveThread(t);
             setIsBlocked(false);
+
+            if (!t?.isGhost || !t?.otherUserId) return;
+            if (
+              creatingConversationForUserIdRef.current &&
+              String(creatingConversationForUserIdRef.current) ===
+                String(t.otherUserId)
+            ) {
+              return;
+            }
+
+            creatingConversationForUserIdRef.current = String(t.otherUserId);
+
+            try {
+              const conv = await createConversationForCandidateUserId(t.otherUserId);
+              if (!conv?.id) return;
+
+              const candidateMeta =
+                candidatesFlat.find(
+                  (c) => String(c.userId || c.id || "") === String(t.otherUserId)
+                ) || null;
+
+              const newThread = {
+                id: conv.id,
+                candidate:
+                  candidateMeta?.name ||
+                  t.candidate ||
+                  conv.name ||
+                  "Conversation",
+                snippet: "",
+                unread: 0,
+                messages: [],
+                otherUserId: conv.otherUserId || conv.otherUser?.id || t.otherUserId,
+                otherAvatarUrl:
+                  candidateMeta?.avatarUrl ||
+                  conv.otherAvatarUrl ||
+                  conv.otherUser?.avatarUrl ||
+                  t.otherAvatarUrl ||
+                  null,
+                isGhost: false,
+              };
+
+              setThreads((prev) => {
+                const filtered = prev.filter(
+                  (row) => String(row.otherUserId || "") !== String(t.otherUserId)
+                );
+                const exists = filtered.some(
+                  (row) => String(row.id) === String(conv.id)
+                );
+                if (exists) return filtered;
+                return [newThread, ...filtered];
+              });
+
+              setInitialThreadId(conv.id);
+              setActiveThread(newThread);
+            } finally {
+              creatingConversationForUserIdRef.current = null;
+            }
           }}
           isBlocked={isBlocked}
           onDelete={handleDelete}
