@@ -64,14 +64,24 @@ export default async function handler(req, res) {
 
     // 2) Seed system categories so they always have real DB ids, then fetch all
     await Promise.all(
-      SYSTEM_CATEGORY_NAMES.map((name) =>
-        prisma.contactCategory.upsert({
-          where: { userId_name: { userId, name } },
-          update: {},
-          create: { userId, name },
-        })
-      )
-    );
+  SYSTEM_CATEGORY_NAMES.map((name) =>
+    prisma.contactCategory.upsert({
+      where: {
+        userId_parentCategoryId_name: {
+          userId,
+          parentCategoryId: null,
+          name,
+        },
+      },
+      update: {},
+      create: {
+        userId,
+        parentCategoryId: null,
+        name,
+      },
+    })
+  )
+);
 
     const [categories, assignments] = await Promise.all([
       prisma.contactCategory.findMany({
