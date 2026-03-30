@@ -12,13 +12,22 @@ function normalizeValue(v) {
 }
 
 async function ensureSystemCategories(userId) {
-  // Upsert all system categories for this user so they always have real DB ids.
   const results = await Promise.all(
     SYSTEM_CATEGORY_NAMES.map((name) =>
       prisma.contactCategory.upsert({
-        where: { userId_name: { userId, name } },
+        where: {
+          userId_parentCategoryId_name: {
+            userId,
+            parentCategoryId: null,
+            name,
+          },
+        },
         update: {},
-        create: { userId, name },
+        create: {
+          userId,
+          parentCategoryId: null,
+          name,
+        },
       })
     )
   );
@@ -48,14 +57,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'contactId is required' });
     }
 
+    await ensureSystemCategories(userId);
+
     // Resolve to the real Contact row id (accepts either Contact.id or contactUserId)
     const existingContact = await prisma.contact.findFirst({
       where: {
         userId,
-        OR: [
-          { id: contactId },
-          { contactUserId: contactId },
-        ],
+        OR: [{ id: contactId }, { contactUserId: contactId }],
       },
       select: { id: true, contactUserId: true },
     });
@@ -70,22 +78,21 @@ export default async function handler(req, res) {
     let resolvedCategory = null;
 
     if (categoryName && categoryName.toLowerCase() !== 'unassigned') {
-      // Always upsert — this handles both system categories and user-created ones
       resolvedCategory = await prisma.contactCategory.upsert({
-  where: {
-    userId_parentCategoryId_name: {
-      userId,
-      parentCategoryId: null,
-      name: categoryName,
-    },
-  },
-  update: {},
-  create: {
-    userId,
-    parentCategoryId: null,
-    name: categoryName,
-  },
-});
+        where: {
+          userId_parentCategoryId_name: {
+            userId,
+            parentCategoryId: null,
+            name: categoryName,
+          },
+        },
+        update: {},
+        create: {
+          userId,
+          parentCategoryId: null,
+          name: categoryName,
+        },
+      });
       categoryId = resolvedCategory.id;
     } else if (categoryId) {
       resolvedCategory = await prisma.contactCategory.findFirst({
@@ -94,44 +101,42 @@ export default async function handler(req, res) {
     }
 
     if (!categoryId) {
-  await prisma.contactCategoryAssignment.deleteMany({
-    where: {
-      userId,
-      contactId: resolvedContactId,
-    },
-  });
+      await prisma.contactCategoryAssignment.deleteMany({
+        where: {
+          userId,
+          contactId: resolvedContactId,
+        },
+      });
 
-  return res.status(200).json({
-    ok: true,
-    assignment: null,
-    category: null,
-  });
-}
+      return res.status(200).json({
+        ok: true,
+        assignment: null,
+        category: null,
+      });
+    }
 
-const assignment = await prisma.contactCategoryAssignment.upsert({
-  where: {
-    userId_contactId_categoryId: {
-      userId,
-      contactId: resolvedContactId,
-      categoryId,
-    },
-  },
-  update: {},
-  create: {
-    userId,
-    accountKey,
-    contactId: resolvedContactId,
-    categoryId,
-  },
-});
+    const assignment = await prisma.contactCategoryAssignment.upsert({
+      where: {
+        userId_contactId_categoryId: {
+          userId,
+          contactId: resolvedContactId,
+          categoryId,
+        },
+      },
+      update: {},
+      create: {
+        userId,
+        accountKey,
+        contactId: resolvedContactId,
+        categoryId,
+      },
+    });
 
-    // Return the full assignment AND the resolved category so the UI can
-    // update both localAssignments and localCategories atomically from one response.
     return res.status(200).json({
       ok: true,
       assignment: {
         ...assignment,
-        contactId: resolvedContactId, // always the Contact row cuid
+        contactId: resolvedContactId,
       },
       category: resolvedCategory || null,
     });
