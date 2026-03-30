@@ -11,10 +11,8 @@ const GLASS = {
   WebkitBackdropFilter: 'blur(10px)',
 };
 
-// System category names that cannot be deleted.
-// Their IDs now come from the DB (seeded by the categories API), not fake strings.
-const SYSTEM_CATEGORY_NAMES = ['Personal', 'Candidates', 'Clients'];
-const LOCKED_NAMES = ['unassigned', 'personal', 'candidates', 'clients'];
+const SYSTEM_CATEGORY_NAMES = ['Personal', 'Candidates', 'Clients', 'Talent Pools'];
+const LOCKED_NAMES = ['personal', 'candidates', 'clients', 'talent pools'];
 
 function getContactImage(contact) {
   return (
@@ -60,6 +58,7 @@ export default function ContactsOrganizer({
     const visibleSystemNames = new Set(['personal']);
     if (effectiveChrome === 'recruiter-smb' || effectiveChrome === 'recruiter-ent') {
       visibleSystemNames.add('candidates');
+      visibleSystemNames.add('talent pools');
     }
     if (effectiveChrome === 'coach') {
       visibleSystemNames.add('clients');
@@ -85,15 +84,6 @@ export default function ContactsOrganizer({
     );
   }, [localCategories]);
 
-  const contactIdToCategoryId = useMemo(() => {
-    const map = new Map();
-    localAssignments.forEach((row) => {
-      if (!row?.contactId) return;
-      map.set(String(row.contactId), row.categoryId || null);
-    });
-    return map;
-  }, [localAssignments]);
-
   const categoriesById = useMemo(() => {
     const map = new Map();
     sortedCategories.forEach((cat) => {
@@ -111,11 +101,11 @@ export default function ContactsOrganizer({
     });
 
     sortedCategories.forEach((cat) => {
-      const parentId = cat?.parentCategoryId ? String(cat.parentCategoryId) : null;
+      const parentCategoryId = cat?.parentCategoryId ? String(cat.parentCategoryId) : null;
       const currentId = String(cat.id);
 
-      if (parentId && byId[parentId]) {
-        byId[parentId].children.push(byId[currentId]);
+      if (parentCategoryId && byId[parentCategoryId]) {
+        byId[parentCategoryId].children.push(byId[currentId]);
       } else {
         roots.push(byId[currentId]);
       }
@@ -131,25 +121,44 @@ export default function ContactsOrganizer({
       map.set(String(cat.id), []);
     });
 
-    contacts.forEach((contact) => {
-      const categoryId = contactIdToCategoryId.get(String(contact.id)) || null;
-      if (!categoryId) return;
+    localAssignments.forEach((assignment) => {
+      const categoryId = assignment?.categoryId ? String(assignment.categoryId) : null;
+      const contactId = assignment?.contactId ? String(assignment.contactId) : null;
+      if (!categoryId || !contactId) return;
 
-      const bucket = map.get(String(categoryId));
-      if (bucket) {
+      const category = categoriesById.get(categoryId);
+      if (!category) return;
+      if (!category.parentCategoryId) return; // never render contacts directly under root containers
+
+      const contact = contacts.find((c) => String(c.id) === contactId);
+      if (!contact) return;
+
+      const bucket = map.get(categoryId);
+      if (!bucket) return;
+
+      if (!bucket.some((row) => String(row.id) === String(contact.id))) {
         bucket.push(contact);
       }
     });
 
     return map;
-  }, [contacts, sortedCategories, contactIdToCategoryId]);
+  }, [sortedCategories, localAssignments, categoriesById, contacts]);
 
   const unassignedContacts = useMemo(() => {
     return contacts.filter((contact) => {
-      const categoryId = contactIdToCategoryId.get(String(contact.id)) || null;
-      return !categoryId;
+      const contactId = String(contact.id);
+
+      const hasChildAssignment = localAssignments.some((assignment) => {
+        if (String(assignment?.contactId || '') !== contactId) return false;
+        const categoryId = assignment?.categoryId ? String(assignment.categoryId) : null;
+        if (!categoryId) return false;
+        const category = categoriesById.get(categoryId);
+        return !!category?.parentCategoryId;
+      });
+
+      return !hasChildAssignment;
     });
-  }, [contacts, contactIdToCategoryId]);
+  }, [contacts, localAssignments, categoriesById]);
 
   useEffect(() => {
     setOpenMap((prev) => {
@@ -186,11 +195,7 @@ export default function ContactsOrganizer({
       if (!res.ok) throw new Error(data?.error || 'Failed to create category');
 
       setLocalCategories((prev) => {
-        const exists = prev.some(
-          (c) =>
-            c.id === data.category.id ||
-            String(c.name || '').toLowerCase() === String(data.category.name || '').toLowerCase()
-        );
+        const exists = prev.some((c) => c.id === data.category.id);
         if (exists) return prev;
         return [...prev, data.category];
       });
@@ -203,7 +208,7 @@ export default function ContactsOrganizer({
 
   const deleteCategory = async (name) => {
     const trimmed = String(name || '').trim();
-    if (!trimmed || trimmed === 'Unassigned' || LOCKED_NAMES.includes(trimmed.toLowerCase())) return;
+    if (!trimmed || trimmed === 'Unassigned') return;
 
     try {
       const res = await fetch('/api/contacts/category', {
@@ -216,7 +221,6 @@ export default function ContactsOrganizer({
       if (!res.ok) throw new Error(data?.error || 'Delete failed');
 
       setLocalCategories((prev) => prev.filter((cat) => cat.name !== trimmed));
-
       setLocalAssignments((prev) =>
         prev.filter((row) => row.categoryId !== data.deletedCategoryId)
       );
@@ -271,7 +275,7 @@ export default function ContactsOrganizer({
 
   const addAndAssignFromCard = async (contactId, categoryName) => {
     const trimmed = String(categoryName || '').trim();
-    if (!contactId || !trimmed || LOCKED_NAMES.includes(trimmed.toLowerCase())) return;
+    if (!contactId || !trimmed) return;
 
     try {
       const res = await fetch('/api/contacts/assign', {
@@ -386,14 +390,12 @@ export default function ContactsOrganizer({
         {categoryTree.roots.map((root) => {
           const rootNameLower = String(root.name || '').toLowerCase();
           const isSystemRoot = SYSTEM_CATEGORY_NAMES.map((n) => n.toLowerCase()).includes(rootNameLower);
-          const rootContacts =
-            root.children.length > 0 ? [] : contactsByCategoryId.get(String(root.id)) || [];
 
           return (
             <div key={root.id} style={{ display: 'grid', gap: 12 }}>
               <CategoryBlock
                 name={root.name}
-                contacts={rootContacts}
+                contacts={[]}
                 categories={sortedCategories}
                 onAssign={assignContact}
                 onAddAndAssign={addAndAssignFromCard}
@@ -568,7 +570,7 @@ function CategoryBlock({
           <ul style={{ display: 'grid', gap: 12, margin: 0, padding: 0, listStyle: 'none' }}>
             {contacts.map((c) => (
               <ContactCard
-                key={c.id}
+                key={`${name}-${c.id}`}
                 contact={c}
                 categories={categories}
                 currentCategory={name}
@@ -602,7 +604,7 @@ function ContactCard({
     'Connection';
 
   const selectableCategories = categories.filter(
-    (cat) => String(cat.parentCategoryId || '') !== ''
+    (cat) => !!cat.parentCategoryId
   );
 
   return (

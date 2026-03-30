@@ -1,10 +1,10 @@
 // pages/api/apply.js
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 function buildJobGroupName(jobId, title) {
-  return `Job ${jobId} - ${String(title || "").trim()}`;
+  return `Job ${jobId} - ${String(title || '').trim()}`;
 }
 
 async function ensureRecruiterJobStructures({ accountKey, jobId, jobTitle }) {
@@ -31,7 +31,7 @@ async function ensureRecruiterJobStructures({ accountKey, jobId, jobTitle }) {
         jobId,
         name: groupName,
         isSystem: true,
-        status: "active",
+        status: 'active',
       },
       select: {
         id: true,
@@ -41,13 +41,13 @@ async function ensureRecruiterJobStructures({ accountKey, jobId, jobTitle }) {
     });
   } else if (
     candidateGroup.name !== groupName ||
-    candidateGroup.status !== "active"
+    candidateGroup.status !== 'active'
   ) {
     candidateGroup = await prisma.candidateGroup.update({
       where: { id: candidateGroup.id },
       data: {
         name: groupName,
-        status: "active",
+        status: 'active',
       },
       select: {
         id: true,
@@ -65,29 +65,51 @@ async function ensureRecruiterJobStructures({ accountKey, jobId, jobTitle }) {
   const recruiterUserIds = [
     ...new Set(
       (orgMembers || [])
-        .map((m) => String(m.userId || ""))
+        .map((m) => String(m.userId || ''))
         .filter(Boolean)
     ),
   ];
 
   for (const recruiterUserId of recruiterUserIds) {
-    let parentCategory = await prisma.contactCategory.findFirst({
+    let candidatesRoot = await prisma.contactCategory.findFirst({
       where: {
         userId: recruiterUserId,
         accountKey,
-        name: "Candidates",
+        name: 'Candidates',
         parentCategoryId: null,
       },
       select: { id: true },
     });
 
-    if (!parentCategory) {
-      parentCategory = await prisma.contactCategory.create({
+    if (!candidatesRoot) {
+      candidatesRoot = await prisma.contactCategory.create({
         data: {
           userId: recruiterUserId,
           accountKey,
-          name: "Candidates",
+          name: 'Candidates',
           parentCategoryId: null,
+        },
+        select: { id: true },
+      });
+    }
+
+    let reviewQueue = await prisma.contactCategory.findFirst({
+      where: {
+        userId: recruiterUserId,
+        accountKey,
+        parentCategoryId: candidatesRoot.id,
+        name: 'Unassigned / Review Queue',
+      },
+      select: { id: true },
+    });
+
+    if (!reviewQueue) {
+      reviewQueue = await prisma.contactCategory.create({
+        data: {
+          userId: recruiterUserId,
+          accountKey,
+          name: 'Unassigned / Review Queue',
+          parentCategoryId: candidatesRoot.id,
         },
         select: { id: true },
       });
@@ -97,7 +119,7 @@ async function ensureRecruiterJobStructures({ accountKey, jobId, jobTitle }) {
       where: {
         userId: recruiterUserId,
         accountKey,
-        parentCategoryId: parentCategory.id,
+        parentCategoryId: candidatesRoot.id,
         name: groupName,
       },
       select: { id: true },
@@ -109,7 +131,7 @@ async function ensureRecruiterJobStructures({ accountKey, jobId, jobTitle }) {
           userId: recruiterUserId,
           accountKey,
           name: groupName,
-          parentCategoryId: parentCategory.id,
+          parentCategoryId: candidatesRoot.id,
         },
       });
     }
@@ -119,20 +141,20 @@ async function ensureRecruiterJobStructures({ accountKey, jobId, jobTitle }) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const session = await getServerSession(req, res, authOptions);
 
   if (!session?.user?.id) {
-    return res.status(401).json({ error: "Unauthorized" });
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const { jobId, resumeId, coverId } = req.body || {};
 
   if (!jobId) {
-    return res.status(400).json({ error: "jobId is required" });
+    return res.status(400).json({ error: 'jobId is required' });
   }
 
   try {
@@ -148,7 +170,7 @@ export default async function handler(req, res) {
     });
 
     if (!job?.id) {
-      return res.status(404).json({ error: "Job not found" });
+      return res.status(404).json({ error: 'Job not found' });
     }
 
     const application = await prisma.application.create({
@@ -157,7 +179,7 @@ export default async function handler(req, res) {
         jobId: job.id,
         resumeId: resumeId || null,
         coverId: coverId || null,
-        source: "FORGETOMORROW",
+        source: 'FORGETOMORROW',
         accountKey: job.accountKey || null,
       },
     });
@@ -179,19 +201,19 @@ export default async function handler(req, res) {
       const orgMembers = await prisma.organizationMember.findMany({
         where: { accountKey },
         select: { userId: true },
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: 'asc' },
       });
 
       const recruiterUserIds = [
         ...new Set(
           (orgMembers || [])
-            .map((m) => String(m.userId || ""))
+            .map((m) => String(m.userId || ''))
             .filter(Boolean)
         ),
       ];
 
       const canonicalRecruiterUserId =
-        recruiterUserIds.find((id) => id === String(job.userId || "")) ||
+        recruiterUserIds.find((id) => id === String(job.userId || '')) ||
         recruiterUserIds[0] ||
         null;
 
@@ -240,23 +262,45 @@ export default async function handler(req, res) {
           select: { id: true },
         });
 
-        let parentCategory = await prisma.contactCategory.findFirst({
+        let candidatesRoot = await prisma.contactCategory.findFirst({
           where: {
             userId: recruiterUserId,
             accountKey,
-            name: "Candidates",
+            name: 'Candidates',
             parentCategoryId: null,
           },
           select: { id: true },
         });
 
-        if (!parentCategory) {
-          parentCategory = await prisma.contactCategory.create({
+        if (!candidatesRoot) {
+          candidatesRoot = await prisma.contactCategory.create({
             data: {
               userId: recruiterUserId,
               accountKey,
-              name: "Candidates",
+              name: 'Candidates',
               parentCategoryId: null,
+            },
+            select: { id: true },
+          });
+        }
+
+        let reviewQueue = await prisma.contactCategory.findFirst({
+          where: {
+            userId: recruiterUserId,
+            accountKey,
+            parentCategoryId: candidatesRoot.id,
+            name: 'Unassigned / Review Queue',
+          },
+          select: { id: true },
+        });
+
+        if (!reviewQueue) {
+          reviewQueue = await prisma.contactCategory.create({
+            data: {
+              userId: recruiterUserId,
+              accountKey,
+              name: 'Unassigned / Review Queue',
+              parentCategoryId: candidatesRoot.id,
             },
             select: { id: true },
           });
@@ -268,7 +312,7 @@ export default async function handler(req, res) {
           where: {
             userId: recruiterUserId,
             accountKey,
-            parentCategoryId: parentCategory.id,
+            parentCategoryId: candidatesRoot.id,
             name: groupName,
           },
           select: { id: true },
@@ -280,29 +324,22 @@ export default async function handler(req, res) {
               userId: recruiterUserId,
               accountKey,
               name: groupName,
-              parentCategoryId: parentCategory.id,
+              parentCategoryId: candidatesRoot.id,
             },
             select: { id: true },
           });
         }
 
-        await prisma.contactCategoryAssignment.upsert({
+        // Remove any bad legacy ROOT assignment to Candidates only.
+        await prisma.contactCategoryAssignment.deleteMany({
           where: {
-            userId_contactId_categoryId: {
-              userId: recruiterUserId,
-              contactId: contact.id,
-              categoryId: parentCategory.id,
-            },
-          },
-          update: {},
-          create: {
             userId: recruiterUserId,
-            accountKey,
             contactId: contact.id,
-            categoryId: parentCategory.id,
+            categoryId: candidatesRoot.id,
           },
         });
 
+        // When someone applies, ensure they are in the job bucket.
         await prisma.contactCategoryAssignment.upsert({
           where: {
             userId_contactId_categoryId: {
@@ -317,6 +354,15 @@ export default async function handler(req, res) {
             accountKey,
             contactId: contact.id,
             categoryId: jobCategory.id,
+          },
+        });
+
+        // If they were sitting in review queue for this recruiter, remove that.
+        await prisma.contactCategoryAssignment.deleteMany({
+          where: {
+            userId: recruiterUserId,
+            contactId: contact.id,
+            categoryId: reviewQueue.id,
           },
         });
       }
@@ -341,7 +387,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json(application);
   } catch (error) {
-    console.error("[/api/apply] Error:", error);
-    return res.status(500).json({ error: "Failed to submit application" });
+    console.error('[/api/apply] Error:', error);
+    return res.status(500).json({ error: 'Failed to submit application' });
   }
 }

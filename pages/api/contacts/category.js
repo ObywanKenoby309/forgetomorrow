@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
+const PROTECTED_ROOT_NAMES = ['personal', 'candidates', 'clients', 'talent pools'];
+
 function normalizeName(name) {
   return String(name || '').trim();
 }
@@ -18,18 +20,18 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'POST') {
       const name = normalizeName(req.body?.name);
+      const parentCategoryId = req.body?.parentCategoryId
+        ? String(req.body.parentCategoryId).trim()
+        : null;
 
       if (!name) {
         return res.status(400).json({ error: 'Category name is required' });
       }
 
-      if (name.toLowerCase() === 'unassigned') {
-        return res.status(400).json({ error: 'Unassigned is reserved' });
-      }
-
       const existing = await prisma.contactCategory.findFirst({
         where: {
           userId,
+          parentCategoryId,
           name: {
             equals: name,
             mode: 'insensitive',
@@ -45,6 +47,7 @@ export default async function handler(req, res) {
         data: {
           userId,
           name,
+          parentCategoryId,
         },
       });
 
@@ -79,6 +82,40 @@ export default async function handler(req, res) {
 
       if (!category) {
         return res.status(404).json({ error: 'Category not found' });
+      }
+
+      const isProtectedRoot =
+        !category.parentCategoryId &&
+        PROTECTED_ROOT_NAMES.includes(String(category.name || '').toLowerCase());
+
+      if (isProtectedRoot) {
+        const sameNamedRoots = await prisma.contactCategory.count({
+          where: {
+            userId,
+            parentCategoryId: null,
+            name: {
+              equals: category.name,
+              mode: 'insensitive',
+            },
+          },
+        });
+
+        if (sameNamedRoots <= 1) {
+          return res.status(400).json({ error: `Cannot delete root ${category.name} category` });
+        }
+
+        const [childCount, assignmentCount] = await Promise.all([
+          prisma.contactCategory.count({
+            where: { parentCategoryId: category.id },
+          }),
+          prisma.contactCategoryAssignment.count({
+            where: { categoryId: category.id },
+          }),
+        ]);
+
+        if (childCount > 0 || assignmentCount > 0) {
+          return res.status(400).json({ error: 'Cannot delete a root category that still has children or assignments' });
+        }
       }
 
       await prisma.contactCategory.delete({
