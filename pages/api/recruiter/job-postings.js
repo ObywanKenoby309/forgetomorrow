@@ -4,8 +4,7 @@ import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET =
-  process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
+const JWT_SECRET = process.env.NEXTAUTH_SECRET;
 
 function readCookie(req, name) {
   try {
@@ -613,13 +612,15 @@ export default async function handler(req, res) {
 
     res.setHeader("Allow", "GET,POST,PATCH,DELETE");
     return res.status(405).json({ error: "Method not allowed" });
-  } catch (err) {
-    console.error("[api/recruiter/job-postings] error:", err);
-    return res.status(500).json({
+} catch (err) {
+  console.error("[api/recruiter/job-postings] error:", err);
+  return res.status(500).json(
+    jsonSafe({
       error: "Unexpected error while handling recruiter job postings.",
       detail: err?.message || null,
       code: err?.code || null,
       meta: err?.meta || null,
-    });
-  }
+    })
+  );
+}
 }
