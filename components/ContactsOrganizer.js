@@ -85,14 +85,6 @@ export default function ContactsOrganizer({
     );
   }, [localCategories]);
 
-  const categoryIdToName = useMemo(() => {
-    const map = new Map();
-    sortedCategories.forEach((cat) => {
-      if (cat?.id) map.set(String(cat.id), cat.name);
-    });
-    return map;
-  }, [sortedCategories]);
-
   const contactIdToCategoryId = useMemo(() => {
     const map = new Map();
     localAssignments.forEach((row) => {
@@ -102,39 +94,82 @@ export default function ContactsOrganizer({
     return map;
   }, [localAssignments]);
 
-  useEffect(() => {
-    setOpenMap((prev) => {
-      const next = { ...prev };
-      sortedCategories.forEach((cat) => {
-        const name = cat?.name;
-        if (name && !(name in next)) next[name] = false;
-      });
-      Object.keys(next).forEach((k) => {
-        if (!sortedCategories.some((cat) => cat?.name === k)) delete next[k];
-      });
-      return next;
+  const categoriesById = useMemo(() => {
+    const map = new Map();
+    sortedCategories.forEach((cat) => {
+      if (cat?.id) map.set(String(cat.id), cat);
     });
+    return map;
   }, [sortedCategories]);
 
-  const groups = useMemo(() => {
-    const map = { Unassigned: [] };
+  const categoryTree = useMemo(() => {
+    const byId = {};
+    const roots = [];
+
     sortedCategories.forEach((cat) => {
-      if (cat?.name) map[cat.name] = [];
+      byId[String(cat.id)] = { ...cat, children: [] };
+    });
+
+    sortedCategories.forEach((cat) => {
+      const parentId = cat?.parentCategoryId ? String(cat.parentCategoryId) : null;
+      const currentId = String(cat.id);
+
+      if (parentId && byId[parentId]) {
+        byId[parentId].children.push(byId[currentId]);
+      } else {
+        roots.push(byId[currentId]);
+      }
+    });
+
+    return { roots, byId };
+  }, [sortedCategories]);
+
+  const contactsByCategoryId = useMemo(() => {
+    const map = new Map();
+
+    sortedCategories.forEach((cat) => {
+      map.set(String(cat.id), []);
     });
 
     contacts.forEach((contact) => {
       const categoryId = contactIdToCategoryId.get(String(contact.id)) || null;
-      const categoryName = categoryId ? categoryIdToName.get(String(categoryId)) : null;
+      if (!categoryId) return;
 
-      if (categoryName && map[categoryName] !== undefined) {
-        map[categoryName].push(contact);
-      } else {
-        map.Unassigned.push(contact);
+      const bucket = map.get(String(categoryId));
+      if (bucket) {
+        bucket.push(contact);
       }
     });
 
     return map;
-  }, [contacts, sortedCategories, contactIdToCategoryId, categoryIdToName]);
+  }, [contacts, sortedCategories, contactIdToCategoryId]);
+
+  const unassignedContacts = useMemo(() => {
+    return contacts.filter((contact) => {
+      const categoryId = contactIdToCategoryId.get(String(contact.id)) || null;
+      return !categoryId;
+    });
+  }, [contacts, contactIdToCategoryId]);
+
+  useEffect(() => {
+    setOpenMap((prev) => {
+      const next = { ...prev };
+
+      sortedCategories.forEach((cat) => {
+        const name = cat?.name;
+        if (name && !(name in next)) {
+          next[name] = false;
+        }
+      });
+
+      Object.keys(next).forEach((k) => {
+        if (k === 'Unassigned') return;
+        if (!sortedCategories.some((cat) => cat?.name === k)) delete next[k];
+      });
+
+      return next;
+    });
+  }, [sortedCategories]);
 
   const addCategory = async (name) => {
     const trimmed = String(name || '').trim();
@@ -183,11 +218,7 @@ export default function ContactsOrganizer({
       setLocalCategories((prev) => prev.filter((cat) => cat.name !== trimmed));
 
       setLocalAssignments((prev) =>
-        prev.map((row) =>
-          row.categoryId === data.deletedCategoryId
-            ? { ...row, categoryId: null }
-            : row
-        )
+        prev.filter((row) => row.categoryId !== data.deletedCategoryId)
       );
 
       setOpenMap((prev) => {
@@ -220,30 +251,18 @@ export default function ContactsOrganizer({
         setLocalCategories((prev) => {
           const existsById = prev.some((c) => c.id === category.id);
           if (existsById) return prev;
-          const withoutSameName = prev.filter(
-            (c) => String(c.name || '').toLowerCase() !== String(category.name || '').toLowerCase()
-          );
-          return [...withoutSameName, category];
+          return [...prev, category];
         });
       }
 
       setLocalAssignments((prev) => {
-        const existing = prev.find(
-          (row) =>
-            String(row.contactId) === resolvedContactId ||
-            String(row.contactId) === String(contactId)
-        );
+        const filtered = prev.filter((row) => String(row.contactId) !== resolvedContactId);
 
-        if (existing) {
-          return prev.map((row) =>
-            String(row.contactId) === resolvedContactId ||
-            String(row.contactId) === String(contactId)
-              ? { ...row, ...assignment, contactId: resolvedContactId }
-              : row
-          );
+        if (!assignment) {
+          return filtered;
         }
 
-        return [...prev, { ...assignment, contactId: resolvedContactId }];
+        return [...filtered, { ...assignment, contactId: resolvedContactId }];
       });
     } catch (err) {
       console.error('assignContact failed:', err);
@@ -271,30 +290,18 @@ export default function ContactsOrganizer({
         setLocalCategories((prev) => {
           const existsById = prev.some((c) => c.id === category.id);
           if (existsById) return prev;
-          const withoutSameName = prev.filter(
-            (c) => String(c.name || '').toLowerCase() !== String(category.name || '').toLowerCase()
-          );
-          return [...withoutSameName, category];
+          return [...prev, category];
         });
       }
 
       setLocalAssignments((prev) => {
-        const existing = prev.find(
-          (row) =>
-            String(row.contactId) === resolvedContactId ||
-            String(row.contactId) === String(contactId)
-        );
+        const filtered = prev.filter((row) => String(row.contactId) !== resolvedContactId);
 
-        if (existing) {
-          return prev.map((row) =>
-            String(row.contactId) === resolvedContactId ||
-            String(row.contactId) === String(contactId)
-              ? { ...row, ...assignment, contactId: resolvedContactId }
-              : row
-          );
+        if (!assignment) {
+          return filtered;
         }
 
-        return [...prev, { ...assignment, contactId: resolvedContactId }];
+        return [...filtered, { ...assignment, contactId: resolvedContactId }];
       });
     } catch (err) {
       console.error('addAndAssignFromCard failed:', err);
@@ -363,7 +370,7 @@ export default function ContactsOrganizer({
       <section style={{ display: 'grid', gap: 20 }}>
         <CategoryBlock
           name="Unassigned"
-          contacts={groups.Unassigned}
+          contacts={unassignedContacts}
           categories={sortedCategories}
           onAssign={assignContact}
           onAddAndAssign={addAndAssignFromCard}
@@ -373,24 +380,59 @@ export default function ContactsOrganizer({
           collapsible={false}
           isOpen
           onToggle={() => {}}
+          depth={0}
         />
 
-        {sortedCategories.map((cat) => (
-          <CategoryBlock
-            key={cat.id || cat.name}
-            name={cat.name}
-            contacts={groups[cat.name] || []}
-            categories={sortedCategories}
-            onAssign={assignContact}
-            onAddAndAssign={addAndAssignFromCard}
-            onViewProfile={onViewProfile}
-            deletable={!SYSTEM_CATEGORY_NAMES.map((n) => n.toLowerCase()).includes(String(cat.name || '').toLowerCase())}
-            onDeleteCategory={deleteCategory}
-            collapsible
-            isOpen={!!openMap[cat.name]}
-            onToggle={() => toggleCategory(cat.name)}
-          />
-        ))}
+        {categoryTree.roots.map((root) => {
+          const rootNameLower = String(root.name || '').toLowerCase();
+          const isSystemRoot = SYSTEM_CATEGORY_NAMES.map((n) => n.toLowerCase()).includes(rootNameLower);
+          const rootContacts =
+            root.children.length > 0 ? [] : contactsByCategoryId.get(String(root.id)) || [];
+
+          return (
+            <div key={root.id} style={{ display: 'grid', gap: 12 }}>
+              <CategoryBlock
+                name={root.name}
+                contacts={rootContacts}
+                categories={sortedCategories}
+                onAssign={assignContact}
+                onAddAndAssign={addAndAssignFromCard}
+                onViewProfile={onViewProfile}
+                deletable={!isSystemRoot}
+                onDeleteCategory={deleteCategory}
+                collapsible
+                isOpen={!!openMap[root.name]}
+                onToggle={() => toggleCategory(root.name)}
+                depth={0}
+              />
+
+              {openMap[root.name] &&
+                root.children.map((child) => {
+                  const childNameLower = String(child.name || '').toLowerCase();
+                  const isSystemChild = SYSTEM_CATEGORY_NAMES.map((n) => n.toLowerCase()).includes(childNameLower);
+                  const childContacts = contactsByCategoryId.get(String(child.id)) || [];
+
+                  return (
+                    <CategoryBlock
+                      key={child.id}
+                      name={child.name}
+                      contacts={childContacts}
+                      categories={sortedCategories}
+                      onAssign={assignContact}
+                      onAddAndAssign={addAndAssignFromCard}
+                      onViewProfile={onViewProfile}
+                      deletable={!isSystemChild}
+                      onDeleteCategory={deleteCategory}
+                      collapsible
+                      isOpen={!!openMap[child.name]}
+                      onToggle={() => toggleCategory(child.name)}
+                      depth={1}
+                    />
+                  );
+                })}
+            </div>
+          );
+        })}
       </section>
     </div>
   );
@@ -408,6 +450,7 @@ function CategoryBlock({
   collapsible,
   isOpen,
   onToggle,
+  depth = 0,
 }) {
   const Header = (
     <div
@@ -446,7 +489,7 @@ function CategoryBlock({
               style={{
                 margin: 0,
                 color: '#263238',
-                fontSize: 18,
+                fontSize: depth === 0 ? 18 : 16,
                 fontWeight: 800,
               }}
             >
@@ -458,7 +501,7 @@ function CategoryBlock({
             style={{
               margin: 0,
               color: '#263238',
-              fontSize: 18,
+              fontSize: depth === 0 ? 18 : 16,
               fontWeight: 800,
             }}
           >
@@ -504,7 +547,13 @@ function CategoryBlock({
   );
 
   return (
-    <div style={{ ...GLASS, padding: 18 }}>
+    <div
+      style={{
+        ...GLASS,
+        padding: 18,
+        marginLeft: depth > 0 ? 18 : 0,
+      }}
+    >
       {Header}
 
       <div
@@ -551,6 +600,10 @@ function ContactCard({
     contact?.title ||
     contact?.role ||
     'Connection';
+
+  const selectableCategories = categories.filter(
+    (cat) => String(cat.parentCategoryId || '') !== ''
+  );
 
   return (
     <li
@@ -663,7 +716,7 @@ function ContactCard({
           }}
         >
           <option value="Unassigned">Unassigned</option>
-          {categories.map((cat) => (
+          {selectableCategories.map((cat) => (
             <option key={cat.id || cat.name} value={cat.name}>
               {cat.name}
             </option>
