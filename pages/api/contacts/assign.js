@@ -72,10 +72,20 @@ export default async function handler(req, res) {
     if (categoryName && categoryName.toLowerCase() !== 'unassigned') {
       // Always upsert — this handles both system categories and user-created ones
       resolvedCategory = await prisma.contactCategory.upsert({
-        where: { userId_name: { userId, name: categoryName } },
-        update: {},
-        create: { userId, name: categoryName },
-      });
+  where: {
+    userId_parentCategoryId_name: {
+      userId,
+      parentCategoryId: null,
+      name: categoryName,
+    },
+  },
+  update: {},
+  create: {
+    userId,
+    parentCategoryId: null,
+    name: categoryName,
+  },
+});
       categoryId = resolvedCategory.id;
     } else if (categoryId) {
       resolvedCategory = await prisma.contactCategory.findFirst({
@@ -83,23 +93,37 @@ export default async function handler(req, res) {
       });
     }
 
-    const assignment = await prisma.contactCategoryAssignment.upsert({
-      where: {
-        userId_contactId: {
-          userId,
-          contactId: resolvedContactId,
-        },
-      },
-      update: {
-        categoryId: categoryId || null,
-      },
-      create: {
-        userId,
-		accountKey,
-        contactId: resolvedContactId,
-        categoryId: categoryId || null,
-      },
-    });
+    if (!categoryId) {
+  await prisma.contactCategoryAssignment.deleteMany({
+    where: {
+      userId,
+      contactId: resolvedContactId,
+    },
+  });
+
+  return res.status(200).json({
+    ok: true,
+    assignment: null,
+    category: null,
+  });
+}
+
+const assignment = await prisma.contactCategoryAssignment.upsert({
+  where: {
+    userId_contactId_categoryId: {
+      userId,
+      contactId: resolvedContactId,
+      categoryId,
+    },
+  },
+  update: {},
+  create: {
+    userId,
+    accountKey,
+    contactId: resolvedContactId,
+    categoryId,
+  },
+});
 
     // Return the full assignment AND the resolved category so the UI can
     // update both localAssignments and localCategories atomically from one response.
