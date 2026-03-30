@@ -5,6 +5,29 @@ import { prisma } from '@/lib/prisma';
 
 const SYSTEM_CATEGORY_NAMES = ['Personal', 'Candidates', 'Clients'];
 
+async function ensureRootSystemCategories(userId) {
+  for (const name of SYSTEM_CATEGORY_NAMES) {
+    const existing = await prisma.contactCategory.findFirst({
+      where: {
+        userId,
+        parentCategoryId: null,
+        name,
+      },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      await prisma.contactCategory.create({
+        data: {
+          userId,
+          parentCategoryId: null,
+          name,
+        },
+      });
+    }
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -19,11 +42,8 @@ export default async function handler(req, res) {
 
     const userId = session.user.id;
 
-    // 1) Contacts
-    // IMPORTANT: contact.id is the Contact ROW cuid — this is what assignments
-    // are keyed against. We must return it as `id`, not the other user's User.id.
     const contactsRows = await prisma.contact.findMany({
-      where: { userId },  // only rows where this user is the owner
+      where: { userId },
       include: {
         contactUser: {
           select: {
@@ -51,8 +71,8 @@ export default async function handler(req, res) {
         'Member';
 
       return {
-        id: c.id,                          // ← Contact row cuid (matches assignments)
-        userId: c.contactUserId,           // ← the other person's User.id (for profile links etc)
+        id: c.id,
+        userId: c.contactUserId,
         slug: other?.slug || null,
         name,
         headline: other?.headline || '',
@@ -62,26 +82,7 @@ export default async function handler(req, res) {
       };
     });
 
-    // 2) Seed system categories so they always have real DB ids, then fetch all
-    await Promise.all(
-  SYSTEM_CATEGORY_NAMES.map((name) =>
-    prisma.contactCategory.upsert({
-      where: {
-        userId_parentCategoryId_name: {
-          userId,
-          parentCategoryId: null,
-          name,
-        },
-      },
-      update: {},
-      create: {
-        userId,
-        parentCategoryId: null,
-        name,
-      },
-    })
-  )
-);
+    await ensureRootSystemCategories(userId);
 
     const [categories, assignments] = await Promise.all([
       prisma.contactCategory.findMany({
@@ -93,7 +94,6 @@ export default async function handler(req, res) {
       }),
     ]);
 
-    // 3) Incoming requests
     const incomingRequests = await prisma.contactRequest.findMany({
       where: { toUserId: userId, status: 'PENDING' },
       orderBy: { createdAt: 'desc' },
@@ -153,7 +153,6 @@ export default async function handler(req, res) {
       };
     });
 
-    // 4) Outgoing requests
     const outgoingRequests = await prisma.contactRequest.findMany({
       where: { fromUserId: userId, status: 'PENDING' },
       orderBy: { createdAt: 'desc' },
