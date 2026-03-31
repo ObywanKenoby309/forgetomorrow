@@ -1,14 +1,15 @@
 // pages/api/apply.js
 // Seeker submits a job application.
-// Triggers full pipeline automation for the recruiter org:
+// Recruiter behavior:
 //   - CandidateGroup ensured for the job (org-scoped)
-//   - ContactCategory tree seeded once for the org (not per-recruiter)
-//   - Contact row created per recruiter (one-directional: recruiter → seeker)
-//   - RecruiterCandidate record per recruiter (org-scoped)
-//   - ContactCategoryAssignment written per recruiter contact row
-//   - CandidateGroupMember written once (canonical anchor)
+//   - Single shared org Candidates root
+//   - Single shared org job subcategory under Candidates
+//   - Single shared org contact for the candidate
+//   - Single org-scoped RecruiterCandidate record
+//   - ContactCategoryAssignment written against the shared org contact
+//   - CandidateGroupMember written once for the org candidate
 //
-// Seeker sees nothing until a recruiter initiates contact.
+// Seeker behavior remains unchanged.
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -69,7 +70,7 @@ export default async function handler(req, res) {
       data: { applicationsCount: { increment: 1 } },
     });
 
-    // ── Pipeline automation — only if job has an org ──────────────────────────
+    // ── Recruiter pipeline automation only if job has an org ─────────────────
     const orgAccountKey = job.accountKey || null;
     if (!orgAccountKey) {
       return res.status(200).json(application);
@@ -95,7 +96,10 @@ export default async function handler(req, res) {
         },
         select: { id: true, name: true, status: true },
       });
-    } else if (candidateGroup.name !== groupName || candidateGroup.status !== 'active') {
+    } else if (
+      candidateGroup.name !== groupName ||
+      candidateGroup.status !== 'active'
+    ) {
       candidateGroup = await prisma.candidateGroup.update({
         where: { id: candidateGroup.id },
         data: { name: groupName, status: 'active' },
@@ -103,7 +107,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── Step 2: Ensure org-scoped ContactCategory tree ────────────────────────
+    // ── Step 2: Ensure shared org Candidates root ────────────────────────────
     let candidatesRoot = await prisma.contactCategory.findFirst({
       where: {
         accountKey: orgAccountKey,
@@ -125,23 +129,7 @@ export default async function handler(req, res) {
       });
     }
 
-    await prisma.contactCategory.upsert({
-      where: {
-        accountKey_parentCategoryId_name: {
-          accountKey: orgAccountKey,
-          parentCategoryId: candidatesRoot.id,
-          name: 'Unassigned / Review Queue',
-        },
-      },
-      update: {},
-      create: {
-        accountKey: orgAccountKey,
-        userId: jobPosterId,
-        name: 'Unassigned / Review Queue',
-        parentCategoryId: candidatesRoot.id,
-      },
-    });
-
+    // ── Step 3: Ensure shared org job subcategory ─────────────────────────────
     let jobCategory = await prisma.contactCategory.findFirst({
       where: {
         accountKey: orgAccountKey,
@@ -163,7 +151,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── Step 3: Get all recruiters in the org ─────────────────────────────────
+    // ── Step 4: Load all recruiters in the org (for cleanup of legacy rows) ──
     const orgMembers = await prisma.organizationMember.findMany({
       where: { accountKey: orgAccountKey },
       select: { userId: true },
@@ -174,108 +162,135 @@ export default async function handler(req, res) {
       ...new Set(orgMembers.map((m) => String(m.userId || '')).filter(Boolean)),
     ];
 
-    if (!recruiterUserIds.length) {
-      return res.status(200).json(application);
-    }
+    // ── Step 5: Ensure ONE shared org contact for this candidate ──────────────
+    const legacyContacts = await prisma.contact.findMany({
+      where: {
+        contactUserId: seekerUserId,
+        OR: [
+          { accountKey: orgAccountKey },
+          ...(recruiterUserIds.length
+            ? [{ userId: { in: recruiterUserIds } }]
+            : []),
+        ],
+      },
+      select: {
+        id: true,
+        userId: true,
+        accountKey: true,
+        contactUserId: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
 
-    // ── Step 4: Per recruiter — Contact row + RecruiterCandidate ─────────────
-    let canonicalRecruiterCandidateId = null;
+    let orgContact =
+      legacyContacts.find((c) => String(c.accountKey || '') === String(orgAccountKey)) ||
+      legacyContacts[0] ||
+      null;
 
-    for (const recruiterUserId of recruiterUserIds) {
-      await prisma.contact.upsert({
-        where: {
-          userId_contactUserId: {
-            userId: recruiterUserId,
-            contactUserId: seekerUserId,
-          },
-        },
-        update: {},
-        create: {
-          userId: recruiterUserId,
+    if (!orgContact) {
+      orgContact = await prisma.contact.create({
+        data: {
+          accountKey: orgAccountKey,
+          userId: jobPosterId,
           contactUserId: seekerUserId,
         },
-      });
-
-      const rc = await prisma.recruiterCandidate.upsert({
-        where: {
-          recruiterUserId_candidateUserId_accountKey: {
-            recruiterUserId,
-            candidateUserId: seekerUserId,
-            accountKey: orgAccountKey,
-          },
+        select: {
+          id: true,
+          userId: true,
+          accountKey: true,
+          contactUserId: true,
         },
-        update: {},
-        create: {
-          recruiterUserId,
+      });
+    } else if (String(orgContact.accountKey || '') !== String(orgAccountKey)) {
+      orgContact = await prisma.contact.update({
+        where: { id: orgContact.id },
+        data: {
+          accountKey: orgAccountKey,
+        },
+        select: {
+          id: true,
+          userId: true,
+          accountKey: true,
+          contactUserId: true,
+        },
+      });
+    }
+
+    // ── Step 6: Ensure ONE org-scoped RecruiterCandidate ──────────────────────
+    let recruiterCandidate = await prisma.recruiterCandidate.findFirst({
+      where: {
+        accountKey: orgAccountKey,
+        candidateUserId: seekerUserId,
+      },
+      select: { id: true },
+    });
+
+    if (!recruiterCandidate) {
+      recruiterCandidate = await prisma.recruiterCandidate.create({
+        data: {
+          recruiterUserId: jobPosterId,
           candidateUserId: seekerUserId,
           accountKey: orgAccountKey,
         },
-        select: { id: true, recruiterUserId: true },
-      });
-
-      if (recruiterUserId === jobPosterId || canonicalRecruiterCandidateId === null) {
-        canonicalRecruiterCandidateId = rc.id;
-      }
-    }
-
-    // ── Step 5: ContactCategoryAssignment per recruiter's own contact row ─────
-    // This matches what the single shared contact center actually reads.
-    for (const recruiterUserId of recruiterUserIds) {
-      const recruiterContact = await prisma.contact.findUnique({
-        where: {
-          userId_contactUserId: {
-            userId: recruiterUserId,
-            contactUserId: seekerUserId,
-          },
-        },
         select: { id: true },
       });
+    }
 
-      if (!recruiterContact?.id || !jobCategory?.id) continue;
+    // ── Step 7: Clean legacy assignments for this candidate in this org ───────
+    const legacyContactIds = [
+      ...new Set(
+        legacyContacts
+          .map((c) => String(c.id || ''))
+          .filter(Boolean)
+      ),
+    ];
 
+    if (legacyContactIds.length) {
       await prisma.contactCategoryAssignment.deleteMany({
         where: {
           accountKey: orgAccountKey,
-          contactId: recruiterContact.id,
-          categoryId: candidatesRoot.id,
+          contactId: { in: legacyContactIds },
+          OR: [
+            { categoryId: candidatesRoot.id },
+            { categoryId: jobCategory.id },
+          ],
         },
       });
+    }
 
-      await prisma.contactCategoryAssignment.upsert({
-        where: {
-          accountKey_contactId_categoryId: {
-            accountKey: orgAccountKey,
-            contactId: recruiterContact.id,
-            categoryId: jobCategory.id,
-          },
-        },
-        update: {},
-        create: {
+    // ── Step 8: Assign shared org contact into the job bucket ─────────────────
+    await prisma.contactCategoryAssignment.upsert({
+      where: {
+        accountKey_contactId_categoryId: {
           accountKey: orgAccountKey,
-          userId: recruiterUserId,
-          contactId: recruiterContact.id,
+          contactId: orgContact.id,
           categoryId: jobCategory.id,
         },
-      });
-    }
+      },
+      update: {},
+      create: {
+        accountKey: orgAccountKey,
+        userId: jobPosterId,
+        contactId: orgContact.id,
+        categoryId: jobCategory.id,
+      },
+    });
 
-    // ── Step 6: CandidateGroupMember ──────────────────────────────────────────
-    if (candidateGroup?.id && canonicalRecruiterCandidateId) {
-      await prisma.candidateGroupMember.upsert({
-        where: {
-          groupId_recruiterCandidateId: {
-            groupId: candidateGroup.id,
-            recruiterCandidateId: canonicalRecruiterCandidateId,
-          },
-        },
-        update: {},
-        create: {
+    // ── Step 9: CandidateGroupMember ──────────────────────────────────────────
+    await prisma.candidateGroupMember.upsert({
+      where: {
+        groupId_recruiterCandidateId: {
           groupId: candidateGroup.id,
-          recruiterCandidateId: canonicalRecruiterCandidateId,
-          addedByUserId: seekerUserId,
+          recruiterCandidateId: recruiterCandidate.id,
         },
-      });
-    }
+      },
+      update: {},
+      create: {
+        groupId: candidateGroup.id,
+        recruiterCandidateId: recruiterCandidate.id,
+        addedByUserId: seekerUserId,
+      },
+    });
 
     return res.status(200).json(application);
   } catch (error) {

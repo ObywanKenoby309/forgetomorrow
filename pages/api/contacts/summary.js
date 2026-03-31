@@ -96,31 +96,31 @@ export default async function handler(req, res) {
         ...new Set(orgMembers.map((m) => String(m.userId || '')).filter(Boolean)),
       ];
 
-      contactRows =
-        orgUserIds.length === 0
-          ? []
-          : await prisma.contact.findMany({
-              where: {
-                userId: { in: orgUserIds },
-              },
-              include: {
-                contactUser: {
-                  select: {
-                    id: true,
-                    slug: true,
-                    name: true,
-                    firstName: true,
-                    lastName: true,
-                    headline: true,
-                    location: true,
-                    status: true,
-                    avatarUrl: true,
-                    image: true,
-                  },
-                },
-              },
-              orderBy: [{ createdAt: 'asc' }],
-            });
+      contactRows = await prisma.contact.findMany({
+        where: {
+          OR: [
+            { accountKey: user.accountKey }, // new shared org contact rows
+            ...(orgUserIds.length ? [{ userId: { in: orgUserIds } }] : []), // legacy per-recruiter rows
+          ],
+        },
+        include: {
+          contactUser: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              firstName: true,
+              lastName: true,
+              headline: true,
+              location: true,
+              status: true,
+              avatarUrl: true,
+              image: true,
+            },
+          },
+        },
+        orderBy: [{ createdAt: 'asc' }],
+      });
     } else {
       contactRows = await prisma.contact.findMany({
         where: { userId },
@@ -160,8 +160,12 @@ export default async function handler(req, res) {
       }
 
       for (const rows of rowsByContactUserId.values()) {
+        // Prefer the new org-shared contact row first.
+        // If not present, fall back to current recruiter's legacy row, then first row.
         const preferred =
-          rows.find((r) => String(r.userId) === String(userId)) || rows[0];
+          rows.find((r) => String(r.accountKey || '') === String(user.accountKey)) ||
+          rows.find((r) => String(r.userId) === String(userId)) ||
+          rows[0];
 
         const other = preferred.contactUser;
         const canonicalId = preferred.id;

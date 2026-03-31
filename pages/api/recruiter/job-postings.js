@@ -21,7 +21,7 @@ function readCookie(req, name) {
   }
 }
 
-// ✅ Keep Prisma payload JSON-safe (BigInt -> string)
+// Keep Prisma payload JSON-safe (BigInt -> string)
 function jsonSafe(value) {
   if (value === null || value === undefined) return value;
 
@@ -195,6 +195,7 @@ async function ensureRecruiterJobStructures({
   accountKey,
   jobId,
   jobTitle,
+  actorUserId,
 }) {
   if (!accountKey || !jobId) return null;
 
@@ -251,65 +252,50 @@ async function ensureRecruiterJobStructures({
     });
   }
 
-  const orgMembers = await prisma.organizationMember.findMany({
-    where: { accountKey },
-    select: { userId: true },
+  // One shared org-wide Candidates root
+  let parentCategory = await prisma.contactCategory.findFirst({
+    where: {
+      accountKey,
+      parentCategoryId: null,
+      name: "Candidates",
+    },
+    select: { id: true },
   });
 
-  const recruiterUserIds = [
-    ...new Set(
-      (orgMembers || [])
-        .map((m) => String(m.userId || ""))
-        .filter(Boolean)
-    ),
-  ];
-
-  for (const recruiterUserId of recruiterUserIds) {
-    let parentCategory = await prisma.contactCategory.findFirst({
-      where: {
-        userId: recruiterUserId,
+  if (!parentCategory) {
+    parentCategory = await prisma.contactCategory.create({
+      data: {
+        userId: actorUserId,
         accountKey,
         name: "Candidates",
         parentCategoryId: null,
       },
       select: { id: true },
     });
+  }
 
-    if (!parentCategory) {
-      parentCategory = await prisma.contactCategory.create({
-        data: {
-          userId: recruiterUserId,
-          accountKey,
-          name: "Candidates",
-          parentCategoryId: null,
-        },
-        select: { id: true },
-      });
-    }
+  // One shared org-wide job subcategory under Candidates
+  const existingJobCategory = await prisma.contactCategory.findFirst({
+    where: {
+      accountKey,
+      parentCategoryId: parentCategory.id,
+      name: groupName,
+    },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
 
-    const existingJobCategory = await prisma.contactCategory.findFirst({
-      where: {
-        userId: recruiterUserId,
+  if (!existingJobCategory) {
+    await prisma.contactCategory.create({
+      data: {
+        userId: actorUserId,
         accountKey,
-        parentCategoryId: parentCategory.id,
         name: groupName,
-      },
-      select: {
-        id: true,
-        name: true,
+        parentCategoryId: parentCategory.id,
       },
     });
-
-    if (!existingJobCategory) {
-      await prisma.contactCategory.create({
-        data: {
-          userId: recruiterUserId,
-          accountKey,
-          name: groupName,
-          parentCategoryId: parentCategory.id,
-        },
-      });
-    }
   }
 
   return candidateGroup;
@@ -482,6 +468,7 @@ export default async function handler(req, res) {
           accountKey: recruiterAccountKey,
           jobId: job.id,
           jobTitle: job.title,
+          actorUserId: effectiveUserId,
         });
       }
 
@@ -562,6 +549,7 @@ export default async function handler(req, res) {
             accountKey: recruiterAccountKey,
             jobId: updated.id,
             jobTitle: updated.title,
+            actorUserId: effectiveUserId,
           });
         } else if (String(updated.status) === "Closed") {
           await closeRecruiterJobStructures({
@@ -612,15 +600,15 @@ export default async function handler(req, res) {
 
     res.setHeader("Allow", "GET,POST,PATCH,DELETE");
     return res.status(405).json({ error: "Method not allowed" });
-} catch (err) {
-  console.error("[api/recruiter/job-postings] error:", err);
-  return res.status(500).json(
-    jsonSafe({
-      error: "Unexpected error while handling recruiter job postings.",
-      detail: err?.message || null,
-      code: err?.code || null,
-      meta: err?.meta || null,
-    })
-  );
-}
+  } catch (err) {
+    console.error("[api/recruiter/job-postings] error:", err);
+    return res.status(500).json(
+      jsonSafe({
+        error: "Unexpected error while handling recruiter job postings.",
+        detail: err?.message || null,
+        code: err?.code || null,
+        meta: err?.meta || null,
+      })
+    );
+  }
 }

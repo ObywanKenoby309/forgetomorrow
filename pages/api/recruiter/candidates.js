@@ -359,14 +359,14 @@ export default async function handler(req, res) {
 
     // ── Load this recruiter's Contact rows for contactId on payload ───────────
     const recruiterContacts = allCandidateUserIds.length
-      ? await prisma.contact.findMany({
-          where: {
-            userId: recruiterUserId,
-            contactUserId: { in: allCandidateUserIds },
-          },
-          select: { id: true, contactUserId: true },
-        })
-      : [];
+  ? await prisma.contact.findMany({
+      where: {
+        accountKey, // 🔥 ORG LEVEL — NOT USER LEVEL
+        contactUserId: { in: allCandidateUserIds },
+      },
+      select: { id: true, contactUserId: true },
+    })
+  : [];
 
     const contactIdByUserId = new Map(
       recruiterContacts.map((c) => [String(c.contactUserId), c.id])
