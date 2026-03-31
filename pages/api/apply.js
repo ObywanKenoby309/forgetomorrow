@@ -8,6 +8,7 @@
 //   - ContactCategoryAssignment written once org-wide (accountKey scope)
 //   - CandidateGroupMember written once (canonical anchor)
 //
+//
 // Seeker sees nothing until a recruiter initiates contact.
 
 import { getServerSession } from 'next-auth';
