@@ -2,39 +2,45 @@
 // Assigns a contact to a category.
 // Scope: org-level for recruiters (accountKey), personal for everyone else (userId).
 //
-// Sibling enforcement rules:
-//   Personal / Clients roots → one child at a time (replace siblings)
-//   Candidates / Talent Pools roots → multiple children allowed (don't replace)
+// Root / sibling enforcement rules:
+//   Personal / Clients roots → one bucket at a time within that root
+//   Candidates root → child buckets only (jobs), multi-bucket
+//   Talent Pools root → root or child allowed, multi-bucket
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
-// Roots where a contact can only be in ONE child at a time
+// Roots where a contact can only be in ONE bucket at a time
 const SINGLE_BUCKET_ROOTS = ['personal', 'clients'];
 
-// Roots where a contact can be in MULTIPLE children simultaneously
+// Roots where a contact can be in MULTIPLE buckets simultaneously
 const MULTI_BUCKET_ROOTS = ['candidates', 'talent pools'];
 
 function normalizeValue(v) {
   return String(v || '').trim();
 }
 
-async function getRootName(categoryId) {
-  // Walk up the tree to find the root category name
-  let current = await prisma.contactCategory.findUnique({
-    where: { id: categoryId },
+async function getRootCategory(categoryId, scopeKey) {
+  let current = await prisma.contactCategory.findFirst({
+    where: {
+      id: categoryId,
+      accountKey: scopeKey,
+    },
     select: { id: true, name: true, parentCategoryId: true },
   });
 
   while (current?.parentCategoryId) {
-    current = await prisma.contactCategory.findUnique({
-      where: { id: current.parentCategoryId },
+    current = await prisma.contactCategory.findFirst({
+      where: {
+        id: current.parentCategoryId,
+        accountKey: scopeKey,
+      },
       select: { id: true, name: true, parentCategoryId: true },
     });
   }
 
-  return String(current?.name || '').toLowerCase();
+  return current || null;
 }
 
 export default async function handler(req, res) {
@@ -51,10 +57,9 @@ export default async function handler(req, res) {
   const userId = session.user.id;
 
   try {
-    // Load user for scopeKey
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, accountKey: true },
+      select: { id: true, accountKey: true, role: true },
     });
 
     if (!user) {
@@ -62,6 +67,7 @@ export default async function handler(req, res) {
     }
 
     const scopeKey = user.accountKey || user.id;
+    const isRecruiter = String(user.role || '').toUpperCase() === 'RECRUITER';
 
     const contactId = normalizeValue(req.body?.contactId);
     const categoryId = normalizeValue(req.body?.categoryId);
@@ -70,30 +76,30 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'contactId and categoryId are required' });
     }
 
-// ── Resolve Contact row ───────────────────────────────────────────────────
-// Recruiters use org-shared contacts by accountKey.
-// Everyone else stays personal by userId.
-const existingContact = user.accountKey
-  ? await prisma.contact.findFirst({
-      where: {
-        accountKey: scopeKey,
-        OR: [
-          { id: contactId },
-          { contactUserId: contactId },
-        ],
-      },
-      select: { id: true },
-    })
-  : await prisma.contact.findFirst({
-      where: {
-        userId,
-        OR: [
-          { id: contactId },
-          { contactUserId: contactId },
-        ],
-      },
-      select: { id: true },
-    });
+    // ── Resolve Contact row ───────────────────────────────────────────────────
+    // Recruiters use org/shared contacts by accountKey.
+    // Everyone else stays personal by userId.
+    const existingContact = isRecruiter
+      ? await prisma.contact.findFirst({
+          where: {
+            accountKey: scopeKey,
+            OR: [
+              { id: contactId },
+              { contactUserId: contactId },
+            ],
+          },
+          select: { id: true, contactUserId: true, accountKey: true, userId: true },
+        })
+      : await prisma.contact.findFirst({
+          where: {
+            userId,
+            OR: [
+              { id: contactId },
+              { contactUserId: contactId },
+            ],
+          },
+          select: { id: true, contactUserId: true, accountKey: true, userId: true },
+        });
 
     if (!existingContact) {
       return res.status(404).json({ error: 'Contact not found' });
@@ -103,7 +109,10 @@ const existingContact = user.accountKey
 
     // ── Validate category belongs to this scope ───────────────────────────────
     const category = await prisma.contactCategory.findFirst({
-      where: { id: categoryId, accountKey: scopeKey },
+      where: {
+        id: categoryId,
+        accountKey: scopeKey,
+      },
       select: { id: true, name: true, parentCategoryId: true },
     });
 
@@ -111,46 +120,44 @@ const existingContact = user.accountKey
       return res.status(404).json({ error: 'Category not found' });
     }
 
-    // ── Determine root type to enforce correct sibling rule ───────────────────
-    if (category.parentCategoryId) {
-      const rootName = await getRootName(category.id);
+    // ── Determine root and enforce correct bucket rules ───────────────────────
+    const rootCategory = await getRootCategory(category.id, scopeKey);
 
-      if (SINGLE_BUCKET_ROOTS.includes(rootName)) {
-        // Remove all sibling assignments under the same parent
-        const siblings = await prisma.contactCategory.findMany({
-          where: {
-            accountKey: scopeKey,
-            parentCategoryId: category.parentCategoryId,
-          },
-          select: { id: true },
-        });
+    if (!rootCategory?.id) {
+      return res.status(404).json({ error: 'Root category not found' });
+    }
 
-        const siblingIds = siblings
-          .map((s) => s.id)
-          .filter((id) => id !== category.id);
+    const rootName = String(rootCategory.name || '').toLowerCase();
+    const isSingleBucket = SINGLE_BUCKET_ROOTS.includes(rootName);
+    const isMultiBucket = MULTI_BUCKET_ROOTS.includes(rootName);
 
-        if (siblingIds.length) {
-          await prisma.contactCategoryAssignment.deleteMany({
-            where: {
-              accountKey: scopeKey,
-              contactId: resolvedContactId,
-              categoryId: { in: siblingIds },
-            },
-          });
-        }
+    // Defensive guard: if neither, just treat it as single bucket.
+    if (isSingleBucket || (!isMultiBucket && !isSingleBucket)) {
+      // Remove all other assignments in this same root tree
+      const sameRootCategories = await prisma.contactCategory.findMany({
+        where: {
+          accountKey: scopeKey,
+          OR: [
+            { id: rootCategory.id },
+            { parentCategoryId: rootCategory.id },
+          ],
+        },
+        select: { id: true },
+      });
 
-        // Also remove any root-level assignment (legacy bad state)
+      const sameRootIds = sameRootCategories
+        .map((c) => c.id)
+        .filter((id) => id !== category.id);
+
+      if (sameRootIds.length) {
         await prisma.contactCategoryAssignment.deleteMany({
           where: {
             accountKey: scopeKey,
             contactId: resolvedContactId,
-            categoryId: category.parentCategoryId,
+            categoryId: { in: sameRootIds },
           },
         });
       }
-
-      // MULTI_BUCKET_ROOTS: no sibling removal — contact stays in all buckets
-      // Just add the new assignment below
     }
 
     // ── Upsert the assignment ─────────────────────────────────────────────────
@@ -162,7 +169,9 @@ const existingContact = user.accountKey
           categoryId: category.id,
         },
       },
-      update: { userId }, // update who last assigned
+      update: {
+        userId,
+      },
       create: {
         accountKey: scopeKey,
         userId,
@@ -175,6 +184,7 @@ const existingContact = user.accountKey
       ok: true,
       assignment,
       category,
+      rootCategory,
     });
   } catch (err) {
     console.error('contacts/assign error:', err);
