@@ -11,6 +11,29 @@ const BASE_SYSTEM_ROOTS = ['Personal'];
 const RECRUITER_SYSTEM_ROOTS = ['Candidates', 'Talent Pools'];
 const COACH_SYSTEM_ROOTS = ['Clients'];
 
+async function ensureRootCategory({ scopeKey, userId, name }) {
+  const existing = await prisma.contactCategory.findFirst({
+    where: {
+      accountKey: scopeKey,
+      parentCategoryId: null,
+      name,
+    },
+    select: { id: true },
+  });
+
+  if (existing?.id) return existing;
+
+  return prisma.contactCategory.create({
+    data: {
+      accountKey: scopeKey,
+      userId,
+      name,
+      parentCategoryId: null,
+    },
+    select: { id: true },
+  });
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -48,26 +71,9 @@ export default async function handler(req, res) {
       ...(isCoach ? COACH_SYSTEM_ROOTS : []),
     ];
 
-    await Promise.all(
-      rootsToSeed.map((name) =>
-        prisma.contactCategory.upsert({
-          where: {
-            accountKey_parentCategoryId_name: {
-              accountKey: scopeKey,
-              parentCategoryId: null,
-              name,
-            },
-          },
-          update: {},
-          create: {
-            accountKey: scopeKey,
-            userId,
-            name,
-            parentCategoryId: null,
-          },
-        })
-      )
-    );
+    for (const name of rootsToSeed) {
+      await ensureRootCategory({ scopeKey, userId, name });
+    }
 
     // ── 2) Contacts ───────────────────────────────────────────────────────────
     // Always per-user — a recruiter's contact rows are their own.
@@ -101,7 +107,7 @@ export default async function handler(req, res) {
         'Member';
 
       return {
-        id: c.id,                // Contact row cuid — matches assignment.contactId
+        id: c.id, // Contact row cuid — matches assignment.contactId
         userId: c.contactUserId, // other person's User.id
         slug: other?.slug || null,
         name,
@@ -115,7 +121,7 @@ export default async function handler(req, res) {
     // ── 3) Categories — scoped by accountKey (org or personal) ───────────────
     const categories = await prisma.contactCategory.findMany({
       where: { accountKey: scopeKey },
-      orderBy: { name: 'asc' },
+      orderBy: [{ parentCategoryId: 'asc' }, { name: 'asc' }],
       select: {
         id: true,
         name: true,
@@ -165,8 +171,10 @@ export default async function handler(req, res) {
             },
           });
 
+    const incomingUserMap = new Map(incomingUsers.map((u) => [u.id, u]));
+
     const incoming = incomingRequests.map((r) => {
-      const u = incomingUsers.find((x) => x.id === r.fromUserId);
+      const u = incomingUserMap.get(r.fromUserId);
       const name =
         u?.name ||
         [u?.firstName, u?.lastName].filter(Boolean).join(' ') ||
@@ -225,8 +233,10 @@ export default async function handler(req, res) {
             },
           });
 
+    const outgoingUserMap = new Map(outgoingUsers.map((u) => [u.id, u]));
+
     const outgoing = outgoingRequests.map((r) => {
-      const u = outgoingUsers.find((x) => x.id === r.toUserId);
+      const u = outgoingUserMap.get(r.toUserId);
       const name =
         u?.name ||
         [u?.firstName, u?.lastName].filter(Boolean).join(' ') ||
@@ -265,7 +275,7 @@ export default async function handler(req, res) {
       assignments,
       incoming,
       outgoing,
-      scopeKey, // useful for client-side debugging
+      scopeKey,
     });
   } catch (err) {
     console.error('contacts/summary error:', err);
