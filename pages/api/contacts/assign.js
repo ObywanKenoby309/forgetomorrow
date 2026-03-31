@@ -81,26 +81,39 @@ const isOrgScoped = !!user.accountKey;
     // Recruiters use org/shared contacts by accountKey.
     // Everyone else stays personal by userId.
     const existingContact = isOrgScoped
-      ? await prisma.contact.findFirst({
-          where: {
+  ? await prisma.contact.findFirst({
+      where: {
+        OR: [
+          {
             accountKey: scopeKey,
-            OR: [
-              { id: contactId },
-              { contactUserId: contactId },
-            ],
+            id: contactId,
           },
-          select: { id: true, contactUserId: true, accountKey: true, userId: true },
-        })
-      : await prisma.contact.findFirst({
-          where: {
+          {
+            accountKey: scopeKey,
+            contactUserId: contactId,
+          },
+          {
             userId,
-            OR: [
-              { id: contactId },
-              { contactUserId: contactId },
-            ],
+            id: contactId,
           },
-          select: { id: true, contactUserId: true, accountKey: true, userId: true },
-        });
+          {
+            userId,
+            contactUserId: contactId,
+          },
+        ],
+      },
+      select: { id: true, contactUserId: true, accountKey: true, userId: true },
+    })
+  : await prisma.contact.findFirst({
+      where: {
+        userId,
+        OR: [
+          { id: contactId },
+          { contactUserId: contactId },
+        ],
+      },
+      select: { id: true, contactUserId: true, accountKey: true, userId: true },
+    });
 
     if (!existingContact) {
       return res.status(404).json({ error: 'Contact not found' });
@@ -189,6 +202,11 @@ const isOrgScoped = !!user.accountKey;
     });
   } catch (err) {
     console.error('contacts/assign error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+	return res.status(500).json({
+	error: 'Internal server error',
+	detail: err?.message || null,
+	code: err?.code || null,
+	meta: err?.meta || null,
+   });
   }
 }
