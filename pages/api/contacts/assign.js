@@ -80,40 +80,42 @@ const isOrgScoped = !!user.accountKey;
     // ── Resolve Contact row ───────────────────────────────────────────────────
     // Recruiters use org/shared contacts by accountKey.
     // Everyone else stays personal by userId.
-    const existingContact = isOrgScoped
-  ? await prisma.contact.findFirst({
-      where: {
-        OR: [
-          {
-            accountKey: scopeKey,
-            id: contactId,
-          },
-          {
-            accountKey: scopeKey,
-            contactUserId: contactId,
-          },
-          {
-            userId,
-            id: contactId,
-          },
-          {
-            userId,
-            contactUserId: contactId,
-          },
-        ],
-      },
-      select: { id: true, contactUserId: true, accountKey: true, userId: true },
-    })
-  : await prisma.contact.findFirst({
-      where: {
-        userId,
-        OR: [
-          { id: contactId },
-          { contactUserId: contactId },
-        ],
-      },
-      select: { id: true, contactUserId: true, accountKey: true, userId: true },
-    });
+    let existingContact = null;
+
+if (isOrgScoped) {
+  const orgMembers = await prisma.organizationMember.findMany({
+    where: { accountKey: scopeKey },
+    select: { userId: true },
+  });
+
+  const orgUserIds = [
+    ...new Set(orgMembers.map((m) => String(m.userId || '')).filter(Boolean)),
+  ];
+
+  existingContact = orgUserIds.length
+    ? await prisma.contact.findFirst({
+        where: {
+          userId: { in: orgUserIds },
+          OR: [
+            { id: contactId },
+            { contactUserId: contactId },
+          ],
+        },
+        select: { id: true, contactUserId: true, userId: true },
+      })
+    : null;
+} else {
+  existingContact = await prisma.contact.findFirst({
+    where: {
+      userId,
+      OR: [
+        { id: contactId },
+        { contactUserId: contactId },
+      ],
+    },
+    select: { id: true, contactUserId: true, userId: true },
+  });
+}
 
     if (!existingContact) {
       return res.status(404).json({ error: 'Contact not found' });
