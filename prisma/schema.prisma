@@ -841,37 +841,37 @@ model User {
 }
 
 model ContactCategory {
-  id               String   @id @default(cuid())
-  userId           String
-  accountKey       String?
+  id               String    @id @default(cuid())
+  accountKey       String                           // scope key — org key OR userId for personal
+  userId           String                           // creator (audit trail)
   name             String
   parentCategoryId String?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
 
   user        User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
   parent      ContactCategory?            @relation("ContactCategoryHierarchy", fields: [parentCategoryId], references: [id], onDelete: SetNull)
   children    ContactCategory[]           @relation("ContactCategoryHierarchy")
   assignments ContactCategoryAssignment[]
 
-  @@unique([userId, parentCategoryId, name])
-  @@index([userId])
+  @@unique([accountKey, parentCategoryId, name])
   @@index([accountKey])
+  @@index([userId])
   @@index([parentCategoryId])
 }
 
 model ContactCategoryAssignment {
   id         String  @id @default(cuid())
-  userId     String
-  accountKey String?
+  accountKey String                           // scope key — org key OR userId for personal
+  userId     String                           // who made the assignment (audit trail)
   contactId  String
   categoryId String?
 
   user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   category ContactCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  @@unique([userId, contactId, categoryId])
-  @@index([userId])
+  @@unique([accountKey, contactId, categoryId])
   @@index([accountKey])
+  @@index([userId])
   @@index([contactId])
   @@index([categoryId])
 }

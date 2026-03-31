@@ -1,35 +1,40 @@
 // pages/api/contacts/assign.js
+// Assigns a contact to a category.
+// Scope: org-level for recruiters (accountKey), personal for everyone else (userId).
+//
+// Sibling enforcement rules:
+//   Personal / Clients roots → one child at a time (replace siblings)
+//   Candidates / Talent Pools roots → multiple children allowed (don't replace)
+
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
-const SYSTEM_CATEGORY_NAMES = ['Personal', 'Candidates', 'Clients'];
+// Roots where a contact can only be in ONE child at a time
+const SINGLE_BUCKET_ROOTS = ['personal', 'clients'];
+
+// Roots where a contact can be in MULTIPLE children simultaneously
+const MULTI_BUCKET_ROOTS = ['candidates', 'talent pools'];
 
 function normalizeValue(v) {
   return String(v || '').trim();
 }
 
-async function ensureSystemCategories(userId) {
-  const results = await Promise.all(
-    SYSTEM_CATEGORY_NAMES.map((name) =>
-      prisma.contactCategory.upsert({
-        where: {
-          userId_parentCategoryId_name: {
-            userId,
-            parentCategoryId: null,
-            name,
-          },
-        },
-        update: {},
-        create: {
-          userId,
-          parentCategoryId: null,
-          name,
-        },
-      })
-    )
-  );
-  return results;
+async function getRootName(categoryId) {
+  // Walk up the tree to find the root category name
+  let current = await prisma.contactCategory.findUnique({
+    where: { id: categoryId },
+    select: { id: true, name: true, parentCategoryId: true },
+  });
+
+  while (current?.parentCategoryId) {
+    current = await prisma.contactCategory.findUnique({
+      where: { id: current.parentCategoryId },
+      select: { id: true, name: true, parentCategoryId: true },
+    });
+  }
+
+  return String(current?.name || '').toLowerCase();
 }
 
 export default async function handler(req, res) {
@@ -44,23 +49,35 @@ export default async function handler(req, res) {
   }
 
   const userId = session.user.id;
-  const accountKey = session.user.accountKey || null;
 
   try {
-    const contactId = normalizeValue(req.body?.contactId);
-    const categoryIdRaw = req.body?.categoryId;
+    // Load user for scopeKey
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, accountKey: true },
+    });
 
-    if (!contactId || !categoryIdRaw) {
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const scopeKey = user.accountKey || user.id;
+
+    const contactId = normalizeValue(req.body?.contactId);
+    const categoryId = normalizeValue(req.body?.categoryId);
+
+    if (!contactId || !categoryId) {
       return res.status(400).json({ error: 'contactId and categoryId are required' });
     }
 
-    await ensureSystemCategories(userId);
-
-    // Resolve contact
+    // ── Resolve Contact row ───────────────────────────────────────────────────
+    // For recruiters: contact may belong to any recruiter in the org
     const existingContact = await prisma.contact.findFirst({
       where: {
-        userId,
-        OR: [{ id: contactId }, { contactUserId: contactId }],
+        OR: [
+          { id: contactId, userId },
+          { contactUserId: contactId, userId },
+        ],
       },
       select: { id: true },
     });
@@ -71,53 +88,71 @@ export default async function handler(req, res) {
 
     const resolvedContactId = existingContact.id;
 
-    // 🔥 CRITICAL: category MUST already exist (no more root creation here)
+    // ── Validate category belongs to this scope ───────────────────────────────
     const category = await prisma.contactCategory.findFirst({
-      where: {
-        id: normalizeValue(categoryIdRaw),
-        userId,
-      },
+      where: { id: categoryId, accountKey: scopeKey },
+      select: { id: true, name: true, parentCategoryId: true },
     });
 
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }
 
-    // 🔥 RULE: ONE CHILD BUCKET ONLY PER ROOT
-    // remove any existing assignment under same parent tree
+    // ── Determine root type to enforce correct sibling rule ───────────────────
     if (category.parentCategoryId) {
-      const siblings = await prisma.contactCategory.findMany({
-        where: {
-          userId,
-          parentCategoryId: category.parentCategoryId,
-        },
-        select: { id: true },
-      });
+      const rootName = await getRootName(category.id);
 
-      const siblingIds = siblings.map((s) => s.id);
+      if (SINGLE_BUCKET_ROOTS.includes(rootName)) {
+        // Remove all sibling assignments under the same parent
+        const siblings = await prisma.contactCategory.findMany({
+          where: {
+            accountKey: scopeKey,
+            parentCategoryId: category.parentCategoryId,
+          },
+          select: { id: true },
+        });
 
-      await prisma.contactCategoryAssignment.deleteMany({
-        where: {
-          userId,
-          contactId: resolvedContactId,
-          categoryId: { in: siblingIds },
-        },
-      });
+        const siblingIds = siblings
+          .map((s) => s.id)
+          .filter((id) => id !== category.id);
+
+        if (siblingIds.length) {
+          await prisma.contactCategoryAssignment.deleteMany({
+            where: {
+              accountKey: scopeKey,
+              contactId: resolvedContactId,
+              categoryId: { in: siblingIds },
+            },
+          });
+        }
+
+        // Also remove any root-level assignment (legacy bad state)
+        await prisma.contactCategoryAssignment.deleteMany({
+          where: {
+            accountKey: scopeKey,
+            contactId: resolvedContactId,
+            categoryId: category.parentCategoryId,
+          },
+        });
+      }
+
+      // MULTI_BUCKET_ROOTS: no sibling removal — contact stays in all buckets
+      // Just add the new assignment below
     }
 
-    // create assignment
+    // ── Upsert the assignment ─────────────────────────────────────────────────
     const assignment = await prisma.contactCategoryAssignment.upsert({
       where: {
-        userId_contactId_categoryId: {
-          userId,
+        accountKey_contactId_categoryId: {
+          accountKey: scopeKey,
           contactId: resolvedContactId,
           categoryId: category.id,
         },
       },
-      update: {},
+      update: { userId }, // update who last assigned
       create: {
+        accountKey: scopeKey,
         userId,
-        accountKey,
         contactId: resolvedContactId,
         categoryId: category.id,
       },

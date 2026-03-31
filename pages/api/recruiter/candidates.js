@@ -1,4 +1,9 @@
 // pages/api/recruiter/candidates.js
+// Returns candidate pipeline grouped by CandidateGroup (canonical truth).
+// Scoped to the recruiter's org (accountKey) — all recruiters see the same groups.
+// Individual conversation threads are per-recruiter (not shared).
+// Full search filter support preserved from original.
+
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
@@ -31,21 +36,16 @@ function normLower(v) {
 
 function jsonSafe(value) {
   if (value === null || value === undefined) return value;
-
   const t = typeof value;
-
   if (t === "bigint") return value.toString();
   if (t === "string" || t === "number" || t === "boolean") return value;
   if (value instanceof Date) return value;
-
   if (Array.isArray(value)) return value.map(jsonSafe);
-
   if (t === "object") {
     const out = {};
     for (const [k, v] of Object.entries(value)) out[k] = jsonSafe(v);
     return out;
   }
-
   return value;
 }
 
@@ -65,10 +65,7 @@ function parseBoolTerms(raw) {
 }
 
 async function resolveEffectiveRecruiter(req, session) {
-  const sessionEmail = String(session?.user?.email || "")
-    .trim()
-    .toLowerCase();
-
+  const sessionEmail = String(session?.user?.email || "").trim().toLowerCase();
   if (!sessionEmail) return null;
 
   const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
@@ -100,13 +97,11 @@ async function resolveEffectiveRecruiter(req, session) {
     where: { email: sessionEmail },
     select: { id: true, email: true, role: true, accountKey: true },
   });
-
   return u?.id ? u : null;
 }
 
 async function requireRecruiterSession(req, res) {
   const session = await getServerSession(req, res, authOptions);
-
   if (!session?.user?.email) {
     res.status(401).json({ error: "Not authenticated" });
     return null;
@@ -179,10 +174,7 @@ function matchesFilters(candidate, reqQuery) {
   }
 
   if (skills) {
-    const skillTerms = skills
-      .split(/[,|]/g)
-      .map((x) => x.trim())
-      .filter(Boolean);
+    const skillTerms = skills.split(/[,|]/g).map((x) => x.trim()).filter(Boolean);
     const skillBlob = (candidate.skills || []).join(" ");
     if (skillTerms.length && !skillTerms.some((term) => includesText(skillBlob, term))) {
       return false;
@@ -190,10 +182,7 @@ function matchesFilters(candidate, reqQuery) {
   }
 
   if (languages) {
-    const languageTerms = languages
-      .split(/[,|]/g)
-      .map((x) => x.trim())
-      .filter(Boolean);
+    const languageTerms = languages.split(/[,|]/g).map((x) => x.trim()).filter(Boolean);
     const langBlob = (candidate.languages || []).join(" ");
     if (languageTerms.length && !languageTerms.some((term) => includesText(langBlob, term))) {
       return false;
@@ -201,10 +190,7 @@ function matchesFilters(candidate, reqQuery) {
   }
 
   if (education) {
-    const eduTerms = education
-      .split(/[,|]/g)
-      .map((x) => x.trim())
-      .filter(Boolean);
+    const eduTerms = education.split(/[,|]/g).map((x) => x.trim()).filter(Boolean);
     const eduBlob = (candidate.education || []).join(" ");
     if (eduTerms.length && !eduTerms.some((term) => includesText(eduBlob, term))) {
       return false;
@@ -230,7 +216,6 @@ export default async function handler(req, res) {
   if (!effective?.id) {
     return res.status(404).json({ error: "User not found" });
   }
-
   if (!effective.accountKey) {
     return res.status(404).json({ error: "accountKey not found" });
   }
@@ -247,11 +232,9 @@ export default async function handler(req, res) {
     String(req.query?.includeArchived || "").toLowerCase() === "true";
 
   try {
+    // ── Verify org membership ─────────────────────────────────────────────────
     const recruiterOrgMember = await prisma.organizationMember.findFirst({
-      where: {
-        accountKey,
-        userId: recruiterUserId,
-      },
+      where: { accountKey, userId: recruiterUserId },
       select: { id: true },
     });
 
@@ -259,41 +242,106 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: "Recruiter is not part of this organization" });
     }
 
-    const parentCategory = await prisma.contactCategory.findFirst({
+    // ── Load CandidateGroups — canonical source of truth ──────────────────────
+    // Replaces the old ContactCategory name-matching bridge.
+    // All recruiters in the org see the same groups via accountKey.
+    const candidateGroups = await prisma.candidateGroup.findMany({
       where: {
-        userId: recruiterUserId,
         accountKey,
-        name: "Candidates",
-        parentCategoryId: null,
+        ...(includeArchived ? {} : { status: "active" }),
       },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        jobId: true,
+        createdAt: true,
+        updatedAt: true,
+        members: {
+          select: {
+            id: true,
+            addedByUserId: true,
+            recruiterCandidate: {
+              select: {
+                id: true,
+                candidateUserId: true,
+                tags: true,
+                notes: true,
+                pipelineStage: true,
+                lastContacted: true,
+                lastSeen: true,
+                skills: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
 
-    if (!parentCategory?.id) {
+    if (!candidateGroups.length) {
       return res.status(200).json(
-        jsonSafe({
-          candidates: [],
-          candidatesFlat: [],
-          jobGroups: [],
-        })
+        jsonSafe({ candidates: [], candidatesFlat: [], jobGroups: [] })
       );
     }
 
+    // ── Collect all candidate user ids ────────────────────────────────────────
+    const allCandidateUserIds = [
+      ...new Set(
+        candidateGroups.flatMap((g) =>
+          g.members
+            .map((m) => m.recruiterCandidate?.candidateUserId)
+            .filter(Boolean)
+        )
+      ),
+    ];
+
+    if (!allCandidateUserIds.length) {
+      return res.status(200).json(
+        jsonSafe({ candidates: [], candidatesFlat: [], jobGroups: [] })
+      );
+    }
+
+    // ── Load candidate profiles — full field set ───────────────────────────────
+    const candidateUsers = await prisma.user.findMany({
+      where: { id: { in: allCandidateUserIds } },
+      select: {
+        id: true,
+        name: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        title: true,
+        headline: true,
+        avatarUrl: true,
+        city: true,
+        region: true,
+        location: true,
+        summary: true,
+        aboutMe: true,
+        role: true,
+        skillsJson: true,
+        languagesJson: true,
+      },
+    });
+
+    const candidateUserById = new Map(
+      candidateUsers.map((u) => [String(u.id), u])
+    );
+
+    // ── Load THIS recruiter's conversations only ───────────────────────────────
+    // Private per recruiter — not shared across the team.
     const recruiterConversations = await prisma.conversationParticipant.findMany({
       where: {
         userId: recruiterUserId,
-        conversation: {
-          channel: "recruiter",
-        },
+        conversation: { channel: "recruiter" },
       },
       include: {
         conversation: {
           include: {
-            participants: {
-              select: {
-                userId: true,
-              },
-            },
+            participants: { select: { userId: true } },
           },
         },
       },
@@ -309,168 +357,35 @@ export default async function handler(req, res) {
       }
     }
 
-    const childCategories = await prisma.contactCategory.findMany({
-      where: {
-        userId: recruiterUserId,
-        accountKey,
-        parentCategoryId: parentCategory.id,
-      },
-      select: {
-        id: true,
-        name: true,
-        parentCategoryId: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const categoryNames = childCategories.map((c) => c.name).filter(Boolean);
-
-    const candidateGroups = categoryNames.length
-      ? await prisma.candidateGroup.findMany({
-          where: {
-            accountKey,
-            name: { in: categoryNames },
-          },
-          select: {
-            id: true,
-            name: true,
-            status: true,
-            jobId: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        })
-      : [];
-
-    const candidateGroupByName = new Map(
-      candidateGroups.map((g) => [String(g.name), g])
-    );
-
-    const eligibleCategories = childCategories.filter((cat) => {
-      const group = candidateGroupByName.get(String(cat.name));
-      if (!group) return includeArchived;
-      return includeArchived ? true : String(group.status || "active") === "active";
-    });
-
-    if (!eligibleCategories.length) {
-      return res.status(200).json(
-        jsonSafe({
-          candidates: [],
-          candidatesFlat: [],
-          jobGroups: [],
-        })
-      );
-    }
-
-    const assignments = await prisma.contactCategoryAssignment.findMany({
-      where: {
-        userId: recruiterUserId,
-        categoryId: {
-          in: eligibleCategories.map((c) => c.id),
-        },
-      },
-      select: {
-        id: true,
-        categoryId: true,
-        contactId: true,
-      },
-    });
-
-    const contactIds = [...new Set(assignments.map((a) => a.contactId).filter(Boolean))];
-
-    const contacts = contactIds.length
+    // ── Load this recruiter's Contact rows for contactId on payload ───────────
+    const recruiterContacts = allCandidateUserIds.length
       ? await prisma.contact.findMany({
           where: {
-            id: { in: contactIds },
             userId: recruiterUserId,
+            contactUserId: { in: allCandidateUserIds },
           },
-          select: {
-            id: true,
-            contactUserId: true,
-          },
+          select: { id: true, contactUserId: true },
         })
       : [];
 
-    const contactById = new Map(contacts.map((c) => [String(c.id), c]));
-
-    const candidateUserIds = [
-      ...new Set(
-        contacts.map((c) => String(c.contactUserId || "")).filter(Boolean)
-      ),
-    ];
-
-    const candidateUsers = candidateUserIds.length
-      ? await prisma.user.findMany({
-          where: {
-            id: { in: candidateUserIds },
-          },
-          select: {
-            id: true,
-            name: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            title: true,
-            headline: true,
-            avatarUrl: true,
-            city: true,
-            region: true,
-            location: true,
-            summary: true,
-            role: true,
-          },
-        })
-      : [];
-
-    const candidateUserById = new Map(candidateUsers.map((u) => [String(u.id), u]));
-
-    const recruiterCandidates = candidateUserIds.length
-      ? await prisma.recruiterCandidate.findMany({
-          where: {
-            recruiterUserId,
-            accountKey,
-            candidateUserId: { in: candidateUserIds },
-          },
-          select: {
-            id: true,
-            candidateUserId: true,
-            tags: true,
-            notes: true,
-            pipelineStage: true,
-            lastContacted: true,
-            lastSeen: true,
-            skills: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        })
-      : [];
-
-    const recruiterCandidateByUserId = new Map(
-      recruiterCandidates.map((rc) => [String(rc.candidateUserId), rc])
+    const contactIdByUserId = new Map(
+      recruiterContacts.map((c) => [String(c.contactUserId), c.id])
     );
 
-    const categoriesById = new Map(eligibleCategories.map((c) => [String(c.id), c]));
-
+    // ── Build response from canonical CandidateGroup data ─────────────────────
     const seenFlat = new Set();
     const candidatesFlat = [];
-    const jobGroups = eligibleCategories.map((category) => {
-      const groupMeta = candidateGroupByName.get(String(category.name)) || null;
-      const members = assignments.filter(
-        (a) => String(a.categoryId || "") === String(category.id)
-      );
 
+    const jobGroups = candidateGroups.map((group) => {
       const candidates = [];
 
-      for (const assignment of members) {
-        const contact = contactById.get(String(assignment.contactId || ""));
-        if (!contact?.contactUserId) continue;
+      for (const member of group.members) {
+        const rc = member.recruiterCandidate;
+        if (!rc?.candidateUserId) continue;
 
-        const user = candidateUserById.get(String(contact.contactUserId));
+        const user = candidateUserById.get(String(rc.candidateUserId));
         if (!user?.id) continue;
 
-        const rc = recruiterCandidateByUserId.get(String(user.id)) || null;
         const displayName =
           user.name ||
           `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
@@ -482,35 +397,45 @@ export default async function handler(req, res) {
           [user.city, user.region].filter(Boolean).join(", ") ||
           "";
 
+        const skills = Array.isArray(rc.skills)
+          ? rc.skills
+          : Array.isArray(user.skillsJson)
+          ? user.skillsJson
+          : [];
+
+        const languages = Array.isArray(user.languagesJson)
+          ? user.languagesJson
+          : [];
+
         const candidatePayload = {
           id: String(user.id),
           userId: String(user.id),
-          contactId: String(contact.id),
-          recruiterCandidateId: rc?.id || null,
+          contactId: contactIdByUserId.get(String(user.id)) || null,
+          recruiterCandidateId: rc.id || null,
           name: displayName,
           email: user.email || null,
           title: user.title || user.headline || "",
           currentTitle: user.title || "",
           headline: user.headline || "",
-          summary: user.summary || "",
+          summary: user.summary || user.aboutMe || "",
           role: user.role || "",
           avatarUrl: user.avatarUrl || null,
           location,
           preferredLocation: location,
-          skills: Array.isArray(rc?.skills) ? rc.skills : [],
-          languages: [],
+          skills,
+          languages,
           education: [],
-          tags: rc?.tags || [],
-          notes: rc?.notes || "",
-          pipelineStage: rc?.pipelineStage || null,
-          lastContacted: rc?.lastContacted || null,
-          lastSeen: rc?.lastSeen || null,
-          conversationId:
-            conversationByOtherUserId.get(String(user.id)) || null,
-          jobGroupId: groupMeta?.id || null,
-          jobGroupName: category.name,
-          jobId: groupMeta?.jobId || null,
-          groupStatus: groupMeta?.status || "active",
+          tags: Array.isArray(rc.tags) ? rc.tags : [],
+          notes: rc.notes || "",
+          pipelineStage: rc.pipelineStage || null,
+          lastContacted: rc.lastContacted || null,
+          lastSeen: rc.lastSeen || null,
+          // Private to this recruiter
+          conversationId: conversationByOtherUserId.get(String(user.id)) || null,
+          jobGroupId: group.id,
+          jobGroupName: group.name,
+          jobId: group.jobId || null,
+          groupStatus: group.status || "active",
           match: null,
         };
 
@@ -523,16 +448,17 @@ export default async function handler(req, res) {
       }
 
       return {
-        id: groupMeta?.id || `category-${category.id}`,
-        categoryId: category.id,
-        name: category.name,
-        status: groupMeta?.status || "active",
-        jobId: groupMeta?.jobId || null,
+        id: group.id,
+        categoryId: null, // no longer category-based
+        name: group.name,
+        status: group.status || "active",
+        jobId: group.jobId || null,
         candidateCount: candidates.length,
         candidates,
       };
     });
 
+    // ── Apply search filters — full filter set preserved ──────────────────────
     const filteredJobGroups = jobGroups
       .map((group) => ({
         ...group,
@@ -554,14 +480,14 @@ export default async function handler(req, res) {
       })
     );
   } catch (err) {
-  console.error("[api/recruiter/candidates] error:", err);
-  return res.status(500).json(
-    jsonSafe({
-      error: "Unexpected error while loading recruiter candidates.",
-      detail: err?.message || null,
-      code: err?.code || null,
-      meta: err?.meta || null,
-    })
-  );
-}
+    console.error("[api/recruiter/candidates] error:", err);
+    return res.status(500).json(
+      jsonSafe({
+        error: "Unexpected error while loading recruiter candidates.",
+        detail: err?.message || null,
+        code: err?.code || null,
+        meta: err?.meta || null,
+      })
+    );
+  }
 }
