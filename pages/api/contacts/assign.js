@@ -3,8 +3,6 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
-// System categories that must always exist in the DB.
-// These are seeded on first assignment so the UI always gets real cuids.
 const SYSTEM_CATEGORY_NAMES = ['Personal', 'Candidates', 'Clients'];
 
 function normalizeValue(v) {
@@ -51,21 +49,20 @@ export default async function handler(req, res) {
   try {
     const contactId = normalizeValue(req.body?.contactId);
     const categoryIdRaw = req.body?.categoryId;
-    const categoryName = normalizeValue(req.body?.categoryName);
 
-    if (!contactId) {
-      return res.status(400).json({ error: 'contactId is required' });
+    if (!contactId || !categoryIdRaw) {
+      return res.status(400).json({ error: 'contactId and categoryId are required' });
     }
 
     await ensureSystemCategories(userId);
 
-    // Resolve to the real Contact row id (accepts either Contact.id or contactUserId)
+    // Resolve contact
     const existingContact = await prisma.contact.findFirst({
       where: {
         userId,
         OR: [{ id: contactId }, { contactUserId: contactId }],
       },
-      select: { id: true, contactUserId: true },
+      select: { id: true },
     });
 
     if (!existingContact) {
@@ -74,53 +71,47 @@ export default async function handler(req, res) {
 
     const resolvedContactId = existingContact.id;
 
-    let categoryId = categoryIdRaw ? normalizeValue(categoryIdRaw) : null;
-    let resolvedCategory = null;
+    // 🔥 CRITICAL: category MUST already exist (no more root creation here)
+    const category = await prisma.contactCategory.findFirst({
+      where: {
+        id: normalizeValue(categoryIdRaw),
+        userId,
+      },
+    });
 
-    if (categoryName && categoryName.toLowerCase() !== 'unassigned') {
-      resolvedCategory = await prisma.contactCategory.upsert({
-        where: {
-          userId_parentCategoryId_name: {
-            userId,
-            parentCategoryId: null,
-            name: categoryName,
-          },
-        },
-        update: {},
-        create: {
-          userId,
-          parentCategoryId: null,
-          name: categoryName,
-        },
-      });
-      categoryId = resolvedCategory.id;
-    } else if (categoryId) {
-      resolvedCategory = await prisma.contactCategory.findFirst({
-        where: { id: categoryId, userId },
-      });
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
     }
 
-    if (!categoryId) {
+    // 🔥 RULE: ONE CHILD BUCKET ONLY PER ROOT
+    // remove any existing assignment under same parent tree
+    if (category.parentCategoryId) {
+      const siblings = await prisma.contactCategory.findMany({
+        where: {
+          userId,
+          parentCategoryId: category.parentCategoryId,
+        },
+        select: { id: true },
+      });
+
+      const siblingIds = siblings.map((s) => s.id);
+
       await prisma.contactCategoryAssignment.deleteMany({
         where: {
           userId,
           contactId: resolvedContactId,
+          categoryId: { in: siblingIds },
         },
-      });
-
-      return res.status(200).json({
-        ok: true,
-        assignment: null,
-        category: null,
       });
     }
 
+    // create assignment
     const assignment = await prisma.contactCategoryAssignment.upsert({
       where: {
         userId_contactId_categoryId: {
           userId,
           contactId: resolvedContactId,
-          categoryId,
+          categoryId: category.id,
         },
       },
       update: {},
@@ -128,17 +119,14 @@ export default async function handler(req, res) {
         userId,
         accountKey,
         contactId: resolvedContactId,
-        categoryId,
+        categoryId: category.id,
       },
     });
 
     return res.status(200).json({
       ok: true,
-      assignment: {
-        ...assignment,
-        contactId: resolvedContactId,
-      },
-      category: resolvedCategory || null,
+      assignment,
+      category,
     });
   } catch (err) {
     console.error('contacts/assign error:', err);
