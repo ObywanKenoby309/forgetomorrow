@@ -87,41 +87,41 @@ export default async function handler(req, res) {
     let contactRows = [];
 
     if (isRecruiter && user.accountKey) {
-      const orgMembers = await prisma.organizationMember.findMany({
-        where: { accountKey: user.accountKey },
-        select: { userId: true },
-      });
+  const orgMembers = await prisma.organizationMember.findMany({
+    where: { accountKey: user.accountKey },
+    select: { userId: true },
+  });
 
-      const orgUserIds = [
-        ...new Set(orgMembers.map((m) => String(m.userId || '')).filter(Boolean)),
-      ];
+  const orgUserIds = [
+    ...new Set(orgMembers.map((m) => String(m.userId || '')).filter(Boolean)),
+  ];
 
-      contactRows = await prisma.contact.findMany({
-        where: {
-          OR: [
-            { accountKey: user.accountKey }, // new shared org contact rows
-            ...(orgUserIds.length ? [{ userId: { in: orgUserIds } }] : []), // legacy per-recruiter rows
-          ],
-        },
-        include: {
-          contactUser: {
-            select: {
-              id: true,
-              slug: true,
-              name: true,
-              firstName: true,
-              lastName: true,
-              headline: true,
-              location: true,
-              status: true,
-              avatarUrl: true,
-              image: true,
+  contactRows =
+    orgUserIds.length === 0
+      ? []
+      : await prisma.contact.findMany({
+          where: {
+            userId: { in: orgUserIds },
+          },
+          include: {
+            contactUser: {
+              select: {
+                id: true,
+                slug: true,
+                name: true,
+                firstName: true,
+                lastName: true,
+                headline: true,
+                location: true,
+                status: true,
+                avatarUrl: true,
+                image: true,
+              },
             },
           },
-        },
-        orderBy: [{ createdAt: 'asc' }],
-      });
-    } else {
+          orderBy: [{ createdAt: 'asc' }],
+        });
+} else {
       contactRows = await prisma.contact.findMany({
         where: { userId },
         include: {
