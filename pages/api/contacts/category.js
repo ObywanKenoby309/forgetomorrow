@@ -18,9 +18,20 @@ export default async function handler(req, res) {
   const userId = session.user.id;
 
   try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, accountKey: true },
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const scopeKey = user.accountKey || user.id;
+
     if (req.method === 'POST') {
       const name = normalizeName(req.body?.name);
-      const parentCategoryId = req.body?.parentCategoryId
+      let parentCategoryId = req.body?.parentCategoryId
         ? String(req.body.parentCategoryId).trim()
         : null;
 
@@ -28,9 +39,24 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Category name is required' });
       }
 
+      // If caller provides a parent, make sure it belongs to this same scope
+      if (parentCategoryId) {
+        const parent = await prisma.contactCategory.findFirst({
+          where: {
+            id: parentCategoryId,
+            accountKey: scopeKey,
+          },
+          select: { id: true },
+        });
+
+        if (!parent) {
+          return res.status(404).json({ error: 'Parent category not found' });
+        }
+      }
+
       const existing = await prisma.contactCategory.findFirst({
         where: {
-          userId,
+          accountKey: scopeKey,
           parentCategoryId,
           name: {
             equals: name,
@@ -46,6 +72,7 @@ export default async function handler(req, res) {
       const category = await prisma.contactCategory.create({
         data: {
           userId,
+          accountKey: scopeKey,
           name,
           parentCategoryId,
         },
@@ -66,12 +93,12 @@ export default async function handler(req, res) {
 
       if (categoryId) {
         category = await prisma.contactCategory.findFirst({
-          where: { id: categoryId, userId },
+          where: { id: categoryId, accountKey: scopeKey },
         });
       } else {
         category = await prisma.contactCategory.findFirst({
           where: {
-            userId,
+            accountKey: scopeKey,
             name: {
               equals: name,
               mode: 'insensitive',
@@ -91,7 +118,7 @@ export default async function handler(req, res) {
       if (isProtectedRoot) {
         const sameNamedRoots = await prisma.contactCategory.count({
           where: {
-            userId,
+            accountKey: scopeKey,
             parentCategoryId: null,
             name: {
               equals: category.name,

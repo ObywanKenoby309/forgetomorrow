@@ -145,8 +145,7 @@ export default function ContactsOrganizer({
       if (!categoryId || !contactId) return;
 
       const category = categoriesById.get(categoryId);
-      if (!category) return;
-      if (!category.parentCategoryId) return; // roots never hold contacts directly
+	  if (!category) return;
 
       const contact = contacts.find((c) => String(c.id) === contactId);
       if (!contact) return;
@@ -163,18 +162,17 @@ export default function ContactsOrganizer({
   }, [sortedCategories, localAssignments, categoriesById, contacts]);
 
   const unassignedContacts = useMemo(() => {
-    return contacts.filter((contact) => {
-      const contactId = String(contact.id);
-      const hasChildAssignment = localAssignments.some((assignment) => {
-        if (String(assignment?.contactId || '') !== contactId) return false;
-        const categoryId = assignment?.categoryId ? String(assignment.categoryId) : null;
-        if (!categoryId) return false;
-        const category = categoriesById.get(categoryId);
-        return !!category?.parentCategoryId;
-      });
-      return !hasChildAssignment;
+  return contacts.filter((contact) => {
+    const contactId = String(contact.id);
+    const hasAnyAssignment = localAssignments.some((assignment) => {
+      if (String(assignment?.contactId || '') !== contactId) return false;
+      const categoryId = assignment?.categoryId ? String(assignment.categoryId) : null;
+      if (!categoryId) return false;
+      return categoriesById.has(categoryId);
     });
-  }, [contacts, localAssignments, categoriesById]);
+    return !hasAnyAssignment;
+  });
+}, [contacts, localAssignments, categoriesById]);
 
   useEffect(() => {
     setOpenMap((prev) => {
