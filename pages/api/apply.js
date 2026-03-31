@@ -5,9 +5,8 @@
 //   - ContactCategory tree seeded once for the org (not per-recruiter)
 //   - Contact row created per recruiter (one-directional: recruiter → seeker)
 //   - RecruiterCandidate record per recruiter (org-scoped)
-//   - ContactCategoryAssignment written once org-wide (accountKey scope)
+//   - ContactCategoryAssignment written per recruiter contact row
 //   - CandidateGroupMember written once (canonical anchor)
-//
 //
 // Seeker sees nothing until a recruiter initiates contact.
 
@@ -105,8 +104,6 @@ export default async function handler(req, res) {
     }
 
     // ── Step 2: Ensure org-scoped ContactCategory tree ────────────────────────
-    // One tree per org — all recruiters read by accountKey, not userId.
-
     let candidatesRoot = await prisma.contactCategory.findFirst({
       where: {
         accountKey: orgAccountKey,
@@ -128,7 +125,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Review Queue sub-category
     await prisma.contactCategory.upsert({
       where: {
         accountKey_parentCategoryId_name: {
@@ -146,7 +142,6 @@ export default async function handler(req, res) {
       },
     });
 
-    // Job-specific sub-category
     let jobCategory = await prisma.contactCategory.findFirst({
       where: {
         accountKey: orgAccountKey,
@@ -184,13 +179,9 @@ export default async function handler(req, res) {
     }
 
     // ── Step 4: Per recruiter — Contact row + RecruiterCandidate ─────────────
-    // Contact rows stay per-recruiter (drive individual messaging permission).
-    // RecruiterCandidate is per recruiter scoped to org accountKey.
-
     let canonicalRecruiterCandidateId = null;
 
     for (const recruiterUserId of recruiterUserIds) {
-      // Contact row: one-directional recruiter → seeker
       await prisma.contact.upsert({
         where: {
           userId_contactUserId: {
@@ -205,7 +196,6 @@ export default async function handler(req, res) {
         },
       });
 
-      // RecruiterCandidate: org-scoped relationship record
       const rc = await prisma.recruiterCandidate.upsert({
         where: {
           recruiterUserId_candidateUserId_accountKey: {
@@ -223,50 +213,47 @@ export default async function handler(req, res) {
         select: { id: true, recruiterUserId: true },
       });
 
-      // Track the job poster's RC as canonical anchor
       if (recruiterUserId === jobPosterId || canonicalRecruiterCandidateId === null) {
         canonicalRecruiterCandidateId = rc.id;
       }
     }
 
-    // ── Step 5: Org-scoped ContactCategoryAssignment ──────────────────────────
-    // Written once per candidate per category — all recruiters read by accountKey.
-    // Use the job poster's Contact row as the canonical contactId anchor.
-    const posterContact = await prisma.contact.findUnique({
-      where: {
-        userId_contactUserId: {
-          userId: jobPosterId || recruiterUserIds[0],
-          contactUserId: seekerUserId,
+    // ── Step 5: ContactCategoryAssignment per recruiter's own contact row ─────
+    // This matches what the single shared contact center actually reads.
+    for (const recruiterUserId of recruiterUserIds) {
+      const recruiterContact = await prisma.contact.findUnique({
+        where: {
+          userId_contactUserId: {
+            userId: recruiterUserId,
+            contactUserId: seekerUserId,
+          },
         },
-      },
-      select: { id: true },
-    });
+        select: { id: true },
+      });
 
-    if (posterContact?.id && jobCategory?.id) {
-      // Remove any bad root-level assignment
+      if (!recruiterContact?.id || !jobCategory?.id) continue;
+
       await prisma.contactCategoryAssignment.deleteMany({
         where: {
           accountKey: orgAccountKey,
-          contactId: posterContact.id,
+          contactId: recruiterContact.id,
           categoryId: candidatesRoot.id,
         },
       });
 
-      // Assign to job sub-category
-      // Multi-bucket: candidates stay in all job buckets they applied to
       await prisma.contactCategoryAssignment.upsert({
         where: {
           accountKey_contactId_categoryId: {
             accountKey: orgAccountKey,
-            contactId: posterContact.id,
+            contactId: recruiterContact.id,
             categoryId: jobCategory.id,
           },
         },
         update: {},
         create: {
           accountKey: orgAccountKey,
-          userId: jobPosterId || recruiterUserIds[0],
-          contactId: posterContact.id,
+          userId: recruiterUserId,
+          contactId: recruiterContact.id,
           categoryId: jobCategory.id,
         },
       });
