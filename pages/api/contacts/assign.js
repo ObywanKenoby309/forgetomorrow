@@ -70,13 +70,26 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'contactId and categoryId are required' });
     }
 
-    // ── Resolve Contact row ───────────────────────────────────────────────────
-    // For recruiters: contact may belong to any recruiter in the org
-    const existingContact = await prisma.contact.findFirst({
+// ── Resolve Contact row ───────────────────────────────────────────────────
+// Recruiters use org-shared contacts by accountKey.
+// Everyone else stays personal by userId.
+const existingContact = user.accountKey
+  ? await prisma.contact.findFirst({
       where: {
+        accountKey: scopeKey,
         OR: [
-          { id: contactId, userId },
-          { contactUserId: contactId, userId },
+          { id: contactId },
+          { contactUserId: contactId },
+        ],
+      },
+      select: { id: true },
+    })
+  : await prisma.contact.findFirst({
+      where: {
+        userId,
+        OR: [
+          { id: contactId },
+          { contactUserId: contactId },
         ],
       },
       select: { id: true },

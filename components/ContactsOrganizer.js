@@ -344,9 +344,21 @@ export default function ContactsOrganizer({
   };
 
   // All child (leaf) categories available for the assignment dropdown
-  const assignableCategories = sortedCategories.filter(
-    (cat) => !!cat.parentCategoryId
-  );
+  const assignableCategories = sortedCategories.filter((cat) => {
+  const hasParent = !!cat.parentCategoryId;
+  const name = String(cat.name || '').toLowerCase();
+
+  // Always allow child categories
+  if (hasParent) return true;
+
+  // Allow specific root categories
+  if (name === 'personal' || name === 'talent pools' || name === 'clients') {
+    return true;
+  }
+
+  // Do NOT allow Candidates root (must use job children)
+  return false;
+});
 
   if (loading) {
     return (
