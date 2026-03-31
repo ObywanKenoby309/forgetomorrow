@@ -57,17 +57,18 @@ export default async function handler(req, res) {
   const userId = session.user.id;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, accountKey: true, role: true },
-    });
+const user = await prisma.user.findUnique({
+  where: { id: userId },
+  select: { id: true, accountKey: true, role: true },
+});
 
-    if (!user) {
-      return res.status(401).json({ error: 'User not found' });
-    }
+if (!user) {
+  return res.status(401).json({ error: 'User not found' });
+}
 
-    const scopeKey = user.accountKey || user.id;
-    const isRecruiter = String(user.role || '').toUpperCase() === 'RECRUITER';
+const scopeKey = user.accountKey || user.id;
+// Any org-backed user should use org-scoped contact assignment here.
+const isOrgScoped = !!user.accountKey;
 
     const contactId = normalizeValue(req.body?.contactId);
     const categoryId = normalizeValue(req.body?.categoryId);
@@ -79,7 +80,7 @@ export default async function handler(req, res) {
     // ── Resolve Contact row ───────────────────────────────────────────────────
     // Recruiters use org/shared contacts by accountKey.
     // Everyone else stays personal by userId.
-    const existingContact = isRecruiter
+    const existingContact = isOrgScoped
       ? await prisma.contact.findFirst({
           where: {
             accountKey: scopeKey,
