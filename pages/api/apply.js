@@ -189,6 +189,9 @@ export default async function handler(req, res) {
         data: {
           userId: jobPosterId,
           contactUserId: seekerUserId,
+          // accountKey required so summary.js canonical resolution
+          // matches this row via accountKey lookup for all org recruiters
+          accountKey: orgAccountKey,
         },
         select: {
           id: true,
@@ -201,6 +204,7 @@ export default async function handler(req, res) {
         where: { id: orgContact.id },
         data: {
           userId: jobPosterId,
+          accountKey: orgAccountKey,
         },
         select: {
           id: true,
@@ -321,6 +325,7 @@ export default async function handler(req, res) {
       const convo = await prisma.conversation.create({
         data: {
           isGroup: false,
+          channel: 'recruiter', // required so messages.js ?channel=recruiter finds it
           participants: {
             create: [
               { userId: jobPosterId },
