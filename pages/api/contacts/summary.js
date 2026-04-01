@@ -163,7 +163,6 @@ export default async function handler(req, res) {
         // Prefer the new org-shared contact row first.
         // If not present, fall back to current recruiter's legacy row, then first row.
         const preferred =
-          rows.find((r) => String(r.accountKey || '') === String(user.accountKey)) ||
           rows.find((r) => String(r.userId) === String(userId)) ||
           rows[0];
 

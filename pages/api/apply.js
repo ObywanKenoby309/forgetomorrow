@@ -8,6 +8,7 @@
 //   - Single org-scoped RecruiterCandidate record
 //   - ContactCategoryAssignment written against the canonical contact
 //   - CandidateGroupMember written once for the org candidate
+//   - Recruiter ↔ candidate conversation created with channel: 'recruiter'
 //
 // Seeker behavior remains unchanged.
 
@@ -162,8 +163,10 @@ export default async function handler(req, res) {
       ...new Set(orgMembers.map((m) => String(m.userId || '')).filter(Boolean)),
     ];
 
-    // ── Step 5: Ensure ONE canonical recruiter-owned contact for this seeker ──
-    // Contact model is recruiter-owned by userId, so we canonicalize to the job poster.
+    // ── Step 5: Ensure canonical job-poster-owned contact for this seeker ─────
+    // Contact model is per-recruiter (no accountKey field).
+    // We canonicalize to the job poster's contact row since assignments are
+    // written against that id and summary.js resolves by userId match.
     const legacyContacts = recruiterUserIds.length
       ? await prisma.contact.findMany({
           where: {
@@ -179,39 +182,32 @@ export default async function handler(req, res) {
         })
       : [];
 
+    // Job poster's contact row is canonical anchor for assignments
     let orgContact =
-      legacyContacts.find((c) => String(c.userId) === jobPosterId) ||
-      legacyContacts[0] ||
-      null;
+      legacyContacts.find((c) => String(c.userId) === jobPosterId) || null;
 
     if (!orgContact) {
-      orgContact = await prisma.contact.create({
-        data: {
-          userId: jobPosterId,
-          contactUserId: seekerUserId,
-          // accountKey required so summary.js canonical resolution
-          // matches this row via accountKey lookup for all org recruiters
-          accountKey: orgAccountKey,
-        },
-        select: {
-          id: true,
-          userId: true,
-          contactUserId: true,
-        },
-      });
-    } else if (String(orgContact.userId) !== jobPosterId) {
-      orgContact = await prisma.contact.update({
-        where: { id: orgContact.id },
-        data: {
-          userId: jobPosterId,
-          accountKey: orgAccountKey,
-        },
-        select: {
-          id: true,
-          userId: true,
-          contactUserId: true,
-        },
-      });
+      // Create contact owned by job poster
+      try {
+        orgContact = await prisma.contact.create({
+          data: {
+            userId: jobPosterId,
+            contactUserId: seekerUserId,
+          },
+          select: { id: true, userId: true, contactUserId: true },
+        });
+      } catch (e) {
+        // If unique constraint fires, fetch the existing one
+        orgContact = await prisma.contact.findUnique({
+          where: {
+            userId_contactUserId: {
+              userId: jobPosterId,
+              contactUserId: seekerUserId,
+            },
+          },
+          select: { id: true, userId: true, contactUserId: true },
+        });
+      }
     }
 
     // ── Step 6: Ensure ONE org-scoped RecruiterCandidate ──────────────────────
@@ -234,45 +230,38 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── Step 7: Clean duplicate candidate assignments for this org/contact set ─
-    const legacyContactIds = [
-      ...new Set(legacyContacts.map((c) => String(c.id || '')).filter(Boolean)),
-    ];
-
-    if (legacyContactIds.length) {
+    // ── Step 7: Clean any bad root-level assignments ───────────────────────────
+    if (orgContact?.id) {
       await prisma.contactCategoryAssignment.deleteMany({
         where: {
           accountKey: orgAccountKey,
-          contactId: { in: legacyContactIds },
-          OR: [
-            { categoryId: candidatesRoot.id },
-            { categoryId: jobCategory.id },
-          ],
+          contactId: orgContact.id,
+          categoryId: candidatesRoot.id,
         },
       });
     }
 
     // ── Step 8: Assign canonical contact into the job bucket ──────────────────
-    await prisma.contactCategoryAssignment.upsert({
-      where: {
-        accountKey_contactId_categoryId: {
+    if (orgContact?.id && jobCategory?.id) {
+      await prisma.contactCategoryAssignment.upsert({
+        where: {
+          accountKey_contactId_categoryId: {
+            accountKey: orgAccountKey,
+            contactId: orgContact.id,
+            categoryId: jobCategory.id,
+          },
+        },
+        update: { userId: jobPosterId },
+        create: {
           accountKey: orgAccountKey,
+          userId: jobPosterId,
           contactId: orgContact.id,
           categoryId: jobCategory.id,
         },
-      },
-      update: {
-        userId: jobPosterId,
-      },
-      create: {
-        accountKey: orgAccountKey,
-        userId: jobPosterId,
-        contactId: orgContact.id,
-        categoryId: jobCategory.id,
-      },
-    });
+      });
+    }
 
-        // ── Step 9: CandidateGroupMember ──────────────────────────────────────────
+    // ── Step 9: CandidateGroupMember ──────────────────────────────────────────
     await prisma.candidateGroupMember.upsert({
       where: {
         groupId_recruiterCandidateId: {
@@ -289,30 +278,22 @@ export default async function handler(req, res) {
     });
 
     // ── Step 10: Ensure recruiter ↔ candidate conversation ───────────────────
-
-    // Find existing conversation between these two users
-    let existing = await prisma.conversationParticipant.findMany({
+    // Filter by channel: 'recruiter' so we never match Signal threads.
+    const existingParticipations = await prisma.conversationParticipant.findMany({
       where: {
         userId: { in: [jobPosterId, seekerUserId] },
+        conversation: { channel: 'recruiter' },
       },
-      select: {
-        conversationId: true,
-        userId: true,
-      },
+      select: { conversationId: true, userId: true },
     });
 
-    // Group by conversationId
     const convoMap = new Map();
-
-    existing.forEach((p) => {
-      if (!convoMap.has(p.conversationId)) {
-        convoMap.set(p.conversationId, new Set());
-      }
+    existingParticipations.forEach((p) => {
+      if (!convoMap.has(p.conversationId)) convoMap.set(p.conversationId, new Set());
       convoMap.get(p.conversationId).add(p.userId);
     });
 
     let conversationId = null;
-
     for (const [cid, users] of convoMap.entries()) {
       if (users.has(jobPosterId) && users.has(seekerUserId)) {
         conversationId = cid;
@@ -320,12 +301,11 @@ export default async function handler(req, res) {
       }
     }
 
-    // Create conversation if not found
     if (!conversationId) {
       const convo = await prisma.conversation.create({
         data: {
           isGroup: false,
-          channel: 'recruiter', // required so messages.js ?channel=recruiter finds it
+          channel: 'recruiter',
           participants: {
             create: [
               { userId: jobPosterId },
@@ -335,21 +315,20 @@ export default async function handler(req, res) {
         },
         select: { id: true },
       });
-
       conversationId = convo.id;
     }
 
-    // Create system message
+    // System message so the thread appears non-empty in the inbox
     await prisma.message.create({
       data: {
         conversationId,
         senderId: seekerUserId,
-        content: 'Application submitted',
+        content: `Applied for ${groupName}`,
       },
     });
 
     return res.status(200).json(application);
-	} catch (error) {
+  } catch (error) {
     console.error('[/api/apply] Error:', error);
     return res.status(500).json({
       error: 'Failed to submit application',
