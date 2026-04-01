@@ -1,4 +1,3 @@
-// components/ContactsOrganizer.js
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 
@@ -47,6 +46,10 @@ function getInitials(name) {
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function getTargetUserId(contact) {
+  return contact?.contactUserId || contact?.userId || contact?.id || null;
 }
 
 export default function ContactsOrganizer({
@@ -346,6 +349,108 @@ export default function ContactsOrganizer({
     }
   };
 
+  const removeContact = async (contact) => {
+    const targetUserId = getTargetUserId(contact);
+    if (!targetUserId) {
+      alert('Unable to determine contact id');
+      return false;
+    }
+
+    const confirmed = window.confirm(`Remove ${contact?.name || 'this contact'} from your contacts?`);
+    if (!confirmed) return false;
+
+    try {
+      const res = await fetch('/api/contacts/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactUserId: targetUserId,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Remove failed');
+
+      window.location.reload();
+      return true;
+    } catch (err) {
+      console.error('removeContact failed:', err);
+      alert('Failed to remove contact');
+      return false;
+    }
+  };
+
+  const blockContact = async (contact) => {
+    const targetUserId = getTargetUserId(contact);
+    if (!targetUserId) {
+      alert('Unable to determine contact id');
+      return false;
+    }
+
+    const confirmed = window.confirm(`Block ${contact?.name || 'this contact'}?`);
+    if (!confirmed) return false;
+
+    try {
+      const res = await fetch('/api/signal/block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUserId,
+          reason: 'Blocked from contact card',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Block failed');
+
+      alert('Contact blocked');
+      return true;
+    } catch (err) {
+      console.error('blockContact failed:', err);
+      alert('Failed to block contact');
+      return false;
+    }
+  };
+
+  const reportContact = async (contact) => {
+    const targetUserId = getTargetUserId(contact);
+    if (!targetUserId) {
+      alert('Unable to determine contact id');
+      return false;
+    }
+
+    const reason = window.prompt(
+      `Report ${contact?.name || 'this contact'}.\nEnter a reason:`,
+      ''
+    );
+
+    if (reason === null) return false;
+
+    try {
+      const res = await fetch('/api/contacts/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUserId,
+          reason,
+          source: 'contact-card',
+          contextType: 'contact',
+          contextId: contact?.id || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Report failed');
+
+      alert('Report submitted');
+      return true;
+    } catch (err) {
+      console.error('reportContact failed:', err);
+      alert('Failed to submit report');
+      return false;
+    }
+  };
+
   const addAndAssignFromCard = async (contactId, parentCategoryName, childCategoryName) => {
     const parentTrimmed = String(parentCategoryName || '').trim();
     const childTrimmed = String(childCategoryName || '').trim();
@@ -461,6 +566,9 @@ export default function ContactsOrganizer({
           assignableCategories={assignableCategories}
           onAssign={assignContact}
           onUnassign={unassignContact}
+          onRemoveContact={removeContact}
+          onBlockContact={blockContact}
+          onReportContact={reportContact}
           onAddAndAssign={addAndAssignFromCard}
           onViewProfile={onViewProfile}
           deletable={false}
@@ -485,6 +593,9 @@ export default function ContactsOrganizer({
                 assignableCategories={assignableCategories}
                 onAssign={assignContact}
                 onUnassign={unassignContact}
+                onRemoveContact={removeContact}
+                onBlockContact={blockContact}
+                onReportContact={reportContact}
                 onAddAndAssign={addAndAssignFromCard}
                 onViewProfile={onViewProfile}
                 deletable={!isSystemRoot}
@@ -511,6 +622,9 @@ export default function ContactsOrganizer({
                       assignableCategories={assignableCategories}
                       onAssign={assignContact}
                       onUnassign={unassignContact}
+                      onRemoveContact={removeContact}
+                      onBlockContact={blockContact}
+                      onReportContact={reportContact}
                       onAddAndAssign={addAndAssignFromCard}
                       onViewProfile={onViewProfile}
                       deletable={!isSystemChild}
@@ -536,6 +650,9 @@ function CategoryBlock({
   assignableCategories,
   onAssign,
   onUnassign,
+  onRemoveContact,
+  onBlockContact,
+  onReportContact,
   onAddAndAssign,
   onViewProfile,
   deletable,
@@ -667,6 +784,9 @@ function CategoryBlock({
                 currentCategoryName={name}
                 onAssign={onAssign}
                 onUnassign={onUnassign}
+                onRemoveContact={onRemoveContact}
+                onBlockContact={onBlockContact}
+                onReportContact={onReportContact}
                 onAddAndAssign={onAddAndAssign}
                 onViewProfile={onViewProfile}
               />
@@ -684,9 +804,14 @@ function ContactCard({
   currentCategoryName,
   onAssign,
   onUnassign,
+  onRemoveContact,
+  onBlockContact,
+  onReportContact,
   onAddAndAssign,
   onViewProfile,
 }) {
+  const [actionsOpen, setActionsOpen] = useState(false);
+
   const imageSrc = getContactImage(contact);
   const displayName = contact?.name || 'Member';
   const subtitle =
@@ -790,23 +915,121 @@ function ContactCard({
           </div>
         </div>
 
-        <button
-          onClick={() => onViewProfile(contact)}
-          aria-label={`View profile for ${displayName}`}
-          style={{
-            padding: '10px 14px',
-            borderRadius: 10,
-            border: 'none',
-            background: '#FF7043',
-            color: '#fff',
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 6px 16px rgba(255,112,67,0.22)',
-            flex: '0 0 auto',
-          }}
-        >
-          View Profile
-        </button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', position: 'relative' }}>
+          <button
+            onClick={() => onViewProfile(contact)}
+            aria-label={`View profile for ${displayName}`}
+            style={{
+              padding: '10px 14px',
+              borderRadius: 10,
+              border: 'none',
+              background: '#FF7043',
+              color: '#fff',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 6px 16px rgba(255,112,67,0.22)',
+              flex: '0 0 auto',
+            }}
+          >
+            View Profile
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActionsOpen((v) => !v)}
+            style={{
+              padding: '10px 14px',
+              borderRadius: 10,
+              border: '1px solid #D7DEE2',
+              background: 'rgba(255,255,255,0.95)',
+              color: '#455A64',
+              fontWeight: 700,
+              cursor: 'pointer',
+              flex: '0 0 auto',
+            }}
+          >
+            Actions
+          </button>
+
+          {actionsOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 46,
+                right: 0,
+                minWidth: 170,
+                borderRadius: 12,
+                border: '1px solid #D7DEE2',
+                background: 'rgba(255,255,255,0.98)',
+                boxShadow: '0 10px 24px rgba(0,0,0,0.14)',
+                overflow: 'hidden',
+                zIndex: 20,
+              }}
+            >
+              <button
+                type="button"
+                onClick={async () => {
+                  setActionsOpen(false);
+                  await onRemoveContact(contact);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  border: 'none',
+                  borderBottom: '1px solid #ECEFF1',
+                  background: 'transparent',
+                  color: '#263238',
+                  textAlign: 'left',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Remove Contact
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  setActionsOpen(false);
+                  await onReportContact(contact);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  border: 'none',
+                  borderBottom: '1px solid #ECEFF1',
+                  background: 'transparent',
+                  color: '#263238',
+                  textAlign: 'left',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Report Contact
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  setActionsOpen(false);
+                  await onBlockContact(contact);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#263238',
+                  textAlign: 'left',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Block Contact
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>

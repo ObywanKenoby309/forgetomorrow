@@ -4,9 +4,9 @@
 //   - CandidateGroup ensured for the job (org-scoped)
 //   - Single shared org Candidates root
 //   - Single shared org job subcategory under Candidates
-//   - Single shared org contact for the candidate
+//   - Canonical recruiter-owned contact for the candidate
 //   - Single org-scoped RecruiterCandidate record
-//   - ContactCategoryAssignment written against the shared org contact
+//   - ContactCategoryAssignment written against the canonical contact
 //   - CandidateGroupMember written once for the org candidate
 //
 // Seeker behavior remains unchanged.
@@ -151,7 +151,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── Step 4: Load all recruiters in the org (for cleanup of legacy rows) ──
+    // ── Step 4: Load all recruiters in the org ───────────────────────────────
     const orgMembers = await prisma.organizationMember.findMany({
       where: { accountKey: orgAccountKey },
       select: { userId: true },
@@ -162,55 +162,49 @@ export default async function handler(req, res) {
       ...new Set(orgMembers.map((m) => String(m.userId || '')).filter(Boolean)),
     ];
 
-    // ── Step 5: Ensure ONE shared org contact for this candidate ──────────────
-    const legacyContacts = await prisma.contact.findMany({
-      where: {
-        contactUserId: seekerUserId,
-        OR: [
-          { accountKey: orgAccountKey },
-          ...(recruiterUserIds.length
-            ? [{ userId: { in: recruiterUserIds } }]
-            : []),
-        ],
-      },
-      select: {
-        id: true,
-        userId: true,
-        accountKey: true,
-        contactUserId: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    // ── Step 5: Ensure ONE canonical recruiter-owned contact for this seeker ──
+    // Contact model is recruiter-owned by userId, so we canonicalize to the job poster.
+    const legacyContacts = recruiterUserIds.length
+      ? await prisma.contact.findMany({
+          where: {
+            contactUserId: seekerUserId,
+            userId: { in: recruiterUserIds },
+          },
+          select: {
+            id: true,
+            userId: true,
+            contactUserId: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        })
+      : [];
 
     let orgContact =
-      legacyContacts.find((c) => String(c.accountKey || '') === String(orgAccountKey)) ||
+      legacyContacts.find((c) => String(c.userId) === jobPosterId) ||
       legacyContacts[0] ||
       null;
 
     if (!orgContact) {
       orgContact = await prisma.contact.create({
         data: {
-          accountKey: orgAccountKey,
           userId: jobPosterId,
           contactUserId: seekerUserId,
         },
         select: {
           id: true,
           userId: true,
-          accountKey: true,
           contactUserId: true,
         },
       });
-    } else if (String(orgContact.accountKey || '') !== String(orgAccountKey)) {
+    } else if (String(orgContact.userId) !== jobPosterId) {
       orgContact = await prisma.contact.update({
         where: { id: orgContact.id },
         data: {
-          accountKey: orgAccountKey,
+          userId: jobPosterId,
         },
         select: {
           id: true,
           userId: true,
-          accountKey: true,
           contactUserId: true,
         },
       });
@@ -236,13 +230,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── Step 7: Clean legacy assignments for this candidate in this org ───────
+    // ── Step 7: Clean duplicate candidate assignments for this org/contact set ─
     const legacyContactIds = [
-      ...new Set(
-        legacyContacts
-          .map((c) => String(c.id || ''))
-          .filter(Boolean)
-      ),
+      ...new Set(legacyContacts.map((c) => String(c.id || '')).filter(Boolean)),
     ];
 
     if (legacyContactIds.length) {
@@ -258,7 +248,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── Step 8: Assign shared org contact into the job bucket ─────────────────
+    // ── Step 8: Assign canonical contact into the job bucket ──────────────────
     await prisma.contactCategoryAssignment.upsert({
       where: {
         accountKey_contactId_categoryId: {
@@ -267,7 +257,9 @@ export default async function handler(req, res) {
           categoryId: jobCategory.id,
         },
       },
-      update: {},
+      update: {
+        userId: jobPosterId,
+      },
       create: {
         accountKey: orgAccountKey,
         userId: jobPosterId,
@@ -295,6 +287,11 @@ export default async function handler(req, res) {
     return res.status(200).json(application);
   } catch (error) {
     console.error('[/api/apply] Error:', error);
-    return res.status(500).json({ error: 'Failed to submit application' });
+    return res.status(500).json({
+      error: 'Failed to submit application',
+      detail: error?.message || null,
+      code: error?.code || null,
+      meta: error?.meta || null,
+    });
   }
 }
