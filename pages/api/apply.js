@@ -285,26 +285,42 @@ export default async function handler(req, res) {
     });
 
     // ── Step 10: Ensure recruiter ↔ candidate conversation ───────────────────
-    let conversation = await prisma.conversation.findFirst({
+
+    // Find existing conversation between these two users
+    let existing = await prisma.conversationParticipant.findMany({
       where: {
-        accountKey: orgAccountKey,
-        participants: {
-          some: { userId: seekerUserId },
-        },
-        AND: {
-          participants: {
-            some: { userId: jobPosterId },
-          },
-        },
+        userId: { in: [jobPosterId, seekerUserId] },
       },
-      select: { id: true },
+      select: {
+        conversationId: true,
+        userId: true,
+      },
     });
 
-    if (!conversation) {
-      conversation = await prisma.conversation.create({
+    // Group by conversationId
+    const convoMap = new Map();
+
+    existing.forEach((p) => {
+      if (!convoMap.has(p.conversationId)) {
+        convoMap.set(p.conversationId, new Set());
+      }
+      convoMap.get(p.conversationId).add(p.userId);
+    });
+
+    let conversationId = null;
+
+    for (const [cid, users] of convoMap.entries()) {
+      if (users.has(jobPosterId) && users.has(seekerUserId)) {
+        conversationId = cid;
+        break;
+      }
+    }
+
+    // Create conversation if not found
+    if (!conversationId) {
+      const convo = await prisma.conversation.create({
         data: {
-          accountKey: orgAccountKey,
-          createdByUserId: jobPosterId,
+          isGroup: false,
           participants: {
             create: [
               { userId: jobPosterId },
@@ -314,14 +330,16 @@ export default async function handler(req, res) {
         },
         select: { id: true },
       });
+
+      conversationId = convo.id;
     }
 
+    // Create system message
     await prisma.message.create({
       data: {
-        conversationId: conversation.id,
+        conversationId,
         senderId: seekerUserId,
         content: 'Application submitted',
-        type: 'SYSTEM',
       },
     });
 
