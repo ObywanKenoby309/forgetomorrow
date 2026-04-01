@@ -13,12 +13,9 @@ const GLASS = {
 const SYSTEM_CATEGORY_NAMES = ['Personal', 'Candidates', 'Clients', 'Talent Pools'];
 const LOCKED_NAMES = ['personal', 'candidates', 'clients', 'talent pools'];
 
-// Roots where a contact lives in ONE bucket at a time (moving replaces)
 const SINGLE_BUCKET_ROOTS = ['personal', 'clients'];
-// Roots where a contact can be in MULTIPLE buckets simultaneously
 const MULTI_BUCKET_ROOTS = ['candidates', 'talent pools'];
 
-// Visible system roots per chrome/role
 const ROOT_VISIBILITY = {
   seeker: ['personal'],
   coach: ['personal', 'clients'],
@@ -26,6 +23,11 @@ const ROOT_VISIBILITY = {
   'recruiter-ent': ['personal', 'candidates', 'talent pools'],
   recruiter: ['personal', 'candidates', 'talent pools'],
 };
+
+const CATEGORY_OPTION_UNASSIGNED = '__UNASSIGNED__';
+const CATEGORY_OPTION_NEW = '__NEW_CATEGORY__';
+const GROUP_OPTION_UNASSIGNED = '__UNASSIGNED_GROUP__';
+const GROUP_OPTION_NEW = '__NEW_GROUP__';
 
 function getContactImage(contact) {
   return (
@@ -250,7 +252,7 @@ export default function ContactsOrganizer({
   };
 
   const assignContact = async (contactId, categoryId) => {
-    if (!contactId || !categoryId || categoryId === 'Unassigned') return false;
+    if (!contactId || !categoryId || categoryId === CATEGORY_OPTION_UNASSIGNED) return false;
 
     try {
       const res = await fetch('/api/contacts/assign', {
@@ -317,7 +319,7 @@ export default function ContactsOrganizer({
   };
 
   const unassignContact = async (contactId, categoryId) => {
-    if (!contactId || !categoryId || categoryId === 'Unassigned') return false;
+    if (!contactId || !categoryId) return false;
 
     try {
       const res = await fetch('/api/contacts/unassign', {
@@ -451,51 +453,14 @@ export default function ContactsOrganizer({
     }
   };
 
-  const addAndAssignFromCard = async (contactId, parentCategoryName, childCategoryName) => {
-    const parentTrimmed = String(parentCategoryName || '').trim();
-    const childTrimmed = String(childCategoryName || '').trim();
-
-    if (!contactId || (!parentTrimmed && !childTrimmed)) return;
-
-    try {
-      let targetCategory = null;
-
-      if (parentTrimmed) {
-        const parentCategory = await addCategory(parentTrimmed, null);
-        if (!parentCategory?.id) return;
-
-        if (childTrimmed) {
-          targetCategory = await addCategory(childTrimmed, parentCategory.id);
-        } else {
-          targetCategory = parentCategory;
-        }
-      } else {
-        targetCategory = await addCategory(childTrimmed, null);
-      }
-
-      if (!targetCategory?.id) return;
-      await assignContact(contactId, targetCategory.id);
-    } catch (err) {
-      console.error('addAndAssignFromCard failed:', err);
-    }
-  };
-
   const toggleCategory = (name) => {
     if (name === 'Unassigned') return;
     setOpenMap((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
-  const assignableCategories = sortedCategories.filter((cat) => {
-    const hasParent = !!cat.parentCategoryId;
-    const name = String(cat.name || '').toLowerCase();
-
-    if (hasParent) return true;
-    if (name === 'personal' || name === 'talent pools' || name === 'clients') {
-      return true;
-    }
-
-    return false;
-  });
+  const rootCategories = useMemo(() => {
+    return sortedCategories.filter((cat) => !cat.parentCategoryId);
+  }, [sortedCategories]);
 
   if (loading) {
     return (
@@ -563,13 +528,14 @@ export default function ContactsOrganizer({
         <CategoryBlock
           name="Unassigned"
           contacts={unassignedContacts}
-          assignableCategories={assignableCategories}
+          allCategories={sortedCategories}
+          rootCategories={rootCategories}
           onAssign={assignContact}
           onUnassign={unassignContact}
           onRemoveContact={removeContact}
           onBlockContact={blockContact}
           onReportContact={reportContact}
-          onAddAndAssign={addAndAssignFromCard}
+          onAddCategory={addCategory}
           onViewProfile={onViewProfile}
           deletable={false}
           onDeleteCategory={() => {}}
@@ -590,13 +556,14 @@ export default function ContactsOrganizer({
               <CategoryBlock
                 name={root.name}
                 contacts={contactsByCategoryId.get(String(root.id)) || []}
-                assignableCategories={assignableCategories}
+                allCategories={sortedCategories}
+                rootCategories={rootCategories}
                 onAssign={assignContact}
                 onUnassign={unassignContact}
                 onRemoveContact={removeContact}
                 onBlockContact={blockContact}
                 onReportContact={reportContact}
-                onAddAndAssign={addAndAssignFromCard}
+                onAddCategory={addCategory}
                 onViewProfile={onViewProfile}
                 deletable={!isSystemRoot}
                 onDeleteCategory={() => deleteCategory(root.id, root.name)}
@@ -619,13 +586,14 @@ export default function ContactsOrganizer({
                       key={child.id}
                       name={child.name}
                       contacts={childContacts}
-                      assignableCategories={assignableCategories}
+                      allCategories={sortedCategories}
+                      rootCategories={rootCategories}
                       onAssign={assignContact}
                       onUnassign={unassignContact}
                       onRemoveContact={removeContact}
                       onBlockContact={blockContact}
                       onReportContact={reportContact}
-                      onAddAndAssign={addAndAssignFromCard}
+                      onAddCategory={addCategory}
                       onViewProfile={onViewProfile}
                       deletable={!isSystemChild}
                       onDeleteCategory={() => deleteCategory(child.id, child.name)}
@@ -647,13 +615,14 @@ export default function ContactsOrganizer({
 function CategoryBlock({
   name,
   contacts,
-  assignableCategories,
+  allCategories,
+  rootCategories,
   onAssign,
   onUnassign,
   onRemoveContact,
   onBlockContact,
   onReportContact,
-  onAddAndAssign,
+  onAddCategory,
   onViewProfile,
   deletable,
   onDeleteCategory,
@@ -780,14 +749,15 @@ function CategoryBlock({
               <ContactCard
                 key={`${name}-${c.id}`}
                 contact={c}
-                assignableCategories={assignableCategories}
+                allCategories={allCategories}
+                rootCategories={rootCategories}
                 currentCategoryName={name}
                 onAssign={onAssign}
                 onUnassign={onUnassign}
                 onRemoveContact={onRemoveContact}
                 onBlockContact={onBlockContact}
                 onReportContact={onReportContact}
-                onAddAndAssign={onAddAndAssign}
+                onAddCategory={onAddCategory}
                 onViewProfile={onViewProfile}
               />
             ))}
@@ -800,14 +770,15 @@ function CategoryBlock({
 
 function ContactCard({
   contact,
-  assignableCategories,
+  allCategories,
+  rootCategories,
   currentCategoryName,
   onAssign,
   onUnassign,
   onRemoveContact,
   onBlockContact,
   onReportContact,
-  onAddAndAssign,
+  onAddCategory,
   onViewProfile,
 }) {
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -821,8 +792,139 @@ function ContactCard({
     contact?.role ||
     'Connection';
 
-  const currentCat = assignableCategories.find((cat) => cat.name === currentCategoryName);
-  const currentCategoryId = currentCat?.id || 'Unassigned';
+  const currentCategory = useMemo(
+    () => allCategories.find((cat) => String(cat.name || '') === String(currentCategoryName || '')) || null,
+    [allCategories, currentCategoryName]
+  );
+
+  const currentRootCategory = useMemo(() => {
+    if (!currentCategory) return null;
+    if (!currentCategory.parentCategoryId) return currentCategory;
+    return allCategories.find((cat) => String(cat.id) === String(currentCategory.parentCategoryId)) || null;
+  }, [allCategories, currentCategory]);
+
+  const currentRootId = currentRootCategory?.id ? String(currentRootCategory.id) : CATEGORY_OPTION_UNASSIGNED;
+  const currentGroupId =
+    currentCategory && currentCategory.parentCategoryId
+      ? String(currentCategory.id)
+      : GROUP_OPTION_UNASSIGNED;
+
+  const [pendingRootId, setPendingRootId] = useState(currentRootId);
+  const [pendingGroupId, setPendingGroupId] = useState(currentGroupId);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
+
+  useEffect(() => {
+    setPendingRootId(currentRootId);
+    setPendingGroupId(currentGroupId);
+    setNewCategoryName('');
+    setNewGroupName('');
+  }, [currentRootId, currentGroupId, currentCategoryName]);
+
+  const availableGroups = useMemo(() => {
+    if (!pendingRootId || pendingRootId === CATEGORY_OPTION_UNASSIGNED || pendingRootId === CATEGORY_OPTION_NEW) {
+      return [];
+    }
+
+    return allCategories
+      .filter((cat) => String(cat.parentCategoryId || '') === String(pendingRootId))
+      .sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
+  }, [allCategories, pendingRootId]);
+
+  const isGroupDisabled = pendingRootId === CATEGORY_OPTION_UNASSIGNED;
+  const showNewCategoryInput = pendingRootId === CATEGORY_OPTION_NEW;
+  const showNewGroupInput = pendingGroupId === GROUP_OPTION_NEW;
+  const canUseExistingRoot = pendingRootId !== CATEGORY_OPTION_UNASSIGNED && pendingRootId !== CATEGORY_OPTION_NEW;
+
+  const handleCategoryChange = (val) => {
+    setPendingRootId(val);
+
+    if (val === CATEGORY_OPTION_UNASSIGNED) {
+      setPendingGroupId(GROUP_OPTION_UNASSIGNED);
+      setNewCategoryName('');
+      setNewGroupName('');
+      return;
+    }
+
+    if (val === CATEGORY_OPTION_NEW) {
+      setPendingGroupId(GROUP_OPTION_UNASSIGNED);
+      setNewGroupName('');
+      return;
+    }
+
+    const currentGroupStillValid = allCategories.some(
+      (cat) =>
+        String(cat.id) === String(pendingGroupId) &&
+        String(cat.parentCategoryId || '') === String(val)
+    );
+
+    setPendingGroupId(currentGroupStillValid ? pendingGroupId : GROUP_OPTION_UNASSIGNED);
+    setNewCategoryName('');
+    setNewGroupName('');
+  };
+
+  const handleAddAndAssign = async () => {
+    try {
+      if (pendingRootId === CATEGORY_OPTION_UNASSIGNED) {
+        if (currentCategory?.id) {
+          await onUnassign(contact.id, currentCategory.id);
+        }
+        return;
+      }
+
+      let rootCategory = null;
+
+      if (pendingRootId === CATEGORY_OPTION_NEW) {
+        const trimmedRootName = String(newCategoryName || '').trim();
+        if (!trimmedRootName) {
+          alert('Please enter a category name.');
+          return;
+        }
+
+        rootCategory = await onAddCategory(trimmedRootName, null);
+        if (!rootCategory?.id) return;
+      } else {
+        rootCategory =
+          rootCategories.find((cat) => String(cat.id) === String(pendingRootId)) || null;
+      }
+
+      if (!rootCategory?.id) {
+        alert('Please select a valid category.');
+        return;
+      }
+
+      if (pendingGroupId === GROUP_OPTION_UNASSIGNED) {
+        await onAssign(contact.id, rootCategory.id);
+        return;
+      }
+
+      let targetGroup = null;
+
+      if (pendingGroupId === GROUP_OPTION_NEW) {
+        const trimmedGroupName = String(newGroupName || '').trim();
+        if (!trimmedGroupName) {
+          alert('Please enter a group name.');
+          return;
+        }
+
+        targetGroup = await onAddCategory(trimmedGroupName, rootCategory.id);
+        if (!targetGroup?.id) return;
+      } else {
+        targetGroup =
+          allCategories.find((cat) => String(cat.id) === String(pendingGroupId)) || null;
+      }
+
+      if (!targetGroup?.id) {
+        alert('Please select a valid group.');
+        return;
+      }
+
+      await onAssign(contact.id, targetGroup.id);
+    } catch (err) {
+      console.error('handleAddAndAssign failed:', err);
+      alert('Failed to update contact placement');
+    }
+  };
 
   return (
     <li
@@ -1034,19 +1136,8 @@ function ContactCard({
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <select
-          value={currentCategoryId}
-          onChange={async (e) => {
-            const val = e.target.value;
-
-            if (val === 'Unassigned') {
-              await onUnassign(contact.id, currentCategoryId);
-              return;
-            }
-
-            if (val) {
-              await onAssign(contact.id, val);
-            }
-          }}
+          value={pendingRootId}
+          onChange={(e) => handleCategoryChange(e.target.value)}
           style={{
             minWidth: 180,
             padding: '9px 10px',
@@ -1057,76 +1148,95 @@ function ContactCard({
             color: '#263238',
           }}
         >
-          <option value="Unassigned">Unassigned</option>
-          {assignableCategories.map((cat) => (
+          <option value={CATEGORY_OPTION_UNASSIGNED}>Unassigned</option>
+          <option value={CATEGORY_OPTION_NEW}>New category</option>
+          {rootCategories.map((cat) => (
             <option key={cat.id} value={cat.id}>
               {cat.name}
             </option>
           ))}
         </select>
 
-        <AddAndAssignInline
-          onAdd={(parentName, groupName) =>
-            onAddAndAssign(contact.id, parentName, groupName)
-          }
-        />
+        <select
+          value={pendingGroupId}
+          disabled={isGroupDisabled}
+          onChange={(e) => {
+            setPendingGroupId(e.target.value);
+            if (e.target.value !== GROUP_OPTION_NEW) {
+              setNewGroupName('');
+            }
+          }}
+          style={{
+            minWidth: 180,
+            padding: '9px 10px',
+            borderRadius: 10,
+            border: '1px solid #D7DEE2',
+            background: isGroupDisabled ? 'rgba(240,240,240,0.95)' : 'rgba(255,255,255,0.95)',
+            fontSize: 13,
+            color: '#263238',
+          }}
+        >
+          <option value={GROUP_OPTION_UNASSIGNED}>Unassigned</option>
+          {pendingRootId !== CATEGORY_OPTION_UNASSIGNED && (
+            <option value={GROUP_OPTION_NEW}>New group</option>
+          )}
+          {canUseExistingRoot &&
+            availableGroups.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+        </select>
+
+        {showNewCategoryInput && (
+          <input
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            placeholder="New category"
+            style={{
+              minWidth: 170,
+              padding: '9px 10px',
+              borderRadius: 10,
+              border: '1px solid #D7DEE2',
+              background: 'rgba(255,255,255,0.95)',
+              fontSize: 13,
+            }}
+          />
+        )}
+
+        {showNewGroupInput && (
+          <input
+            value={newGroupName}
+            onChange={(e) => setNewGroupName(e.target.value)}
+            placeholder="New group"
+            style={{
+              minWidth: 170,
+              padding: '9px 10px',
+              borderRadius: 10,
+              border: '1px solid #D7DEE2',
+              background: 'rgba(255,255,255,0.95)',
+              fontSize: 13,
+            }}
+          />
+        )}
+
+        <button
+          type="button"
+          onClick={handleAddAndAssign}
+          style={{
+            padding: '9px 12px',
+            borderRadius: 10,
+            border: '1px solid #D7DEE2',
+            background: 'rgba(255,255,255,0.9)',
+            color: '#455A64',
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          Add & Assign
+        </button>
       </div>
     </li>
-  );
-}
-
-function AddAndAssignInline({ onAdd }) {
-  const [parentVal, setParentVal] = useState('');
-  const [groupVal, setGroupVal] = useState('');
-
-  return (
-    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-      <input
-        value={parentVal}
-        onChange={(e) => setParentVal(e.target.value)}
-        placeholder="New category"
-        style={{
-          minWidth: 170,
-          padding: '9px 10px',
-          borderRadius: 10,
-          border: '1px solid #D7DEE2',
-          background: 'rgba(255,255,255,0.95)',
-          fontSize: 13,
-        }}
-      />
-      <input
-        value={groupVal}
-        onChange={(e) => setGroupVal(e.target.value)}
-        placeholder="New group"
-        style={{
-          minWidth: 170,
-          padding: '9px 10px',
-          borderRadius: 10,
-          border: '1px solid #D7DEE2',
-          background: 'rgba(255,255,255,0.95)',
-          fontSize: 13,
-        }}
-      />
-      <button
-        type="button"
-        onClick={async () => {
-          await onAdd(parentVal, groupVal);
-          setParentVal('');
-          setGroupVal('');
-        }}
-        style={{
-          padding: '9px 12px',
-          borderRadius: 10,
-          border: '1px solid #D7DEE2',
-          background: 'rgba(255,255,255,0.9)',
-          color: '#455A64',
-          fontSize: 13,
-          fontWeight: 700,
-          cursor: 'pointer',
-        }}
-      >
-        Add & Assign
-      </button>
-    </div>
   );
 }
