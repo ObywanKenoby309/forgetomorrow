@@ -1040,30 +1040,38 @@ function ContactCard({
             >
               {subtitle}
             </div>
-
-            <button
-              type="button"
-              onClick={() => onViewProfile(contact)}
-              aria-label={`View profile for ${displayName}`}
-              style={{
-                marginTop: 10,
-                padding: '10px 14px',
-                borderRadius: 10,
-                border: 'none',
-                background: '#FF7043',
-                color: '#fff',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 6px 16px rgba(255,112,67,0.22)',
-              }}
-            >
-              View Profile
-            </button>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={() => onViewProfile(contact)}
+          aria-label={`View profile for ${displayName}`}
+          style={{
+            padding: '10px 14px',
+            borderRadius: 10,
+            border: 'none',
+            background: '#FF7043',
+            color: '#fff',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 6px 16px rgba(255,112,67,0.22)',
+            flex: '0 0 auto',
+          }}
+        >
+          View Profile
+        </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: 10,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          position: 'relative',
+        }}
+      >
         <select
           value={pendingRootId}
           onChange={(e) => handleCategoryChange(e.target.value)}
@@ -1167,103 +1175,103 @@ function ContactCard({
         >
           Add & Assign
         </button>
-      </div>
 
-      <div style={{ position: 'relative', justifySelf: 'start' }}>
-        <button
-          type="button"
-          onClick={() => setActionsOpen((v) => !v)}
-          style={{
-            padding: '10px 14px',
-            borderRadius: 10,
-            border: '1px solid #D7DEE2',
-            background: 'rgba(255,255,255,0.95)',
-            color: '#455A64',
-            fontWeight: 700,
-            cursor: 'pointer',
-          }}
-        >
-          Actions
-        </button>
-
-        {actionsOpen && (
-          <div
+        <div style={{ marginLeft: 'auto', position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setActionsOpen((v) => !v)}
             style={{
-              position: 'absolute',
-              top: 46,
-              left: 0,
-              minWidth: 170,
-              borderRadius: 12,
+              padding: '10px 14px',
+              borderRadius: 10,
               border: '1px solid #D7DEE2',
-              background: 'rgba(255,255,255,0.98)',
-              boxShadow: '0 10px 24px rgba(0,0,0,0.14)',
-              overflow: 'hidden',
-              zIndex: 20,
+              background: 'rgba(255,255,255,0.95)',
+              color: '#455A64',
+              fontWeight: 700,
+              cursor: 'pointer',
             }}
           >
-            <button
-              type="button"
-              onClick={async () => {
-                setActionsOpen(false);
-                await onRemoveContact(contact);
-              }}
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                border: 'none',
-                borderBottom: '1px solid #ECEFF1',
-                background: 'transparent',
-                color: '#263238',
-                textAlign: 'left',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              Remove Contact
-            </button>
+            Actions
+          </button>
 
-            <button
-              type="button"
-              onClick={async () => {
-                setActionsOpen(false);
-                await onReportContact(contact);
-              }}
+          {actionsOpen && (
+            <div
               style={{
-                width: '100%',
-                padding: '12px 14px',
-                border: 'none',
-                borderBottom: '1px solid #ECEFF1',
-                background: 'transparent',
-                color: '#263238',
-                textAlign: 'left',
-                fontWeight: 700,
-                cursor: 'pointer',
+                position: 'absolute',
+                top: 46,
+                right: 0,
+                minWidth: 170,
+                borderRadius: 12,
+                border: '1px solid #D7DEE2',
+                background: 'rgba(255,255,255,0.98)',
+                boxShadow: '0 10px 24px rgba(0,0,0,0.14)',
+                overflow: 'hidden',
+                zIndex: 20,
               }}
             >
-              Report Contact
-            </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setActionsOpen(false);
+                  await onRemoveContact(contact);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  border: 'none',
+                  borderBottom: '1px solid #ECEFF1',
+                  background: 'transparent',
+                  color: '#263238',
+                  textAlign: 'left',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Remove Contact
+              </button>
 
-            <button
-              type="button"
-              onClick={async () => {
-                setActionsOpen(false);
-                await onBlockContact(contact);
-              }}
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                border: 'none',
-                background: 'transparent',
-                color: '#263238',
-                textAlign: 'left',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              Block Contact
-            </button>
-          </div>
-        )}
+              <button
+                type="button"
+                onClick={async () => {
+                  setActionsOpen(false);
+                  await onReportContact(contact);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  border: 'none',
+                  borderBottom: '1px solid #ECEFF1',
+                  background: 'transparent',
+                  color: '#263238',
+                  textAlign: 'left',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Report Contact
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  setActionsOpen(false);
+                  await onBlockContact(contact);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#263238',
+                  textAlign: 'left',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Block Contact
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </li>
   );
