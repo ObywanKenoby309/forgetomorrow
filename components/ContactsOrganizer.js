@@ -793,17 +793,27 @@ function ContactCard({
     'Connection';
 
   const currentCategory = useMemo(
-    () => allCategories.find((cat) => String(cat.name || '') === String(currentCategoryName || '')) || null,
+    () =>
+      allCategories.find(
+        (cat) => String(cat.name || '') === String(currentCategoryName || '')
+      ) || null,
     [allCategories, currentCategoryName]
   );
 
   const currentRootCategory = useMemo(() => {
     if (!currentCategory) return null;
     if (!currentCategory.parentCategoryId) return currentCategory;
-    return allCategories.find((cat) => String(cat.id) === String(currentCategory.parentCategoryId)) || null;
+    return (
+      allCategories.find(
+        (cat) => String(cat.id) === String(currentCategory.parentCategoryId)
+      ) || null
+    );
   }, [allCategories, currentCategory]);
 
-  const currentRootId = currentRootCategory?.id ? String(currentRootCategory.id) : CATEGORY_OPTION_UNASSIGNED;
+  const currentRootId = currentRootCategory?.id
+    ? String(currentRootCategory.id)
+    : CATEGORY_OPTION_UNASSIGNED;
+
   const currentGroupId =
     currentCategory && currentCategory.parentCategoryId
       ? String(currentCategory.id)
@@ -822,19 +832,29 @@ function ContactCard({
   }, [currentRootId, currentGroupId, currentCategoryName]);
 
   const availableGroups = useMemo(() => {
-    if (!pendingRootId || pendingRootId === CATEGORY_OPTION_UNASSIGNED || pendingRootId === CATEGORY_OPTION_NEW) {
+    if (
+      !pendingRootId ||
+      pendingRootId === CATEGORY_OPTION_UNASSIGNED ||
+      pendingRootId === CATEGORY_OPTION_NEW
+    ) {
       return [];
     }
 
     return allCategories
-      .filter((cat) => String(cat.parentCategoryId || '') === String(pendingRootId))
-      .sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
+      .filter(
+        (cat) => String(cat.parentCategoryId || '') === String(pendingRootId)
+      )
+      .sort((a, b) =>
+        String(a?.name || '').localeCompare(String(b?.name || ''))
+      );
   }, [allCategories, pendingRootId]);
 
   const isGroupDisabled = pendingRootId === CATEGORY_OPTION_UNASSIGNED;
   const showNewCategoryInput = pendingRootId === CATEGORY_OPTION_NEW;
   const showNewGroupInput = pendingGroupId === GROUP_OPTION_NEW;
-  const canUseExistingRoot = pendingRootId !== CATEGORY_OPTION_UNASSIGNED && pendingRootId !== CATEGORY_OPTION_NEW;
+  const canUseExistingRoot =
+    pendingRootId !== CATEGORY_OPTION_UNASSIGNED &&
+    pendingRootId !== CATEGORY_OPTION_NEW;
 
   const handleCategoryChange = (val) => {
     setPendingRootId(val);
@@ -858,7 +878,9 @@ function ContactCard({
         String(cat.parentCategoryId || '') === String(val)
     );
 
-    setPendingGroupId(currentGroupStillValid ? pendingGroupId : GROUP_OPTION_UNASSIGNED);
+    setPendingGroupId(
+      currentGroupStillValid ? pendingGroupId : GROUP_OPTION_UNASSIGNED
+    );
     setNewCategoryName('');
     setNewGroupName('');
   };
@@ -885,7 +907,9 @@ function ContactCard({
         if (!rootCategory?.id) return;
       } else {
         rootCategory =
-          rootCategories.find((cat) => String(cat.id) === String(pendingRootId)) || null;
+          rootCategories.find(
+            (cat) => String(cat.id) === String(pendingRootId)
+          ) || null;
       }
 
       if (!rootCategory?.id) {
@@ -911,7 +935,9 @@ function ContactCard({
         if (!targetGroup?.id) return;
       } else {
         targetGroup =
-          allCategories.find((cat) => String(cat.id) === String(pendingGroupId)) || null;
+          allCategories.find(
+            (cat) => String(cat.id) === String(pendingGroupId)
+          ) || null;
       }
 
       if (!targetGroup?.id) {
@@ -942,9 +968,9 @@ function ContactCard({
       <div
         style={{
           display: 'flex',
+          alignItems: 'flex-start',
           justifyContent: 'space-between',
           gap: 16,
-          alignItems: 'flex-start',
           flexWrap: 'wrap',
         }}
       >
@@ -1014,123 +1040,26 @@ function ContactCard({
             >
               {subtitle}
             </div>
-          </div>
-        </div>
 
-        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', position: 'relative' }}>
-          <button
-            onClick={() => onViewProfile(contact)}
-            aria-label={`View profile for ${displayName}`}
-            style={{
-              padding: '10px 14px',
-              borderRadius: 10,
-              border: 'none',
-              background: '#FF7043',
-              color: '#fff',
-              fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: '0 6px 16px rgba(255,112,67,0.22)',
-              flex: '0 0 auto',
-            }}
-          >
-            View Profile
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActionsOpen((v) => !v)}
-            style={{
-              padding: '10px 14px',
-              borderRadius: 10,
-              border: '1px solid #D7DEE2',
-              background: 'rgba(255,255,255,0.95)',
-              color: '#455A64',
-              fontWeight: 700,
-              cursor: 'pointer',
-              flex: '0 0 auto',
-            }}
-          >
-            Actions
-          </button>
-
-          {actionsOpen && (
-            <div
+            <button
+              type="button"
+              onClick={() => onViewProfile(contact)}
+              aria-label={`View profile for ${displayName}`}
               style={{
-                position: 'absolute',
-                top: 46,
-                right: 0,
-                minWidth: 170,
-                borderRadius: 12,
-                border: '1px solid #D7DEE2',
-                background: 'rgba(255,255,255,0.98)',
-                boxShadow: '0 10px 24px rgba(0,0,0,0.14)',
-                overflow: 'hidden',
-                zIndex: 20,
+                marginTop: 10,
+                padding: '10px 14px',
+                borderRadius: 10,
+                border: 'none',
+                background: '#FF7043',
+                color: '#fff',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 6px 16px rgba(255,112,67,0.22)',
               }}
             >
-              <button
-                type="button"
-                onClick={async () => {
-                  setActionsOpen(false);
-                  await onRemoveContact(contact);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  border: 'none',
-                  borderBottom: '1px solid #ECEFF1',
-                  background: 'transparent',
-                  color: '#263238',
-                  textAlign: 'left',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                Remove Contact
-              </button>
-
-              <button
-                type="button"
-                onClick={async () => {
-                  setActionsOpen(false);
-                  await onReportContact(contact);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  border: 'none',
-                  borderBottom: '1px solid #ECEFF1',
-                  background: 'transparent',
-                  color: '#263238',
-                  textAlign: 'left',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                Report Contact
-              </button>
-
-              <button
-                type="button"
-                onClick={async () => {
-                  setActionsOpen(false);
-                  await onBlockContact(contact);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#263238',
-                  textAlign: 'left',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                Block Contact
-              </button>
-            </div>
-          )}
+              View Profile
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1171,7 +1100,9 @@ function ContactCard({
             padding: '9px 10px',
             borderRadius: 10,
             border: '1px solid #D7DEE2',
-            background: isGroupDisabled ? 'rgba(240,240,240,0.95)' : 'rgba(255,255,255,0.95)',
+            background: isGroupDisabled
+              ? 'rgba(240,240,240,0.95)'
+              : 'rgba(255,255,255,0.95)',
             fontSize: 13,
             color: '#263238',
           }}
@@ -1236,6 +1167,103 @@ function ContactCard({
         >
           Add & Assign
         </button>
+      </div>
+
+      <div style={{ position: 'relative', justifySelf: 'start' }}>
+        <button
+          type="button"
+          onClick={() => setActionsOpen((v) => !v)}
+          style={{
+            padding: '10px 14px',
+            borderRadius: 10,
+            border: '1px solid #D7DEE2',
+            background: 'rgba(255,255,255,0.95)',
+            color: '#455A64',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          Actions
+        </button>
+
+        {actionsOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 46,
+              left: 0,
+              minWidth: 170,
+              borderRadius: 12,
+              border: '1px solid #D7DEE2',
+              background: 'rgba(255,255,255,0.98)',
+              boxShadow: '0 10px 24px rgba(0,0,0,0.14)',
+              overflow: 'hidden',
+              zIndex: 20,
+            }}
+          >
+            <button
+              type="button"
+              onClick={async () => {
+                setActionsOpen(false);
+                await onRemoveContact(contact);
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                border: 'none',
+                borderBottom: '1px solid #ECEFF1',
+                background: 'transparent',
+                color: '#263238',
+                textAlign: 'left',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Remove Contact
+            </button>
+
+            <button
+              type="button"
+              onClick={async () => {
+                setActionsOpen(false);
+                await onReportContact(contact);
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                border: 'none',
+                borderBottom: '1px solid #ECEFF1',
+                background: 'transparent',
+                color: '#263238',
+                textAlign: 'left',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Report Contact
+            </button>
+
+            <button
+              type="button"
+              onClick={async () => {
+                setActionsOpen(false);
+                await onBlockContact(contact);
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                border: 'none',
+                background: 'transparent',
+                color: '#263238',
+                textAlign: 'left',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Block Contact
+            </button>
+          </div>
+        )}
       </div>
     </li>
   );
