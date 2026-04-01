@@ -75,8 +75,9 @@ export default function ContactsOrganizer({
 
     const filtered = incoming.filter((cat) => {
       const lower = String(cat.name || '').toLowerCase();
-      const isSystemRoot = SYSTEM_CATEGORY_NAMES.map((n) => n.toLowerCase()).includes(lower)
-        && !cat.parentCategoryId;
+      const isSystemRoot =
+        SYSTEM_CATEGORY_NAMES.map((n) => n.toLowerCase()).includes(lower) &&
+        !cat.parentCategoryId;
       if (isSystemRoot) return visibleRoots.has(lower);
       return true;
     });
@@ -145,7 +146,7 @@ export default function ContactsOrganizer({
       if (!categoryId || !contactId) return;
 
       const category = categoriesById.get(categoryId);
-	  if (!category) return;
+      if (!category) return;
 
       const contact = contacts.find((c) => String(c.id) === contactId);
       if (!contact) return;
@@ -162,17 +163,17 @@ export default function ContactsOrganizer({
   }, [sortedCategories, localAssignments, categoriesById, contacts]);
 
   const unassignedContacts = useMemo(() => {
-  return contacts.filter((contact) => {
-    const contactId = String(contact.id);
-    const hasAnyAssignment = localAssignments.some((assignment) => {
-      if (String(assignment?.contactId || '') !== contactId) return false;
-      const categoryId = assignment?.categoryId ? String(assignment.categoryId) : null;
-      if (!categoryId) return false;
-      return categoriesById.has(categoryId);
+    return contacts.filter((contact) => {
+      const contactId = String(contact.id);
+      const hasAnyAssignment = localAssignments.some((assignment) => {
+        if (String(assignment?.contactId || '') !== contactId) return false;
+        const categoryId = assignment?.categoryId ? String(assignment.categoryId) : null;
+        if (!categoryId) return false;
+        return categoriesById.has(categoryId);
+      });
+      return !hasAnyAssignment;
     });
-    return !hasAnyAssignment;
-  });
-}, [contacts, localAssignments, categoriesById]);
+  }, [contacts, localAssignments, categoriesById]);
 
   useEffect(() => {
     setOpenMap((prev) => {
@@ -189,15 +190,15 @@ export default function ContactsOrganizer({
     });
   }, [sortedCategories]);
 
-  const addCategory = async (name) => {
+  const addCategory = async (name, parentCategoryId = null) => {
     const trimmed = String(name || '').trim();
-    if (!trimmed || LOCKED_NAMES.includes(trimmed.toLowerCase())) return;
+    if (!trimmed) return null;
 
     try {
       const res = await fetch('/api/contacts/category', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: trimmed }),
+        body: JSON.stringify({ name: trimmed, parentCategoryId }),
       });
 
       const data = await res.json();
@@ -210,14 +211,17 @@ export default function ContactsOrganizer({
       });
 
       setOpenMap((prev) => ({ ...prev, [trimmed]: false }));
+      return data.category;
     } catch (err) {
       console.error('addCategory failed:', err);
+      return null;
     }
   };
 
   const deleteCategory = async (categoryId, name) => {
     const trimmed = String(name || '').trim();
-    if (!trimmed || trimmed === 'Unassigned' || LOCKED_NAMES.includes(trimmed.toLowerCase())) return;
+    if (!trimmed || trimmed === 'Unassigned' || LOCKED_NAMES.includes(trimmed.toLowerCase()))
+      return;
 
     try {
       const res = await fetch('/api/contacts/category', {
@@ -305,33 +309,31 @@ export default function ContactsOrganizer({
     }
   };
 
-  // Create a new category by name and immediately assign the contact to it
-  const addAndAssignFromCard = async (contactId, categoryName) => {
-    const trimmed = String(categoryName || '').trim();
-    if (!contactId || !trimmed || LOCKED_NAMES.includes(trimmed.toLowerCase())) return;
+  // Create root + optional child, then assign the contact to the final target
+  const addAndAssignFromCard = async (contactId, parentCategoryName, childCategoryName) => {
+    const parentTrimmed = String(parentCategoryName || '').trim();
+    const childTrimmed = String(childCategoryName || '').trim();
+
+    if (!contactId || (!parentTrimmed && !childTrimmed)) return;
 
     try {
-      // Step 1: Create the category
-      const catRes = await fetch('/api/contacts/category', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: trimmed }),
-      });
+      let targetCategory = null;
 
-      const catData = await catRes.json();
-      if (!catRes.ok) throw new Error(catData?.error || 'Failed to create category');
+      if (parentTrimmed) {
+        const parentCategory = await addCategory(parentTrimmed, null);
+        if (!parentCategory?.id) return;
 
-      const newCategory = catData.category;
+        if (childTrimmed) {
+          targetCategory = await addCategory(childTrimmed, parentCategory.id);
+        } else {
+          targetCategory = parentCategory;
+        }
+      } else {
+        targetCategory = await addCategory(childTrimmed, null);
+      }
 
-      // Add to local categories if not already present
-      setLocalCategories((prev) => {
-        if (prev.some((c) => c.id === newCategory.id)) return prev;
-        return [...prev, newCategory];
-      });
-      setOpenMap((prev) => ({ ...prev, [trimmed]: false }));
-
-      // Step 2: Assign to the new category using its id
-      await assignContact(contactId, newCategory.id);
+      if (!targetCategory?.id) return;
+      await assignContact(contactId, targetCategory.id);
     } catch (err) {
       console.error('addAndAssignFromCard failed:', err);
     }
@@ -344,20 +346,20 @@ export default function ContactsOrganizer({
 
   // All child (leaf) categories available for the assignment dropdown
   const assignableCategories = sortedCategories.filter((cat) => {
-  const hasParent = !!cat.parentCategoryId;
-  const name = String(cat.name || '').toLowerCase();
+    const hasParent = !!cat.parentCategoryId;
+    const name = String(cat.name || '').toLowerCase();
 
-  // Always allow child categories
-  if (hasParent) return true;
+    // Always allow child categories
+    if (hasParent) return true;
 
-  // Allow specific root categories
-  if (name === 'personal' || name === 'talent pools' || name === 'clients') {
-    return true;
-  }
+    // Allow specific root categories
+    if (name === 'personal' || name === 'talent pools' || name === 'clients') {
+      return true;
+    }
 
-  // Do NOT allow Candidates root (must use job children)
-  return false;
-});
+    // Do NOT allow Candidates root (must use job children)
+    return false;
+  });
 
   if (loading) {
     return (
@@ -382,7 +384,15 @@ export default function ContactsOrganizer({
             </div>
           </div>
 
-          <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+          <div
+            style={{
+              marginLeft: 'auto',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 10,
+              alignItems: 'center',
+            }}
+          >
             <input
               value={globalNewCat}
               onChange={(e) => setGlobalNewCat(e.target.value)}
@@ -431,13 +441,15 @@ export default function ContactsOrganizer({
 
         {categoryTree.roots.map((root) => {
           const rootNameLower = String(root.name || '').toLowerCase();
-          const isSystemRoot = SYSTEM_CATEGORY_NAMES.map((n) => n.toLowerCase()).includes(rootNameLower);
+          const isSystemRoot = SYSTEM_CATEGORY_NAMES.map((n) => n.toLowerCase()).includes(
+            rootNameLower
+          );
 
           return (
             <div key={root.id} style={{ display: 'grid', gap: 12 }}>
               <CategoryBlock
                 name={root.name}
-                contacts={[]}
+                contacts={contactsByCategoryId.get(String(root.id)) || []}
                 assignableCategories={assignableCategories}
                 onAssign={assignContact}
                 onAddAndAssign={addAndAssignFromCard}
@@ -453,7 +465,9 @@ export default function ContactsOrganizer({
               {openMap[root.name] &&
                 root.children.map((child) => {
                   const childNameLower = String(child.name || '').toLowerCase();
-                  const isSystemChild = SYSTEM_CATEGORY_NAMES.map((n) => n.toLowerCase()).includes(childNameLower);
+                  const isSystemChild = SYSTEM_CATEGORY_NAMES.map((n) =>
+                    n.toLowerCase()
+                  ).includes(childNameLower);
                   const childContacts = contactsByCategoryId.get(String(child.id)) || [];
 
                   return (
@@ -762,7 +776,6 @@ function ContactCard({
       </div>
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        {/* Dropdown uses categoryId as value — not name */}
         <select
           value={currentCategoryId}
           onChange={(e) => {
@@ -789,22 +802,39 @@ function ContactCard({
           ))}
         </select>
 
-        {/* Inline new category creation — creates then assigns */}
-        <AddAndAssignInline onAdd={(newName) => onAddAndAssign(contact.id, newName)} />
+        <AddAndAssignInline
+          onAdd={(parentName, groupName) =>
+            onAddAndAssign(contact.id, parentName, groupName)
+          }
+        />
       </div>
     </li>
   );
 }
 
 function AddAndAssignInline({ onAdd }) {
-  const [val, setVal] = useState('');
+  const [parentVal, setParentVal] = useState('');
+  const [groupVal, setGroupVal] = useState('');
 
   return (
     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
       <input
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
+        value={parentVal}
+        onChange={(e) => setParentVal(e.target.value)}
         placeholder="New category"
+        style={{
+          minWidth: 170,
+          padding: '9px 10px',
+          borderRadius: 10,
+          border: '1px solid #D7DEE2',
+          background: 'rgba(255,255,255,0.95)',
+          fontSize: 13,
+        }}
+      />
+      <input
+        value={groupVal}
+        onChange={(e) => setGroupVal(e.target.value)}
+        placeholder="New group"
         style={{
           minWidth: 170,
           padding: '9px 10px',
@@ -817,8 +847,9 @@ function AddAndAssignInline({ onAdd }) {
       <button
         type="button"
         onClick={async () => {
-          await onAdd(val);
-          setVal('');
+          await onAdd(parentVal, groupVal);
+          setParentVal('');
+          setGroupVal('');
         }}
         style={{
           padding: '9px 12px',
