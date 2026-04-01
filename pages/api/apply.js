@@ -268,7 +268,7 @@ export default async function handler(req, res) {
       },
     });
 
-    // ── Step 9: CandidateGroupMember ──────────────────────────────────────────
+        // ── Step 9: CandidateGroupMember ──────────────────────────────────────────
     await prisma.candidateGroupMember.upsert({
       where: {
         groupId_recruiterCandidateId: {
@@ -284,8 +284,49 @@ export default async function handler(req, res) {
       },
     });
 
+    // ── Step 10: Ensure recruiter ↔ candidate conversation ───────────────────
+    let conversation = await prisma.conversation.findFirst({
+      where: {
+        accountKey: orgAccountKey,
+        participants: {
+          some: { userId: seekerUserId },
+        },
+        AND: {
+          participants: {
+            some: { userId: jobPosterId },
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!conversation) {
+      conversation = await prisma.conversation.create({
+        data: {
+          accountKey: orgAccountKey,
+          createdByUserId: jobPosterId,
+          participants: {
+            create: [
+              { userId: jobPosterId },
+              { userId: seekerUserId },
+            ],
+          },
+        },
+        select: { id: true },
+      });
+    }
+
+    await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        senderId: seekerUserId,
+        content: 'Application submitted',
+        type: 'SYSTEM',
+      },
+    });
+
     return res.status(200).json(application);
-  } catch (error) {
+	} catch (error) {
     console.error('[/api/apply] Error:', error);
     return res.status(500).json({
       error: 'Failed to submit application',
