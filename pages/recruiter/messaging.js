@@ -140,7 +140,7 @@ export default function MessagingPage() {
 
     async function loadGroups() {
       try {
-        const res = await fetch("/api/recruiter/candidates", {
+        const res = await fetch("/api/recruiter/pipeline", {
           credentials: "include",
           headers: { "Content-Type": "application/json" },
         });

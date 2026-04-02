@@ -1,4 +1,4 @@
-// pages/api/recruiter/candidates.js
+// pages/api/recruiter/pipeline.js
 // Returns candidate pipeline grouped by CandidateGroup (canonical truth).
 // Also returns talentPoolGroups for the recruiter messaging center.
 // Scoped to the recruiter's org (accountKey) — all recruiters see the same groups.
