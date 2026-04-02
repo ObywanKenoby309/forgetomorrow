@@ -347,15 +347,10 @@ export default async function handler(req, res) {
             firstName: true,
             lastName: true,
             email: true,
-            title: true,
             headline: true,
             avatarUrl: true,
-            city: true,
-            region: true,
             location: true,
-            summary: true,
             aboutMe: true,
-            role: true,
             skillsJson: true,
             languagesJson: true,
           },
@@ -414,10 +409,7 @@ export default async function handler(req, res) {
         user.email ||
         "Candidate";
 
-      const location =
-        user.location ||
-        [user.city, user.region].filter(Boolean).join(", ") ||
-        "";
+      const location = user.location || "";
 
       const skills = Array.isArray(rc?.skills)
         ? rc.skills
@@ -436,11 +428,11 @@ export default async function handler(req, res) {
         recruiterCandidateId: rc?.id || null,
         name: displayName,
         email: user.email || null,
-        title: user.title || user.headline || "",
-        currentTitle: user.title || "",
+        title: user.headline || "",
+        currentTitle: user.headline || "",
         headline: user.headline || "",
-        summary: user.summary || user.aboutMe || "",
-        role: user.role || "",
+        summary: user.aboutMe || "",
+        role: user.headline || "",
         avatarUrl: user.avatarUrl || null,
         location,
         preferredLocation: location,
