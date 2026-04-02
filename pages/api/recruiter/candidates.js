@@ -1,8 +1,8 @@
 // pages/api/recruiter/candidates.js
 // Returns candidate pipeline grouped by CandidateGroup (canonical truth).
+// Also returns talentPoolGroups for the recruiter messaging center.
 // Scoped to the recruiter's org (accountKey) — all recruiters see the same groups.
 // Individual conversation threads are per-recruiter (not shared).
-// Full search filter support preserved from original.
 
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
@@ -243,8 +243,6 @@ export default async function handler(req, res) {
     }
 
     // ── Load CandidateGroups — canonical source of truth ──────────────────────
-    // Replaces the old ContactCategory name-matching bridge.
-    // All recruiters in the org see the same groups via accountKey.
     const candidateGroups = await prisma.candidateGroup.findMany({
       where: {
         accountKey,
@@ -281,14 +279,36 @@ export default async function handler(req, res) {
       orderBy: { createdAt: "desc" },
     });
 
-    if (!candidateGroups.length) {
-      return res.status(200).json(
-        jsonSafe({ candidates: [], candidatesFlat: [], jobGroups: [] })
-      );
-    }
+    // ── Load Talent Pools ─────────────────────────────────────────────────────
+    const talentPools = await prisma.talentPool.findMany({
+      where: { accountKey },
+      select: {
+        id: true,
+        name: true,
+        purpose: true,
+        createdAt: true,
+        updatedAt: true,
+        entries: {
+          where: {
+            candidateUserId: { not: null },
+          },
+          select: {
+            id: true,
+            candidateUserId: true,
+            candidateName: true,
+            candidateHeadline: true,
+            candidateLocation: true,
+            status: true,
+            source: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-    // ── Collect all candidate user ids ────────────────────────────────────────
-    const allCandidateUserIds = [
+    // ── Collect all candidate user ids (from both groups and pools) ───────────
+    const groupCandidateUserIds = [
       ...new Set(
         candidateGroups.flatMap((g) =>
           g.members
@@ -298,41 +318,54 @@ export default async function handler(req, res) {
       ),
     ];
 
-    if (!allCandidateUserIds.length) {
+    const poolCandidateUserIds = [
+      ...new Set(
+        talentPools.flatMap((p) =>
+          p.entries.map((e) => e.candidateUserId).filter(Boolean)
+        )
+      ),
+    ];
+
+    const allCandidateUserIds = [
+      ...new Set([...groupCandidateUserIds, ...poolCandidateUserIds]),
+    ];
+
+    if (!allCandidateUserIds.length && !candidateGroups.length && !talentPools.length) {
       return res.status(200).json(
-        jsonSafe({ candidates: [], candidatesFlat: [], jobGroups: [] })
+        jsonSafe({ candidates: [], candidatesFlat: [], jobGroups: [], talentPoolGroups: [] })
       );
     }
 
-    // ── Load candidate profiles — full field set ───────────────────────────────
-    const candidateUsers = await prisma.user.findMany({
-      where: { id: { in: allCandidateUserIds } },
-      select: {
-        id: true,
-        name: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        title: true,
-        headline: true,
-        avatarUrl: true,
-        city: true,
-        region: true,
-        location: true,
-        summary: true,
-        aboutMe: true,
-        role: true,
-        skillsJson: true,
-        languagesJson: true,
-      },
-    });
+    // ── Load candidate profiles ───────────────────────────────────────────────
+    const candidateUsers = allCandidateUserIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: allCandidateUserIds } },
+          select: {
+            id: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            title: true,
+            headline: true,
+            avatarUrl: true,
+            city: true,
+            region: true,
+            location: true,
+            summary: true,
+            aboutMe: true,
+            role: true,
+            skillsJson: true,
+            languagesJson: true,
+          },
+        })
+      : [];
 
     const candidateUserById = new Map(
       candidateUsers.map((u) => [String(u.id), u])
     );
 
     // ── Load THIS recruiter's conversations only ───────────────────────────────
-    // Private per recruiter — not shared across the team.
     const recruiterConversations = await prisma.conversationParticipant.findMany({
       where: {
         userId: recruiterUserId,
@@ -357,22 +390,79 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── Load this recruiter's Contact rows for contactId on payload ───────────
+    // ── Load org-level contact rows ───────────────────────────────────────────
     const recruiterContacts = allCandidateUserIds.length
-  ? await prisma.contact.findMany({
-      where: {
-        accountKey, // 🔥 ORG LEVEL — NOT USER LEVEL
-        contactUserId: { in: allCandidateUserIds },
-      },
-      select: { id: true, contactUserId: true },
-    })
-  : [];
+      ? await prisma.contact.findMany({
+          where: {
+            userId: recruiterUserId,
+            contactUserId: { in: allCandidateUserIds },
+          },
+          select: { id: true, contactUserId: true },
+        })
+      : [];
 
     const contactIdByUserId = new Map(
       recruiterContacts.map((c) => [String(c.contactUserId), c.id])
     );
 
-    // ── Build response from canonical CandidateGroup data ─────────────────────
+    // ── Helper: build a candidate payload from a user record ──────────────────
+    function buildCandidatePayload(user, rc, groupMeta) {
+      const displayName =
+        user.name ||
+        `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+        user.email ||
+        "Candidate";
+
+      const location =
+        user.location ||
+        [user.city, user.region].filter(Boolean).join(", ") ||
+        "";
+
+      const skills = Array.isArray(rc?.skills)
+        ? rc.skills
+        : Array.isArray(user.skillsJson)
+        ? user.skillsJson
+        : [];
+
+      const languages = Array.isArray(user.languagesJson)
+        ? user.languagesJson
+        : [];
+
+      return {
+        id: String(user.id),
+        userId: String(user.id),
+        contactId: contactIdByUserId.get(String(user.id)) || null,
+        recruiterCandidateId: rc?.id || null,
+        name: displayName,
+        email: user.email || null,
+        title: user.title || user.headline || "",
+        currentTitle: user.title || "",
+        headline: user.headline || "",
+        summary: user.summary || user.aboutMe || "",
+        role: user.role || "",
+        avatarUrl: user.avatarUrl || null,
+        location,
+        preferredLocation: location,
+        skills,
+        languages,
+        education: [],
+        tags: Array.isArray(rc?.tags) ? rc.tags : [],
+        notes: rc?.notes || "",
+        pipelineStage: rc?.pipelineStage || null,
+        lastContacted: rc?.lastContacted || null,
+        lastSeen: rc?.lastSeen || null,
+        conversationId: conversationByOtherUserId.get(String(user.id)) || null,
+        jobGroupId: groupMeta?.groupId || null,
+        jobGroupName: groupMeta?.groupName || null,
+        jobId: groupMeta?.jobId || null,
+        groupStatus: groupMeta?.groupStatus || "active",
+        poolId: groupMeta?.poolId || null,
+        poolName: groupMeta?.poolName || null,
+        match: null,
+      };
+    }
+
+    // ── Build jobGroups from CandidateGroups ──────────────────────────────────
     const seenFlat = new Set();
     const candidatesFlat = [];
 
@@ -386,58 +476,12 @@ export default async function handler(req, res) {
         const user = candidateUserById.get(String(rc.candidateUserId));
         if (!user?.id) continue;
 
-        const displayName =
-          user.name ||
-          `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-          user.email ||
-          "Candidate";
-
-        const location =
-          user.location ||
-          [user.city, user.region].filter(Boolean).join(", ") ||
-          "";
-
-        const skills = Array.isArray(rc.skills)
-          ? rc.skills
-          : Array.isArray(user.skillsJson)
-          ? user.skillsJson
-          : [];
-
-        const languages = Array.isArray(user.languagesJson)
-          ? user.languagesJson
-          : [];
-
-        const candidatePayload = {
-          id: String(user.id),
-          userId: String(user.id),
-          contactId: contactIdByUserId.get(String(user.id)) || null,
-          recruiterCandidateId: rc.id || null,
-          name: displayName,
-          email: user.email || null,
-          title: user.title || user.headline || "",
-          currentTitle: user.title || "",
-          headline: user.headline || "",
-          summary: user.summary || user.aboutMe || "",
-          role: user.role || "",
-          avatarUrl: user.avatarUrl || null,
-          location,
-          preferredLocation: location,
-          skills,
-          languages,
-          education: [],
-          tags: Array.isArray(rc.tags) ? rc.tags : [],
-          notes: rc.notes || "",
-          pipelineStage: rc.pipelineStage || null,
-          lastContacted: rc.lastContacted || null,
-          lastSeen: rc.lastSeen || null,
-          // Private to this recruiter
-          conversationId: conversationByOtherUserId.get(String(user.id)) || null,
-          jobGroupId: group.id,
-          jobGroupName: group.name,
+        const candidatePayload = buildCandidatePayload(user, rc, {
+          groupId: group.id,
+          groupName: group.name,
           jobId: group.jobId || null,
           groupStatus: group.status || "active",
-          match: null,
-        };
+        });
 
         candidates.push(candidatePayload);
 
@@ -449,7 +493,7 @@ export default async function handler(req, res) {
 
       return {
         id: group.id,
-        categoryId: null, // no longer category-based
+        categoryId: null,
         name: group.name,
         status: group.status || "active",
         jobId: group.jobId || null,
@@ -458,7 +502,35 @@ export default async function handler(req, res) {
       };
     });
 
-    // ── Apply search filters — full filter set preserved ──────────────────────
+    // ── Build talentPoolGroups ────────────────────────────────────────────────
+    const talentPoolGroups = talentPools.map((pool) => {
+      const members = [];
+
+      for (const entry of pool.entries) {
+        if (!entry.candidateUserId) continue;
+
+        const user = candidateUserById.get(String(entry.candidateUserId));
+        if (!user?.id) continue;
+
+        const memberPayload = buildCandidatePayload(user, null, {
+          poolId: pool.id,
+          poolName: pool.name,
+          groupStatus: "active",
+        });
+
+        members.push(memberPayload);
+      }
+
+      return {
+        id: pool.id,
+        name: pool.name,
+        purpose: pool.purpose || null,
+        memberCount: members.length,
+        members,
+      };
+    });
+
+    // ── Apply search filters ──────────────────────────────────────────────────
     const filteredJobGroups = jobGroups
       .map((group) => ({
         ...group,
@@ -466,17 +538,28 @@ export default async function handler(req, res) {
           matchesFilters(candidate, req.query)
         ),
       }))
-      .filter((group) => group.candidates.length > 0 || !Object.keys(req.query || {}).length);
+      .filter(
+        (group) =>
+          group.candidates.length > 0 || !Object.keys(req.query || {}).length
+      );
 
     const filteredCandidatesFlat = candidatesFlat.filter((candidate) =>
       matchesFilters(candidate, req.query)
     );
+
+    const filteredTalentPoolGroups = talentPools.length
+      ? talentPoolGroups.map((pool) => ({
+          ...pool,
+          members: pool.members.filter((m) => matchesFilters(m, req.query)),
+        }))
+      : [];
 
     return res.status(200).json(
       jsonSafe({
         candidates: filteredCandidatesFlat,
         candidatesFlat: filteredCandidatesFlat,
         jobGroups: filteredJobGroups,
+        talentPoolGroups: filteredTalentPoolGroups,
       })
     );
   } catch (err) {
