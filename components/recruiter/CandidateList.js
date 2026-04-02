@@ -1,5 +1,6 @@
 // components/recruiter/CandidateList.jsx
 import React from "react";
+import CandidateActionsMenu from "./CandidateActionsMenu";
 
 function toSafeArray(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -173,7 +174,7 @@ function CandidateCard({
     : "text-slate-500";
 
   return (
-    <div className="group relative w-full max-w-full min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm transition-shadow duration-150 hover:shadow-md">
+    <div className="group relative w-full max-w-full min-w-0 rounded-xl border border-slate-200/80 bg-white shadow-sm transition-shadow duration-150 hover:shadow-md" style={{ overflow: "visible", position: "relative", zIndex: 1 }}>
       {/* Left accent bar */}
       <div
         className="absolute left-0 top-0 bottom-0 w-[3px]"
@@ -321,7 +322,7 @@ function CandidateCard({
           )}
 
           {typeof onToggleCompare === "function" && (
-            <label className="inline-flex max-w-full cursor-pointer select-none items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 sm:ml-auto">
+            <label className="inline-flex max-w-full cursor-pointer select-none items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50">
               <span className="truncate">Compare</span>
               <input
                 type="checkbox"
@@ -331,6 +332,14 @@ function CandidateCard({
               />
             </label>
           )}
+
+          {/* Actions menu — always last, pushed to the right */}
+          <div style={{ marginLeft: "auto" }}>
+            <CandidateActionsMenu
+              candidate={candidate}
+              context="candidates"
+            />
+          </div>
         </div>
       </div>
     </div>

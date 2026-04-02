@@ -5,6 +5,7 @@
 // Conversation is only created when the recruiter sends the first message.
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import CandidateActionsMenu from "./CandidateActionsMenu";
 
 /* ─────────────────────────────────────────────────────────────
    DESIGN TOKENS
@@ -91,7 +92,7 @@ function Avatar({ src, name, size = 34 }) {
 ───────────────────────────────────────────────────────────── */
 function SectionHeader({ label, count, expanded, onToggle }) {
   return (
-    <button
+    <button type="button"
       onClick={onToggle}
       style={{
         display: "flex",
@@ -146,7 +147,7 @@ function SectionHeader({ label, count, expanded, onToggle }) {
 ───────────────────────────────────────────────────────────── */
 function GroupRow({ label, count, archived, expanded, onToggle }) {
   return (
-    <button
+    <button type="button"
       onClick={onToggle}
       style={{
         display: "flex",
@@ -222,7 +223,7 @@ function CandidateRow({ candidate, selected, onSelect }) {
   const hasUnread = (candidate.unread || 0) > 0;
 
   return (
-    <button
+    <button type="button"
       onClick={() => onSelect(candidate)}
       style={{
         display: "flex",
@@ -511,7 +512,7 @@ function MessageBubble({ message, isRecruiter }) {
 /* ─────────────────────────────────────────────────────────────
    RIGHT PANEL
 ───────────────────────────────────────────────────────────── */
-function RightPanel({ candidate, messages, onSend, sending, isArchived, currentUserId }) {
+function RightPanel({ candidate, messages, onSend, sending, isArchived, currentUserId, activeConversationId, onArchiveMine, onArchiveOrg }) {
   const [draft, setDraft] = useState("");
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
@@ -619,6 +620,14 @@ function RightPanel({ candidate, messages, onSend, sending, isArchived, currentU
             )}
           </div>
         </div>
+        <CandidateActionsMenu
+          candidate={candidate}
+          conversationId={activeConversationId}
+          context="messaging"
+          onArchiveMine={onArchiveMine}
+          onArchiveOrg={onArchiveOrg}
+          buttonStyle={{ marginRight: 0 }}
+        />
       </div>
 
       {/* ── Messages ── */}
@@ -717,7 +726,7 @@ function RightPanel({ candidate, messages, onSend, sending, isArchived, currentU
               e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
             }}
           />
-          <button
+          <button type="button"
             onClick={handleSend}
             disabled={!draft.trim() || sending}
             style={{
@@ -955,6 +964,17 @@ export default function RecruiterMessageCenter({
           sending={sending}
           isArchived={!!isArchived}
           currentUserId={currentUserId}
+          activeConversationId={activeConversationId}
+          onArchiveMine={(c) => {
+            setSelectedCandidate(null);
+            setMessages([]);
+            setActiveConversationId(null);
+          }}
+          onArchiveOrg={(c) => {
+            setSelectedCandidate(null);
+            setMessages([]);
+            setActiveConversationId(null);
+          }}
         />
       </div>
     </div>
