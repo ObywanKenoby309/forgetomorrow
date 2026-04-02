@@ -15,6 +15,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { createNotification } from '@/lib/notifications/writer';
 
 function buildJobGroupName(jobId, title) {
   return `Job ${jobId} - ${String(title || '').trim()}`;
@@ -277,7 +278,31 @@ export default async function handler(req, res) {
       },
     });
 
-    // ── Step 10: Ensure recruiter ↔ candidate conversation ───────────────────
+// ── Step 10: Notify all org recruiters of new application ────────────────
+    await Promise.all(
+      recruiterUserIds.map((recruiterId) =>
+        createNotification({
+          userId: recruiterId,
+          actorUserId: seekerUserId,
+          category: 'APPLICATION',
+          scope: 'RECRUITER',
+          entityType: 'APPLICATION',
+          entityId: String(application.id),
+          dedupeKey: `application:new:${application.id}:${recruiterId}`,
+          title: `New application for ${job.title}`,
+          body: null,
+          requiresAction: true,
+          metadata: {
+            jobId: job.id,
+            jobTitle: job.title,
+            applicationId: application.id,
+            accountKey: orgAccountKey,
+          },
+        })
+      )
+    );
+
+    // ── Step 11: Ensure recruiter ↔ candidate conversation ───────────────────
     // Filter by channel: 'recruiter' so we never match Signal threads.
     const existingParticipations = await prisma.conversationParticipant.findMany({
       where: {

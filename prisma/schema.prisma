@@ -645,9 +645,10 @@ model Organization {
   name               String
   status             OrganizationStatus   @default(PILOT)
   accountKey         String               @unique
-  ownerUserId        String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  ownerUserId                   String?
+  stalledCandidateThresholdDays Int?
+  createdAt                     DateTime             @default(now())
+  updatedAt                     DateTime             @updatedAt
   externalCandidates ExternalCandidate[]  @relation("OrganizationExternalCandidates")
   jobs               Job[]                @relation("OrganizationJobs")
   members            OrganizationMember[] @relation("OrganizationMembers")
@@ -1726,6 +1727,11 @@ enum ApplicationQuestionType {
 enum NotificationCategory {
   MESSAGING
   CRM
+  PIPELINE
+  APPLICATION
+  JOB
+  CALENDAR
+  FEEDBACK
 }
 
 enum NotificationScope {
@@ -1740,6 +1746,11 @@ enum NotificationEntityType {
   CONVERSATION
   TICKET
   SLA_EVENT
+  RECRUITER_CANDIDATE
+  JOB_POSTING
+  APPLICATION
+  CALENDAR_ITEM
+  COACHING_SESSION
 }
 
 enum AiBuddyMode {
