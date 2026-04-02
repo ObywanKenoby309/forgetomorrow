@@ -2,6 +2,7 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../auth/[...nextauth]";
+import { createNotification, resolveNotification } from "@/lib/notifications/writer";
 
 function toInt(val) {
   const n = Number(val);
@@ -154,6 +155,43 @@ export default async function handler(req, res) {
         updatedAt: true,
       },
     });
+
+    // ── Notify seeker of stage change ─────────────────────────────────────────
+    if (hasStatus && nextStatus && app.userId) {
+      const stageLabels = {
+        Applied: "Applied",
+        Interviewing: "Interviewing",
+        Offers: "Offer received",
+        ClosedOut: "Application closed",
+      };
+      const label = stageLabels[nextStatus] || nextStatus;
+
+      await createNotification({
+        userId: app.userId,
+        actorUserId: userId,
+        category: "APPLICATION",
+        scope: "SEEKER",
+        entityType: "APPLICATION",
+        entityId: String(applicationId),
+        dedupeKey: `application:status:${applicationId}:${nextStatus}`,
+        title: `Your application status changed: ${label}`,
+        body: null,
+        requiresAction: true,
+        metadata: {
+          jobId,
+          applicationId,
+          status: nextStatus,
+        },
+      });
+
+      // If recruiter moves them out of ClosedOut, resolve the closed notification
+      if (nextStatus !== "ClosedOut") {
+        await resolveNotification({
+          userId: app.userId,
+          dedupeKey: `application:status:${applicationId}:ClosedOut`,
+        });
+      }
+    }
 
     return res.status(200).json({ ok: true, application: updated });
   } catch (e) {
