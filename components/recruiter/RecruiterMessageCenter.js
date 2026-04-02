@@ -514,12 +514,13 @@ function MessageBubble({ message, isRecruiter }) {
 ───────────────────────────────────────────────────────────── */
 function RightPanel({ candidate, messages, onSend, sending, isArchived, currentUserId, activeConversationId, onArchiveMine, onArchiveOrg }) {
   const [draft, setDraft] = useState("");
-  const bottomRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
-
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  if (messagesContainerRef.current) {
+    messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+  }
+}, [messages]);
 
   // Reset draft when candidate changes
   useEffect(() => {
@@ -632,6 +633,7 @@ function RightPanel({ candidate, messages, onSend, sending, isArchived, currentU
 
       {/* ── Messages ── */}
       <div
+	    ref={messagesContainerRef}
         style={{
           flex: 1,
           overflowY: "auto",
@@ -667,7 +669,6 @@ function RightPanel({ candidate, messages, onSend, sending, isArchived, currentU
             isRecruiter={msg.from === "recruiter" || msg.senderId === currentUserId}
           />
         ))}
-        <div ref={bottomRef} />
       </div>
 
       {/* ── Composer or archived notice ── */}
