@@ -314,6 +314,7 @@ export default async function handler(req, res) {
           g.members
             .map((m) => m.recruiterCandidate?.candidateUserId)
             .filter(Boolean)
+            .filter((id) => String(id) !== recruiterUserId) // exclude self-applications
         )
       ),
     ];
@@ -330,7 +331,7 @@ export default async function handler(req, res) {
       ...new Set([...groupCandidateUserIds, ...poolCandidateUserIds]),
     ];
 
-    if (!allCandidateUserIds.length && !candidateGroups.length && !talentPools.length) {
+    if (!candidateGroups.length && !talentPools.length) {
       return res.status(200).json(
         jsonSafe({ candidates: [], candidatesFlat: [], jobGroups: [], talentPoolGroups: [] })
       );
@@ -538,10 +539,7 @@ export default async function handler(req, res) {
           matchesFilters(candidate, req.query)
         ),
       }))
-      .filter(
-        (group) =>
-          group.candidates.length > 0 || !Object.keys(req.query || {}).length
-      );
+      .filter((group) => group.candidates.length > 0);
 
     const filteredCandidatesFlat = candidatesFlat.filter((candidate) =>
       matchesFilters(candidate, req.query)
