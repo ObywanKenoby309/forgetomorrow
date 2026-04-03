@@ -1149,10 +1149,10 @@ function Jobs() {
 
 export default function JobsPage() {
   return (
-    <InternalLayout activeNav="jobs">
+    <JobsLayout activeNav="jobs">
       <JobPipelineProvider>
         <Jobs />
       </JobPipelineProvider>
-    </InternalLayout>
+    </JobsLayout>
   );
 }
