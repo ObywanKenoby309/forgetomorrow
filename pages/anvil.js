@@ -3,10 +3,12 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 
 import SeekerLayout from "@/components/layouts/SeekerLayout";
+import SeekerTitleCard from "@/components/seeker/SeekerTitleCard";
 import ProfileDevelopment from "../components/roadmap/ProfileDevelopment";
 import OfferNegotiation from "../components/roadmap/OfferNegotiation";
 import OnboardingGrowth from "../components/roadmap/OnboardingGrowth";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
+import { getTimeGreeting } from "@/lib/dashboardGreeting";
 
 function getChromeFromAsPath(asPath) {
   try {
@@ -31,11 +33,15 @@ const GLASS = {
   WebkitBackdropFilter: "blur(10px)",
 };
 
+const ORANGE_HEADING_LIFT = {
+  textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
+  fontWeight: 900,
+};
+
 const GAP = 16;
 
 // Icon component — swap src for your ChatGPT-generated icons when ready
 function AnvilIcon({ src, alt, size = 64 }) {
-  // Placeholder renders a styled div until real icons are dropped in
   if (!src) {
     return (
       <div style={{
@@ -62,33 +68,32 @@ function AnvilIcon({ src, alt, size = 64 }) {
 }
 
 // ─── The 4 Anvil tiles ───────────────────────────────────────────────────────
-// Set img to your icon paths when ready e.g. '/icons/anvil-resume.png'
 const TILES = [
   {
     id: "resume",
     title: "Resume & Cover",
     desc: "Start at the beginning — build your resume, then create a cover letter when you're ready.",
     note: "Opens a full page outside The Anvil.",
-    href: null, // handled as external link
-    img: null,  // swap to '/icons/anvil-resume.png' when ready
+    href: null,
+    img: null,
   },
   {
     id: "profile",
     title: "Profile Development",
     desc: "Strengthen how you present your experience — clarity, positioning, and practical next steps.",
-    img: null,  // swap to '/icons/anvil-profile.png' when ready
+    img: null,
   },
   {
     id: "offer",
     title: "Offer & Negotiation",
     desc: "Prepare for compensation conversations with structure, confidence, and evidence.",
-    img: null,  // swap to '/icons/anvil-offer.png' when ready
+    img: null,
   },
   {
     id: "onboarding",
     title: "Growth & Pivot",
     desc: "Plan realistic pivots and growth paths based on your goals and current market conditions.",
-    img: null,  // swap to '/icons/anvil-growth.png' when ready
+    img: null,
   },
 ];
 
@@ -117,7 +122,6 @@ function MobileCard({ tile, isActive, onSelect, withChrome }) {
 
   const inner = (
     <>
-      {/* Corner glow */}
       <div aria-hidden="true" style={{
         position: "absolute", right: -70, top: -70, width: 200, height: 200,
         background: "radial-gradient(circle, rgba(255,112,67,0.18), rgba(255,112,67,0.00) 70%)",
@@ -126,7 +130,7 @@ function MobileCard({ tile, isActive, onSelect, withChrome }) {
 
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
         <AnvilIcon src={tile.img} alt={tile.title} size={64} />
-        <h2 style={{ fontSize: 20, fontWeight: 900, margin: 0, color: "#FF7043", lineHeight: 1.1 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 900, margin: 0, color: "#FF7043", lineHeight: 1.1, ...ORANGE_HEADING_LIFT }}>
           {tile.title}
         </h2>
       </div>
@@ -180,7 +184,6 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
     programmatic.current = true;
     track.scrollTo({ left: index * track.offsetWidth, behavior: "smooth" });
     setTimeout(() => { programmatic.current = false; }, 600);
-    // Fire hint for any non-resume tile (resume navigates away, no hint needed)
     const tile = tiles[index];
     if (tile && tile.id !== "resume") {
       setShowScrollHint(true);
@@ -206,7 +209,6 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
 
   const active = tiles[activeIndex];
 
-  // Scroll hint — shows when a module is activated, auto-hides after 3s
   const [showScrollHint, setShowScrollHint] = useState(false);
   const hintTimer = useRef(null);
 
@@ -310,7 +312,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
         ))}
       </div>
 
-      {/* ── Scroll hint — below cards, above dots ── */}
+      {/* ── Scroll hint ── */}
       {showScrollHint && (
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
@@ -349,7 +351,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
         ))}
       </div>
 
-      {/* ── Inline module content (loads below carousel, no back button — use carousel to switch) ── */}
+      {/* ── Inline module content ── */}
       {activeModule && activeModule !== "resume" && (
         <div style={{ ...GLASS, margin: "16px 16px 0", padding: 24, display: "grid", gap: 16 }}>
           {activeModule === "profile" && (
@@ -368,16 +370,24 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
   );
 }
 
-// ─── Desktop tile (unchanged from original) ──────────────────────────────────
+// ─── Desktop tile ────────────────────────────────────────────────────────────
 function DesktopTile({ tile, onOpen, withChrome }) {
   const tileStyle = {
     ...GLASS, padding: 16, display: "grid", gap: 8, minHeight: 106,
   };
-  const titleStyle = { margin: 0, color: "#37474F", fontSize: 16, fontWeight: 900 };
+  const titleStyle = {
+    margin: 0,
+    fontSize: 18,
+    color: "#FF7043",
+    lineHeight: 1.25,
+    letterSpacing: "-0.01em",
+    ...ORANGE_HEADING_LIFT,
+  };
   const descStyle = { margin: 0, color: "#607D8B", fontSize: 13, lineHeight: 1.4 };
   const linkStyle = {
     color: "#FF7043", fontWeight: 800, textDecoration: "none",
     display: "inline-flex", alignItems: "center", gap: 6, width: "fit-content",
+    fontSize: 13, lineHeight: 1.2,
   };
 
   return (
@@ -414,7 +424,6 @@ export default function AnvilPage() {
 
   const activeNav = "anvil";
 
-  // JS-driven mobile detection — same pattern as SeekerLayout + HearthCenter
   const [isMobile, setIsMobile] = useState(true);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
@@ -423,19 +432,7 @@ export default function AnvilPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const HeaderBox = (
-    <section style={{ ...GLASS, padding: "24px 16px", textAlign: "center",
-      margin: "0 auto", maxWidth: 1320 }} aria-label="The Anvil overview">
-      <h1 style={{ color: "#FF7043", fontSize: 28, fontWeight: 900, margin: 0 }}>
-        The Anvil
-      </h1>
-      <p style={{ marginTop: 8, color: "#546E7A", fontSize: 14, fontWeight: 600,
-        maxWidth: 860, marginLeft: "auto", marginRight: "auto" }}>
-        Your workstation for building career signal — profile strength, negotiation readiness,
-        and guided growth plans that explain themselves.
-      </p>
-    </section>
-  );
+  const greeting = getTimeGreeting();
 
   const RightColumn = (
     <aside style={{ ...GLASS, padding: 16, boxSizing: "border-box",
@@ -449,13 +446,18 @@ export default function AnvilPage() {
   return (
     <SeekerLayout
       title="The Anvil | ForgeTomorrow"
-      header={HeaderBox}
       right={RightColumn}
       activeNav={activeNav}
     >
+      {/* Title card — uniform with dashboard */}
+      <SeekerTitleCard
+        greeting={greeting}
+        title="The Anvil"
+        subtitle="Your workstation for building career signal — profile strength, negotiation readiness, and guided growth plans."
+      />
+
       <div style={{
         ...GLASS,
-        // Same JS-driven padding pattern as HearthCenter
         paddingTop: 24,
         paddingBottom: 24,
         paddingLeft: isMobile ? 0 : 16,
@@ -464,7 +466,7 @@ export default function AnvilPage() {
         overflow: isMobile ? "hidden" : "visible",
       }}>
 
-        {/* ── MOBILE: dropdown + carousel + inline content ── */}
+        {/* ── MOBILE ── */}
         {isMobile && (
           <MobileAnvil
             tiles={TILES}
@@ -474,7 +476,7 @@ export default function AnvilPage() {
           />
         )}
 
-        {/* ── DESKTOP: original 2×2 grid + inline module swap ── */}
+        {/* ── DESKTOP ── */}
         {!isMobile && (
           <div style={{ display: "grid", gap: 12, width: "100%" }}>
             {!activeModule && (
