@@ -262,6 +262,7 @@ export default function SeekerLayout({
   }, [chromeMode, normalizedActiveNav, seekerCounts, employee, department, profileSlug]);
 
   // ---- MOBILE DETECTION ----
+  const hasHeader = Boolean(header);
   const hasRight = Boolean(right);
 
   const [isMobile, setIsMobile] = useState(() => {
@@ -342,31 +343,61 @@ export default function SeekerLayout({
   };
 
   // ---- DESKTOP VS MOBILE GRID ----
-  const desktopGrid = {
-    display: 'grid',
-    gridTemplateColumns: `${leftWidth}px minmax(0, 1fr) ${hasRight ? `${rightWidth}px` : '0px'}`,
-    gridTemplateRows: 'auto 1fr',
-    gridTemplateAreas: hasRight
-      ? rightTopOnly
-        ? `"left header right"
-           "left content content"`
-        : `"left header right"
-           "left content right"`
-      : `"left header header"
-         "left content content"`,
-  };
+    const desktopGrid = !hasHeader
+    ? !hasRight
+      ? {
+          display: 'grid',
+          gridTemplateColumns: `${leftWidth}px minmax(0, 1fr)`,
+          gridTemplateRows: '1fr',
+          gridTemplateAreas: `"left content"`,
+        }
+      : {
+          display: 'grid',
+          gridTemplateColumns: `${leftWidth}px minmax(0, 1fr) ${rightWidth}px`,
+          gridTemplateRows: rightTopOnly ? '1fr' : '1fr',
+          gridTemplateAreas: rightTopOnly
+            ? `"left content right"`
+            : `"left content right"`,
+        }
+    : {
+        display: 'grid',
+        gridTemplateColumns: `${leftWidth}px minmax(0, 1fr) ${hasRight ? `${rightWidth}px` : '0px'}`,
+        gridTemplateRows: 'auto 1fr',
+        gridTemplateAreas: hasRight
+          ? rightTopOnly
+            ? `"left header right"
+               "left content content"`
+            : `"left header right"
+               "left content right"`
+          : `"left header header"
+             "left content content"`,
+      };
 
-  const mobileGrid = {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
-    gridTemplateAreas: hasRight
-      ? `"header"
-         "content"
-         "right"`
-      : `"header"
-         "content"`,
-  };
+  const mobileGrid = !hasHeader
+    ? hasRight
+      ? {
+          display: 'grid',
+          gridTemplateColumns: '1fr',
+          gridTemplateRows: 'auto auto',
+          gridTemplateAreas: `"content" "right"`,
+        }
+      : {
+          display: 'grid',
+          gridTemplateColumns: '1fr',
+          gridTemplateRows: 'auto',
+          gridTemplateAreas: `"content"`,
+        }
+    : {
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
+        gridTemplateAreas: hasRight
+          ? `"header"
+             "content"
+             "right"`
+          : `"header"
+             "content"`,
+      };
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
 
@@ -416,16 +447,18 @@ export default function SeekerLayout({
             {left ? left : <SidebarComp {...sidebarProps} />}
           </aside>
 
-          <header
-            style={{
-              ...headerLayer,
-              gridArea: 'header',
-              alignSelf: 'start',
-              minWidth: 0,
-            }}
-          >
-            {header}
-          </header>
+         {hasHeader ? (
+            <header
+              style={{
+                ...headerLayer,
+                gridArea: 'header',
+                alignSelf: 'start',
+                minWidth: 0,
+              }}
+            >
+              {header}
+            </header>
+          ) : null}
 
           {hasRight ? (
             <aside
