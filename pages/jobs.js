@@ -875,6 +875,7 @@ function OldJobsUI() {
 
       <ATSResultPanel open={atsPanelOpen} onClose={() => setAtsPanelOpen(false)} loading={atsLoading} error={atsError} result={atsResult} onImproveResume={handleSendToResumeBuilder} />
     </div>
+  </div>
   );
 }
 
