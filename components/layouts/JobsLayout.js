@@ -11,6 +11,7 @@ import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 import SeekerSidebar from '@/components/SeekerSidebar';
 import CoachingSidebar from '@/components/coaching/CoachingSidebar';
 import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
+import MobileBottomBar from '@/components/mobile/MobileBottomBar';
 
 const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
 
@@ -53,6 +54,7 @@ export default function JobsLayout({
   const { plan, role } = usePlan();
 
   const [isMobile, setIsMobile] = useState(false);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -88,6 +90,8 @@ export default function JobsLayout({
     return 'seeker';
   }, [router.query?.chrome, role, plan]);
 
+  const handleOpenTools = () => setMobileToolsOpen(true);
+
   const { HeaderComp, SidebarComp, sidebarProps } = useMemo(() => {
     switch (chromeMode) {
       case 'coach':
@@ -117,7 +121,7 @@ export default function JobsLayout({
     }
   }, [chromeMode, activeNav]);
 
-  return (
+    return (
     <>
       <Head>
         <title>{title}</title>
@@ -190,6 +194,85 @@ export default function JobsLayout({
               <RightRailPlacementManager slot="right_rail_1" />
             </div>
           </aside>
+        </div>
+      )}
+
+      <MobileBottomBar
+        isMobile={isMobile}
+        chromeMode={chromeMode}
+        onOpenTools={handleOpenTools}
+      />
+
+      {isMobile && mobileToolsOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-end',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setMobileToolsOpen(false)}
+            aria-label="Dismiss Tools"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              border: 'none',
+              background: 'rgba(0,0,0,0.55)',
+              cursor: 'pointer',
+            }}
+          />
+
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              width: 'min(760px, 100%)',
+              maxHeight: '82vh',
+              borderTopLeftRadius: 18,
+              borderTopRightRadius: 18,
+              border: '1px solid rgba(255,255,255,0.22)',
+              background: 'rgba(255,255,255,0.92)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              padding: 16,
+              boxSizing: 'border-box',
+              overflowY: 'auto',
+              boxShadow: '0 -10px 26px rgba(0,0,0,0.22)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#112033' }}>Tools</div>
+              <button
+                type="button"
+                onClick={() => setMobileToolsOpen(false)}
+                aria-label="Close Tools"
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: 22,
+                  lineHeight: 1,
+                  color: '#546E7A',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <SidebarComp {...sidebarProps} />
+          </div>
         </div>
       )}
     </>
