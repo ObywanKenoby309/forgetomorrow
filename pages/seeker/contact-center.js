@@ -3,6 +3,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import ContactsList from '@/components/ContactsList';
 import IncomingRequestsList from '@/components/IncomingRequestsList';
@@ -172,14 +173,14 @@ function MobileTabStrip({ counts, withChrome }) {
       <div
         style={{
           display: 'flex',
-          flexWrap: 'wrap',          // ✅ wrap instead of scroll
+          flexWrap: 'wrap',
           gap: 8,
           padding: '10px 16px',
           minWidth: 0,
         }}
       >
         {tabs.map((tab) => {
-          const isActive = tab.key === 'contacts'; // current page
+          const isActive = tab.key === 'contacts';
           const hasAlert = tab.badge > 0 && tab.key !== 'contacts';
 
           return (
@@ -190,13 +191,13 @@ function MobileTabStrip({ counts, withChrome }) {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                padding: '7px 10px',     // ✅ slightly tighter
+                padding: '7px 10px',
                 borderRadius: 999,
                 fontWeight: 800,
                 fontSize: 13,
                 textDecoration: 'none',
-                whiteSpace: 'normal',     // ✅ allow wrap
-                lineHeight: 1.1,          // ✅ keeps wrapped chips tidy
+                whiteSpace: 'normal',
+                lineHeight: 1.1,
                 background: isActive
                   ? '#FF7043'
                   : hasAlert
@@ -417,17 +418,20 @@ export default function SeekerContactCenter() {
   const openNewsletter = (n) => console.log('Open newsletter (future)', n);
 
   const HeaderBox = (
-    <section style={{ ...GLASS, padding: 16, textAlign: 'center' }}>
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>Contact Center</h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-        See who you&apos;re connected with, who&apos;s trying to reach you, and who&apos;s been looking at your
-        profile. When you&apos;re ready to talk, jump into{' '}
-        <Link href={withChrome('/seeker/messages')} style={{ color: '#FF7043', fontWeight: 700 }}>
-          The Signal
-        </Link>
-        .
-      </p>
-    </section>
+    <SeekerTitleCard
+      title="Contact Center"
+      subtitle={
+        <>
+          See who you&apos;re connected with, who&apos;s trying to reach you, and who&apos;s been looking at your
+          profile. When you&apos;re ready to talk, jump into{' '}
+          <Link href={withChrome('/seeker/messages')} style={{ color: '#FF7043', fontWeight: 700 }}>
+            The Signal
+          </Link>
+          .
+        </>
+      }
+      isMobile={isMobile === true}
+    />
   );
 
   // ── Render nothing until we know which layout to show ──
@@ -447,10 +451,8 @@ export default function SeekerContactCenter() {
     return (
       <SeekerLayout title="Contact Center | ForgeTomorrow" header={HeaderBox} right={null} activeNav="contacts">
         <div style={{ ...MOBILE_ROOT, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {/* Sticky tab strip */}
           <MobileTabStrip counts={counts} withChrome={withChrome} />
 
-          {/* 1. Needs Your Attention — always open */}
           <div
             style={{
               ...WHITE_CARD,
@@ -512,7 +514,11 @@ export default function SeekerContactCenter() {
                     <h3 style={{ margin: '0 0 8px', fontSize: 13, color: '#374151', fontWeight: 700 }}>
                       Requests you&apos;ve sent
                     </h3>
-                    <OutgoingRequestsList items={outgoingPreview} onCancel={handleCancel} onViewProfile={handleViewProfile} />
+                    <OutgoingRequestsList
+                      items={outgoingPreview}
+                      onCancel={handleCancel}
+                      onViewProfile={handleViewProfile}
+                    />
                     <Link
                       href={withChrome('/seeker/contact-outgoing')}
                       style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 6, display: 'block' }}
@@ -525,7 +531,6 @@ export default function SeekerContactCenter() {
             )}
           </div>
 
-          {/* 2. Contacts — collapsible, open by default */}
           <CollapsibleCard title="Contacts" count={contacts.length} defaultOpen={true}>
             <div style={{ paddingTop: 12 }}>
               <ContactsList
@@ -543,7 +548,6 @@ export default function SeekerContactCenter() {
             </div>
           </CollapsibleCard>
 
-          {/* 3. Profile Views — collapsible, closed by default */}
           <CollapsibleCard title="Recent Profile Views" count={profileViews.length} defaultOpen={false}>
             <div style={{ paddingTop: 12 }}>
               {pvLoading ? (
@@ -586,7 +590,6 @@ export default function SeekerContactCenter() {
             </div>
           </CollapsibleCard>
 
-          {/* 4. Your Network — Groups/Pages/Newsletters folded into one */}
           <CollapsibleCard title="Your Network" defaultOpen={false}>
             <div style={{ paddingTop: 4 }}>
               <div style={{ paddingTop: 12, paddingBottom: 12, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
@@ -608,7 +611,6 @@ export default function SeekerContactCenter() {
     );
   }
 
-  // ── DESKTOP layout — original, completely untouched ────────────────────────
   const PAGE_GLASS_WRAP = { ...GLASS, padding: 16, margin: '24px 0 0', width: '100%' };
 
   return (
