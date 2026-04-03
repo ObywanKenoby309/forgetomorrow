@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { usePlan } from '@/context/PlanContext';
@@ -51,6 +51,20 @@ export default function JobsLayout({
 }) {
   const router = useRouter();
   const { plan, role } = usePlan();
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 1024);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const chromeMode = useMemo(() => {
     const urlChrome = normalizeChrome(router.query?.chrome);
@@ -111,55 +125,73 @@ export default function JobsLayout({
 
       <HeaderComp />
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '240px minmax(0, 1fr) 260px',
-          gap: 12,
-          padding: 16,
-          alignItems: 'start',
-          width: '100%',
-          boxSizing: 'border-box',
-        }}
-      >
-        <aside style={{ minWidth: 0 }}>
-          <SidebarComp {...sidebarProps} />
-        </aside>
-
-        <main style={{ width: '100%', minWidth: 0 }}>
-          {children}
-        </main>
-
-        <aside
-          aria-label="Sponsored"
+      {isMobile ? (
+        <div
           style={{
-            ...KPI_GLASS,
-            padding: 14,
-            minWidth: 0,
+            display: 'grid',
+            gridTemplateColumns: '1fr',
+            gap: 12,
+            padding: '12px 12px 96px',
+            alignItems: 'start',
+            width: '100%',
             boxSizing: 'border-box',
-            alignSelf: 'start',
-            position: 'sticky',
-            top: 16,
           }}
         >
-          <div
+          <main style={{ width: '100%', minWidth: 0 }}>
+            {children}
+          </main>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '240px minmax(0, 1fr) 260px',
+            gap: 12,
+            padding: 16,
+            alignItems: 'start',
+            width: '100%',
+            boxSizing: 'border-box',
+          }}
+        >
+          <aside style={{ minWidth: 0 }}>
+            <SidebarComp {...sidebarProps} />
+          </aside>
+
+          <main style={{ width: '100%', minWidth: 0 }}>
+            {children}
+          </main>
+
+          <aside
+            aria-label="Sponsored"
             style={{
-              fontWeight: 900,
-              marginBottom: 8,
-              fontSize: 15,
-              color: '#0F172A',
-              lineHeight: 1.25,
-              letterSpacing: '-0.01em',
+              ...KPI_GLASS,
+              padding: 14,
+              minWidth: 0,
+              boxSizing: 'border-box',
+              alignSelf: 'start',
+              position: 'sticky',
+              top: 16,
             }}
           >
-            Sponsored
-          </div>
+            <div
+              style={{
+                fontWeight: 900,
+                marginBottom: 8,
+                fontSize: 15,
+                color: '#0F172A',
+                lineHeight: 1.25,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Sponsored
+            </div>
 
-          <div style={{ ...GLASS, padding: 10 }}>
-            <RightRailPlacementManager slot="right_rail_1" />
-          </div>
-        </aside>
-      </div>
+            <div style={{ ...GLASS, padding: 10 }}>
+              <RightRailPlacementManager slot="right_rail_1" />
+            </div>
+          </aside>
+        </div>
+      )}
     </>
   );
 }
