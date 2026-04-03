@@ -168,7 +168,10 @@ export default function JobsLayout({
           <aside
             aria-label="Sponsored"
             style={{
-              ...KPI_GLASS,
+              background: 'rgba(255,255,255,0.95)',
+              border: '1px solid rgba(0,0,0,0.08)',
+              borderRadius: 14,
+              boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
               padding: 14,
               minWidth: 0,
               boxSizing: 'border-box',
@@ -190,7 +193,7 @@ export default function JobsLayout({
               Sponsored
             </div>
 
-            <div style={{ ...GLASS, padding: 10 }}>
+            <div style={{ background: 'rgba(255,255,255,0.80)', borderRadius: 10, padding: 10 }}>
               <RightRailPlacementManager slot="right_rail_1" />
             </div>
           </aside>
