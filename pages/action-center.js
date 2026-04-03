@@ -7,6 +7,8 @@ import { useRouter } from "next/router";
 import SeekerLayout from "@/components/layouts/SeekerLayout";
 import CoachingLayout from "@/components/layouts/CoachingLayout";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
+import SeekerTitleCard from "@/components/seeker/SeekerTitleCard";
+import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 
 /* -----------------------------
    UI: Frosted glass helpers
@@ -60,7 +62,7 @@ function resolveScope({ pathname, chrome }) {
 function scopeLabel(scope) {
   if (scope === "RECRUITER") return "Recruiter Action Center";
   if (scope === "COACH") return "Coach Action Center";
-  return "Your Action Center";
+  return "Action Center";
 }
 
 function withChrome(href, chrome) {
@@ -224,52 +226,6 @@ function byCreatedDesc(a, b) {
 }
 
 /* -----------------------------
-   Recruiter Right Rail (Ad + helper)
------------------------------- */
-function RecruiterRightRail() {
-  return (
-    <div className="grid gap-3">
-      <div
-        style={{
-          background: "white",
-          borderRadius: 12,
-          padding: 14,
-          boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-          border: "1px solid #eee",
-          minHeight: 110,
-          display: "grid",
-          placeItems: "center",
-          textAlign: "center",
-        }}
-      >
-        <div style={{ fontWeight: 900, color: "#37474F" }}>AD SLOT</div>
-        <div style={{ marginTop: 6, fontSize: 12, color: "#607D8B" }}>
-          Top-right placement
-        </div>
-      </div>
-
-      <div
-        style={{
-          background: "white",
-          borderRadius: 12,
-          padding: 14,
-          boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-          border: "1px solid #eee",
-        }}
-      >
-        <div style={{ fontWeight: 900, color: "#37474F", marginBottom: 6 }}>
-          Need help?
-        </div>
-        <p style={{ margin: 0, color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>
-          Use the orange “Need help? Chat with Support” button at the bottom-right of
-          the screen.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* -----------------------------
    Page
 ------------------------------ */
 export default function ActionCenterPage() {
@@ -429,37 +385,12 @@ export default function ActionCenterPage() {
   /* -----------------------------
      Header: clean, no tabs
   ------------------------------ */
-  const Header = (
-  <section
-    style={{
-      borderRadius: 18,
-      border: "1px solid rgba(255,255,255,0.22)",
-      background: "rgba(255,255,255,0.58)",
-      boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
-      backdropFilter: "blur(10px)",
-      WebkitBackdropFilter: "blur(10px)",
-      padding: 16,
-      textAlign: "center",
-    }}
-  >
-    <div style={{ fontSize: 24, fontWeight: 900, color: "#FF7043" }}>
-      {scopeLabel(scope)}
-    </div>
-    <div
-      style={{
-        marginTop: 6,
-        fontSize: 14,
-        color: "#64748B",
-        maxWidth: 720,
-        marginInline: "auto",
-        lineHeight: 1.5,
-      }}
-    >
-      This is your review surface. Items that need attention are on the left. History for
-      this category is on the right.
-    </div>
-  </section>
-);
+    const Header = (
+    <SeekerTitleCard
+      title={scopeLabel(scope)}
+      subtitle="This is your review surface. Items that need attention are on the left. History for this category is on the right."
+    />
+  );
 
   /* -----------------------------
      Reusable list row
@@ -781,7 +712,7 @@ export default function ActionCenterPage() {
   title="Action Center | ForgeTomorrow"
   header={Header}
   headerCard={false}
-  right={<RecruiterRightRail />}
+  right={<RightRailPlacementManager slot="right_rail_1" />}
   activeNav="dashboard"
 >
           {Content}
@@ -816,7 +747,7 @@ export default function ActionCenterPage() {
       <SeekerLayout
 		title="Action Center | ForgeTomorrow"
 		header={Header}
-		right={<RecruiterRightRail />}
+		right={<RightRailPlacementManager slot="right_rail_1" />}
 		activeNav="dashboard"
 	  >
 		{Content}
