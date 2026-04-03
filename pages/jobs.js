@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { JobPipelineProvider, useJobPipeline } from '../context/JobPipelineContext';
 import { Card, CardHeader, CardTitle, CardContent, CardSubtle } from '../components/ui/Card';
-import InternalLayout from '../components/layouts/InternalLayout';
+import JobsLayout from '../components/layouts/JobsLayout';
 import ATSResultPanel from '../components/seeker/ATSResultPanel';
 import JobActions from '../components/jobs/JobActions';
 import { normalizeJobText } from '../lib/jd/ingest';
