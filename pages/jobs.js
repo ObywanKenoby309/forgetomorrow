@@ -594,7 +594,7 @@ function OldJobsUI() {
   // ── DESKTOP LAYOUT ────────────────────────────────────────
     return (
     <div className="px-4 md:px-8 pb-10">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1.9fr)_280px] gap-4">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-3">
         <div className="space-y-4">
                     <header style={{ ...KPI_GLASS, padding: '18px 24px', textAlign: 'center' }}>
             <h1
@@ -622,7 +622,7 @@ function OldJobsUI() {
             </p>
           </header>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 1200 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', minWidth: 0 }}>
             {/* FIX #1: Filter panel with draft state + Apply Filters button */}
             <Card as="section" aria-labelledby="jobs-filter-heading" style={{ ...KPI_GLASS, padding: 0 }}>
               <CardHeader>
