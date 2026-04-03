@@ -385,29 +385,30 @@ export default function SeekerDashboard() {
   const scope = 'SEEKER';
   const chromeKey = chrome || 'seeker';
   const seekerActiveNav = chromeKey === 'coach' || chromeKey.startsWith('recruiter') ? 'seeker-dashboard' : 'dashboard';
-  
+
   const greeting = getTimeGreeting();
 
-const pageHeader = (
-  <SeekerTitleCard
-    greeting={greeting}
-    title="Your Job Seeker Dashboard"
-    subtitle="You're not alone. Track your momentum, see your wins, and keep moving forward."
-    isMobile={isMobile === true}
-  />
-);
-
-  const [kpi, setKpi] = useState(null);
-  const [weeks, setWeeks] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
   const [isMobile, setIsMobile] = useState(null);
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+    const pageHeader = (
+    <SeekerTitleCard
+      greeting={greeting}
+      title="Your Job Seeker Dashboard"
+      subtitle="You're not alone. Track your momentum, see your wins, and keep moving forward."
+      isMobile={isMobile === true}
+    />
+  );
+
+  const [kpi, setKpi] = useState(null);
+  const [weeks, setWeeks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -463,7 +464,6 @@ const pageHeader = (
 
   // ── MOBILE ────────────────────────────────────────────────────────────────
   if (isMobile) {
-    const greeting = getTimeGreeting();
 
     return (
       <>
