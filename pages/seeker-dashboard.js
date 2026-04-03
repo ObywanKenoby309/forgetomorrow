@@ -385,6 +385,17 @@ export default function SeekerDashboard() {
   const scope = 'SEEKER';
   const chromeKey = chrome || 'seeker';
   const seekerActiveNav = chromeKey === 'coach' || chromeKey.startsWith('recruiter') ? 'seeker-dashboard' : 'dashboard';
+  
+  const greeting = getTimeGreeting();
+
+const pageHeader = (
+  <SeekerTitleCard
+    greeting={greeting}
+    title="Your Job Seeker Dashboard"
+    subtitle="You're not alone. Track your momentum, see your wins, and keep moving forward."
+    isMobile={isMobile === true}
+  />
+);
 
   const [kpi, setKpi] = useState(null);
   const [weeks, setWeeks] = useState([]);
@@ -457,16 +468,12 @@ export default function SeekerDashboard() {
     return (
       <>
         <Head><title>Seeker Dashboard | ForgeTomorrow</title></Head>
-        <SeekerLayout title="Seeker Dashboard | ForgeTomorrow" activeNav={seekerActiveNav}>
+        <SeekerLayout
+  title="Seeker Dashboard | ForgeTomorrow"
+  activeNav={seekerActiveNav}
+  header={pageHeader}
+>
           <div style={{ display: 'grid', gap: GAP, width: '100%' }}>
-
-            {/* 1. Greeting */}
-            <SeekerTitleCard
-              greeting={greeting}
-              title="Your Job Seeker Dashboard"
-              subtitle="You're not alone. Track your momentum, see your wins, and keep moving forward."
-              isMobile={true}
-            />
 
             {/* 2. Action Center */}
             <section style={{ ...GLASS, padding: 16 }}>
@@ -633,7 +640,12 @@ export default function SeekerDashboard() {
   return (
     <>
       <Head><title>Seeker Dashboard | ForgeTomorrow</title></Head>
-      <SeekerLayout title="Seeker Dashboard | ForgeTomorrow" activeNav={seekerActiveNav} contentFullBleed>
+      <SeekerLayout
+  title="Seeker Dashboard | ForgeTomorrow"
+  activeNav={seekerActiveNav}
+  contentFullBleed
+  header={pageHeader}
+>
         <div style={{ padding: 0, margin: 0, width: '100%' }}>
           <div style={{
             display: 'grid',
@@ -642,13 +654,6 @@ export default function SeekerDashboard() {
             gap: GAP,
             width: '100%',
           }}>
-
-            {/* ROW 1, COL 1: Title card */}
-            <SeekerTitleCard
-              title="Your Job Seeker Dashboard"
-              subtitle="You're not alone. Track your momentum, see your wins, and keep moving forward."
-              style={{ gridColumn: '1 / 2', gridRow: '1' }}
-            />
 
             {/* ROW 2, COL 1: KPI strip */}
             <section style={{ ...KPI_GLASS, padding: '12px 16px 16px 16px', gridColumn: '1 / 2', gridRow: '2' }}>
