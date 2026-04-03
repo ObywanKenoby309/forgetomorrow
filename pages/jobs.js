@@ -447,7 +447,7 @@ function OldJobsUI() {
 
   if (loading || isMobile === null) {
     return (
-      <div className="px-2 md:px-3 pb-10">
+      <div className="pb-10">
         <p style={{ padding: 40, textAlign: 'center' }} aria-busy="true">Loading jobs...</p>
       </div>
     );
@@ -594,7 +594,7 @@ function OldJobsUI() {
   // ── DESKTOP LAYOUT ────────────────────────────────────────
     return (
     <div className="px-4 md:px-8 pb-10">
-      <div className="w-full grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-3.5">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-3">
         <div className="space-y-4">
                     <header style={{ ...KPI_GLASS, padding: '18px 24px', textAlign: 'center' }}>
             <h1
