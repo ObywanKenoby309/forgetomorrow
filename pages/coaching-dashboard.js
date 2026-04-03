@@ -22,6 +22,7 @@ import Link from 'next/link';
 import { getTimeGreeting } from "@/lib/dashboardGreeting";
 import { useRouter } from 'next/router';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
+import CoachingTitleCard from '@/components/coaching/CoachingTitleCard';
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 function localISODate(d = new Date()) {
@@ -52,24 +53,28 @@ const GLASS = {
   background:'rgba(255,255,255,0.58)', boxShadow:'0 10px 24px rgba(0,0,0,0.12)',
   backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
 };
+const KPI_GLASS = {
+  ...GLASS,
+  background:'rgba(255,255,255,0.68)',
+  boxShadow:'0 12px 28px rgba(0,0,0,0.14)',
+};
 const WHITE_CARD = {
   background:'rgba(255,255,255,0.92)', border:'1px solid rgba(0,0,0,0.08)',
   borderRadius:12, boxShadow:'0 2px 10px rgba(0,0,0,0.08)', boxSizing:'border-box',
 };
-const DARK_RAIL = {
-  background:'#2a2a2a', border:'1px solid #3a3a3a', borderRadius:12,
-  padding:16, boxShadow:'0 2px 6px rgba(0,0,0,0.06)', boxSizing:'border-box',
+const ORANGE_HEADING_LIFT = {
+  textShadow:'0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)',
+  fontWeight:900,
 };
 const GAP = 16;
 const RIGHT_COL_WIDTH = 280;
 
-// ─── Desktop helpers (preserved from original) ────────────────────────────────
+// ─── Desktop helpers ──────────────────────────────────────────────────────────
 function Section({ title, children, action=null, style={} }) {
   return (
-    <section style={{ background:'white', borderRadius:12, padding:20,
-      boxShadow:'0 2px 6px rgba(0,0,0,0.06)', border:'1px solid #eee', ...style }}>
+    <section style={{ ...GLASS, padding:20, ...style }}>
       <div style={{ marginBottom:12, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-        <div style={{ color:'#FF7043', fontWeight:700, fontSize:18 }}>{title}</div>
+        <div style={{ fontSize:18, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', ...ORANGE_HEADING_LIFT }}>{title}</div>
         {action}
       </div>
       <div>{children}</div>
@@ -78,38 +83,38 @@ function Section({ title, children, action=null, style={} }) {
 }
 function Card({ title, children }) {
   return (
-    <div style={{ background:'#FAFAFA', border:'1px solid #eee', borderRadius:10, padding:16, minHeight:120 }}>
-      <div style={{ fontWeight:600, marginBottom:8 }}>{title}</div>
-      {children||<div style={{ color:'#90A4AE' }}>Coming soon…</div>}
+    <div style={{ ...WHITE_CARD, padding:16, minHeight:120 }}>
+      <div style={{ fontWeight:700, marginBottom:8, color:'#112033', fontSize:13 }}>{title}</div>
+      {children||<div style={{ color:'#90A4AE', fontSize:13 }}>Coming soon…</div>}
     </div>
   );
 }
 function KPI({ label, value }) {
   return (
-    <div style={{ background:'#FFFFFF', border:'1px solid #eee', borderRadius:10, padding:12,
-      minHeight:70, display:'flex', flexDirection:'column', justifyContent:'center', gap:4, cursor:'pointer' }}>
-      <div style={{ fontSize:12, color:'#FF7043', fontWeight:600 }}>{label}</div>
-      <div style={{ fontSize:22, fontWeight:800, color:'#263238' }}>{value}</div>
-      <div style={{ fontSize:11, color:'#90A4AE' }}>View details</div>
+    <div style={{ ...WHITE_CARD, padding:'14px 16px', minHeight:108,
+      display:'flex', flexDirection:'column', justifyContent:'space-between', cursor:'pointer' }}>
+      <div style={{ fontSize:10, fontWeight:800, color:'#FF7043', textTransform:'uppercase', letterSpacing:'0.08em', lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{label}</div>
+      <div style={{ fontSize:24, fontWeight:900, color:'#0F172A', lineHeight:1.05, letterSpacing:'-0.02em', marginTop:6 }}>{value}</div>
+      <div style={{ fontSize:12, color:'#64748B', fontWeight:500, alignSelf:'flex-end' }}>View details</div>
     </div>
   );
 }
 function ActionLiteCard({ title, items, emptyText, href }) {
   const list = Array.isArray(items) ? items : [];
   return (
-    <div style={{ background:'#FAFAFA', border:'1px solid #eee', borderRadius:10, padding:16, minHeight:140, display:'grid', gap:10 }}>
+    <div style={{ ...WHITE_CARD, padding:16, minHeight:140, display:'grid', gap:10 }}>
       <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:10 }}>
-        <div style={{ fontWeight:600 }}>{title}</div>
-        <Link href={href} style={{ color:'#FF7043', fontWeight:700, fontSize:12 }}>View all</Link>
+        <div style={{ fontWeight:700, color:'#112033', fontSize:13 }}>{title}</div>
+        <Link href={href} style={{ color:'#FF7043', fontWeight:800, fontSize:13, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>View all</Link>
       </div>
       {list.length===0 ? (
         <div style={{ color:'#90A4AE', fontSize:13 }}>{emptyText}</div>
       ) : (
         <div style={{ display:'grid', gap:8 }}>
           {list.map(n => (
-            <Link key={n.id} href={href} style={{ display:'block', border:'1px solid #eee',
-              borderRadius:8, padding:'8px 10px', background:'white', textDecoration:'none' }}>
-              <div style={{ fontWeight:700, color:'#263238', fontSize:13 }}>{n.title||'Update'}</div>
+            <Link key={n.id} href={href} style={{ display:'block', ...WHITE_CARD,
+              padding:'8px 10px', textDecoration:'none' }}>
+              <div style={{ fontWeight:700, color:'#112033', fontSize:13 }}>{n.title||'Update'}</div>
               {n.body&&<div style={{ color:'#607D8B', fontSize:12, marginTop:2 }}>{n.body}</div>}
             </Link>
           ))}
@@ -289,29 +294,25 @@ export default function CoachingDashboardPage() {
 
   // ── MOBILE ────────────────────────────────────────────────────────────────
   if (isMobile) {
-    const hour = new Date().getHours();
-    const greeting = hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+    const greeting = getTimeGreeting();
 
     return (
       <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="overview" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
         <div style={{ display:'grid', gap:GAP, width:'100%' }}>
 
-          {/* 1. Greeting card */}
-          <section style={{ ...GLASS, padding:'18px 20px' }}>
-            <div style={{ fontSize:13, fontWeight:600, color:'#90A4AE', marginBottom:4 }}>{greeting}</div>
-            <h1 style={{ margin:0, fontSize:22, fontWeight:900, color:'#FF7043', lineHeight:1.1 }}>
-              Your Coaching Dashboard
-            </h1>
-            <p style={{ margin:'8px 0 0', fontSize:13, color:'#546E7A', fontWeight:600, lineHeight:1.5 }}>
-              Your clients, sessions, and feedback — all in one place.
-            </p>
-          </section>
+          {/* 1. Title card */}
+          <CoachingTitleCard
+            greeting={greeting}
+            title="Your Coaching Dashboard"
+            subtitle="Your clients, sessions, and feedback — all in one place."
+            isMobile={true}
+          />
 
           {/* 2. Action Center — first, most urgent */}
           <section style={{ ...GLASS, padding:16 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
               <div>
-                <div style={{ fontSize:16, fontWeight:800, color:'#FF7043' }}>Action Center</div>
+                <div style={{ fontSize:16, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', ...ORANGE_HEADING_LIFT }}>Action Center</div>
                 <div style={{ fontSize:12, marginTop:2, fontWeight:totalActions>0?700:500,
                   color:totalActions>0?'#FF7043':'#90A4AE' }}>
                   {totalActions>0 ? `${totalActions} item${totalActions!==1?'s':''} need your attention` : "You're all caught up"}
@@ -360,7 +361,7 @@ export default function CoachingDashboardPage() {
           {/* 4. Upcoming Sessions */}
           <section style={{ ...GLASS, padding:16 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
-              <span style={{ fontSize:15, fontWeight:800, color:'#FF7043' }}>Upcoming Sessions</span>
+              <span style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', ...ORANGE_HEADING_LIFT }}>Upcoming Sessions</span>
               <Link href="/dashboard/coaching/sessions" style={{ fontSize:12, fontWeight:700, color:'#FF7043', textDecoration:'none', padding:'5px 10px', borderRadius:999, border:'1px solid rgba(255,112,67,0.25)', background:'rgba(255,112,67,0.08)' }}>
                 Schedule →
               </Link>
@@ -393,7 +394,7 @@ export default function CoachingDashboardPage() {
           {/* 5. Clients snapshot */}
           <section style={{ ...GLASS, padding:16 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
-              <span style={{ fontSize:15, fontWeight:800, color:'#FF7043' }}>Clients</span>
+              <span style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', ...ORANGE_HEADING_LIFT }}>Clients</span>
               <Link href="/dashboard/coaching/clients" style={{ fontSize:12, fontWeight:700, color:'#FF7043', textDecoration:'none', padding:'5px 10px', borderRadius:999, border:'1px solid rgba(255,112,67,0.25)', background:'rgba(255,112,67,0.08)' }}>
                 View all →
               </Link>
@@ -423,7 +424,7 @@ export default function CoachingDashboardPage() {
           {/* 6. CSAT Pulse + Sponsored side by side */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:GAP }}>
             <section style={{ ...GLASS, padding:14 }}>
-              <div style={{ fontSize:13, fontWeight:800, color:'#FF7043', marginBottom:10 }}>CSAT Pulse</div>
+              <div style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', marginBottom:10, ...ORANGE_HEADING_LIFT }}>CSAT Pulse</div>
               <div style={{ ...WHITE_CARD, padding:12 }}>
                 {csatError ? (
                   <div style={{ fontSize:12, color:'#C62828' }}>{csatError}</div>
@@ -451,7 +452,7 @@ export default function CoachingDashboardPage() {
 
           {/* 7. Docs & Tools */}
           <section style={{ ...GLASS, padding:16 }}>
-            <div style={{ fontSize:14, fontWeight:800, color:'#FF7043', marginBottom:10 }}>Docs & Tools</div>
+            <div style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', marginBottom:10, ...ORANGE_HEADING_LIFT }}>Docs & Tools</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {['Templates & Guides','Resource Library','Announcements','Coming Soon'].map(t=>(
                 <div key={t} style={{ ...WHITE_CARD, padding:12, minHeight:60 }}>
@@ -478,30 +479,18 @@ export default function CoachingDashboardPage() {
         <div style={{ display:'grid', gridTemplateColumns:`minmax(0,1fr) ${RIGHT_COL_WIDTH}px`,
           gridTemplateRows:'auto auto auto auto', gap:GAP, width:'100%', minWidth:0, boxSizing:'border-box' }}>
 
-          <section
-  style={{
-    ...GLASS,
-    padding: 16,
-    textAlign: "center",
-    gridColumn: "1/2",
-    gridRow: "1",
-    boxSizing: "border-box",
-  }}
->
-  <div style={{ fontSize: 13, fontWeight: 600, color: "#90A4AE", marginBottom: 4 }}>
-    {greeting}
-  </div>
+          <CoachingTitleCard
+            greeting={greeting}
+            title="Your Coaching Dashboard"
+            subtitle="Track client progress, manage sessions, and review feedback — all in one place."
+            style={{ gridColumn:'1/2', gridRow:'1' }}
+          />
 
-  <h1 style={{ margin: 0, color: "#FF7043", fontSize: 24, fontWeight: 800 }}>
-    Your Coaching Dashboard
-  </h1>
-
-  <p style={{ margin: "6px auto 0", color: "#607D8B", maxWidth: 740 }}>
-    Track client progress, manage sessions, and review feedback — all in one place.
-  </p>
-</section>
-
-          <section style={{ ...WHITE_CARD, padding:16, gridColumn:'1/2', gridRow:'2' }}>
+          <section style={{ ...KPI_GLASS, padding:'12px 16px 16px 16px', gridColumn:'1/2', gridRow:'2' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+              <h2 style={{ fontSize:18, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', margin:0, ...ORANGE_HEADING_LIFT }}>KPIs</h2>
+              <Link href="/dashboard/coaching/feedback" style={{ color:'#FF7043', fontWeight:800, fontSize:13, lineHeight:1.2, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>Full analytics →</Link>
+            </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:12 }}>
               {kpis.map(k=>(
                 <Link key={k.label} href={k.href} style={{ textDecoration:'none' }}>
@@ -515,7 +504,7 @@ export default function CoachingDashboardPage() {
             action={
               <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                 {actionRefreshing&&<span style={{ fontSize:12, color:'#90A4AE', fontWeight:600 }}>Updating…</span>}
-                <Link href="/action-center?scope=COACH&chrome=coach" style={{ color:'#FF7043', fontWeight:700 }}>View all</Link>
+                <Link href="/action-center?scope=COACH&chrome=coach" style={{ color:'#FF7043', fontWeight:800, fontSize:13, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>View all</Link>
               </div>
             }>
             <div style={{ minHeight:190 }}>
@@ -532,22 +521,22 @@ export default function CoachingDashboardPage() {
             </div>
           </Section>
 
-          <aside style={{ ...DARK_RAIL, gridColumn:'2/3', gridRow:'1/4', display:'flex', flexDirection:'column', gap:GAP, alignSelf:'stretch' }}>
+          <aside style={{ ...GLASS, gridColumn:'2/3', gridRow:'1/4', display:'flex', flexDirection:'column', gap:GAP, alignSelf:'stretch', padding:16, boxSizing:'border-box' }}>
             <div style={{ ...WHITE_CARD, padding:16, flex:2, minHeight:180 }}>
-              <div style={{ fontWeight:600, marginBottom:8, color:'#263238' }}>Sponsored</div>
-              <div style={{ color:'#90A4AE', fontSize:13 }}>Ad space</div>
+              <div style={{ fontSize:10, fontWeight:800, letterSpacing:'0.08em', textTransform:'uppercase', color:'#94A3B8', marginBottom:8 }}>Sponsored</div>
+              <div style={{ fontSize:13, color:'#B0BEC5' }}>Ad space</div>
             </div>
-            <div style={{ ...WHITE_CARD, padding:16, flex:1 }}>
-              <div style={{ fontWeight:600, marginBottom:8, color:'#263238' }}>CSAT Pulse</div>
+            <div style={{ ...KPI_GLASS, padding:16, flex:1 }}>
+              <div style={{ fontSize:15, fontWeight:900, marginBottom:8, color:'#0F172A', lineHeight:1.25, letterSpacing:'-0.01em' }}>CSAT Pulse</div>
               {csatError ? <div style={{ color:'#C62828', fontSize:12 }}>{csatError}</div> : (
-                <div style={{ display:'grid', gap:6 }}>
+                <div style={{ ...WHITE_CARD, padding:14, display:'grid', gap:6 }}>
                   <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
-                    <div style={{ fontSize:26, fontWeight:800, color:'#263238' }}>{avgScore}</div>
+                    <div style={{ fontSize:26, fontWeight:900, color:'#112033' }}>{avgScore}</div>
                     <div style={{ color:'#90A4AE', fontSize:12 }}>/5</div>
                   </div>
                   <div style={{ color:'#607D8B', fontSize:12 }}>Based on {totalResponses} {totalResponses===1?'response':'responses'}</div>
                   <div style={{ marginTop:4 }}>
-                    <Link href="/dashboard/coaching/feedback" style={{ color:'#FF7043', fontWeight:700, fontSize:13 }}>Open feedback</Link>
+                    <Link href="/dashboard/coaching/feedback" style={{ color:'#FF7043', fontWeight:800, fontSize:13, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>Open feedback</Link>
                   </div>
                 </div>
               )}
@@ -583,7 +572,7 @@ export default function CoachingDashboardPage() {
                     </table>
                   </div>
                   <div style={{ textAlign:'right', marginTop:10 }}>
-                    <Link href="/dashboard/coaching/clients" style={{ color:'#FF7043', fontWeight:600 }}>View all clients</Link>
+                    <Link href="/dashboard/coaching/clients" style={{ color:'#FF7043', fontWeight:800, fontSize:13, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>View all clients</Link>
                   </div>
                 </>
               )}
