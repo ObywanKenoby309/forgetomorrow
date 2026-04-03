@@ -625,11 +625,11 @@ function OldJobsUI() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', minWidth: 0 }}>
             {/* FIX #1: Filter panel with draft state + Apply Filters button */}
             <Card as="section" aria-labelledby="jobs-filter-heading" style={{ ...KPI_GLASS, padding: 0 }}>
-              <CardHeader>
-                <h2 id="jobs-filter-heading" style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#263238' }}>Filter jobs</h2>
-              </CardHeader>
-              <CardContent>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, alignItems: 'center', marginBottom: 10 }}>
+			   <CardHeader style={{ padding: '18px 20px 8px' }}>
+				 <h2 id="jobs-filter-heading" style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#263238' }}>Filter jobs</h2>
+				</CardHeader>
+				<CardContent style={{ padding: '8px 20px 18px' }}>
+				  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, alignItems: 'center', marginBottom: 10 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label htmlFor="jobs-filter-keywords" style={{ fontSize: 12, color: '#78909C' }}>Keywords</label>
                     <input id="jobs-filter-keywords" type="text" value={draftKeyword} onChange={e => setDraftKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()} placeholder="Title, skills, tags..." style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14 }} />
