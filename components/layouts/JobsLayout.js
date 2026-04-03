@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { usePlan } from '@/context/PlanContext';
+import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
 import SeekerHeader from '@/components/seeker/SeekerHeader';
@@ -121,13 +122,30 @@ export default function JobsLayout({
     }
   }, [chromeMode, activeNav]);
 
-    return (
+  const { wallpaperUrl } = useUserWallpaper();
+
+  const backgroundStyle = wallpaperUrl
+    ? {
+        minHeight: '100vh',
+        backgroundImage: `url(${wallpaperUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: isMobile ? 'scroll' : 'fixed',
+      }
+    : {
+        minHeight: '100vh',
+        backgroundColor: '#ECEFF1',
+      };
+
+  return (
     <>
       <Head>
         <title>{title}</title>
       </Head>
 
-      <HeaderComp />
+      <div style={backgroundStyle}>
+        <HeaderComp />
 
       {isMobile ? (
         <div
@@ -199,6 +217,8 @@ export default function JobsLayout({
           </aside>
         </div>
       )}
+
+      </div>
 
       <MobileBottomBar
         isMobile={isMobile}

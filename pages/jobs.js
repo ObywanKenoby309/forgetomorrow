@@ -159,7 +159,7 @@ function JobsUI() {
     return () => { cancelled = true; };
   }, []);
 
-  const [filterOpen, setFilterOpen] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const isJobPinned = (job) => !!job && pinnedIds.has(job.id);
 
@@ -334,12 +334,27 @@ function JobsUI() {
               </div>
               <input type="number" min="1" value={daysFilter} onChange={e => { setDaysFilter(e.target.value); setCurrentPage(1); }} placeholder="Posted within (days) e.g. 7"
                 style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
-              {activeFilterCount > 0 && (
-                <button type="button" onClick={() => { setKeyword(''); setCompanyFilter(''); setLocationFilter(''); setLocationTypeFilter(''); setSourceFilter(''); setDaysFilter(''); setCurrentPage(1); }}
-                  style={{ padding: '8px', borderRadius: 8, border: '1px solid #CFD8DC', background: 'white', color: '#78909C', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
-                  Clear filters
-                </button>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 12, color: '#78909C' }}>Per page:</span>
+                  <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                    style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', fontSize: 12, background: 'white' }}>
+                    <option value={10}>10</option><option value={20}>20</option><option value={50}>50</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {activeFilterCount > 0 && (
+                    <button type="button" onClick={() => { setKeyword(''); setCompanyFilter(''); setLocationFilter(''); setLocationTypeFilter(''); setSourceFilter(''); setDaysFilter(''); setCurrentPage(1); }}
+                      style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #CFD8DC', background: 'white', color: '#78909C', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
+                      Clear
+                    </button>
+                  )}
+                  <button type="button" onClick={() => setFilterOpen(false)}
+                    style={{ padding: '8px 18px', borderRadius: 8, background: '#FF7043', color: 'white', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
