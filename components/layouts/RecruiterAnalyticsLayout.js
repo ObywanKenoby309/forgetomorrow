@@ -71,7 +71,7 @@ const GLASS = {
 };
 
 const ORANGE = "#FF7043";
-const SLATE = "#334155";
+const SLATE = "#1E293B";
 const GAP = 12;
 const PAD = 16;
 const LEFT_W = 240;
@@ -126,7 +126,7 @@ function AnalyticsTitleCard({
 }) {
   return (
     <div style={{ textAlign: "center" }}>
-      <h1
+      <div
         style={{
           margin: 0,
           textAlign: "center",
@@ -135,17 +135,11 @@ function AnalyticsTitleCard({
           color: ORANGE,
           lineHeight: 1.05,
           letterSpacing: "-0.02em",
-          textShadow: `
-            0 0 8px rgba(255,255,255,0.35),
-            0 0 18px rgba(255,255,255,0.28),
-            0 0 32px rgba(255,255,255,0.22),
-            0 0 48px rgba(255,255,255,0.16),
-            0 1px 2px rgba(0,0,0,0.12)
-          `,
+          textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
         }}
       >
         {title}
-      </h1>
+      </div>
 
       <div
         style={{
@@ -163,7 +157,7 @@ function AnalyticsTitleCard({
       <p
         style={{
           fontSize: 14,
-          color: "#475569",
+          color: "#64748B",
           marginTop: 8,
           maxWidth: 760,
           marginLeft: "auto",
