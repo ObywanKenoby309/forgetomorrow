@@ -10,8 +10,6 @@ import { normalizeJobText } from '../lib/jd/ingest';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { isInternalJob, getJobTier, getDisplaySource } from '../lib/jobs/jobSource';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
-import JobFilterPanel     from '../components/jobs/JobFilterPanel';
-import MobileFilterDrawer from '../components/jobs/MobileFilterDrawer';
 import JobListCard        from '../components/jobs/JobListCard';
 import JobPagination      from '../components/jobs/JobPagination';
 import JobDetailPanel     from '../components/jobs/JobDetailPanel';
@@ -161,6 +159,8 @@ function JobsUI() {
     return () => { cancelled = true; };
   }, []);
 
+  const [filterOpen, setFilterOpen] = useState(true);
+
   const isJobPinned = (job) => !!job && pinnedIds.has(job.id);
 
   const handleApplyClick = (job) => {
@@ -290,23 +290,60 @@ function JobsUI() {
   const greeting = getTimeGreeting();
 
   if (isMobile) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px 100px' }}>
-      <SeekerTitleCard
-        greeting={greeting}
-        title="Job Listings"
-        subtitle="Explore openings, review full details, and apply with confidence."
-        isMobile={true}
-      />
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: -6 }}>
-          <input type="text" value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Search jobs…"
-            style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.30)', background: 'rgba(255,255,255,0.80)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', fontSize: 14, color: '#263238', outline: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }} />
-          <button type="button" onClick={() => setFilterDrawerOpen(true)}
-            style={{ position: 'relative', padding: '10px 14px', borderRadius: 12, background: activeFilterCount > 0 ? '#FF7043' : 'rgba(255,255,255,0.80)', border: '1px solid rgba(255,255,255,0.30)', color: activeFilterCount > 0 ? 'white' : '#546E7A', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', whiteSpace: 'nowrap' }}>
-            Filters
-            {activeFilterCount > 0 && <span style={{ position: 'absolute', top: -6, right: -6, background: 'white', color: '#FF7043', borderRadius: 999, fontSize: 10, fontWeight: 900, padding: '1px 5px', border: '1.5px solid #FF7043', lineHeight: 1.4 }}>{activeFilterCount}</span>}
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px 100px' }}>
+        <SeekerTitleCard
+          greeting={greeting}
+          title="Job Listings"
+          subtitle="Explore openings, review full details, and apply with confidence."
+          isMobile={true}
+        />
+
+        {/* Collapsible filter card */}
+        <div style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 14, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 2px 10px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+          <button type="button" onClick={() => setFilterOpen(o => !o)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#112033' }}>Filter jobs</span>
+              {activeFilterCount > 0 && <span style={{ background: '#FF7043', color: 'white', borderRadius: 999, fontSize: 11, fontWeight: 800, padding: '1px 7px' }}>{activeFilterCount}</span>}
+            </div>
+            <span style={{ fontSize: 18, color: '#90A4AE', lineHeight: 1 }}>{filterOpen ? '▲' : '▼'}</span>
           </button>
+          {filterOpen && (
+            <div style={{ padding: '0 16px 16px', display: 'grid', gap: 10 }}>
+              <input type="text" value={keyword} onChange={e => { setKeyword(e.target.value); setCurrentPage(1); }} placeholder="Keywords — title, skills, tags..."
+                style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+              <input type="text" value={companyFilter} onChange={e => { setCompanyFilter(e.target.value); setCurrentPage(1); }} placeholder="Company name..."
+                style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+              <input type="text" value={locationFilter} onChange={e => { setLocationFilter(e.target.value); setCurrentPage(1); }} placeholder="City, region, country..."
+                style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <select value={locationTypeFilter} onChange={e => { setLocationTypeFilter(e.target.value); setCurrentPage(1); }}
+                  style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', background: 'white' }}>
+                  <option value="">All types</option>
+                  <option value="Remote">Remote</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="On-site">On-site</option>
+                </select>
+                <select value={sourceFilter} onChange={e => { setSourceFilter(e.target.value); setCurrentPage(1); }}
+                  style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', background: 'white' }}>
+                  <option value="">All sources</option>
+                  <option value="external">External</option>
+                  <option value="internal">Forge recruiters</option>
+                </select>
+              </div>
+              <input type="number" min="1" value={daysFilter} onChange={e => { setDaysFilter(e.target.value); setCurrentPage(1); }} placeholder="Posted within (days) e.g. 7"
+                style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+              {activeFilterCount > 0 && (
+                <button type="button" onClick={() => { setKeyword(''); setCompanyFilter(''); setLocationFilter(''); setLocationTypeFilter(''); setSourceFilter(''); setDaysFilter(''); setCurrentPage(1); }}
+                  style={{ padding: '8px', borderRadius: 8, border: '1px solid #CFD8DC', background: 'white', color: '#78909C', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
         </div>
+
         <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600, paddingLeft: 2 }}>
           Showing {filteredJobs.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + pageSize, filteredJobs.length)} of {filteredJobs.length} jobs
         </div>
@@ -318,7 +355,6 @@ function JobsUI() {
         </div>
         <JobPagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         <JobsBottomRow viewedJobs={viewedJobs} appliedJobs={appliedJobs} onSelectJob={handleSelectJob} />
-        <MobileFilterDrawer open={filterDrawerOpen} onClose={() => setFilterDrawerOpen(false)} filterProps={filterProps} />
         {mobileDetailOpen && selectedJob && (
           <MobileJobDetail job={selectedJob} onBack={() => setMobileDetailOpen(false)} getJobStatus={getJobStatus} isInternalJob={isInternalJob} getJobTier={getJobTier} isJobPinned={isJobPinned} hasApplied={hasAppliedToSelected} isPaidUser={isPaidUser} onApply={handleApplyClick} onResumeAlign={handleResumeAlign} onImproveResume={handleImproveResume} />
         )}
@@ -326,40 +362,115 @@ function JobsUI() {
     );
   }
 
+  // ── DESKTOP ──────────────────────────────────────────────────
   return (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-    <SeekerTitleCard
-      greeting={greeting}
-      title="Job Listings"
-      subtitle="Explore openings, review full details, and apply with confidence."
-    />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <SeekerTitleCard
+        greeting={greeting}
+        title="Job Listings"
+        subtitle="Explore openings, review full details, and apply with confidence."
+      />
 
-    {/* Filter bar — full width under title */}
-    <section style={{ ...KPI_GLASS, padding: '16px 20px' }}>
-      <JobFilterPanel {...filterProps} mode="bar" />
-    </section>
+      {/* Collapsible filter card — solid white, no backdrop over wallpaper */}
+      <div style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 14, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 2px 10px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+        <button type="button" onClick={() => setFilterOpen(o => !o)}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', background: 'none', border: 'none', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#112033' }}>Filter jobs</span>
+            {activeFilterCount > 0 && <span style={{ background: '#FF7043', color: 'white', borderRadius: 999, fontSize: 11, fontWeight: 800, padding: '2px 8px' }}>{activeFilterCount} active</span>}
+          </div>
+          <span style={{ fontSize: 16, color: '#90A4AE' }}>{filterOpen ? '▲' : '▼'}</span>
+        </button>
+        {filterOpen && (
+          <div style={{ padding: '0 20px 16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Keywords</label>
+                <input type="text" value={keyword} onChange={e => { setKeyword(e.target.value); setCurrentPage(1); }} placeholder="Title, skills, tags..."
+                  style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Company</label>
+                <input type="text" value={companyFilter} onChange={e => { setCompanyFilter(e.target.value); setCurrentPage(1); }} placeholder="Company name..."
+                  style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Location</label>
+                <input type="text" value={locationFilter} onChange={e => { setLocationFilter(e.target.value); setCurrentPage(1); }} placeholder="City, region, country..."
+                  style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Location Type</label>
+                <select value={locationTypeFilter} onChange={e => { setLocationTypeFilter(e.target.value); setCurrentPage(1); }}
+                  style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', background: 'white' }}>
+                  <option value="">All</option>
+                  <option value="Remote">Remote</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="On-site">On-site</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Source</label>
+                <select value={sourceFilter} onChange={e => { setSourceFilter(e.target.value); setCurrentPage(1); }}
+                  style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', background: 'white' }}>
+                  <option value="">All sources</option>
+                  <option value="external">External only</option>
+                  <option value="internal">Forge recruiters only</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Posted within (days)</label>
+                <input type="number" min="1" value={daysFilter} onChange={e => { setDaysFilter(e.target.value); setCurrentPage(1); }} placeholder="e.g. 7"
+                  style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+              <span style={{ fontSize: 12, color: '#78909C', fontWeight: 600 }}>
+                Showing {filteredJobs.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + pageSize, filteredJobs.length)} of {filteredJobs.length} jobs
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 12, color: '#78909C' }}>Jobs per page:</span>
+                <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                  style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', fontSize: 12, background: 'white' }}>
+                  <option value={10}>10</option><option value={20}>20</option><option value={50}>50</option>
+                </select>
+                {activeFilterCount > 0 && (
+                  <button type="button" onClick={() => { setKeyword(''); setCompanyFilter(''); setLocationFilter(''); setLocationTypeFilter(''); setSourceFilter(''); setDaysFilter(''); setCurrentPage(1); }}
+                    style={{ padding: '5px 14px', borderRadius: 8, border: '1px solid #CFD8DC', background: 'white', color: '#78909C', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                    Clear
+                  </button>
+                )}
+                <button type="button" onClick={() => setFilterOpen(false)}
+                  style={{ padding: '5px 18px', borderRadius: 8, background: '#FF7043', color: 'white', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-    {/* 2-column: list left, detail right */}
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.4fr)', gap: 16, alignItems: 'flex-start' }}>
-      <section aria-label="Job results" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600, padding: '0 2px' }}>
-          {filteredJobs.length === 0 ? 'No jobs found' : `${startIndex + 1}–${Math.min(startIndex + pageSize, filteredJobs.length)} of ${filteredJobs.length}`}
-        </div>
-        <div style={{ maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
-          {pagedJobs.map(job => (
-            <JobListCard key={job.id} job={job} isSelected={selectedJob?.id === job.id} onClick={() => handleSelectJob(job)} getJobStatus={getJobStatus} isInternalJob={isInternalJob} getJobTier={getJobTier} />
-          ))}
-          {pagedJobs.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', background: 'rgba(255,255,255,0.70)', borderRadius: 14, color: '#78909C', fontSize: 14 }}>No jobs match your filters.</div>}
-        </div>
-        <JobPagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-      </section>
-      <section aria-label="Selected job details" style={{ position: 'sticky', top: 16, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <JobDetailPanel job={selectedJob} getJobStatus={getJobStatus} isInternalJob={isInternalJob} getJobTier={getJobTier} isJobPinned={isJobPinned} hasApplied={hasAppliedToSelected} isPaidUser={isPaidUser} onApply={handleApplyClick} onResumeAlign={handleResumeAlign} onImproveResume={handleImproveResume} />
-      </section>
+      {/* 2-column: job list left, job detail right */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.4fr)', gap: 16, alignItems: 'flex-start' }}>
+        <section aria-label="Job results" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600, padding: '0 2px' }}>
+            {filteredJobs.length === 0 ? 'No jobs found' : `${startIndex + 1}–${Math.min(startIndex + pageSize, filteredJobs.length)} of ${filteredJobs.length}`}
+          </div>
+          <div style={{ maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
+            {pagedJobs.map(job => (
+              <JobListCard key={job.id} job={job} isSelected={selectedJob?.id === job.id} onClick={() => handleSelectJob(job)} getJobStatus={getJobStatus} isInternalJob={isInternalJob} getJobTier={getJobTier} />
+            ))}
+            {pagedJobs.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', background: 'rgba(255,255,255,0.70)', borderRadius: 14, color: '#78909C', fontSize: 14 }}>No jobs match your filters.</div>}
+          </div>
+          <JobPagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </section>
+        <section aria-label="Selected job details" style={{ position: 'sticky', top: 16, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <JobDetailPanel job={selectedJob} getJobStatus={getJobStatus} isInternalJob={isInternalJob} getJobTier={getJobTier} isJobPinned={isJobPinned} hasApplied={hasAppliedToSelected} isPaidUser={isPaidUser} onApply={handleApplyClick} onResumeAlign={handleResumeAlign} onImproveResume={handleImproveResume} />
+        </section>
+      </div>
+
+      <JobsBottomRow viewedJobs={viewedJobs} appliedJobs={appliedJobs} onSelectJob={handleSelectJob} />
     </div>
-
-    <JobsBottomRow viewedJobs={viewedJobs} appliedJobs={appliedJobs} onSelectJob={handleSelectJob} />
-  </div>
   );
 }
 
