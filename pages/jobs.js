@@ -47,6 +47,17 @@ const GLASS = {
   WebkitBackdropFilter: 'blur(10px)',
 };
 
+const KPI_GLASS = {
+  ...GLASS,
+  background: 'rgba(255,255,255,0.68)',
+  boxShadow: '0 12px 28px rgba(0,0,0,0.14)',
+};
+
+const ORANGE_HEADING_LIFT = {
+  textShadow: '0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)',
+  fontWeight: 900,
+};
+
 function inferLocationType(location) {
   if (!location) return '';
   const l = location.toLowerCase();
@@ -581,23 +592,44 @@ function OldJobsUI() {
   }
 
   // ── DESKTOP LAYOUT ────────────────────────────────────────
-  return (
+    return (
     <div className="px-4 md:px-8 pb-10">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1.8fr)_minmax(260px,0.7fr)] gap-6">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1.9fr)_280px] gap-4">
         <div className="space-y-4">
-          <header style={{ ...GLASS, padding: '20px 24px', textAlign: 'center' }}>
-            <h1 style={{ color: '#FF7043', fontSize: 28, fontWeight: 800, margin: 0 }}>Job Listings</h1>
-            <p style={{ margin: '8px 0 0', color: '#546E7A', fontSize: 14 }}>Explore openings, review full details, and apply with confidence.</p>
+                    <header style={{ ...KPI_GLASS, padding: '18px 24px', textAlign: 'center' }}>
+            <h1
+              style={{
+                color: '#FF7043',
+                fontSize: 28,
+                lineHeight: 1.15,
+                letterSpacing: '-0.01em',
+                margin: 0,
+                ...ORANGE_HEADING_LIFT,
+              }}
+            >
+              Job Listings
+            </h1>
+            <p
+              style={{
+                margin: '8px 0 0',
+                color: '#546E7A',
+                fontSize: 14,
+                fontWeight: 600,
+                lineHeight: 1.5,
+              }}
+            >
+              Explore openings, review full details, and apply with confidence.
+            </p>
           </header>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 1200 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 1200 }}>
             {/* FIX #1: Filter panel with draft state + Apply Filters button */}
-            <Card as="section" aria-labelledby="jobs-filter-heading">
+            <Card as="section" aria-labelledby="jobs-filter-heading" style={{ ...KPI_GLASS, padding: 0 }}>
               <CardHeader>
                 <h2 id="jobs-filter-heading" style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#263238' }}>Filter jobs</h2>
               </CardHeader>
               <CardContent>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, alignItems: 'center', marginBottom: 10 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label htmlFor="jobs-filter-keywords" style={{ fontSize: 12, color: '#78909C' }}>Keywords</label>
                     <input id="jobs-filter-keywords" type="text" value={draftKeyword} onChange={e => setDraftKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()} placeholder="Title, skills, tags..." style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14 }} />
@@ -627,7 +659,7 @@ function OldJobsUI() {
                     <input id="jobs-filter-days" type="number" min="1" value={draftDays} onChange={e => setDraftDays(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()} placeholder="e.g. 7" style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14 }} />
                   </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                   <span style={{ fontSize: 12, color: '#78909C' }}>
                     Showing {filteredJobs.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + pageSize, filteredJobs.length)} of {filteredJobs.length} jobs
                   </span>
@@ -650,9 +682,9 @@ function OldJobsUI() {
               </CardContent>
             </Card>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1.5fr)', gap: 16, alignItems: 'flex-start' }}>
-              <section aria-label="Job results" style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.65fr) minmax(0, 1.4fr)', gap: 12, alignItems: 'flex-start' }}>
+              <section aria-label="Job results" style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {pagedJobs.map(job => {
                     const rawDesc      = job.description || '';
                     const cleanDesc    = stripMarkdown(rawDesc.replace(/<[^>]*>/g, ''));
@@ -799,20 +831,45 @@ function OldJobsUI() {
           </div>
         </div>
 
-        <aside className="hidden lg:block" aria-label="Job tools">
-          <nav style={{ display: 'grid', gap: 12, minWidth: 0 }}>
-            <div style={{ ...GLASS, padding: 14, minWidth: 0, boxSizing: 'border-box' }}>
-              <div style={{ fontWeight: 800, marginBottom: 6, fontSize: 14, color: '#112033' }}>Sponsored</div>
-              <RightRailPlacementManager slot="right_rail_1" />
+         <aside className="hidden lg:block" aria-label="Sponsored">
+          <nav style={{ display: 'grid', gap: 12, minWidth: 0, position: 'sticky', top: 16 }}>
+            <div style={{ ...KPI_GLASS, padding: 14, minWidth: 0, boxSizing: 'border-box' }}>
+              <div
+                style={{
+                  fontWeight: 900,
+                  marginBottom: 8,
+                  fontSize: 15,
+                  color: '#0F172A',
+                  lineHeight: 1.25,
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                Sponsored
+              </div>
+              <div style={{ ...GLASS, padding: 10 }}>
+                <RightRailPlacementManager slot="right_rail_1" />
+              </div>
             </div>
           </nav>
         </aside>
-      </div>
 
-      <div className="lg:hidden mt-6">
-        <div style={{ ...GLASS, padding: 14 }}>
-          <div style={{ fontWeight: 800, marginBottom: 6, fontSize: 14, color: '#112033' }}>Sponsored</div>
-          <RightRailPlacementManager slot="right_rail_1" />
+            <div className="lg:hidden mt-4">
+        <div style={{ ...KPI_GLASS, padding: 14 }}>
+          <div
+            style={{
+              fontWeight: 900,
+              marginBottom: 8,
+              fontSize: 15,
+              color: '#0F172A',
+              lineHeight: 1.25,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            Sponsored
+          </div>
+          <div style={{ ...GLASS, padding: 10 }}>
+            <RightRailPlacementManager slot="right_rail_1" />
+          </div>
         </div>
       </div>
 
