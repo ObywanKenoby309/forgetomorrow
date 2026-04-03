@@ -4,9 +4,11 @@ import SeekerLayout from '@/components/layouts/SeekerLayout';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import HearthCenter from '@/components/community/HearthCenter';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import Link from 'next/link';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
 
 const GLASS = {
   borderRadius: 14,
@@ -17,29 +19,18 @@ const GLASS = {
   WebkitBackdropFilter: 'blur(10px)',
 };
 
-function HeaderBox() {
-  return (
-    <section
-      style={{
-        ...GLASS,
-        padding: 16,
-        textAlign: 'center',
-      }}
-    >
-      <h1 style={{ color: '#FF7043', fontSize: 28, fontWeight: 800, margin: 0 }}>
-        The Hearth
-      </h1>
-      <p style={{ marginTop: 8, color: '#546E7A', fontSize: 14 }}>
-        Your central place to build connections, find mentors, and grow your professional
-        network with purpose and authenticity.
-      </p>
-    </section>
-  );
-}
+const ORANGE_HEADING_LIFT = {
+  textShadow: '0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)',
+  fontWeight: 900,
+};
 
 function RightRail() {
   return (
     <div style={{ display: 'grid', gap: 12, minWidth: 0 }}>
+      <div style={{ minWidth: 0 }}>
+        <RightRailPlacementManager slot="right_rail_1" />
+      </div>
+
       <div
         style={{
           ...GLASS,
@@ -49,16 +40,24 @@ function RightRail() {
           boxSizing: 'border-box',
         }}
       >
-        <div style={{ fontWeight: 800, color: '#37474F' }}>
+        <div style={{
+          fontSize: 18,
+          color: '#FF7043',
+          lineHeight: 1.25,
+          letterSpacing: '-0.01em',
+          ...ORANGE_HEADING_LIFT,
+        }}>
           Community Guidelines
         </div>
-        <Link href="/community-guidelines" style={{ color: '#FF7043', fontWeight: 600 }}>
-          Community Guidelines
+        <Link href="/community-guidelines" style={{
+          color: '#FF7043',
+          fontWeight: 800,
+          fontSize: 13,
+          lineHeight: 1.2,
+          textDecoration: 'none',
+        }}>
+          Read the guidelines →
         </Link>
-      </div>
-
-      <div style={{ minWidth: 0 }}>
-        <RightRailPlacementManager slot="right_rail_1" />
       </div>
     </div>
   );
@@ -79,10 +78,18 @@ export default function TheHearth() {
     activeNav = 'hearth';
   }
 
+  const greeting = getTimeGreeting();
+
   return (
     <Layout
       title="ForgeTomorrow — The Hearth"
-      header={<HeaderBox />}
+      header={
+        <SeekerTitleCard
+          greeting={greeting}
+          title="The Hearth"
+          subtitle="Your central place to build connections, find mentors, and grow your professional network with purpose and authenticity."
+        />
+      }
       headerCard={false}
       right={<RightRail />}
       activeNav={activeNav}
