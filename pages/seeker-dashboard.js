@@ -69,6 +69,10 @@ const WHITE_CARD = {
   boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
   boxSizing: 'border-box',
 };
+const ORANGE_HEADING_LIFT = {
+  textShadow: '0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)',
+  fontWeight: 900,
+};
 const GAP = 16;
 const RIGHT_COL_WIDTH = 280;
 
@@ -317,15 +321,35 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) 
   }
 
   // Desktop
-  return (
+    return (
     <section className="rounded-xl p-5" style={glassStyle || {}}>
       <div className="flex items-center justify-between gap-3 mb-4">
-        <h2 className="text-lg font-semibold text-orange-600">Action Center</h2>
+        <h2
+          style={{
+            fontSize: 18,
+            color: '#FF7043',
+            lineHeight: 1.25,
+            letterSpacing: '-0.01em',
+            margin: 0,
+            ...ORANGE_HEADING_LIFT,
+          }}
+        >
+          Action Center
+        </h2>
         <div className="flex items-center gap-3">
           {refreshing ? <div className="text-xs text-gray-500">Updating…</div> : null}
-          <Link href={withChrome(`/action-center?scope=${scope}`)}
-            className="rounded-md border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-            View More
+          <Link
+            href={withChrome(`/action-center?scope=${scope}`)}
+            style={{
+              color: '#FF7043',
+              fontWeight: 800,
+              fontSize: 13,
+              lineHeight: 1.2,
+              textDecoration: 'none',
+              ...ORANGE_HEADING_LIFT,
+            }}
+          >
+            View all
           </Link>
         </div>
       </div>
@@ -627,30 +651,88 @@ export default function SeekerDashboard() {
             />
 
             {/* ROW 2, COL 1: KPI strip */}
-            <section style={{ ...KPI_GLASS, padding: 16, gridColumn: '1 / 2', gridRow: '2' }}>
+            <section style={{ ...KPI_GLASS, padding: '12px 16px 16px 16px', gridColumn: '1 / 2', gridRow: '2' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <h2
+                  style={{
+                    fontSize: 18,
+                    color: '#FF7043',
+                    lineHeight: 1.25,
+                    letterSpacing: '-0.01em',
+                    margin: 0,
+                    ...ORANGE_HEADING_LIFT,
+                  }}
+                >
+                  KPIs
+                </h2>
+                <Link
+                  href={withChrome('/seeker/applications')}
+                  style={{
+                    color: '#FF7043',
+                    fontWeight: 800,
+                    fontSize: 13,
+                    lineHeight: 1.2,
+                    textDecoration: 'none',
+                    ...ORANGE_HEADING_LIFT,
+                  }}
+                >
+                  Full history →
+                </Link>
+              </div>
               {kpi && (
-                <KpiRow pinned={kpi.pinned||0} applied={kpi.applied||0}
-                  interviewing={kpi.interviewing||0} offers={kpi.offers||0} closedOut={kpi.closedOut||0} />
+                <KpiRow
+                  pinned={kpi.pinned || 0}
+                  applied={kpi.applied || 0}
+                  interviewing={kpi.interviewing || 0}
+                  offers={kpi.offers || 0}
+                  closedOut={kpi.closedOut || 0}
+                />
               )}
             </section>
 
             {/* ROW 3, COL 1: Action Center */}
             <div style={{ gridColumn: '1 / 2', gridRow: '3' }}>
-              <SeekerActionCenterSection scope={scope} withChrome={withChrome}
-                glassStyle={GLASS} isMobile={false} />
+              <SeekerActionCenterSection
+                scope={scope}
+                withChrome={withChrome}
+                glassStyle={KPI_GLASS}
+                isMobile={false}
+              />
             </div>
 
             {/* COL 2, ROWS 1–3: Right Rail */}
-            <aside style={{
-              ...GLASS, gridColumn: '2 / 3', gridRow: '1 / 4',
-              display: 'flex', flexDirection: 'column', gap: GAP,
-              alignSelf: 'stretch', padding: 16, boxSizing: 'border-box',
-            }}>
+            <aside
+              style={{
+                ...GLASS,
+                gridColumn: '2 / 3',
+                gridRow: '1 / 4',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: GAP,
+                alignSelf: 'stretch',
+                padding: 16,
+                boxSizing: 'border-box',
+              }}
+            >
               <div style={{ flex: 2, minHeight: 160 }}>
                 <RightRailPlacementManager slot="right_rail_1" />
               </div>
-              <div style={{ ...GLASS, padding: 16, flex: 1 }}>
-                <ProfilePerformanceTeaser />
+              <div style={{ ...KPI_GLASS, padding: 16, flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 900,
+                    marginBottom: 10,
+                    color: '#0F172A',
+                    lineHeight: 1.25,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  Profile Health
+                </div>
+                <div style={{ ...WHITE_CARD, padding: 12 }}>
+                  <ProfilePerformanceTeaser />
+                </div>
               </div>
             </aside>
 
@@ -665,22 +747,93 @@ export default function SeekerDashboard() {
               zIndex: 11,
             }}>
               <section style={{ ...GLASS, padding: 16 }}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2
+                    style={{
+                      fontSize: 18,
+                      color: '#FF7043',
+                      lineHeight: 1.25,
+                      letterSpacing: '-0.01em',
+                      margin: 0,
+                      ...ORANGE_HEADING_LIFT,
+                    }}
+                  >
+                    New Matches
+                  </h2>
+                  <Link
+                    href={withChrome('/seeker/jobs')}
+                    style={{
+                      color: '#FF7043',
+                      fontWeight: 800,
+                      fontSize: 13,
+                      lineHeight: 1.2,
+                      textDecoration: 'none',
+                      ...ORANGE_HEADING_LIFT,
+                    }}
+                  >
+                    View all
+                  </Link>
+                </div>
                 <RecommendedJobsPreview />
               </section>
-              <section style={{ ...GLASS, padding: 16 }}>
+               <section style={{ ...GLASS, padding: 16 }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
-                  <Link href={withChrome('/seeker/pinned-jobs')}
-                    className="text-orange-600 font-medium hover:underline">
+                  <h2
+                    style={{
+                      fontSize: 18,
+                      color: '#FF7043',
+                      lineHeight: 1.25,
+                      letterSpacing: '-0.01em',
+                      margin: 0,
+                      ...ORANGE_HEADING_LIFT,
+                    }}
+                  >
+                    Your Next Yes
+                  </h2>
+                  <Link
+                    href={withChrome('/seeker/pinned-jobs')}
+                    style={{
+                      color: '#FF7043',
+                      fontWeight: 800,
+                      fontSize: 13,
+                      lineHeight: 1.2,
+                      textDecoration: 'none',
+                      ...ORANGE_HEADING_LIFT,
+                    }}
+                  >
                     View all
                   </Link>
                 </div>
                 <PinnedJobsPreview />
               </section>
-              <section style={{ ...GLASS, padding: 16 }}>
-                <h3 className="text-base font-semibold text-orange-600 mb-3">
-                  Applications Over Time
-                </h3>
+               <section style={{ ...GLASS, padding: 16 }}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3
+                    style={{
+                      fontSize: 16,
+                      color: '#FF7043',
+                      lineHeight: 1.25,
+                      letterSpacing: '-0.01em',
+                      margin: 0,
+                      ...ORANGE_HEADING_LIFT,
+                    }}
+                  >
+                    Applications Over Time
+                  </h3>
+                  <Link
+                    href={withChrome('/seeker/applications')}
+                    style={{
+                      color: '#FF7043',
+                      fontWeight: 800,
+                      fontSize: 13,
+                      lineHeight: 1.2,
+                      textDecoration: 'none',
+                      ...ORANGE_HEADING_LIFT,
+                    }}
+                  >
+                    View all
+                  </Link>
+                </div>
                 <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
               </section>
             </div>
