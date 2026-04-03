@@ -9,6 +9,7 @@ import { useRouter } from 'next/router';
 import { JobPipelineProvider, useJobPipeline } from '../context/JobPipelineContext';
 import { Card, CardHeader, CardTitle, CardContent, CardSubtle } from '../components/ui/Card';
 import JobsLayout from '../components/layouts/JobsLayout';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import ATSResultPanel from '../components/seeker/ATSResultPanel';
 import JobActions from '../components/jobs/JobActions';
 import { normalizeJobText } from '../lib/jd/ingest';
@@ -1033,10 +1034,15 @@ function NewJobsUI() {
   }
 
   if (isMobile) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px 100px' }}>
-        <JobsPageHeader totalCount={filteredJobs.length} />
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px 100px' }}>
+      <SeekerTitleCard
+        greeting="Forge Jobs"
+        title="Find Your Next Opportunity"
+        subtitle={`${filteredJobs.length} jobs available`}
+        isMobile={true}
+      />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input type="text" value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Search jobs…"
             style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.30)', background: 'rgba(255,255,255,0.80)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', fontSize: 14, color: '#263238', outline: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }} />
           <button type="button" onClick={() => setFilterDrawerOpen(true)}
@@ -1065,12 +1071,16 @@ function NewJobsUI() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <JobsPageHeader totalCount={filteredJobs.length} />
-      <div style={{ display: 'grid', gridTemplateColumns: '220px minmax(0,1.6fr) minmax(0,1.5fr)', gap: 16, alignItems: 'flex-start' }}>
-        <aside style={{ position: 'sticky', top: 16, ...GLASS, padding: '18px 16px', borderRadius: 14 }}>
-          <JobFilterPanel {...filterProps} mode="sidebar" />
-        </aside>
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <SeekerTitleCard
+      greeting="Forge Jobs"
+      title="Find Your Next Opportunity"
+      subtitle={`${filteredJobs.length} jobs available`}
+    />
+    <div style={{ display: 'grid', gridTemplateColumns: '220px minmax(0,1.6fr) minmax(0,1.5fr)', gap: 16, alignItems: 'flex-start' }}>
+      <aside style={{ position: 'sticky', top: 16, ...GLASS, padding: '18px 16px', borderRadius: 14 }}>
+        <JobFilterPanel {...filterProps} mode="sidebar" />
+      </aside>
         <section aria-label="Job results" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600, padding: '0 2px' }}>
             {filteredJobs.length === 0 ? 'No jobs found' : `${startIndex + 1}–${Math.min(startIndex + pageSize, filteredJobs.length)} of ${filteredJobs.length}`}
