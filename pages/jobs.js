@@ -9,6 +9,7 @@ import JobActions from '../components/jobs/JobActions';
 import { normalizeJobText } from '../lib/jd/ingest';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { isInternalJob, getJobTier, getDisplaySource } from '../lib/jobs/jobSource';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import JobFilterPanel     from '../components/jobs/JobFilterPanel';
 import MobileFilterDrawer from '../components/jobs/MobileFilterDrawer';
 import JobListCard        from '../components/jobs/JobListCard';
@@ -286,13 +287,15 @@ function JobsUI() {
     return <div style={{ padding: 40, textAlign: 'center', color: '#78909C' }} aria-busy="true">Loading jobs…</div>;
   }
 
+  const greeting = getTimeGreeting();
+
   if (isMobile) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px 100px' }}>
       <SeekerTitleCard
-        greeting="Forge Jobs"
-        title="Find Your Next Opportunity"
-        subtitle={`${filteredJobs.length} jobs available`}
+        greeting={greeting}
+        title="Job Listings"
+        subtitle="Explore openings, review full details, and apply with confidence."
         isMobile={true}
       />
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -326,9 +329,9 @@ function JobsUI() {
   return (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
     <SeekerTitleCard
-      greeting="Forge Jobs"
-      title="Find Your Next Opportunity"
-      subtitle={`${filteredJobs.length} jobs available`}
+      greeting={greeting}
+      title="Job Listings"
+      subtitle="Explore openings, review full details, and apply with confidence."
     />
     <div style={{ display: 'grid', gridTemplateColumns: '220px minmax(0,1.6fr) minmax(0,1.5fr)', gap: 16, alignItems: 'flex-start' }}>
       <aside style={{ position: 'sticky', top: 16, ...GLASS, padding: '18px 16px', borderRadius: 14 }}>
