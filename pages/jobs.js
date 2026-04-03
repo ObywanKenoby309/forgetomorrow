@@ -593,8 +593,8 @@ function OldJobsUI() {
 
   // ── DESKTOP LAYOUT ────────────────────────────────────────
     return (
-    <div className="px-4 md:px-8 pb-10">
-      <div className="w-full grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-3">
+    <div className="pb-10">
+      <div className="w-full">
         <div className="space-y-4">
                     <header style={{ ...KPI_GLASS, padding: '18px 24px', textAlign: 'center' }}>
             <h1
@@ -830,48 +830,6 @@ function OldJobsUI() {
             </div>
           </div>
         </div>
-
-         <aside className="hidden lg:block" aria-label="Sponsored">
-          <nav style={{ display: 'grid', gap: 12, minWidth: 0, position: 'sticky', top: 16 }}>
-            <div style={{ ...KPI_GLASS, padding: 14, minWidth: 0, boxSizing: 'border-box' }}>
-              <div
-                style={{
-                  fontWeight: 900,
-                  marginBottom: 8,
-                  fontSize: 15,
-                  color: '#0F172A',
-                  lineHeight: 1.25,
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                Sponsored
-              </div>
-              <div style={{ ...GLASS, padding: 10 }}>
-                <RightRailPlacementManager slot="right_rail_1" />
-              </div>
-            </div>
-          </nav>
-        </aside>
-
-            <div className="lg:hidden mt-4">
-        <div style={{ ...KPI_GLASS, padding: 14 }}>
-          <div
-            style={{
-              fontWeight: 900,
-              marginBottom: 8,
-              fontSize: 15,
-              color: '#0F172A',
-              lineHeight: 1.25,
-              letterSpacing: '-0.01em',
-            }}
-          >
-            Sponsored
-          </div>
-          <div style={{ ...GLASS, padding: 10 }}>
-            <RightRailPlacementManager slot="right_rail_1" />
-          </div>
-        </div>
-      </div>
 
       <ATSResultPanel open={atsPanelOpen} onClose={() => setAtsPanelOpen(false)} loading={atsLoading} error={atsError} result={atsResult} onImproveResume={handleSendToResumeBuilder} />
     </div>

@@ -2,8 +2,8 @@ import React, { useMemo } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { usePlan } from '@/context/PlanContext';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
-// Chrome components
 import SeekerHeader from '@/components/seeker/SeekerHeader';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
@@ -14,6 +14,21 @@ import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
 
 const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
 
+const GLASS = {
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
+const KPI_GLASS = {
+  ...GLASS,
+  background: 'rgba(255,255,255,0.68)',
+  boxShadow: '0 12px 28px rgba(0,0,0,0.14)',
+};
+
 function normalizeChrome(input) {
   const raw = String(input || '').toLowerCase().trim();
   if (!raw) return '';
@@ -21,7 +36,7 @@ function normalizeChrome(input) {
   if (ALLOWED_MODES.has(raw)) return raw;
 
   if (raw.startsWith('recruiter')) {
-    if (raw.includes('ent')) return 'recruiter-ent';
+    if (raw.includes('ent') || raw.includes('enterprise')) return 'recruiter-ent';
     return 'recruiter-smb';
   }
 
@@ -32,15 +47,13 @@ function normalizeChrome(input) {
 export default function JobsLayout({
   title = 'ForgeTomorrow - Jobs',
   children,
-  activeNav = 'jobs'
+  activeNav = 'jobs',
 }) {
   const router = useRouter();
   const { plan, role } = usePlan();
 
-  // 🔥 SAME ROLE-AWARE LOGIC — but simplified
   const chromeMode = useMemo(() => {
     const urlChrome = normalizeChrome(router.query?.chrome);
-
     if (urlChrome) return urlChrome;
 
     const dbRole = String(role || '').toLowerCase();
@@ -50,8 +63,10 @@ export default function JobsLayout({
 
     if (
       dbRole === 'recruiter' ||
+      dbRole === 'site_admin' ||
+      dbRole === 'owner' ||
       dbRole === 'admin' ||
-      dbRole === 'owner'
+      dbRole === 'billing'
     ) {
       return dbPlan === 'enterprise' ? 'recruiter-ent' : 'recruiter-smb';
     }
@@ -59,32 +74,31 @@ export default function JobsLayout({
     return 'seeker';
   }, [router.query?.chrome, role, plan]);
 
-  // 🔥 HEADER + SIDEBAR SWITCH
   const { HeaderComp, SidebarComp, sidebarProps } = useMemo(() => {
     switch (chromeMode) {
       case 'coach':
         return {
           HeaderComp: CoachingHeader,
           SidebarComp: CoachingSidebar,
-          sidebarProps: { active: activeNav }
+          sidebarProps: { active: activeNav },
         };
       case 'recruiter-smb':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { active: activeNav, variant: 'smb' }
+          sidebarProps: { active: activeNav, variant: 'smb' },
         };
       case 'recruiter-ent':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { active: activeNav, variant: 'enterprise' }
+          sidebarProps: { active: activeNav, variant: 'enterprise' },
         };
       default:
         return {
           HeaderComp: SeekerHeader,
           SidebarComp: SeekerSidebar,
-          sidebarProps: { active: activeNav }
+          sidebarProps: { active: activeNav },
         };
     }
   }, [chromeMode, activeNav]);
@@ -95,43 +109,55 @@ export default function JobsLayout({
         <title>{title}</title>
       </Head>
 
-      {/* HEADER */}
       <HeaderComp />
 
-      {/* 🔥 TIGHT DASHBOARD GRID */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '240px 1fr 260px',
+          gridTemplateColumns: '240px minmax(0, 1fr) 260px',
           gap: 12,
-          padding: '16px',
+          padding: 16,
           alignItems: 'start',
-          maxWidth: '100vw',
-          boxSizing: 'border-box'
+          width: '100%',
+          boxSizing: 'border-box',
         }}
       >
-        {/* LEFT SIDEBAR */}
-        <aside style={{ position: 'relative' }}>
+        <aside style={{ minWidth: 0 }}>
           <SidebarComp {...sidebarProps} />
         </aside>
 
-        {/* MAIN CONTENT */}
         <main style={{ width: '100%', minWidth: 0 }}>
           {children}
         </main>
 
-        {/* RIGHT (SPONSORED - TIGHT) */}
         <aside
+          aria-label="Sponsored"
           style={{
-            borderRadius: 14,
-            border: '1px solid rgba(255,255,255,0.22)',
-            background: 'rgba(255,255,255,0.58)',
-            padding: 16,
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 10px 24px rgba(0,0,0,0.12)'
+            ...KPI_GLASS,
+            padding: 14,
+            minWidth: 0,
+            boxSizing: 'border-box',
+            alignSelf: 'start',
+            position: 'sticky',
+            top: 16,
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Sponsored</div>
+          <div
+            style={{
+              fontWeight: 900,
+              marginBottom: 8,
+              fontSize: 15,
+              color: '#0F172A',
+              lineHeight: 1.25,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            Sponsored
+          </div>
+
+          <div style={{ ...GLASS, padding: 10 }}>
+            <RightRailPlacementManager slot="right_rail_1" />
+          </div>
         </aside>
       </div>
     </>
