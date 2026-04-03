@@ -1,6 +1,7 @@
 // pages/seeker/applications.js
 import React, { useEffect, useState, useMemo } from 'react';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import ApplicationForm from '@/components/applications/ApplicationForm';
 import ApplicationDetailsModal from '@/components/applications/ApplicationDetailsModal';
@@ -563,22 +564,18 @@ export default function SeekerApplicationsPage() {
     overflowX: 'hidden',
   };
 
-  const HeaderBox = (
-    <div style={{ display: 'grid', gap: 12, width: '100%', minWidth: 0 }}>
-      <section style={{ ...GLASS, padding: 16, textAlign: 'center' }}>
-        <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
-          Applications
-        </h1>
-        <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-          Track your job search across stages, keep notes, and move roles forward.
-        </p>
-      </section>
+const HeaderBox = (
+  <div style={{ display: 'grid', gap: 12, width: '100%', minWidth: 0 }}>
+    <SeekerTitleCard
+      title="Applications"
+      subtitle="Track your job search across stages, keep notes, and move roles forward."
+    />
 
-      <section style={{ ...WHITE_CARD, padding: '28px 16px' }}>
-        <StageStrip tracker={tracker} />
-      </section>
-    </div>
-  );
+    <section style={{ ...WHITE_CARD, padding: '28px 16px' }}>
+      <StageStrip tracker={tracker} />
+    </section>
+  </div>
+);
 
   const formInitial = useMemo(() => {
     if (formMode === 'edit' && jobToEdit) {
