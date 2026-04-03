@@ -4,6 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import PinnedJobsPreview from '@/components/PinnedJobsPreview';
 import RecommendedJobsPreview from '@/components/seeker/dashboard/RecommendedJobsPreview';
 import ProfilePerformanceTeaser from '@/components/seeker/dashboard/ProfilePerformanceTeaser';
@@ -436,19 +437,12 @@ export default function SeekerDashboard() {
           <div style={{ display: 'grid', gap: GAP, width: '100%' }}>
 
             {/* 1. Greeting */}
-            <section style={{ ...GLASS, padding: '18px 20px' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#90A4AE', marginBottom: 4 }}>
-                {greeting}
-              </div>
-              <h1 style={{ margin: '0 auto', textAlign: 'center', fontSize: 22, fontWeight: 900,
-                color: '#FF7043', lineHeight: 1.1 }}>
-                Your Job Seeker Dashboard
-              </h1>
-              <p style={{ margin: '8px auto 0', textAlign: 'center', fontSize: 13,
-                color: '#546E7A', fontWeight: 600, lineHeight: 1.5, maxWidth: 720 }}>
-                You're not alone. Track your momentum, see your wins, and keep moving forward.
-              </p>
-            </section>
+            <SeekerTitleCard
+              greeting={greeting}
+              title="Your Job Seeker Dashboard"
+              subtitle="You're not alone. Track your momentum, see your wins, and keep moving forward."
+              isMobile={true}
+            />
 
             {/* 2. Action Center */}
             <section style={{ ...GLASS, padding: 16 }}>
@@ -626,15 +620,11 @@ export default function SeekerDashboard() {
           }}>
 
             {/* ROW 1, COL 1: Title card */}
-            <section style={{ ...GLASS, padding: 16, textAlign: 'center', gridColumn: '1 / 2', gridRow: '1' }}
-              aria-label="Job seeker dashboard overview">
-              <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
-                Your Job Seeker Dashboard
-              </h1>
-              <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-                You're not alone. Track your momentum, see your wins, and keep moving forward.
-              </p>
-            </section>
+            <SeekerTitleCard
+              title="Your Job Seeker Dashboard"
+              subtitle="You're not alone. Track your momentum, see your wins, and keep moving forward."
+              style={{ gridColumn: '1 / 2', gridRow: '1' }}
+            />
 
             {/* ROW 2, COL 1: KPI strip */}
             <section style={{ ...KPI_GLASS, padding: 16, gridColumn: '1 / 2', gridRow: '2' }}>
