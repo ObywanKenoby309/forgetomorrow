@@ -73,7 +73,7 @@ export default function RecruiterLayout({
   header,
   right,
   children,
-  rightBare = false
+  rightBare = false,
 
   headerCard = true,
 
