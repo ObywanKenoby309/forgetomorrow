@@ -26,6 +26,7 @@ import { PlanProvider, usePlan } from "@/context/PlanContext";
 import FeatureLock from "@/components/recruiter/FeatureLock";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import RecruiterTitleCard from "@/components/recruiter/RecruiterTitleCard";
+import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 
 function safeText(v) {
   return typeof v === "string" ? v : v == null ? "" : String(v);
@@ -790,7 +791,7 @@ function DashboardBody() {
               </div>
             </section>
           </div>
-          <section style={{ ...GLASS, padding: 16 }}>
+                    <section style={{ ...GLASS, padding: 16 }}>
             <div style={{ fontSize: 15, fontWeight: 900, color: "#112033", marginBottom: 10, lineHeight: 1.25, letterSpacing: "-0.01em" }}>
               Health Snapshot
             </div>
@@ -837,24 +838,8 @@ function DashboardBody() {
               )}
             </div>
           </section>
-          <section style={{ ...GLASS, padding: 12 }}>
-            <div style={{ ...WHITE_CARD, padding: 16, minHeight: 100 }}>
-              <div
-                style={{
-                  fontWeight: 800,
-                  color: "#90A4AE",
-                  marginBottom: 6,
-                  fontSize: 10,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  lineHeight: 1.2,
-                }}
-              >
-                Sponsored
-              </div>
-              <div style={{ fontSize: 13, color: "#B0BEC5", lineHeight: 1.5 }}>Ad space</div>
-            </div>
-          </section>
+
+          <RightRailPlacementManager />
         </div>
       </div>
     );
@@ -1023,36 +1008,7 @@ function DashboardBody() {
             boxSizing: "border-box",
           }}
         >
-          <div style={{ ...GLASS, padding: 14, flex: 1 }}>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 800,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "#94A3B8",
-                marginBottom: 8,
-              }}
-            >
-              Sponsored
-            </div>
-            <div
-              style={{
-                ...WHITE_CARD,
-                minHeight: 180,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 16,
-                textAlign: "center",
-                color: "#94A3B8",
-                fontSize: 13,
-                fontWeight: 700,
-              }}
-            >
-              Reserved ad / sponsor panel
-            </div>
-          </div>
+          <RightRailPlacementManager />
         </aside>
 
         <div
