@@ -1,66 +1,24 @@
-// pages/recruiter/job-postings.js
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider } from "@/context/PlanContext";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
+import RecruiterTitleCard from "@/components/recruiter/RecruiterTitleCard";
+import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import JobTable from "@/components/recruiter/JobTable";
 import JobFormModal from "@/components/recruiter/JobFormModal";
 import { PrimaryButton } from "@/components/ui/Buttons";
+import { getTimeGreeting } from "@/lib/dashboardGreeting";
 
-function HeaderBar({ onOpenModal }) {
-  return (
-    <section
-      style={{
-        borderRadius: 18,
-        border: '1px solid rgba(255,255,255,0.22)',
-        background: 'rgba(255,255,255,0.58)',
-        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        padding: 16,
-      }}
-    >
-      <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3">
-        <div className="hidden md:block" />
+const GLASS = {
+  borderRadius: 18,
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(255,255,255,0.68)",
+  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+};
 
-        <div className="text-center">
-          <div style={{ fontSize: 24, fontWeight: 900, color: '#FF7043' }}>
-            Job Postings
-          </div>
-
-          <div
-            style={{
-              marginTop: 6,
-              fontSize: 14,
-              color: '#64748B',
-              maxWidth: 720,
-              marginInline: 'auto',
-              lineHeight: 1.5,
-            }}
-          >
-            Create and manage roles, then track performance and applications.
-          </div>
-        </div>
-
-        <div className="justify-self-center md:justify-self-end">
-          <PrimaryButton onClick={onOpenModal}>Post a Job</PrimaryButton>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function RightToolsCard() {
-  return (
-    <div className="rounded-lg border bg-white p-4">
-      <div className="font-medium mb-2">Tips</div>
-      <div className="text-sm text-slate-600 space-y-2">
-        <p>Use clear titles and must-have skills up top.</p>
-        <p>Keep requirements lean to boost applies.</p>
-      </div>
-    </div>
-  );
-}
+const ORANGE = "#FF7043";
 
 function Body({
   rows,
@@ -74,12 +32,12 @@ function Body({
   onChangeViewMode,
   onUseTemplate,
   onViewApplicants,
+  onOpenModal,
 }) {
   const tableRows = useMemo(
     () =>
       (rows || []).map((j) => ({
         ...j,
-        // Map Prisma fields → table expectations
         views: j.viewsCount ?? j.views ?? 0,
         applications: j.applicationsCount ?? j.applications ?? 0,
       })),
@@ -90,7 +48,6 @@ function Body({
 
   return (
     <main className="min-w-0 w-full space-y-6">
-      {/* Error banner (only for real failures) */}
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <div className="font-semibold mb-1">
@@ -104,9 +61,43 @@ function Body({
         </div>
       )}
 
-      {/* Table */}
+      <section
+        style={{
+          ...GLASS,
+          padding: 16,
+        }}
+      >
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 900,
+                color: ORANGE,
+                lineHeight: 1.25,
+                letterSpacing: "-0.01em",
+                textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
+              }}
+            >
+              Job Posting Tools
+            </div>
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: 13,
+                color: "#64748B",
+                lineHeight: 1.5,
+              }}
+            >
+              Create and manage roles, then track performance and applications.
+            </div>
+          </div>
+
+          <PrimaryButton onClick={onOpenModal}>Post a Job</PrimaryButton>
+        </div>
+      </section>
+
       <div className="min-w-0 w-full rounded-lg border bg-white p-2 sm:p-4">
-        {/* Jobs | Templates toggle */}
         <div className="px-2 sm:px-0 pb-3 flex items-center gap-2">
           <button
             type="button"
@@ -145,9 +136,7 @@ function Body({
           onView={onView}
           onClose={onClose}
           onUseTemplate={onUseTemplate}
-          // ✅ templates-only delete action (button shows only in templates mode)
           onDelete={onDeleteTemplate}
-          // ✅ NEW: Job-scoped applicants view (JobTable must add dropdown item)
           onViewApplicants={onViewApplicants}
         />
 
@@ -158,7 +147,6 @@ function Body({
         )}
       </div>
 
-      {/* Performance preview – wired later to analytics */}
       {!isTemplates && (
         <div className="min-w-0 w-full rounded-lg border bg-white p-4 text-sm">
           <div className="font-medium mb-2">Job Performance (Preview)</div>
@@ -180,16 +168,11 @@ export default function JobPostingsPage() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
 
-  // track whether we are creating / editing / viewing
   const [editingJob, setEditingJob] = useState(null);
-  const [modalMode, setModalMode] = useState("create"); // "create" | "edit" | "view"
+  const [modalMode, setModalMode] = useState("create");
 
-  // jobs vs templates view
-  const [viewMode, setViewMode] = useState("jobs"); // "jobs" | "templates"
+  const [viewMode, setViewMode] = useState("jobs");
 
-  // ──────────────────────────────────────────────────────────────
-  // Load job postings for the current recruiter
-  // ──────────────────────────────────────────────────────────────
   const loadJobs = useCallback(async (kind = "jobs") => {
     try {
       setLoading(true);
@@ -230,10 +213,6 @@ export default function JobPostingsPage() {
     loadJobs(viewMode);
   }, [loadJobs, viewMode]);
 
-  // ──────────────────────────────────────────────────────────────
-  // Handlers
-  // ──────────────────────────────────────────────────────────────
-
   const openCreateModal = () => {
     setEditingJob(null);
     setModalMode("create");
@@ -245,7 +224,6 @@ export default function JobPostingsPage() {
       let res;
 
       if (editingJob?.id && modalMode === "edit") {
-        // UPDATE existing job/template
         res = await fetch("/api/recruiter/job-postings", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -255,7 +233,6 @@ export default function JobPostingsPage() {
           }),
         });
       } else {
-        // CREATE new job (templates are created inside modal to avoid closing)
         res = await fetch("/api/recruiter/job-postings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -305,7 +282,6 @@ export default function JobPostingsPage() {
   };
 
   const handleUseTemplate = (templateJob) => {
-    // Use Template -> open modal in create mode with fields prefilled
     setEditingJob(templateJob);
     setModalMode("create");
     setOpen(true);
@@ -318,8 +294,6 @@ export default function JobPostingsPage() {
 
   const handleCloseJob = async (job) => {
     if (!job?.id) return;
-
-    // Do not allow "Close" for templates (defense-in-depth)
     if (job?.isTemplate) return;
 
     const confirmClose = window.confirm(
@@ -352,11 +326,8 @@ export default function JobPostingsPage() {
     }
   };
 
-  // Delete action for templates (UI now supports it; API needs DELETE handler)
   const handleDeleteTemplate = async (job) => {
     if (!job?.id) return;
-
-    // defense: only allow delete for templates (UI already scopes it)
     if (!job?.isTemplate) return;
 
     const name = job.templateName || job.title || "this template";
@@ -376,7 +347,6 @@ export default function JobPostingsPage() {
         throw new Error(errJson.error || `HTTP ${res.status}`);
       }
 
-      // remove from current list immediately
       setRows((prev) => prev.filter((j) => j.id !== job.id));
     } catch (err) {
       console.error("[JobPostings] delete template error", err);
@@ -394,18 +364,31 @@ export default function JobPostingsPage() {
 
   const handleChangeViewMode = (next) => {
     setViewMode(next);
-    // reset modal state (safe)
     setEditingJob(null);
     setModalMode("create");
   };
 
+  const greeting = getTimeGreeting();
+
+  const HeaderBox = (
+    <RecruiterTitleCard
+      greeting={greeting}
+      title="Job Postings"
+      subtitle="Create and manage roles, then track performance and applications."
+      compact
+    />
+  );
+
+  const RightColumn = <RightRailPlacementManager slot="right_rail_1" />;
+
   return (
     <PlanProvider>
       <RecruiterLayout
-        title="Job Postings — ForgeTomorrow"
-        header={<HeaderBar onOpenModal={openCreateModal} />}
-		headerCard={false}
-        right={<RightToolsCard />}
+        title="Job Postings - ForgeTomorrow"
+        header={HeaderBox}
+        headerCard={false}
+        right={RightColumn}
+        rightBare
         activeNav="job-postings"
       >
         <Body
@@ -420,6 +403,7 @@ export default function JobPostingsPage() {
           onChangeViewMode={handleChangeViewMode}
           onUseTemplate={handleUseTemplate}
           onViewApplicants={handleViewApplicants}
+          onOpenModal={openCreateModal}
         />
 
         <JobFormModal
