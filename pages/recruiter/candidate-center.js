@@ -135,7 +135,7 @@ const buildTiles = (isEnterprise) => [
   {
     id: "compare",
     title: "External Compare",
-    desc: "Paste any resume and job description to generate an evidence-backed comparison — even outside ForgeTomorrow.",
+    desc: "Paste any resume and job description to generate an evidence-backed comparison - even outside ForgeTomorrow.",
     href: "/recruiter/explain",
     img: null,
   },
@@ -512,47 +512,30 @@ export default function CandidateCenter() {
     <RecruiterTitleCard
       greeting={greeting}
       title="Candidate Center"
-      subtitle="Internal search, external comparisons, and talent pools — all in one place."
+      subtitle="Internal search, external comparisons, and talent pools - all in one place."
       compact
     />
   );
 
-  const RightColumn = (
-    <div style={{ ...GLASS, padding: 14, minHeight: 160, width: "100%", boxSizing: "border-box" }}>
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 800,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "#94A3B8",
-          marginBottom: 8,
-        }}
-      >
-        Sponsored
-      </div>
-      <div style={{ ...WHITE_CARD, minHeight: 180, padding: 12 }}>
-        <RightRailPlacementManager slot="right_rail_1" />
-      </div>
-    </div>
-  );
+  const RightColumn = <RightRailPlacementManager slot="right_rail_1" />;
 
   if (isMobile === null) {
     return (
       <RecruiterLayout
-        title="ForgeTomorrow — Candidate Center"
-        header={HeaderBox}
-        headerCard={false}
-        right={RightColumn}
-        activeNav="candidate-center"
-      />
+		title="ForgeTomorrow - Candidate Center"
+		header={HeaderBox}
+		headerCard={false}
+		right={RightColumn}
+		rightBare
+		activeNav="candidate-center"
+	  />
     );
   }
 
   if (isMobile) {
     return (
       <RecruiterLayout
-        title="ForgeTomorrow — Candidate Center"
+        title="ForgeTomorrow - Candidate Center"
         header={HeaderBox}
         headerCard={false}
         right={null}
@@ -578,12 +561,13 @@ export default function CandidateCenter() {
 
   return (
     <RecruiterLayout
-      title="ForgeTomorrow — Candidate Center"
-      header={HeaderBox}
-      headerCard={false}
-      right={RightColumn}
-      activeNav="candidate-center"
-    >
+		title="ForgeTomorrow - Candidate Center"
+		header={HeaderBox}
+		headerCard={false}
+		right={RightColumn}
+		rightBare
+		activeNav="candidate-center"
+	   >
       <section style={{ padding: 0 }}>
         <div
           style={{
