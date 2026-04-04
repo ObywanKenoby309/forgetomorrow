@@ -14,7 +14,7 @@ import {
 } from "recharts";
 
 const SOURCE_COLORS = {
-  ForgeTomorrow: "#FB923C",
+  Forge: "#FB923C",
   Referrals: "#2563EB",
   "Direct Outreach": "#0F766E",
   "Company Careers": "#B45309",
