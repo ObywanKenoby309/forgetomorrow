@@ -1,4 +1,3 @@
-// pages/advertise.js
 import Head from 'next/head';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
@@ -9,13 +8,7 @@ import LandingHeader from '@/components/LandingHeader';
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const ORANGE = '#FF7043';
-const DARK   = '#0a0f1a';
-const GLASS  = {
-  border: '1px solid rgba(255,255,255,0.18)',
-  background: 'rgba(255,255,255,0.06)',
-  backdropFilter: 'blur(12px)',
-  WebkitBackdropFilter: 'blur(12px)',
-};
+const DARK = '#0a0f1a';
 
 const SURFACES = [
   {
@@ -50,7 +43,7 @@ const BUDGET_RANGES = [
   '$1,000–$2,500/mo',
   '$2,500–$5,000/mo',
   '$5,000+/mo',
-  'Let\'s talk',
+  "Let's talk",
 ];
 
 // ─── Audience stat cards ────────────────────────────────────────────────────────
@@ -118,17 +111,25 @@ function AdvertiseContent({ isInternal }) {
   }
 
   return (
-    <div style={{ color: isInternal ? '#112033' : '#ffffff' }}>
-
+    <div
+      style={{
+        color: isInternal ? '#112033' : '#ffffff',
+        padding: isInternal ? '18px 18px 28px' : 0,
+      }}
+    >
       {/* ── HERO ── */}
       <section
         style={{
           position: 'relative',
-          minHeight: isInternal ? 420 : '100vh',
+          minHeight: isInternal ? 290 : '100vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
+          borderRadius: isInternal ? 22 : 0,
+          marginBottom: isInternal ? 18 : 0,
+          border: isInternal ? '1px solid rgba(255,255,255,0.20)' : 'none',
+          boxShadow: isInternal ? '0 18px 38px rgba(0,0,0,0.24)' : 'none',
           backgroundImage: [
             'linear-gradient(180deg, rgba(10,15,26,0.30) 0%, rgba(10,15,26,0.62) 55%, rgba(10,15,26,0.96) 100%)',
             "url('/images/advertise-hero.png')",
@@ -137,7 +138,6 @@ function AdvertiseContent({ isInternal }) {
           backgroundPosition: 'center',
         }}
       >
-        {/* orange radial pulse */}
         <div
           aria-hidden="true"
           style={{
@@ -153,8 +153,8 @@ function AdvertiseContent({ isInternal }) {
             position: 'relative',
             zIndex: 1,
             textAlign: 'center',
-            maxWidth: 860,
-            padding: '0 24px',
+            maxWidth: 980,
+            padding: isInternal ? '20px 28px' : '0 24px',
           }}
         >
           <div
@@ -177,8 +177,8 @@ function AdvertiseContent({ isInternal }) {
 
           <h1
             style={{
-              margin: '0 0 20px',
-              fontSize: 'clamp(38px, 7vw, 80px)',
+              margin: '0 0 18px',
+              fontSize: isInternal ? 'clamp(34px, 5vw, 64px)' : 'clamp(38px, 7vw, 80px)',
               fontWeight: 900,
               lineHeight: 1.02,
               letterSpacing: '-0.04em',
@@ -186,7 +186,8 @@ function AdvertiseContent({ isInternal }) {
               textShadow: '0 8px 40px rgba(0,0,0,0.50)',
             }}
           >
-            Be seen where<br />
+            Be seen where
+            <br />
             <span style={{ color: ORANGE }}>decisions are made.</span>
           </h1>
 
@@ -200,19 +201,19 @@ function AdvertiseContent({ isInternal }) {
               fontWeight: 400,
             }}
           >
-            ForgeTomorrow places your brand inside real career moments - 
-            not passive scrolling, not surveillance, just intent.
+            ForgeTomorrow places your brand inside real career moments - not passive scrolling, not
+            surveillance, just intent.
           </p>
 
           <a
             href="#inquire"
             style={{
               display: 'inline-block',
-              padding: '14px 32px',
+              padding: isInternal ? '12px 28px' : '14px 32px',
               borderRadius: 14,
               background: ORANGE,
               color: '#ffffff',
-              fontSize: 15,
+              fontSize: isInternal ? 14 : 15,
               fontWeight: 800,
               textDecoration: 'none',
               letterSpacing: '0.02em',
@@ -233,23 +234,30 @@ function AdvertiseContent({ isInternal }) {
         </div>
       </section>
 
-      {/* ── STATS BAR ── */}
+      {/* ── STATS / KPI BANNER ── */}
       <section
         style={{
-          background: isInternal ? '#f0f4f8' : DARK,
-          borderTop: `1px solid rgba(255,112,67,0.20)`,
-          borderBottom: `1px solid rgba(255,112,67,0.20)`,
-          padding: '40px 24px',
+          background: isInternal ? 'transparent' : DARK,
+          borderTop: isInternal ? 'none' : `1px solid rgba(255,112,67,0.20)`,
+          borderBottom: isInternal ? 'none' : `1px solid rgba(255,112,67,0.20)`,
+          padding: isInternal ? '0 0 18px' : '40px 24px',
         }}
       >
         <div
           style={{
-            maxWidth: 900,
+            maxWidth: isInternal ? '100%' : 900,
             margin: '0 auto',
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 32,
+            gap: 24,
             textAlign: 'center',
+            borderRadius: isInternal ? 22 : 0,
+            padding: isInternal ? '22px 24px' : 0,
+            border: isInternal ? '1px solid rgba(255,255,255,0.18)' : 'none',
+            background: isInternal ? 'rgba(255,255,255,0.72)' : 'transparent',
+            backdropFilter: isInternal ? 'blur(12px)' : 'none',
+            WebkitBackdropFilter: isInternal ? 'blur(12px)' : 'none',
+            boxShadow: isInternal ? '0 16px 34px rgba(0,0,0,0.18)' : 'none',
           }}
         >
           {STATS.map((s) => (
@@ -292,11 +300,23 @@ function AdvertiseContent({ isInternal }) {
       {/* ── WHY FORGETOMORROW ── */}
       <section
         style={{
-          background: isInternal ? '#ffffff' : '#0d1320',
-          padding: '80px 24px',
+          background: isInternal ? 'transparent' : '#0d1320',
+          padding: isInternal ? '0 0 18px' : '80px 24px',
         }}
       >
-        <div style={{ maxWidth: 860, margin: '0 auto' }}>
+        <div
+          style={{
+            maxWidth: isInternal ? '100%' : 860,
+            margin: '0 auto',
+            borderRadius: isInternal ? 22 : 0,
+            padding: isInternal ? '30px 28px' : 0,
+            border: isInternal ? '1px solid rgba(255,255,255,0.18)' : 'none',
+            background: isInternal ? 'rgba(255,255,255,0.66)' : 'transparent',
+            backdropFilter: isInternal ? 'blur(12px)' : 'none',
+            WebkitBackdropFilter: isInternal ? 'blur(12px)' : 'none',
+            boxShadow: isInternal ? '0 16px 34px rgba(0,0,0,0.18)' : 'none',
+          }}
+        >
           <div
             style={{
               fontSize: 11,
@@ -319,7 +339,9 @@ function AdvertiseContent({ isInternal }) {
               color: isInternal ? '#0a0f1a' : '#ffffff',
             }}
           >
-            Your brand belongs<br />where momentum lives.
+            Your brand belongs
+            <br />
+            where momentum lives.
           </h2>
           <p
             style={{
@@ -330,8 +352,8 @@ function AdvertiseContent({ isInternal }) {
               marginBottom: 48,
             }}
           >
-            Most platforms chase attention. ForgeTomorrow meets people in motion.
-			Your brand appears beside real decisions, real progress, and real professional momentum.
+            Most platforms chase attention. ForgeTomorrow meets people in motion. Your brand
+            appears beside real decisions, real progress, and real professional momentum.
           </p>
 
           <div
@@ -343,21 +365,21 @@ function AdvertiseContent({ isInternal }) {
           >
             {[
               {
-    title: 'Show up with purpose',
-    body: 'Your brand appears inside moments of action, not beside idle scrolling.',
-  },
-  {
-    title: 'Be part of the experience',
-    body: 'ForgeTomorrow placements feel native, premium, and aligned with the platform.',
-  },
-  {
-    title: 'Reach the right mindset',
-    body: 'Seeker, Recruiter, and Coach surfaces let you align to intent without surveillance.',
-  },
-  {
-    title: 'Stand where momentum is',
-    body: 'This is a platform for movement, clarity, and next steps - and your brand can live inside that energy.',
-  },
+                title: 'Show up with purpose',
+                body: 'Your brand appears inside moments of action, not beside idle scrolling.',
+              },
+              {
+                title: 'Be part of the experience',
+                body: 'ForgeTomorrow placements feel native, premium, and aligned with the platform.',
+              },
+              {
+                title: 'Reach the right mindset',
+                body: 'Seeker, Recruiter, and Coach surfaces let you align to intent without surveillance.',
+              },
+              {
+                title: 'Stand where momentum is',
+                body: 'This is a platform for movement, clarity, and next steps - and your brand can live inside that energy.',
+              },
             ].map((card) => (
               <div
                 key={card.title}
@@ -365,11 +387,14 @@ function AdvertiseContent({ isInternal }) {
                   borderRadius: 16,
                   padding: '22px 20px',
                   border: isInternal
-                    ? '1px solid rgba(51,65,85,0.16)'
+                    ? '1px solid rgba(255,255,255,0.18)'
                     : '1px solid rgba(255,255,255,0.12)',
                   background: isInternal
-                    ? 'rgba(248,250,252,0.9)'
+                    ? 'rgba(255,255,255,0.52)'
                     : 'rgba(255,255,255,0.05)',
+                  backdropFilter: isInternal ? 'blur(10px)' : 'none',
+                  WebkitBackdropFilter: isInternal ? 'blur(10px)' : 'none',
+                  boxShadow: isInternal ? '0 10px 24px rgba(0,0,0,0.10)' : 'none',
                 }}
               >
                 <div
@@ -409,11 +434,23 @@ function AdvertiseContent({ isInternal }) {
       {/* ── SURFACES ── */}
       <section
         style={{
-          background: isInternal ? '#f0f4f8' : DARK,
-          padding: '80px 24px',
+          background: isInternal ? 'transparent' : DARK,
+          padding: isInternal ? '0 0 18px' : '80px 24px',
         }}
       >
-        <div style={{ maxWidth: 860, margin: '0 auto' }}>
+        <div
+          style={{
+            maxWidth: isInternal ? '100%' : 860,
+            margin: '0 auto',
+            borderRadius: isInternal ? 22 : 0,
+            padding: isInternal ? '30px 28px' : 0,
+            border: isInternal ? '1px solid rgba(255,255,255,0.18)' : 'none',
+            background: isInternal ? 'rgba(255,255,255,0.66)' : 'transparent',
+            backdropFilter: isInternal ? 'blur(12px)' : 'none',
+            WebkitBackdropFilter: isInternal ? 'blur(12px)' : 'none',
+            boxShadow: isInternal ? '0 16px 34px rgba(0,0,0,0.18)' : 'none',
+          }}
+        >
           <div
             style={{
               fontSize: 11,
@@ -453,9 +490,14 @@ function AdvertiseContent({ isInternal }) {
                   borderRadius: 16,
                   padding: '24px 20px',
                   border: isInternal
-                    ? '1px solid rgba(51,65,85,0.16)'
+                    ? '1px solid rgba(255,255,255,0.18)'
                     : '1px solid rgba(255,255,255,0.12)',
-                  background: isInternal ? '#ffffff' : 'rgba(255,255,255,0.04)',
+                  background: isInternal
+                    ? 'rgba(255,255,255,0.52)'
+                    : 'rgba(255,255,255,0.04)',
+                  backdropFilter: isInternal ? 'blur(10px)' : 'none',
+                  WebkitBackdropFilter: isInternal ? 'blur(10px)' : 'none',
+                  boxShadow: isInternal ? '0 10px 24px rgba(0,0,0,0.10)' : 'none',
                 }}
               >
                 <div style={{ fontSize: 28, marginBottom: 12 }}>{s.icon}</div>
@@ -488,12 +530,24 @@ function AdvertiseContent({ isInternal }) {
       <section
         id="inquire"
         style={{
-          background: isInternal ? '#ffffff' : '#0d1320',
-          padding: '80px 24px 100px',
+          background: isInternal ? 'transparent' : '#0d1320',
+          padding: isInternal ? '0 0 8px' : '80px 24px 100px',
         }}
         ref={formRef}
       >
-        <div style={{ maxWidth: 640, margin: '0 auto' }}>
+        <div
+          style={{
+            maxWidth: isInternal ? '100%' : 640,
+            margin: '0 auto',
+            borderRadius: isInternal ? 22 : 0,
+            padding: isInternal ? '30px 28px' : 0,
+            border: isInternal ? '1px solid rgba(255,255,255,0.18)' : 'none',
+            background: isInternal ? 'rgba(255,255,255,0.66)' : 'transparent',
+            backdropFilter: isInternal ? 'blur(12px)' : 'none',
+            WebkitBackdropFilter: isInternal ? 'blur(12px)' : 'none',
+            boxShadow: isInternal ? '0 16px 34px rgba(0,0,0,0.18)' : 'none',
+          }}
+        >
           <div
             style={{
               fontSize: 11,
@@ -526,7 +580,8 @@ function AdvertiseContent({ isInternal }) {
               lineHeight: 1.6,
             }}
           >
-            Tell us where you want to show up, and we’ll help you build the right presence on ForgeTomorrow.
+            Tell us where you want to show up, and we’ll help you build the right presence on
+            ForgeTomorrow.
           </p>
 
           {submitted ? (
@@ -536,7 +591,10 @@ function AdvertiseContent({ isInternal }) {
                 padding: '40px 32px',
                 textAlign: 'center',
                 border: `1px solid rgba(255,112,67,0.30)`,
-                background: isInternal ? 'rgba(255,112,67,0.06)' : 'rgba(255,112,67,0.08)',
+                background: isInternal ? 'rgba(255,255,255,0.52)' : 'rgba(255,112,67,0.08)',
+                backdropFilter: isInternal ? 'blur(10px)' : 'none',
+                WebkitBackdropFilter: isInternal ? 'blur(10px)' : 'none',
+                boxShadow: isInternal ? '0 10px 24px rgba(0,0,0,0.10)' : 'none',
               }}
             >
               <div style={{ fontSize: 36, marginBottom: 16 }}>🔥</div>
@@ -559,8 +617,8 @@ function AdvertiseContent({ isInternal }) {
                 }}
               >
                 Someone from the ForgeTomorrow sales team will reach out to{' '}
-                <strong style={{ color: ORANGE }}>{form.contactEmail}</strong>{' '}
-                within one business day.
+                <strong style={{ color: ORANGE }}>{form.contactEmail}</strong> within one business
+                day.
               </p>
             </div>
           ) : (
@@ -569,15 +627,23 @@ function AdvertiseContent({ isInternal }) {
                 borderRadius: 20,
                 padding: '32px 28px',
                 border: isInternal
-                  ? '1px solid rgba(51,65,85,0.16)'
+                  ? '1px solid rgba(255,255,255,0.18)'
                   : '1px solid rgba(255,255,255,0.12)',
-                background: isInternal ? '#f8fafc' : 'rgba(255,255,255,0.04)',
+                background: isInternal ? 'rgba(255,255,255,0.52)' : 'rgba(255,255,255,0.04)',
+                backdropFilter: isInternal ? 'blur(10px)' : 'none',
+                WebkitBackdropFilter: isInternal ? 'blur(10px)' : 'none',
+                boxShadow: isInternal ? '0 10px 24px rgba(0,0,0,0.10)' : 'none',
                 display: 'grid',
                 gap: 18,
               }}
             >
-              {/* Row: Name + Email */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 14,
+                }}
+              >
                 <Field
                   label="Contact Name *"
                   value={form.contactName}
@@ -595,8 +661,13 @@ function AdvertiseContent({ isInternal }) {
                 />
               </div>
 
-              {/* Row: Company + Website */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 14,
+                }}
+              >
                 <Field
                   label="Company Name *"
                   value={form.companyName}
@@ -614,7 +685,6 @@ function AdvertiseContent({ isInternal }) {
                 />
               </div>
 
-              {/* Surfaces multi-select */}
               <div>
                 <div
                   style={{
@@ -651,7 +721,7 @@ function AdvertiseContent({ isInternal }) {
                           background: active
                             ? ORANGE
                             : isInternal
-                            ? 'rgba(51,65,85,0.06)'
+                            ? 'rgba(255,255,255,0.55)'
                             : 'rgba(255,255,255,0.06)',
                           color: active
                             ? '#ffffff'
@@ -667,7 +737,6 @@ function AdvertiseContent({ isInternal }) {
                 </div>
               </div>
 
-              {/* Budget range */}
               <div>
                 <div
                   style={{
@@ -704,7 +773,7 @@ function AdvertiseContent({ isInternal }) {
                           background: active
                             ? ORANGE
                             : isInternal
-                            ? 'rgba(51,65,85,0.06)'
+                            ? 'rgba(255,255,255,0.55)'
                             : 'rgba(255,255,255,0.06)',
                           color: active
                             ? '#ffffff'
@@ -720,7 +789,6 @@ function AdvertiseContent({ isInternal }) {
                 </div>
               </div>
 
-              {/* Notes */}
               <div>
                 <div
                   style={{
@@ -746,7 +814,7 @@ function AdvertiseContent({ isInternal }) {
                     border: isInternal
                       ? '1px solid rgba(51,65,85,0.25)'
                       : '1px solid rgba(255,255,255,0.14)',
-                    background: isInternal ? '#ffffff' : 'rgba(255,255,255,0.06)',
+                    background: isInternal ? 'rgba(255,255,255,0.74)' : 'rgba(255,255,255,0.06)',
                     color: isInternal ? '#112033' : '#ffffff',
                     fontSize: 14,
                     lineHeight: 1.6,
@@ -848,7 +916,7 @@ function Field({ label, value, onChange, placeholder, type = 'text', isInternal 
           border: isInternal
             ? '1px solid rgba(51,65,85,0.25)'
             : '1px solid rgba(255,255,255,0.14)',
-          background: isInternal ? '#ffffff' : 'rgba(255,255,255,0.06)',
+          background: isInternal ? 'rgba(255,255,255,0.74)' : 'rgba(255,255,255,0.06)',
           color: isInternal ? '#112033' : '#ffffff',
           fontSize: 14,
           outline: 'none',
@@ -860,10 +928,10 @@ function Field({ label, value, onChange, placeholder, type = 'text', isInternal 
   );
 }
 
-// ─── Main export ─────────────────────────────────────────────────────────────────
+// ─── Main export ───────────────────────────────────────────────────────────────
 export default function Advertise() {
   const router = useRouter();
-  const [authState, setAuthState] = useState('loading'); // 'loading' | 'public' | 'seeker' | 'recruiter' | 'coach'
+  const [authState, setAuthState] = useState('loading');
 
   useEffect(() => {
     let alive = true;
@@ -873,16 +941,15 @@ export default function Advertise() {
         return r.json();
       })
       .then((data) => {
-  if (!alive) return;
+        if (!alive) return;
 
-  // me.js returns 200 with user: null when logged out
-  if (!data?.user) {
-    setAuthState('public');
-    return;
-  }
+        if (!data?.user) {
+          setAuthState('public');
+          return;
+        }
 
-  const role = String(data?.user?.role || data?.role || '').toUpperCase();
-  const plan = String(data?.user?.plan || data?.plan || '').toUpperCase();
+        const role = String(data?.user?.role || data?.role || '').toUpperCase();
+        const plan = String(data?.user?.plan || data?.plan || '').toUpperCase();
 
         if (role === 'COACH') {
           setAuthState('coach');
@@ -908,7 +975,6 @@ export default function Advertise() {
     };
   }, []);
 
-  // ── Still detecting auth — render nothing to avoid flash ──
   if (authState === 'loading') {
     return (
       <Head>
@@ -917,53 +983,40 @@ export default function Advertise() {
     );
   }
 
-  // ── Public visitor — _app.js provides LandingHeader + LandingFooter ──
   if (authState === 'public') {
-  return (
-    <>
-      <Head>
-        <title>Advertise — ForgeTomorrow</title>
-        <meta
-          name="description"
-          content="Reach job seekers, recruiters, and career coaches on ForgeTomorrow. Intent-based advertising with zero user data sold."
-        />
-      </Head>
-      <LandingHeader />
-      <AdvertiseContent isInternal={false} />
-    </>
-  );
-}
+    return (
+      <>
+        <Head>
+          <title>Advertise — ForgeTomorrow</title>
+          <meta
+            name="description"
+            content="Reach job seekers, recruiters, and career coaches on ForgeTomorrow. Intent-based advertising with zero user data sold."
+          />
+        </Head>
+        <LandingHeader />
+        <AdvertiseContent isInternal={false} />
+      </>
+    );
+  }
 
-  // ── Logged-in coach ──
   if (authState === 'coach') {
     return (
-      <CoachingLayout
-        title="Advertise - ForgeTomorrow"
-        activeNav=""
-      >
+      <CoachingLayout title="Advertise — ForgeTomorrow" activeNav="">
         <AdvertiseContent isInternal={true} />
       </CoachingLayout>
     );
   }
 
-  // ── Logged-in recruiter ──
   if (authState === 'recruiter') {
     return (
-      <RecruiterLayout
-        title="Advertise - ForgeTomorrow"
-        activeNav=""
-      >
+      <RecruiterLayout title="Advertise — ForgeTomorrow" activeNav="">
         <AdvertiseContent isInternal={true} />
       </RecruiterLayout>
     );
   }
 
-  // ── Logged-in seeker (default for all other auth states) ──
   return (
-    <SeekerLayout
-      title="Advertise - ForgeTomorrow"
-      activeNav=""
-    >
+    <SeekerLayout title="Advertise — ForgeTomorrow" activeNav="">
       <AdvertiseContent isInternal={true} />
     </SeekerLayout>
   );
