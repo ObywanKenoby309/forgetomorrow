@@ -255,10 +255,10 @@ function AppShell({ Component, pageProps }) {
   const useForgeBackground =
     !isUniversalPage &&
     isPublicEffective &&
-    ['/', '/about', '/features', '/press', '/status', '/company', '/product', '/legal'].includes(router.pathname);
+    ['/', '/about', '/features', '/press', '/status', '/company', '/product', '/legal'].includes(router.pathname) && router.pathname !== '/advertise';
 
   const forgeBgPosition = router.pathname === '/' ? '35% center' : 'center';
-  const renderLandingHeader = isPublicEffective && !isUniversalPage;
+  const renderLandingHeader = isPublicEffective && !isUniversalPage && router.pathname !== '/advertise';
 
   // Only load cookie banner on production hostname
   const isBrowser = typeof window !== 'undefined';
@@ -385,7 +385,7 @@ function AppShell({ Component, pageProps }) {
             </ResumeProvider>
           </PlanProvider>
 
-          {renderLandingHeader ? <LandingFooter /> : <Footer />}
+          {isPublicEffective ? <LandingFooter /> : <Footer />}
 
           {/* Support Floating Button - internal pages only (hidden on mobile via globals.css) */}
           {!isPublicEffective && (
