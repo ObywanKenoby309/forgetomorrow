@@ -30,7 +30,7 @@ const BASE_DEMO_FUNNEL = [
 ];
 
 const BASE_DEMO_SOURCES = [
-  { name: "ForgeTomorrow", value: 312 },
+  { name: "Forge", value: 312 },
   { name: "Referrals", value: 188 },
   { name: "Direct Outreach", value: 142 },
   { name: "Company Careers", value: 96 },
