@@ -69,10 +69,11 @@ function chromeToVariant(chromeMode) {
 }
 
 export default function RecruiterLayout({
-  title = 'ForgeTomorrow — Recruiter',
+  title = 'ForgeTomorrow - Recruiter',
   header,
   right,
   children,
+  rightBare = false
 
   headerCard = true,
 
@@ -275,24 +276,30 @@ export default function RecruiterLayout({
   const gridStyles = hasMounted && isMobile ? mobileGrid : desktopGrid;
 
   const rightRailStyle = {
-    gridArea: 'right',
-    alignSelf: 'start',
-
-    // Canonical GLASS token
-    ...GLASS,
-
-    // Section-card radius (18px)
-    borderRadius: 18,
-    padding: 16,
-    minHeight: 120,
-    boxSizing: 'border-box',
-    width: hasMounted && isMobile ? '100%' : RIGHT_W,
-    minWidth: hasMounted && isMobile ? 0 : RIGHT_W,
-    maxWidth: hasMounted && isMobile ? '100%' : RIGHT_W,
-    minInlineSize: 0,
-
-    color: '#112033',
-  };
+  gridArea: 'right',
+  alignSelf: 'start',
+  ...(rightBare
+    ? {
+        background: 'transparent',
+        border: 'none',
+        boxShadow: 'none',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+        padding: 0,
+      }
+    : {
+        ...GLASS,
+        padding: 16,
+      }),
+  borderRadius: 18,
+  minHeight: 120,
+  boxSizing: 'border-box',
+  width: hasMounted && isMobile ? '100%' : RIGHT_W,
+  minWidth: hasMounted && isMobile ? 0 : RIGHT_W,
+  maxWidth: hasMounted && isMobile ? '100%' : RIGHT_W,
+  minInlineSize: 0,
+  color: '#112033',
+};
 
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 

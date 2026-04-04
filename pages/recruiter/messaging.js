@@ -217,12 +217,13 @@ export default function MessagingPage() {
     return (
       <PlanProvider>
         <RecruiterLayout
-          title="Messaging — ForgeTomorrow"
+          title="Messaging - ForgeTomorrow"
           header={HeaderBox}
-          headerCard={false}
-          right={<RightToolsCard />}
-          activeNav="messaging"
-        >
+		  headerCard={false}
+		  right={<RightToolsCard />}
+		  rightBare
+		  activeNav="messaging"
+		>
           <section style={{ ...GLASS, overflow: "hidden", padding: 16 }}>
             <div
               style={{
