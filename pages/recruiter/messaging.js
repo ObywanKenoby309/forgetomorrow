@@ -250,12 +250,13 @@ export default function MessagingPage() {
     return (
       <PlanProvider>
         <RecruiterLayout
-          title="Messaging — ForgeTomorrow"
-          header={HeaderBox}
-          headerCard={false}
-          right={<RightToolsCard />}
-          activeNav="messaging"
-        >
+		title="Messaging - ForgeTomorrow"
+		header={HeaderBox}
+		headerCard={false}
+		right={<RightToolsCard />}
+		rightBare
+		activeNav="messaging"
+	  >
           <section style={{ ...GLASS, overflow: "hidden", padding: 16 }}>
             <div style={{ ...WHITE_CARD, padding: 16 }}>
               <div style={{ fontWeight: 800, fontSize: 16, color: "#0F172A" }}>
@@ -307,12 +308,13 @@ export default function MessagingPage() {
   return (
     <PlanProvider>
       <RecruiterLayout
-        title="Messaging — ForgeTomorrow"
-        header={HeaderBox}
-        headerCard={false}
-        right={<RightToolsCard />}
-        activeNav="messaging"
-      >
+		title="Messaging — ForgeTomorrow"
+		header={HeaderBox}
+		headerCard={false}
+		right={<RightToolsCard />}
+		rightBare
+		activeNav="messaging"
+	  >
         <RecruiterMessageCenter
           currentUserId={currentUserId}
           jobGroups={jobGroups}
