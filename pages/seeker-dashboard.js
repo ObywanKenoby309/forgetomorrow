@@ -397,15 +397,6 @@ export default function SeekerDashboard() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-    const pageHeader = (
-    <SeekerTitleCard
-      greeting={greeting}
-      title="Your Job Seeker Dashboard"
-      subtitle="You're not alone. Track your momentum, see your wins, and keep moving forward."
-      isMobile={isMobile === true}
-    />
-  );
-
   const [kpi, setKpi] = useState(null);
   const [weeks, setWeeks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -471,9 +462,16 @@ export default function SeekerDashboard() {
         <SeekerLayout
   title="Seeker Dashboard | ForgeTomorrow"
   activeNav={seekerActiveNav}
-  header={pageHeader}
 >
           <div style={{ display: 'grid', gap: GAP, width: '100%' }}>
+
+            {/* 1. Title card */}
+            <SeekerTitleCard
+              greeting={greeting}
+              title="Your Job Seeker Dashboard"
+              subtitle="You're not alone. Track your momentum, see your wins, and keep moving forward."
+              isMobile={true}
+            />
 
             {/* 2. Action Center */}
             <section style={{ ...GLASS, padding: 16 }}>
@@ -644,7 +642,6 @@ export default function SeekerDashboard() {
   title="Seeker Dashboard | ForgeTomorrow"
   activeNav={seekerActiveNav}
   contentFullBleed
-  header={pageHeader}
 >
         <div style={{ padding: 0, margin: 0, width: '100%' }}>
           <div style={{
@@ -654,6 +651,14 @@ export default function SeekerDashboard() {
             gap: GAP,
             width: '100%',
           }}>
+
+            {/* ROW 1, COL 1: Title card */}
+            <SeekerTitleCard
+              greeting={greeting}
+              title="Your Job Seeker Dashboard"
+              subtitle="You're not alone. Track your momentum, see your wins, and keep moving forward."
+              style={{ gridColumn: '1 / 2', gridRow: '1' }}
+            />
 
             {/* ROW 2, COL 1: KPI strip */}
             <section style={{ ...KPI_GLASS, padding: '12px 16px 16px 16px', gridColumn: '1 / 2', gridRow: '2' }}>
