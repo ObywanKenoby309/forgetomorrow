@@ -46,14 +46,12 @@ const BUDGET_RANGES = [
   "Let's talk",
 ];
 
-// ─── Audience stat cards ────────────────────────────────────────────────────────
 const STATS = [
   { value: '3', label: 'High-intent environments', sub: 'Seeker · Recruiter · Coach' },
   { value: '0', label: 'User data sold. Ever.', sub: 'Context without surveillance' },
   { value: '100%', label: 'Placement by intent', sub: 'Built around what people are doing now' },
 ];
 
-// ─── Page content (shared between public and internal shells) ──────────────────
 function AdvertiseContent({ isInternal }) {
   const [form, setForm] = useState({
     contactName: '',
@@ -114,24 +112,24 @@ function AdvertiseContent({ isInternal }) {
     <div
       style={{
         color: isInternal ? '#112033' : '#ffffff',
-        padding: isInternal ? '18px 18px 28px' : 0,
+        padding: isInternal ? '10px 14px 20px' : 0,
       }}
     >
       {/* ── HERO ── */}
       <section
         style={{
           position: 'relative',
-          minHeight: isInternal ? 290 : '100vh',
+          minHeight: isInternal ? 220 : '100vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-          borderRadius: isInternal ? 22 : 0,
-          marginBottom: isInternal ? 18 : 0,
-          border: isInternal ? '1px solid rgba(255,255,255,0.20)' : 'none',
-          boxShadow: isInternal ? '0 18px 38px rgba(0,0,0,0.24)' : 'none',
+          borderRadius: isInternal ? 20 : 0,
+          marginBottom: isInternal ? 12 : 0,
+          border: isInternal ? '1px solid rgba(255,255,255,0.18)' : 'none',
+          boxShadow: isInternal ? '0 14px 28px rgba(0,0,0,0.20)' : 'none',
           backgroundImage: [
-            'linear-gradient(180deg, rgba(10,15,26,0.30) 0%, rgba(10,15,26,0.62) 55%, rgba(10,15,26,0.96) 100%)',
+            'linear-gradient(180deg, rgba(10,15,26,0.28) 0%, rgba(10,15,26,0.58) 55%, rgba(10,15,26,0.92) 100%)',
             "url('/images/advertise-hero.png')",
           ].join(', '),
           backgroundSize: 'cover',
@@ -144,7 +142,7 @@ function AdvertiseContent({ isInternal }) {
             position: 'absolute',
             inset: 0,
             pointerEvents: 'none',
-            background: 'radial-gradient(ellipse at 50% 80%, rgba(255,112,67,0.18) 0%, transparent 60%)',
+            background: 'radial-gradient(ellipse at 50% 80%, rgba(255,112,67,0.16) 0%, transparent 60%)',
           }}
         />
 
@@ -153,20 +151,20 @@ function AdvertiseContent({ isInternal }) {
             position: 'relative',
             zIndex: 1,
             textAlign: 'center',
-            maxWidth: 980,
-            padding: isInternal ? '20px 28px' : '0 24px',
+            maxWidth: 900,
+            padding: isInternal ? '16px 20px' : '0 24px',
           }}
         >
           <div
             style={{
               display: 'inline-block',
-              marginBottom: 20,
-              padding: '6px 14px',
+              marginBottom: isInternal ? 14 : 20,
+              padding: isInternal ? '5px 12px' : '6px 14px',
               borderRadius: 999,
               border: '1px solid rgba(255,112,67,0.40)',
               background: 'rgba(255,112,67,0.12)',
               color: ORANGE,
-              fontSize: 11,
+              fontSize: isInternal ? 10 : 11,
               fontWeight: 700,
               letterSpacing: '0.10em',
               textTransform: 'uppercase',
@@ -177,8 +175,8 @@ function AdvertiseContent({ isInternal }) {
 
           <h1
             style={{
-              margin: '0 0 18px',
-              fontSize: isInternal ? 'clamp(34px, 5vw, 64px)' : 'clamp(38px, 7vw, 80px)',
+              margin: '0 0 12px',
+              fontSize: isInternal ? 'clamp(26px, 3.7vw, 46px)' : 'clamp(38px, 7vw, 80px)',
               fontWeight: 900,
               lineHeight: 1.02,
               letterSpacing: '-0.04em',
@@ -193,10 +191,10 @@ function AdvertiseContent({ isInternal }) {
 
           <p
             style={{
-              margin: '0 auto 36px',
-              maxWidth: 600,
-              fontSize: 'clamp(16px, 2.2vw, 20px)',
-              lineHeight: 1.6,
+              margin: '0 auto 20px',
+              maxWidth: isInternal ? 700 : 600,
+              fontSize: isInternal ? 'clamp(13px, 1.35vw, 17px)' : 'clamp(16px, 2.2vw, 20px)',
+              lineHeight: 1.5,
               color: 'rgba(255,255,255,0.78)',
               fontWeight: 400,
             }}
@@ -209,11 +207,11 @@ function AdvertiseContent({ isInternal }) {
             href="#inquire"
             style={{
               display: 'inline-block',
-              padding: isInternal ? '12px 28px' : '14px 32px',
+              padding: isInternal ? '10px 22px' : '14px 32px',
               borderRadius: 14,
               background: ORANGE,
               color: '#ffffff',
-              fontSize: isInternal ? 14 : 15,
+              fontSize: isInternal ? 13 : 15,
               fontWeight: 800,
               textDecoration: 'none',
               letterSpacing: '0.02em',
@@ -240,7 +238,7 @@ function AdvertiseContent({ isInternal }) {
           background: isInternal ? 'transparent' : DARK,
           borderTop: isInternal ? 'none' : `1px solid rgba(255,112,67,0.20)`,
           borderBottom: isInternal ? 'none' : `1px solid rgba(255,112,67,0.20)`,
-          padding: isInternal ? '0 0 18px' : '40px 24px',
+          padding: isInternal ? '0 0 12px' : '40px 24px',
         }}
       >
         <div
@@ -249,34 +247,34 @@ function AdvertiseContent({ isInternal }) {
             margin: '0 auto',
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 24,
+            gap: isInternal ? 18 : 24,
             textAlign: 'center',
-            borderRadius: isInternal ? 22 : 0,
-            padding: isInternal ? '22px 24px' : 0,
+            borderRadius: isInternal ? 20 : 0,
+            padding: isInternal ? '16px 18px' : 0,
             border: isInternal ? '1px solid rgba(255,255,255,0.18)' : 'none',
-            background: isInternal ? 'rgba(255,255,255,0.72)' : 'transparent',
+            background: isInternal ? 'rgba(255,255,255,0.68)' : 'transparent',
             backdropFilter: isInternal ? 'blur(12px)' : 'none',
             WebkitBackdropFilter: isInternal ? 'blur(12px)' : 'none',
-            boxShadow: isInternal ? '0 16px 34px rgba(0,0,0,0.18)' : 'none',
+            boxShadow: isInternal ? '0 14px 28px rgba(0,0,0,0.16)' : 'none',
           }}
         >
           {STATS.map((s) => (
             <div key={s.label}>
               <div
                 style={{
-                  fontSize: 'clamp(36px, 5vw, 52px)',
+                  fontSize: isInternal ? 'clamp(28px, 3.2vw, 42px)' : 'clamp(36px, 5vw, 52px)',
                   fontWeight: 900,
                   color: ORANGE,
                   letterSpacing: '-0.04em',
                   lineHeight: 1,
-                  marginBottom: 8,
+                  marginBottom: 6,
                 }}
               >
                 {s.value}
               </div>
               <div
                 style={{
-                  fontSize: 14,
+                  fontSize: isInternal ? 13 : 14,
                   fontWeight: 700,
                   color: isInternal ? '#334155' : '#ffffff',
                   marginBottom: 4,
@@ -286,7 +284,7 @@ function AdvertiseContent({ isInternal }) {
               </div>
               <div
                 style={{
-                  fontSize: 12,
+                  fontSize: isInternal ? 11 : 12,
                   color: isInternal ? '#64748b' : 'rgba(255,255,255,0.45)',
                 }}
               >
@@ -301,20 +299,20 @@ function AdvertiseContent({ isInternal }) {
       <section
         style={{
           background: isInternal ? 'transparent' : '#0d1320',
-          padding: isInternal ? '0 0 18px' : '80px 24px',
+          padding: isInternal ? '0 0 12px' : '80px 24px',
         }}
       >
         <div
           style={{
             maxWidth: isInternal ? '100%' : 860,
             margin: '0 auto',
-            borderRadius: isInternal ? 22 : 0,
-            padding: isInternal ? '30px 28px' : 0,
+            borderRadius: isInternal ? 20 : 0,
+            padding: isInternal ? '22px 20px' : 0,
             border: isInternal ? '1px solid rgba(255,255,255,0.18)' : 'none',
             background: isInternal ? 'rgba(255,255,255,0.66)' : 'transparent',
             backdropFilter: isInternal ? 'blur(12px)' : 'none',
             WebkitBackdropFilter: isInternal ? 'blur(12px)' : 'none',
-            boxShadow: isInternal ? '0 16px 34px rgba(0,0,0,0.18)' : 'none',
+            boxShadow: isInternal ? '0 14px 28px rgba(0,0,0,0.16)' : 'none',
           }}
         >
           <div
@@ -324,15 +322,15 @@ function AdvertiseContent({ isInternal }) {
               letterSpacing: '0.10em',
               textTransform: 'uppercase',
               color: ORANGE,
-              marginBottom: 16,
+              marginBottom: 12,
             }}
           >
             Why us
           </div>
           <h2
             style={{
-              margin: '0 0 20px',
-              fontSize: 'clamp(28px, 4vw, 44px)',
+              margin: '0 0 14px',
+              fontSize: isInternal ? 'clamp(24px, 3vw, 34px)' : 'clamp(28px, 4vw, 44px)',
               fontWeight: 900,
               letterSpacing: '-0.03em',
               lineHeight: 1.1,
@@ -345,11 +343,11 @@ function AdvertiseContent({ isInternal }) {
           </h2>
           <p
             style={{
-              maxWidth: 620,
-              fontSize: 17,
-              lineHeight: 1.7,
+              maxWidth: 700,
+              fontSize: isInternal ? 15 : 17,
+              lineHeight: 1.65,
               color: isInternal ? '#334155' : 'rgba(255,255,255,0.70)',
-              marginBottom: 48,
+              marginBottom: isInternal ? 26 : 48,
             }}
           >
             Most platforms chase attention. ForgeTomorrow meets people in motion. Your brand
@@ -359,8 +357,8 @@ function AdvertiseContent({ isInternal }) {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-              gap: 20,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: isInternal ? 14 : 20,
             }}
           >
             {[
@@ -385,13 +383,11 @@ function AdvertiseContent({ isInternal }) {
                 key={card.title}
                 style={{
                   borderRadius: 16,
-                  padding: '22px 20px',
+                  padding: isInternal ? '18px 16px' : '22px 20px',
                   border: isInternal
                     ? '1px solid rgba(255,255,255,0.18)'
                     : '1px solid rgba(255,255,255,0.12)',
-                  background: isInternal
-                    ? 'rgba(255,255,255,0.52)'
-                    : 'rgba(255,255,255,0.05)',
+                  background: isInternal ? 'rgba(255,255,255,0.52)' : 'rgba(255,255,255,0.05)',
                   backdropFilter: isInternal ? 'blur(10px)' : 'none',
                   WebkitBackdropFilter: isInternal ? 'blur(10px)' : 'none',
                   boxShadow: isInternal ? '0 10px 24px rgba(0,0,0,0.10)' : 'none',
@@ -403,12 +399,12 @@ function AdvertiseContent({ isInternal }) {
                     height: 3,
                     borderRadius: 999,
                     background: ORANGE,
-                    marginBottom: 14,
+                    marginBottom: 12,
                   }}
                 />
                 <div
                   style={{
-                    fontSize: 15,
+                    fontSize: isInternal ? 14 : 15,
                     fontWeight: 800,
                     color: isInternal ? '#0a0f1a' : '#ffffff',
                     marginBottom: 8,
@@ -418,8 +414,8 @@ function AdvertiseContent({ isInternal }) {
                 </div>
                 <div
                   style={{
-                    fontSize: 13,
-                    lineHeight: 1.6,
+                    fontSize: isInternal ? 12.5 : 13,
+                    lineHeight: 1.55,
                     color: isInternal ? '#475569' : 'rgba(255,255,255,0.60)',
                   }}
                 >
@@ -435,20 +431,20 @@ function AdvertiseContent({ isInternal }) {
       <section
         style={{
           background: isInternal ? 'transparent' : DARK,
-          padding: isInternal ? '0 0 18px' : '80px 24px',
+          padding: isInternal ? '0 0 12px' : '80px 24px',
         }}
       >
         <div
           style={{
             maxWidth: isInternal ? '100%' : 860,
             margin: '0 auto',
-            borderRadius: isInternal ? 22 : 0,
-            padding: isInternal ? '30px 28px' : 0,
+            borderRadius: isInternal ? 20 : 0,
+            padding: isInternal ? '22px 20px' : 0,
             border: isInternal ? '1px solid rgba(255,255,255,0.18)' : 'none',
             background: isInternal ? 'rgba(255,255,255,0.66)' : 'transparent',
             backdropFilter: isInternal ? 'blur(12px)' : 'none',
             WebkitBackdropFilter: isInternal ? 'blur(12px)' : 'none',
-            boxShadow: isInternal ? '0 16px 34px rgba(0,0,0,0.18)' : 'none',
+            boxShadow: isInternal ? '0 14px 28px rgba(0,0,0,0.16)' : 'none',
           }}
         >
           <div
@@ -458,15 +454,15 @@ function AdvertiseContent({ isInternal }) {
               letterSpacing: '0.10em',
               textTransform: 'uppercase',
               color: ORANGE,
-              marginBottom: 16,
+              marginBottom: 12,
             }}
           >
             Ad surfaces
           </div>
           <h2
             style={{
-              margin: '0 0 40px',
-              fontSize: 'clamp(28px, 4vw, 44px)',
+              margin: '0 0 24px',
+              fontSize: isInternal ? 'clamp(24px, 3vw, 34px)' : 'clamp(28px, 4vw, 44px)',
               fontWeight: 900,
               letterSpacing: '-0.03em',
               lineHeight: 1.1,
@@ -479,8 +475,8 @@ function AdvertiseContent({ isInternal }) {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: 16,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: isInternal ? 14 : 16,
             }}
           >
             {SURFACES.map((s) => (
@@ -488,22 +484,20 @@ function AdvertiseContent({ isInternal }) {
                 key={s.id}
                 style={{
                   borderRadius: 16,
-                  padding: '24px 20px',
+                  padding: isInternal ? '18px 16px' : '24px 20px',
                   border: isInternal
                     ? '1px solid rgba(255,255,255,0.18)'
                     : '1px solid rgba(255,255,255,0.12)',
-                  background: isInternal
-                    ? 'rgba(255,255,255,0.52)'
-                    : 'rgba(255,255,255,0.04)',
+                  background: isInternal ? 'rgba(255,255,255,0.52)' : 'rgba(255,255,255,0.04)',
                   backdropFilter: isInternal ? 'blur(10px)' : 'none',
                   WebkitBackdropFilter: isInternal ? 'blur(10px)' : 'none',
                   boxShadow: isInternal ? '0 10px 24px rgba(0,0,0,0.10)' : 'none',
                 }}
               >
-                <div style={{ fontSize: 28, marginBottom: 12 }}>{s.icon}</div>
+                <div style={{ fontSize: isInternal ? 24 : 28, marginBottom: 10 }}>{s.icon}</div>
                 <div
                   style={{
-                    fontSize: 16,
+                    fontSize: isInternal ? 15 : 16,
                     fontWeight: 800,
                     color: isInternal ? '#0a0f1a' : '#ffffff',
                     marginBottom: 8,
@@ -513,8 +507,8 @@ function AdvertiseContent({ isInternal }) {
                 </div>
                 <div
                   style={{
-                    fontSize: 13,
-                    lineHeight: 1.6,
+                    fontSize: isInternal ? 12.5 : 13,
+                    lineHeight: 1.55,
                     color: isInternal ? '#475569' : 'rgba(255,255,255,0.55)',
                   }}
                 >
@@ -539,13 +533,13 @@ function AdvertiseContent({ isInternal }) {
           style={{
             maxWidth: isInternal ? '100%' : 640,
             margin: '0 auto',
-            borderRadius: isInternal ? 22 : 0,
-            padding: isInternal ? '30px 28px' : 0,
+            borderRadius: isInternal ? 20 : 0,
+            padding: isInternal ? '22px 20px' : 0,
             border: isInternal ? '1px solid rgba(255,255,255,0.18)' : 'none',
             background: isInternal ? 'rgba(255,255,255,0.66)' : 'transparent',
             backdropFilter: isInternal ? 'blur(12px)' : 'none',
             WebkitBackdropFilter: isInternal ? 'blur(12px)' : 'none',
-            boxShadow: isInternal ? '0 16px 34px rgba(0,0,0,0.18)' : 'none',
+            boxShadow: isInternal ? '0 14px 28px rgba(0,0,0,0.16)' : 'none',
           }}
         >
           <div
@@ -555,7 +549,7 @@ function AdvertiseContent({ isInternal }) {
               letterSpacing: '0.10em',
               textTransform: 'uppercase',
               color: ORANGE,
-              marginBottom: 16,
+              marginBottom: 12,
             }}
           >
             Get started
@@ -563,7 +557,7 @@ function AdvertiseContent({ isInternal }) {
           <h2
             style={{
               margin: '0 0 8px',
-              fontSize: 'clamp(28px, 4vw, 40px)',
+              fontSize: isInternal ? 'clamp(24px, 3vw, 34px)' : 'clamp(28px, 4vw, 40px)',
               fontWeight: 900,
               letterSpacing: '-0.03em',
               lineHeight: 1.1,
@@ -574,8 +568,8 @@ function AdvertiseContent({ isInternal }) {
           </h2>
           <p
             style={{
-              margin: '0 0 40px',
-              fontSize: 15,
+              margin: '0 0 24px',
+              fontSize: isInternal ? 14 : 15,
               color: isInternal ? '#475569' : 'rgba(255,255,255,0.55)',
               lineHeight: 1.6,
             }}
@@ -588,7 +582,7 @@ function AdvertiseContent({ isInternal }) {
             <div
               style={{
                 borderRadius: 18,
-                padding: '40px 32px',
+                padding: isInternal ? '28px 24px' : '40px 32px',
                 textAlign: 'center',
                 border: `1px solid rgba(255,112,67,0.30)`,
                 background: isInternal ? 'rgba(255,255,255,0.52)' : 'rgba(255,112,67,0.08)',
@@ -597,10 +591,10 @@ function AdvertiseContent({ isInternal }) {
                 boxShadow: isInternal ? '0 10px 24px rgba(0,0,0,0.10)' : 'none',
               }}
             >
-              <div style={{ fontSize: 36, marginBottom: 16 }}>🔥</div>
+              <div style={{ fontSize: 32, marginBottom: 14 }}>🔥</div>
               <div
                 style={{
-                  fontSize: 22,
+                  fontSize: isInternal ? 20 : 22,
                   fontWeight: 900,
                   color: isInternal ? '#0a0f1a' : '#ffffff',
                   marginBottom: 10,
@@ -610,7 +604,7 @@ function AdvertiseContent({ isInternal }) {
               </div>
               <p
                 style={{
-                  fontSize: 15,
+                  fontSize: isInternal ? 14 : 15,
                   color: isInternal ? '#475569' : 'rgba(255,255,255,0.60)',
                   lineHeight: 1.6,
                   margin: 0,
@@ -625,7 +619,7 @@ function AdvertiseContent({ isInternal }) {
             <div
               style={{
                 borderRadius: 20,
-                padding: '32px 28px',
+                padding: isInternal ? '22px 20px' : '32px 28px',
                 border: isInternal
                   ? '1px solid rgba(255,255,255,0.18)'
                   : '1px solid rgba(255,255,255,0.12)',
@@ -634,13 +628,13 @@ function AdvertiseContent({ isInternal }) {
                 WebkitBackdropFilter: isInternal ? 'blur(10px)' : 'none',
                 boxShadow: isInternal ? '0 10px 24px rgba(0,0,0,0.10)' : 'none',
                 display: 'grid',
-                gap: 18,
+                gap: isInternal ? 14 : 18,
               }}
             >
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
+                  gridTemplateColumns: isInternal ? '1fr 1fr' : '1fr 1fr',
                   gap: 14,
                 }}
               >
@@ -664,7 +658,7 @@ function AdvertiseContent({ isInternal }) {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
+                  gridTemplateColumns: isInternal ? '1fr 1fr' : '1fr 1fr',
                   gap: 14,
                 }}
               >
@@ -707,9 +701,9 @@ function AdvertiseContent({ isInternal }) {
                         type="button"
                         onClick={() => toggleSurface(s.id)}
                         style={{
-                          padding: '8px 16px',
+                          padding: isInternal ? '7px 14px' : '8px 16px',
                           borderRadius: 999,
-                          fontSize: 13,
+                          fontSize: isInternal ? 12 : 13,
                           fontWeight: 700,
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
@@ -759,9 +753,9 @@ function AdvertiseContent({ isInternal }) {
                         type="button"
                         onClick={() => setForm((p) => ({ ...p, budgetRange: b }))}
                         style={{
-                          padding: '8px 14px',
+                          padding: isInternal ? '7px 12px' : '8px 14px',
                           borderRadius: 999,
-                          fontSize: 12,
+                          fontSize: isInternal ? 11.5 : 12,
                           fontWeight: 700,
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
@@ -816,7 +810,7 @@ function AdvertiseContent({ isInternal }) {
                       : '1px solid rgba(255,255,255,0.14)',
                     background: isInternal ? 'rgba(255,255,255,0.74)' : 'rgba(255,255,255,0.06)',
                     color: isInternal ? '#112033' : '#ffffff',
-                    fontSize: 14,
+                    fontSize: isInternal ? 13 : 14,
                     lineHeight: 1.6,
                     resize: 'vertical',
                     outline: 'none',
@@ -847,11 +841,11 @@ function AdvertiseContent({ isInternal }) {
                 onClick={handleSubmit}
                 disabled={submitting}
                 style={{
-                  padding: '14px 28px',
+                  padding: isInternal ? '12px 22px' : '14px 28px',
                   borderRadius: 12,
                   background: submitting ? 'rgba(255,112,67,0.50)' : ORANGE,
                   color: '#ffffff',
-                  fontSize: 15,
+                  fontSize: isInternal ? 14 : 15,
                   fontWeight: 800,
                   border: 'none',
                   cursor: submitting ? 'not-allowed' : 'pointer',
@@ -867,7 +861,7 @@ function AdvertiseContent({ isInternal }) {
               <p
                 style={{
                   margin: 0,
-                  fontSize: 12,
+                  fontSize: isInternal ? 11.5 : 12,
                   textAlign: 'center',
                   color: isInternal ? '#94a3b8' : 'rgba(255,255,255,0.35)',
                 }}
@@ -888,7 +882,6 @@ function AdvertiseContent({ isInternal }) {
   );
 }
 
-// ─── Reusable field ─────────────────────────────────────────────────────────────
 function Field({ label, value, onChange, placeholder, type = 'text', isInternal }) {
   return (
     <div>
@@ -911,14 +904,14 @@ function Field({ label, value, onChange, placeholder, type = 'text', isInternal 
         placeholder={placeholder}
         style={{
           width: '100%',
-          padding: '11px 13px',
+          padding: isInternal ? '10px 12px' : '11px 13px',
           borderRadius: 10,
           border: isInternal
             ? '1px solid rgba(51,65,85,0.25)'
             : '1px solid rgba(255,255,255,0.14)',
           background: isInternal ? 'rgba(255,255,255,0.74)' : 'rgba(255,255,255,0.06)',
           color: isInternal ? '#112033' : '#ffffff',
-          fontSize: 14,
+          fontSize: isInternal ? 13 : 14,
           outline: 'none',
           boxSizing: 'border-box',
           fontFamily: 'inherit',
@@ -928,7 +921,6 @@ function Field({ label, value, onChange, placeholder, type = 'text', isInternal 
   );
 }
 
-// ─── Main export ───────────────────────────────────────────────────────────────
 export default function Advertise() {
   const router = useRouter();
   const [authState, setAuthState] = useState('loading');
