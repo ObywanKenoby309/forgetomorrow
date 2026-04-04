@@ -710,39 +710,51 @@ export default function SeekerDashboard() {
               />
             </div>
 
-            {/* COL 2, ROWS 1–3: Right Rail */}
+            {/* COL 2, ROWS 1–2: Sponsored */}
             <aside
               style={{
                 ...GLASS,
                 gridColumn: '2 / 3',
-                gridRow: '1 / 4',
+                gridRow: '1 / 3',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: GAP,
+                padding: 16,
+                boxSizing: 'border-box',
                 alignSelf: 'stretch',
+              }}
+            >
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94A3B8', marginBottom: 8 }}>
+                Sponsored
+              </div>
+              <div style={{ flex: 1, minHeight: 160 }}>
+                <RightRailPlacementManager slot="right_rail_1" />
+              </div>
+            </aside>
+
+            {/* COL 2, ROW 3: Profile Health — beside Action Center only */}
+            <aside
+              style={{
+                ...KPI_GLASS,
+                gridColumn: '2 / 3',
+                gridRow: '3',
                 padding: 16,
                 boxSizing: 'border-box',
               }}
             >
-              <div style={{ flex: 2, minHeight: 160 }}>
-                <RightRailPlacementManager slot="right_rail_1" />
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 900,
+                  marginBottom: 10,
+                  color: '#0F172A',
+                  lineHeight: 1.25,
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                Profile Health
               </div>
-              <div style={{ ...KPI_GLASS, padding: 16, flex: 1 }}>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 900,
-                    marginBottom: 10,
-                    color: '#0F172A',
-                    lineHeight: 1.25,
-                    letterSpacing: '-0.01em',
-                  }}
-                >
-                  Profile Health
-                </div>
-                <div style={{ ...WHITE_CARD, padding: 12 }}>
-                  <ProfilePerformanceTeaser />
-                </div>
+              <div style={{ ...WHITE_CARD, padding: 12 }}>
+                <ProfilePerformanceTeaser />
               </div>
             </aside>
 
