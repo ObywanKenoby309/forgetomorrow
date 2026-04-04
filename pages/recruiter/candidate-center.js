@@ -24,10 +24,12 @@ const GLASS_OVERLAY = {
 };
 
 const WHITE_CARD = {
-  background: "rgba(255,255,255,0.97)",
-  border: "1px solid rgba(255,255,255,0.60)",
-  borderRadius: 14,
-  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+  background: "rgba(255,255,255,0.72)", // lighter glass feel
+  border: "1px solid rgba(255,255,255,0.35)",
+  borderRadius: 16,
+  boxShadow: "0 6px 18px rgba(15,23,42,0.10)", // softer, less heavy
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
   boxSizing: "border-box",
   position: "relative",
   zIndex: 1,
@@ -440,9 +442,7 @@ function DesktopCard({ tile }) {
     <Link
       href={tile.href}
       style={{
-        ...GLASS,
-        ...GLASS_OVERLAY,
-        padding: 16,
+        padding: 0,
         display: "grid",
         gap: 10,
         minHeight: 150,
@@ -450,48 +450,48 @@ function DesktopCard({ tile }) {
         color: "inherit",
       }}
     >
-      <div style={{ ...WHITE_CARD, padding: 16, minHeight: 118, display: "grid", gap: 10 }}>
+      <div style={{ ...WHITE_CARD, padding: 18, minHeight: 120, display: "grid", gap: 8 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
           <div
-            style={{
-              fontWeight: 900,
-              color: ORANGE,
-              fontSize: 18,
-              lineHeight: 1.2,
-              letterSpacing: "-0.01em",
-              ...ORANGE_HEADING_LIFT,
-            }}
-          >
-            {tile.title}
-          </div>
+  style={{
+    fontWeight: 800,
+    color: ORANGE,
+    fontSize: 18,
+    lineHeight: 1.2,
+    letterSpacing: "-0.01em",
+    textShadow: "0 1px 2px rgba(15,23,42,0.28)",
+  }}
+>
+  {tile.title}
+</div>
           {tile.note ? (
             <div
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: ORANGE,
-                ...ORANGE_HEADING_LIFT,
-              }}
-            >
-              {tile.note}
-            </div>
+  style={{
+    fontSize: 12,
+    fontWeight: 700,
+    color: ORANGE,
+    textShadow: "0 1px 2px rgba(15,23,42,0.22)",
+  }}
+>
+  {tile.note}
+</div>
           ) : null}
         </div>
 
-        <div style={{ color: "#607D8B", fontSize: 13, lineHeight: 1.5 }}>{tile.desc}</div>
+        <div style={{ color: "#546E7A", fontSize: 13, lineHeight: 1.55 }}>{tile.desc}</div>
 
         <div
-          style={{
-            marginTop: "auto",
-            color: ORANGE,
-            fontWeight: 800,
-            fontSize: 13,
-            lineHeight: 1.2,
-            ...ORANGE_HEADING_LIFT,
-          }}
-        >
-          Open →
-        </div>
+  style={{
+    marginTop: "auto",
+    color: ORANGE,
+    fontWeight: 700,
+    fontSize: 13,
+    lineHeight: 1.2,
+    textShadow: "0 1px 2px rgba(15,23,42,0.22)",
+  }}
+>
+  Open →
+</div>
       </div>
     </Link>
   );
@@ -584,13 +584,13 @@ export default function CandidateCenter() {
       right={RightColumn}
       activeNav="candidate-center"
     >
-      <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
+      <section style={{ padding: 0 }}>
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: 14,
+            marginBottom: 12,
             gap: 12,
           }}
         >
