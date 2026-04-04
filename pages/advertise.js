@@ -112,7 +112,7 @@ function AdvertiseContent({ isInternal }) {
     <div
       style={{
         color: isInternal ? '#112033' : '#ffffff',
-        padding: isInternal ? '10px 14px 20px' : 0,
+        padding: isInternal ? '0px 14px 20px' : 0,
       }}
     >
       {/* ── HERO ── */}
