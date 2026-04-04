@@ -120,13 +120,18 @@ export default function RecruiterCalendarInterface({
 
   /* ---------- styles ---------- */
   const shell = {
-    background: '#F4F6F8',
-    borderRadius: 16,
-    border: '1px solid #E0E0E0',
-    padding: 16,
-    width: '100%',
-    boxSizing: 'border-box',
-  };
+  background: 'rgba(255,255,255,0.65)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+
+  borderRadius: 16,
+  border: '1px solid rgba(255,255,255,0.22)',
+  boxShadow: '0 10px 24px rgba(15,23,42,0.12)',
+
+  padding: 16,
+  width: '100%',
+  boxSizing: 'border-box',
+};
 
   const header = {
     display: 'flex',
