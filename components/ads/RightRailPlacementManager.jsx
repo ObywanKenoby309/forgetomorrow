@@ -84,9 +84,9 @@ const HOUSE_AD_COPY = {
 };
 
 const HOUSE_AD_IMAGES = {
-  seeker: '/ads/house/seeker-house-ad.webp',
-  coaching: '/ads/house/coaching-house-ad.webp',
-  recruiter: '/ads/house/recruiter-house-ad.webp',
+  seeker: '/ads/house/seeker-house-ad.png',
+  coaching: '/ads/house/coaching-house-ad.png',
+  recruiter: '/ads/house/recruiter-house-ad.png',
 };
 
 function Card({ title, children }) {
