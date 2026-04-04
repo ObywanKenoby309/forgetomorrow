@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
+import LandingHeader from '@/components/LandingHeader';
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const ORANGE = '#FF7043';
@@ -918,25 +919,26 @@ export default function Advertise() {
 
   // ── Public visitor — _app.js provides LandingHeader + LandingFooter ──
   if (authState === 'public') {
-    return (
-      <>
-        <Head>
-          <title>Advertise — ForgeTomorrow</title>
-          <meta
-            name="description"
-            content="Reach job seekers, recruiters, and career coaches on ForgeTomorrow. Intent-based advertising with zero user data sold."
-          />
-        </Head>
-        <AdvertiseContent isInternal={false} />
-      </>
-    );
-  }
+  return (
+    <>
+      <Head>
+        <title>Advertise — ForgeTomorrow</title>
+        <meta
+          name="description"
+          content="Reach job seekers, recruiters, and career coaches on ForgeTomorrow. Intent-based advertising with zero user data sold."
+        />
+      </Head>
+      <LandingHeader />
+      <AdvertiseContent isInternal={false} />
+    </>
+  );
+}
 
   // ── Logged-in coach ──
   if (authState === 'coach') {
     return (
       <CoachingLayout
-        title="Advertise — ForgeTomorrow"
+        title="Advertise - ForgeTomorrow"
         activeNav=""
       >
         <AdvertiseContent isInternal={true} />
@@ -948,7 +950,7 @@ export default function Advertise() {
   if (authState === 'recruiter') {
     return (
       <RecruiterLayout
-        title="Advertise — ForgeTomorrow"
+        title="Advertise - ForgeTomorrow"
         activeNav=""
       >
         <AdvertiseContent isInternal={true} />
@@ -959,7 +961,7 @@ export default function Advertise() {
   // ── Logged-in seeker (default for all other auth states) ──
   return (
     <SeekerLayout
-      title="Advertise — ForgeTomorrow"
+      title="Advertise - ForgeTomorrow"
       activeNav=""
     >
       <AdvertiseContent isInternal={true} />

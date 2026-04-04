@@ -258,7 +258,7 @@ function AppShell({ Component, pageProps }) {
     ['/', '/about', '/features', '/press', '/status', '/company', '/product', '/legal'].includes(router.pathname) && router.pathname !== '/advertise';
 
   const forgeBgPosition = router.pathname === '/' ? '35% center' : 'center';
-  const renderLandingHeader = isPublicEffective && !isUniversalPage;
+  const renderLandingHeader = isPublicEffective && !isUniversalPage && router.pathname !== '/advertise';
 
   // Only load cookie banner on production hostname
   const isBrowser = typeof window !== 'undefined';
