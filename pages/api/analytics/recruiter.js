@@ -296,7 +296,7 @@ const sourceGroups = await prisma.application.groupBy({
 });
 
 const SOURCE_LABELS = {
-  FORGETOMORROW: "ForgeTomorrow",
+  FORGETOMORROW: "Forge",
   EXTERNAL:      "External",
   REFERRAL:      "Referral",
   CAREERS:       "Careers",
