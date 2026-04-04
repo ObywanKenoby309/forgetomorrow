@@ -873,9 +873,16 @@ export default function Advertise() {
         return r.json();
       })
       .then((data) => {
-        if (!alive) return;
-        const role = String(data?.user?.role || data?.role || '').toUpperCase();
-        const plan = String(data?.user?.plan || data?.plan || '').toUpperCase();
+  if (!alive) return;
+
+  // me.js returns 200 with user: null when logged out
+  if (!data?.user) {
+    setAuthState('public');
+    return;
+  }
+
+  const role = String(data?.user?.role || data?.role || '').toUpperCase();
+  const plan = String(data?.user?.plan || data?.plan || '').toUpperCase();
 
         if (role === 'COACH') {
           setAuthState('coach');
