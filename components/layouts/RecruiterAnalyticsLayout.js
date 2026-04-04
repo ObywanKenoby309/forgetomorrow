@@ -29,6 +29,7 @@ import RecruiterSidebar from "@/components/recruiter/RecruiterSidebar";
 import MobileBottomBar from "@/components/mobile/MobileBottomBar";
 import SupportFloatingButton from "@/components/SupportFloatingButton";
 import AnalyticsFilterBar from "@/components/analytics/AnalyticsFilterBar";
+import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 
 // ─── Isomorphic layout effect ─────────────────────────────────────────────────
 const useIsomorphicLayoutEffect =
@@ -79,43 +80,7 @@ const RIGHT_W = 240;
 
 // ─── Default right rail ───────────────────────────────────────────────────────
 function DefaultRightRail() {
-  return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
-        <div
-          style={{
-            fontSize: 10,
-            fontWeight: 800,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: "#94A3B8",
-            marginBottom: 8,
-          }}
-        >
-          Sponsored
-        </div>
-        <div
-          style={{
-            borderRadius: 12,
-            border: "1px dashed rgba(100,116,139,0.24)",
-            background: "rgba(255,255,255,0.60)",
-            minHeight: 420,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-            textAlign: "center",
-            color: "#94A3B8",
-            fontSize: 13,
-            fontWeight: 700,
-            boxSizing: "border-box",
-          }}
-        >
-          Reserved ad / sponsor panel
-        </div>
-      </div>
-    </div>
-  );
+  return <RightRailPlacementManager slot="right_rail_1" />;
 }
 
 // ─── Analytics title card ─────────────────────────────────────────────────────
