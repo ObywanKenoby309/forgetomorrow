@@ -44,6 +44,11 @@ const ORANGE = "#FF7043";
 const SLATE = "#1E293B";
 const MUTED = "#475569";
 
+const ORANGE_HEADING_LIFT = {
+  textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
+  fontWeight: 900,
+};
+
 // desktop bleed settings
 const LEFT_BLEED = -(240 + 12);
 const RIGHT_BLEED = -(240 + 12);
@@ -254,12 +259,27 @@ function ReportCard({ title, description, href, value }) {
           >
             Full report
           </div>
-          <div style={{ fontSize: 15, fontWeight: 900, color: "#0F172A", letterSpacing: "-0.01em", lineHeight: 1.25 }}>
-  {title}
-</div>
-          <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.55, marginTop: 6 }}>
-  {description}
-</div>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 900,
+              color: "#0F172A",
+              letterSpacing: "-0.01em",
+              lineHeight: 1.25,
+            }}
+          >
+            {title}
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: "#64748B",
+              lineHeight: 1.55,
+              marginTop: 6,
+            }}
+          >
+            {description}
+          </div>
         </div>
         <div
           style={{
@@ -270,8 +290,19 @@ function ReportCard({ title, description, href, value }) {
             gap: 12,
           }}
         >
-          <div style={{ fontSize: 18, fontWeight: 900, color: "#0F172A", lineHeight: 1.15 }}>{value}</div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: ORANGE }}>Open report →</div>
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 900,
+              color: "#0F172A",
+              lineHeight: 1.15,
+            }}
+          >
+            {value}
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: ORANGE }}>
+            Open report →
+          </div>
         </div>
       </div>
     </Link>
@@ -356,42 +387,39 @@ function Body() {
       <div
         style={{
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
           marginBottom: 12,
         }}
       >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-  style={{
-    fontSize: 18,
-    fontWeight: 900,
-    color: ORANGE,
-    letterSpacing: "-0.01em",
-    lineHeight: 1.25,
-  }}
->
-  Recruiter Activity
-</div>
-          <div style={{ fontSize: 13, color: "#64748B", marginTop: 4, lineHeight: 1.5 }}>
-  Applications and interviews this window.
-</div>
+        <div
+          style={{
+            fontSize: 18,
+            color: ORANGE,
+            lineHeight: 1.25,
+            letterSpacing: "-0.01em",
+            margin: 0,
+            ...ORANGE_HEADING_LIFT,
+          }}
+        >
+          Recruiter Activity
         </div>
         <Link
-  href="/recruiter/analytics/reports?report=recruiters"
-  style={{
-    color: ORANGE,
-    fontWeight: 800,
-    fontSize: 13,
-    lineHeight: 1.2,
-    whiteSpace: "nowrap",
-    flexShrink: 0,
-    textDecoration: "none",
-  }}
->
-  Full report →
-</Link>
+          href="/recruiter/analytics/reports?report=recruiters"
+          style={{
+            color: ORANGE,
+            fontWeight: 800,
+            fontSize: 13,
+            lineHeight: 1.2,
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+            textDecoration: "none",
+            ...ORANGE_HEADING_LIFT,
+          }}
+        >
+          Full report →
+        </Link>
       </div>
       <RecruiterActivity data={data?.recruiterActivity || []} />
     </div>
@@ -399,19 +427,28 @@ function Body() {
 
   const forgeInsightsCard = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
           <div
-  style={{
-    fontSize: 18,
-    fontWeight: 900,
-    color: ORANGE,
-    letterSpacing: "-0.01em",
-    lineHeight: 1.25,
-  }}
->
-  Forge Insights
-</div>
+            style={{
+              fontSize: 18,
+              color: ORANGE,
+              lineHeight: 1.25,
+              letterSpacing: "-0.01em",
+              margin: 0,
+              ...ORANGE_HEADING_LIFT,
+            }}
+          >
+            Forge Insights
+          </div>
           <span
             style={{
               display: "inline-block",
@@ -420,12 +457,10 @@ function Body() {
               borderRadius: "50%",
               background: ORANGE,
               boxShadow: "0 0 0 3px rgba(255,112,67,0.18)",
+              flexShrink: 0,
             }}
           />
         </div>
-        <div style={{ fontSize: 13, color: "#64748B", marginTop: 4, lineHeight: 1.5 }}>
-  What matters most right now.
-</div>
       </div>
 
       {insightsLoading && !insights ? (
@@ -451,42 +486,39 @@ function Body() {
       <div
         style={{
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
           marginBottom: 12,
         }}
       >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-  style={{
-    fontSize: 18,
-    fontWeight: 900,
-    color: ORANGE,
-    letterSpacing: "-0.01em",
-    lineHeight: 1.25,
-  }}
->
-  Source Performance
-</div>
-          <div style={{ fontSize: 13, color: "#64748B", marginTop: 4, lineHeight: 1.5 }}>
-  Channels producing the strongest outcomes.
-</div>
+        <div
+          style={{
+            fontSize: 18,
+            color: ORANGE,
+            lineHeight: 1.25,
+            letterSpacing: "-0.01em",
+            margin: 0,
+            ...ORANGE_HEADING_LIFT,
+          }}
+        >
+          Source Performance
         </div>
         <Link
-  href="/recruiter/analytics/reports?report=sources"
-  style={{
-    color: ORANGE,
-    fontWeight: 800,
-    fontSize: 13,
-    lineHeight: 1.2,
-    whiteSpace: "nowrap",
-    flexShrink: 0,
-    textDecoration: "none",
-  }}
->
-  Full report →
-</Link>
+          href="/recruiter/analytics/reports?report=sources"
+          style={{
+            color: ORANGE,
+            fontWeight: 800,
+            fontSize: 13,
+            lineHeight: 1.2,
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+            textDecoration: "none",
+            ...ORANGE_HEADING_LIFT,
+          }}
+        >
+          Full report →
+        </Link>
       </div>
       <SourceBreakdown data={data?.sources || []} />
     </div>
@@ -497,42 +529,39 @@ function Body() {
       <div
         style={{
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
           marginBottom: 12,
         }}
       >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-  style={{
-    fontSize: 18,
-    fontWeight: 900,
-    color: ORANGE,
-    letterSpacing: "-0.01em",
-    lineHeight: 1.25,
-  }}
->
-  Application Funnel
-</div>
-          <div style={{ fontSize: 13, color: "#64748B", marginTop: 4, lineHeight: 1.5 }}>
-  Movement from interest to hire.
-</div>
+        <div
+          style={{
+            fontSize: 18,
+            color: ORANGE,
+            lineHeight: 1.25,
+            letterSpacing: "-0.01em",
+            margin: 0,
+            ...ORANGE_HEADING_LIFT,
+          }}
+        >
+          Application Funnel
         </div>
         <Link
-  href="/recruiter/analytics/reports?report=funnel"
-  style={{
-    color: ORANGE,
-    fontWeight: 800,
-    fontSize: 13,
-    lineHeight: 1.2,
-    whiteSpace: "nowrap",
-    flexShrink: 0,
-    textDecoration: "none",
-  }}
->
-  Full report →
-</Link>
+          href="/recruiter/analytics/reports?report=funnel"
+          style={{
+            color: ORANGE,
+            fontWeight: 800,
+            fontSize: 13,
+            lineHeight: 1.2,
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+            textDecoration: "none",
+            ...ORANGE_HEADING_LIFT,
+          }}
+        >
+          Full report →
+        </Link>
       </div>
       <ApplicationFunnel data={data?.funnel || []} />
     </div>
@@ -541,19 +570,27 @@ function Body() {
   const reportGatewaysCard = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
       <div
-  style={{
-    fontSize: 18,
-    fontWeight: 900,
-    color: ORANGE,
-    letterSpacing: "-0.01em",
-    lineHeight: 1.25,
-  }}
->
-  Report Gateways
-</div>
-      <div style={{ fontSize: 13, color: "#64748B", marginTop: 4, marginBottom: 12, lineHeight: 1.5 }}>
-  Drill into dedicated reports for the why.
-</div>
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 18,
+            color: ORANGE,
+            lineHeight: 1.25,
+            letterSpacing: "-0.01em",
+            margin: 0,
+            ...ORANGE_HEADING_LIFT,
+          }}
+        >
+          Report Gateways
+        </div>
+      </div>
       <div style={{ display: "grid", gap: 10 }}>
         <ReportCard
           title="Time-to-Fill"
@@ -745,9 +782,17 @@ function Body() {
       {isEnterprise ? <>{DesktopBlock}</> : <FeatureLock label="Full Analytics">{DesktopBlock}</FeatureLock>}
 
       {data?.meta?.refreshedAt && (
-        <div style={{ fontSize: 12, color: "#64748B", textAlign: "right", fontWeight: 600, lineHeight: 1.4 }}>
-  Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
-</div>
+        <div
+          style={{
+            fontSize: 12,
+            color: "#64748B",
+            textAlign: "right",
+            fontWeight: 600,
+            lineHeight: 1.4,
+          }}
+        >
+          Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
+        </div>
       )}
     </RecruiterAnalyticsLayout>
   );
