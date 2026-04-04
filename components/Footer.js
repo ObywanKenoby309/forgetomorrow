@@ -9,25 +9,28 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 space-y-4">
         {/* Top row: utility/help */}
         <nav
-          aria-label="Internal utilities"
-          className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs md:text-sm"
-        >
-          <Link href="/help" className="hover:text-[#FF7043] transition">
-            Help Center
-          </Link>
-          <Link href="/status" className="hover:text-[#FF7043] transition">
-            Status
-          </Link>
-          <Link href="/changelog" className="hover:text-[#FF7043] transition">
-            Changelog
-          </Link>
-          <Link href="/shortcuts" className="hover:text-[#FF7043] transition">
-            Keyboard Shortcuts
-          </Link>
-          <Link href="/settings" className="hover:text-[#FF7043] transition">
-            Settings
-          </Link>
-        </nav>
+  aria-label="Internal utilities"
+  className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs md:text-sm"
+>
+  <Link href="/help" className="hover:text-[#FF7043] transition">
+    Help Center
+  </Link>
+  <Link href="/advertise" className="hover:text-[#FF7043] transition">
+    Advertise
+  </Link>
+  <Link href="/status" className="hover:text-[#FF7043] transition">
+    Status
+  </Link>
+  <Link href="/changelog" className="hover:text-[#FF7043] transition">
+    Changelog
+  </Link>
+  <Link href="/shortcuts" className="hover:text-[#FF7043] transition">
+    Keyboard Shortcuts
+  </Link>
+  <Link href="/settings" className="hover:text-[#FF7043] transition">
+    Settings
+  </Link>
+</nav>
 
         {/* Divider */}
         <div className="border-t border-gray-700" />

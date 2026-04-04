@@ -3,7 +3,8 @@ import EnterpriseHeader from "@/components/layouts/EnterpriseHeader";
 const navItems = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
-  { href: "/pricing", label: "Sign Up" },   // ← FIXED: now goes to pricing first
+  { href: "/advertise", label: "Advertise" },
+  { href: "/pricing", label: "Sign Up" },
   { href: "/login", label: "Login" },
 ];
 

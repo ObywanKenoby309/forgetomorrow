@@ -54,9 +54,9 @@ const BUDGET_RANGES = [
 
 // ─── Audience stat cards ────────────────────────────────────────────────────────
 const STATS = [
-  { value: '3', label: 'Distinct audience segments', sub: 'Seeker · Recruiter · Coach' },
-  { value: '0', label: 'User data sold. Ever.', sub: 'Page intent targeting only' },
-  { value: '100%', label: 'Intent-based placement', sub: 'Context, not surveillance' },
+  { value: '3', label: 'High-intent environments', sub: 'Seeker · Recruiter · Coach' },
+  { value: '0', label: 'User data sold. Ever.', sub: 'Context without surveillance' },
+  { value: '100%', label: 'Placement by intent', sub: 'Built around what people are doing now' },
 ];
 
 // ─── Page content (shared between public and internal shells) ──────────────────
@@ -185,8 +185,8 @@ function AdvertiseContent({ isInternal }) {
               textShadow: '0 8px 40px rgba(0,0,0,0.50)',
             }}
           >
-            Reach the people<br />
-            <span style={{ color: ORANGE }}>building what's next.</span>
+            Be seen where<br />
+            <span style={{ color: ORANGE }}>decisions are made.</span>
           </h1>
 
           <p
@@ -199,8 +199,8 @@ function AdvertiseContent({ isInternal }) {
               fontWeight: 400,
             }}
           >
-            ForgeTomorrow targets page intent — not people.
-            Your brand reaches an audience in motion, not an audience under surveillance.
+            ForgeTomorrow places your brand inside real career moments - 
+            not passive scrolling, not surveillance, just intent.
           </p>
 
           <a
@@ -227,7 +227,7 @@ function AdvertiseContent({ isInternal }) {
               e.currentTarget.style.boxShadow = '0 8px 28px rgba(255,112,67,0.40)';
             }}
           >
-            Start a Conversation →
+            Claim Your Place →
           </a>
         </div>
       </section>
@@ -318,7 +318,7 @@ function AdvertiseContent({ isInternal }) {
               color: isInternal ? '#0a0f1a' : '#ffffff',
             }}
           >
-            Advertising that respects<br />everyone in the room.
+            Your brand belongs<br />where momentum lives.
           </h2>
           <p
             style={{
@@ -329,9 +329,8 @@ function AdvertiseContent({ isInternal }) {
               marginBottom: 48,
             }}
           >
-            Most platforms reduce people to behavioral profiles and sell access to those profiles.
-            We don't. We target the page — the moment, the intent — not the person behind it.
-            Your brand appears in context. That's it.
+            Most platforms chase attention. ForgeTomorrow meets people in motion.
+			Your brand appears beside real decisions, real progress, and real professional momentum.
           </p>
 
           <div
@@ -343,21 +342,21 @@ function AdvertiseContent({ isInternal }) {
           >
             {[
               {
-                title: 'No user data sold',
-                body: 'We never build behavioral profiles or sell audience data to advertisers. Ever.',
-              },
-              {
-                title: 'Intent-based placement',
-                body: 'Ads appear based on what page someone is on — what they\'re trying to do right now.',
-              },
-              {
-                title: 'Three distinct audiences',
-                body: 'Seeker, Recruiter, and Coach surfaces give you precision without surveillance.',
-              },
-              {
-                title: 'Premium, not interruptive',
-                body: 'House ads are cinematic and editorial. Your brand belongs here — it doesn\'t intrude.',
-              },
+    title: 'Show up with purpose',
+    body: 'Your brand appears inside moments of action, not beside idle scrolling.',
+  },
+  {
+    title: 'Be part of the experience',
+    body: 'ForgeTomorrow placements feel native, premium, and aligned with the platform.',
+  },
+  {
+    title: 'Reach the right mindset',
+    body: 'Seeker, Recruiter, and Coach surfaces let you align to intent without surveillance.',
+  },
+  {
+    title: 'Stand where momentum is',
+    body: 'This is a platform for movement, clarity, and next steps - and your brand can live inside that energy.',
+  },
             ].map((card) => (
               <div
                 key={card.title}
@@ -436,7 +435,7 @@ function AdvertiseContent({ isInternal }) {
               color: isInternal ? '#0a0f1a' : '#ffffff',
             }}
           >
-            Choose your audience.
+            Choose where your brand belongs.
           </h2>
 
           <div
@@ -526,7 +525,7 @@ function AdvertiseContent({ isInternal }) {
               lineHeight: 1.6,
             }}
           >
-            Fill out the form below and our sales team will be in touch within one business day.
+            Tell us where you want to show up, and we’ll help you build the right presence on ForgeTomorrow.
           </p>
 
           {submitted ? (
@@ -793,7 +792,7 @@ function AdvertiseContent({ isInternal }) {
                   width: '100%',
                 }}
               >
-                {submitting ? 'Sending…' : 'Send Inquiry →'}
+                {submitting ? 'Sending…' : 'Start the Conversation →'}
               </button>
 
               <p

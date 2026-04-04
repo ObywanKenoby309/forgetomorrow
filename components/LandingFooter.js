@@ -45,10 +45,13 @@ export default function LandingFooter() {
         ],
       },
       {
-        id: 'connect',
-        title: 'Connect',
-        links: [{ href: '/contact', label: 'Contact' }],
-      },
+  id: 'connect',
+  title: 'Connect',
+  links: [
+    { href: '/contact', label: 'Contact' },
+    { href: '/advertise', label: 'Advertise' },
+  ],
+},
     ],
     []
   );
@@ -152,8 +155,13 @@ export default function LandingFooter() {
                 <Link href="/contact" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Contact
                 </Link>
-              </li>
-            </ul>
+  </li>
+  <li>
+    <Link href="/advertise" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
+      Advertise
+    </Link>
+  </li>
+</ul>
 
             {/* Social Icons */}
             <div className="flex gap-4 mt-4">
@@ -292,13 +300,16 @@ export default function LandingFooter() {
           <div className="mt-6 border-t border-gray-900 pt-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <Link href="/contact" className="text-sm hover:text-[#FF7043] focus:text-[#FF7043] transition">
-                  Contact
-                </Link>
-                <Link href="/status" className="text-sm hover:text-[#FF7043] focus:text-[#FF7043] transition">
-                  Status
-                </Link>
-              </div>
+  <Link href="/contact" className="text-sm hover:text-[#FF7043] focus:text-[#FF7043] transition">
+    Contact
+  </Link>
+  <Link href="/advertise" className="text-sm hover:text-[#FF7043] focus:text-[#FF7043] transition">
+    Advertise
+  </Link>
+  <Link href="/status" className="text-sm hover:text-[#FF7043] focus:text-[#FF7043] transition">
+    Status
+  </Link>
+</div>
               <span className="text-xs text-gray-500">© {year} Forge Tomorrow, Inc.</span>
             </div>
           </div>
