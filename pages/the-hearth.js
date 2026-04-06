@@ -26,8 +26,8 @@ const ORANGE_HEADING_LIFT = {
 
 function RightRail() {
   return (
-    <div style={{ display: 'grid', gap: 12, minWidth: 0 }}>
-      <div style={{ minWidth: 0 }}>
+    <div style={{ display: 'grid', gap: 12, minWidth: 0, width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
         <RightRailPlacementManager slot="right_rail_1" />
       </div>
 
