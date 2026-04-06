@@ -56,7 +56,6 @@ export default function TheHearth() {
       rightVariant="light"
       right={
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, background: 'none', border: 'none', boxShadow: 'none' }}>
-          <RightRailPlacementManager slot="right_rail_1" />
           <div style={{ ...GLASS, padding: 12, display: 'grid', gap: 8, boxSizing: 'border-box' }}>
             <div style={{ fontSize: 18, color: '#FF7043', lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>
               Community Guidelines
@@ -65,6 +64,7 @@ export default function TheHearth() {
               Read the guidelines →
             </Link>
           </div>
+          <RightRailPlacementManager slot="right_rail_1" />
         </div>
       }
     >
