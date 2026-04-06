@@ -1,4 +1,3 @@
-// components/layouts/RecruiterLayout.js
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -74,6 +73,7 @@ export default function RecruiterLayout({
   right,
   children,
   rightBare = false,
+  rightVariant = 'dark',
 
   headerCard = true,
 
@@ -205,8 +205,8 @@ export default function RecruiterLayout({
 
   const resolvedRole = planRole || roleProp;
 
-  const GAP    = 12;
-  const PAD    = 16;
+  const GAP = 12;
+  const PAD = 16;
   const LEFT_W = 240;
   const RIGHT_W = 240;
 
@@ -276,30 +276,31 @@ export default function RecruiterLayout({
   const gridStyles = hasMounted && isMobile ? mobileGrid : desktopGrid;
 
   const rightRailStyle = {
-  gridArea: 'right',
-  alignSelf: 'start',
-  ...(rightBare
-    ? {
-        background: 'transparent',
-        border: 'none',
-        boxShadow: 'none',
-        backdropFilter: 'none',
-        WebkitBackdropFilter: 'none',
-        padding: 0,
-      }
-    : {
-        ...GLASS,
-        padding: 16,
-      }),
-  borderRadius: 18,
-  minHeight: 120,
-  boxSizing: 'border-box',
-  width: hasMounted && isMobile ? '100%' : RIGHT_W,
-  minWidth: hasMounted && isMobile ? 0 : RIGHT_W,
-  maxWidth: hasMounted && isMobile ? '100%' : RIGHT_W,
-  minInlineSize: 0,
-  color: '#112033',
-};
+    gridArea: 'right',
+    alignSelf: 'start',
+    ...(rightBare || rightVariant === 'light'
+      ? {
+          background: 'transparent',
+          border: 'none',
+          boxShadow: 'none',
+          backdropFilter: 'none',
+          WebkitBackdropFilter: 'none',
+          padding: 0,
+          borderRadius: 0,
+        }
+      : {
+          ...GLASS,
+          padding: 16,
+          borderRadius: 18,
+        }),
+    minHeight: 120,
+    boxSizing: 'border-box',
+    width: hasMounted && isMobile ? '100%' : RIGHT_W,
+    minWidth: hasMounted && isMobile ? 0 : RIGHT_W,
+    maxWidth: hasMounted && isMobile ? '100%' : RIGHT_W,
+    minInlineSize: 0,
+    color: '#112033',
+  };
 
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
@@ -329,14 +330,12 @@ export default function RecruiterLayout({
             paddingRight: hasRight ? Math.max(8, PAD - 4) : PAD,
             alignItems: 'start',
             boxSizing: 'border-box',
-
             width: '100%',
             maxWidth: '100vw',
             overflowX: 'hidden',
             minWidth: 0,
           }}
         >
-          {/* Left rail */}
           <aside
             style={{
               ...leftRailLayer,
@@ -358,13 +357,11 @@ export default function RecruiterLayout({
             />
           </aside>
 
-          {/* Header (ONLY if provided) */}
           {hasHeader ? (
             headerCard ? (
               <section
                 style={{
                   gridArea: 'header',
-                  // Section-card radius (18px)
                   borderRadius: 18,
                   padding: '8px 12px',
                   minWidth: 0,
@@ -381,10 +378,8 @@ export default function RecruiterLayout({
             )
           ) : null}
 
-          {/* Right rail (ONLY if provided) */}
           {hasRight ? <aside style={rightRailStyle}>{right}</aside> : null}
 
-          {/* Main content */}
           <main
             style={{
               gridArea: 'content',
@@ -440,7 +435,6 @@ export default function RecruiterLayout({
               zIndex: 1,
               width: 'min(760px, 100%)',
               maxHeight: '82vh',
-              // Page-level container radius (22px) for bottom sheet
               borderTopLeftRadius: 22,
               borderTopRightRadius: 22,
               border: '1px solid rgba(255,255,255,0.22)',

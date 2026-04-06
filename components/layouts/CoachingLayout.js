@@ -1,4 +1,3 @@
-// components/layouts/CoachingLayout.js
 import React, { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
@@ -35,8 +34,8 @@ export default function CoachingLayout({
   sidebarInitialOpen,
   employee = false,
   department = '',
+  rightVariant = 'dark',
 
-  // ✅ Same pattern as RecruiterLayout — dashboard opts in, all other pages unaffected
   contentFullBleed = false,
 }) {
   const defaultFromNav =
@@ -54,7 +53,6 @@ export default function CoachingLayout({
   const hasRight = Boolean(right);
   const hasHeader = Boolean(header);
 
-  // ✅ FIX: null until client decides (prevents “mobile first” paint)
   const [isMobile, setIsMobile] = useState(null);
 
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
@@ -72,7 +70,6 @@ export default function CoachingLayout({
   const isMobileReady = isMobile !== null;
   const isMobileBool = isMobile === true;
 
-  // ✅ Matches RecruiterLayout: no header + no right = Seeker-style page-owned layout
   const desktopGrid = (!hasHeader && !hasRight)
     ? {
         display: 'grid',
@@ -103,9 +100,39 @@ export default function CoachingLayout({
   const gridStyles = isMobileBool ? mobileGrid : desktopGrid;
   const chromeMode = 'coach';
 
-  // ✅ Same stacking strategy as RecruiterLayout
   const leftRailLayer = { position: 'relative', zIndex: 10 };
   const mainOverrides = { position: 'relative', zIndex: 1 };
+
+  const rightRailStyle = {
+    gridArea: 'right',
+    alignSelf: 'start',
+    ...(rightVariant === 'light'
+      ? {
+          background: 'transparent',
+          border: 'none',
+          boxShadow: 'none',
+          backdropFilter: 'none',
+          WebkitBackdropFilter: 'none',
+          padding: 0,
+          borderRadius: 0,
+        }
+      : {
+          border: GLASS.border,
+          background: GLASS.background,
+          boxShadow: GLASS.boxShadow,
+          backdropFilter: GLASS.backdropFilter,
+          WebkitBackdropFilter: GLASS.WebkitBackdropFilter,
+          borderRadius: 14,
+          padding: 16,
+        }),
+    minHeight: 120,
+    boxSizing: 'border-box',
+    width: isMobileBool ? '100%' : UI.RIGHT_W,
+    minWidth: isMobileBool ? 0 : UI.RIGHT_W,
+    maxWidth: isMobileBool ? '100%' : UI.RIGHT_W,
+    minInlineSize: 0,
+    color: '#112033',
+  };
 
   return (
     <>
@@ -115,7 +142,6 @@ export default function CoachingLayout({
 
       <CoachingHeader />
 
-      {/* ✅ FIX: don’t render grid until isMobile is known (prevents “mobile first → desktop” blink) */}
       {isMobileReady ? (
         <div
           style={{
@@ -133,7 +159,6 @@ export default function CoachingLayout({
             minWidth: 0,
           }}
         >
-          {/* Left rail */}
           <aside
             style={{
               ...leftRailLayer,
@@ -153,7 +178,6 @@ export default function CoachingLayout({
             )}
           </aside>
 
-          {/* Header (ONLY if provided — dashboard does NOT pass this) */}
           {hasHeader ? (
             <header style={{ gridArea: 'header', alignSelf: 'start', marginTop: 0, paddingTop: 0, minWidth: 0 }}>
               {header ?? (
@@ -172,46 +196,18 @@ export default function CoachingLayout({
             </header>
           ) : null}
 
-          {/* Right rail (ONLY if provided) */}
           {hasRight && (
-            <aside
-              style={{
-                gridArea: 'right',
-                alignSelf: 'start',
-
-                // ✅ MIN CHANGE: match site-wide frosted glass right rail
-                border: GLASS.border,
-                background: GLASS.background,
-                boxShadow: GLASS.boxShadow,
-                backdropFilter: GLASS.backdropFilter,
-                WebkitBackdropFilter: GLASS.WebkitBackdropFilter,
-
-                borderRadius: 14, // ✅ was 12
-                padding: 16,
-                minHeight: 120,
-                boxSizing: 'border-box',
-                width: isMobileBool ? '100%' : UI.RIGHT_W,
-                minWidth: isMobileBool ? 0 : UI.RIGHT_W,
-                maxWidth: isMobileBool ? '100%' : UI.RIGHT_W,
-                minInlineSize: 0,
-
-                // ✅ was white text for dark rail; keep neutral so ad card can be solid on its own
-                color: '#112033',
-              }}
-            >
+            <aside style={rightRailStyle}>
               {right}
             </aside>
           )}
 
-          {/* Main content */}
           <main
             style={{
               gridArea: 'content',
               minWidth: 0,
               width: '100%',
               maxWidth: '100%',
-              // ✅ Only remove overflow clipping for dashboard (contentFullBleed).
-              // All other coaching pages keep overflowX: 'hidden' for mobile safety.
               ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
               ...mainOverrides,
             }}
