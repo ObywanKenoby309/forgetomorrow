@@ -632,7 +632,7 @@ export default function SeekerContactCenter() {
       activeNav="contacts"
     >
       <div style={PAGE_GLASS_WRAP}>
-        <section style={{ ...WHITE_CARD, padding: 12 }}>
+        <section style={{ padding: '4px 4px 8px' }}>
           <ContactCenterToolbar currentTab="contacts" counts={counts} />
         </section>
 
