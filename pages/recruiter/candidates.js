@@ -1,4 +1,3 @@
-// pages/recruiter/candidates.js
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider, usePlan } from "../../context/PlanContext";
@@ -14,6 +13,7 @@ import * as Analytics from "../../lib/analytics/instrumentation";
 import WhyInfo from "../../components/recruiter/WhyInfo";
 import PersonaChoiceModal from "../../components/common/PersonaChoiceModal";
 import CandidateTargetingPanel from "../../components/recruiter/CandidateTargetingPanel";
+import RightRailPlacementManager from "../../components/ads/RightRailPlacementManager";
 
 async function getSessionDirect(timeoutMs = 4000) {
   const controller = new AbortController();
@@ -61,8 +61,6 @@ const GlassPanel = ({ className = "", children, style = {} }) => (
 );
 
 // ─── TARGETING DRAWER ──────────────────────────────────────────────────────
-// Slides in from the right on desktop. Bottom sheet on mobile.
-// Keeps the targeting form completely OUT of the vertical scroll flow.
 function TargetingDrawer({
   open,
   onClose,
@@ -89,7 +87,6 @@ function TargetingDrawer({
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
@@ -104,7 +101,6 @@ function TargetingDrawer({
         }}
       />
 
-      {/* Drawer — right panel desktop, bottom sheet mobile */}
       <div
         style={{
           position: "fixed",
@@ -124,7 +120,6 @@ function TargetingDrawer({
           transition: "transform 0.32s cubic-bezier(0.4,0,0.2,1)",
         }}
       >
-        {/* Drawer header bar */}
         <div
           style={{
             display: "flex",
@@ -137,7 +132,6 @@ function TargetingDrawer({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            {/* Target icon */}
             <div
               style={{
                 width: 34,
@@ -212,7 +206,6 @@ function TargetingDrawer({
           </button>
         </div>
 
-        {/* Scrollable body */}
         <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", minWidth: 0 }}>
           <CandidateTargetingPanel
             filters={filters}
@@ -234,8 +227,6 @@ function TargetingDrawer({
 }
 
 // ─── MOBILE COMPARE SHEET ─────────────────────────────────────────────────
-// [FIX 3] Replaces the side-by-side WHY compare drawer on narrow screens.
-// Shows A and B as switchable tabs inside a bottom sheet.
 function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRight, mode }) {
   const [tab, setTab] = useState("a");
 
@@ -254,8 +245,8 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
   if (!open) return null;
 
   const activeCandidate = tab === "a" ? left?.candidate : right?.candidate;
-  const activeExplain   = tab === "a" ? left?.explain   : right?.explain;
-  const onViewActive    = tab === "a" ? onViewLeft       : onViewRight;
+  const activeExplain = tab === "a" ? left?.explain : right?.explain;
+  const onViewActive = tab === "a" ? onViewLeft : onViewRight;
 
   const score = typeof activeExplain?.score === "number" ? activeExplain.score : null;
   const reasons = Array.isArray(activeExplain?.reasons) ? activeExplain.reasons : [];
@@ -263,12 +254,10 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{ position: "fixed", inset: 0, zIndex: 98, background: "rgba(10,12,18,0.55)", backdropFilter: "blur(4px)" }}
       />
-      {/* Sheet */}
       <div
         style={{
           position: "fixed",
@@ -291,12 +280,10 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
           overflowX: "hidden",
         }}
       >
-        {/* Drag handle */}
         <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px" }}>
           <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(0,0,0,0.14)" }} />
         </div>
 
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 12px", minWidth: 0 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>Compare Candidates</span>
           <button
@@ -309,7 +296,6 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
           </button>
         </div>
 
-        {/* Candidate tabs */}
         <div style={{ display: "flex", borderBottom: "1px solid rgba(0,0,0,0.07)", paddingLeft: 16, paddingRight: 16, gap: 4, minWidth: 0 }}>
           {[{ key: "a", candidate: left?.candidate }, { key: "b", candidate: right?.candidate }].map(({ key, candidate }) => (
             <button
@@ -330,7 +316,6 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
           ))}
         </div>
 
-        {/* Scrollable content */}
         <div
           style={{
             flex: 1,
@@ -341,7 +326,6 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
             minWidth: 0,
           }}
         >
-          {/* Candidate header row */}
           {activeCandidate && (
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18, minWidth: 0 }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,#FF7043,#FF8A65)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18 }}>
@@ -361,7 +345,6 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
             </div>
           )}
 
-          {/* WHY reasons */}
           {reasons.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
               {reasons.slice(0, mode === "full" ? 8 : 3).map((r, i) => (
@@ -379,7 +362,6 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
             <div style={{ fontSize: 13, color: "#94a3b8", textAlign: "center", paddingTop: 24 }}>No explainability data available.</div>
           )}
 
-          {/* View full profile CTA */}
           {activeCandidate && (
             <button
               onClick={() => { onViewActive?.(); onClose(); }}
@@ -408,7 +390,6 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
   );
 }
 
-// ─── ACTIVE FILTER CHIPS ───────────────────────────────────────────────────
 function FilterChip({ label, onRemove }) {
   return (
     <span
@@ -455,10 +436,6 @@ function FilterChip({ label, onRemove }) {
   );
 }
 
-// ─── COMMAND BAR ──────────────────────────────────────────────────────────
-// [FIX 1] Mobile layout: row 1 = [name | Filters btn], row 2 = [location].
-//         Advanced query hidden on mobile (Enterprise-only, not critical on narrow screens).
-//         Desktop: original three-input + Targeting button inline.
 function CommandBar({
   nameQuery, setNameQuery,
   locQuery, setLocQuery,
@@ -479,7 +456,6 @@ function CommandBar({
 }) {
   const hasSearch = nameQuery || locQuery || boolQuery;
 
-  // Shared targeting button — used in both mobile row-1 and desktop single-row
   const TargetingBtn = () => (
     <button
       onClick={onOpenTargeting}
@@ -545,13 +521,11 @@ function CommandBar({
     </button>
   );
 
-  // Shared input focus/blur handlers
   const onFocus = (e) => { e.target.style.borderColor = "#FF7043"; e.target.style.boxShadow = "0 0 0 3px rgba(255,112,67,0.12)"; };
-  const onBlur  = (e) => { e.target.style.borderColor = "rgba(0,0,0,0.08)"; e.target.style.boxShadow = "none"; };
+  const onBlur = (e) => { e.target.style.borderColor = "rgba(0,0,0,0.08)"; e.target.style.boxShadow = "none"; };
 
   return (
     <div style={{ marginBottom: 16, width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden" }}>
-      {/* Main bar */}
       <div
         style={{
           width: "100%",
@@ -568,9 +542,7 @@ function CommandBar({
         }}
       >
         {isMobile ? (
-          /* ── MOBILE: two-row layout ── */
           <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: "100%", minWidth: 0 }}>
-            {/* Row 1: name/role + Filters button */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", maxWidth: "100%", minWidth: 0 }}>
               <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
                 <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
@@ -591,7 +563,6 @@ function CommandBar({
               </div>
               <TargetingBtn />
             </div>
-            {/* Row 2: location */}
             <div style={{ position: "relative", width: "100%", maxWidth: "100%", minWidth: 0 }}>
               <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
@@ -611,9 +582,7 @@ function CommandBar({
             </div>
           </div>
         ) : (
-          /* ── DESKTOP: original single-row layout ── */
           <div style={{ display: "flex", alignItems: "stretch", gap: 8, flexWrap: "wrap", width: "100%", maxWidth: "100%", minWidth: 0 }}>
-            {/* Search by name/role */}
             <div style={{ flex: "2 1 160px", minWidth: 0, position: "relative" }}>
               <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -632,7 +601,6 @@ function CommandBar({
               />
             </div>
 
-            {/* Location */}
             <div style={{ flex: "1.5 1 120px", minWidth: 0, position: "relative" }}>
               <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
@@ -651,7 +619,6 @@ function CommandBar({
               />
             </div>
 
-            {/* Advanced / Enterprise query */}
             <div style={{ flex: "2 1 160px", minWidth: 0 }}>
               {isEnterprise ? (
                 <input
@@ -674,15 +641,12 @@ function CommandBar({
               )}
             </div>
 
-            {/* Divider */}
             <div style={{ width: 1, background: "rgba(0,0,0,0.08)", margin: "2px 2px", flexShrink: 0 }} />
-
             <TargetingBtn />
           </div>
         )}
       </div>
 
-      {/* Status bar + active chips */}
       <div
         style={{
           display: "flex",
@@ -698,7 +662,6 @@ function CommandBar({
           boxSizing: "border-box",
         }}
       >
-        {/* Result count */}
         <div
           style={{
             fontSize: 12,
@@ -729,7 +692,6 @@ function CommandBar({
           )}
         </div>
 
-        {/* Active chips */}
         {activeChips.length > 0 && (
           <>
             <div style={{ width: 1, height: 14, background: "rgba(0,0,0,0.10)", flexShrink: 0 }} />
@@ -750,7 +712,6 @@ function CommandBar({
           </>
         )}
 
-        {/* Clear actions */}
         {(hasSearch || activeFilterCount > 0) && (
           <button
             onClick={onClearAll}
@@ -795,7 +756,6 @@ function CommandBar({
   );
 }
 
-// ─── HEADER (title card — preserving site uniformity) ──────────────────────
 function HeaderOnly() {
   return (
     <div className="w-full">
@@ -819,16 +779,16 @@ function RightToolsCard({ whyMode, creditsLeft = null }) {
   const isFull = resolvedMode === "full";
 
   return (
-    <GlassPanel className="p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="font-semibold text-slate-900">Tips</div>
-          <div className="mt-1 text-xs text-slate-600">Fast workflows, clean signal.</div>
+    <GlassPanel className="p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="font-semibold text-[13px] text-slate-900">Candidate Tips</div>
+          <div className="mt-0.5 text-[11px] text-slate-600">Less noise. Better signal.</div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <span
             className={
-              "text-[11px] px-2 py-0.5 rounded-full border bg-white/60 " +
+              "text-[10px] px-2 py-0.5 rounded-full border bg-white/60 " +
               (isFull
                 ? "border-emerald-200 text-emerald-700"
                 : "border-amber-200 text-amber-700")
@@ -839,28 +799,33 @@ function RightToolsCard({ whyMode, creditsLeft = null }) {
           <WhyInfo />
         </div>
       </div>
-      <div className="mt-3 text-sm text-slate-700 space-y-2">
-        <p>Start with a short query, then refine. Enterprise teams can use advanced queries when the pool is large.</p>
-        <p>Tag top candidates to build quick outreach lists and keep your pipeline clean.</p>
-        <div className="pt-2">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-            <span className="inline-flex items-center gap-1">
-              <span className="font-semibold text-slate-800">Explainability</span>
-              <span className="text-slate-500">shows evidence, not buzzwords.</span>
-            </span>
-            {creditsLeft != null && !isFull && (
-              <span className="ml-auto text-xs px-2 py-0.5 rounded-full border border-[#FF7043]/25 bg-[#FFEDE6]/70 text-[#FF7043]">
-                {creditsLeft} left
-              </span>
-            )}
-          </div>
-        </div>
+
+      <div className="mt-3 grid gap-2 text-[12px] leading-[1.45] text-slate-700">
+        <div>Start broad, then tighten with filters.</div>
+        <div>Use WHY to verify evidence before outreach.</div>
+        <div>Compare only finalists to keep signal clean.</div>
       </div>
+
+      {creditsLeft != null && !isFull && (
+        <div className="mt-3 pt-2 border-t border-black/5">
+          <span className="inline-flex text-[10px] px-2 py-0.5 rounded-full border border-[#FF7043]/25 bg-[#FFEDE6]/70 text-[#FF7043]">
+            {creditsLeft} WHY credits left
+          </span>
+        </div>
+      )}
     </GlassPanel>
   );
 }
 
-// ─── BODY ─────────────────────────────────────────────────────────────────
+function RightRailStack({ whyMode, creditsLeft = null }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <RightRailPlacementManager />
+      <RightToolsCard whyMode={whyMode} creditsLeft={creditsLeft} />
+    </div>
+  );
+}
+
 function Body() {
   const { isEnterprise } = usePlan();
   const router = useRouter();
@@ -868,7 +833,6 @@ function Body() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  // [FIX 1 + FIX 3] Drives two-row command bar and mobile compare sheet
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -902,12 +866,10 @@ function Body() {
 
   const [didAutoOpenFromQuery, setDidAutoOpenFromQuery] = useState(false);
 
-  // Filters
   const [nameQuery, setNameQuery] = useState("");
   const [locQuery, setLocQuery] = useState("");
   const [boolQuery, setBoolQuery] = useState("");
 
-  // Targeting filters
   const [summaryKeywords, setSummaryKeywords] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [workStatus, setWorkStatus] = useState("");
@@ -918,16 +880,13 @@ function Body() {
   const [languages, setLanguages] = useState("");
   const [education, setEducation] = useState("");
 
-  // Automation state
   const [automationEnabled, setAutomationEnabled] = useState(false);
   const [automationName, setAutomationName] = useState("");
   const [automationSaving, setAutomationSaving] = useState(false);
   const [automationMessage, setAutomationMessage] = useState(null);
 
-  // Targeting drawer
   const [targetingOpen, setTargetingOpen] = useState(false);
 
-  // Data
   const [candidates, setCandidates] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -1231,11 +1190,11 @@ function Body() {
     try {
       const recipientId = candidate.userId || candidate.id;
       const res = await fetch("/api/conversations", {
-  method: "POST",
-  credentials: "include",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ recipientId, channel }),
-});
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipientId, channel }),
+      });
       if (!res.ok) { alert("We couldn't open a conversation yet. Please try again in a moment."); return; }
       const json = await res.json();
       const conv = json?.conversation;
@@ -1260,7 +1219,6 @@ function Body() {
 
   const onMessage = (c) => { if (!c) return; setPersonaCandidate(c); setPersonaOpen(true); };
 
-  // ✅ FIX: targeting fields removed from deps — only quick filters fire automatically
   useEffect(() => {
     let isMounted = true;
     async function fetchCandidates() {
@@ -1455,7 +1413,6 @@ function Body() {
         boxSizing: "border-box",
       }}
     >
-      {/* ── ERROR BANNERS ─────────────────────────────────────────── */}
       {loadError && (
         <GlassPanel className="mb-3 px-5 py-3 sm:px-6 border-red-200/50 bg-red-50/60">
           <div className="text-xs text-red-700">{loadError}</div>
@@ -1467,7 +1424,6 @@ function Body() {
         </GlassPanel>
       )}
 
-      {/* ── COMMAND BAR ───────────────────────────────────────────── */}
       <CommandBar
         nameQuery={nameQuery} setNameQuery={setNameQuery}
         locQuery={locQuery} setLocQuery={setLocQuery}
@@ -1487,7 +1443,6 @@ function Body() {
         isMobile={isMobile}
       />
 
-      {/* ── TARGETING DRAWER ──────────────────────────────────────── */}
       <TargetingDrawer
         open={targetingOpen}
         onClose={() => setTargetingOpen(false)}
@@ -1501,7 +1456,6 @@ function Body() {
         activeFilterCount={activeFilterCount}
       />
 
-      {/* ── CANDIDATE GRID ────────────────────────────────────────── */}
       {isLoading ? (
         <GlassPanel className="px-5 py-8 sm:px-6">
           <div className="text-sm text-slate-700 font-medium">Loading candidates...</div>
@@ -1588,7 +1542,6 @@ function Body() {
         </div>
       )}
 
-      {/* ── MODALS ────────────────────────────────────────────────── */}
       <CandidateProfileModal
         open={open}
         onClose={() => setOpen(false)}
@@ -1604,7 +1557,6 @@ function Body() {
         onViewCandidate={() => { if (whyCandidate) { setSelected(whyCandidate); setOpen(true); } setWhyOpen(false); }}
       />
 
-      {/* [FIX 3] Tabbed bottom sheet on mobile; side-by-side drawer on desktop */}
       {isMobile ? (
         <MobileCompareSheet
           open={compareOpen}
@@ -1642,14 +1594,13 @@ function Body() {
 }
 
 export default function CandidatesPage() {
-  const RightCard = (props) => <RightToolsCard {...props} />;
   return (
     <PlanProvider>
-            <RecruiterLayout
+      <RecruiterLayout
         title="Candidates - ForgeTomorrow"
         header={<HeaderOnly />}
         headerCard={false}
-        right={<RightCard />}
+        right={<RightRailStack />}
         activeNav="candidates"
       >
         <Body />
