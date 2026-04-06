@@ -6,6 +6,8 @@ import Head from "next/head";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import WHYScoreInfo from "@/components/ai/WHYScoreInfo";
+import RecruiterTitleCard from "@/components/recruiter/RecruiterTitleCard";
+import { getTimeGreeting } from "@/lib/dashboardGreeting";
 
 // ✅ NEW: use the same drawer UX as Candidates
 import WhyCandidateDrawer from "../../components/recruiter/WhyCandidateDrawer";
@@ -26,47 +28,6 @@ const CARD = {
   boxShadow: "0 10px 26px rgba(0,0,0,0.10)",
 };
 
-function HeaderOnly() {
-  return (
-    <div className="w-full">
-      <section
-        style={{
-          borderRadius: 18,
-          border: '1px solid rgba(255,255,255,0.22)',
-          background: 'rgba(255,255,255,0.58)',
-          boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          padding: 16,
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ fontSize: 24, fontWeight: 900, color: '#FF7043' }}>
-          Resume &amp; Job Match Explainability
-        </div>
-
-        <div
-          style={{
-            marginTop: 6,
-            fontSize: 14,
-            color: '#64748B',
-            maxWidth: 720,
-            marginInline: 'auto',
-            lineHeight: 1.5,
-          }}
-        >
-          Paste a job description and a resume to generate explainable alignment insights.
-          <br />
-          <span style={{ fontSize: 13 }}>
-            This tool supports recruiter judgment by mapping evidence and highlighting
-            strengths, gaps, and interview guidance. It does not make hiring decisions.
-          </span>
-        </div>
-      </section>
-    </div>
-  );
-}
-
 export default function RecruiterExplainPage() {
   const { data: session, status } = useSession();
 
@@ -80,6 +41,17 @@ export default function RecruiterExplainPage() {
   // ✅ NEW: drawer state (like Candidates)
   const [whyOpen, setWhyOpen] = useState(false);
   const [whyData, setWhyData] = useState(null);
+
+  const greeting = getTimeGreeting();
+
+  const HeaderBox = (
+    <RecruiterTitleCard
+      greeting={greeting}
+      title="Resume & Job Match Explainability"
+      subtitle="Paste a job description and a resume to generate explainable alignment insights. This tool supports recruiter judgment by mapping evidence, highlighting strengths and gaps, and guiding interviews. It does not make hiring decisions."
+      compact
+    />
+  );
 
   const hasResult = !!result;
   const showPanel = showWhyPanel && hasResult; // kept (no behavior change required elsewhere)
@@ -145,9 +117,10 @@ export default function RecruiterExplainPage() {
   return (
     <RecruiterLayout
       title="Applicant Explain — ForgeTomorrow"
-      header={<HeaderOnly />}
-	  headerCard={false}
+      header={HeaderBox}
+      headerCard={false}
       right={<RightRailPlacementManager surfaceId="applicant_explain" />}
+      rightVariant="light"
       activeNav="applicant-explain"
     >
       <Head>
@@ -196,7 +169,7 @@ export default function RecruiterExplainPage() {
                     lineHeight: 1.45,
                     background: "rgba(255,255,255,0.88)",
                     minHeight: 360,
-                    marginBottom: 64, // keeps bottom buttons clearly unobstructed
+                    marginBottom: 64,
                     boxSizing: "border-box",
                   }}
                 />
@@ -241,7 +214,7 @@ export default function RecruiterExplainPage() {
                     lineHeight: 1.45,
                     background: "rgba(255,255,255,0.88)",
                     minHeight: 360,
-                    marginBottom: 64, // keeps bottom buttons clearly unobstructed
+                    marginBottom: 64,
                     boxSizing: "border-box",
                   }}
                 />
@@ -301,8 +274,6 @@ export default function RecruiterExplainPage() {
                 </div>
               )}
             </div>
-
-            {/* ✅ REMOVED: inline right panel; overlay drawer handles it */}
           </div>
         </div>
       </section>
@@ -323,52 +294,5 @@ export default function RecruiterExplainPage() {
         }}
       />
     </RecruiterLayout>
-  );
-}
-
-function CollapsibleRow({ title }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div
-      style={{
-        border: "1px solid rgba(15,23,42,0.10)",
-        background: "rgba(255,255,255,0.80)",
-        borderRadius: 14,
-        marginBottom: 10,
-        overflow: "hidden",
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          width: "100%",
-          textAlign: "left",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 10,
-          padding: "12px 12px",
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          fontWeight: 900,
-          fontSize: 13,
-          color: "rgba(15,23,42,0.85)",
-        }}
-      >
-        <span>{title}</span>
-        <span style={{ fontWeight: 800, color: "rgba(15,23,42,0.55)" }}>
-          {open ? "Collapse" : "Expand"}
-        </span>
-      </button>
-
-      {open && (
-        <div style={{ padding: "0 12px 12px", fontSize: 12, color: "rgba(15,23,42,0.70)" }}>
-          Placeholder content for layout. Wire to real explainability sections next.
-        </div>
-      )}
-    </div>
   );
 }
