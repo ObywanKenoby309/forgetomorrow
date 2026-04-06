@@ -1,3 +1,4 @@
+// components/layouts/JobsLayout.js
 import React, { useMemo, useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -186,11 +187,6 @@ export default function JobsLayout({
           <aside
             aria-label="Sponsored"
             style={{
-              background: 'rgba(255,255,255,0.95)',
-              border: '1px solid rgba(0,0,0,0.08)',
-              borderRadius: 14,
-              boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-              padding: 14,
               minWidth: 0,
               boxSizing: 'border-box',
               alignSelf: 'start',
@@ -198,22 +194,7 @@ export default function JobsLayout({
               top: 16,
             }}
           >
-            <div
-              style={{
-                fontWeight: 900,
-                marginBottom: 8,
-                fontSize: 15,
-                color: '#0F172A',
-                lineHeight: 1.25,
-                letterSpacing: '-0.01em',
-              }}
-            >
-              Sponsored
-            </div>
-
-            <div style={{ background: 'rgba(255,255,255,0.80)', borderRadius: 10, padding: 10 }}>
-              <RightRailPlacementManager slot="right_rail_1" />
-            </div>
+            <RightRailPlacementManager slot="right_rail_1" />
           </aside>
         </div>
       )}

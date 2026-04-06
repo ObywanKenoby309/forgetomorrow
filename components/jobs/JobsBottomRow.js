@@ -10,12 +10,28 @@ const GLASS = {
   WebkitBackdropFilter: 'blur(10px)',
 };
 
+const WHITE_CARD = {
+  background: 'rgba(255,255,255,0.92)',
+  border: '1px solid rgba(0,0,0,0.08)',
+  borderRadius: 10,
+  boxSizing: 'border-box',
+};
+
+const ORANGE_HEADING_LIFT = {
+  textShadow: '0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)',
+  fontWeight: 900,
+};
+
 function MiniCard({ title, emptyText, jobs, onSelect }) {
   return (
     <div style={{ ...GLASS, padding: '16px 18px' }}>
       <div style={{
-        fontWeight: 800, fontSize: 15, color: '#FF7043',
-        marginBottom: 12, letterSpacing: '-0.2px',
+        fontSize: 18,
+        color: '#FF7043',
+        marginBottom: 12,
+        lineHeight: 1.25,
+        letterSpacing: '-0.01em',
+        ...ORANGE_HEADING_LIFT,
       }}>
         {title}
       </div>
@@ -30,10 +46,9 @@ function MiniCard({ title, emptyText, jobs, onSelect }) {
               key={`${job.id}-${job.title}`}
               onClick={() => onSelect?.(job)}
               style={{
+                ...WHITE_CARD,
                 display: 'flex', alignItems: 'center', gap: 10,
-                padding: '8px 10px', borderRadius: 10,
-                background: 'rgba(255,255,255,0.70)',
-                border: '1px solid rgba(224,224,224,0.70)',
+                padding: '8px 10px',
                 cursor: onSelect ? 'pointer' : 'default',
                 transition: 'background 120ms ease',
               }}
