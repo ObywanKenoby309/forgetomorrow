@@ -14,6 +14,7 @@ import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
 import SeekerHeader from '@/components/seeker/SeekerHeader';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
 // ✅ mobile bottom bar + support floating button
 import MobileBottomBar from '@/components/mobile/MobileBottomBar';
@@ -84,7 +85,6 @@ function setQueryChrome(router, chrome) {
 function SiderailToggle({ collapsed, onToggle, leftWidth, gap }) {
   const [hovered, setHovered] = useState(false);
 
-  // Position: at the left seam when expanded, near viewport edge when collapsed
   const leftPos = collapsed ? 6 : leftWidth + gap - 14;
 
   return (
@@ -122,22 +122,18 @@ function SiderailToggle({ collapsed, onToggle, leftWidth, gap }) {
         minWidth: 22,
       }}
     >
-      {/* Double chevron SVG */}
       {collapsed ? (
-        // >> expand
         <svg width="11" height="18" viewBox="0 0 11 18" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M1 2l4.5 7L1 16" stroke="#FF7043" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
           <path d="M5.5 2L10 9l-4.5 7" stroke="#FF7043" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ) : (
-        // << collapse
         <svg width="11" height="18" viewBox="0 0 11 18" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M10 2L5.5 9 10 16" stroke="#FF7043" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           <path d="M5.5 2L1 9l4.5 7" stroke="#FF7043" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
         </svg>
       )}
 
-      {/* Tooltip */}
       {hovered && (
         <span style={{
           position: 'absolute',
@@ -183,10 +179,6 @@ export default function InternalLayout({
   gap = 12,
   pad = 16,
 
-  // ── Siderail collapse props ────────────────────────────────────────────────
-  // Pass collapseSiderails + onToggleSiderails from the page to enable
-  // the portfolio-view toggle. Only renders on desktop, only affects this
-  // page's session — no persistence.
   collapseSiderails = false,
   onToggleSiderails = null,
 }) {
@@ -199,14 +191,12 @@ export default function InternalLayout({
   useEffect(() => {
     if (!router?.isReady) return;
 
-    // 1) Explicit override wins
     const override = normalizeChrome(forceChrome || chrome);
     if (override && ALLOWED_MODES.has(override)) {
       setChromeMode(override);
       return;
     }
 
-    // 2) URL query
     const q = normalizeChrome(router?.query?.chrome);
     if (q && ALLOWED_MODES.has(q)) {
       if ((q === 'recruiter-smb' || q === 'recruiter-ent') && planLoaded) {
@@ -220,7 +210,6 @@ export default function InternalLayout({
       return;
     }
 
-    // 3) router.asPath fallback
     const fromPath = extractChromeFromAsPath(router?.asPath);
     if (fromPath && ALLOWED_MODES.has(fromPath)) {
       if ((fromPath === 'recruiter-smb' || fromPath === 'recruiter-ent') && planLoaded) {
@@ -234,7 +223,6 @@ export default function InternalLayout({
       return;
     }
 
-    // 4) DB default when loaded
     if (planLoaded) {
       const dbRole = String(role || '').toLowerCase();
       const isRecruiterAccount =
@@ -292,24 +280,8 @@ export default function InternalLayout({
   const { wallpaperUrl } = useUserWallpaper();
   const effectiveLayoutWallpaper = backgroundOverrideUrl || wallpaperUrl;
 
-  const backgroundStyle = effectiveLayoutWallpaper
-    ? {
-        minHeight: '100vh',
-        backgroundImage: `url(${effectiveLayoutWallpaper})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center top',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-      }
-    : {
-        minHeight: '100vh',
-        backgroundColor: '#ECEFF1',
-      };
-
-  const hasRight = Boolean(right);
   const [isMobile, setIsMobile] = useState(true);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
-
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
   useEffect(() => {
@@ -321,9 +293,31 @@ export default function InternalLayout({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // ── Grid column widths — animate when siderails collapse ──────────────────
-  const effectiveLeftWidth  = !isMobile && collapseSiderails ? 0 : leftWidth;
+  const backgroundStyle = effectiveLayoutWallpaper
+    ? {
+        minHeight: '100vh',
+        backgroundImage: `url(${effectiveLayoutWallpaper})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: isMobile ? 'scroll' : 'fixed',
+      }
+    : {
+        minHeight: '100vh',
+        backgroundColor: '#ECEFF1',
+      };
+
+  const hasHeader = Boolean(header);
+  const hasRight = Boolean(right);
+
+  const effectiveLeftWidth = !isMobile && collapseSiderails ? 0 : leftWidth;
   const effectiveRightWidth = !isMobile && collapseSiderails ? 0 : (hasRight ? rightWidth : 0);
+
+  const isRightRailAdOnly =
+    React.isValidElement(right) &&
+    right.type === RightRailPlacementManager;
+
+  const useLightRightRail = rightVariant === 'light' || isRightRailAdOnly;
 
   const rightBase = {
     gridArea: 'right',
@@ -351,6 +345,9 @@ export default function InternalLayout({
     border: 'none',
     padding: 0,
     boxShadow: 'none',
+    backdropFilter: 'none',
+    WebkitBackdropFilter: 'none',
+    borderRadius: 0,
   };
 
   const containerPadding = {
@@ -360,30 +357,59 @@ export default function InternalLayout({
     paddingRight: hasRight ? Math.max(8, pad - 4) : pad,
   };
 
-  const desktopGrid = {
-    display: 'grid',
-    // ✅ Animate column widths when collapsing/expanding siderails
-    gridTemplateColumns: `${effectiveLeftWidth}px minmax(0, 1fr) ${effectiveRightWidth}px`,
-    gridTemplateRows: 'auto 1fr',
-    gridTemplateAreas: hasRight
-      ? `"left header right"
-         "left content right"`
-      : `"left header header"
-         "left content content"`,
-    transition: 'grid-template-columns 0.35s ease',
-  };
+  const desktopGrid = !hasHeader
+    ? !hasRight
+      ? {
+          display: 'grid',
+          gridTemplateColumns: `${effectiveLeftWidth}px minmax(0, 1fr)`,
+          gridTemplateRows: '1fr',
+          gridTemplateAreas: `"left content"`,
+          transition: 'grid-template-columns 0.35s ease',
+        }
+      : {
+          display: 'grid',
+          gridTemplateColumns: `${effectiveLeftWidth}px minmax(0, 1fr) ${effectiveRightWidth}px`,
+          gridTemplateRows: '1fr',
+          gridTemplateAreas: `"left content right"`,
+          transition: 'grid-template-columns 0.35s ease',
+        }
+    : {
+        display: 'grid',
+        gridTemplateColumns: `${effectiveLeftWidth}px minmax(0, 1fr) ${effectiveRightWidth}px`,
+        gridTemplateRows: 'auto 1fr',
+        gridTemplateAreas: hasRight
+          ? `"left header right"
+             "left content right"`
+          : `"left header header"
+             "left content content"`,
+        transition: 'grid-template-columns 0.35s ease',
+      };
 
-  const mobileGrid = {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
-    gridTemplateAreas: hasRight
-      ? `"header"
-         "content"
-         "right"`
-      : `"header"
-         "content"`,
-  };
+  const mobileGrid = !hasHeader
+    ? hasRight
+      ? {
+          display: 'grid',
+          gridTemplateColumns: '1fr',
+          gridTemplateRows: 'auto auto',
+          gridTemplateAreas: `"content" "right"`,
+        }
+      : {
+          display: 'grid',
+          gridTemplateColumns: '1fr',
+          gridTemplateRows: 'auto',
+          gridTemplateAreas: `"content"`,
+        }
+    : {
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
+        gridTemplateAreas: hasRight
+          ? `"header"
+             "content"
+             "right"`
+          : `"header"
+             "content"`,
+      };
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
 
@@ -396,16 +422,25 @@ export default function InternalLayout({
       <div style={backgroundStyle}>
         <HeaderComp />
 
-        <div style={{ ...gridStyles, gap, ...containerPadding, alignItems: 'start' }}>
-
-          {/* ── Left sidebar ── */}
+        <div
+          style={{
+            ...gridStyles,
+            gap,
+            ...containerPadding,
+            alignItems: 'start',
+            boxSizing: 'border-box',
+            width: '100%',
+            maxWidth: '100vw',
+            minWidth: 0,
+            overflowX: 'hidden',
+          }}
+        >
           <aside
             style={{
               gridArea: 'left',
               alignSelf: 'start',
               minWidth: 0,
               display: isMobile ? 'none' : 'block',
-              // ✅ Fade out and clip when collapsed
               overflow: 'hidden',
               opacity: collapseSiderails ? 0 : 1,
               pointerEvents: collapseSiderails ? 'none' : 'auto',
@@ -415,21 +450,21 @@ export default function InternalLayout({
             {left ?? <SidebarComp {...sidebarProps} />}
           </aside>
 
-          <header style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}>
-            {header}
-          </header>
+          {hasHeader ? (
+            <header style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}>
+              {header}
+            </header>
+          ) : null}
 
-          {/* ── Right rail ── */}
           {hasRight ? (
             <aside
               style={{
                 ...rightBase,
-                ...(rightVariant === 'light' ? rightLight : rightDark),
-                // ✅ Fade out and clip when collapsed
+                ...(useLightRightRail ? rightLight : rightDark),
                 overflow: 'hidden',
                 opacity: collapseSiderails ? 0 : 1,
                 pointerEvents: collapseSiderails ? 'none' : 'auto',
-                padding: collapseSiderails ? 0 : (rightVariant === 'light' ? 0 : 16),
+                padding: collapseSiderails ? 0 : (useLightRightRail ? 0 : 16),
                 transition: 'opacity 0.25s ease, padding 0.35s ease',
               }}
             >
@@ -437,8 +472,10 @@ export default function InternalLayout({
             </aside>
           ) : null}
 
-          <main style={{ gridArea: 'content', minWidth: 0 }}>
-            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>{children}</div>
+          <main style={{ gridArea: 'content', minWidth: 0, width: '100%', maxWidth: '100%' }}>
+            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>
+              {children}
+            </div>
           </main>
         </div>
 
@@ -446,7 +483,6 @@ export default function InternalLayout({
 
         <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
 
-        {/* ── Siderail toggle button — only renders when the page opts in ── */}
         {onToggleSiderails && !isMobile && (
           <SiderailToggle
             collapsed={collapseSiderails}
