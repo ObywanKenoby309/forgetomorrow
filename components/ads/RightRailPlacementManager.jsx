@@ -435,10 +435,9 @@ export default function RightRailPlacementManager({
                 borderRadius: 12,
                 padding: 12,
                 border: '1px solid rgba(255,255,255,0.22)',
-                background: 'rgba(255,255,255,0.58)',
-                boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
+                background: 'rgba(255,255,255,0.92)',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+                boxSizing: 'border-box',
               }}
             >
               <h3 style={{ margin: 0, marginBottom: 8, fontWeight: 800, color: '#263238' }}>
@@ -453,9 +452,5 @@ export default function RightRailPlacementManager({
   }
 
   // ── House ads (current default) ──
-  return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      {carousel ? <HouseAdCarousel /> : <HouseAdCard segment={segment} />}
-    </div>
-  );
+  return carousel ? <HouseAdCarousel /> : <HouseAdCard segment={segment} />;
 }
