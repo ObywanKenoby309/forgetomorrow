@@ -553,16 +553,6 @@ export default function SeekerApplicationsPage() {
     minWidth: 0,
   };
 
-  const PAGE_GLASS_WRAP = {
-    ...GLASS,
-    padding: 16,
-    margin: '12px 0 0',
-    width: '100%',
-    minWidth: 0,
-    maxWidth: '100%',
-    boxSizing: 'border-box',
-    overflowX: 'hidden',
-  };
 
 const HeaderBox = (
   <div style={{ display: 'grid', gap: 12, width: '100%', minWidth: 0 }}>
@@ -626,7 +616,7 @@ const HeaderBox = (
       rightTopOnly
       activeNav="jobs"
     >
-      <div style={PAGE_GLASS_WRAP}>
+      <div style={{ marginTop: 12 }}>
         <section style={{ ...WHITE_CARD, padding: 16, marginTop: 0 }}>
           <ApplicationsBoard
             key={JSON.stringify(tracker)}
