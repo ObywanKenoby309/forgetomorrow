@@ -1,4 +1,3 @@
-// pages/recruiter/pools.js
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
@@ -490,8 +489,9 @@ export default function RecruiterPools() {
     <RecruiterLayout
       title="ForgeTomorrow — Talent Pools"
       header={<HeaderBox />}
-	  headerCard={false}
+      headerCard={false}
       right={<RightRail />}
+      rightVariant="light"
       activeNav="candidate-center"
     >
       <section style={panelStyle} aria-label="Talent Pools working surface">
@@ -690,7 +690,6 @@ export default function RecruiterPools() {
                   At a glance...
                 </div>
 
-                {/* ✅ CHANGED: pills moved UNDER name/headline so they never get clipped */}
                 <div style={{ display: "grid", gap: 8 }}>
                   <div style={{ minWidth: 0 }}>
                     <div
@@ -756,7 +755,6 @@ export default function RecruiterPools() {
                     </Pill>
                   </div>
 
-                  {/* ✅ NEW: show external email when available */}
                   {String(selectedEntry.externalEmail || "").trim() ? (
                     <div
                       style={{
@@ -866,7 +864,6 @@ export default function RecruiterPools() {
                     View Full Details
                   </SecondaryButton>
 
-                  {/* ✅ CHANGED: Edit now opens edit modal (no deletion) */}
                   <TextButton onClick={() => openEdit(selectedEntry)} disabled={saving}>
                     Edit
                   </TextButton>
