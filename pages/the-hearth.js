@@ -53,24 +53,19 @@ export default function TheHearth() {
       }
       headerCard={false}
       activeNav={activeNav}
-      rightTopOnly
-      right={
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <RightRailPlacementManager slot="right_rail_1" />
-          <div style={{ ...GLASS, padding: 12, display: 'grid', gap: 8, boxSizing: 'border-box' }}>
-            <div style={{ fontSize: 18, color: '#FF7043', lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>
-              Community Guidelines
-            </div>
-            <Link href="/community-guidelines" style={{ color: '#FF7043', fontWeight: 800, fontSize: 13, lineHeight: 1.2, textDecoration: 'none' }}>
-              Read the guidelines →
-            </Link>
-          </div>
-        </div>
-      }
+      right={<RightRailPlacementManager slot="right_rail_1" />}
       rightVariant="light"
     >
       <>
         <HearthCenter />
+        <div style={{ ...GLASS, padding: 12, display: 'grid', gap: 8, boxSizing: 'border-box' }}>
+          <div style={{ fontSize: 18, color: '#FF7043', lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>
+            Community Guidelines
+          </div>
+          <Link href="/community-guidelines" style={{ color: '#FF7043', fontWeight: 800, fontSize: 13, lineHeight: 1.2, textDecoration: 'none' }}>
+            Read the guidelines →
+          </Link>
+        </div>
         <SupportFloatingButton />
       </>
     </Layout>
