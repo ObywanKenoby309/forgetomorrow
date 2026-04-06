@@ -12,6 +12,7 @@ import GroupsList from '@/components/GroupsList';
 import PagesList from '@/components/PagesList';
 import NewslettersList from '@/components/NewslettersList';
 import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
 const GLASS = {
@@ -28,6 +29,11 @@ const WHITE_CARD = {
   border: '1px solid rgba(0,0,0,0.08)',
   borderRadius: 12,
   boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+};
+
+const ORANGE_HEADING_LIFT = {
+  textShadow: '0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)',
+  fontWeight: 900,
 };
 
 // ✅ Mobile clamp helpers (prevents cards from stretching past viewport)
@@ -417,8 +423,11 @@ export default function SeekerContactCenter() {
   const openPage = (p) => console.log('Open page (future)', p);
   const openNewsletter = (n) => console.log('Open newsletter (future)', n);
 
+  const greeting = getTimeGreeting();
+
   const HeaderBox = (
     <SeekerTitleCard
+      greeting={greeting}
       title="Contact Center"
       subtitle={
         <>
@@ -441,6 +450,7 @@ export default function SeekerContactCenter() {
         title="Contact Center | ForgeTomorrow"
         header={HeaderBox}
         right={<RightRailPlacementManager surfaceId="contact_center" />}
+        rightVariant="light"
         activeNav="contacts"
       />
     );
@@ -464,7 +474,7 @@ export default function SeekerContactCenter() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, minWidth: 0 }}>
-              <h2 style={{ color: '#FF7043', margin: 0, fontSize: 16, fontWeight: 800 }}>
+              <h2 style={{ color: '#FF7043', margin: 0, fontSize: 18, lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>
                 Needs Your Attention
               </h2>
               {!nothingNeedingAttention && (
@@ -492,7 +502,7 @@ export default function SeekerContactCenter() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
                 {incomingRequests.length > 0 && (
                   <div style={{ minWidth: 0 }}>
-                    <h3 style={{ margin: '0 0 8px', fontSize: 13, color: '#374151', fontWeight: 700 }}>
+                    <h3 style={{ margin: '0 0 8px', fontSize: 13, color: '#112033', fontWeight: 700 }}>
                       Invites waiting on you
                     </h3>
                     <IncomingRequestsList
@@ -503,7 +513,7 @@ export default function SeekerContactCenter() {
                     />
                     <Link
                       href={withChrome('/seeker/contact-incoming')}
-                      style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 6, display: 'block' }}
+                      style={{ color: '#FF7043', fontWeight: 800, fontSize: 13, marginTop: 6, display: 'block', textDecoration: 'none' }}
                     >
                       Review all invites →
                     </Link>
@@ -511,7 +521,7 @@ export default function SeekerContactCenter() {
                 )}
                 {outgoingRequests.length > 0 && (
                   <div style={{ minWidth: 0 }}>
-                    <h3 style={{ margin: '0 0 8px', fontSize: 13, color: '#374151', fontWeight: 700 }}>
+                    <h3 style={{ margin: '0 0 8px', fontSize: 13, color: '#112033', fontWeight: 700 }}>
                       Requests you&apos;ve sent
                     </h3>
                     <OutgoingRequestsList
@@ -521,7 +531,7 @@ export default function SeekerContactCenter() {
                     />
                     <Link
                       href={withChrome('/seeker/contact-outgoing')}
-                      style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 6, display: 'block' }}
+                      style={{ color: '#FF7043', fontWeight: 800, fontSize: 13, marginTop: 6, display: 'block', textDecoration: 'none' }}
                     >
                       Review all requests →
                     </Link>
@@ -541,7 +551,7 @@ export default function SeekerContactCenter() {
               />
               <Link
                 href={withChrome('/seeker/contacts')}
-                style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 8, display: 'block' }}
+                style={{ color: '#FF7043', fontWeight: 800, fontSize: 13, marginTop: 8, display: 'block', textDecoration: 'none' }}
               >
                 View all contacts →
               </Link>
@@ -583,7 +593,7 @@ export default function SeekerContactCenter() {
               )}
               <Link
                 href={withChrome('/seeker/profile-views')}
-                style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 8, display: 'block' }}
+                style={{ color: '#FF7043', fontWeight: 800, fontSize: 13, marginTop: 8, display: 'block', textDecoration: 'none' }}
               >
                 View all profile views →
               </Link>
@@ -593,15 +603,15 @@ export default function SeekerContactCenter() {
           <CollapsibleCard title="Your Network" defaultOpen={false}>
             <div style={{ paddingTop: 4 }}>
               <div style={{ paddingTop: 12, paddingBottom: 12, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                <h3 style={{ color: '#FF7043', margin: '0 0 8px', fontSize: 14, fontWeight: 800 }}>Groups</h3>
+                <h3 style={{ color: '#FF7043', margin: '0 0 8px', fontSize: 16, lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>Groups</h3>
                 <GroupsList groups={groups} onOpen={openGroup} />
               </div>
               <div style={{ paddingTop: 12, paddingBottom: 12, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                <h3 style={{ color: '#FF7043', margin: '0 0 8px', fontSize: 14, fontWeight: 800 }}>Pages</h3>
+                <h3 style={{ color: '#FF7043', margin: '0 0 8px', fontSize: 16, lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>Pages</h3>
                 <PagesList pages={pages} onOpen={openPage} />
               </div>
               <div style={{ paddingTop: 12 }}>
-                <h3 style={{ color: '#FF7043', margin: '0 0 8px', fontSize: 14, fontWeight: 800 }}>Newsletters</h3>
+                <h3 style={{ color: '#FF7043', margin: '0 0 8px', fontSize: 16, lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>Newsletters</h3>
                 <NewslettersList items={newsletters} onOpen={openNewsletter} />
               </div>
             </div>
@@ -611,13 +621,14 @@ export default function SeekerContactCenter() {
     );
   }
 
-  const PAGE_GLASS_WRAP = { ...GLASS, padding: 16, margin: '24px 0 0', width: '100%' };
+  const PAGE_GLASS_WRAP = { ...GLASS, padding: 16, width: '100%' };
 
   return (
     <SeekerLayout
       title="Contact Center | ForgeTomorrow"
       header={HeaderBox}
       right={<RightRailPlacementManager surfaceId="contact_center" />}
+      rightVariant="light"
       activeNav="contacts"
     >
       <div style={PAGE_GLASS_WRAP}>
@@ -626,7 +637,7 @@ export default function SeekerContactCenter() {
         </section>
 
         <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
-          <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 8 }}>Needs your attention</h2>
+          <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 8, fontSize: 18, lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>Needs your attention</h2>
           {nothingNeedingAttention ? (
             <p style={{ color: '#607D8B', fontSize: 14, marginBottom: 0 }}>
               You&apos;re all caught up. When new invites or requests come in, they&apos;ll appear here first.
@@ -635,7 +646,7 @@ export default function SeekerContactCenter() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {incomingRequests.length > 0 && (
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 14, color: '#374151', fontWeight: 700 }}>
+                  <h3 style={{ margin: 0, fontSize: 14, color: '#112033', fontWeight: 700 }}>
                     Invites waiting on you
                   </h3>
                   <IncomingRequestsList
@@ -646,7 +657,7 @@ export default function SeekerContactCenter() {
                   />
                   <Link
                     href={withChrome('/seeker/contact-incoming')}
-                    style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 6, display: 'block' }}
+                    style={{ color: '#FF7043', fontWeight: 800, fontSize: 13, marginTop: 6, display: 'block', textDecoration: 'none' }}
                   >
                     Review all invites →
                   </Link>
@@ -654,7 +665,7 @@ export default function SeekerContactCenter() {
               )}
               {outgoingRequests.length > 0 && (
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 14, color: '#374151', fontWeight: 700 }}>
+                  <h3 style={{ margin: 0, fontSize: 14, color: '#112033', fontWeight: 700 }}>
                     Requests you&apos;ve sent
                   </h3>
                   <OutgoingRequestsList
@@ -664,7 +675,7 @@ export default function SeekerContactCenter() {
                   />
                   <Link
                     href={withChrome('/seeker/contact-outgoing')}
-                    style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 6, display: 'block' }}
+                    style={{ color: '#FF7043', fontWeight: 800, fontSize: 13, marginTop: 6, display: 'block', textDecoration: 'none' }}
                   >
                     Review all requests →
                   </Link>
@@ -684,7 +695,7 @@ export default function SeekerContactCenter() {
         >
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <h2 style={{ color: '#FF7043', margin: 0 }}>Contacts</h2>
+              <h2 style={{ color: '#FF7043', margin: 0, fontSize: 18, lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>Contacts</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span
                   style={{
@@ -727,7 +738,7 @@ export default function SeekerContactCenter() {
                 />
                 <Link
                   href={withChrome('/seeker/contacts')}
-                  style={{ color: '#FF7043', fontWeight: 700, marginTop: 8, display: 'block' }}
+                  style={{ color: '#FF7043', fontWeight: 800, marginTop: 8, display: 'block', textDecoration: 'none' }}
                 >
                   View all contacts →
                 </Link>
@@ -736,7 +747,7 @@ export default function SeekerContactCenter() {
           </section>
 
           <section style={{ ...WHITE_CARD, padding: 16 }}>
-            <h2 style={{ color: '#FF7043', marginTop: 0 }}>Recent Profile Views</h2>
+            <h2 style={{ color: '#FF7043', marginTop: 0, fontSize: 18, lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>Recent Profile Views</h2>
             {pvLoading ? (
               <p style={{ color: '#607D8B', fontSize: 14 }}>Loading views…</p>
             ) : profileViews.length === 0 ? (
@@ -770,7 +781,7 @@ export default function SeekerContactCenter() {
             )}
             <Link
               href={withChrome('/seeker/profile-views')}
-              style={{ color: '#FF7043', fontWeight: 700, marginTop: 8, display: 'block' }}
+              style={{ color: '#FF7043', fontWeight: 800, marginTop: 8, display: 'block', textDecoration: 'none' }}
             >
               View all profile views →
             </Link>
@@ -786,15 +797,15 @@ export default function SeekerContactCenter() {
           }}
         >
           <section style={{ ...WHITE_CARD, padding: 16 }}>
-            <h2 style={{ color: '#FF7043', marginTop: 0 }}>Groups</h2>
+            <h2 style={{ color: '#FF7043', marginTop: 0, fontSize: 18, lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>Groups</h2>
             <GroupsList groups={groups} onOpen={openGroup} />
           </section>
           <section style={{ ...WHITE_CARD, padding: 16 }}>
-            <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pages</h2>
+            <h2 style={{ color: '#FF7043', marginTop: 0, fontSize: 18, lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>Pages</h2>
             <PagesList pages={pages} onOpen={openPage} />
           </section>
           <section style={{ ...WHITE_CARD, padding: 16 }}>
-            <h2 style={{ color: '#FF7043', marginTop: 0 }}>Newsletters</h2>
+            <h2 style={{ color: '#FF7043', marginTop: 0, fontSize: 18, lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>Newsletters</h2>
             <NewslettersList items={newsletters} onOpen={openNewsletter} />
           </section>
         </section>
