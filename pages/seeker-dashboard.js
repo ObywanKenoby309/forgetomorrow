@@ -661,7 +661,7 @@ export default function SeekerDashboard() {
             />
 
             {/* ROW 2, COL 1: KPI strip */}
-            <section style={{ ...KPI_GLASS, padding: '12px 16px 16px 16px', gridColumn: '1 / 2', gridRow: '2' }}>
+            <section style={{ ...GLASS, padding: '12px 16px 16px 16px', gridColumn: '1 / 2', gridRow: '2' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <h2
                   style={{
@@ -690,13 +690,15 @@ export default function SeekerDashboard() {
                 </Link>
               </div>
               {kpi && (
-                <KpiRow
-                  pinned={kpi.pinned || 0}
-                  applied={kpi.applied || 0}
-                  interviewing={kpi.interviewing || 0}
-                  offers={kpi.offers || 0}
-                  closedOut={kpi.closedOut || 0}
-                />
+                <div style={{ minHeight: 108 }}>
+                  <KpiRow
+                    pinned={kpi.pinned || 0}
+                    applied={kpi.applied || 0}
+                    interviewing={kpi.interviewing || 0}
+                    offers={kpi.offers || 0}
+                    closedOut={kpi.closedOut || 0}
+                  />
+                </div>
               )}
             </section>
 
@@ -705,27 +707,23 @@ export default function SeekerDashboard() {
               <SeekerActionCenterSection
                 scope={scope}
                 withChrome={withChrome}
-                glassStyle={KPI_GLASS}
+                glassStyle={GLASS}
                 isMobile={false}
               />
             </div>
 
-            {/* COL 2, ROWS 1–2: Sponsored */}
+            {/* COL 2, ROWS 1–2: Sponsored — no glass backing */}
             <aside
               style={{
-                ...GLASS,
                 gridColumn: '2 / 3',
                 gridRow: '1 / 3',
                 display: 'flex',
                 flexDirection: 'column',
-                padding: 16,
+                padding: 0,
                 boxSizing: 'border-box',
                 alignSelf: 'stretch',
               }}
             >
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94A3B8', marginBottom: 8 }}>
-                Sponsored
-              </div>
               <div style={{ flex: 1, minHeight: 160 }}>
                 <RightRailPlacementManager slot="right_rail_1" />
               </div>
