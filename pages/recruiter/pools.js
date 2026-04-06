@@ -11,7 +11,7 @@ import PoolEntriesList from "@/components/recruiter/pools/PoolEntriesList";
 import CreatePoolPanel from "@/components/recruiter/pools/CreatePoolPanel";
 import AddCandidatesPicker from "@/components/recruiter/pools/AddCandidatesPicker";
 import CandidateDetailModal from "@/components/recruiter/pools/CandidateDetailModal";
-import CandidateProfileModal from "@/components/CandidateProfileModal";
+import CandidateProfileModal from "../../components/recruiter/CandidateProfileModal";
 import {
   PrimaryButton,
   SecondaryButton,
