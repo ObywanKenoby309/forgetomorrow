@@ -24,45 +24,6 @@ const ORANGE_HEADING_LIFT = {
   fontWeight: 900,
 };
 
-function RightRail() {
-  return (
-    <div style={{ display: 'grid', gap: 12, minWidth: 0, width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
-        <RightRailPlacementManager slot="right_rail_1" />
-      </div>
-
-      <div
-        style={{
-          ...GLASS,
-          padding: 12,
-          display: 'grid',
-          gap: 8,
-          boxSizing: 'border-box',
-        }}
-      >
-        <div style={{
-          fontSize: 18,
-          color: '#FF7043',
-          lineHeight: 1.25,
-          letterSpacing: '-0.01em',
-          ...ORANGE_HEADING_LIFT,
-        }}>
-          Community Guidelines
-        </div>
-        <Link href="/community-guidelines" style={{
-          color: '#FF7043',
-          fontWeight: 800,
-          fontSize: 13,
-          lineHeight: 1.2,
-          textDecoration: 'none',
-        }}>
-          Read the guidelines →
-        </Link>
-      </div>
-    </div>
-  );
-}
-
 export default function TheHearth() {
   const router = useRouter();
   const chromeRaw = String(router.query.chrome || 'seeker').toLowerCase();
@@ -91,14 +52,26 @@ export default function TheHearth() {
         />
       }
       headerCard={false}
-      right={<RightRail />}
-      rightVariant="light"
       activeNav={activeNav}
+      contentFullBleed
     >
-      <>
-        <HearthCenter />
-        <SupportFloatingButton />
-      </>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 260px', gap: 16, alignItems: 'start', width: '100%' }}>
+        <div>
+          <HearthCenter />
+        </div>
+        <aside style={{ position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <RightRailPlacementManager slot="right_rail_1" />
+          <div style={{ ...GLASS, padding: 12, display: 'grid', gap: 8, boxSizing: 'border-box' }}>
+            <div style={{ fontSize: 18, color: '#FF7043', lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>
+              Community Guidelines
+            </div>
+            <Link href="/community-guidelines" style={{ color: '#FF7043', fontWeight: 800, fontSize: 13, lineHeight: 1.2, textDecoration: 'none' }}>
+              Read the guidelines →
+            </Link>
+          </div>
+        </aside>
+      </div>
+      <SupportFloatingButton />
     </Layout>
   );
 }
