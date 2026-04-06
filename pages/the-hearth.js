@@ -53,13 +53,9 @@ export default function TheHearth() {
       }
       headerCard={false}
       activeNav={activeNav}
-      contentFullBleed
-    >
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 260px', gap: 16, alignItems: 'start', width: '100%' }}>
-        <div>
-          <HearthCenter />
-        </div>
-        <aside style={{ position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      rightTopOnly
+      right={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <RightRailPlacementManager slot="right_rail_1" />
           <div style={{ ...GLASS, padding: 12, display: 'grid', gap: 8, boxSizing: 'border-box' }}>
             <div style={{ fontSize: 18, color: '#FF7043', lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>
@@ -69,9 +65,14 @@ export default function TheHearth() {
               Read the guidelines →
             </Link>
           </div>
-        </aside>
-      </div>
-      <SupportFloatingButton />
+        </div>
+      }
+      rightVariant="light"
+    >
+      <>
+        <HearthCenter />
+        <SupportFloatingButton />
+      </>
     </Layout>
   );
 }
