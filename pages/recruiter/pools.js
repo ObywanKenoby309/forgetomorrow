@@ -11,6 +11,7 @@ import PoolEntriesList from "@/components/recruiter/pools/PoolEntriesList";
 import CreatePoolPanel from "@/components/recruiter/pools/CreatePoolPanel";
 import AddCandidatesPicker from "@/components/recruiter/pools/AddCandidatesPicker";
 import CandidateDetailModal from "@/components/recruiter/pools/CandidateDetailModal";
+import CandidateProfileModal from "@/components/CandidateProfileModal";
 import {
   PrimaryButton,
   SecondaryButton,
@@ -47,6 +48,9 @@ export default function RecruiterPools() {
 
   const [search, setSearch] = useState("");
   const [selectedEntryId, setSelectedEntryId] = useState("");
+  
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   // ✅ column focus (left vs middle)
   // default to "pools" so on load Col 1 is normal and Col 2 is collapsed
@@ -427,21 +431,27 @@ export default function RecruiterPools() {
     setShowCandidateModal(true);
   }
 
-  function openFullProfileFromModal(entryArg) {
-    const e = entryArg && typeof entryArg === "object" ? entryArg : modalEntry;
-    const candidateUserId = String(e?.candidateUserId || "").trim();
+function openFullProfileFromModal(entryArg) {
+  const e = entryArg && typeof entryArg === "object" ? entryArg : modalEntry;
 
-    if (!candidateUserId) {
-      setError(
-        "This pool entry is missing an internal candidate ID. Cannot open Candidate Center."
-      );
-      return;
-    }
+  const candidateUserId = String(e?.candidateUserId || "").trim();
 
-    router.push(
-      `/recruiter/candidates?candidateId=${encodeURIComponent(candidateUserId)}`
+  if (!candidateUserId) {
+    setError(
+      "This pool entry is missing an internal candidate ID. Cannot open Candidate Profile."
     );
+    return;
   }
+
+  setSelectedCandidate({
+    id: candidateUserId,
+    name: e.name,
+    headline: e.headline,
+    email: e.email,
+  });
+
+  setShowProfileModal(true);
+}
 
   async function savePoolEntryEdits(payload) {
     const poolId = String(selectedPoolId || "").trim();
@@ -873,6 +883,15 @@ export default function RecruiterPools() {
           </div>
         </div>
       </section>
-    </RecruiterLayout>
+
+{showProfileModal && selectedCandidate && (
+  <CandidateProfileModal
+    open={showProfileModal}
+    onClose={() => setShowProfileModal(false)}
+    candidate={selectedCandidate}
+  />
+)}
+
+</RecruiterLayout>
   );
 }
