@@ -13,6 +13,8 @@ import * as Analytics from "../../lib/analytics/instrumentation";
 import WhyInfo from "../../components/recruiter/WhyInfo";
 import PersonaChoiceModal from "../../components/common/PersonaChoiceModal";
 import CandidateTargetingPanel from "../../components/recruiter/CandidateTargetingPanel";
+import RecruiterTitleCard from "@/components/recruiter/RecruiterTitleCard";
+import { getTimeGreeting } from "@/lib/dashboardGreeting";
 import RightRailPlacementManager from "../../components/ads/RightRailPlacementManager";
 
 async function getSessionDirect(timeoutMs = 4000) {
@@ -753,39 +755,6 @@ function CommandBar({
         }
       `}</style>
     </div>
-  );
-}
-
-function HeaderOnly() {
-  return (
-    <section
-      style={{
-        borderRadius: 18,
-        padding: "18px 20px",
-        background: "rgba(245, 232, 220, 0.92)",
-        border: "1px solid rgba(255,255,255,0.28)",
-        boxShadow: "0 10px 26px rgba(0,0,0,0.10)",
-        textAlign: "center",
-      }}
-    >
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-  <div style={{ fontSize: 24, fontWeight: 900, color: "#FF7043", lineHeight: 1.1 }}>
-    Candidates
-  </div>
-  <div
-    style={{
-      marginTop: 8,
-      fontSize: 14,
-      color: "#64748B",
-      maxWidth: 720,
-      lineHeight: 1.45,
-      fontWeight: 500,
-    }}
-  >
-    Review and manage your active pipeline. Search by name or role, filter by location, and on Enterprise use advanced queries to dial in exactly who you need.
-  </div>
-</div>
-    </section>
   );
 }
 
@@ -1610,11 +1579,21 @@ function Body() {
 }
 
 export default function CandidatesPage() {
+  const greeting = getTimeGreeting();
+
+  const HeaderBox = (
+    <RecruiterTitleCard
+      greeting={greeting}
+      title="Candidates"
+      subtitle="Review and manage your active pipeline. Search, filter, and identify the right talent quickly."
+      compact
+    />
+  );
   return (
     <PlanProvider>
       <RecruiterLayout
 		title="Candidates - ForgeTomorrow"
-		header={<HeaderOnly />}
+		header={HeaderBox}
 		headerCard={false}
 		right={<RightRailStack />}
 		rightVariant="light"
