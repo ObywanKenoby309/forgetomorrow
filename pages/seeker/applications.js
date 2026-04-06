@@ -599,10 +599,11 @@ const HeaderBox = (
   if (loading) {
     return (
       <SeekerLayout
-        header={HeaderBox}
-        right={<RightRailPlacementManager surfaceId="applications" />}
-        rightTopOnly
-      >
+		header={HeaderBox}
+		right={<RightRailPlacementManager surfaceId="applications" />}
+		rightVariant="light"
+		rightTopOnly
+	   >
         <div className="text-center py-20">Loading your applications...</div>
       </SeekerLayout>
     );
@@ -610,12 +611,13 @@ const HeaderBox = (
 
   return (
     <SeekerLayout
-      title="Applications | ForgeTomorrow"
-      header={HeaderBox}
-      right={<RightRailPlacementManager surfaceId="applications" />}
-      rightTopOnly
-      activeNav="jobs"
-    >
+  title="Applications | ForgeTomorrow"
+  header={HeaderBox}
+  right={<RightRailPlacementManager surfaceId="applications" />}
+  rightVariant="light"
+  rightTopOnly
+  activeNav="jobs"
+>
       <div style={{ marginTop: 12 }}>
         <section style={{ ...WHITE_CARD, padding: 16, marginTop: 0 }}>
           <ApplicationsBoard
