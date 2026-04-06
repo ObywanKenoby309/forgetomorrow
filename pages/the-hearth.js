@@ -92,8 +92,8 @@ export default function TheHearth() {
       }
       headerCard={false}
       right={<RightRail />}
-      activeNav={activeNav}
       rightVariant="light"
+      activeNav={activeNav}
     >
       <>
         <HearthCenter />
