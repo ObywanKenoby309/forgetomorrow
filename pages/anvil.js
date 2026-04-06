@@ -433,31 +433,23 @@ export default function AnvilPage() {
   }, []);
 
   const greeting = getTimeGreeting();
-  
-  const pageHeader = (
-  <SeekerTitleCard
-    greeting={greeting}
-    title="The Anvil"
-    subtitle="Your workstation for building career signal — profile strength, negotiation readiness, and guided growth plans."
-  />
-);
 
   const RightColumn = (
-    <aside style={{ ...GLASS, padding: 16, boxSizing: "border-box",
-      display: "flex", flexDirection: "column", gap: GAP, alignSelf: "stretch" }}>
-      <div style={{ minHeight: 160, width: "100%" }}>
-        <RightRailPlacementManager slot="right_rail_1" />
-      </div>
-    </aside>
+    <RightRailPlacementManager slot="right_rail_1" />
   );
 
   return (
     <SeekerLayout
-  title="The Anvil | ForgeTomorrow"
-  right={RightColumn}
-  activeNav={activeNav}
-  header={pageHeader}
->
+      title="The Anvil | ForgeTomorrow"
+      right={RightColumn}
+      rightVariant="light"
+      activeNav={activeNav}
+    >
+      <SeekerTitleCard
+        greeting={greeting}
+        title="The Anvil"
+        subtitle="Your workstation for building career signal — profile strength, negotiation readiness, and guided growth plans."
+      />
 
       <div style={{
         ...GLASS,
