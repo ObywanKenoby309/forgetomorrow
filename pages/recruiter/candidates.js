@@ -758,18 +758,34 @@ function CommandBar({
 
 function HeaderOnly() {
   return (
-    <div className="w-full">
-      <GlassPanel className="px-5 py-4 sm:px-6" style={{ borderRadius: 18 }}>
-        <div className="flex flex-col items-center text-center">
-          <div className="text-[24px] font-black text-[#FF7043]">Candidates</div>
-          <div className="mt-1.5 text-[14px] text-[#64748B] max-w-xl leading-[1.5]">
-            Review and manage your active pipeline. Search by name or role,
-            filter by location, and on Enterprise use advanced queries to dial in
-            exactly who you need.
-          </div>
-        </div>
-      </GlassPanel>
-    </div>
+    <section
+      style={{
+        borderRadius: 18,
+        padding: "18px 20px",
+        background: "rgba(245, 232, 220, 0.92)",
+        border: "1px solid rgba(255,255,255,0.28)",
+        boxShadow: "0 10px 26px rgba(0,0,0,0.10)",
+        textAlign: "center",
+      }}
+    >
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+  <div style={{ fontSize: 24, fontWeight: 900, color: "#FF7043", lineHeight: 1.1 }}>
+    Candidates
+  </div>
+  <div
+    style={{
+      marginTop: 8,
+      fontSize: 14,
+      color: "#64748B",
+      maxWidth: 720,
+      lineHeight: 1.45,
+      fontWeight: 500,
+    }}
+  >
+    Review and manage your active pipeline. Search by name or role, filter by location, and on Enterprise use advanced queries to dial in exactly who you need.
+  </div>
+</div>
+    </section>
   );
 }
 
@@ -819,7 +835,7 @@ function RightToolsCard({ whyMode, creditsLeft = null }) {
 
 function RightRailStack({ whyMode, creditsLeft = null }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <RightRailPlacementManager />
       <RightToolsCard whyMode={whyMode} creditsLeft={creditsLeft} />
     </div>
@@ -1597,12 +1613,13 @@ export default function CandidatesPage() {
   return (
     <PlanProvider>
       <RecruiterLayout
-        title="Candidates - ForgeTomorrow"
-        header={<HeaderOnly />}
-        headerCard={false}
-        right={<RightRailStack />}
-        activeNav="candidates"
-      >
+		title="Candidates - ForgeTomorrow"
+		header={<HeaderOnly />}
+		headerCard={false}
+		right={<RightRailStack />}
+		rightVariant="light"
+		activeNav="candidates"
+	  >
         <Body />
       </RecruiterLayout>
     </PlanProvider>
