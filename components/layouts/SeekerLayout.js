@@ -333,6 +333,9 @@ export default function SeekerLayout({
     border: 'none',
     padding: 0,
     boxShadow: 'none',
+    backdropFilter: 'none',
+    WebkitBackdropFilter: 'none',
+    borderRadius: 0,
   };
 
   const containerPadding = {
