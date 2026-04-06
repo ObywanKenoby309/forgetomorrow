@@ -23,7 +23,6 @@ function formatWorkStatus(value) {
   if (v === "employed") return "Employed";
   if (v === "student") return "Student";
   if (v === "contractor") return "Contractor / Freelance";
-  // Capitalize first letter as fallback
   return String(value || "").trim();
 }
 
@@ -173,7 +172,11 @@ export default function CandidateProfileModal({
   const toggleExp = (idx) => setExpandedExp((p) => ({ ...p, [idx]: !p[idx] }));
 
   const sectionClasses = (isEmpty = false) =>
-    `rounded border p-4 ${isEmpty ? "bg-slate-50 border-slate-200" : "bg-white"}`;
+    `rounded-2xl border p-4 sm:p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ${
+      isEmpty
+        ? "bg-white/70 border-slate-200"
+        : "bg-white/88 border-white/60 backdrop-blur-sm"
+    }`;
 
   const isSummaryEmpty = !candidate.summary || !candidate.summary.toString().trim();
 
@@ -195,7 +198,6 @@ export default function CandidateProfileModal({
   const workTypeFmt = formatWorkType(candidate?.preferredWorkType);
   const relocateFmt = formatRelocate(candidate?.willingToRelocate);
 
-  // Earliest start date — stored in workPreferences.earliestStartDate or top-level
   const earliestStart =
     candidate?.workPreferences?.earliestStartDate ||
     candidate?.earliestStartDate ||
@@ -206,44 +208,46 @@ export default function CandidateProfileModal({
     preferredLocationList.length || earliestStart
   );
 
-  // ── Education ────────────────────────────────────────────────────────────────
   const educationList = toSafeArray(candidate?.education).filter(
     (e) => e && typeof e === "object" && (e.school || e.degree || e.field)
   );
   const hasEducation = educationList.length > 0;
 
-  // ── Languages ───────────────────────────────────────────────────────────────
   const languageList = toSafeArray(candidate?.languages);
   const hasLanguages = languageList.length > 0;
 
   return (
-    // ✅ FIX: z-[200] ensures this always renders above the sidebar (z-index: 10)
-    <div className="fixed inset-0 z-[200] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+    <div
+      className="fixed inset-0 z-[200] flex items-start justify-center px-4 pt-10 pb-6 sm:px-6 sm:pt-14"
+    >
+      <div
+        className="absolute inset-0 bg-[rgba(2,6,23,0.55)] backdrop-blur-[3px]"
+        onClick={onClose}
+      />
 
-      <div className="relative w-full max-w-6xl rounded-lg bg-white shadow-xl border max-h-[90vh] flex flex-col">
+      <div className="relative w-full max-w-6xl rounded-[28px] border border-white/25 bg-[rgba(248,250,252,0.82)] shadow-[0_30px_80px_rgba(2,6,23,0.35)] backdrop-blur-xl max-h-[88vh] flex flex-col overflow-hidden">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
-        <div className="p-5 border-b flex items-center justify-between flex-shrink-0">
+        <div className="px-5 py-5 sm:px-6 sm:py-6 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.88),rgba(248,250,252,0.72))] flex items-center justify-between gap-4 flex-shrink-0">
           <div className="min-w-0">
-            <div className="text-lg font-semibold truncate">
+            <div className="text-[24px] font-black tracking-tight text-slate-900 truncate">
               {candidate.name || "Candidate"}
             </div>
-            <div className="text-sm text-slate-500 truncate">
+            <div className="mt-1 text-sm text-slate-600 truncate">
               {candidate.role || "Candidate"} • {candidate.location || "—"}
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {typeof onViewResume === "function" && (
               <button
                 type="button"
                 onClick={() => onViewResume(candidate)}
                 disabled={!hasResume}
-                className={`rounded border px-3 py-2 text-sm hover:bg-slate-50 ${
+                className={`rounded-xl border px-3 py-2 text-sm font-medium shadow-sm transition ${
                   hasResume
-                    ? "text-slate-700"
-                    : "text-slate-400 cursor-not-allowed opacity-70"
+                    ? "border-slate-200 bg-white/80 text-slate-700 hover:bg-white"
+                    : "border-slate-200 bg-white/60 text-slate-400 cursor-not-allowed opacity-70"
                 }`}
                 title={hasResume ? "View resume" : "No resume on file"}
               >
@@ -253,7 +257,7 @@ export default function CandidateProfileModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded border px-3 py-2 text-sm hover:bg-slate-50"
+              className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
             >
               Close
             </button>
@@ -261,14 +265,14 @@ export default function CandidateProfileModal({
         </div>
 
         {/* ── Body grid ──────────────────────────────────────────────────── */}
-        <div className="p-5 grid grid-cols-1 lg:grid-cols-3 gap-5 overflow-y-auto bg-slate-50/40">
+        <div className="p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-5 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,250,252,0.22),rgba(241,245,249,0.34))]">
 
           {/* Left column — main profile content */}
           <div className="lg:col-span-2 space-y-5">
 
             {/* Summary */}
             <section className={sectionClasses(isSummaryEmpty)}>
-              <div className="font-medium mb-1">Summary</div>
+              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">Summary</div>
               {isSummaryEmpty ? (
                 <div className="text-sm text-slate-500">
                   This candidate hasn&apos;t added a full summary yet.
@@ -277,7 +281,7 @@ export default function CandidateProfileModal({
                   </span>
                 </div>
               ) : (
-                <div className="text-sm text-slate-700 whitespace-pre-line">
+                <div className="text-sm leading-7 text-slate-700 whitespace-pre-line">
                   {candidate.summary}
                 </div>
               )}
@@ -285,17 +289,17 @@ export default function CandidateProfileModal({
 
             {/* Experience */}
             <section className={sectionClasses(!hasExperience)}>
-              <div className="font-medium mb-2">Experience</div>
+              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Experience</div>
               {hasExperience ? (
                 <ul className="space-y-3 text-sm">
                   {experienceList.map((exp, idx) => {
                     const openItem = !!expandedExp[idx];
                     const highlights = toSafeArray(exp?.highlights);
                     return (
-                      <li key={idx} className="border-b last:border-0 pb-3">
+                      <li key={idx} className="border-b border-slate-100 last:border-0 pb-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="font-medium break-words">
+                            <div className="font-semibold text-slate-900 break-words">
                               {exp?.title || "Role"} — {exp?.company || "Company"}
                             </div>
                             <div className="text-slate-500 break-words">
@@ -306,14 +310,14 @@ export default function CandidateProfileModal({
                             <button
                               type="button"
                               onClick={() => toggleExp(idx)}
-                              className="text-xs px-2 py-1 border rounded hover:bg-slate-50 shrink-0"
+                              className="text-xs px-3 py-1.5 border border-slate-200 rounded-xl bg-white/80 hover:bg-white shrink-0 transition"
                             >
                               {openItem ? "Hide" : "Show"} details
                             </button>
                           ) : null}
                         </div>
                         {openItem && highlights.length ? (
-                          <ul className="list-disc pl-5 mt-2 space-y-1">
+                          <ul className="list-disc pl-5 mt-2 space-y-1 text-slate-700">
                             {highlights.map((h, i) => (
                               <li key={i}>{h}</li>
                             ))}
@@ -327,7 +331,7 @@ export default function CandidateProfileModal({
                 <div className="text-sm text-slate-500">
                   No experience listed.
                   <span className="block text-xs text-slate-400 mt-1">
-                    Experience is pulled from the candidate's primary resume.
+                    Experience is pulled from the candidate&apos;s primary resume.
                   </span>
                 </div>
               )}
@@ -335,12 +339,12 @@ export default function CandidateProfileModal({
 
             {/* Education */}
             <section className={sectionClasses(!hasEducation)}>
-              <div className="font-medium mb-2">Education</div>
+              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Education</div>
               {hasEducation ? (
                 <ul className="space-y-2 text-sm">
                   {educationList.map((edu, idx) => (
-                    <li key={idx} className="border-b last:border-0 pb-2">
-                      <div className="font-medium break-words">
+                    <li key={idx} className="border-b border-slate-100 last:border-0 pb-2">
+                      <div className="font-semibold text-slate-900 break-words">
                         {[edu.degree, edu.field].filter(Boolean).join(" in ") || "Degree"}
                       </div>
                       {edu.school && (
@@ -358,7 +362,7 @@ export default function CandidateProfileModal({
                 <div className="text-sm text-slate-500">
                   No education listed.
                   <span className="block text-xs text-slate-400 mt-1">
-                    Education is pulled from the candidate's profile.
+                    Education is pulled from the candidate&apos;s profile.
                   </span>
                 </div>
               )}
@@ -366,7 +370,7 @@ export default function CandidateProfileModal({
 
             {/* Recent Activity */}
             <section className={sectionClasses(!hasActivity)}>
-              <div className="font-medium mb-2">Recent Activity</div>
+              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Recent Activity</div>
               {hasActivity ? (
                 <ul className="space-y-2 text-sm">
                   {activityList.map((a, idx) => {
@@ -383,12 +387,16 @@ export default function CandidateProfileModal({
                       return (
                         <li key={idx}>
                           {isInternal ? (
-                            <Link href={a.url} className="block hover:bg-slate-50 rounded px-2 py-1">
+                            <Link href={a.url} className="block hover:bg-slate-50 rounded-xl px-2 py-1 transition">
                               {content}
                             </Link>
                           ) : (
-                            <a href={a.url} target="_blank" rel="noreferrer noopener"
-                              className="block hover:bg-slate-50 rounded px-2 py-1">
+                            <a
+                              href={a.url}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="block hover:bg-slate-50 rounded-xl px-2 py-1 transition"
+                            >
                               {content}
                             </a>
                           )}
@@ -410,18 +418,18 @@ export default function CandidateProfileModal({
 
             {/* Candidate Journey Replay */}
             <section className={sectionClasses(!hasJourney)}>
-              <div className="flex items-center justify-between mb-2 gap-3">
-                <div className="font-medium">Candidate Journey Replay</div>
+              <div className="flex items-center justify-between mb-3 gap-3">
+                <div className="text-[22px] font-bold tracking-tight text-slate-900">Candidate Journey Replay</div>
                 <div className="flex gap-2 flex-wrap justify-end">
                   {["All", "Views", "Applies", "Messages"].map((f) => (
                     <button
                       type="button"
                       key={f}
                       onClick={() => setJourneyFilter(f)}
-                      className={`text-xs px-2 py-1 rounded border ${
+                      className={`text-xs px-3 py-1.5 rounded-xl border transition ${
                         journeyFilter === f
                           ? "bg-slate-900 text-white border-slate-900"
-                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                          : "bg-white/80 text-slate-700 border-slate-300 hover:bg-white"
                       }`}
                     >
                       {f}
@@ -433,7 +441,7 @@ export default function CandidateProfileModal({
                 {hasJourney ? (
                   journeyList.map((step, idx) => (
                     <div key={idx} className="text-sm">
-                      <div className="font-medium break-words">{step?.action || "Event"}</div>
+                      <div className="font-semibold text-slate-900 break-words">{step?.action || "Event"}</div>
                       <div className="text-slate-500 break-words">{step?.timestamp || ""}</div>
                     </div>
                   ))
@@ -452,9 +460,9 @@ export default function CandidateProfileModal({
           {/* Right column — recruiter tools + candidate preferences */}
           <div className="space-y-5">
 
-            {/* ✅ NEW: Work Preferences — surfaces what the seeker set on their profile */}
+            {/* Work Preferences */}
             <section className={sectionClasses(!hasWorkPrefs)}>
-              <div className="font-medium mb-2">Work Preferences</div>
+              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Work Preferences</div>
               {hasWorkPrefs ? (
                 <div className="divide-y divide-slate-100">
                   <PrefRow label="Status" value={workStatusFmt} />
@@ -488,24 +496,24 @@ export default function CandidateProfileModal({
                 <div className="text-sm text-slate-500">
                   No work preferences set.
                   <span className="block text-xs text-slate-400 mt-1">
-                    Candidate hasn't configured discovery settings yet.
+                    Candidate hasn&apos;t configured discovery settings yet.
                   </span>
                 </div>
               )}
             </section>
 
-            {/* Skills (recruiter-editable, team-only) */}
+            {/* Skills */}
             <section className={sectionClasses(!hasSkills)}>
-              <div className="font-medium mb-2">Skills</div>
-              <div className="text-[11px] text-slate-400 mb-2">
-                Visible to your team only. Does not modify the candidate's profile.
+              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">Skills</div>
+              <div className="text-[11px] text-slate-400 mb-3">
+                Visible to your team only. Does not modify the candidate&apos;s profile.
               </div>
               <div className="flex flex-wrap gap-2 mb-3">
                 {hasSkills ? (
                   toSafeArray(skillsLocal).map((s, i) => (
                     <span
                       key={`${s}-${i}`}
-                      className="text-xs px-2 py-[6px] rounded border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1 break-words"
+                      className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1 break-words"
                     >
                       {s}
                       <button
@@ -529,7 +537,7 @@ export default function CandidateProfileModal({
               </div>
               <div className="flex items-center gap-2">
                 <input
-                  className="border rounded px-3 py-2 text-sm w-full"
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
                   placeholder="Add a skill…"
                   value={skillInput}
                   onChange={(e) => setSkillInput(e.target.value)}
@@ -557,7 +565,7 @@ export default function CandidateProfileModal({
                       await saveRecruiterSkills(next);
                     }
                   }}
-                  className="px-3 py-2 rounded text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] disabled:opacity-50"
+                  className="px-3 py-2 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm disabled:opacity-50 transition"
                 >
                   {savingSkills ? "Saving…" : "Add"}
                 </button>
@@ -567,12 +575,12 @@ export default function CandidateProfileModal({
             {/* Languages */}
             {hasLanguages && (
               <section className={sectionClasses(false)}>
-                <div className="font-medium mb-2">Languages</div>
+                <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Languages</div>
                 <div className="flex flex-wrap gap-2">
                   {languageList.map((lang, i) => (
                     <span
                       key={i}
-                      className="text-xs px-2 py-[6px] rounded border bg-slate-50 text-slate-700 border-slate-200"
+                      className="text-xs px-2 py-[6px] rounded-xl border bg-slate-50 text-slate-700 border-slate-200"
                     >
                       {lang}
                     </span>
@@ -583,7 +591,7 @@ export default function CandidateProfileModal({
 
             {/* Tags */}
             <section className={sectionClasses(false)}>
-              <div className="font-medium mb-2">Tags</div>
+              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Tags</div>
               <div className="flex flex-wrap gap-2">
                 {["Top Prospect", "Phone Screen", "Keep Warm", "Do Not Contact"].map((t) => (
                   <Tag key={t} t={t} />
@@ -593,9 +601,9 @@ export default function CandidateProfileModal({
 
             {/* Notes */}
             <section className={sectionClasses(!hasNotes)}>
-              <div className="font-medium mb-2">Notes</div>
+              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Notes</div>
               <textarea
-                className="border rounded px-3 py-2 w-full min-h-[120px] text-sm"
+                className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
                 placeholder="Add private notes visible to your team…"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -607,7 +615,7 @@ export default function CandidateProfileModal({
                 <button
                   type="button"
                   onClick={saveNotes}
-                  className="px-3 py-2 rounded text-sm text-white bg-[#FF7043] hover:bg-[#F4511E]"
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
                 >
                   Save Notes
                 </button>
