@@ -626,38 +626,35 @@ function WhyPanel({
                   </div>
                 </div>
               </div>
-            ) : (
-              // Lite: show small preview only
-              gapSkills.length || noCriticalGaps ? (
-                <div>
-                  <div className="text-xs font-semibold text-slate-700 mb-2">
-                    Not evidenced in submitted materials (preview)
-                  </div>
-
-                  {needsJD ? (
-                    <div className="text-sm text-slate-600">
-                      Add a job description to show what is required vs. what is evidenced.
-                    </div>
-                  ) : noCriticalGaps ? (
-                    <div className="text-sm text-emerald-700">
-                      No critical gaps detected.
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {gapSkills.map((s) => (
-                        <Chip key={s} tone="bad">
-                          {s}
-                        </Chip>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="text-xs text-slate-500 mt-2">
-                    Upgrade to see adjacent strengths and full context.
-                  </div>
+            ) : gapSkills.length || noCriticalGaps ? (
+              <div>
+                <div className="text-xs font-semibold text-slate-700 mb-2">
+                  Not evidenced in submitted materials (preview)
                 </div>
-              ) : null
-            )}
+
+                {needsJD ? (
+                  <div className="text-sm text-slate-600">
+                    Add a job description to show what is required vs. what is evidenced.
+                  </div>
+                ) : noCriticalGaps ? (
+                  <div className="text-sm text-emerald-700">
+                    No critical gaps detected.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {gapSkills.map((s) => (
+                      <Chip key={s} tone="bad">
+                        {s}
+                      </Chip>
+                    ))}
+                  </div>
+                )}
+
+                <div className="text-xs text-slate-500 mt-2">
+                  Upgrade to see adjacent strengths and full context.
+                </div>
+              </div>
+            ) : null}
           </div>
         </CollapsibleSection>
 
@@ -716,7 +713,10 @@ function WhyPanel({
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t flex items-center justify-end gap-2">
+      <div
+        className="p-4 border-t flex items-center justify-start gap-2"
+        style={{ paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))" }}
+      >
         {!isFull && <SecondaryButton href="#upgrade">Upgrade WHY</SecondaryButton>}
         <SecondaryButton onClick={onClose}>Close</SecondaryButton>
         {onViewCandidate ? (
@@ -790,9 +790,9 @@ export default function WhyCandidateDrawer({
         aria-modal="true"
         style={{
           position: "fixed",
-          top: 0,
+          top: 56,
           right: 0,
-          height: "100vh",
+          height: "calc(100vh - 56px)",
           width: "min(560px, 100%)",
           background: "#fff",
           borderLeft: "1px solid #e5e7eb",
@@ -855,9 +855,9 @@ export function WhyCandidateCompareDrawer({
         aria-modal="true"
         style={{
           position: "fixed",
-          top: 0,
+          top: 56,
           right: 0,
-          height: "100vh",
+          height: "calc(100vh - 56px)",
           width: "min(1120px, 100%)",
           zIndex: 71,
           display: "grid",
