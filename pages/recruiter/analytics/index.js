@@ -758,13 +758,20 @@ function Body() {
         </div>
       )}
 
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(6, minmax(120px, 1fr))",
-          gap: 12,
-        }}
-      >
+      <div
+  style={{
+    ...GLASS,
+    borderRadius: 18,
+    padding: 16,
+  }}
+>
+  <section
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(6, minmax(120px, 1fr))",
+      gap: 12,
+    }}
+  >
         <KPICard label="Total job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
         <KPICard label="Total applies" value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)} />
         <KPICard
@@ -777,7 +784,8 @@ function Body() {
         />
         <KPICard label="Interviews" value={loading ? "…" : totalInterviews} />
         <KPICard label="Hires" value={loading ? "…" : totalHires} />
-      </section>
+       </section>
+</div>
 
       {isEnterprise ? <>{DesktopBlock}</> : <FeatureLock label="Full Analytics">{DesktopBlock}</FeatureLock>}
 
