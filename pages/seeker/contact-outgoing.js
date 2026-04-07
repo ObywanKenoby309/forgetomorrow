@@ -4,18 +4,22 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import OutgoingRequestsList from '@/components/OutgoingRequestsList';
-import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar'; // ✅ NEW import
+import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar';
 
 export default function SeekerOutgoingRequestsPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const [contacts, setContacts] = useState([]);
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [outgoingRequests, setOutgoingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const reloadSummary = async () => {
     try {
       setLoading(true);
@@ -40,9 +44,11 @@ export default function SeekerOutgoingRequestsPage() {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     reloadSummary();
   }, []);
+
   const counts = useMemo(
     () => ({
       contacts: contacts.length,
@@ -51,19 +57,20 @@ export default function SeekerOutgoingRequestsPage() {
     }),
     [contacts, incomingRequests, outgoingRequests]
   );
+
   const getPersonFromItem = (item) => {
     if (!item) return null;
     if (item.from) return item.from;
     if (item.to) return item.to;
     return item;
   };
+
   const handleViewProfile = (item) => {
     const person = getPersonFromItem(item);
     if (!person?.id) return;
-    const params = new URLSearchParams();
-    params.set('userId', person.id);
     router.push(withChrome(`/profile/${person.slug}`));
   };
+
   const handleCancel = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
@@ -84,39 +91,23 @@ export default function SeekerOutgoingRequestsPage() {
       alert('We could not cancel this request. Please try again.');
     }
   };
+
+  const greeting = getTimeGreeting();
+  const contactCenterHref = withChrome('/seeker/contact-center');
+
   const HeaderBox = (
-    <section
-      style={{
-        background: 'white',
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        border: '1px solid #eee',
-        textAlign: 'center',
-      }}
-    >
-      <h1
-        style={{
-          margin: 0,
-          color: '#FF7043',
-          fontSize: 24,
-          fontWeight: 800,
-        }}
-      >
-        Pending Requests
-      </h1>
-      <p
-        style={{
-          margin: '6px auto 0',
-          color: '#607D8B',
-          maxWidth: 720,
-        }}
-      >
-        These are the connection requests you&apos;ve sent that haven&apos;t
-        been accepted yet. Review profiles, keep them pending, or cancel
-        requests at any time.
-      </p>
-    </section>
+    <SeekerTitleCard
+      greeting={greeting}
+      title="Pending Requests"
+      subtitle={
+        <>
+          These are the connection requests you&apos;ve sent that haven&apos;t been accepted yet. Review profiles, keep them pending, or cancel requests at any time.{' '}
+          <Link href={contactCenterHref} style={{ color: '#FF7043', fontWeight: 700 }}>
+            ← To Contact Center
+          </Link>
+        </>
+      }
+    />
   );
 
   return (
@@ -124,12 +115,11 @@ export default function SeekerOutgoingRequestsPage() {
       title="Pending Requests | ForgeTomorrow"
       header={HeaderBox}
       right={<RightRailPlacementManager surfaceId="contact_outgoing" />}
+      rightVariant="light"
       activeNav="contacts"
     >
-      {/* ✅ Toolbar component */}
-      <ContactCenterToolbar currentTab="requests" />
+      <ContactCenterToolbar currentTab="requests" counts={counts} />
 
-      {/* Outgoing list full-page */}
       <section
         style={{
           background: 'white',

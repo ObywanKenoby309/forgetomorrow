@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar';
 
 export default function BlockedUsersPage() {
@@ -55,7 +57,6 @@ export default function BlockedUsersPage() {
         alert('We could not unblock this member. Please try again.');
         return;
       }
-      // Optimistic update
       setBlockedUsers((prev) => prev.filter((u) => u.id !== blockedId));
       alert(`${name || 'Member'} unblocked.`);
     } catch (err) {
@@ -76,37 +77,22 @@ export default function BlockedUsersPage() {
     }
   };
 
+  const greeting = getTimeGreeting();
+  const contactCenterHref = withChrome('/seeker/contact-center');
+
   const HeaderBox = (
-    <section
-      style={{
-        background: 'white',
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        border: '1px solid #eee',
-        textAlign: 'center',
-      }}
-    >
-      <h1
-        style={{
-          margin: 0,
-          color: '#FF7043',
-          fontSize: 24,
-          fontWeight: 800,
-        }}
-      >
-        Blocked Users
-      </h1>
-      <p
-        style={{
-          margin: '6px auto 0',
-          color: '#607D8B',
-          maxWidth: 720,
-        }}
-      >
-        You won&apos;t see posts from these members in your feed, and they can&apos;t message you.
-      </p>
-    </section>
+    <SeekerTitleCard
+      greeting={greeting}
+      title="Blocked Users"
+      subtitle={
+        <>
+          You won&apos;t see posts from these members in your feed, and they can&apos;t message you.{' '}
+          <Link href={contactCenterHref} style={{ color: '#FF7043', fontWeight: 700 }}>
+            ← To Contact Center
+          </Link>
+        </>
+      }
+    />
   );
 
   return (
@@ -114,6 +100,7 @@ export default function BlockedUsersPage() {
       title="Blocked Users | ForgeTomorrow"
       header={HeaderBox}
       right={<RightRailPlacementManager surfaceId="blocked" />}
+      rightVariant="light"
       activeNav="contacts"
     >
       <ContactCenterToolbar currentTab="blocked" />
@@ -149,7 +136,6 @@ export default function BlockedUsersPage() {
                   border: '1px solid #eee',
                 }}
               >
-                {/* Avatar + Name */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   {user.avatarUrl ? (
                     <img
@@ -181,7 +167,6 @@ export default function BlockedUsersPage() {
                   </div>
                 </div>
 
-                {/* Reason & Date */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <div>
                     <span style={{ fontWeight: 600, color: '#374151' }}>Reason:</span>{' '}
@@ -195,7 +180,6 @@ export default function BlockedUsersPage() {
                   </div>
                 </div>
 
-                {/* Unblock button */}
                 <button
                   onClick={() => handleUnblock(user.id, user.name)}
                   style={{

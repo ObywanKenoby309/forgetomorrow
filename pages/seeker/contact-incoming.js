@@ -4,18 +4,22 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import IncomingRequestsList from '@/components/IncomingRequestsList';
-import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar'; // ✅ NEW import
+import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar';
 
 export default function SeekerIncomingInvitesPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const [contacts, setContacts] = useState([]);
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [outgoingRequests, setOutgoingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const reloadSummary = async () => {
     try {
       setLoading(true);
@@ -40,9 +44,11 @@ export default function SeekerIncomingInvitesPage() {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     reloadSummary();
   }, []);
+
   const counts = useMemo(
     () => ({
       contacts: contacts.length,
@@ -51,19 +57,20 @@ export default function SeekerIncomingInvitesPage() {
     }),
     [contacts, incomingRequests, outgoingRequests]
   );
+
   const getPersonFromItem = (item) => {
     if (!item) return null;
     if (item.from) return item.from;
     if (item.to) return item.to;
     return item;
   };
+
   const handleViewProfile = (item) => {
     const person = getPersonFromItem(item);
     if (!person?.id) return;
-    const params = new URLSearchParams();
-    params.set('userId', person.id);
     router.push(withChrome(`/profile/${person.slug}`));
   };
+
   const handleAccept = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
@@ -84,6 +91,7 @@ export default function SeekerIncomingInvitesPage() {
       alert('We could not accept this invitation. Please try again.');
     }
   };
+
   const handleDecline = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
@@ -104,39 +112,23 @@ export default function SeekerIncomingInvitesPage() {
       alert('We could not decline this invitation. Please try again.');
     }
   };
+
+  const greeting = getTimeGreeting();
+  const contactCenterHref = withChrome('/seeker/contact-center');
+
   const HeaderBox = (
-    <section
-      style={{
-        background: 'white',
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        border: '1px solid #eee',
-        textAlign: 'center',
-      }}
-    >
-      <h1
-        style={{
-          margin: 0,
-          color: '#FF7043',
-          fontSize: 24,
-          fontWeight: 800,
-        }}
-      >
-        Pending Invites
-      </h1>
-      <p
-        style={{
-          margin: '6px auto 0',
-          color: '#607D8B',
-          maxWidth: 720,
-        }}
-      >
-        These members have requested to connect with you. Review their profiles,
-        accept or decline, and then organize confirmed contacts in your
-        Contacts view.
-      </p>
-    </section>
+    <SeekerTitleCard
+      greeting={greeting}
+      title="Pending Invites"
+      subtitle={
+        <>
+          These members have requested to connect with you. Review their profiles, accept or decline, and then organize confirmed contacts in your Contacts view.{' '}
+          <Link href={contactCenterHref} style={{ color: '#FF7043', fontWeight: 700 }}>
+            ← To Contact Center
+          </Link>
+        </>
+      }
+    />
   );
 
   return (
@@ -144,12 +136,11 @@ export default function SeekerIncomingInvitesPage() {
       title="Pending Invites | ForgeTomorrow"
       header={HeaderBox}
       right={<RightRailPlacementManager surfaceId="contact_incoming" />}
+      rightVariant="light"
       activeNav="contacts"
     >
-      {/* ✅ Toolbar component */}
-      <ContactCenterToolbar currentTab="invites" />
+      <ContactCenterToolbar currentTab="invites" counts={counts} />
 
-      {/* Incoming list full-page */}
       <section
         style={{
           background: 'white',

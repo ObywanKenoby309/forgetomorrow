@@ -4,51 +4,19 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
-import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar'; // ✅ NEW import
-
-function HeaderBox() {
-  return (
-    <section
-      style={{
-        background: 'white',
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        border: '1px solid #eee',
-        textAlign: 'center',
-      }}
-    >
-      <h1
-        style={{
-          margin: 0,
-          color: '#FF7043',
-          fontSize: 24,
-          fontWeight: 800,
-        }}
-      >
-        Profile Views
-      </h1>
-      <p
-        style={{
-          margin: '6px auto 0',
-          color: '#607D8B',
-          maxWidth: 720,
-        }}
-      >
-        See who has viewed your profile and when. No gatekeeping, no upgrades —
-        just transparency.
-      </p>
-    </section>
-  );
-}
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
+import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar';
 
 export default function ProfileViewsPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const [views, setViews] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const loadViews = async () => {
     try {
       setLoading(true);
@@ -67,9 +35,11 @@ export default function ProfileViewsPage() {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     loadViews();
   }, []);
+
   const formatDateTime = (iso) => {
     try {
       const d = new Date(iso);
@@ -78,20 +48,38 @@ export default function ProfileViewsPage() {
       return '';
     }
   };
+
   const handleOpenViewerProfile = (view) => {
-    if (!view.viewer?.id) return;
-    const params = new URLSearchParams();
-    params.set('userId', view.viewer.id);
-    router.push(withChrome(`/profile/${viewer.slug}`));
+    if (!view.viewer?.id || !view.viewer?.slug) return;
+    router.push(withChrome(`/profile/${view.viewer.slug}`));
   };
+
+  const greeting = getTimeGreeting();
+  const contactCenterHref = withChrome('/seeker/contact-center');
+
+  const HeaderBox = (
+    <SeekerTitleCard
+      greeting={greeting}
+      title="Profile Views"
+      subtitle={
+        <>
+          See who has viewed your profile and when. No gatekeeping, no upgrades — just transparency.{' '}
+          <Link href={contactCenterHref} style={{ color: '#FF7043', fontWeight: 700 }}>
+            ← To Contact Center
+          </Link>
+        </>
+      }
+    />
+  );
+
   return (
     <SeekerLayout
       title="Profile Views | ForgeTomorrow"
-      header={<HeaderBox />}
+      header={HeaderBox}
       right={<RightRailPlacementManager surfaceId="profile_views" />}
+      rightVariant="light"
       activeNav="contacts"
     >
-      {/* ✅ Toolbar component added */}
       <ContactCenterToolbar currentTab="profileViews" />
 
       <section
@@ -113,12 +101,13 @@ export default function ProfileViewsPage() {
         >
           <h2 style={{ margin: 0, color: '#FF7043' }}>Who&apos;s looking at you</h2>
           <Link
-            href={withChrome('/seeker/contact-center')}
+            href={contactCenterHref}
             style={{ color: '#FF7043', fontWeight: 700, fontSize: 13 }}
           >
             ← Back to Contact Center
           </Link>
         </div>
+
         {loading ? (
           <p style={{ color: '#607D8B', fontSize: 14 }}>Loading profile views…</p>
         ) : views.length === 0 ? (
@@ -167,7 +156,8 @@ export default function ProfileViewsPage() {
                     Viewed your profile • {formatDateTime(v.createdAt)}
                   </span>
                 </div>
-                {v.viewer?.id && (
+
+                {v.viewer?.id && v.viewer?.slug && (
                   <button
                     type="button"
                     onClick={() => handleOpenViewerProfile(v)}
