@@ -557,7 +557,7 @@ const ApplicationsRightRail = (
   <div
     style={{
       width: '100%',
-      maxWidth: 248,
+      maxWidth: 220,
       margin: '0 auto',
     }}
   >
