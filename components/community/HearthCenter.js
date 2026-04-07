@@ -64,6 +64,12 @@ const GLASS = {
   WebkitBackdropFilter: 'blur(10px)',
 };
 
+const ORANGE_HEADING_LIFT = {
+  color: '#FF7043',
+  textShadow: '0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)',
+  fontWeight: 900,
+};
+
 // ─── Desktop 2×2 grid ────────────────────────────────────────────────────────
 function DesktopGrid({ tiles, withChrome }) {
   return (
@@ -164,7 +170,7 @@ function DesktopCard({ title, desc, href, status, img }) {
         <div style={{ flexShrink: 0, lineHeight: 0 }}>
           <HearthIcon src={img} alt={title} size={64} />
         </div>
-        <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: '#FF7043', lineHeight: 1.1 }}>
+        <h2 style={{ fontSize: 18, margin: 0, lineHeight: 1.1, ...ORANGE_HEADING_LIFT }}>
           {title}
         </h2>
       </div>
@@ -354,7 +360,7 @@ function MobileLayoutInner({ tiles, withChrome }) {
                 <div style={{ flexShrink: 0, lineHeight: 0 }}>
                   <HearthIcon src={img} alt={title} size={64} />
                 </div>
-                <h2 style={{ fontSize: 22, fontWeight: 900, margin: 0, color: '#FF7043', lineHeight: 1.1 }}>
+                <h2 style={{ fontSize: 22, margin: 0, lineHeight: 1.1, ...ORANGE_HEADING_LIFT }}>
                   {title}
                 </h2>
               </div>
