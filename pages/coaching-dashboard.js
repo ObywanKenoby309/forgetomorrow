@@ -521,9 +521,8 @@ export default function CoachingDashboardPage() {
 
           <aside style={{ gridColumn:'2/3', gridRow:'1/4', display:'flex', flexDirection:'column', gap:GAP, alignSelf:'stretch', padding:0, boxSizing:'border-box' }}>
             <div style={{ flex:2, minHeight:180 }}>
-              <div style={{ fontSize:10, fontWeight:800, letterSpacing:'0.08em', textTransform:'uppercase', color:'#94A3B8', marginBottom:8 }}>Sponsored</div>
-              <RightRailPlacementManager slot="right_rail_1" />
-            </div>
+			  <RightRailPlacementManager slot="right_rail_1" />
+			</div>
             <div style={{ ...KPI_GLASS, padding:16, flex:1 }}>
               <div style={{ fontSize:15, fontWeight:900, marginBottom:8, color:'#0F172A', lineHeight:1.25, letterSpacing:'-0.01em' }}>CSAT Pulse</div>
               {csatError ? <div style={{ color:'#C62828', fontSize:12 }}>{csatError}</div> : (
