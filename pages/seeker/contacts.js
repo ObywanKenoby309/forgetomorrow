@@ -70,14 +70,15 @@ export default function SeekerContactsGatePage() {
       greeting={greeting}
       title="Contacts"
       subtitle={
-        <>
-          View all your connections and organize them with custom categories.{' '}
-          <Link href={contactCenterHref} style={{ color: '#FF7043', fontWeight: 700 }}>
-            ← Back to Contact Center
-          </Link>
-          .
-        </>
-      }
+  <>
+    View all your connections and organize them with custom categories.{' '}
+    <span style={{ whiteSpace: 'nowrap' }}>
+      <Link href={contactCenterHref} style={{ color: '#FF7043', fontWeight: 700 }}>
+        ← To Contact Center
+      </Link>
+    </span>
+  </>
+}
     />
   );
 
