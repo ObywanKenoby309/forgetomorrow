@@ -84,12 +84,13 @@ export default function SeekerContactsGatePage() {
 
   return (
     <Layout
-      title="Contacts | ForgeTomorrow"
-      header={HeaderBox}
-      activeNav="contacts"
-      right={<RightRailPlacementManager surfaceId="contacts" />}
-      rightVariant="light"
-    >
+  title="Contacts | ForgeTomorrow"
+  header={HeaderBox}
+  headerCard={false}
+  activeNav="contacts"
+  right={<RightRailPlacementManager surfaceId="contacts" />}
+  rightVariant="light"
+>
       <Head>
         <title>ForgeTomorrow - Contacts</title>
       </Head>
