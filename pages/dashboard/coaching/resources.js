@@ -509,6 +509,7 @@ export default function CoachingResourcesPage() {
           display: 'grid',
           gridTemplateColumns: `minmax(0,1fr) ${RIGHT_COL_WIDTH}px`,
           gridTemplateRows: 'auto auto',
+          alignItems: 'start',
           gap: GAP, width: '100%', minWidth: 0, boxSizing: 'border-box',
         }}>
 
