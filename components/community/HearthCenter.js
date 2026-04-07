@@ -1,5 +1,4 @@
 // components/community/HearthCenter.js
-import Link from 'next/link';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 
@@ -26,30 +25,30 @@ function HearthIcon({ src, alt, size = 64 }) {
 
 const TILES = [
   {
+    id: 'mentorship',
     title: 'Mentorship Programs',
     desc: 'Connect with experienced mentors to guide your career journey.',
-    href: '/hearth/spotlights',
     status: 'New!',
     img: '/icons/mentorship.png',
   },
   {
+    id: 'events',
     title: 'Community Events',
     desc: 'Join workshops, webinars, and networking events tailored for growth.',
-    href: '/seeker/the-hearth/events',
     status: 'Coming Soon',
     img: '/icons/events.png',
   },
   {
+    id: 'forums',
     title: 'Discussion Forums',
     desc: 'Engage in meaningful conversations and share knowledge.',
-    href: '/seeker/the-hearth/forums',
     status: 'Coming Soon',
     img: '/icons/forums.png',
   },
   {
+    id: 'resources',
     title: 'Resource Library',
     desc: 'Access articles, guides, and tools to support your professional growth.',
-    href: '/seeker/the-hearth/resources',
     status: 'New!',
     img: '/icons/resource_library.png',
   },
@@ -71,7 +70,7 @@ const ORANGE_HEADING_LIFT = {
 };
 
 // ─── Desktop 2×2 grid ────────────────────────────────────────────────────────
-function DesktopGrid({ tiles, withChrome }) {
+function DesktopGrid({ tiles, activeModule, setActiveModule }) {
   return (
     <>
       <div
@@ -82,14 +81,12 @@ function DesktopGrid({ tiles, withChrome }) {
           gap: 16,
         }}
       >
-        {tiles.map(({ title, desc, href, status, img }) => (
+        {tiles.map((tile) => (
           <DesktopCard
-            key={title}
-            title={title}
-            desc={desc}
-            href={withChrome(href)}
-            status={status}
-            img={img}
+            key={tile.id}
+            tile={tile}
+            isActive={activeModule === tile.id}
+            onOpen={setActiveModule}
           />
         ))}
       </div>
@@ -109,13 +106,13 @@ function DesktopGrid({ tiles, withChrome }) {
         }
 
         .hearth-desktop-grid::-webkit-scrollbar-thumb {
-          background: rgba(255, 112, 67, 0.0);
+          background: rgba(255, 112, 67, 0);
           border-radius: 999px;
           transition: background 300ms ease;
         }
 
         .hearth-desktop-grid:hover::-webkit-scrollbar-thumb {
-          background: rgba(255, 112, 67, 0.40);
+          background: rgba(255, 112, 67, 0.4);
         }
 
         .hearth-desktop-grid::-webkit-scrollbar-thumb:hover {
@@ -126,32 +123,45 @@ function DesktopGrid({ tiles, withChrome }) {
   );
 }
 
-function DesktopCard({ title, desc, href, status, img }) {
+function DesktopCard({ tile, isActive, onOpen }) {
   return (
-    <Link
-      href={href}
+    <button
+      type="button"
+      onClick={() => onOpen(tile.id)}
       style={{
         background: 'rgba(255,255,255,0.92)',
         borderRadius: 14,
         padding: 18,
-        border: '1px solid rgba(0,0,0,0.06)',
-        boxShadow: '0 10px 22px rgba(0,0,0,0.10)',
+        border: isActive
+          ? '1px solid rgba(255,112,67,0.28)'
+          : '1px solid rgba(0,0,0,0.06)',
+        boxShadow: isActive
+          ? '0 18px 34px rgba(0,0,0,0.14), 0 0 0 6px rgba(255,112,67,0.12)'
+          : '0 10px 22px rgba(0,0,0,0.10)',
         textDecoration: 'none',
         transition: 'box-shadow 180ms ease, transform 120ms ease, border-color 180ms ease',
         display: 'block',
         minHeight: 132,
         position: 'relative',
         overflow: 'hidden',
+        width: '100%',
+        textAlign: 'left',
+        cursor: 'pointer',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';
         e.currentTarget.style.borderColor = 'rgba(255,112,67,0.28)';
-        e.currentTarget.style.boxShadow = '0 18px 34px rgba(0,0,0,0.14), 0 0 0 6px rgba(255,112,67,0.12)';
+        e.currentTarget.style.boxShadow =
+          '0 18px 34px rgba(0,0,0,0.14), 0 0 0 6px rgba(255,112,67,0.12)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.borderColor = 'rgba(0,0,0,0.06)';
-        e.currentTarget.style.boxShadow = '0 10px 22px rgba(0,0,0,0.10)';
+        e.currentTarget.style.borderColor = isActive
+          ? 'rgba(255,112,67,0.28)'
+          : 'rgba(0,0,0,0.06)';
+        e.currentTarget.style.boxShadow = isActive
+          ? '0 18px 34px rgba(0,0,0,0.14), 0 0 0 6px rgba(255,112,67,0.12)'
+          : '0 10px 22px rgba(0,0,0,0.10)';
       }}
     >
       <div
@@ -162,20 +172,21 @@ function DesktopCard({ title, desc, href, status, img }) {
           top: -60,
           width: 160,
           height: 160,
-          background: 'radial-gradient(circle, rgba(255,112,67,0.20), rgba(255,112,67,0.00) 70%)',
+          background:
+            'radial-gradient(circle, rgba(255,112,67,0.20), rgba(255,112,67,0.00) 70%)',
           pointerEvents: 'none',
         }}
       />
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
         <div style={{ flexShrink: 0, lineHeight: 0 }}>
-          <HearthIcon src={img} alt={title} size={64} />
+          <HearthIcon src={tile.img} alt={tile.title} size={64} />
         </div>
         <h2 style={{ fontSize: 18, margin: 0, lineHeight: 1.1, ...ORANGE_HEADING_LIFT }}>
-          {title}
+          {tile.title}
         </h2>
       </div>
-      <p style={{ color: '#37474F', margin: 0, lineHeight: 1.45 }}>{desc}</p>
-      <div style={{ marginTop: 12 }}>
+      <p style={{ color: '#37474F', margin: 0, lineHeight: 1.45 }}>{tile.desc}</p>
+      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span
           style={{
             fontSize: 12,
@@ -190,15 +201,28 @@ function DesktopCard({ title, desc, href, status, img }) {
             gap: 6,
           }}
         >
-          {status}
+          {tile.status}
+        </span>
+
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 800,
+            color: '#FF7043',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          Open →
         </span>
       </div>
-    </Link>
+    </button>
   );
 }
 
 // ─── Mobile: Dropdown + Carousel ────────────────────────────────────────────
-function MobileLayoutInner({ tiles, withChrome }) {
+function MobileLayoutInner({ tiles, activeModule, setActiveModule }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const trackRef = useRef(null);
@@ -211,7 +235,9 @@ function MobileLayoutInner({ tiles, withChrome }) {
     if (!track) return;
     programmatic.current = true;
     track.scrollTo({ left: index * track.offsetWidth, behavior: 'smooth' });
-    setTimeout(() => { programmatic.current = false; }, 600);
+    setTimeout(() => {
+      programmatic.current = false;
+    }, 600);
   }, []);
 
   const handleScroll = useCallback(() => {
@@ -231,10 +257,23 @@ function MobileLayoutInner({ tiles, withChrome }) {
 
   const active = tiles[activeIndex];
 
+  const [showScrollHint, setShowScrollHint] = useState(false);
+  const hintTimer = useRef(null);
+
+  const handleCardSelect = (tile) => {
+    const next = tile.id === activeModule ? null : tile.id;
+    setActiveModule(next);
+    if (next) {
+      setShowScrollHint(true);
+      clearTimeout(hintTimer.current);
+      hintTimer.current = setTimeout(() => setShowScrollHint(false), 3000);
+    }
+  };
+
+  useEffect(() => () => clearTimeout(hintTimer.current), []);
+
   return (
     <div style={{ position: 'relative' }}>
-
-      {/* ── Dropdown ── */}
       <div style={{ padding: '0 16px 14px', position: 'relative', zIndex: 20 }}>
         <button
           onClick={() => setDropdownOpen((o) => !o)}
@@ -259,34 +298,53 @@ function MobileLayoutInner({ tiles, withChrome }) {
               {active.title}
             </span>
           </div>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
-            style={{ flexShrink: 0, transition: 'transform 200ms ease', transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-            <path d="M5 7.5L10 12.5L15 7.5" stroke="#FF7043" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            fill="none"
+            style={{
+              flexShrink: 0,
+              transition: 'transform 200ms ease',
+              transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
+          >
+            <path
+              d="M5 7.5L10 12.5L15 7.5"
+              stroke="#FF7043"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
 
         {dropdownOpen && (
-          <div style={{
-            position: 'absolute',
-            top: 'calc(100% - 14px + 6px)',
-            left: 16, right: 16,
-            background: 'rgba(255,255,255,0.98)',
-            border: '1.5px solid rgba(255,112,67,0.20)',
-            borderRadius: 12,
-            overflow: 'hidden',
-            boxShadow: '0 20px 48px rgba(0,0,0,0.16)',
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)',
-          }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: 'calc(100% - 14px + 6px)',
+              left: 16,
+              right: 16,
+              background: 'rgba(255,255,255,0.98)',
+              border: '1.5px solid rgba(255,112,67,0.20)',
+              borderRadius: 12,
+              overflow: 'hidden',
+              boxShadow: '0 20px 48px rgba(0,0,0,0.16)',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
+            }}
+          >
             {tiles.map((tile, i) => (
               <button
-                key={tile.title}
+                key={tile.id}
                 onClick={() => goTo(i)}
                 style={{
                   width: '100%',
                   background: i === activeIndex ? 'rgba(255,112,67,0.08)' : 'transparent',
                   border: 'none',
-                  borderBottom: i < tiles.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none',
+                  borderBottom:
+                    i < tiles.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none',
                   padding: '13px 16px',
                   display: 'flex',
                   alignItems: 'center',
@@ -297,14 +355,29 @@ function MobileLayoutInner({ tiles, withChrome }) {
               >
                 <HearthIcon src={tile.img} alt={tile.title} size={34} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: i === activeIndex ? '#FF7043' : '#37474F', lineHeight: 1.2 }}>
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 800,
+                      color: i === activeIndex ? '#FF7043' : '#37474F',
+                      lineHeight: 1.2,
+                    }}
+                  >
                     {tile.title}
                   </div>
-                  <div style={{ fontSize: 12, color: '#78909C', marginTop: 2 }}>{tile.status}</div>
+                  <div style={{ fontSize: 12, color: '#78909C', marginTop: 2 }}>
+                    {activeModule === tile.id ? 'Loaded below' : 'Load below'}
+                  </div>
                 </div>
                 {i === activeIndex && (
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0 }}>
-                    <path d="M4 9L7.5 12.5L14 6" stroke="#FF7043" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path
+                      d="M4 9L7.5 12.5L14 6"
+                      stroke="#FF7043"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 )}
               </button>
@@ -313,7 +386,6 @@ function MobileLayoutInner({ tiles, withChrome }) {
         )}
       </div>
 
-      {/* ── Carousel track ── */}
       <div
         ref={trackRef}
         style={{
@@ -325,9 +397,9 @@ function MobileLayoutInner({ tiles, withChrome }) {
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        {tiles.map(({ title, desc, href, status, img }) => (
+        {tiles.map((tile) => (
           <div
-            key={title}
+            key={tile.id}
             style={{
               flexShrink: 0,
               width: '100%',
@@ -336,58 +408,145 @@ function MobileLayoutInner({ tiles, withChrome }) {
               boxSizing: 'border-box',
             }}
           >
-            <Link
-              href={withChrome(href)}
+            <button
+              type="button"
+              onClick={() => handleCardSelect(tile)}
               style={{
                 display: 'block',
+                width: '100%',
                 background: 'rgba(255,255,255,0.95)',
                 borderRadius: 16,
                 padding: '22px 20px 20px',
-                border: '1.5px solid rgba(255,112,67,0.15)',
-                boxShadow: '0 12px 28px rgba(0,0,0,0.10)',
+                border:
+                  activeModule === tile.id
+                    ? '1.5px solid rgba(255,112,67,0.40)'
+                    : '1.5px solid rgba(255,112,67,0.15)',
+                boxShadow:
+                  activeModule === tile.id
+                    ? '0 12px 28px rgba(0,0,0,0.12), 0 0 0 3px rgba(255,112,67,0.12)'
+                    : '0 12px 28px rgba(0,0,0,0.10)',
                 textDecoration: 'none',
                 position: 'relative',
                 overflow: 'hidden',
                 minHeight: 210,
+                cursor: 'pointer',
+                textAlign: 'left',
               }}
             >
-              <div aria-hidden="true" style={{
-                position: 'absolute', right: -70, top: -70, width: 200, height: 200,
-                background: 'radial-gradient(circle, rgba(255,112,67,0.18), rgba(255,112,67,0.00) 70%)',
-                pointerEvents: 'none',
-              }} />
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  right: -70,
+                  top: -70,
+                  width: 200,
+                  height: 200,
+                  background:
+                    'radial-gradient(circle, rgba(255,112,67,0.18), rgba(255,112,67,0.00) 70%)',
+                  pointerEvents: 'none',
+                }}
+              />
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
                 <div style={{ flexShrink: 0, lineHeight: 0 }}>
-                  <HearthIcon src={img} alt={title} size={64} />
+                  <HearthIcon src={tile.img} alt={tile.title} size={64} />
                 </div>
                 <h2 style={{ fontSize: 22, margin: 0, lineHeight: 1.1, ...ORANGE_HEADING_LIFT }}>
-                  {title}
+                  {tile.title}
                 </h2>
               </div>
-              <p style={{ color: '#37474F', margin: '0 0 18px', lineHeight: 1.55, fontSize: 15 }}>
-                {desc}
+              <p
+                style={{
+                  color: '#37474F',
+                  margin: '0 0 18px',
+                  lineHeight: 1.55,
+                  fontSize: 15,
+                }}
+              >
+                {tile.desc}
               </p>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{
-                  fontSize: 12, fontWeight: 800, color: '#FF7043',
-                  background: 'rgba(255,112,67,0.10)', border: '1px solid rgba(255,112,67,0.20)',
-                  padding: '5px 10px', borderRadius: 999,
-                }}>
-                  {status}
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: '#FF7043',
+                    background: 'rgba(255,112,67,0.10)',
+                    border: '1px solid rgba(255,112,67,0.20)',
+                    padding: '5px 10px',
+                    borderRadius: 999,
+                  }}
+                >
+                  {tile.status}
                 </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#FF7043', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  Explore
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: '#FF7043',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  {activeModule === tile.id ? 'Selected' : 'Open'}
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="#FF7043" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <path
+                      d="M3 8H13M13 8L9 4M13 8L9 12"
+                      stroke="#FF7043"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </span>
               </div>
-            </Link>
+            </button>
           </div>
         ))}
       </div>
 
-      {/* ── Dot indicators ── */}
+      {showScrollHint && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            padding: '10px 16px',
+            marginTop: 4,
+            animation: 'fadeInOut 3s ease forwards',
+          }}
+        >
+          <style>{`
+            @keyframes fadeInOut {
+              0%   { opacity: 0; transform: translateY(-4px); }
+              15%  { opacity: 1; transform: translateY(0); }
+              70%  { opacity: 1; }
+              100% { opacity: 0; }
+            }
+          `}</style>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            style={{ animation: 'bounce 1s ease infinite' }}
+          >
+            <style>{`@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(3px)} }`}</style>
+            <path
+              d="M8 3v10M8 13l-3-3M8 13l3-3"
+              stroke="#FF7043"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span style={{ fontSize: 15, fontWeight: 900, color: '#FF7043' }}>
+            Scroll down to see your selection
+          </span>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
         {tiles.map((_, i) => (
           <button
@@ -399,19 +558,20 @@ function MobileLayoutInner({ tiles, withChrome }) {
               height: 8,
               borderRadius: 999,
               background: i === activeIndex ? '#FF7043' : 'rgba(255,112,67,0.25)',
-              border: 'none', padding: 0, cursor: 'pointer',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
               transition: 'width 220ms ease, background 220ms ease',
             }}
           />
         ))}
       </div>
-
     </div>
   );
 }
 
 // ─── Root component ──────────────────────────────────────────────────────────
-export default function HearthCenter() {
+export default function HearthCenter({ activeModule, setActiveModule }) {
   const router = useRouter();
   const chrome = String(router.query.chrome || 'seeker').toLowerCase();
   const withChrome = (path) =>
@@ -437,17 +597,31 @@ export default function HearthCenter() {
         overflow: 'hidden',
       }}
     >
-      {/* Ambient glow */}
-      <div aria-hidden="true" style={{
-        position: 'absolute', inset: -120,
-        background: 'radial-gradient(circle at 35% 30%, rgba(255,112,67,0.20), rgba(255,112,67,0.00) 55%)',
-        pointerEvents: 'none', borderRadius: 'inherit',
-      }} />
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: -120,
+          background:
+            'radial-gradient(circle at 35% 30%, rgba(255,112,67,0.20), rgba(255,112,67,0.00) 55%)',
+          pointerEvents: 'none',
+          borderRadius: 'inherit',
+        }}
+      />
 
-      {isMobile
-        ? <MobileLayoutInner tiles={TILES} withChrome={withChrome} />
-        : <DesktopGrid tiles={TILES} withChrome={withChrome} />
-      }
+      {isMobile ? (
+        <MobileLayoutInner
+          tiles={TILES}
+          activeModule={activeModule}
+          setActiveModule={setActiveModule}
+        />
+      ) : (
+        <DesktopGrid
+          tiles={TILES}
+          activeModule={activeModule}
+          setActiveModule={setActiveModule}
+        />
+      )}
     </section>
   );
 }
