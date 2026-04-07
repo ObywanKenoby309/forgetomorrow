@@ -5,6 +5,7 @@ import RightRailPlacementManager from "@/components/ads/RightRailPlacementManage
 import { usePlan } from "@/context/PlanContext";
 import { getTimeGreeting } from "@/lib/dashboardGreeting";
 import RecruiterTitleCard from "@/components/recruiter/RecruiterTitleCard";
+import ExternalCompareModule from "@/components/recruiter/candidate-center/ExternalCompareModule";
 
 const GLASS = {
   borderRadius: 18,
@@ -119,13 +120,13 @@ function buildTiles(isEnterprise) {
       img: null,
     },
     {
-      id: "compare",
-      title: "External Compare",
-      desc: "Paste any resume and job description to generate an evidence-backed comparison, even outside ForgeTomorrow.",
-      subtitle: "External resume and job comparison with explainable matching support.",
-      src: "/recruiter/explain?chrome=recruiter-ent",
-      img: null,
-    },
+  id: "compare",
+  title: "External Compare",
+  desc: "Paste any resume and job description to generate an evidence-backed comparison, even outside ForgeTomorrow.",
+  subtitle: "External resume and job comparison with explainable matching support.",
+  src: "/recruiter/explain?chrome=recruiter-ent",
+  img: null,
+},
     {
       id: "pools",
       title: "Talent Pools",
@@ -686,10 +687,20 @@ export default function CandidateCenterUpdate() {
             subtitle={activeTile?.subtitle || ""}
             onBack={() => setActiveModule(null)}
           >
-            <ToolFrame
-              src={activeTile?.src || "/recruiter/candidate-center"}
-              height={isMobile ? "calc(100vh - 320px)" : "calc(100vh - 280px)"}
-            />
+            {(() => {
+  switch (activeModule) {
+    case "compare":
+      return <ExternalCompareModule />;
+
+    default:
+      return (
+        <ToolFrame
+          src={activeTile?.src || "/recruiter/candidate-center"}
+          height={isMobile ? "calc(100vh - 320px)" : "calc(100vh - 280px)"}
+        />
+      );
+  }
+})()}
           </WorkspaceModuleShell>
         )}
       </section>
