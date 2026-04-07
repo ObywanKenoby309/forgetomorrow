@@ -7,6 +7,7 @@ import { getTimeGreeting } from "@/lib/dashboardGreeting";
 import RecruiterTitleCard from "@/components/recruiter/RecruiterTitleCard";
 import ExternalCompareModule from "@/components/recruiter/candidate-center/ExternalCompareModule";
 import InternalSearchModule from "@/components/recruiter/modules/InternalSearchModule";
+import TalentPoolsModule from "@/components/recruiter/modules/TalentPoolsModule";
 
 const GLASS = {
   borderRadius: 18,
@@ -690,6 +691,9 @@ export default function CandidateCenterUpdate() {
 
                 case "compare":
                   return <ExternalCompareModule />;
+
+                case "pools":
+                  return <TalentPoolsModule />;
 
                 default:
                   return (

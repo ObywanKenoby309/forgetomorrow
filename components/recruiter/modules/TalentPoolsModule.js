@@ -1,0 +1,874 @@
+// components/recruiter/modules/TalentPoolsModule.js
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
+
+import SectionTitle from "@/components/recruiter/pools/SectionTitle";
+import PoolsList from "@/components/recruiter/pools/PoolsList";
+import PoolEntriesList from "@/components/recruiter/pools/PoolEntriesList";
+import CreatePoolPanel from "@/components/recruiter/pools/CreatePoolPanel";
+import AddCandidatesPicker from "@/components/recruiter/pools/AddCandidatesPicker";
+import CandidateDetailModal from "@/components/recruiter/pools/CandidateDetailModal";
+import CandidateProfileModal from "@/components/recruiter/CandidateProfileModal";
+import {
+  PrimaryButton,
+  SecondaryButton,
+  TextButton,
+  Pill,
+} from "@/components/recruiter/pools/Pills";
+import {
+  normalizeReasonsText,
+  fmtShortDate,
+} from "@/components/recruiter/pools/utils";
+
+export default function TalentPoolsModule() {
+  const router = useRouter();
+
+  const panelStyle = useMemo(
+    () => ({
+      background: "white",
+      border: "1px solid #eee",
+      borderRadius: 14,
+      padding: 16,
+      boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+    }),
+    []
+  );
+
+  const [loadingPools, setLoadingPools] = useState(true);
+  const [loadingEntries, setLoadingEntries] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const [pools, setPools] = useState([]);
+  const [selectedPoolId, setSelectedPoolId] = useState("");
+  const [entries, setEntries] = useState([]);
+
+  const [search, setSearch] = useState("");
+  const [selectedEntryId, setSelectedEntryId] = useState("");
+
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  const [activePane, setActivePane] = useState("pools"); // "pools" | "entries"
+
+  const WORKSPACE_HEIGHT = "calc(100vh - 380px)";
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [newPoolName, setNewPoolName] = useState("");
+  const [newPoolPurpose, setNewPoolPurpose] = useState("");
+  const [newPoolTags, setNewPoolTags] = useState("");
+
+  const [showPicker, setShowPicker] = useState(false);
+  const [loadingPicker, setLoadingPicker] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerResults, setPickerResults] = useState([]);
+  const [pickerSelectedIds, setPickerSelectedIds] = useState([]);
+  const [pickerWhy, setPickerWhy] = useState("");
+  const [pickerFit, setPickerFit] = useState("");
+  const [pickerStatus, setPickerStatus] = useState("Warm");
+
+  const [pickerLastRoleConsidered, setPickerLastRoleConsidered] = useState("");
+  const [pickerNotes, setPickerNotes] = useState("");
+
+  const [showCandidateModal, setShowCandidateModal] = useState(false);
+  const [modalEntry, setModalEntry] = useState(null);
+
+  async function loadPools() {
+    setLoadingPools(true);
+    setError("");
+    try {
+      const res = await fetch("/api/recruiter/pools", { method: "GET" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to load pools.");
+      const list = Array.isArray(data?.pools) ? data.pools : [];
+      setPools(list);
+
+      if (!selectedPoolId && list[0]?.id) setSelectedPoolId(list[0].id);
+      if (selectedPoolId && !list.some((p) => p.id === selectedPoolId)) {
+        setSelectedPoolId(list[0]?.id || "");
+      }
+    } catch (e) {
+      setError(String(e?.message || e || "Failed to load pools."));
+    } finally {
+      setLoadingPools(false);
+    }
+  }
+
+  async function loadEntries(poolId) {
+    const pid = String(poolId || "").trim();
+    if (!pid) {
+      setEntries([]);
+      return;
+    }
+    setLoadingEntries(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/recruiter/pools/${encodeURIComponent(pid)}/entries`,
+        { method: "GET" }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to load pool entries.");
+      }
+      const list = Array.isArray(data?.entries) ? data.entries : [];
+      setEntries(list);
+    } catch (e) {
+      setError(String(e?.message || e || "Failed to load pool entries."));
+    } finally {
+      setLoadingEntries(false);
+    }
+  }
+
+  useEffect(() => {
+    loadPools();
+  }, []);
+
+  useEffect(() => {
+    const pid = String(selectedPoolId || "").trim();
+    if (!pid) return;
+    loadEntries(pid);
+  }, [selectedPoolId]);
+
+  const selectedPool = useMemo(
+    () => pools.find((p) => p.id === selectedPoolId) || null,
+    [pools, selectedPoolId]
+  );
+
+  const filteredEntries = useMemo(() => {
+    const q = String(search || "").toLowerCase().trim();
+    if (!q) return entries;
+    return entries.filter((c) => {
+      const hay = `${c.name || ""} ${c.headline || ""} ${c.fit || ""} ${
+        c.source || ""
+      } ${c.status || ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [entries, search]);
+
+  const selectedEntry = useMemo(() => {
+    if (!filteredEntries.length) return null;
+    const found = filteredEntries.find((c) => c.id === selectedEntryId);
+    return found || filteredEntries[0];
+  }, [filteredEntries, selectedEntryId]);
+
+  useEffect(() => {
+    if (!selectedEntry) {
+      if (selectedEntryId) setSelectedEntryId("");
+      return;
+    }
+    if (selectedEntryId !== selectedEntry.id) {
+      setSelectedEntryId(selectedEntry.id);
+    }
+  }, [selectedEntry, selectedEntryId]);
+
+  async function createPool() {
+    const name = String(newPoolName || "").trim();
+    const purpose = String(newPoolPurpose || "").trim();
+    const tags = String(newPoolTags || "")
+      .split(",")
+      .map((t) => String(t || "").trim())
+      .filter(Boolean)
+      .slice(0, 12);
+
+    if (!name) {
+      setError("Pool name is required.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/recruiter/pools", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, purpose, tags }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to create pool.");
+
+      const created = data?.pool || data;
+      if (created?.id) {
+        setPools((prev) => [created, ...prev]);
+        setSelectedPoolId(created.id);
+      } else {
+        await loadPools();
+      }
+
+      setShowCreate(false);
+      setNewPoolName("");
+      setNewPoolPurpose("");
+      setNewPoolTags("");
+    } catch (e) {
+      setError(String(e?.message || e || "Failed to create pool."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeFromPool(entryId) {
+    if (!selectedPoolId || !entryId) return;
+
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/recruiter/pools/${encodeURIComponent(
+          selectedPoolId
+        )}/entries?entryId=${encodeURIComponent(entryId)}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to remove from pool.");
+
+      setEntries((prev) => prev.filter((x) => x.id !== entryId));
+      setSelectedEntryId("");
+      await loadPools();
+    } catch (e) {
+      setError(String(e?.message || e || "Failed to remove from pool."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function loadPickerCandidates(queryStr) {
+    const q = String(queryStr || "").trim();
+    setLoadingPicker(true);
+    setError("");
+    try {
+      const url = `/api/recruiter/candidates?q=${encodeURIComponent(q)}`;
+      const res = await fetch(url, { method: "GET" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to load candidates.");
+      const list = Array.isArray(data?.candidates) ? data.candidates : [];
+      setPickerResults(list);
+    } catch (e) {
+      setError(String(e?.message || e || "Failed to load candidates."));
+      setPickerResults([]);
+    } finally {
+      setLoadingPicker(false);
+    }
+  }
+
+  function openPicker() {
+    if (!selectedPoolId) return;
+    setShowPicker(true);
+    setPickerQuery("");
+    setPickerResults([]);
+    setPickerSelectedIds([]);
+    setPickerWhy("");
+    setPickerFit("");
+    setPickerStatus("Warm");
+    setPickerLastRoleConsidered("");
+    setPickerNotes("");
+    loadPickerCandidates("");
+  }
+
+  function togglePickerSelect(userId) {
+    const id = String(userId || "").trim();
+    if (!id) return;
+    setPickerSelectedIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      return [...prev].concat(id).slice(0, 25);
+    });
+  }
+
+  async function addSelectedToPool() {
+    const poolId = String(selectedPoolId || "").trim();
+    if (!poolId) return;
+
+    const ids = Array.isArray(pickerSelectedIds) ? pickerSelectedIds : [];
+    if (!ids.length) {
+      setError("Select at least one candidate.");
+      return;
+    }
+
+    const reasons = normalizeReasonsText(pickerWhy);
+    const status = String(pickerStatus || "Warm").trim() || "Warm";
+    const fit = String(pickerFit || "").trim();
+
+    const lastRoleConsidered = String(pickerLastRoleConsidered || "").trim();
+    const notes = String(pickerNotes || "").trim();
+
+    setSaving(true);
+    setError("");
+    try {
+      const byId = new Map();
+      for (const c of Array.isArray(pickerResults) ? pickerResults : []) {
+        if (c?.id) byId.set(String(c.id), c);
+      }
+
+      for (const candidateUserId of ids) {
+        const c = byId.get(String(candidateUserId)) || null;
+
+        const payload = {
+          candidateUserId,
+          name: String(c?.name || "").trim() || "Unnamed",
+          headline: String(c?.title || c?.headline || "").trim(),
+          location: String(c?.location || "").trim(),
+          source: "Internal",
+          status,
+          fit: fit || String(c?.title || c?.headline || "").trim() || null,
+          reasons: reasons.length ? reasons : [],
+          notes: notes || "",
+          lastRoleConsidered: lastRoleConsidered || "",
+        };
+
+        const res = await fetch(
+          `/api/recruiter/pools/${encodeURIComponent(poolId)}/entries`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data?.error || "Failed to add candidate to pool.");
+        }
+      }
+
+      setShowPicker(false);
+      setPickerSelectedIds([]);
+      setPickerResults([]);
+      setPickerQuery("");
+      setPickerWhy("");
+      setPickerFit("");
+      setPickerStatus("Warm");
+      setPickerLastRoleConsidered("");
+      setPickerNotes("");
+
+      await loadEntries(poolId);
+      await loadPools();
+    } catch (e) {
+      setError(String(e?.message || e || "Failed to add candidates to pool."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function startConversationFromPools(entry) {
+    const e = entry && typeof entry === "object" ? entry : null;
+    const candidateUserId = String(e?.candidateUserId || "").trim();
+
+    if (!candidateUserId) {
+      setError(
+        "This is an external candidate. Messaging is available for internal candidates only (for now)."
+      );
+      return;
+    }
+
+    const destName = String(e?.name || "").trim();
+    const firstName = destName.split(" ")[0] || "";
+    const prefill = firstName
+      ? `Hi ${firstName}, thanks for connecting - I’d love to chat about a role that looks like a strong match for your background.`
+      : `Hi there, thanks for connecting - I’d love to chat about a role that looks like a strong match for your background.`;
+
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientId: candidateUserId,
+          channel: "recruiter",
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.error || "Failed to create conversation.");
+      }
+
+      const conv = json?.conversation || json;
+      const convId = conv?.id;
+
+      if (convId) {
+        router.push({
+          pathname: "/recruiter/messaging",
+          query: {
+            c: convId,
+            candidateUserId,
+            name: destName,
+            role: String(e?.headline || e?.fit || "").trim(),
+            prefill,
+          },
+        });
+        return;
+      }
+
+      router.push(
+        `/recruiter/messaging?candidateUserId=${encodeURIComponent(
+          candidateUserId
+        )}&prefill=${encodeURIComponent(prefill)}`
+      );
+    } catch (err) {
+      console.error("[Pools] startConversation error:", err);
+      router.push(
+        `/recruiter/messaging?candidateUserId=${encodeURIComponent(
+          candidateUserId
+        )}&prefill=${encodeURIComponent(prefill)}`
+      );
+    }
+  }
+
+  async function messageCandidate(entry) {
+    await startConversationFromPools(entry);
+  }
+
+  function openEdit(entry) {
+    const e = entry && typeof entry === "object" ? entry : null;
+    setModalEntry(e);
+    setShowCandidateModal(true);
+  }
+
+  function openFullProfileFromModal(entryArg) {
+    const e = entryArg && typeof entryArg === "object" ? entryArg : modalEntry;
+    const candidateUserId = String(e?.candidateUserId || "").trim();
+
+    if (!candidateUserId) {
+      setError(
+        "This pool entry is missing an internal candidate ID. Cannot open Candidate Profile."
+      );
+      return;
+    }
+
+    setSelectedCandidate({
+      id: candidateUserId,
+      name: e.name,
+      headline: e.headline,
+      email: e.email,
+    });
+
+    setShowProfileModal(true);
+  }
+
+  async function savePoolEntryEdits(payload) {
+    const poolId = String(selectedPoolId || "").trim();
+    if (!poolId) return;
+
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/recruiter/pools/${encodeURIComponent(poolId)}/entries`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to update entry.");
+
+      const updated = data?.entry || null;
+      if (updated?.id) {
+        setEntries((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+      }
+
+      setShowCandidateModal(false);
+      setModalEntry(null);
+    } catch (e) {
+      setError(String(e?.message || e || "Failed to update entry."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const focusedColumns =
+    activePane === "entries"
+      ? "minmax(120px, 200px) minmax(0, 1fr) 360px"
+      : "minmax(320px, 420px) minmax(120px, 200px) 220px";
+
+  const middleCompact = activePane === "pools";
+
+  const canMessageSelected = Boolean(String(selectedEntry?.candidateUserId || "").trim());
+  const canOpenSelected = Boolean(String(selectedEntry?.candidateUserId || "").trim());
+
+  return (
+    <section style={panelStyle} aria-label="Talent Pools working surface">
+      <SectionTitle
+        title="Pools workspace"
+        subtitle="Pick a pool, scan candidates, and take action without jumping between pages."
+        right={
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              justifyContent: "flex-end",
+            }}
+          >
+            <SecondaryButton
+              onClick={() => setShowCreate(true)}
+              disabled={saving}
+            >
+              New pool
+            </SecondaryButton>
+            <PrimaryButton
+              onClick={openPicker}
+              disabled={saving || !selectedPoolId}
+            >
+              Add candidates
+            </PrimaryButton>
+          </div>
+        }
+      />
+
+      <div style={{ height: 12 }} />
+
+      {error ? (
+        <div
+          style={{
+            border: "1px solid rgba(255,112,67,0.35)",
+            background: "rgba(255,112,67,0.08)",
+            borderRadius: 12,
+            padding: 12,
+            color: "#B23C17",
+            fontWeight: 800,
+            fontSize: 13,
+            lineHeight: 1.35,
+            marginBottom: 12,
+          }}
+        >
+          {error}
+        </div>
+      ) : null}
+
+      {showCreate ? (
+        <CreatePoolPanel
+          panelStyle={panelStyle}
+          saving={saving}
+          newPoolName={newPoolName}
+          setNewPoolName={setNewPoolName}
+          newPoolPurpose={newPoolPurpose}
+          setNewPoolPurpose={setNewPoolPurpose}
+          newPoolTags={newPoolTags}
+          setNewPoolTags={setNewPoolTags}
+          onCreate={createPool}
+          onCancel={() => {
+            setShowCreate(false);
+            setNewPoolName("");
+            setNewPoolPurpose("");
+            setNewPoolTags("");
+          }}
+        />
+      ) : null}
+
+      {showPicker ? (
+        <AddCandidatesPicker
+          panelStyle={panelStyle}
+          selectedPool={selectedPool}
+          saving={saving}
+          loadingPicker={loadingPicker}
+          pickerQuery={pickerQuery}
+          setPickerQuery={setPickerQuery}
+          pickerResults={pickerResults}
+          pickerSelectedIds={pickerSelectedIds}
+          pickerStatus={pickerStatus}
+          setPickerStatus={setPickerStatus}
+          pickerFit={pickerFit}
+          setPickerFit={setPickerFit}
+          pickerWhy={pickerWhy}
+          setPickerWhy={setPickerWhy}
+          pickerLastRoleConsidered={pickerLastRoleConsidered}
+          setPickerLastRoleConsidered={setPickerLastRoleConsidered}
+          pickerNotes={pickerNotes}
+          setPickerNotes={setPickerNotes}
+          onClose={() => {
+            setShowPicker(false);
+            setPickerQuery("");
+            setPickerResults([]);
+            setPickerSelectedIds([]);
+            setPickerWhy("");
+            setPickerFit("");
+            setPickerStatus("Warm");
+            setPickerLastRoleConsidered("");
+            setPickerNotes("");
+          }}
+          onSearch={() => loadPickerCandidates(pickerQuery)}
+          onToggleSelect={togglePickerSelect}
+          onAddSelected={addSelectedToPool}
+          onClearSelected={() => setPickerSelectedIds([])}
+        />
+      ) : null}
+
+      <CandidateDetailModal
+        open={showCandidateModal}
+        onClose={() => {
+          setShowCandidateModal(false);
+          setModalEntry(null);
+        }}
+        entry={modalEntry}
+        saving={saving}
+        editable={true}
+        onSave={savePoolEntryEdits}
+        onMessage={() => messageCandidate(modalEntry)}
+        onRemove={() => {
+          const id = String(modalEntry?.id || "").trim();
+          if (!id) return;
+          removeFromPool(id);
+          setShowCandidateModal(false);
+          setModalEntry(null);
+        }}
+        onOpenFullProfile={(e) => openFullProfileFromModal(e)}
+      />
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: focusedColumns,
+          gap: 12,
+          alignItems: "start",
+          transition: "grid-template-columns 180ms ease",
+          width: "100%",
+          maxWidth: "100%",
+        }}
+      >
+        <div
+          style={{ minWidth: 0, height: WORKSPACE_HEIGHT, overflowY: "auto" }}
+          onMouseDown={() => setActivePane("pools")}
+        >
+          <PoolsList
+            panelStyle={panelStyle}
+            loadingPools={loadingPools}
+            pools={pools}
+            selectedPoolId={selectedPoolId}
+            onSelectPool={(id) => {
+              setSelectedPoolId(id);
+              setSearch("");
+              setSelectedEntryId("");
+            }}
+          />
+        </div>
+
+        <div
+          style={{ minWidth: 0, height: WORKSPACE_HEIGHT, overflowY: "auto" }}
+          onMouseDown={() => setActivePane("entries")}
+        >
+          <PoolEntriesList
+            panelStyle={panelStyle}
+            selectedPool={selectedPool}
+            loadingEntries={loadingEntries}
+            filteredEntries={filteredEntries}
+            search={search}
+            setSearch={setSearch}
+            selectedEntry={selectedEntry}
+            onSelectEntry={(id) => setSelectedEntryId(id)}
+            compact={middleCompact}
+          />
+        </div>
+
+        <div
+          style={{
+            ...panelStyle,
+            padding: 12,
+            minWidth: 0,
+            justifySelf: "end",
+            width: "100%",
+            overflow: "hidden",
+          }}
+        >
+          {!selectedEntry ? (
+            <div style={{ color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>
+              Select a candidate to take action.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 10 }}>
+              <div style={{ fontWeight: 900, color: "#FF7043", fontSize: 14 }}>
+                At a glance...
+              </div>
+
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      color: "#263238",
+                      fontSize: 16,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {selectedEntry.name}
+                  </div>
+                  {selectedEntry.headline ? (
+                    <div
+                      style={{
+                        color: "#607D8B",
+                        fontSize: 12,
+                        marginTop: 4,
+                        lineHeight: 1.35,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {selectedEntry.headline}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    maxWidth: "100%",
+                  }}
+                >
+                  <Pill
+                    tone={
+                      String(selectedEntry.source || "").toLowerCase() ===
+                      "internal"
+                        ? "internal"
+                        : "external"
+                    }
+                  >
+                    {selectedEntry.source || "External"}
+                  </Pill>
+                  <Pill
+                    tone={
+                      String(selectedEntry.status || "").toLowerCase() ===
+                      "hot"
+                        ? "hot"
+                        : String(selectedEntry.status || "").toLowerCase() ===
+                          "warm"
+                        ? "warm"
+                        : "hold"
+                    }
+                  >
+                    {selectedEntry.status || "Warm"}
+                  </Pill>
+                </div>
+
+                {String(selectedEntry.externalEmail || "").trim() ? (
+                  <div
+                    style={{
+                      color: "#607D8B",
+                      fontSize: 12,
+                      fontWeight: 800,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Email: <span style={{ fontWeight: 900 }}>{selectedEntry.externalEmail}</span>
+                  </div>
+                ) : null}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ color: "#37474F", fontSize: 12, fontWeight: 900 }}>
+                  Fit:{" "}
+                  <span style={{ color: "#607D8B", fontWeight: 800 }}>
+                    {selectedEntry.fit || "-"}
+                  </span>
+                </div>
+                <div style={{ color: "#90A4AE", fontSize: 12, fontWeight: 900 }}>
+                  Last updated:{" "}
+                  <span style={{ fontWeight: 800 }}>
+                    {fmtShortDate(
+                      selectedEntry.updatedAt || selectedEntry.lastTouch || null
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {selectedEntry.lastRoleConsidered ? (
+                <div
+                  style={{
+                    color: "#37474F",
+                    fontSize: 12,
+                    fontWeight: 900,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Last role considered:{" "}
+                  <span style={{ color: "#607D8B", fontWeight: 800 }}>
+                    {selectedEntry.lastRoleConsidered}
+                  </span>
+                </div>
+              ) : null}
+
+              <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>
+                  Why saved
+                </div>
+                {Array.isArray(selectedEntry.reasons) && selectedEntry.reasons.length ? (
+                  <div style={{ color: "#546E7A", fontSize: 12, lineHeight: 1.45 }}>
+                    {selectedEntry.reasons[0]}
+                  </div>
+                ) : (
+                  <div style={{ color: "#90A4AE", fontSize: 12, lineHeight: 1.35 }}>
+                    No snapshot yet.
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>
+                  Notes
+                </div>
+                <div
+                  style={{
+                    border: "1px solid rgba(38,50,56,0.14)",
+                    borderRadius: 12,
+                    padding: 10,
+                    minHeight: 92,
+                    color: "#455A64",
+                    fontSize: 12,
+                    lineHeight: 1.45,
+                    background: "rgba(96,125,139,0.06)",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {selectedEntry.notes || "No notes."}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
+                <PrimaryButton
+                  onClick={() => messageCandidate(selectedEntry)}
+                  disabled={saving || !canMessageSelected}
+                >
+                  Message
+                </PrimaryButton>
+
+                <SecondaryButton
+                  onClick={() => openFullProfileFromModal(selectedEntry)}
+                  disabled={saving || !canOpenSelected}
+                >
+                  View Full Details
+                </SecondaryButton>
+
+                <TextButton onClick={() => openEdit(selectedEntry)} disabled={saving}>
+                  Edit
+                </TextButton>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showProfileModal && selectedCandidate && (
+        <CandidateProfileModal
+          open={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          candidate={selectedCandidate}
+        />
+      )}
+    </section>
+  );
+}
