@@ -558,14 +558,15 @@ const ApplicationsRightRail = (
     style={{
       width: '100%',
       maxWidth: 248,
-      margin: '0 auto',
+      margin: '0 auto -72px',
       display: 'flex',
       justifyContent: 'center',
+      alignItems: 'flex-start',
     }}
   >
     <div
       style={{
-        transform: 'scale(0.85)',
+        transform: 'scale(0.82)',
         transformOrigin: 'top center',
       }}
     >
@@ -638,7 +639,7 @@ const HeaderBox = (
   rightTopOnly
   activeNav="jobs"
 >
-      <div style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 0 }}>
         <section style={{ ...WHITE_CARD, padding: 16, marginTop: 0 }}>
           <ApplicationsBoard
             key={JSON.stringify(tracker)}
