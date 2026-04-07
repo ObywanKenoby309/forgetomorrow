@@ -442,11 +442,8 @@ export default function CoachingDashboardPage() {
                 )}
               </div>
             </section>
-            <section style={{ ...GLASS, padding:14 }}>
-              <div style={{ fontSize:12, fontWeight:700, color:'#90A4AE', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:10 }}>Sponsored</div>
-              <div style={{ ...WHITE_CARD, padding:12, minHeight:80 }}>
-                <div style={{ fontSize:12, color:'#B0BEC5' }}>Ad space</div>
-              </div>
+            <section style={{ padding:0 }}>
+              <RightRailPlacementManager slot="right_rail_1" />
             </section>
           </div>
 
@@ -468,7 +465,7 @@ export default function CoachingDashboardPage() {
     );
   }
 
-  // ── DESKTOP (original, untouched) ─────────────────────────────────────────
+  // ── DESKTOP (original, touched only for ad wrapper removal) ───────────────
   const greeting = getTimeGreeting();
   return (
     <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="overview" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
@@ -521,10 +518,10 @@ export default function CoachingDashboardPage() {
             </div>
           </Section>
 
-          <aside style={{ ...GLASS, gridColumn:'2/3', gridRow:'1/4', display:'flex', flexDirection:'column', gap:GAP, alignSelf:'stretch', padding:16, boxSizing:'border-box' }}>
-            <div style={{ ...WHITE_CARD, padding:16, flex:2, minHeight:180 }}>
+          <aside style={{ gridColumn:'2/3', gridRow:'1/4', display:'flex', flexDirection:'column', gap:GAP, alignSelf:'stretch', padding:0, boxSizing:'border-box' }}>
+            <div style={{ flex:2, minHeight:180 }}>
               <div style={{ fontSize:10, fontWeight:800, letterSpacing:'0.08em', textTransform:'uppercase', color:'#94A3B8', marginBottom:8 }}>Sponsored</div>
-              <div style={{ fontSize:13, color:'#B0BEC5' }}>Ad space</div>
+              <RightRailPlacementManager slot="right_rail_1" />
             </div>
             <div style={{ ...KPI_GLASS, padding:16, flex:1 }}>
               <div style={{ fontSize:15, fontWeight:900, marginBottom:8, color:'#0F172A', lineHeight:1.25, letterSpacing:'-0.01em' }}>CSAT Pulse</div>
