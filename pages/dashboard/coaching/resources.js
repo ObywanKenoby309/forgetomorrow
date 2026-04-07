@@ -509,7 +509,6 @@ export default function CoachingResourcesPage() {
           display: 'grid',
           gridTemplateColumns: `minmax(0,1fr) ${RIGHT_COL_WIDTH}px`,
           gridTemplateRows: 'auto auto',
-          alignItems: 'start',
           gap: GAP, width: '100%', minWidth: 0, boxSizing: 'border-box',
         }}>
 
@@ -517,7 +516,7 @@ export default function CoachingResourcesPage() {
           <CoachingTitleCard
             title="Resource Center"
             subtitle="Your documents, client materials, and coaching resources — all in one place."
-            style={{ gridColumn: '1/2', gridRow: '1' }}
+            style={{ gridColumn: '1/2', gridRow: '1', alignSelf: 'start' }}
           />
 
           {/* Right rail */}
@@ -530,7 +529,7 @@ export default function CoachingResourcesPage() {
           </aside>
 
           {/* Main content */}
-          <div style={{ gridColumn: '1/2', gridRow: '2', ...GLASS, padding: 0, overflow: 'hidden' }}>
+          <div style={{ gridColumn: '1/2', gridRow: '2', ...GLASS, padding: 0, overflow: 'hidden', minHeight: 320 }}>
 
             {/* Tab bar */}
             <div style={{
