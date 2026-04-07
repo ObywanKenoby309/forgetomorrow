@@ -713,6 +713,7 @@ export default function ActionCenterPage() {
   header={Header}
   headerCard={false}
   right={<RightRailPlacementManager slot="right_rail_1" />}
+  rightVariant="light"
   activeNav="dashboard"
 >
           {Content}
@@ -745,11 +746,12 @@ export default function ActionCenterPage() {
         <title>Action Center | ForgeTomorrow</title>
       </Head>
       <SeekerLayout
-		title="Action Center | ForgeTomorrow"
-		header={Header}
-		right={<RightRailPlacementManager slot="right_rail_1" />}
-		activeNav="dashboard"
-	  >
+  title="Action Center | ForgeTomorrow"
+  header={Header}
+  right={<RightRailPlacementManager slot="right_rail_1" />}
+  rightVariant="light"
+  activeNav="dashboard"
+>
 		{Content}
 	  </SeekerLayout>
     </>
