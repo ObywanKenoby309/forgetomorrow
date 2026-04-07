@@ -23,6 +23,7 @@ import { getTimeGreeting } from "@/lib/dashboardGreeting";
 import { useRouter } from 'next/router';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingTitleCard from '@/components/coaching/CoachingTitleCard';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 function localISODate(d = new Date()) {
