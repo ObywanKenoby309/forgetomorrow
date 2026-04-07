@@ -553,6 +553,17 @@ export default function SeekerApplicationsPage() {
     minWidth: 0,
   };
 
+const ApplicationsRightRail = (
+  <div
+    style={{
+      width: '100%',
+      maxWidth: 248,
+      margin: '0 auto',
+    }}
+  >
+    <RightRailPlacementManager surfaceId="applications" />
+  </div>
+);
 
 const HeaderBox = (
   <div style={{ display: 'grid', gap: 12, width: '100%', minWidth: 0 }}>
@@ -599,11 +610,11 @@ const HeaderBox = (
   if (loading) {
     return (
       <SeekerLayout
-		header={HeaderBox}
-		right={<RightRailPlacementManager surfaceId="applications" />}
-		rightVariant="light"
-		rightTopOnly
-	   >
+  header={HeaderBox}
+  right={ApplicationsRightRail}
+  rightVariant="light"
+  rightTopOnly
+>
         <div className="text-center py-20">Loading your applications...</div>
       </SeekerLayout>
     );
@@ -613,7 +624,7 @@ const HeaderBox = (
     <SeekerLayout
   title="Applications | ForgeTomorrow"
   header={HeaderBox}
-  right={<RightRailPlacementManager surfaceId="applications" />}
+  right={ApplicationsRightRail}
   rightVariant="light"
   rightTopOnly
   activeNav="jobs"
