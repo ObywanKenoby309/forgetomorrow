@@ -557,11 +557,20 @@ const ApplicationsRightRail = (
   <div
     style={{
       width: '100%',
-      maxWidth: 220,
+      maxWidth: 248,
       margin: '0 auto',
+      display: 'flex',
+      justifyContent: 'center',
     }}
   >
-    <RightRailPlacementManager surfaceId="applications" />
+    <div
+      style={{
+        transform: 'scale(0.85)',
+        transformOrigin: 'top center',
+      }}
+    >
+      <RightRailPlacementManager surfaceId="applications" />
+    </div>
   </div>
 );
 
