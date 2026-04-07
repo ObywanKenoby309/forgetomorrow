@@ -6,6 +6,7 @@ import { usePlan } from "@/context/PlanContext";
 import { getTimeGreeting } from "@/lib/dashboardGreeting";
 import RecruiterTitleCard from "@/components/recruiter/RecruiterTitleCard";
 import ExternalCompareModule from "@/components/recruiter/candidate-center/ExternalCompareModule";
+import InternalSearchModule from "@/components/recruiter/modules/InternalSearchModule";
 
 const GLASS = {
   borderRadius: 18,
@@ -120,13 +121,13 @@ function buildTiles(isEnterprise) {
       img: null,
     },
     {
-  id: "compare",
-  title: "External Compare",
-  desc: "Paste any resume and job description to generate an evidence-backed comparison, even outside ForgeTomorrow.",
-  subtitle: "External resume and job comparison with explainable matching support.",
-  src: "/recruiter/explain?chrome=recruiter-ent",
-  img: null,
-},
+      id: "compare",
+      title: "External Compare",
+      desc: "Paste any resume and job description to generate an evidence-backed comparison, even outside ForgeTomorrow.",
+      subtitle: "External resume and job comparison with explainable matching support.",
+      src: "/recruiter/explain?chrome=recruiter-ent",
+      img: null,
+    },
     {
       id: "pools",
       title: "Talent Pools",
@@ -318,20 +319,17 @@ function MobileCandidateCenter({ tiles, activeModule, setActiveModule }) {
   const trackRef = useRef(null);
   const programmatic = useRef(false);
 
-  const goTo = useCallback(
-    (index) => {
-      setActiveIndex(index);
-      setDropdownOpen(false);
-      const track = trackRef.current;
-      if (!track) return;
-      programmatic.current = true;
-      track.scrollTo({ left: index * track.offsetWidth, behavior: "smooth" });
-      setTimeout(() => {
-        programmatic.current = false;
-      }, 600);
-    },
-    []
-  );
+  const goTo = useCallback((index) => {
+    setActiveIndex(index);
+    setDropdownOpen(false);
+    const track = trackRef.current;
+    if (!track) return;
+    programmatic.current = true;
+    track.scrollTo({ left: index * track.offsetWidth, behavior: "smooth" });
+    setTimeout(() => {
+      programmatic.current = false;
+    }, 600);
+  }, []);
 
   const handleScroll = useCallback(() => {
     if (programmatic.current) return;
@@ -350,9 +348,7 @@ function MobileCandidateCenter({ tiles, activeModule, setActiveModule }) {
 
   const active = tiles[activeIndex];
 
-  if (activeModule) {
-    return null;
-  }
+  if (activeModule) return null;
 
   return (
     <div style={{ position: "relative" }}>
@@ -688,19 +684,22 @@ export default function CandidateCenterUpdate() {
             onBack={() => setActiveModule(null)}
           >
             {(() => {
-  switch (activeModule) {
-    case "compare":
-      return <ExternalCompareModule />;
+              switch (activeModule) {
+                case "search":
+                  return <InternalSearchModule />;
 
-    default:
-      return (
-        <ToolFrame
-          src={activeTile?.src || "/recruiter/candidate-center"}
-          height={isMobile ? "calc(100vh - 320px)" : "calc(100vh - 280px)"}
-        />
-      );
-  }
-})()}
+                case "compare":
+                  return <ExternalCompareModule />;
+
+                default:
+                  return (
+                    <ToolFrame
+                      src={activeTile?.src || "/recruiter/candidate-center"}
+                      height={isMobile ? "calc(100vh - 320px)" : "calc(100vh - 280px)"}
+                    />
+                  );
+              }
+            })()}
           </WorkspaceModuleShell>
         )}
       </section>
