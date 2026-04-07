@@ -180,7 +180,7 @@ export default function CoachingFeedbackPage() {
       const res = await fetch('/api/coaching/csat');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load feedback');
-      setResponses(data.responses);
+      setResponses(Array.isArray(data.responses) ? data.responses : []);
     } catch (err) {
       setError(err.message);
     } finally {
