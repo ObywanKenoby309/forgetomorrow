@@ -6,6 +6,7 @@ import CoachingLayout from "@/components/layouts/CoachingLayout";
 import CoachingTitleCard from "@/components/coaching/CoachingTitleCard";
 import MessageThread from "@/components/recruiter/MessageThread";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
+import SavedReplies from "@/components/recruiter/SavedReplies";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import { SecondaryButton } from "@/components/ui/Buttons";
 import { getTimeGreeting } from "@/lib/dashboardGreeting";
@@ -137,6 +138,8 @@ function Body({
   recipients,
   bulkOpen,
   setBulkOpen,
+  savedRepliesOpen,
+  setSavedRepliesOpen,
   initialThreadId,
   prefillText,
   onBulkSendDb,
@@ -217,6 +220,9 @@ function Body({
             personaLabel="Coach"
             otherLabel="client"
             inboxTitle="Coach Inbox"
+            showInboxToolButtons={true}
+            onOpenSavedReplies={() => setSavedRepliesOpen(true)}
+            savedRepliesLabel="Saved Replies"
             inboxDescription={
               <p className="mt-1 text-[11px] text-slate-500 leading-snug">
                 Conversations you start as a <span className="font-semibold">Coach</span>{" "}
@@ -265,6 +271,19 @@ function Body({
         }))}
         onSend={onBulkSendDb}
       />
+
+      <SavedReplies
+        open={savedRepliesOpen}
+        onClose={() => setSavedRepliesOpen(false)}
+        persona="coach"
+        title="Saved Replies (Coach)"
+        onInsert={(text) => {
+          if (threadRef?.current?.insertText) {
+            threadRef.current.insertText(text);
+          }
+          setSavedRepliesOpen(false);
+        }}
+      />
     </main>
   );
 }
@@ -276,6 +295,7 @@ export default function CoachMessagingPage() {
   const router = useRouter();
   const [threads, setThreads] = useState([]);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [savedRepliesOpen, setSavedRepliesOpen] = useState(false);
   const [initialThreadId, setInitialThreadId] = useState(null);
 
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -780,6 +800,8 @@ export default function CoachMessagingPage() {
           recipients={recipients}
           bulkOpen={bulkOpen}
           setBulkOpen={setBulkOpen}
+          savedRepliesOpen={savedRepliesOpen}
+          setSavedRepliesOpen={setSavedRepliesOpen}
           initialThreadId={initialThreadId}
           prefillText={prefillText}
           onBulkSendDb={onBulkSendDb}

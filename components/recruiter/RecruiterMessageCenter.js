@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import CandidateActionsMenu from "./CandidateActionsMenu";
 import BulkMessageModal from "./BulkMessageModal";
+import SavedReplies from "./SavedReplies";
 
 /* ─────────────────────────────────────────────────────────────
    DESIGN TOKENS
@@ -516,6 +517,7 @@ function MessageBubble({ message, isRecruiter }) {
 function RightPanel({ candidate, messages, onSend, sending, isArchived, currentUserId, activeConversationId, onArchiveMine, onArchiveOrg }) {
   const [draft, setDraft] = useState("");
   const [showTyping, setShowTyping] = useState(false);
+  const [savedRepliesOpen, setSavedRepliesOpen] = useState(false);
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
   useEffect(() => {
@@ -739,30 +741,55 @@ function RightPanel({ candidate, messages, onSend, sending, isArchived, currentU
               e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
             }}
           />
-          <button type="button"
-            onClick={handleSend}
-            disabled={!draft.trim() || sending}
-            style={{
-              background: !draft.trim() || sending
-                ? "rgba(15,23,42,0.15)"
-                : "linear-gradient(135deg, #FF7043 0%, #FF8A65 100%)",
-              color: "white",
-              border: "none",
-              borderRadius: 10,
-              padding: "9px 18px",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: !draft.trim() || sending ? "not-allowed" : "pointer",
-              flexShrink: 0,
-              transition: "background 0.15s",
-              boxShadow: !draft.trim() || sending
-                ? "none"
-                : "0 2px 8px rgba(255,112,67,0.3)",
-            }}
-          >
-            {sending ? "..." : "Send"}
-          </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
+            <button type="button"
+              onClick={() => setSavedRepliesOpen(true)}
+              style={{
+                fontSize: 11, fontWeight: 800, color: ORANGE,
+                background: "rgba(255,112,67,0.08)",
+                border: `1px solid rgba(255,112,67,0.20)`,
+                borderRadius: 8, padding: "5px 10px",
+                cursor: "pointer", whiteSpace: "nowrap",
+              }}>
+              Saved Replies
+            </button>
+            <button type="button"
+              onClick={handleSend}
+              disabled={!draft.trim() || sending}
+              style={{
+                background: !draft.trim() || sending
+                  ? "rgba(15,23,42,0.15)"
+                  : "linear-gradient(135deg, #FF7043 0%, #FF8A65 100%)",
+                color: "white",
+                border: "none",
+                borderRadius: 10,
+                padding: "9px 18px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: !draft.trim() || sending ? "not-allowed" : "pointer",
+                flexShrink: 0,
+                transition: "background 0.15s",
+                boxShadow: !draft.trim() || sending
+                  ? "none"
+                  : "0 2px 8px rgba(255,112,67,0.3)",
+              }}
+            >
+              {sending ? "..." : "Send"}
+            </button>
           </div>
+          </div>
+
+          <SavedReplies
+            open={savedRepliesOpen}
+            onClose={() => setSavedRepliesOpen(false)}
+            persona="recruiter"
+            title="Saved Replies"
+            onInsert={(text) => {
+              setDraft(text);
+              setSavedRepliesOpen(false);
+              textareaRef.current?.focus();
+            }}
+          />
         </div>
       )}
     </div>
