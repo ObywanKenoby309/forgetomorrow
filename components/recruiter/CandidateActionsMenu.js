@@ -4,6 +4,7 @@
 // Floats above all other content via fixed positioning.
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 const ORANGE = "#FF7043";
 const SLATE = "#334155";
@@ -444,8 +445,8 @@ export default function CandidateActionsMenu({
         </svg>
       </button>
 
-      {/* Floating dropdown — fixed position so it never clips */}
-      {open && (
+      {/* Floating dropdown — portalled to body to escape overflow:hidden parents */}
+      {open && createPortal(
         <div
           ref={menuRef}
           style={{
@@ -498,7 +499,8 @@ export default function CandidateActionsMenu({
               onClick={() => { setOpen(false); setModal("block"); }}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modals */}
@@ -547,7 +549,7 @@ export default function CandidateActionsMenu({
       )}
 
       {/* Toast notification */}
-      {toast && (
+      {toast && createPortal(
         <div
           style={{
             position: "fixed",
@@ -567,7 +569,8 @@ export default function CandidateActionsMenu({
           }}
         >
           {toast.msg}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

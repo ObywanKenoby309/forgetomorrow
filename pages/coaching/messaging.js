@@ -189,6 +189,22 @@ function Body({
           >
             Conversations
           </h2>
+          <button
+            type="button"
+            onClick={() => setBulkOpen(true)}
+            style={{
+              fontSize: 13,
+              fontWeight: 800,
+              color: ORANGE,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              ...ORANGE_HEADING_LIFT,
+            }}
+          >
+            Group Message →
+          </button>
         </div>
 
         <div style={{ ...WHITE_CARD, padding: 12 }}>

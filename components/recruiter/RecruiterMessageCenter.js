@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import CandidateActionsMenu from "./CandidateActionsMenu";
+import BulkMessageModal from "./BulkMessageModal";
 
 /* ─────────────────────────────────────────────────────────────
    DESIGN TOKENS
@@ -514,6 +515,7 @@ function MessageBubble({ message, isRecruiter }) {
 ───────────────────────────────────────────────────────────── */
 function RightPanel({ candidate, messages, onSend, sending, isArchived, currentUserId, activeConversationId, onArchiveMine, onArchiveOrg }) {
   const [draft, setDraft] = useState("");
+  const [showTyping, setShowTyping] = useState(false);
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
   useEffect(() => {
@@ -695,11 +697,21 @@ function RightPanel({ candidate, messages, onSend, sending, isArchived, currentU
             padding: "12px 16px",
             borderTop: `1px solid ${BORDER}`,
             display: "flex",
-            gap: 10,
-            alignItems: "flex-end",
+            flexDirection: "column",
+            gap: 8,
             flexShrink: 0,
           }}
         >
+          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", width: "fit-content" }}>
+            <input
+              type="checkbox"
+              checked={showTyping}
+              onChange={(e) => setShowTyping(e.target.checked)}
+              style={{ accentColor: ORANGE, cursor: "pointer" }}
+            />
+            <span style={{ fontSize: 11, color: MUTED, fontWeight: 600 }}>Show recipient you are typing</span>
+          </label>
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
           <textarea
             ref={textareaRef}
             value={draft}
@@ -750,6 +762,7 @@ function RightPanel({ candidate, messages, onSend, sending, isArchived, currentU
           >
             {sending ? "..." : "Send"}
           </button>
+          </div>
         </div>
       )}
     </div>
@@ -766,11 +779,13 @@ export default function RecruiterMessageCenter({
   onCreateConversation,
   fetchMessages,
   onSendMessage,
+  onBulkSend,
 }) {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   // conversationId for the selected candidate (null = ghost, no convo yet)
   const [activeConversationId, setActiveConversationId] = useState(null);
@@ -784,7 +799,7 @@ export default function RecruiterMessageCenter({
   const isArchived =
     selectedCandidate?.groupStatus &&
     selectedCandidate.groupStatus !== "active" &&
-    !selectedCandidate.poolId; // pool members are never archived via job status
+    !selectedCandidate.poolId;
 
   // ── Load messages when candidate or conversationId changes ───────────────
   const loadMessages = useCallback(
@@ -924,6 +939,9 @@ export default function RecruiterMessageCenter({
           padding: "14px 16px 10px",
           borderBottom: `1px solid ${BORDER}`,
           flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
         <h2
@@ -938,6 +956,22 @@ export default function RecruiterMessageCenter({
         >
           Conversations
         </h2>
+        <button
+          type="button"
+          onClick={() => setBulkOpen(true)}
+          style={{
+            fontSize: 13,
+            fontWeight: 800,
+            color: ORANGE,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+            textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
+          }}
+        >
+          Group Message →
+        </button>
       </div>
 
       {/* ── Body ── */}
@@ -978,6 +1012,23 @@ export default function RecruiterMessageCenter({
           }}
         />
       </div>
+
+      <BulkMessageModal
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        candidates={[
+          ...(jobGroups || []).flatMap(g => (g.candidates || []).map(c => ({ id: c.userId, name: c.name, role: "Candidate" }))),
+          ...(talentPoolGroups || []).flatMap(p => (p.members || []).map(m => ({ id: m.userId, name: m.name, role: "Talent Pool" }))),
+        ]}
+        onSend={async (ids, text) => {
+          if (typeof onBulkSend === "function") await onBulkSend(ids, text);
+          setBulkOpen(false);
+        }}
+        title="Group Message"
+        recipientLabelPlural="candidates"
+        emptyRecipientsText="No candidates available yet."
+        messagePlaceholder="Write your message once — it will be sent to all selected candidates."
+      />
     </div>
   );
 }
