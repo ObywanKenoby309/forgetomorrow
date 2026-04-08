@@ -514,12 +514,18 @@ function MessageBubble({ message, isRecruiter }) {
 /* ─────────────────────────────────────────────────────────────
    RIGHT PANEL
 ───────────────────────────────────────────────────────────── */
-function RightPanel({ candidate, messages, onSend, sending, isArchived, currentUserId, activeConversationId, onArchiveMine, onArchiveOrg }) {
+function RightPanel({ candidate, messages, onSend, sending, isArchived, currentUserId, activeConversationId, onArchiveMine, onArchiveOrg, onOpenSavedReplies, registerDraftSetter }) {
   const [draft, setDraft] = useState("");
   const [showTyping, setShowTyping] = useState(false);
-  const [savedRepliesOpen, setSavedRepliesOpen] = useState(false);
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
+
+  useEffect(() => {
+    if (registerDraftSetter) registerDraftSetter((text) => {
+      setDraft(text);
+      setTimeout(() => textareaRef.current?.focus(), 0);
+    });
+  }, [registerDraftSetter]);
   useEffect(() => {
   if (messagesContainerRef.current) {
     messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
@@ -765,18 +771,6 @@ function RightPanel({ candidate, messages, onSend, sending, isArchived, currentU
             {sending ? "..." : "Send"}
           </button>
           </div>
-
-          <SavedReplies
-            open={savedRepliesOpen}
-            onClose={() => setSavedRepliesOpen(false)}
-            persona="recruiter"
-            title="Saved Replies"
-            onInsert={(text) => {
-              setDraft(text);
-              setSavedRepliesOpen(false);
-              textareaRef.current?.focus();
-            }}
-          />
         </div>
       )}
     </div>
@@ -800,6 +794,8 @@ export default function RecruiterMessageCenter({
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [savedRepliesOpen, setSavedRepliesOpen] = useState(false);
+  const draftSetterRef = useRef(null);
 
   // conversationId for the selected candidate (null = ghost, no convo yet)
   const [activeConversationId, setActiveConversationId] = useState(null);
@@ -1024,6 +1020,9 @@ export default function RecruiterMessageCenter({
           isArchived={!!isArchived}
           currentUserId={currentUserId}
           activeConversationId={activeConversationId}
+          onOpenSavedReplies={() => setSavedRepliesOpen(true)}
+          onInsertText={(text) => { if (draftSetterRef.current) draftSetterRef.current(text); }}
+          registerDraftSetter={(fn) => { draftSetterRef.current = fn; }}
           onArchiveMine={(c) => {
             setSelectedCandidate(null);
             setMessages([]);
@@ -1046,6 +1045,17 @@ export default function RecruiterMessageCenter({
         onSend={async (ids, text) => {
           if (typeof onBulkSend === "function") await onBulkSend(ids, text);
           setBulkOpen(false);
+        }}
+      />
+
+      <SavedReplies
+        open={savedRepliesOpen}
+        onClose={() => setSavedRepliesOpen(false)}
+        persona="recruiter"
+        title="Saved Replies"
+        onInsert={(text) => {
+          if (draftSetterRef.current) draftSetterRef.current(text);
+          setSavedRepliesOpen(false);
         }}
       />
     </div>
