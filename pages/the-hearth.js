@@ -335,7 +335,7 @@ function ResourcesModule() {
     },
     {
       title: 'Job Search Foundations',
-      blurb: 'Start here if you're restarting your search or feel stuck. Learn how to structure your week, tap into the hidden job market, and avoid burnout while moving forward.',
+      blurb: "Start here if you're restarting your search or feel stuck. Learn how to structure your week, tap into the hidden job market, and avoid burnout while moving forward.",
     },
     {
       title: 'Resumes & Cover Letters',
