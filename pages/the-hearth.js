@@ -10,6 +10,7 @@ import Link from 'next/link';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
+import SpotlightFilters from '@/components/spotlights/SpotlightFilters';
 
 const GLASS = {
   borderRadius: 14,
@@ -63,13 +64,13 @@ function HearthModuleShell({ title, subtitle, children, onBack }) {
   );
 }
 
-// ─── Mentorship Module — pulls from /api/hearth/spotlights ───────────────────
+// ─── Mentorship Module — full SpotlightFilters + list/detail inline ──────────
 function MentorshipModule() {
   const [spotlights, setSpotlights] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [selected, setSelected]     = useState(null);
+  const [filters, setFilters]       = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -78,24 +79,25 @@ function MentorshipModule() {
       setError('');
       try {
         const res = await fetch('/api/hearth/spotlights');
-        if (!res.ok) throw new Error('Failed to load');
+        if (!res.ok) throw new Error('Failed to load spotlights');
         const data = await res.json();
         const list =
           (Array.isArray(data?.spotlights) && data.spotlights) ||
-          (Array.isArray(data?.items) && data.items) ||
-          (Array.isArray(data) && data) ||
+          (Array.isArray(data?.items)      && data.items)      ||
+          (Array.isArray(data)             && data)            ||
           [];
         if (!mounted) return;
         const normalized = list.map((a) => ({
-          id: a.id,
-          name: a.name || '',
-          headline: a.headline || '',
-          summary: a.summary || '',
-          specialties: Array.isArray(a.specialties) ? a.specialties : [],
-          rate: a.rate || '',
+          id:           a.id,
+          name:         a.name         || '',
+          headline:     a.headline     || '',
+          summary:      a.summary      || '',
+          specialties:  Array.isArray(a.specialties) ? a.specialties : [],
+          rate:         a.rate         || '',
           availability: a.availability || '',
           contactEmail: a.contactEmail || '',
-          contactLink: a.contactLink || '',
+          contactLink:  a.contactLink  || '',
+          createdAt:    a.createdAt    || null,
         }));
         setSpotlights(normalized);
         if (normalized.length > 0) setSelected(normalized[0]);
@@ -109,21 +111,50 @@ function MentorshipModule() {
     return () => { mounted = false; };
   }, []);
 
+  // Mirror the exact filter logic from /hearth/spotlights/index.js
   const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return spotlights;
-    return spotlights.filter((a) =>
-      [a.name, a.headline, a.summary, a.specialties.join(' ')]
-        .join(' ').toLowerCase().includes(term)
-    );
-  }, [spotlights, search]);
+    let arr = [...spotlights];
+    if (!filters) return arr;
+    const term = (filters.q || '').trim().toLowerCase();
+    if (term) {
+      arr = arr.filter((a) =>
+        [a.name, a.headline, a.summary, (a.specialties || []).join(' ')]
+          .join(' ').toLowerCase().includes(term)
+      );
+    }
+    if (filters.specialties?.length) {
+      arr = arr.filter((a) =>
+        (a.specialties || []).some((s) => filters.specialties.includes(s))
+      );
+    }
+    if (filters.availability && filters.availability !== 'Any') {
+      arr = arr.filter((a) => (a.availability || '') === filters.availability);
+    }
+    if (filters.rate?.length) {
+      arr = arr.filter((a) => filters.rate.includes(a.rate));
+    }
+    if (filters.sort === 'Name A–Z') {
+      arr.sort((x, y) => (x.name || '').localeCompare(y.name || ''));
+    } else if (filters.sort === 'Newest') {
+      arr.sort((x, y) => {
+        const ax = x.createdAt ? new Date(x.createdAt).getTime() : 0;
+        const by = y.createdAt ? new Date(y.createdAt).getTime() : 0;
+        return by - ax;
+      });
+    }
+    return arr;
+  }, [spotlights, filters]);
 
   if (loading) {
-    return <div style={{ color: '#90A4AE', fontSize: 13, padding: 8 }}>Loading mentors…</div>;
+    return (
+      <div style={{ color: '#90A4AE', fontSize: 13, padding: 8 }}>Loading mentors…</div>
+    );
   }
 
   if (error) {
-    return <div style={{ ...WHITE_CARD, padding: 16, color: '#C62828', fontSize: 13 }}>{error}</div>;
+    return (
+      <div style={{ ...WHITE_CARD, padding: 16, color: '#C62828', fontSize: 13 }}>{error}</div>
+    );
   }
 
   if (spotlights.length === 0) {
@@ -140,33 +171,29 @@ function MentorshipModule() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <input
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        placeholder="Search by name, specialty, or focus area…"
-        style={{
-          width: '100%', padding: '10px 14px', fontSize: 13,
-          border: '1px solid rgba(0,0,0,0.12)', borderRadius: 10,
-          background: 'rgba(255,255,255,0.85)', boxSizing: 'border-box',
-          fontFamily: 'inherit',
-        }}
-      />
+    <div style={{ display: 'grid', gap: 16 }}>
+      {/* Full filter bar — identical to standalone spotlights page */}
+      <SpotlightFilters onChange={setFilters} />
 
       {filtered.length === 0 ? (
         <div style={{ ...WHITE_CARD, padding: 16, color: '#90A4AE', fontSize: 13 }}>
-          No mentors match your search.
+          No mentors match your filters.
         </div>
       ) : (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-          gap: 16, alignItems: 'flex-start',
+          gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1.5fr)',
+          gap: 16,
+          alignItems: 'flex-start',
         }}>
-          {/* List */}
+          {/* Scrollable list */}
           <div style={{
-            display: 'flex', flexDirection: 'column', gap: 10,
-            maxHeight: '55vh', overflowY: 'auto', paddingRight: 4,
+            maxHeight: '60vh',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            paddingRight: 4,
           }}>
             {filtered.map((a) => {
               const isSelected = selected?.id === a.id;
@@ -175,17 +202,35 @@ function MentorshipModule() {
                   key={a.id}
                   onClick={() => setSelected(a)}
                   style={{
-                    ...WHITE_CARD, padding: '14px 16px', cursor: 'pointer',
-                    border: isSelected ? '2px solid #FF7043' : '1px solid rgba(0,0,0,0.08)',
+                    ...WHITE_CARD,
+                    padding: '14px 16px',
+                    cursor: 'pointer',
+                    border: isSelected
+                      ? '2px solid #FF7043'
+                      : '1px solid rgba(0,0,0,0.08)',
                   }}
                 >
                   <div style={{ fontWeight: 800, color: '#263238', fontSize: 14 }}>
                     {a.headline || 'Mentor'}
                   </div>
-                  <div style={{ color: '#607D8B', fontSize: 12, marginTop: 2 }}>{a.name}</div>
+                  <div style={{ color: '#607D8B', fontSize: 12, marginTop: 2 }}>
+                    {a.name}
+                  </div>
                   {a.summary && (
                     <div style={{ color: '#455A64', fontSize: 12, marginTop: 6, lineHeight: 1.5 }}>
-                      {a.summary.length > 100 ? `${a.summary.slice(0, 100)}…` : a.summary}
+                      {a.summary.length > 120 ? `${a.summary.slice(0, 120)}…` : a.summary}
+                    </div>
+                  )}
+                  {a.specialties?.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+                      {a.specialties.slice(0, 3).map((s) => (
+                        <span key={s} style={{
+                          fontSize: 10, padding: '2px 7px', borderRadius: 20,
+                          background: '#FAECE7', color: '#993C1D', fontWeight: 600,
+                        }}>
+                          {s}
+                        </span>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -193,19 +238,28 @@ function MentorshipModule() {
             })}
           </div>
 
-          {/* Detail */}
-          <div style={{ ...WHITE_CARD, padding: '16px 18px', position: 'sticky', top: 0 }}>
+          {/* Sticky detail panel */}
+          <div style={{
+            ...WHITE_CARD,
+            padding: '18px 20px',
+            position: 'sticky',
+            top: 0,
+            maxHeight: '60vh',
+            overflowY: 'auto',
+          }}>
             {selected ? (
-              <div style={{ display: 'grid', gap: 12 }}>
+              <div style={{ display: 'grid', gap: 14 }}>
                 <div>
-                  <div style={{ fontWeight: 900, color: '#263238', fontSize: 16 }}>
+                  <div style={{ fontWeight: 900, color: '#263238', fontSize: 17, lineHeight: 1.2 }}>
                     {selected.headline || 'Mentor'}
                   </div>
-                  <div style={{ color: '#607D8B', fontSize: 13, marginTop: 2 }}>{selected.name}</div>
+                  <div style={{ color: '#607D8B', fontSize: 13, marginTop: 3 }}>
+                    {selected.name}
+                  </div>
                 </div>
 
                 {selected.summary && (
-                  <p style={{ margin: 0, color: '#455A64', fontSize: 13, lineHeight: 1.6 }}>
+                  <p style={{ margin: 0, color: '#455A64', fontSize: 13, lineHeight: 1.65 }}>
                     {selected.summary}
                   </p>
                 )}
@@ -214,33 +268,28 @@ function MentorshipModule() {
                   <div>
                     <div style={{
                       fontSize: 11, fontWeight: 700, color: '#90A4AE',
-                      textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6,
+                      textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8,
                     }}>
                       Specialties
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
                       {selected.specialties.map((s) => (
-                        <span key={s} style={{
-                          fontSize: 11, padding: '3px 9px', borderRadius: 20,
-                          background: '#FAECE7', color: '#993C1D', fontWeight: 600,
-                        }}>
-                          {s}
-                        </span>
+                        <li key={s} style={{ fontSize: 13, color: '#37474F' }}>{s}</li>
                       ))}
-                    </div>
+                    </ul>
                   </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div style={{ display: 'grid', gap: 6 }}>
                   {selected.rate && (
-                    <div style={{ fontSize: 12 }}>
-                      <span style={{ color: '#90A4AE', fontWeight: 700 }}>Rate </span>
+                    <div style={{ fontSize: 13 }}>
+                      <span style={{ fontWeight: 700, color: '#546E7A' }}>Rate: </span>
                       <span style={{ color: '#455A64' }}>{selected.rate}</span>
                     </div>
                   )}
                   {selected.availability && (
-                    <div style={{ fontSize: 12 }}>
-                      <span style={{ color: '#90A4AE', fontWeight: 700 }}>Availability </span>
+                    <div style={{ fontSize: 13 }}>
+                      <span style={{ fontWeight: 700, color: '#546E7A' }}>Availability: </span>
                       <span style={{ color: '#455A64' }}>{selected.availability}</span>
                     </div>
                   )}
@@ -258,7 +307,9 @@ function MentorshipModule() {
                       Contact
                     </div>
                     {selected.contactEmail && (
-                      <div style={{ fontSize: 13, color: '#455A64' }}>{selected.contactEmail}</div>
+                      <div style={{ fontSize: 13, color: '#455A64' }}>
+                        {selected.contactEmail}
+                      </div>
                     )}
                     {selected.contactLink && (
                       <a
@@ -279,7 +330,9 @@ function MentorshipModule() {
                 )}
               </div>
             ) : (
-              <div style={{ color: '#90A4AE', fontSize: 13 }}>Select a mentor to view details.</div>
+              <div style={{ color: '#90A4AE', fontSize: 13 }}>
+                Select a mentor to view details.
+              </div>
             )}
           </div>
         </div>
