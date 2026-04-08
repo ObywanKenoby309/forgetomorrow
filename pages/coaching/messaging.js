@@ -166,7 +166,6 @@ function Body({
 
   return (
     <main style={{ display: "grid", gap: 16 }}>
-      <MessagingActionBar onOpenBulk={() => setBulkOpen(true)} />
 
       <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
         <div style={{ ...WHITE_CARD, padding: 14 }}>
@@ -734,7 +733,7 @@ export default function CoachMessagingPage() {
           header={HeaderBox}
           headerCard={false}
           right={<RightToolsCard />}
-          rightBare
+          rightVariant="light"
           activeNav="coach-messages"
           footer={null}
         >
@@ -773,7 +772,7 @@ export default function CoachMessagingPage() {
           header={HeaderBox}
           headerCard={false}
           right={<RightToolsCard />}
-          rightBare
+          rightVariant="light"
           activeNav="coach-messages"
           footer={null}
         >
@@ -831,7 +830,7 @@ export default function CoachMessagingPage() {
         header={HeaderBox}
         headerCard={false}
         right={<RightToolsCard />}
-          rightBare
+          rightVariant="light"
         activeNav="coach-messages"
         footer={null}
       >
