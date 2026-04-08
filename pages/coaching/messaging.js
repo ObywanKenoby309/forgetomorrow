@@ -125,33 +125,7 @@ function MessagingActionBar({ onOpenBulk }) {
    RIGHT SIDEBAR CARD
 ---------------------------------------------- */
 function RightToolsCard() {
-  return (
-    <div
-      style={{
-        ...GLASS,
-        padding: 14,
-        minHeight: 160,
-        width: "100%",
-        boxSizing: "border-box",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 800,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "#94A3B8",
-          marginBottom: 8,
-        }}
-      >
-        Sponsored
-      </div>
-      <div style={{ ...WHITE_CARD, minHeight: 180, padding: 12 }}>
-        <RightRailPlacementManager slot="right_rail_1" />
-      </div>
-    </div>
-  );
+  return <RightRailPlacementManager slot="right_rail_1" />;
 }
 
 /* ---------------------------------------------
@@ -760,6 +734,7 @@ export default function CoachMessagingPage() {
           header={HeaderBox}
           headerCard={false}
           right={<RightToolsCard />}
+          rightBare
           activeNav="coach-messages"
           footer={null}
         >
@@ -798,6 +773,7 @@ export default function CoachMessagingPage() {
           header={HeaderBox}
           headerCard={false}
           right={<RightToolsCard />}
+          rightBare
           activeNav="coach-messages"
           footer={null}
         >
@@ -855,6 +831,7 @@ export default function CoachMessagingPage() {
         header={HeaderBox}
         headerCard={false}
         right={<RightToolsCard />}
+          rightBare
         activeNav="coach-messages"
         footer={null}
       >
