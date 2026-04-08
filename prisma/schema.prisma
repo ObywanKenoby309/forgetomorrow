@@ -368,15 +368,31 @@ model UserDraft {
 }
 
 model SavedReply {
-  id        Int      @id @default(autoincrement())
-  userId    String
-  persona   String   @default("recruiter")
-  text      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  userId      String
+  persona     String   @default("recruiter")
+  text        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([userId, persona])
   @@map("saved_replies")
+}
+
+model RecipientGroup {
+  id         String   @id @default(cuid())
+  userId     String
+  accountKey String?
+  persona    String   @default("recruiter")
+  name       String
+  memberIds  String[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId, persona])
+  @@index([accountKey, persona])
+  @@map("recipient_groups")
 }
 
 model AiThread {
