@@ -956,6 +956,8 @@ export default function RecruiterMessageCenter({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          position: "relative",
+          zIndex: 2,
         }}
       >
         <h2

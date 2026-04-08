@@ -31,9 +31,14 @@ export default async function handler(req, res) {
       const text = typeof body.text === "string" ? body.text.trim() : "";
       if (!text) return res.status(400).json({ error: "Missing text" });
 
+      const description = typeof body.description === "string" ? body.description.trim() : null;
+
       const updated = await prisma.savedReply.update({
         where: { id },
-        data: { text },
+        data: {
+          text,
+          ...(description !== null && { description }),
+        },
       });
 
       return res.status(200).json({ item: updated });
