@@ -5,7 +5,6 @@ import { PlanProvider } from "@/context/PlanContext";
 import CoachingLayout from "@/components/layouts/CoachingLayout";
 import CoachingTitleCard from "@/components/coaching/CoachingTitleCard";
 import MessageThread from "@/components/recruiter/MessageThread";
-import SavedReplies from "@/components/recruiter/SavedReplies";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import { SecondaryButton } from "@/components/ui/Buttons";
@@ -168,37 +167,6 @@ function Body({
     <main style={{ display: "grid", gap: 16 }}>
 
       <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
-        <div style={{ ...WHITE_CARD, padding: 14 }}>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 11,
-              fontWeight: 800,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: MUTED,
-              lineHeight: 1.2,
-            }}
-          >
-            How messaging works
-          </p>
-          <p
-            style={{
-              margin: "8px 0 0",
-              fontSize: 13,
-              color: "#475569",
-              lineHeight: 1.6,
-            }}
-          >
-            Start conversations from a client or seeker profile by clicking{" "}
-            <span style={{ fontWeight: 700 }}>Message</span>. You can also send group
-            updates for newsletters, reminders, or shared guidance. All replies stay
-            organized here so you can focus on coaching.
-          </p>
-        </div>
-      </section>
-
-      <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
         <div
           style={{
             display: "flex",
@@ -265,52 +233,6 @@ function Body({
               report: "Report",
               block: "Block",
               blocked: "Blocked",
-            }}
-          />
-        </div>
-      </section>
-
-      <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 12,
-            gap: 12,
-          }}
-        >
-          <h2
-            style={{
-              fontSize: 18,
-              fontWeight: 900,
-              color: ORANGE,
-              lineHeight: 1.25,
-              letterSpacing: "-0.01em",
-              margin: 0,
-              ...ORANGE_HEADING_LIFT,
-            }}
-          >
-            Saved Replies
-          </h2>
-        </div>
-
-        <div style={{ ...WHITE_CARD, padding: 12 }}>
-          <SavedReplies
-            persona="coach"
-            title="Saved Replies (Coach)"
-            onInsert={(text) => {
-              if (threadRef?.current?.insertText) {
-                threadRef.current.insertText(text);
-                return;
-              }
-
-              const el = document.querySelector('input[placeholder="Type a message…"]');
-              if (el) {
-                el.value = el.value ? `${el.value} ${text}` : text;
-                el.dispatchEvent(new Event("input", { bubbles: true }));
-                el.focus();
-              }
             }}
           />
         </div>
