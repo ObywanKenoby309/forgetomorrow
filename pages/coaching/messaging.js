@@ -257,12 +257,13 @@ function Body({
       <BulkMessageModal
         open={bulkOpen}
         onClose={() => setBulkOpen(false)}
-        candidates={recipients}
+        persona="coach"
+        clients={recipients.map((r) => ({
+          id: r.id,
+          name: r.name,
+          status: r.role || "Active",
+        }))}
         onSend={onBulkSendDb}
-        title="Group Message"
-        recipientLabelPlural="clients"
-        emptyRecipientsText="No clients available yet."
-        messagePlaceholder="Write your message once - it will be sent to all selected clients."
       />
     </main>
   );

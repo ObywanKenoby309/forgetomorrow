@@ -1016,18 +1016,13 @@ export default function RecruiterMessageCenter({
       <BulkMessageModal
         open={bulkOpen}
         onClose={() => setBulkOpen(false)}
-        candidates={[
-          ...(jobGroups || []).flatMap(g => (g.candidates || []).map(c => ({ id: c.userId, name: c.name, role: "Candidate" }))),
-          ...(talentPoolGroups || []).flatMap(p => (p.members || []).map(m => ({ id: m.userId, name: m.name, role: "Talent Pool" }))),
-        ]}
+        persona="recruiter"
+        jobGroups={jobGroups}
+        talentPoolGroups={talentPoolGroups}
         onSend={async (ids, text) => {
           if (typeof onBulkSend === "function") await onBulkSend(ids, text);
           setBulkOpen(false);
         }}
-        title="Group Message"
-        recipientLabelPlural="candidates"
-        emptyRecipientsText="No candidates available yet."
-        messagePlaceholder="Write your message once — it will be sent to all selected candidates."
       />
     </div>
   );
