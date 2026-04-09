@@ -13,30 +13,30 @@ export default function FeedPage() {
   return (
     <>
       <Head>
-        <title>ForgeTomorrow — Community Feed</title>
+        <title>ForgeTomorrow — Career Signal Feed</title>
       </Head>
 
       <SeekerLayout
-        title="Community Feed | ForgeTomorrow"
+        title="Career Signal Feed | ForgeTomorrow"
         right={<RightRailPlacementManager />}
         rightVariant="light"
         activeNav="feed"
         header={
           <SeekerTitleCard
             greeting={greeting}
-            title="Community Feed"
-            subtitle="Share updates, get insights, and stay connected with your network."
+            title="Career Signal Feed"
+            subtitle="Share updates, spot momentum, and stay connected with what matters in your network."
           />
         }
       >
         <div
           style={{
-            borderRadius: 14,
-            border: "1px solid rgba(255,255,255,0.22)",
-            background: "rgba(255,255,255,0.58)",
-            boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
+            borderRadius: 18,
+            border: "1px solid rgba(255,255,255,0.24)",
+            background: "rgba(255,255,255,0.52)",
+            boxShadow: "0 14px 36px rgba(0,0,0,0.12)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
             padding: 16,
             width: "100%",
             minHeight: "60vh",

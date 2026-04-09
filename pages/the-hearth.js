@@ -11,6 +11,7 @@ import SupportFloatingButton from '@/components/SupportFloatingButton';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import SpotlightFilters from '@/components/spotlights/SpotlightFilters';
+import { SpotlightCard, SpotlightDetail } from '@/components/spotlights/SpotlightCardUI';
 
 const GLASS = {
   borderRadius: 14,
@@ -64,7 +65,7 @@ function HearthModuleShell({ title, subtitle, children, onBack }) {
   );
 }
 
-// ─── Mentorship Module — full SpotlightFilters + list/detail inline ──────────
+// ─── Mentorship Module — uses shared SpotlightCard + SpotlightDetail ────────
 function MentorshipModule() {
   const [spotlights, setSpotlights] = useState([]);
   const [selected, setSelected]     = useState(null);
@@ -75,11 +76,10 @@ function MentorshipModule() {
   useEffect(() => {
     let mounted = true;
     async function load() {
-      setLoading(true);
-      setError('');
+      setLoading(true); setError('');
       try {
         const res = await fetch('/api/hearth/spotlights');
-        if (!res.ok) throw new Error('Failed to load spotlights');
+        if (!res.ok) throw new Error('Failed to load');
         const data = await res.json();
         const list =
           (Array.isArray(data?.spotlights) && data.spotlights) ||
@@ -87,17 +87,20 @@ function MentorshipModule() {
           (Array.isArray(data)             && data)            ||
           [];
         if (!mounted) return;
-        const normalized = list.map((a) => ({
+        const normalized = list.map(a => ({
           id:           a.id,
           name:         a.name         || '',
           headline:     a.headline     || '',
+          hook:         a.hook         || null,
           summary:      a.summary      || '',
+          whyICoach:    a.whyICoach    || null,
           specialties:  Array.isArray(a.specialties) ? a.specialties : [],
           rate:         a.rate         || '',
           availability: a.availability || '',
           contactEmail: a.contactEmail || '',
           contactLink:  a.contactLink  || '',
           createdAt:    a.createdAt    || null,
+          csat:         a.csat         || { sessions: 0, overall: null, satisfaction: null, timeliness: null, quality: null },
         }));
         setSpotlights(normalized);
         if (normalized.length > 0) setSelected(normalized[0]);
@@ -111,58 +114,59 @@ function MentorshipModule() {
     return () => { mounted = false; };
   }, []);
 
-  // Mirror the exact filter logic from /hearth/spotlights/index.js
   const filtered = useMemo(() => {
     let arr = [...spotlights];
     if (!filters) return arr;
     const term = (filters.q || '').trim().toLowerCase();
     if (term) {
-      arr = arr.filter((a) =>
-        [a.name, a.headline, a.summary, (a.specialties || []).join(' ')]
+      arr = arr.filter(a =>
+        [a.name, a.headline, a.hook || '', a.summary, (a.specialties || []).join(' ')]
           .join(' ').toLowerCase().includes(term)
       );
     }
     if (filters.specialties?.length) {
-      arr = arr.filter((a) =>
-        (a.specialties || []).some((s) => filters.specialties.includes(s))
-      );
+      arr = arr.filter(a => (a.specialties || []).some(s => filters.specialties.includes(s)));
     }
     if (filters.availability && filters.availability !== 'Any') {
-      arr = arr.filter((a) => (a.availability || '') === filters.availability);
+      arr = arr.filter(a => a.availability === filters.availability);
     }
     if (filters.rate?.length) {
-      arr = arr.filter((a) => filters.rate.includes(a.rate));
+      arr = arr.filter(a => filters.rate.includes(a.rate));
     }
-    if (filters.sort === 'Name A–Z') {
+    if (filters.csatMin && filters.csatMin !== 'Any') {
+      const min = parseFloat(filters.csatMin);
+      arr = arr.filter(a => a.csat?.overall != null && a.csat.overall >= min);
+    }
+    if (filters.sort === 'Name A\u2013Z') {
       arr.sort((x, y) => (x.name || '').localeCompare(y.name || ''));
-    } else if (filters.sort === 'Newest') {
+    } else if (filters.sort === 'Highest rated') {
+      arr.sort((x, y) => (y.csat?.overall || 0) - (x.csat?.overall || 0));
+    } else if (filters.sort === 'Most sessions') {
+      arr.sort((x, y) => (y.csat?.sessions || 0) - (x.csat?.sessions || 0));
+    } else {
       arr.sort((x, y) => {
         const ax = x.createdAt ? new Date(x.createdAt).getTime() : 0;
-        const by = y.createdAt ? new Date(y.createdAt).getTime() : 0;
-        return by - ax;
+        const ay = y.createdAt ? new Date(y.createdAt).getTime() : 0;
+        return ay - ax;
       });
     }
     return arr;
   }, [spotlights, filters]);
 
-  if (loading) {
-    return (
-      <div style={{ color: '#90A4AE', fontSize: 13, padding: 8 }}>Loading mentors…</div>
-    );
-  }
+  // Keep selected in sync after filter changes
+  useEffect(() => {
+    if (filtered.length > 0 && !filtered.find(s => s.id === selected?.id)) {
+      setSelected(filtered[0]);
+    }
+  }, [filtered]);
 
-  if (error) {
-    return (
-      <div style={{ ...WHITE_CARD, padding: 16, color: '#C62828', fontSize: 13 }}>{error}</div>
-    );
-  }
+  if (loading) return <div style={{ color: '#90A4AE', fontSize: 13, padding: 8 }}>Loading mentors…</div>;
+  if (error)   return <div style={{ ...WHITE_CARD, padding: 16, color: '#C62828', fontSize: 13 }}>{error}</div>;
 
   if (spotlights.length === 0) {
     return (
       <div style={{ ...WHITE_CARD, padding: 24, textAlign: 'center' }}>
-        <div style={{ fontWeight: 800, color: '#37474F', marginBottom: 6 }}>
-          No mentors in the Hearth Spotlight yet
-        </div>
+        <div style={{ fontWeight: 800, color: '#37474F', marginBottom: 6 }}>No mentors in the Hearth Spotlight yet</div>
         <p style={{ color: '#607D8B', margin: 0, lineHeight: 1.6, fontSize: 13 }}>
           As coaches and mentors opt in, they'll appear here. Check back soon.
         </p>
@@ -171,176 +175,48 @@ function MentorshipModule() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      {/* Full filter bar — identical to standalone spotlights page */}
+    <div style={{ display: 'grid', gap: 14 }}>
       <SpotlightFilters onChange={setFilters} />
 
       {filtered.length === 0 ? (
-        <div style={{ ...WHITE_CARD, padding: 16, color: '#90A4AE', fontSize: 13 }}>
+        <div style={{ ...WHITE_CARD, padding: 14, color: '#90A4AE', fontSize: 13 }}>
           No mentors match your filters.
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1.5fr)',
-          gap: 16,
-          alignItems: 'flex-start',
-        }}>
-          {/* Scrollable list */}
-          <div style={{
-            maxHeight: '60vh',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-            paddingRight: 4,
-          }}>
-            {filtered.map((a) => {
-              const isSelected = selected?.id === a.id;
-              return (
-                <div
-                  key={a.id}
-                  onClick={() => setSelected(a)}
-                  style={{
-                    ...WHITE_CARD,
-                    padding: '14px 16px',
-                    cursor: 'pointer',
-                    border: isSelected
-                      ? '2px solid #FF7043'
-                      : '1px solid rgba(0,0,0,0.08)',
-                  }}
-                >
-                  <div style={{ fontWeight: 800, color: '#263238', fontSize: 14 }}>
-                    {a.headline || 'Mentor'}
-                  </div>
-                  <div style={{ color: '#607D8B', fontSize: 12, marginTop: 2 }}>
-                    {a.name}
-                  </div>
-                  {a.summary && (
-                    <div style={{ color: '#455A64', fontSize: 12, marginTop: 6, lineHeight: 1.5 }}>
-                      {a.summary.length > 120 ? `${a.summary.slice(0, 120)}…` : a.summary}
-                    </div>
-                  )}
-                  {a.specialties?.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
-                      {a.specialties.slice(0, 3).map((s) => (
-                        <span key={s} style={{
-                          fontSize: 10, padding: '2px 7px', borderRadius: 20,
-                          background: '#FAECE7', color: '#993C1D', fontWeight: 600,
-                        }}>
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        <>
+          <div style={{ fontSize: 12, color: '#90A4AE' }}>
+            {filtered.length} {filtered.length === 1 ? 'mentor' : 'mentors'} available
           </div>
-
-          {/* Sticky detail panel */}
           <div style={{
-            ...WHITE_CARD,
-            padding: '18px 20px',
-            position: 'sticky',
-            top: 0,
-            maxHeight: '60vh',
-            overflowY: 'auto',
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0,1.8fr) minmax(0,1.5fr)',
+            gap: 14, alignItems: 'flex-start',
           }}>
-            {selected ? (
-              <div style={{ display: 'grid', gap: 14 }}>
-                <div>
-                  <div style={{ fontWeight: 900, color: '#263238', fontSize: 17, lineHeight: 1.2 }}>
-                    {selected.headline || 'Mentor'}
-                  </div>
-                  <div style={{ color: '#607D8B', fontSize: 13, marginTop: 3 }}>
-                    {selected.name}
-                  </div>
-                </div>
-
-                {selected.summary && (
-                  <p style={{ margin: 0, color: '#455A64', fontSize: 13, lineHeight: 1.65 }}>
-                    {selected.summary}
-                  </p>
-                )}
-
-                {selected.specialties?.length > 0 && (
-                  <div>
-                    <div style={{
-                      fontSize: 11, fontWeight: 700, color: '#90A4AE',
-                      textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8,
-                    }}>
-                      Specialties
-                    </div>
-                    <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
-                      {selected.specialties.map((s) => (
-                        <li key={s} style={{ fontSize: 13, color: '#37474F' }}>{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div style={{ display: 'grid', gap: 6 }}>
-                  {selected.rate && (
-                    <div style={{ fontSize: 13 }}>
-                      <span style={{ fontWeight: 700, color: '#546E7A' }}>Rate: </span>
-                      <span style={{ color: '#455A64' }}>{selected.rate}</span>
-                    </div>
-                  )}
-                  {selected.availability && (
-                    <div style={{ fontSize: 13 }}>
-                      <span style={{ fontWeight: 700, color: '#546E7A' }}>Availability: </span>
-                      <span style={{ color: '#455A64' }}>{selected.availability}</span>
-                    </div>
-                  )}
-                </div>
-
-                {(selected.contactEmail || selected.contactLink) && (
-                  <div style={{
-                    borderTop: '1px solid rgba(0,0,0,0.06)',
-                    paddingTop: 12, display: 'grid', gap: 8,
-                  }}>
-                    <div style={{
-                      fontSize: 11, fontWeight: 700, color: '#90A4AE',
-                      textTransform: 'uppercase', letterSpacing: '0.05em',
-                    }}>
-                      Contact
-                    </div>
-                    {selected.contactEmail && (
-                      <div style={{ fontSize: 13, color: '#455A64' }}>
-                        {selected.contactEmail}
-                      </div>
-                    )}
-                    {selected.contactLink && (
-                      <a
-                        href={selected.contactLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'inline-block', padding: '8px 14px', borderRadius: 10,
-                          border: '1px solid #FF7043', color: '#FF7043', fontWeight: 700,
-                          textDecoration: 'none', background: 'white', fontSize: 13,
-                          width: 'fit-content',
-                        }}
-                      >
-                        Open contact link
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div style={{ color: '#90A4AE', fontSize: 13 }}>
-                Select a mentor to view details.
-              </div>
-            )}
+            <div style={{
+              maxHeight: '60vh', overflowY: 'auto',
+              display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4,
+            }}>
+              {filtered.map(s => (
+                <SpotlightCard
+                  key={s.id}
+                  spotlight={s}
+                  selected={selected?.id === s.id}
+                  onSelect={setSelected}
+                />
+              ))}
+            </div>
+            <div style={{ position: 'sticky', top: 0 }}>
+              {selected
+                ? <SpotlightDetail spotlight={selected} />
+                : <div style={{ ...WHITE_CARD, padding: 16, color: '#90A4AE', fontSize: 13 }}>Select a mentor to view details.</div>
+              }
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
 }
-
 function EventsModule() {
   return (
     <div style={{ display: 'grid', gap: 12 }}>
