@@ -1,7 +1,12 @@
 // components/feed/PostComposer.js
 import { useMemo, useState } from 'react';
 
-export default function PostComposer({ onPost, onCancel }) {
+export default function PostComposer({
+  onPost,
+  onCancel,
+  canPostHiring = false,
+  canPostCoachingOffer = false,
+}) {
   const [text, setText] = useState('');
   const [postType, setPostType] = useState('');
   const [attachments, setAttachments] = useState([]);
@@ -12,15 +17,26 @@ export default function PostComposer({ onPost, onCancel }) {
   const [submitError, setSubmitError] = useState('');
 
   const EMOJIS = useMemo(() => ['🔥', '💼', '🤝', '🚀', '🙏', '💪', '🛠️', '❤️'], []);
-  const STARTER_PROMPTS = useMemo(
-    () => [
+
+  const STARTER_PROMPTS = useMemo(() => {
+    const prompts = [
       'Sharing a win:',
       'Looking for advice on',
-      'Hiring for',
       'Open to opportunities in',
-    ],
-    []
-  );
+      'Sharing an idea about',
+    ];
+
+    if (canPostCoachingOffer) {
+      prompts.push('Coaching insight:');
+      prompts.push('Hosting a workshop on');
+    }
+
+    if (canPostHiring) {
+      prompts.push('Hiring for');
+    }
+
+    return prompts;
+  }, [canPostCoachingOffer, canPostHiring]);
 
   const canPost =
     !uploading &&
@@ -128,7 +144,7 @@ export default function PostComposer({ onPost, onCancel }) {
               Share a signal
             </div>
             <div className="mt-1 text-sm text-gray-600">
-              Post a win, opportunity, update, or question for the community.
+              Post a win, update, idea, opportunity, or question for the community.
             </div>
           </div>
 

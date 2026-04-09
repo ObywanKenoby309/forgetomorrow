@@ -49,6 +49,23 @@ export default function Feed() {
 
   const hasAvatarImage = !!stickyAvatarUrl;
 
+  const userCapabilities = useMemo(() => {
+    const roleValues = [
+      session?.user?.role,
+      session?.user?.userType,
+      ...(Array.isArray(session?.user?.roles) ? session.user.roles : []),
+    ]
+      .filter(Boolean)
+      .map((value) => String(value).trim().toUpperCase());
+
+    const roleSet = new Set(roleValues);
+
+    return {
+      canPostHiring: roleSet.has('RECRUITER'),
+      canPostCoachingOffer: roleSet.has('COACH'),
+    };
+  }, [session]);
+
   const logPostInteraction = async (postId, source) => {
     try {
       if (!postId && postId !== 0) return;
@@ -452,6 +469,8 @@ export default function Feed() {
                 onCancel={() => setShowComposer(false)}
                 currentUserName={currentUserName}
                 currentUserAvatar={stickyAvatarUrl || composerAvatarUrl || null}
+                canPostHiring={userCapabilities.canPostHiring}
+                canPostCoachingOffer={userCapabilities.canPostCoachingOffer}
               />
             </div>
           </div>
