@@ -20,7 +20,7 @@ export default function PostCard({
   const { connectWith } = useConnect();
 
   const [expanded, setExpanded] = useState(false);
-  const TRUNCATE_LIMIT = 280; // characters
+  const TRUNCATE_LIMIT = 280;
 
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
@@ -28,7 +28,7 @@ export default function PostCard({
   const [reactionUsers, setReactionUsers] = useState({});
 
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
-  const [connectStatus, setConnectStatus] = useState('idle'); // idle | requested | connected
+  const [connectStatus, setConnectStatus] = useState('idle');
 
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef(null);
@@ -422,6 +422,69 @@ export default function PostCard({
     return safeAttachments.filter((a) => a.type === 'link');
   }, [safeAttachments]);
 
+  const signalMeta = useMemo(() => {
+    const rawBody = String(post?.body || '');
+    const rules = [
+      {
+        prefix: 'Hiring for',
+        label: 'Hiring',
+        className: 'bg-orange-50 border-orange-200 text-orange-700',
+      },
+      {
+        prefix: 'Open to opportunities in',
+        label: 'Open to work',
+        className: 'bg-green-50 border-green-200 text-green-700',
+      },
+      {
+        prefix: 'Hosting a workshop on',
+        label: 'Workshop',
+        className: 'bg-blue-50 border-blue-200 text-blue-700',
+      },
+      {
+        prefix: 'Coaching insight:',
+        label: 'Coaching',
+        className: 'bg-sky-50 border-sky-200 text-sky-700',
+      },
+      {
+        prefix: 'Looking for advice on',
+        label: 'Advice',
+        className: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+      },
+      {
+        prefix: 'Sharing a win:',
+        label: 'Win',
+        className: 'bg-amber-50 border-amber-200 text-amber-700',
+      },
+      {
+        prefix: 'Sharing an idea about',
+        label: 'Idea',
+        className: 'bg-gray-50 border-gray-200 text-gray-700',
+      },
+    ];
+
+    const match = rules.find((rule) => rawBody.startsWith(rule.prefix));
+
+    if (!match) {
+      return {
+        signalLabel: '',
+        signalClassName: '',
+        displayBody: rawBody,
+      };
+    }
+
+    let displayBody = rawBody.slice(match.prefix.length).trim();
+
+    if (!displayBody) {
+      displayBody = rawBody;
+    }
+
+    return {
+      signalLabel: match.label,
+      signalClassName: match.className,
+      displayBody,
+    };
+  }, [post?.body]);
+
   return (
     <div className="relative bg-white/90 backdrop-blur rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 space-y-4 w-full">
       <div className="flex items-start justify-between gap-3">
@@ -504,6 +567,15 @@ export default function PostCard({
               >
                 {typeLabel}
               </span>
+
+              {signalMeta.signalLabel ? (
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-full border ${signalMeta.signalClassName}`}
+                  title={signalMeta.signalLabel}
+                >
+                  {signalMeta.signalLabel}
+                </span>
+              ) : null}
             </div>
 
             <div className="text-xs text-gray-500 mt-0.5">
@@ -571,12 +643,12 @@ export default function PostCard({
 
       <div className="w-full text-left">
         <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-gray-800">
-          {!expanded && post.body?.length > TRUNCATE_LIMIT
-            ? post.body.slice(0, TRUNCATE_LIMIT).trimEnd() + '…'
-            : post.body}
+          {!expanded && signalMeta.displayBody?.length > TRUNCATE_LIMIT
+            ? signalMeta.displayBody.slice(0, TRUNCATE_LIMIT).trimEnd() + '…'
+            : signalMeta.displayBody}
         </p>
 
-        {post.body?.length > TRUNCATE_LIMIT && (
+        {signalMeta.displayBody?.length > TRUNCATE_LIMIT && (
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
