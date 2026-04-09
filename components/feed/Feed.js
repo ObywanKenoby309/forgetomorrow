@@ -4,19 +4,17 @@ import { useSession } from 'next-auth/react';
 import PostComposer from './PostComposer';
 import PostList from './PostList';
 
-// ✅ MIN ADD: use the same avatar resolver as the header system
 import { useCurrentUserAvatar } from '@/hooks/useCurrentUserAvatar';
 
 export default function Feed() {
-  const { data: session, status } = useSession(); // ✅ MIN CHANGE: include status
+  const { data: session, status } = useSession();
   const [filter, setFilter] = useState('both'); // both | business | personal
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
-  const [blockedAuthorIds, setBlockedAuthorIds] = useState([]); // ✅ NEW: track blocked authors client-side
+  const [blockedAuthorIds, setBlockedAuthorIds] = useState([]);
 
-  // ✅ NEW: "new posts available" banner state
   const [newPostsAvailable, setNewPostsAvailable] = useState(0);
-  const newestPostIdRef = useRef(null); // tracks the newest post ID we've shown
+  const newestPostIdRef = useRef(null);
 
   const currentUserId = session?.user?.id || 'me';
   const currentUserName =
@@ -26,55 +24,31 @@ export default function Feed() {
 
   const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
 
-  // ✅ MIN ADD: preferred avatarUrl from your "working" system (DB-backed)
-  // IMPORTANT: only use this hook for avatarUrl, not initials (prevents Y → S flicker)
-  // ✅ MIN CHANGE: also read loading so we don't "resolve no avatar" too early on refresh
   const { avatarUrl: resolvedAvatarUrl, loading: resolvedAvatarLoading } = useCurrentUserAvatar();
 
-  // ✅ Prefer session avatar first (will become "immediate" after NextAuth update), then DB resolver
   const composerAvatarUrl = currentUserAvatar || resolvedAvatarUrl || null;
 
-  // ✅ Stable initial derived from session name (never changes Y → S)
   const composerInitial = useMemo(() => {
     return (currentUserName || '?').trim().charAt(0).toUpperCase();
   }, [currentUserName]);
 
-  // ✅ Sticky avatar so once we have an image, we never regress
   const [stickyAvatarUrl, setStickyAvatarUrl] = useState(null);
 
   useEffect(() => {
     if (composerAvatarUrl) setStickyAvatarUrl(composerAvatarUrl);
   }, [composerAvatarUrl]);
 
-  // ✅ RULE: no letter until we KNOW there is no avatar
-  // - If we have sticky avatar: resolved (avatar exists)
-  // - If session not authenticated yet: unknown -> skeleton
-  // - If authenticated and either:
-  //     - session has avatar OR DB hook has avatar: resolved (avatar exists)
-  //     - DB hook still loading: unknown -> skeleton
-  //     - DB hook finished and no avatar anywhere: resolved (no avatar) -> show initial
   const avatarResolved = useMemo(() => {
-    if (stickyAvatarUrl) return true; // avatar exists
-    if (status !== 'authenticated') return false; // unknown, keep skeleton
-
-    // If session already has avatar, we are resolved immediately
+    if (stickyAvatarUrl) return true;
+    if (status !== 'authenticated') return false;
     if (currentUserAvatar) return true;
-
-    // Authenticated but session has no avatar:
-    // If resolver still loading, we are NOT resolved yet (keep skeleton)
     if (resolvedAvatarLoading) return false;
-
-    // Resolver finished: if it found one, we resolve (avatar exists)
     if (resolvedAvatarUrl) return true;
-
-    // Resolver finished and nothing found -> resolved "no avatar"
     return true;
   }, [stickyAvatarUrl, status, currentUserAvatar, resolvedAvatarLoading, resolvedAvatarUrl]);
 
-  // ✅ Derived: do we know we have an avatar image to show?
   const hasAvatarImage = !!stickyAvatarUrl;
 
-  // ✅ NEW: best-effort interaction logger (server dedupes + ignores self)
   const logPostInteraction = async (postId, source) => {
     try {
       if (!postId && postId !== 0) return;
@@ -91,7 +65,6 @@ export default function Feed() {
     }
   };
 
-  // Normalize community post shape
   const normalizeCommunityPost = (row) => {
     if (!row) return null;
 
@@ -104,7 +77,6 @@ export default function Feed() {
       if (Array.isArray(parsed?.attachments)) attachments = parsed.attachments;
     } catch {}
 
-    // Prefer top-level attachments array if present (new format from /api/feed/index.js)
     if (Array.isArray(row.attachments) && row.attachments.length > 0) {
       attachments = row.attachments;
     }
@@ -134,7 +106,7 @@ export default function Feed() {
       authorId: row.authorId ?? null,
       author: row.authorName || row.author || 'Member',
       authorAvatar: row.authorAvatar || null,
-	  authorSlug: row.authorSlug || null,
+      authorSlug: row.authorSlug || null,
       body,
       type: row.type ?? 'business',
       createdAt: new Date(row.createdAt).toISOString(),
@@ -146,7 +118,6 @@ export default function Feed() {
     };
   };
 
-  // ✅ Full feed load (initial + on "show new posts" click)
   const reloadFeed = async () => {
     if (document.visibilityState === 'hidden') return;
     try {
@@ -156,7 +127,6 @@ export default function Feed() {
         const community = (feedData.posts || []).map(normalizeCommunityPost).filter(Boolean);
         setPosts(community);
         setNewPostsAvailable(0);
-        // Track the newest post ID we've shown
         if (community.length > 0) {
           newestPostIdRef.current = community[0].id;
         }
@@ -166,7 +136,6 @@ export default function Feed() {
     }
   };
 
-  // ✅ Silent background check — only fetches page 1 and compares newest ID
   const checkForNewPosts = async () => {
     if (document.visibilityState === 'hidden') return;
     if (!newestPostIdRef.current) return;
@@ -177,20 +146,16 @@ export default function Feed() {
       const latest = (feedData.posts || []).map(normalizeCommunityPost).filter(Boolean);
       if (!latest.length) return;
 
-      // Count how many posts are newer than what we're currently showing
-      const newCount = latest.filter(
-        (p) => p.id > newestPostIdRef.current
-      ).length;
+      const newCount = latest.filter((p) => p.id > newestPostIdRef.current).length;
 
       if (newCount > 0) {
         setNewPostsAvailable((prev) => Math.max(prev, newCount));
       }
     } catch {
-      // silent — don't surface background check errors
+      // silent
     }
   };
 
-  // ✅ Load blocked from DB, merge with optimistic
   const loadBlockedAuthors = async () => {
     try {
       const res = await fetch('/api/signal/blocked');
@@ -207,23 +172,18 @@ export default function Feed() {
     }
   };
 
-  // ✅ Initial load — wait for session to be ready
   useEffect(() => {
     if (status !== 'authenticated') return;
     reloadFeed();
     loadBlockedAuthors();
   }, [status, filter]);
 
-  // ✅ Background poll every 30s — only checks, never auto-reloads
   useEffect(() => {
     if (status !== 'authenticated') return;
     const interval = setInterval(checkForNewPosts, 30 * 1000);
     return () => clearInterval(interval);
   }, [status]);
 
-  // ✅ UPDATED: receives { body, type, attachments } from PostComposer (no more base64).
-  // Must be async and must THROW on failure so PostComposer keeps the composer
-  // open with the user's content intact instead of silently erasing it.
   const handleNewPost = async ({ body, type, attachments }) => {
     const res = await fetch('/api/feed', {
       method: 'POST',
@@ -238,11 +198,9 @@ export default function Feed() {
 
     const { post } = await res.json();
 
-    // Optimistically prepend the new post so the feed feels instant
     if (post) {
       const normalized = normalizeCommunityPost(post);
       setPosts((prev) => [normalized, ...prev]);
-      // Update our "newest seen" marker so background checks stay accurate
       if (normalized?.id) newestPostIdRef.current = normalized.id;
     } else {
       await reloadFeed();
@@ -250,7 +208,6 @@ export default function Feed() {
 
     setShowComposer(false);
 
-    // Best-effort interaction log
     if (post?.id) {
       await logPostInteraction(post.id, 'post_create');
     }
@@ -367,55 +324,64 @@ export default function Feed() {
   const filteredPosts = posts.filter((p) => !blockedAuthorIds.includes(p.authorId));
 
   return (
-    <div className="w-full max-w-none px-2 sm:px-6 pt-6 pb-10">
-      {/* Filter row + new posts banner side by side */}
-      <div className="mb-4 flex items-center justify-between w-full">
-        <div className="flex items-center gap-3">
-          <span className="bg-white/80 backdrop-blur px-3 py-1 rounded-lg text-sm font-semibold text-gray-800 shadow-sm border border-gray-200">
-            Showing
-          </span>
+    <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 pt-2 pb-10">
+      <div className="mb-5 rounded-[24px] border border-white/50 bg-white/72 backdrop-blur-xl shadow-[0_14px_40px_rgba(15,23,42,0.08)] px-4 py-4 sm:px-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="text-[18px] sm:text-[20px] font-bold text-gray-900">
+              Career Signal Feed
+            </div>
+            <div className="mt-1 text-sm text-gray-600">
+              Share momentum, opportunities, questions, and real career updates.
+            </div>
+          </div>
 
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="text-sm bg-white/80 backdrop-blur border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-orange-500"
-          >
-            <option value="both">Business & Personal</option>
-            <option value="business">Business</option>
-            <option value="personal">Personal</option>
-          </select>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
+            <div className="flex items-center gap-3">
+              <span className="bg-white/85 backdrop-blur px-3 py-1.5 rounded-xl text-sm font-semibold text-gray-800 shadow-sm border border-gray-200">
+                Showing
+              </span>
+
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="text-sm bg-white/90 backdrop-blur border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800"
+              >
+                <option value="both">Business & Personal</option>
+                <option value="business">Business</option>
+                <option value="personal">Personal</option>
+              </select>
+            </div>
+
+            {newPostsAvailable > 0 && (
+              <button
+                type="button"
+                onClick={reloadFeed}
+                className="py-2.5 px-4 rounded-2xl bg-[#ff7043] text-white text-sm font-bold shadow-md hover:opacity-90 transition flex items-center justify-center gap-2"
+              >
+                <span>↑</span>
+                {newPostsAvailable === 1
+                  ? '1 new post — tap to load'
+                  : `${newPostsAvailable}+ new posts — tap to load`}
+              </button>
+            )}
+          </div>
         </div>
-
-        {/* ✅ NEW: "New posts available" banner — sits in filter row, top right */}
-        {newPostsAvailable > 0 && (
-          <button
-            type="button"
-            onClick={reloadFeed}
-            className="py-2 px-4 rounded-2xl bg-[#ff7043] text-white text-sm font-bold shadow-md hover:opacity-90 transition flex items-center gap-2"
-          >
-            <span>↑</span>
-            {newPostsAvailable === 1
-              ? '1 new post — tap to load'
-              : `${newPostsAvailable}+ new posts — tap to load`}
-          </button>
-        )}
       </div>
 
-      {/* Composer trigger (polished) */}
-      <div className="bg-white/80 backdrop-blur rounded-2xl border border-gray-200 shadow-sm p-4 mb-6 w-full">
+      <div className="bg-white/78 backdrop-blur-xl rounded-[26px] border border-white/50 shadow-[0_16px_50px_rgba(15,23,42,0.08)] p-4 sm:p-5 mb-6 w-full">
         <div className="flex items-center gap-3">
-          {/* ✅ RULE: no letter until we KNOW there is no avatar */}
           <div className="shrink-0">
             {!avatarResolved ? (
-              <div className="w-10 h-10 rounded-full bg-gray-200 border border-gray-200 animate-pulse" />
+              <div className="w-11 h-11 rounded-full bg-gray-200 border border-gray-200 animate-pulse" />
             ) : hasAvatarImage ? (
               <img
                 src={stickyAvatarUrl}
                 alt={currentUserName || 'You'}
-                className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                className="w-11 h-11 rounded-full object-cover border border-gray-200"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 border border-gray-200">
+              <div className="w-11 h-11 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 border border-gray-200 font-semibold">
                 {composerInitial}
               </div>
             )}
@@ -423,23 +389,23 @@ export default function Feed() {
 
           <button
             onClick={() => setShowComposer(true)}
-            className="flex-1 text-left text-gray-600 px-4 py-3 border border-gray-300 rounded-xl hover:bg-white transition shadow-inner"
+            className="flex-1 text-left text-gray-600 px-4 py-3.5 border border-gray-300 rounded-2xl bg-white/88 hover:bg-white transition shadow-inner text-sm sm:text-[15px]"
           >
-            Start a post…
+            Share a signal, win, opportunity, or question…
           </button>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-600 pl-[52px]">
-          <span className="inline-flex items-center gap-1">
+        <div className="mt-3 flex flex-wrap gap-2.5 text-xs text-gray-600 pl-[56px]">
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 border border-gray-200 px-2.5 py-1">
             <span aria-hidden="true">📷</span> Photo
           </span>
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 border border-gray-200 px-2.5 py-1">
             <span aria-hidden="true">🎥</span> Video
           </span>
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 border border-gray-200 px-2.5 py-1">
             <span aria-hidden="true">🔗</span> Link
           </span>
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 border border-gray-200 px-2.5 py-1">
             <span aria-hidden="true">🙂</span> Emoji
           </span>
         </div>
@@ -464,11 +430,13 @@ export default function Feed() {
           aria-modal="true"
         >
           <div
-            className="relative bg-white rounded-2xl shadow-2xl w-[92vw] max-w-2xl p-0 border border-gray-200"
+            className="relative bg-white rounded-[28px] shadow-2xl w-[92vw] max-w-2xl p-0 border border-gray-200 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white rounded-t-2xl">
-              <div className="font-extrabold text-gray-900">Create post</div>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-white">
+              <div className="font-extrabold text-gray-900 text-[18px]">
+                Create post
+              </div>
               <button
                 type="button"
                 onClick={() => setShowComposer(false)}
@@ -478,12 +446,11 @@ export default function Feed() {
               </button>
             </div>
 
-            <div className="p-4 bg-white rounded-b-2xl">
+            <div className="p-4 bg-white">
               <PostComposer
                 onPost={handleNewPost}
                 onCancel={() => setShowComposer(false)}
                 currentUserName={currentUserName}
-                // ✅ MIN FIX: pass best-known avatar, not session-only
                 currentUserAvatar={stickyAvatarUrl || composerAvatarUrl || null}
               />
             </div>

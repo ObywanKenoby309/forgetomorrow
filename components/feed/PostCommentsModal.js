@@ -1,5 +1,5 @@
 // components/feed/PostCommentsModal.js
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
@@ -10,7 +10,6 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
   const [likingKey, setLikingKey] = useState(null); // `${postId}:${commentId||index}`
   const [deletingKey, setDeletingKey] = useState(null); // `${postId}:${commentId||index}`
 
-  // ✅ comment avatar popover state (anchored per comment row)
   const [commentMenuKey, setCommentMenuKey] = useState(null); // `${postId}:${commentId||visibleIndex}`
   const [connectingKey, setConnectingKey] = useState(null);
 
@@ -43,9 +42,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     const t = text.trim();
     if (!t) return;
 
-    // ✅ Comment submission counts as a view
     logPostView('reply_submit');
-
     onReply?.(post.id, t);
     setText('');
   };
@@ -63,15 +60,11 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     }
   })();
 
-  // ✅ MIN CHANGE: hide soft-deleted comments from public view
   const allComments = Array.isArray(post.comments) ? post.comments : [];
   const visibleComments = allComments.filter((c) => !(c && c.deleted === true));
 
   const myId = session?.user?.id ? String(session.user.id) : '';
 
-  // ─────────────────────────────────────────────────────────────
-  // Comment member actions (View / Connect / Message) + profile view log
-  // ─────────────────────────────────────────────────────────────
   const getCommentAuthorId = (c) => {
     try {
       return String(c?.authorId || c?.userId || '').trim();
@@ -99,11 +92,8 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     if (!targetUserId) return;
     setCommentMenuKey(null);
 
-    logProfileView(targetUserId, 'feed_comment');
-
-    const params = new URLSearchParams();
-    params.set('userId', targetUserId);
-    router.push(withChrome(`/profile/${user.slug}`));
+    await logProfileView(targetUserId, 'feed_comment');
+    router.push(withChrome(`/member-profile?userId=${targetUserId}`));
   };
 
   const handleConnect = async (targetUserId, key) => {
@@ -148,9 +138,6 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     router.push(withChrome(`/seeker/messages?${params.toString()}`));
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // ✅ COMMENT LIKE (thumbs up) — separate from emojis
-  // ─────────────────────────────────────────────────────────────
   const toggleCommentLike = async (comment, visibleIndex) => {
     if (!post?.id) return;
 
@@ -160,15 +147,13 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
     setLikingKey(key);
 
-    // optimistic update (local only)
     try {
       const currentLikes = Number(comment?.likes) || 0;
-      const hasLiked = Boolean(comment?.hasLiked); // client-only flag (optional)
+      const hasLiked = Boolean(comment?.hasLiked);
       const nextLikes = hasLiked
         ? Math.max(0, currentLikes - 1)
         : currentLikes + 1;
 
-      // apply to the *real* post.comments array by id (preferred) else by visible-index mapping
       if (Array.isArray(post.comments)) {
         const nextComments = post.comments.map((c) => {
           if (!c) return c;
@@ -178,7 +163,6 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
           return c;
         });
 
-        // fallback if no id match (older comments): map visibleIndex -> actual index
         if (!commentId) {
           const actualIndex = (() => {
             let seen = -1;
@@ -212,8 +196,8 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           postId: post.id,
-          commentId: commentId, // may be null; API can fallback to index later if needed
-          commentIndex: visibleIndex, // visible index (non-deleted list)
+          commentId: commentId,
+          commentIndex: visibleIndex,
         }),
       });
 
@@ -225,7 +209,6 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
       const data = await res.json().catch(() => ({}));
       const updated = data?.comment || null;
 
-      // reconcile with server response if provided
       if (updated && Array.isArray(post.comments)) {
         const nextComments = post.comments.map((c) => {
           if (!c) return c;
@@ -255,9 +238,6 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // ✅ COMMENT DELETE — ONLY for comment author (soft delete)
-  // ─────────────────────────────────────────────────────────────
   const deleteComment = async (comment, visibleIndex) => {
     if (!post?.id) return;
 
@@ -273,7 +253,6 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
     setDeletingKey(key);
 
-    // optimistic: mark deleted in the real post.comments (so it disappears immediately)
     let prior = null;
 
     try {
@@ -287,7 +266,6 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
           return c;
         });
 
-        // fallback if no id
         if (!commentId) {
           const actualIndex = (() => {
             let seen = -1;
@@ -324,7 +302,6 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
       });
 
       if (!res.ok) {
-        // rollback (show it again)
         try {
           if (prior && Array.isArray(post.comments)) {
             post.comments = post.comments.map((c) => {
@@ -343,7 +320,6 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
         alert(msg?.error || 'Delete failed. The comment was restored.');
       }
     } catch {
-      // rollback (show it again)
       try {
         if (prior && Array.isArray(post.comments)) {
           post.comments = post.comments.map((c) => {
@@ -364,275 +340,313 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     }
   };
 
+  const safeAttachments = useMemo(() => {
+    const arr = Array.isArray(post?.attachments) ? post.attachments : [];
+    return arr
+      .map((a) => ({
+        type: String(a?.type || '').toLowerCase(),
+        url: String(a?.url || '').trim(),
+        name: String(a?.name || '').trim(),
+      }))
+      .filter((a) => {
+        if (!a.url) return false;
+        return (
+          a.url.startsWith('data:image/') ||
+          (a.url.startsWith('data:') && a.url.includes('image')) ||
+          a.url.startsWith('data:video/') ||
+          a.url.startsWith('https://') ||
+          a.url.startsWith('http://') ||
+          a.url.startsWith('/')
+        );
+      });
+  }, [post?.attachments]);
+
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/55 p-4 sm:p-6"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 relative"
+        className="relative w-full max-w-2xl overflow-hidden rounded-[28px] border border-white/40 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl"
       >
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+          className="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
           aria-label="Close"
         >
           ✕
         </button>
 
-        <header className="mb-4 flex items-center gap-3">
-          {post.authorAvatar ? (
-            <img
-              src={post.authorAvatar}
-              alt={post.author || 'Author'}
-              className="w-9 h-9 rounded-full object-cover bg-gray-200 flex-shrink-0"
-            />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500 flex-shrink-0">
-              {post.author?.charAt(0)?.toUpperCase() || '?'}
-            </div>
-          )}
-          <div>
-            <div className="font-semibold">{post.author}</div>
-            <div className="text-xs text-gray-500">
-              {createdAtLabel} • {post.type === 'personal' ? 'Personal' : 'Business'}
-            </div>
-          </div>
-        </header>
-
-        <p className="mb-4 whitespace-pre-wrap">{post.body}</p>
-
-{/* ✅ ATTACHMENTS */}
-{Array.isArray(post?.attachments) && post.attachments.length > 0 && (
-  <div className="mb-4 space-y-3">
-    {post.attachments.map((a, idx) => {
-      const type = String(a?.type || '').toLowerCase();
-      const url = String(a?.url || '').trim();
-      if (!url) return null;
-
-      // Allow data URLs + http(s) + relative
-      const isSafe =
-        url.startsWith('data:image/') ||
-		url.startsWith('data:') && url.includes('image') ||
-        url.startsWith('data:video/') ||
-        url.startsWith('https://') ||
-        url.startsWith('http://') ||
-        url.startsWith('/');
-
-      if (!isSafe) return null;
-
-      if (type === 'image') {
-        return (
-          <div
-            key={`modal-attachment-${idx}`}
-            className="border border-gray-200 rounded-xl overflow-hidden bg-white"
-          >
-            <img
-              src={url}
-              alt={a?.name || 'Image attachment'}
-              className="w-full max-h-[420px] object-contain bg-white"
-              onError={(e) => {
-                try { e.currentTarget.style.display = 'none'; } catch {}
-              }}
-            />
-          </div>
-        );
-      }
-
-      if (type === 'video') {
-        return (
-          <div
-            key={`modal-attachment-${idx}`}
-            className="border border-gray-200 rounded-xl overflow-hidden bg-white"
-          >
-            <video
-              src={url}
-              controls
-              className="w-full max-h-[420px] object-contain bg-white"
-            />
-          </div>
-        );
-      }
-
-      if (type === 'link') {
-        return (
-          <a
-            key={`modal-attachment-${idx}`}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm text-blue-700 break-all"
-          >
-            🔗 {a?.name || url}
-          </a>
-        );
-      }
-
-      return null;
-    })}
-  </div>
-)}
-
-        <div className="border-t pt-4 space-y-3 max-h-[50vh] overflow-y-auto">
-          {visibleComments.length === 0 ? (
-            <div className="text-sm text-gray-500">
-              No comments yet—be the first!
-            </div>
-          ) : (
-            visibleComments.map((c, i) => {
-              const likes = Number(c?.likes) || 0;
-              const hasLiked = Boolean(c?.hasLiked);
-              const key = c?.id ?? i;
-
-              const busyLike = likingKey === `${post.id}:${c?.id ?? i}`;
-              const busyDelete = deletingKey === `${post.id}:${c?.id ?? i}`;
-
-              const authorId = c?.authorId ? String(c.authorId) : '';
-              const canDelete = Boolean(myId && authorId && myId === authorId);
-
-              const targetUserId = getCommentAuthorId(c);
-              const canTarget = Boolean(targetUserId) && Boolean(myId) && targetUserId !== myId;
-
-              const menuKey = `${post.id}:${c?.id ?? i}`;
-              const menuOpen = commentMenuKey === menuKey;
-
-              return (
-                <div key={key} className="flex items-start gap-2">
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!canTarget) return;
-                        setCommentMenuKey((v) => (v === menuKey ? null : menuKey));
-                      }}
-                      onBlur={() => setCommentMenuKey(null)}
-                      className="shrink-0"
-                      style={{ cursor: canTarget ? 'pointer' : 'default' }}
-                      aria-label={canTarget ? 'Open member actions' : 'Comment author avatar'}
-                    >
-                      {c.avatarUrl ? (
-                        <img
-                          src={c.avatarUrl}
-                          alt={c.by || 'User'}
-                          className="w-7 h-7 rounded-full object-cover bg-gray-200 mt-0.5 flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500 mt-0.5 flex-shrink-0">
-                          {c.by?.charAt(0)?.toUpperCase() || '?'}
-                        </div>
-                      )}
-                    </button>
-
-                    {menuOpen && canTarget ? (
-                      <div
-                        className="absolute left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-30 overflow-hidden"
-                        role="menu"
-                      >
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => handleViewProfile(targetUserId)}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                          role="menuitem"
-                        >
-                          View profile
-                        </button>
-
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => handleConnect(targetUserId, menuKey)}
-                          disabled={connectingKey === menuKey}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:text-gray-400 disabled:bg-white"
-                          role="menuitem"
-                        >
-                          {connectingKey === menuKey ? 'Sending…' : 'Connect'}
-                        </button>
-
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => handleMessage(targetUserId)}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                          role="menuitem"
-                        >
-                          Message
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm">
-                      <span className="font-medium">{c.by}:</span> {c.text}
-                    </div>
-
-                    <div className="mt-1 flex items-center gap-3">
-                      {c.at && (
-                        <div className="text-xs text-gray-400">
-                          {new Date(c.at).toLocaleString()}
-                        </div>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => toggleCommentLike(c, i)}
-                        disabled={busyLike}
-                        className={`text-xs font-semibold px-2 py-1 rounded-full border transition ${
-                          hasLiked
-                            ? 'bg-[#FF7043]/10 border-[#FF7043]/30 text-[#FF7043]'
-                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                        } ${busyLike ? 'opacity-60' : ''}`}
-                        aria-label={hasLiked ? 'Unlike comment' : 'Like comment'}
-                        title={hasLiked ? 'Unlike' : 'Like'}
-                      >
-                        👍 Like{likes > 0 ? ` · ${likes}` : ''}
-                      </button>
-
-                      {canDelete && (
-                        <button
-                          type="button"
-                          onClick={() => deleteComment(c, i)}
-                          disabled={busyDelete}
-                          className={`text-xs font-semibold px-2 py-1 rounded-full border transition ${
-                            busyDelete
-                              ? 'opacity-60'
-                              : 'bg-white border-red-200 text-red-600 hover:bg-red-50'
-                          }`}
-                          aria-label="Delete comment"
-                          title="Delete"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  </div>
+        <div className="max-h-[88vh] overflow-y-auto">
+          <div className="border-b border-gray-100 px-5 py-5 sm:px-6">
+            <header className="flex items-center gap-3 pr-12">
+              {post.authorAvatar ? (
+                <img
+                  src={post.authorAvatar}
+                  alt={post.author || 'Author'}
+                  className="h-10 w-10 flex-shrink-0 rounded-full bg-gray-200 object-cover"
+                />
+              ) : (
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm text-gray-500">
+                  {post.author?.charAt(0)?.toUpperCase() || '?'}
                 </div>
-              );
-            })
-          )}
-        </div>
+              )}
+              <div className="min-w-0">
+                <div className="truncate text-[15px] font-semibold text-gray-900">
+                  {post.author}
+                </div>
+                <div className="mt-0.5 text-xs text-gray-500">
+                  {createdAtLabel} • {post.type === 'personal' ? 'Personal' : 'Business'}
+                </div>
+              </div>
+            </header>
 
-        <div className="mt-4 space-y-3">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={3}
-            className="w-full border rounded-md p-3"
-            placeholder="Write your comment…"
-          />
-          <QuickEmojiBar onPick={addEmoji} />
-          <div className="flex justify-end">
-            <button
-              onClick={send}
-              disabled={!text.trim()}
-              className="px-4 py-2 rounded-md bg-[#ff8a65] text-white font-semibold disabled:opacity-50"
-            >
-              Comment
-            </button>
+            <div className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-gray-800">
+              {post.body}
+            </div>
+
+            {safeAttachments.length > 0 && (
+              <div className="mt-4 space-y-3">
+                {safeAttachments.map((a, idx) => {
+                  if (a.type === 'image') {
+                    return (
+                      <div
+                        key={`modal-attachment-${idx}`}
+                        className="overflow-hidden rounded-2xl border border-gray-200 bg-white"
+                      >
+                        <img
+                          src={a.url}
+                          alt={a.name || 'Image attachment'}
+                          className="max-h-[420px] w-full bg-white object-contain"
+                          onError={(e) => {
+                            try {
+                              e.currentTarget.style.display = 'none';
+                            } catch {}
+                          }}
+                        />
+                      </div>
+                    );
+                  }
+
+                  if (a.type === 'video') {
+                    return (
+                      <div
+                        key={`modal-attachment-${idx}`}
+                        className="overflow-hidden rounded-2xl border border-gray-200 bg-black"
+                      >
+                        <video
+                          src={a.url}
+                          controls
+                          className="max-h-[420px] w-full bg-black object-contain"
+                        />
+                      </div>
+                    );
+                  }
+
+                  if (a.type === 'link') {
+                    return (
+                      <a
+                        key={`modal-attachment-${idx}`}
+                        href={a.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 break-all rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-blue-700 hover:bg-gray-50"
+                      >
+                        🔗 {a.name || a.url}
+                      </a>
+                    );
+                  }
+
+                  return null;
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="px-5 py-5 sm:px-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-900">
+                Comments
+              </div>
+              <div className="text-xs text-gray-500">
+                {visibleComments.length} {visibleComments.length === 1 ? 'reply' : 'replies'}
+              </div>
+            </div>
+
+            <div className="space-y-3 max-h-[42vh] overflow-y-auto pr-1">
+              {visibleComments.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                  No comments yet. Be the first to add one.
+                </div>
+              ) : (
+                visibleComments.map((c, i) => {
+                  const likes = Number(c?.likes) || 0;
+                  const hasLiked = Boolean(c?.hasLiked);
+                  const key = c?.id ?? i;
+
+                  const busyLike = likingKey === `${post.id}:${c?.id ?? i}`;
+                  const busyDelete = deletingKey === `${post.id}:${c?.id ?? i}`;
+
+                  const authorId = c?.authorId ? String(c.authorId) : '';
+                  const canDelete = Boolean(myId && authorId && myId === authorId);
+
+                  const targetUserId = getCommentAuthorId(c);
+                  const canTarget =
+                    Boolean(targetUserId) && Boolean(myId) && targetUserId !== myId;
+
+                  const menuKey = `${post.id}:${c?.id ?? i}`;
+                  const menuOpen = commentMenuKey === menuKey;
+
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-sm"
+                    >
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!canTarget) return;
+                            setCommentMenuKey((v) => (v === menuKey ? null : menuKey));
+                          }}
+                          onBlur={() => setCommentMenuKey(null)}
+                          className="shrink-0"
+                          style={{ cursor: canTarget ? 'pointer' : 'default' }}
+                          aria-label={canTarget ? 'Open member actions' : 'Comment author avatar'}
+                        >
+                          {c.avatarUrl ? (
+                            <img
+                              src={c.avatarUrl}
+                              alt={c.by || 'User'}
+                              className="mt-0.5 h-8 w-8 flex-shrink-0 rounded-full bg-gray-200 object-cover"
+                            />
+                          ) : (
+                            <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-[10px] text-gray-500">
+                              {c.by?.charAt(0)?.toUpperCase() || '?'}
+                            </div>
+                          )}
+                        </button>
+
+                        {menuOpen && canTarget ? (
+                          <div
+                            className="absolute left-0 z-30 mt-2 w-44 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+                            role="menu"
+                          >
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => handleViewProfile(targetUserId)}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
+                              role="menuitem"
+                            >
+                              View profile
+                            </button>
+
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => handleConnect(targetUserId, menuKey)}
+                              disabled={connectingKey === menuKey}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:bg-white disabled:text-gray-400"
+                              role="menuitem"
+                            >
+                              {connectingKey === menuKey ? 'Sending…' : 'Connect'}
+                            </button>
+
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => handleMessage(targetUserId)}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
+                              role="menuitem"
+                            >
+                              Message
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="rounded-2xl bg-gray-50 px-3 py-2.5">
+                          <div className="text-sm font-semibold text-gray-900">
+                            {c.by}
+                          </div>
+                          <div className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+                            {c.text}
+                          </div>
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-2.5">
+                          {c.at && (
+                            <div className="text-xs text-gray-400">
+                              {new Date(c.at).toLocaleString()}
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => toggleCommentLike(c, i)}
+                            disabled={busyLike}
+                            className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+                              hasLiked
+                                ? 'border-[#FF7043]/30 bg-[#FF7043]/10 text-[#FF7043]'
+                                : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+                            } ${busyLike ? 'opacity-60' : ''}`}
+                            aria-label={hasLiked ? 'Unlike comment' : 'Like comment'}
+                            title={hasLiked ? 'Unlike' : 'Like'}
+                          >
+                            👍 Like{likes > 0 ? ` · ${likes}` : ''}
+                          </button>
+
+                          {canDelete && (
+                            <button
+                              type="button"
+                              onClick={() => deleteComment(c, i)}
+                              disabled={busyDelete}
+                              className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+                                busyDelete
+                                  ? 'opacity-60'
+                                  : 'border-red-200 bg-white text-red-600 hover:bg-red-50'
+                              }`}
+                              aria-label="Delete comment"
+                              title="Delete"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-3 sm:p-4">
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={3}
+                className="w-full rounded-2xl border border-gray-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                placeholder="Write your comment…"
+              />
+
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <QuickEmojiBar onPick={addEmoji} />
+                <div className="flex justify-end">
+                  <button
+                    onClick={send}
+                    disabled={!text.trim()}
+                    className="rounded-xl bg-[#ff8a65] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    Comment
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -19,8 +19,8 @@ export default function PostCard({
   const router = useRouter();
   const { connectWith } = useConnect();
 
-const [expanded, setExpanded] = useState(false);
-const TRUNCATE_LIMIT = 280; // characters
+  const [expanded, setExpanded] = useState(false);
+  const TRUNCATE_LIMIT = 280; // characters
 
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
@@ -30,14 +30,11 @@ const TRUNCATE_LIMIT = 280; // characters
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [connectStatus, setConnectStatus] = useState('idle'); // idle | requested | connected
 
-  // ✅ NEW: actions menu (kebab) for Report/Block/Delete
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef(null);
 
-  // ✅ Emoji bar (now "lives" with the actions row instead of floating mid-card)
   const [showEmojiBar, setShowEmojiBar] = useState(false);
 
-  // ✅ NEW: Share + Save state
   const [saved, setSaved] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [copyConfirm, setCopyConfirm] = useState(false);
@@ -53,7 +50,6 @@ const TRUNCATE_LIMIT = 280; // characters
     ? post.comments.filter((c) => !(c && c.deleted === true)).length
     : 0;
 
-  // Close actions menu on outside click
   useEffect(() => {
     const onDocDown = (e) => {
       if (!actionsMenuOpen) return;
@@ -95,7 +91,6 @@ const TRUNCATE_LIMIT = 280; // characters
     setShowReplyInput(false);
   };
 
-  // Profile view logger
   const logProfileView = async (source) => {
     try {
       await fetch('/api/profile/views', {
@@ -288,7 +283,6 @@ const TRUNCATE_LIMIT = 280; // characters
     }
   };
 
-  // ✅ NEW: Share handler — native share sheet on mobile, clipboard on desktop
   const handleShare = async () => {
     if (!post?.id) return;
     const url = `${window.location.origin}/post-view?id=${post.id}`;
@@ -302,22 +296,19 @@ const TRUNCATE_LIMIT = 280; // characters
       try {
         await navigator.share(shareData);
       } catch {
-        // user cancelled — no error needed
+        // user cancelled
       }
     } else {
-      // Fallback: copy to clipboard
       try {
         await navigator.clipboard.writeText(url);
         setCopyConfirm(true);
         setTimeout(() => setCopyConfirm(false), 2000);
       } catch {
-        // last resort
         window.prompt('Copy this link:', url);
       }
     }
   };
 
-  // ✅ NEW: Save/unsave toggle
   const handleSave = async () => {
     if (!post?.id || saveLoading) return;
     setSaveLoading(true);
@@ -338,7 +329,6 @@ const TRUNCATE_LIMIT = 280; // characters
     }
   };
 
-  // Reactions
   const selectedEmojis =
     post.reactions
       ?.filter(
@@ -399,7 +389,6 @@ const TRUNCATE_LIMIT = 280; // characters
       ? 'bg-purple-50 border-purple-200 text-purple-700'
       : 'bg-slate-50 border-slate-200 text-slate-700';
 
-  // ✅ NEW: attachments (minimal display support)
   const attachments = useMemo(() => {
     const arr = Array.isArray(post?.attachments) ? post.attachments : [];
     return arr
@@ -425,11 +414,17 @@ const TRUNCATE_LIMIT = 280; // characters
     return attachments.filter((a) => isSafeAttachmentUrl(a.url));
   }, [attachments]);
 
+  const mediaAttachments = useMemo(() => {
+    return safeAttachments.filter((a) => a.type === 'image' || a.type === 'video');
+  }, [safeAttachments]);
+
+  const linkAttachments = useMemo(() => {
+    return safeAttachments.filter((a) => a.type === 'link');
+  }, [safeAttachments]);
+
   return (
     <div className="relative bg-white/90 backdrop-blur rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 space-y-4 w-full">
-      {/* Header row: author + meta + kebab */}
       <div className="flex items-start justify-between gap-3">
-        {/* AUTHOR */}
         <div className="flex items-start gap-3 min-w-0">
           <div className="relative">
             <button
@@ -517,7 +512,6 @@ const TRUNCATE_LIMIT = 280; // characters
           </div>
         </div>
 
-        {/* Actions (kebab) */}
         <div className="relative" ref={actionsMenuRef}>
           <button
             type="button"
@@ -575,48 +569,51 @@ const TRUNCATE_LIMIT = 280; // characters
         </div>
       </div>
 
-      {/* BODY */}
-<div className="w-full text-left">
-  <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-gray-800">
-    {!expanded && post.body?.length > TRUNCATE_LIMIT
-      ? post.body.slice(0, TRUNCATE_LIMIT).trimEnd() + '…'
-      : post.body}
-  </p>
+      <div className="w-full text-left">
+        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-gray-800">
+          {!expanded && post.body?.length > TRUNCATE_LIMIT
+            ? post.body.slice(0, TRUNCATE_LIMIT).trimEnd() + '…'
+            : post.body}
+        </p>
 
-  {post.body?.length > TRUNCATE_LIMIT && (
-    <button
-      type="button"
-      onClick={() => setExpanded((v) => !v)}
-      className="mt-1 text-sm font-semibold text-orange-500 hover:text-orange-600"
-    >
-      {expanded ? 'See less' : 'See more'}
-    </button>
-  )}
-</div>
+        {post.body?.length > TRUNCATE_LIMIT && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="mt-1 text-sm font-semibold text-orange-500 hover:text-orange-600"
+          >
+            {expanded ? 'See less' : 'See more'}
+          </button>
+        )}
+      </div>
 
-      {/* ATTACHMENTS (minimal, safe display) */}
-      {safeAttachments.length > 0 ? (
-        <div className="grid gap-3">
-          {safeAttachments.map((a, idx) => {
+      {mediaAttachments.length > 0 ? (
+        <div className={`grid gap-3 ${mediaAttachments.length > 1 ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
+          {mediaAttachments.map((a, idx) => {
             const label = a.name || `${a.type} attachment`;
 
             if (a.type === 'image') {
               return (
-                <div
+                <button
                   key={`${a.type}-${idx}`}
-                  className="border border-gray-200 rounded-2xl overflow-hidden bg-white"
+                  type="button"
+                  onClick={handleOpenPost}
+                  className="group relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 text-left"
+                  title="Open post"
                 >
-                  <img
-                    src={a.url}
-                    alt={label}
-                    className="w-full max-h-[420px] object-contain bg-white"
-                    onError={(e) => {
-                      try {
-                        e.currentTarget.style.display = 'none';
-                      } catch {}
-                    }}
-                  />
-                </div>
+                  <div className="h-[220px] sm:h-[240px] md:h-[280px] w-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={a.url}
+                      alt={label}
+                      className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.01]"
+                      onError={(e) => {
+                        try {
+                          e.currentTarget.style.display = 'none';
+                        } catch {}
+                      }}
+                    />
+                  </div>
+                </button>
               );
             }
 
@@ -624,29 +621,16 @@ const TRUNCATE_LIMIT = 280; // characters
               return (
                 <div
                   key={`${a.type}-${idx}`}
-                  className="border border-gray-200 rounded-2xl overflow-hidden bg-white"
+                  className="overflow-hidden rounded-2xl border border-gray-200 bg-black"
                 >
-                  <video
-                    src={a.url}
-                    controls
-                    className="w-full max-h-[420px] object-contain bg-white"
-                  />
+                  <div className="h-[220px] sm:h-[240px] md:h-[280px] w-full">
+                    <video
+                      src={a.url}
+                      controls
+                      className="h-full w-full object-cover bg-black"
+                    />
+                  </div>
                 </div>
-              );
-            }
-
-            if (a.type === 'link') {
-              return (
-                <a
-                  key={`${a.type}-${idx}`}
-                  href={a.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm text-blue-700 break-all"
-                  title={a.url}
-                >
-                  🔗 <span className="font-semibold">{label}</span>
-                </a>
               );
             }
 
@@ -655,7 +639,27 @@ const TRUNCATE_LIMIT = 280; // characters
         </div>
       ) : null}
 
-      {/* Action row */}
+      {linkAttachments.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {linkAttachments.map((a, idx) => {
+            const label = a.name || 'Link attachment';
+
+            return (
+              <a
+                key={`${a.type}-${idx}`}
+                href={a.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm text-blue-700 break-all"
+                title={a.url}
+              >
+                🔗 <span className="font-semibold">{label}</span>
+              </a>
+            );
+          })}
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
         <button
           type="button"
@@ -691,7 +695,6 @@ const TRUNCATE_LIMIT = 280; // characters
           🙂 React
         </button>
 
-        {/* ✅ NEW: Share button */}
         <button
           type="button"
           onClick={handleShare}
@@ -702,7 +705,6 @@ const TRUNCATE_LIMIT = 280; // characters
           {copyConfirm ? '✅ Copied!' : '↗ Share'}
         </button>
 
-        {/* ✅ NEW: Save button */}
         <button
           type="button"
           onClick={handleSave}
@@ -719,7 +721,6 @@ const TRUNCATE_LIMIT = 280; // characters
         </button>
       </div>
 
-      {/* Emoji bar */}
       {showEmojiBar ? (
         <div className="relative">
           <div className="mt-2">
@@ -744,7 +745,6 @@ const TRUNCATE_LIMIT = 280; // characters
         </div>
       ) : null}
 
-      {/* REPLY */}
       {showReplyInput ? (
         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
           <div className="flex gap-2">
