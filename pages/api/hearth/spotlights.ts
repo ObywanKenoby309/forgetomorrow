@@ -102,6 +102,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return {
           id:           a.id,
           userId:       a.userId,
+          userSlug:     a.user?.slug      || '',
+          userAvatarUrl: a.user?.avatarUrl || a.user?.image || '',
           name:         a.name         || '',
           headline:     a.headline     || '',
           summary:      a.summary      || '',
