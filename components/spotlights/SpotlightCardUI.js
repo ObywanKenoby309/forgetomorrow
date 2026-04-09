@@ -14,6 +14,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
+import RequestAppointmentModal from '@/components/spotlights/RequestAppointmentModal';
 
 export const WHITE_CARD = {
   background: 'rgba(255,255,255,0.92)',
@@ -116,6 +117,7 @@ async function sendConnect(userId) {
 export function SpotlightCard({ spotlight, selected, onSelect }) {
   const router = useRouter();
   const [connecting, setConnecting] = useState(false);
+  const [showBook, setShowBook]     = useState(false);
 
   const {
     id, name, headline, hook, summary,
@@ -140,12 +142,19 @@ export function SpotlightCard({ spotlight, selected, onSelect }) {
 
   function handleBook(e) {
     e.stopPropagation();
-    if (userSlug) router.push(`/profile/${userSlug}?action=book&offeringId=${id}`);
+    setShowBook(true);
   }
 
   return (
-    <div
-      onClick={() => onSelect(spotlight)}
+    <>
+      {showBook && (
+        <RequestAppointmentModal
+          spotlight={spotlight}
+          onClose={() => setShowBook(false)}
+        />
+      )}
+      <div
+        onClick={() => onSelect(spotlight)}
       style={{
         ...WHITE_CARD,
         padding: '12px 14px',
@@ -219,15 +228,17 @@ export function SpotlightCard({ spotlight, selected, onSelect }) {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
 // ─── Detail panel ─────────────────────────────────────────────────────────────
 export function SpotlightDetail({ spotlight }) {
   const router = useRouter();
-  const [showAll, setShowAll]     = useState(false);
+  const [showAll, setShowAll]       = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [showBook, setShowBook]     = useState(false);
 
   const {
     id, name, headline, hook, summary, whyICoach,
@@ -370,7 +381,7 @@ export function SpotlightDetail({ spotlight }) {
           Profile
         </button>
         <button
-          onClick={() => userSlug && router.push(`/profile/${userSlug}?action=book&offeringId=${id}`)}
+          onClick={() => setShowBook(true)}
           style={detailBtnOutline}
         >
           Book
@@ -383,6 +394,12 @@ export function SpotlightDetail({ spotlight }) {
           {connecting ? 'Sending…' : 'Connect'}
         </button>
       </div>
+      {showBook && (
+        <RequestAppointmentModal
+          spotlight={spotlight}
+          onClose={() => setShowBook(false)}
+        />
+      )}
     </div>
   );
 }

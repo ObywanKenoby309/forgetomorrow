@@ -509,6 +509,28 @@ model UserConsent {
   @@map("user_consents")
 }
 
+model AppointmentRequest {
+  id           String   @id @default(cuid())
+  coachId      String
+  requesterId  String
+  spotlightId  String
+  preferredSlots Json   // array of ISO datetime strings, max 3
+  timezone     String
+  message      String?
+  status       String   @default("PENDING") // PENDING | CONFIRMED | DECLINED | RESCHEDULED
+  suggestedAt  DateTime? // coach counter-proposal
+  coachNotes   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  coach        User     @relation("AppointmentRequestsAsCoach",     fields: [coachId],     references: [id], onDelete: Cascade)
+  requester    User     @relation("AppointmentRequestsAsRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+
+  @@index([coachId])
+  @@index([requesterId])
+  @@index([status])
+  @@map("appointment_requests")
+}
+
 model CoachingClient {
   id                String             @id @default(cuid())
   coachId           String
@@ -787,6 +809,8 @@ model User {
   auditAsActor                 AuditLog[]                     @relation("AuditActor")
   auditAsImpersonated          AuditLog[]                     @relation("AuditImpersonated")
   candidates                   Candidate[]
+  appointmentRequestsAsCoach     AppointmentRequest[] @relation("AppointmentRequestsAsCoach")
+  appointmentRequestsAsRequester AppointmentRequest[] @relation("AppointmentRequestsAsRequester")
   coachingClientsAsClient      CoachingClient[]               @relation("CoachClientsClient")
   coachingClientsAsCoach       CoachingClient[]               @relation("CoachClientsCoach")
   coachingCsatResponses        CoachingCsatResponse[]         @relation("UserCoachingCsatResponses")
