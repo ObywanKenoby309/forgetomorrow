@@ -137,41 +137,47 @@ function statusBadgeStyle(s) {
 
 function ActionsDropdown({ client, onDelete, onMessage }) {
   const [open, setOpen]           = useState(false);
-  const [reporting, setReporting] = useState(false);
-  const [blocking, setBlocking]   = useState(false);
-  const ref = React.useRef(null);
+  const [pos, setPos]             = useState({ top: 0, right: 0 });
+  const btnRef                    = React.useRef(null);
 
   // Close on outside click
   React.useEffect(() => {
     if (!open) return;
-    function handle(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    function handle(e) {
+      if (btnRef.current && !btnRef.current.contains(e.target)) setOpen(false);
+    }
     document.addEventListener('mousedown', handle);
     return () => document.removeEventListener('mousedown', handle);
   }, [open]);
 
+  function toggleOpen() {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({
+        top:   rect.bottom + window.scrollY + 4,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setOpen(o => !o);
+  }
+
   async function handleReport() {
     const reason = prompt(`Report ${client.name}?\n\nBriefly describe the issue:`);
     if (!reason?.trim()) return;
-    setReporting(true);
+    setOpen(false);
     try {
       await fetch('/api/contacts/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetUserId: client.clientId,
-          reason: reason.trim(),
-          source: 'client-hub',
-          contextType: 'client',
-        }),
+        body: JSON.stringify({ targetUserId: client.clientId, reason: reason.trim(), source: 'client-hub', contextType: 'client' }),
       });
       alert('Report submitted. Our team will review it.');
     } catch { alert('Could not submit report. Please try again.'); }
-    finally { setReporting(false); setOpen(false); }
   }
 
   async function handleBlock() {
     if (!confirm(`Block ${client.name}? They will no longer be able to contact you.`)) return;
-    setBlocking(true);
+    setOpen(false);
     try {
       await fetch('/api/signal/block', {
         method: 'POST',
@@ -180,7 +186,6 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
       });
       alert(`${client.name} has been blocked.`);
     } catch { alert('Could not block this user. Please try again.'); }
-    finally { setBlocking(false); setOpen(false); }
   }
 
   const menuItem = (label, onClick, danger = false) => (
@@ -202,16 +207,17 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
   );
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <>
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={toggleOpen}
         style={{
           background: 'white', color: '#FF7043',
           border: '1px solid rgba(255,112,67,0.4)',
           borderRadius: 8, padding: '5px 12px',
           fontSize: 12, fontWeight: 700, cursor: 'pointer',
-          fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4,
+          fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4,
         }}
       >
         Actions
@@ -222,19 +228,25 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
 
       {open && (
         <div style={{
-          position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 200,
-          background: 'white', border: '1px solid rgba(0,0,0,0.1)',
-          borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          minWidth: 160, overflow: 'hidden',
+          position: 'absolute',
+          top: pos.top,
+          right: pos.right,
+          zIndex: 9999,
+          background: 'white',
+          border: '1px solid rgba(0,0,0,0.1)',
+          borderRadius: 10,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
+          minWidth: 160,
+          overflow: 'hidden',
         }}>
-          {client.slug && menuItem('View Profile', () => window.location.href = `/profile/${client.slug}`)}
+          {client.slug    && menuItem('View Profile', () => window.location.href = `/profile/${client.slug}`)}
           {client.clientId && menuItem('Message', () => onMessage(client.clientId))}
-          {client.clientId && menuItem('Report', handleReport)}
-          {client.clientId && menuItem('Block', handleBlock)}
+          {client.clientId && menuItem('Report',  handleReport)}
+          {client.clientId && menuItem('Block',   handleBlock)}
           {menuItem('Delete client', () => onDelete(client.id), true)}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -355,13 +367,14 @@ export default function ClientsModule() {
         .cm-filter-grid { display: grid; grid-template-columns: 1fr 180px 160px; gap: 12px; align-items: center; }
         .cm-table-wrap  { display: block; overflow-x: auto; }
         .cm-table { width: 100%; border-collapse: separate; border-spacing: 0 6px; table-layout: fixed; }
-        .cm-table thead th:nth-child(1) { width: 18%; }
-        .cm-table thead th:nth-child(2) { width: 24%; }
-        .cm-table thead th:nth-child(3) { width: 14%; }
+        .cm-table thead th:nth-child(1) { width: 16%; }
+        .cm-table thead th:nth-child(2) { width: 22%; }
+        .cm-table thead th:nth-child(3) { width: 13%; }
         .cm-table thead th:nth-child(4) { width: 16%; }
         .cm-table thead th:nth-child(5) { width: 16%; }
-        .cm-table thead th:nth-child(6) { width: 12%; text-align: right; }
+        .cm-table thead th:nth-child(6) { width: 17%; text-align: right; }
         .cm-table tbody td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cm-table tbody td:last-child { overflow: visible; }
         .cm-table thead tr { background: rgba(0,0,0,0.03); }
         .cm-table thead th { text-align: left; padding: 9px 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #78909C; border-bottom: 1px solid rgba(0,0,0,0.06); white-space: nowrap; }
         .cm-table thead th:first-child { border-radius: 8px 0 0 8px; }
