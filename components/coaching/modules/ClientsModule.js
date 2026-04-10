@@ -358,8 +358,8 @@ export default function ClientsModule() {
         .cm-table thead th { text-align: left; padding: 9px 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #78909C; border-bottom: 1px solid rgba(0,0,0,0.06); white-space: nowrap; }
         .cm-table thead th:first-child { border-radius: 8px 0 0 8px; }
         .cm-table thead th:last-child  { border-radius: 0 8px 8px 0; }
-        .cm-table tbody tr { background: rgba(255,255,255,0.85); box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: box-shadow 0.15s, transform 0.15s; }
-        .cm-table tbody tr:hover { box-shadow: 0 4px 12px rgba(255,112,67,0.12); transform: translateY(-1px); }
+        .cm-table tbody tr { background: rgba(255,255,255,0.85); box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: box-shadow 0.15s; }
+        .cm-table tbody tr:hover { box-shadow: 0 4px 12px rgba(255,112,67,0.12); }
         .cm-table tbody td { padding: 11px 14px; font-size: 13px; color: #37474F; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .cm-table tbody td:first-child { border-radius: 10px 0 0 10px; font-weight: 600; color: #263238; }
         .cm-table tbody td:last-child  { border-radius: 0 10px 10px 0; overflow: visible; }
