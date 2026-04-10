@@ -251,7 +251,15 @@ export default function ClientsModule() {
       <style>{`
         .cm-filter-grid { display: grid; grid-template-columns: 1fr 180px 160px; gap: 12px; align-items: center; }
         .cm-table-wrap  { display: block; overflow-x: auto; }
-        .cm-table { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
+        .cm-table { width: 100%; border-collapse: separate; border-spacing: 0 6px; table-layout: fixed; }
+        .cm-table thead th:nth-child(1) { width: 18%; }
+        .cm-table thead th:nth-child(2) { width: 22%; }
+        .cm-table thead th:nth-child(3) { width: 13%; }
+        .cm-table thead th:nth-child(4) { width: 14%; }
+        .cm-table thead th:nth-child(5) { width: 14%; }
+        .cm-table thead th:nth-child(6) { width: 14%; }
+        .cm-table thead th:nth-child(7) { width: 5%; }
+        .cm-table tbody td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .cm-table thead tr { background: rgba(0,0,0,0.03); }
         .cm-table thead th { text-align: left; padding: 9px 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #78909C; border-bottom: 1px solid rgba(0,0,0,0.06); white-space: nowrap; }
         .cm-table thead th:first-child { border-radius: 8px 0 0 8px; }
@@ -270,7 +278,7 @@ export default function ClientsModule() {
         }
       `}</style>
 
-      <div style={{ display: 'grid', gap: 14 }}>
+      <div style={{ display: 'grid', gap: 14, minWidth: 0, overflow: 'hidden' }}>
 
         {/* Filters + Add */}
         <div style={{ ...GLASS, padding: '14px 16px' }}>
