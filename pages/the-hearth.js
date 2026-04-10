@@ -12,6 +12,7 @@ import RightRailPlacementManager from '@/components/ads/RightRailPlacementManage
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import SpotlightFilters from '@/components/spotlights/SpotlightFilters';
 import { SpotlightCard, SpotlightDetail } from '@/components/spotlights/SpotlightCardUI';
+import SpotlightResourceCard from '@/components/spotlights/SpotlightResourceCard';
 
 const GLASS = {
   borderRadius: 14,
@@ -34,7 +35,7 @@ const ORANGE_HEADING_LIFT = {
   fontWeight: 900,
 };
 
-function HearthModuleShell({ title, subtitle, children, onBack }) {
+function HearthModuleShell({ title, subtitle, children, onBack, coachAction = null }) {
   return (
     <section style={{ ...GLASS, padding: 24, display: 'grid', gap: 16 }}>
       <button
@@ -49,17 +50,34 @@ function HearthModuleShell({ title, subtitle, children, onBack }) {
       >
         ← Return to Main
       </button>
-      <div style={{ display: 'grid', gap: 8 }}>
-        <h2 style={{
-          margin: 0, fontSize: 22, color: '#FF7043',
-          lineHeight: 1.2, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT,
-        }}>
-          {title}
-        </h2>
-        <p style={{ margin: 0, color: '#546E7A', fontSize: 15, lineHeight: 1.6 }}>
-          {subtitle}
-        </p>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: coachAction ? 'minmax(0,1fr) 280px' : '1fr',
+          gap: 16,
+          alignItems: 'start',
+        }}
+      >
+        <div style={{ display: 'grid', gap: 8 }}>
+          <h2 style={{
+            margin: 0, fontSize: 22, color: '#FF7043',
+            lineHeight: 1.2, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT,
+          }}>
+            {title}
+          </h2>
+          <p style={{ margin: 0, color: '#546E7A', fontSize: 15, lineHeight: 1.6 }}>
+            {subtitle}
+          </p>
+        </div>
+
+        {coachAction ? (
+          <div style={{ minWidth: 0 }}>
+            {coachAction}
+          </div>
+        ) : null}
       </div>
+
       {children}
     </section>
   );
@@ -161,7 +179,7 @@ function MentorshipModule() {
     if (filtered.length > 0 && !filtered.find(s => s.id === selected?.id)) {
       setSelected(filtered[0]);
     }
-  }, [filtered]);
+  }, [filtered, selected]);
 
   if (loading) return <div style={{ color: '#90A4AE', fontSize: 13, padding: 8 }}>Loading mentors…</div>;
   if (error)   return <div style={{ ...WHITE_CARD, padding: 16, color: '#C62828', fontSize: 13 }}>{error}</div>;
@@ -325,6 +343,7 @@ export default function TheHearth() {
           title="Mentorship Programs"
           subtitle="Discover mentors by specialty, experience, and availability."
           onBack={() => setActiveModule(null)}
+          coachAction={chromeRaw === 'coach' ? <SpotlightResourceCard /> : null}
         >
           <MentorshipModule />
         </HearthModuleShell>
