@@ -6,7 +6,7 @@
 //   - pages/dashboard/coaching/client-hub-update.js (inline in hub)
 //   - pages/dashboard/coaching/clients.js           (thin page wrapper)
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 
 const GLASS = {
@@ -135,6 +135,109 @@ function statusBadgeStyle(s) {
   };
 }
 
+function ActionsDropdown({ client, onDelete, onMessage }) {
+  const [open, setOpen]           = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [blocking, setBlocking]   = useState(false);
+  const ref = React.useRef(null);
+
+  // Close on outside click
+  React.useEffect(() => {
+    if (!open) return;
+    function handle(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [open]);
+
+  async function handleReport() {
+    const reason = prompt(`Report ${client.name}?\n\nBriefly describe the issue:`);
+    if (!reason?.trim()) return;
+    setReporting(true);
+    try {
+      await fetch('/api/contacts/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUserId: client.clientId,
+          reason: reason.trim(),
+          source: 'client-hub',
+          contextType: 'client',
+        }),
+      });
+      alert('Report submitted. Our team will review it.');
+    } catch { alert('Could not submit report. Please try again.'); }
+    finally { setReporting(false); setOpen(false); }
+  }
+
+  async function handleBlock() {
+    if (!confirm(`Block ${client.name}? They will no longer be able to contact you.`)) return;
+    setBlocking(true);
+    try {
+      await fetch('/api/signal/block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: client.clientId }),
+      });
+      alert(`${client.name} has been blocked.`);
+    } catch { alert('Could not block this user. Please try again.'); }
+    finally { setBlocking(false); setOpen(false); }
+  }
+
+  const menuItem = (label, onClick, danger = false) => (
+    <button
+      type="button"
+      onClick={() => { setOpen(false); onClick(); }}
+      style={{
+        display: 'block', width: '100%', textAlign: 'left',
+        padding: '8px 14px', fontSize: 13, background: 'none', border: 'none',
+        cursor: 'pointer', color: danger ? '#C62828' : '#37474F',
+        fontFamily: 'inherit', fontWeight: danger ? 700 : 500,
+        borderTop: danger ? '1px solid rgba(0,0,0,0.06)' : 'none',
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          background: 'white', color: '#FF7043',
+          border: '1px solid rgba(255,112,67,0.4)',
+          borderRadius: 8, padding: '5px 12px',
+          fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4,
+        }}
+      >
+        Actions
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M3 4.5l3 3 3-3" stroke="#FF7043" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 200,
+          background: 'white', border: '1px solid rgba(0,0,0,0.1)',
+          borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          minWidth: 160, overflow: 'hidden',
+        }}>
+          {client.slug && menuItem('View Profile', () => window.location.href = `/profile/${client.slug}`)}
+          {client.clientId && menuItem('Message', () => onMessage(client.clientId))}
+          {client.clientId && menuItem('Report', handleReport)}
+          {client.clientId && menuItem('Block', handleBlock)}
+          {menuItem('Delete client', () => onDelete(client.id), true)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ClientsModule() {
   const [search, setSearch]   = useState('');
   const [status, setStatus]   = useState('All');
@@ -253,12 +356,11 @@ export default function ClientsModule() {
         .cm-table-wrap  { display: block; overflow-x: auto; }
         .cm-table { width: 100%; border-collapse: separate; border-spacing: 0 6px; table-layout: fixed; }
         .cm-table thead th:nth-child(1) { width: 18%; }
-        .cm-table thead th:nth-child(2) { width: 22%; }
-        .cm-table thead th:nth-child(3) { width: 13%; }
-        .cm-table thead th:nth-child(4) { width: 14%; }
-        .cm-table thead th:nth-child(5) { width: 14%; }
-        .cm-table thead th:nth-child(6) { width: 14%; }
-        .cm-table thead th:nth-child(7) { width: 5%; }
+        .cm-table thead th:nth-child(2) { width: 24%; }
+        .cm-table thead th:nth-child(3) { width: 14%; }
+        .cm-table thead th:nth-child(4) { width: 16%; }
+        .cm-table thead th:nth-child(5) { width: 16%; }
+        .cm-table thead th:nth-child(6) { width: 12%; text-align: right; }
         .cm-table tbody td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .cm-table thead tr { background: rgba(0,0,0,0.03); }
         .cm-table thead th { text-align: left; padding: 9px 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #78909C; border-bottom: 1px solid rgba(0,0,0,0.06); white-space: nowrap; }
@@ -314,13 +416,13 @@ export default function ClientsModule() {
                     <tr>
                       <th>Name</th><th>Email</th><th>Status</th>
                       <th>Next Session</th><th>Last Contact</th>
-                      <th>Actions</th><th></th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={7} style={{ padding: '20px 14px', color: '#90A4AE', fontStyle: 'italic' }}>
+                        <td colSpan={6} style={{ padding: '20px 14px', color: '#90A4AE', fontStyle: 'italic' }}>
                           No clients yet. Use "+ Add Client" to get started.
                         </td>
                       </tr>
@@ -331,20 +433,12 @@ export default function ClientsModule() {
                         <td><span style={statusBadgeStyle(c.status)}>{c.status}</span></td>
                         <td style={{ color: '#607D8B' }}>{c.next || '—'}</td>
                         <td style={{ color: '#607D8B' }}>{c.last || '—'}</td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 8 }}>
-                            <Link href={`/dashboard/coaching/clients/${encodeURIComponent(c.email || '')}`} style={outlineBtn}>
-                              View Profile
-                            </Link>
-                            {c.clientId && (
-                              <button type="button" onClick={() => startCoachThread(c.clientId)} style={solidBtnSm}>
-                                Message
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                        <td>
-                          <button type="button" onClick={() => handleDelete(c.id)} style={deleteBtnSm}>Delete</button>
+                        <td style={{ textAlign: 'right', overflow: 'visible' }}>
+                          <ActionsDropdown
+                            client={c}
+                            onDelete={handleDelete}
+                            onMessage={startCoachThread}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -371,17 +465,13 @@ export default function ClientsModule() {
                       <span>Next: <strong>{c.next || '—'}</strong></span>
                       <span>Last: <strong>{c.last || '—'}</strong></span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: c.clientId ? '1fr 1fr' : '1fr', gap: 8 }}>
-                      <Link href={`/dashboard/coaching/clients/${encodeURIComponent(c.email || '')}`} style={{ ...outlineBtn, textAlign: 'center', display: 'block' }}>
-                        View Profile
-                      </Link>
-                      {c.clientId && (
-                        <button type="button" onClick={() => startCoachThread(c.clientId)} style={{ ...solidBtnSm, width: '100%' }}>
-                          Message
-                        </button>
-                      )}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <ActionsDropdown
+                        client={c}
+                        onDelete={handleDelete}
+                        onMessage={startCoachThread}
+                      />
                     </div>
-                    <button type="button" onClick={() => handleDelete(c.id)} style={{ ...deleteBtnSm, width: '100%' }}>Delete</button>
                   </div>
                 ))}
               </div>
