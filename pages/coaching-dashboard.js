@@ -85,7 +85,16 @@ function Section({ title, children, action=null, style={} }) {
 }
 function Card({ title, children }) {
   return (
-    <div style={{ ...WHITE_CARD, padding:16, minHeight:120 }}>
+    <div style={{
+      ...WHITE_CARD,
+      padding:16,
+      minHeight:120,
+      display:'flex',
+      flexDirection:'column',
+      justifyContent:'center',
+      alignItems:'center',
+      textAlign:'center'
+    }}>
       <div style={{ fontWeight:700, marginBottom:8, color:'#112033', fontSize:13 }}>{title}</div>
       {children||<div style={{ color:'#90A4AE', fontSize:13 }}>Coming soon…</div>}
     </div>
@@ -96,7 +105,7 @@ function KPI({ label, value }) {
     <div style={{ ...WHITE_CARD, padding:'14px 16px', minHeight:108,
       display:'flex', flexDirection:'column', justifyContent:'space-between', cursor:'pointer' }}>
       <div style={{ fontSize:10, fontWeight:800, color:'#FF7043', textTransform:'uppercase', letterSpacing:'0.08em', lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{label}</div>
-      <div style={{ fontSize:24, fontWeight:900, color:'#0F172A', lineHeight:1.05, letterSpacing:'-0.02em', marginTop:6 }}>{value}</div>
+      <div style={{ fontSize:24, fontWeight:900, color:'#0F172A', lineHeight:1.05, letterSpacing:'-0.02em', marginTop:6, textAlign:'center' }}>{value}</div>
       <div style={{ fontSize:12, color:'#64748B', fontWeight:500, alignSelf:'flex-end' }}>View details</div>
     </div>
   );
@@ -266,7 +275,7 @@ export default function CoachingDashboardPage() {
     }
     return Array.from(byClient.values()).sort((a,b)=>(a.nextSession?.getTime()??Infinity)-(b.nextSession?.getTime()??Infinity));
   }, [sessions,now]);
-  const clientsPreview = useMemo(()=>clients.slice(0,5),[clients]);
+  const clientsPreview = useMemo(()=>clients.slice(0,3),[clients]);
   const avgScore = csat.length>0
     ? (csat.reduce((s,r)=>s+(Number(r.satisfaction)+Number(r.timeliness)+Number(r.quality))/3,0)/csat.length).toFixed(1) : '—';
   const totalResponses = csat.length;
@@ -353,7 +362,7 @@ export default function CoachingDashboardPage() {
                   <div style={{ fontSize:10, fontWeight:700, color:'#FF7043', textTransform:'uppercase', letterSpacing:'0.04em', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                     {k.label}
                   </div>
-                  <div style={{ fontSize:22, fontWeight:900, color:'#112033', lineHeight:1.1, marginTop:4 }}>
+                  <div style={{ fontSize:22, fontWeight:900, color:'#112033', lineHeight:1.1, marginTop:4, textAlign:'center' }}>
                     {k.value}
                   </div>
                 </Link>
@@ -373,7 +382,7 @@ export default function CoachingDashboardPage() {
               {loading ? (
                 <div style={{ color:'#90A4AE', fontSize:13 }}>Loading sessions…</div>
               ) : upcomingNext3.length===0 ? (
-                <div style={{ color:'#90A4AE', fontSize:13 }}>No upcoming sessions. Add one in the calendar.</div>
+                <div style={{ color:'#607D8B', fontSize:13, fontWeight:600 }}>No upcoming sessions. Add one in the calendar.</div>
               ) : (
                 <div style={{ display:'grid', gap:8 }}>
                   {upcomingNext3.map(s=>{
@@ -426,21 +435,23 @@ export default function CoachingDashboardPage() {
 
           {/* 6. CSAT Pulse + Sponsored side by side */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:GAP }}>
-            <section style={{ ...GLASS, padding:14 }}>
-              <div style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', marginBottom:10, ...ORANGE_HEADING_LIFT }}>CSAT Pulse</div>
-              <div style={{ ...WHITE_CARD, padding:12 }}>
+            <section style={{ ...GLASS, padding:12 }}>
+              <div style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', marginBottom:8, ...ORANGE_HEADING_LIFT }}>CSAT Pulse</div>
+              <div style={{ ...WHITE_CARD, padding:10 }}>
                 {csatError ? (
                   <div style={{ fontSize:12, color:'#C62828' }}>{csatError}</div>
                 ) : (
                   <div style={{ display:'grid', gap:6 }}>
-                    <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
-                      <span style={{ fontSize:28, fontWeight:900, color:'#112033' }}>{avgScore}</span>
+                    <div style={{ display:'flex', alignItems:'baseline', justifyContent:'center', gap:4 }}>
+                      <span style={{ fontSize:24, fontWeight:900, color:'#112033' }}>{avgScore}</span>
                       <span style={{ fontSize:12, color:'#90A4AE' }}>/5</span>
                     </div>
-                    <div style={{ fontSize:11, color:'#607D8B' }}>{totalResponses} response{totalResponses!==1?'s':''}</div>
-                    <Link href="/dashboard/coaching/feedback" style={{ color:'#FF7043', fontWeight:700, fontSize:12, textDecoration:'none' }}>
-                      Open →
-                    </Link>
+                    <div style={{ fontSize:11, color:'#607D8B', textAlign:'center' }}>{totalResponses} response{totalResponses!==1?'s':''}</div>
+                    <div style={{ textAlign:'right' }}>
+                      <Link href="/dashboard/coaching/feedback" style={{ color:'#FF7043', fontWeight:700, fontSize:12, textDecoration:'none' }}>
+                        Open →
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>
@@ -455,7 +466,16 @@ export default function CoachingDashboardPage() {
             <div style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', marginBottom:10, ...ORANGE_HEADING_LIFT }}>Docs & Tools</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {['Templates & Guides','Resource Library','Announcements','Coming Soon'].map(t=>(
-                <div key={t} style={{ ...WHITE_CARD, padding:12, minHeight:60 }}>
+                <div key={t} style={{
+                  ...WHITE_CARD,
+                  padding:12,
+                  minHeight:60,
+                  display:'flex',
+                  flexDirection:'column',
+                  justifyContent:'center',
+                  alignItems:'center',
+                  textAlign:'center'
+                }}>
                   <div style={{ fontSize:12, fontWeight:700, color:'#37474F' }}>{t}</div>
                   <div style={{ fontSize:11, color:'#90A4AE', marginTop:4 }}>Coming soon…</div>
                 </div>
@@ -468,7 +488,7 @@ export default function CoachingDashboardPage() {
     );
   }
 
-  // ── DESKTOP (original, touched only for ad wrapper removal) ───────────────
+  // ── DESKTOP (original, touched only for requested UI refinements) ─────────
   const greeting = getTimeGreeting();
   return (
     <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="overview" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
@@ -524,18 +544,18 @@ export default function CoachingDashboardPage() {
 
           <aside style={{ gridColumn:'2/3', gridRow:'1/4', display:'flex', flexDirection:'column', gap:GAP, alignSelf:'stretch', padding:0, boxSizing:'border-box' }}>
             <div style={{ flex:2, minHeight:180 }}>
-			  <RightRailPlacementManager slot="right_rail_1" />
-			</div>
-            <div style={{ ...KPI_GLASS, padding:16, flex:1 }}>
+              <RightRailPlacementManager slot="right_rail_1" />
+            </div>
+            <div style={{ ...GLASS, padding:12, flex:'0 0 auto' }}>
               <div style={{ fontSize:15, fontWeight:900, marginBottom:8, color:'#0F172A', lineHeight:1.25, letterSpacing:'-0.01em' }}>CSAT Pulse</div>
               {csatError ? <div style={{ color:'#C62828', fontSize:12 }}>{csatError}</div> : (
-                <div style={{ ...WHITE_CARD, padding:14, display:'grid', gap:6 }}>
-                  <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
-                    <div style={{ fontSize:26, fontWeight:900, color:'#112033' }}>{avgScore}</div>
+                <div style={{ ...WHITE_CARD, padding:12, display:'grid', gap:6 }}>
+                  <div style={{ display:'flex', alignItems:'baseline', justifyContent:'center', gap:6 }}>
+                    <div style={{ fontSize:24, fontWeight:900, color:'#112033' }}>{avgScore}</div>
                     <div style={{ color:'#90A4AE', fontSize:12 }}>/5</div>
                   </div>
-                  <div style={{ color:'#607D8B', fontSize:12 }}>Based on {totalResponses} {totalResponses===1?'response':'responses'}</div>
-                  <div style={{ marginTop:4 }}>
+                  <div style={{ color:'#607D8B', fontSize:12, textAlign:'center' }}>Based on {totalResponses} {totalResponses===1?'response':'responses'}</div>
+                  <div style={{ marginTop:4, textAlign:'right' }}>
                     <Link href="/dashboard/coaching/feedback" style={{ color:'#FF7043', fontWeight:800, fontSize:13, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>Open feedback</Link>
                   </div>
                 </div>
@@ -556,13 +576,13 @@ export default function CoachingDashboardPage() {
                 <>
                   <div style={{ overflowX:'auto' }}>
                     <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:0, background:'white', border:'1px solid #eee', borderRadius:10, overflow:'hidden' }}>
-                      <thead><tr style={{ background:'#FAFAFA' }}><Th>Name</Th><Th>Email</Th><Th>Status</Th><Th>Next Session</Th></tr></thead>
+                      <thead><tr style={{ background:'#FAFAFA' }}><Th>Name</Th><Th>Status</Th><Th>Next Session</Th></tr></thead>
                       <tbody>
                         {clientsPreview.map(c=>{
                           const {background,color}=getStatusStyles(c.status);
                           return (
                             <tr key={c.id} style={{ borderTop:'1px solid #eee' }}>
-                              <Td strong>{c.name}</Td><Td>{c.email||'—'}</Td>
+                              <Td strong>{c.name}</Td>
                               <Td><span style={{ fontSize:12,background,color,padding:'4px 8px',borderRadius:999 }}>{c.status}</span></Td>
                               <Td>{c.nextSession?c.nextSession.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—'}</Td>
                             </tr>
@@ -578,14 +598,20 @@ export default function CoachingDashboardPage() {
               )}
             </Section>
 
-            <Section title="Docs & Tools"><div style={grid3}><Card title="Templates & Guides"/><Card title="Resource Library"/><Card title="Announcements"/></div></Section>
+            <Section title="Docs & Tools">
+              <div style={grid3}>
+                <Card title="Templates & Guides" />
+                <Card title="Resource Library" />
+                <Card title="Announcements" />
+              </div>
+            </Section>
 
             <Section title="Upcoming Sessions"
               action={<Link href="/dashboard/coaching/sessions" style={{ color:'#FF7043', fontWeight:700, fontSize:13 }}>View schedule</Link>}>
               {loading ? (
                 <div style={{ color:'#90A4AE', fontSize:14 }}>Loading…</div>
               ) : upcomingNext3.length===0 ? (
-                <div style={{ color:'#90A4AE' }}>No upcoming sessions yet.</div>
+                <div style={{ color:'#607D8B', fontSize:14, fontWeight:600 }}>No upcoming sessions yet.</div>
               ) : (
                 <ul style={{ listStyle:'none', padding:0, margin:0, display:'grid', gap:8 }}>
                   {upcomingNext3.map(s=>{
