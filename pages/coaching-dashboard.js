@@ -511,7 +511,7 @@ export default function CoachingDashboardPage() {
               {actionLoading && !actionBootstrapped ? (
                 <div style={{ color:'#90A4AE' }}>Loading updates…</div>
               ) : (
-                <div style={grid4}>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(5,minmax(0,1fr))', gap:12 }}>
                   <ActionLiteCard title="New Messages"     items={actionBuckets.messages} emptyText="No unread coach inbox items." href="/action-center?scope=COACH&chrome=coach" />
                   <ActionLiteCard title="Session Requests" items={actionBuckets.requests} emptyText="No pending session requests." href="/dashboard/coaching/client-hub-update?tab=requests" />
                   <ActionLiteCard title="New Feedback"     items={actionBuckets.feedback} emptyText="No new feedback yet."         href="/dashboard/coaching/feedback" />
