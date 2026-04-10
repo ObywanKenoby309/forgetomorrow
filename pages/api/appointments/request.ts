@@ -112,7 +112,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           body:       `${requesterName} has requested a coaching session with you.`,
           entityType: 'COACHING_SESSION',
           entityId:   appt.id,
-          actionUrl:  '/dashboard/coaching/sessions',
+          dedupeKey:  `appointment_request_${appt.id}`,
+          metadata:   { actionUrl: '/dashboard/coaching/sessions', appointmentRequestId: appt.id },
         },
       });
     } catch (notifyErr) {
