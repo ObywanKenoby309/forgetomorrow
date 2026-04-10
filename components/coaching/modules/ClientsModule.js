@@ -136,35 +136,22 @@ function statusBadgeStyle(s) {
 }
 
 function ActionsDropdown({ client, onDelete, onMessage }) {
-  const [open, setOpen]           = useState(false);
-  const [pos, setPos]             = useState({ top: 0, right: 0 });
-  const btnRef                    = React.useRef(null);
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef(null);
 
-  // Close on outside click
   React.useEffect(() => {
     if (!open) return;
     function handle(e) {
-      if (btnRef.current && !btnRef.current.contains(e.target)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     }
     document.addEventListener('mousedown', handle);
     return () => document.removeEventListener('mousedown', handle);
   }, [open]);
 
-  function toggleOpen() {
-    if (!open && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setPos({
-        top:   rect.bottom + 4,
-        right: window.innerWidth - rect.right,
-      });
-    }
-    setOpen(o => !o);
-  }
-
   async function handleReport() {
+    setOpen(false);
     const reason = prompt(`Report ${client.name}?\n\nBriefly describe the issue:`);
     if (!reason?.trim()) return;
-    setOpen(false);
     try {
       await fetch('/api/contacts/report', {
         method: 'POST',
@@ -176,8 +163,8 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
   }
 
   async function handleBlock() {
-    if (!confirm(`Block ${client.name}? They will no longer be able to contact you.`)) return;
     setOpen(false);
+    if (!confirm(`Block ${client.name}? They will no longer be able to contact you.`)) return;
     try {
       await fetch('/api/signal/block', {
         method: 'POST',
@@ -207,11 +194,10 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
   );
 
   return (
-    <>
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
       <button
-        ref={btnRef}
         type="button"
-        onClick={toggleOpen}
+        onClick={() => setOpen(o => !o)}
         style={{
           background: 'white', color: '#FF7043',
           border: '1px solid rgba(255,112,67,0.4)',
@@ -228,25 +214,20 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
 
       {open && (
         <div style={{
-          position: 'fixed',
-          top: pos.top,
-          right: pos.right,
-          zIndex: 9999,
-          background: 'white',
-          border: '1px solid rgba(0,0,0,0.1)',
-          borderRadius: 10,
+          position: 'absolute', right: 0, top: 'calc(100% + 4px)',
+          zIndex: 9999, background: 'white',
+          border: '1px solid rgba(0,0,0,0.1)', borderRadius: 10,
           boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
-          minWidth: 160,
-          overflow: 'hidden',
+          minWidth: 160, overflow: 'hidden',
         }}>
-          {client.slug    && menuItem('View Profile', () => window.location.href = `/profile/${client.slug}`)}
+          {client.slug     && menuItem('View Profile', () => { window.location.href = `/profile/${client.slug}`; })}
           {client.clientId && menuItem('Message', () => onMessage(client.clientId))}
           {client.clientId && menuItem('Report',  handleReport)}
           {client.clientId && menuItem('Block',   handleBlock)}
           {menuItem('Delete client', () => onDelete(client.id), true)}
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -365,25 +346,23 @@ export default function ClientsModule() {
     <>
       <style>{`
         .cm-filter-grid { display: grid; grid-template-columns: 1fr 180px 160px; gap: 12px; align-items: center; }
-        .cm-table-wrap  { display: block; overflow-x: auto; }
-        .cm-table { width: 100%; border-collapse: separate; border-spacing: 0 6px; table-layout: fixed; }
+        .cm-table-wrap  { display: block; overflow-x: auto; overflow-y: visible; }
+        .cm-table { width: 100%; border-collapse: separate; border-spacing: 0 6px; table-layout: fixed; overflow: visible; }
         .cm-table thead th:nth-child(1) { width: 16%; }
         .cm-table thead th:nth-child(2) { width: 22%; }
         .cm-table thead th:nth-child(3) { width: 13%; }
         .cm-table thead th:nth-child(4) { width: 16%; }
         .cm-table thead th:nth-child(5) { width: 16%; }
         .cm-table thead th:nth-child(6) { width: 17%; text-align: right; }
-        .cm-table tbody td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .cm-table tbody td:last-child { overflow: visible; }
         .cm-table thead tr { background: rgba(0,0,0,0.03); }
         .cm-table thead th { text-align: left; padding: 9px 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #78909C; border-bottom: 1px solid rgba(0,0,0,0.06); white-space: nowrap; }
         .cm-table thead th:first-child { border-radius: 8px 0 0 8px; }
         .cm-table thead th:last-child  { border-radius: 0 8px 8px 0; }
         .cm-table tbody tr { background: rgba(255,255,255,0.85); box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: box-shadow 0.15s, transform 0.15s; }
         .cm-table tbody tr:hover { box-shadow: 0 4px 12px rgba(255,112,67,0.12); transform: translateY(-1px); }
-        .cm-table tbody td { padding: 11px 14px; font-size: 13px; color: #37474F; vertical-align: middle; }
+        .cm-table tbody td { padding: 11px 14px; font-size: 13px; color: #37474F; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .cm-table tbody td:first-child { border-radius: 10px 0 0 10px; font-weight: 600; color: #263238; }
-        .cm-table tbody td:last-child  { border-radius: 0 10px 10px 0; }
+        .cm-table tbody td:last-child  { border-radius: 0 10px 10px 0; overflow: visible; }
         .cm-cards { display: none; }
         @media (max-width: 768px) {
           .cm-filter-grid { grid-template-columns: 1fr; }
@@ -393,7 +372,7 @@ export default function ClientsModule() {
         }
       `}</style>
 
-      <div style={{ display: 'grid', gap: 14, minWidth: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gap: 14, minWidth: 0 }}>
 
         {/* Filters + Add */}
         <div style={{ ...GLASS, padding: '14px 16px' }}>
@@ -412,7 +391,7 @@ export default function ClientsModule() {
         </div>
 
         {/* Client list */}
-        <div style={{ ...GLASS, padding: '18px 20px' }}>
+        <div style={{ ...GLASS, padding: '18px 20px', overflow: 'visible', backdropFilter: 'none', WebkitBackdropFilter: 'none', background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(255,255,255,0.55)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontSize: 18, color: '#FF7043', ...ORANGE_HEADING_LIFT }}>Clients</div>
             <div style={{ fontSize: 12, color: '#90A4AE' }}>{filtered.length} {filtered.length === 1 ? 'client' : 'clients'}</div>
