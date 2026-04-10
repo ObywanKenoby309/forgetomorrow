@@ -3,21 +3,21 @@
 //   - CoachingLayout receives NO header prop, NO right prop
 //   - contentFullBleed passed so main overflowX clipping removed for this page only
 //   - DashboardBody owns the full internal grid
-//   - Right rail (Sponsored + CSAT Pulse) lives INSIDE the internal grid, spans rows 1-3
+//   - Right rail now holds Sponsored + Upcoming Sessions
 //   - Bottom 3 cards use marginLeft: -252 to extend under sidebar
 //
 // Visual structure:
 // ┌─────────────────────────────┬──────────────┐
 // │ Title Card       (row 1)    │  Sponsored   │
-// ├─────────────────────────────│  (rows 1-3)  │
-// │ KPI Row          (row 2)    │              │
-// ├─────────────────────────────│  CSAT Pulse  │
+// ├─────────────────────────────│──────────────│
+// │ KPI Row          (row 2)    │ Upcoming     │
+// ├─────────────────────────────│ Sessions     │
 // │ Action Center    (row 3)    │              │
 // ├─────────────────────────────┴──────────────┤
-// │ Clients       │ Docs & Tools │ Upcoming    │  ← full width incl. under sidebar
+// │ Clients       │ Docs & Tools │ CSAT Pulse  │
 // └────────────────────────────────────────────┘
 
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { getTimeGreeting } from "@/lib/dashboardGreeting";
 import { useRouter } from 'next/router';
@@ -141,7 +141,6 @@ function Td({ children, strong=false }) {
   return <td style={{ padding:'10px 12px', fontSize:14, color:'#37474F', fontWeight:strong?600:400, background:'white' }}>{children}</td>;
 }
 const grid3 = { display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', gap:12 };
-const grid4 = { display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:12 };
 
 // ─── Mobile Action tile ───────────────────────────────────────────────────────
 function MobileActionTile({ title, items, emptyText, href, icon }) {
@@ -184,13 +183,23 @@ function MobileActionTile({ title, items, emptyText, href, icon }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function CoachingDashboardPage() {
   const router = useRouter();
+  const upcomingRailScrollRef = useRef(null);
 
   const [isMobile, setIsMobile] = useState(null);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 30000);
+    return () => clearInterval(timer);
   }, []);
 
   // Sessions
@@ -240,7 +249,6 @@ export default function CoachingDashboardPage() {
   // CSAT
   const [csat, setCsat] = useState([]);
   const [csatError, setCsatError] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
   const loadCsat = useCallback(async () => {
     setCsatError('');
     try {
@@ -254,13 +262,22 @@ export default function CoachingDashboardPage() {
   useEffect(() => { loadCsat(); }, [loadCsat]);
 
   // Derived values
-  const todayISO = localISODate();
-  const now = new Date();
-  const sessionsToday = useMemo(() => sessions.filter(s=>s?.date===todayISO), [sessions,todayISO]);
-  const upcomingNext3 = useMemo(() =>
-    sessions.filter(s=>s?.date&&s?.time&&toLocalDateTime(s.date,s.time)>=now)
-      .sort((a,b)=>toLocalDateTime(a.date,a.time)-toLocalDateTime(b.date,b.time)).slice(0,3),
-    [sessions,now]);
+  const todayISO = localISODate(currentTime);
+  const sessionsToday = useMemo(() => {
+    return sessions
+      .filter(s => s?.date === todayISO)
+      .sort((a, b) => toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time));
+  }, [sessions, todayISO]);
+
+  const sessionsRemainingToday = useMemo(() => {
+    return sessionsToday.filter(s => {
+      if (!s?.date || !s?.time) return false;
+      return toLocalDateTime(s.date, s.time) >= currentTime;
+    });
+  }, [sessionsToday, currentTime]);
+
+  const upcomingNext3 = useMemo(() => sessionsRemainingToday.slice(0, 3), [sessionsRemainingToday]);
+
   const activeClients = useMemo(() => new Set(sessions.map(s=>(s?.client||'').trim()).filter(Boolean)).size, [sessions]);
   const clients = useMemo(() => {
     const byClient = new Map();
@@ -268,13 +285,13 @@ export default function CoachingDashboardPage() {
       const name = (s?.client||'').trim(); if (!name) continue;
       const dt = s?.date&&s?.time ? toLocalDateTime(s.date,s.time) : null;
       const ex = byClient.get(name);
-      if (!ex) { byClient.set(name,{ id:s?.clientId||name, name, status:s?.status||'Active', nextSession:dt&&dt>=now?dt:null }); continue; }
+      if (!ex) { byClient.set(name,{ id:s?.clientId||name, name, status:s?.status||'Active', nextSession:dt&&dt>=currentTime?dt:null }); continue; }
       ex.status = s?.status||ex.status;
-      if (dt&&dt>=now&&(!ex.nextSession||dt<ex.nextSession)) ex.nextSession=dt;
+      if (dt&&dt>=currentTime&&(!ex.nextSession||dt<ex.nextSession)) ex.nextSession=dt;
       byClient.set(name,ex);
     }
     return Array.from(byClient.values()).sort((a,b)=>(a.nextSession?.getTime()??Infinity)-(b.nextSession?.getTime()??Infinity));
-  }, [sessions,now]);
+  }, [sessions,currentTime]);
   const clientsPreview = useMemo(()=>clients.slice(0,3),[clients]);
   const avgScore = csat.length>0
     ? (csat.reduce((s,r)=>s+(Number(r.satisfaction)+Number(r.timeliness)+Number(r.quality))/3,0)/csat.length).toFixed(1) : '—';
@@ -302,7 +319,77 @@ export default function CoachingDashboardPage() {
   const sortedMobileTiles = [...mobileTiles].sort((a,b)=>(b.items.length>0?1:0)-(a.items.length>0?1:0));
   const totalActions = mobileTiles.reduce((s,t)=>s+t.items.length,0);
 
-  if (isMobile===null) return <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="overview" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}><div style={{minHeight:200}}/></CoachingLayout>;
+  useEffect(() => {
+    if (isMobile || loading || sessionsRemainingToday.length <= 1) return;
+
+    const el = upcomingRailScrollRef.current;
+    if (!el) return;
+
+    let timeoutId = null;
+    let intervalId = null;
+    let cancelled = false;
+
+    const clearAll = () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      if (intervalId) window.clearInterval(intervalId);
+      timeoutId = null;
+      intervalId = null;
+    };
+
+    const resetToTop = () => {
+      if (!el) return;
+      el.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const startSlowScroll = () => {
+      if (cancelled || !el) return;
+
+      const maxScrollTop = el.scrollHeight - el.clientHeight;
+      if (maxScrollTop <= 8) {
+        timeoutId = window.setTimeout(startLoop, 5000);
+        return;
+      }
+
+      intervalId = window.setInterval(() => {
+        if (!el) return;
+        const nextTop = el.scrollTop + 1;
+        const atBottom = nextTop >= (el.scrollHeight - el.clientHeight - 1);
+
+        if (atBottom) {
+          clearAll();
+          timeoutId = window.setTimeout(() => {
+            resetToTop();
+            timeoutId = window.setTimeout(startLoop, 5000);
+          }, 1800);
+          return;
+        }
+
+        el.scrollTop = nextTop;
+      }, 28);
+    };
+
+    const startLoop = () => {
+      if (cancelled) return;
+      clearAll();
+      timeoutId = window.setTimeout(startSlowScroll, 5000);
+    };
+
+    el.scrollTop = 0;
+    startLoop();
+
+    return () => {
+      cancelled = true;
+      clearAll();
+    };
+  }, [isMobile, loading, sessionsRemainingToday]);
+
+  if (isMobile===null) {
+    return (
+      <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="overview" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
+        <div style={{minHeight:200}}/>
+      </CoachingLayout>
+    );
+  }
 
   // ── MOBILE ────────────────────────────────────────────────────────────────
   if (isMobile) {
@@ -312,7 +399,6 @@ export default function CoachingDashboardPage() {
       <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="overview" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
         <div style={{ display:'grid', gap:GAP, width:'100%' }}>
 
-          {/* 1. Title card */}
           <CoachingTitleCard
             greeting={greeting}
             title="Your Coaching Dashboard"
@@ -320,7 +406,6 @@ export default function CoachingDashboardPage() {
             isMobile={true}
           />
 
-          {/* 2. Action Center — first, most urgent */}
           <section style={{ ...GLASS, padding:16 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
               <div>
@@ -348,7 +433,6 @@ export default function CoachingDashboardPage() {
             )}
           </section>
 
-          {/* 3. KPI strip — horizontal scroll */}
           <section style={{ ...GLASS, padding:'12px 0 12px 12px', overflow:'hidden' }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingRight:12, marginBottom:10 }}>
               <span style={{ fontSize:13, fontWeight:800, color:'#112033' }}>Your Numbers</span>
@@ -370,7 +454,6 @@ export default function CoachingDashboardPage() {
             </div>
           </section>
 
-          {/* 4. Upcoming Sessions */}
           <section style={{ ...GLASS, padding:16 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
               <span style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', ...ORANGE_HEADING_LIFT }}>Upcoming Sessions</span>
@@ -381,18 +464,18 @@ export default function CoachingDashboardPage() {
             <div style={{ ...WHITE_CARD, padding:12 }}>
               {loading ? (
                 <div style={{ color:'#90A4AE', fontSize:13 }}>Loading sessions…</div>
-              ) : upcomingNext3.length===0 ? (
-                <div style={{ color:'#607D8B', fontSize:13, fontWeight:600 }}>No upcoming sessions. Add one in the calendar.</div>
+              ) : sessionsRemainingToday.length===0 ? (
+                <div style={{ color:'#607D8B', fontSize:13, fontWeight:600 }}>No more sessions today.</div>
               ) : (
                 <div style={{ display:'grid', gap:8 }}>
-                  {upcomingNext3.map(s=>{
+                  {sessionsRemainingToday.map(s=>{
                     const { background, color } = getStatusStyles(s.status);
                     return (
                       <div key={s.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:10, border:'1px solid rgba(0,0,0,0.07)', background:'white' }}>
                         <div style={{ width:4, borderRadius:999, alignSelf:'stretch', background:'#FF7043', flexShrink:0 }}/>
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ fontSize:13, fontWeight:800, color:'#112033', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.client||'Client'}</div>
-                          <div style={{ fontSize:11, color:'#607D8B' }}>{s.date} · {s.time||'—'}</div>
+                          <div style={{ fontSize:11, color:'#607D8B' }}>{s.time||'—'} · {s.type||'Session'}</div>
                         </div>
                         <span style={{ fontSize:11, background, color, padding:'2px 8px', borderRadius:999, fontWeight:700, flexShrink:0 }}>{s.status||'Scheduled'}</span>
                       </div>
@@ -403,7 +486,6 @@ export default function CoachingDashboardPage() {
             </div>
           </section>
 
-          {/* 5. Clients snapshot */}
           <section style={{ ...GLASS, padding:16 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
               <span style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', ...ORANGE_HEADING_LIFT }}>Clients</span>
@@ -433,7 +515,6 @@ export default function CoachingDashboardPage() {
             </div>
           </section>
 
-          {/* 6. CSAT Pulse + Sponsored side by side */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:GAP }}>
             <section style={{ ...GLASS, padding:12 }}>
               <div style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', marginBottom:8, ...ORANGE_HEADING_LIFT }}>CSAT Pulse</div>
@@ -446,10 +527,10 @@ export default function CoachingDashboardPage() {
                       <span style={{ fontSize:24, fontWeight:900, color:'#112033' }}>{avgScore}</span>
                       <span style={{ fontSize:12, color:'#90A4AE' }}>/5</span>
                     </div>
-                    <div style={{ fontSize:11, color:'#607D8B', textAlign:'center' }}>{totalResponses} response{totalResponses!==1?'s':''}</div>
+                    <div style={{ fontSize:11, color:'#607D8B', textAlign:'center' }}>Based on {totalResponses} {totalResponses!==1?'responses':'response'}</div>
                     <div style={{ textAlign:'right' }}>
                       <Link href="/dashboard/coaching/feedback" style={{ color:'#FF7043', fontWeight:700, fontSize:12, textDecoration:'none' }}>
-                        Open →
+                        Open feedback
                       </Link>
                     </div>
                   </div>
@@ -461,7 +542,6 @@ export default function CoachingDashboardPage() {
             </section>
           </div>
 
-          {/* 7. Docs & Tools */}
           <section style={{ ...GLASS, padding:16 }}>
             <div style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', marginBottom:10, ...ORANGE_HEADING_LIFT }}>Docs & Tools</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
@@ -488,7 +568,7 @@ export default function CoachingDashboardPage() {
     );
   }
 
-  // ── DESKTOP (original, touched only for requested UI refinements) ─────────
+  // ── DESKTOP ───────────────────────────────────────────────────────────────
   const greeting = getTimeGreeting();
   return (
     <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="overview" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
@@ -543,10 +623,103 @@ export default function CoachingDashboardPage() {
           </Section>
 
           <aside style={{ gridColumn:'2/3', gridRow:'1/4', display:'flex', flexDirection:'column', gap:GAP, alignSelf:'stretch', padding:0, boxSizing:'border-box' }}>
-            <div style={{ flex:2, minHeight:180 }}>
+            <div style={{ flex:'0 0 auto', minHeight:180 }}>
               <RightRailPlacementManager slot="right_rail_1" />
             </div>
-            <div style={{ ...GLASS, padding:12, flex:'0 0 auto' }}>
+
+            <section style={{ ...GLASS, padding:12, flex:'1 1 auto', minHeight:176 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                <div style={{ fontSize:15, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', ...ORANGE_HEADING_LIFT }}>Upcoming Sessions</div>
+                <Link href="/dashboard/coaching/sessions" style={{ color:'#FF7043', fontWeight:800, fontSize:12, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>
+                  View all
+                </Link>
+              </div>
+
+              {loading ? (
+                <div style={{ ...WHITE_CARD, padding:12, color:'#90A4AE', fontSize:13 }}>Loading sessions…</div>
+              ) : sessionsRemainingToday.length===0 ? (
+                <div style={{ ...WHITE_CARD, padding:12, color:'#90A4AE', fontSize:13 }}>No more sessions today.</div>
+              ) : (
+                <div
+                  ref={upcomingRailScrollRef}
+                  style={{
+                    ...WHITE_CARD,
+                    padding:10,
+                    maxHeight:112,
+                    overflowY:'auto',
+                    display:'grid',
+                    gap:8,
+                    scrollBehavior:'smooth',
+                    scrollbarWidth:'none',
+                    msOverflowStyle:'none'
+                  }}
+                >
+                  {sessionsRemainingToday.map(s => {
+                    const { background, color } = getStatusStyles(s.status);
+                    return (
+                      <div key={s.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', border:'1px solid #eee', borderRadius:8, padding:'8px 10px', background:'white', gap:10 }}>
+                        <span style={{ fontWeight:700, minWidth:48, color:'#112033', fontSize:12 }}>{s.time||'—'}</span>
+                        <div style={{ display:'grid', gap:2, flex:1, minWidth:0 }}>
+                          <span style={{ color:'#455A64', fontSize:12, fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.client||'Client'}</span>
+                          <span style={{ color:'#90A4AE', fontSize:11, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.type||'Session'}</span>
+                        </div>
+                        <span style={{ fontSize:11, background, color, padding:'4px 8px', borderRadius:999, whiteSpace:'nowrap' }}>{s.status||'Scheduled'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </aside>
+
+          <div style={{ gridColumn:'1/-1', gridRow:'4', display:'grid',
+            gridTemplateColumns:'minmax(0,6fr) minmax(0,4fr) minmax(0,2fr)',
+            gap:GAP, marginLeft:-252, boxSizing:'border-box', minWidth:0 }}>
+
+            <Section
+              title="Clients"
+              action={<Link href="/dashboard/coaching/clients" style={{ color:'#FF7043', fontWeight:800, fontSize:13, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>View all</Link>}
+            >
+              {loading ? (
+                <div style={{ color:'#90A4AE', fontSize:14, padding:16, background:'white', borderRadius:10, border:'1px solid #eee' }}>Loading clients…</div>
+              ) : clientsPreview.length===0 ? (
+                <div style={{ padding:16, background:'white', borderRadius:10, border:'1px solid #eee', color:'#90A4AE', fontSize:14 }}>No clients yet.</div>
+              ) : (
+                <div style={{ overflowX:'auto' }}>
+                  <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:0, background:'white', border:'1px solid #eee', borderRadius:10, overflow:'hidden' }}>
+                    <thead>
+                      <tr style={{ background:'#FAFAFA' }}>
+                        <Th>Name</Th>
+                        <Th>Status</Th>
+                        <Th>Next Session</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clientsPreview.map(c=>{
+                        const {background,color}=getStatusStyles(c.status);
+                        return (
+                          <tr key={c.id} style={{ borderTop:'1px solid #eee' }}>
+                            <Td strong>{c.name}</Td>
+                            <Td><span style={{ fontSize:12,background,color,padding:'4px 8px',borderRadius:999 }}>{c.status}</span></Td>
+                            <Td>{c.nextSession?c.nextSession.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—'}</Td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Section>
+
+            <Section title="Docs & Tools">
+              <div style={grid3}>
+                <Card title="Templates & Guides" />
+                <Card title="Resource Library" />
+                <Card title="Announcements" />
+              </div>
+            </Section>
+
+            <section style={{ ...GLASS, padding:12 }}>
               <div style={{ fontSize:15, fontWeight:900, marginBottom:8, color:'#0F172A', lineHeight:1.25, letterSpacing:'-0.01em' }}>CSAT Pulse</div>
               {csatError ? <div style={{ color:'#C62828', fontSize:12 }}>{csatError}</div> : (
                 <div style={{ ...WHITE_CARD, padding:12, display:'grid', gap:6 }}>
@@ -560,76 +733,7 @@ export default function CoachingDashboardPage() {
                   </div>
                 </div>
               )}
-            </div>
-          </aside>
-
-          <div style={{ gridColumn:'1/-1', gridRow:'4', display:'grid',
-            gridTemplateColumns:'minmax(0,6fr) minmax(0,4fr) minmax(0,2fr)',
-            gap:GAP, marginLeft:-252, boxSizing:'border-box', minWidth:0 }}>
-
-            <Section title="Clients">
-              {loading ? (
-                <div style={{ color:'#90A4AE', fontSize:14, padding:16, background:'white', borderRadius:10, border:'1px solid #eee' }}>Loading clients…</div>
-              ) : clientsPreview.length===0 ? (
-                <div style={{ padding:16, background:'white', borderRadius:10, border:'1px solid #eee', color:'#90A4AE', fontSize:14 }}>No clients yet.</div>
-              ) : (
-                <>
-                  <div style={{ overflowX:'auto' }}>
-                    <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:0, background:'white', border:'1px solid #eee', borderRadius:10, overflow:'hidden' }}>
-                      <thead><tr style={{ background:'#FAFAFA' }}><Th>Name</Th><Th>Status</Th><Th>Next Session</Th></tr></thead>
-                      <tbody>
-                        {clientsPreview.map(c=>{
-                          const {background,color}=getStatusStyles(c.status);
-                          return (
-                            <tr key={c.id} style={{ borderTop:'1px solid #eee' }}>
-                              <Td strong>{c.name}</Td>
-                              <Td><span style={{ fontSize:12,background,color,padding:'4px 8px',borderRadius:999 }}>{c.status}</span></Td>
-                              <Td>{c.nextSession?c.nextSession.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—'}</Td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div style={{ textAlign:'right', marginTop:10 }}>
-                    <Link href="/dashboard/coaching/clients" style={{ color:'#FF7043', fontWeight:800, fontSize:13, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>View all clients</Link>
-                  </div>
-                </>
-              )}
-            </Section>
-
-            <Section title="Docs & Tools">
-              <div style={grid3}>
-                <Card title="Templates & Guides" />
-                <Card title="Resource Library" />
-                <Card title="Announcements" />
-              </div>
-            </Section>
-
-            <Section title="Upcoming Sessions"
-              action={<Link href="/dashboard/coaching/sessions" style={{ color:'#FF7043', fontWeight:700, fontSize:13 }}>View schedule</Link>}>
-              {loading ? (
-                <div style={{ color:'#90A4AE', fontSize:14 }}>Loading…</div>
-              ) : upcomingNext3.length===0 ? (
-                <div style={{ color:'#607D8B', fontSize:14, fontWeight:600 }}>No upcoming sessions yet.</div>
-              ) : (
-                <ul style={{ listStyle:'none', padding:0, margin:0, display:'grid', gap:8 }}>
-                  {upcomingNext3.map(s=>{
-                    const {background,color}=getStatusStyles(s.status);
-                    return (
-                      <li key={s.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', border:'1px solid #eee', borderRadius:8, padding:'8px 10px', background:'white', gap:10 }}>
-                        <span style={{ fontWeight:600, minWidth:72 }}>{s.time||'—'}</span>
-                        <div style={{ display:'grid', gap:2, flex:1 }}>
-                          <span style={{ color:'#455A64' }}>{s.client||'Client'}</span>
-                          <span style={{ color:'#90A4AE', fontSize:12 }}>{s.type||'Session'}</span>
-                        </div>
-                        <span style={{ fontSize:12, background, color, padding:'4px 8px', borderRadius:999, whiteSpace:'nowrap' }}>{s.status||'Scheduled'}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </Section>
+            </section>
           </div>
         </div>
       </div>
