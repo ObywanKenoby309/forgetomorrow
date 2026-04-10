@@ -9,12 +9,15 @@ import CoachingTitleCard from '@/components/coaching/CoachingTitleCard';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import SessionsModule from '@/components/coaching/modules/SessionsModule';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
+import { useRouter } from 'next/router';
 
 const GAP = 16;
 const RIGHT_COL_WIDTH = 280;
 
 export default function CoachingSessionsPage() {
   const greeting = getTimeGreeting();
+  const router = useRouter();
+  const initialTab = router.query.tab === 'requests' ? 'requests' : 'agenda';
 
   return (
     <CoachingLayout
@@ -47,7 +50,7 @@ export default function CoachingSessionsPage() {
           </aside>
 
           <div style={{ gridColumn: '1/2', gridRow: '2' }}>
-            <SessionsModule />
+            <SessionsModule initialTab={initialTab} />
           </div>
 
         </div>

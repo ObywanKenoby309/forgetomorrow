@@ -80,16 +80,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const appt = await prisma.appointmentRequest.create({
-      data: {
-        coachId,
-        requesterId,
-        spotlightId,
-        preferredSlots,
-        timezone,
-        message: message?.trim() || null,
-        status: 'PENDING',
-      },
+    // Create ContactRequest + AppointmentRequest atomically
+    const { appt } = await prisma.$transaction(async (tx) => {
+      // Upsert ContactRequest — COACHING_REQUEST type
+      let contactRequest = await tx.contactRequest.findFirst({
+        where: { fromUserId: requesterId, toUserId: coachId },
+      });
+      if (!contactRequest) {
+        contactRequest = await tx.contactRequest.create({
+          data: {
+            fromUserId: requesterId,
+            toUserId:   coachId,
+            status:     'PENDING',
+            type:       'COACHING_REQUEST',
+          },
+        });
+      }
+
+      const appt = await tx.appointmentRequest.create({
+        data: {
+          coachId,
+          requesterId,
+          spotlightId,
+          preferredSlots,
+          timezone,
+          message:          message?.trim() || null,
+          status:           'PENDING',
+          contactRequestId: contactRequest.id,
+        },
+      });
+
+      return { appt, contactRequest };
     });
 
     // ── Notify coach (wrapped in try/catch — must never crash the request) ──
@@ -110,7 +131,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           category:   'CALENDAR',
           title:      'New session request',
           body:       `${requesterName} has requested a coaching session with you.`,
-          entityType: 'COACHING_SESSION',
+          entityType: 'APPOINTMENT_REQUEST',
           entityId:   appt.id,
           dedupeKey:  `appointment_request_${appt.id}`,
           metadata:   { actionUrl: '/dashboard/coaching/sessions', appointmentRequestId: appt.id },

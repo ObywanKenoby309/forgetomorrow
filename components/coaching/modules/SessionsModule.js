@@ -5,10 +5,13 @@
 // Used by:
 //   - pages/dashboard/coaching/client-hub-update.js (inline in hub)
 //   - pages/dashboard/coaching/sessions.js          (thin page wrapper)
+//
+// Tabs: Agenda | Appointment Requests
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import CoachSessionEditor from '@/components/calendar/CoachSessionEditor';
+import AppointmentRequestsModule from '@/components/coaching/modules/AppointmentRequestsModule';
 
 const API_URL = '/api/coaching/sessions';
 
@@ -96,7 +99,8 @@ function TypePill({ text }) {
 }
 
 // ─── Module ───────────────────────────────────────────────────────────────────
-export default function SessionsModule() {
+export default function SessionsModule({ initialTab = 'agenda' }) {
+  const [activeTab, setActiveTab]     = useState(initialTab);
   const [typeFilter, setTypeFilter]   = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [sessions, setSessions]       = useState([]);
@@ -217,6 +221,35 @@ export default function SessionsModule() {
     <>
       <div style={{ display: 'grid', gap: 14 }}>
 
+        {/* Tab bar */}
+        <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid rgba(0,0,0,0.08)', paddingBottom: 0 }}>
+          {[
+            { id: 'agenda',   label: 'Agenda' },
+            { id: 'requests', label: 'Appointment Requests' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                padding: '9px 18px', fontSize: 13, fontWeight: 700,
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit', borderBottom: activeTab === tab.id ? '2px solid #FF7043' : '2px solid transparent',
+                color: activeTab === tab.id ? '#FF7043' : '#78909C',
+                marginBottom: -2, transition: 'color 0.15s',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Appointment Requests tab */}
+        {activeTab === 'requests' && <AppointmentRequestsModule />}
+
+        {/* Agenda tab */}
+        {activeTab === 'agenda' && <>
+
         {/* Filters + actions */}
         <div style={{ ...GLASS, padding: '14px 16px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) auto auto', gap: 12, alignItems: 'center' }}>
@@ -289,6 +322,7 @@ export default function SessionsModule() {
             </div>
           )}
         </div>
+        </>}
       </div>
 
       {editorOpen && (

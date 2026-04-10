@@ -517,13 +517,14 @@ model AppointmentRequest {
   preferredSlots Json   // array of ISO datetime strings, max 3
   timezone     String
   message      String?
-  status       String   @default("PENDING") // PENDING | CONFIRMED | DECLINED | RESCHEDULED
-  suggestedAt  DateTime? // coach counter-proposal
-  coachNotes   String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  coach        User     @relation("AppointmentRequestsAsCoach",     fields: [coachId],     references: [id], onDelete: Cascade)
-  requester    User     @relation("AppointmentRequestsAsRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  status            String   @default("PENDING") // PENDING | CONFIRMED | DECLINED | RESCHEDULED
+  suggestedAt       DateTime?
+  coachNotes        String?
+  contactRequestId  String?  // links to the ContactRequest created alongside this booking
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  coach             User     @relation("AppointmentRequestsAsCoach",     fields: [coachId],     references: [id], onDelete: Cascade)
+  requester         User     @relation("AppointmentRequestsAsRequester", fields: [requesterId], references: [id], onDelete: Cascade)
 
   @@index([coachId])
   @@index([requesterId])
@@ -668,6 +669,7 @@ model ContactRequest {
   fromUserId String
   toUserId   String
   status     ContactRequestStatus @default(PENDING)
+  type       String               @default("GENERAL") // GENERAL | COACHING_REQUEST
   createdAt  DateTime             @default(now())
   updatedAt  DateTime             @updatedAt
   fromUser   User                 @relation("UserContactRequestsFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
@@ -1793,6 +1795,7 @@ enum NotificationEntityType {
   APPLICATION
   CALENDAR_ITEM
   COACHING_SESSION
+  APPOINTMENT_REQUEST
 }
 
 enum AiBuddyMode {
