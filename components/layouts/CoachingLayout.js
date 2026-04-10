@@ -1,3 +1,4 @@
+// components/layouts/CoachingLayout.js
 import React, { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
@@ -35,7 +36,6 @@ export default function CoachingLayout({
   employee = false,
   department = '',
   rightVariant = 'dark',
-
   contentFullBleed = false,
 }) {
   const defaultFromNav =
@@ -54,8 +54,9 @@ export default function CoachingLayout({
   const hasHeader = Boolean(header);
 
   const [isMobile, setIsMobile] = useState(null);
-
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+  const [profileSlug, setProfileSlug] = useState('');
+
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
   useEffect(() => {
@@ -65,6 +66,43 @@ export default function CoachingLayout({
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadProfileSlug = async () => {
+      try {
+        const res = await fetch('/api/profile/details', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!alive) return;
+
+        const nextSlug =
+          data?.user?.slug ||
+          data?.details?.slug ||
+          data?.slug ||
+          '';
+
+        if (nextSlug) {
+          setProfileSlug(String(nextSlug));
+        }
+      } catch {
+        // no-op
+      }
+    };
+
+    loadProfileSlug();
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const isMobileReady = isMobile !== null;
@@ -174,6 +212,7 @@ export default function CoachingLayout({
                 active={activeNav}
                 employee={employee}
                 department={department}
+                profileSlug={profileSlug}
               />
             )}
           </aside>
@@ -259,6 +298,7 @@ export default function CoachingLayout({
                 active={activeNav}
                 employee={employee}
                 department={department}
+                profileSlug={profileSlug}
               />
             )}
           </div>
