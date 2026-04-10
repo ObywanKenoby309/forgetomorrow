@@ -154,7 +154,7 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
       setPos({
-        top:   rect.bottom + window.scrollY + 4,
+        top:   rect.bottom + 4,
         right: window.innerWidth - rect.right,
       });
     }
@@ -228,7 +228,7 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
 
       {open && (
         <div style={{
-          position: 'absolute',
+          position: 'fixed',
           top: pos.top,
           right: pos.right,
           zIndex: 9999,
