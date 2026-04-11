@@ -132,8 +132,10 @@ export default function ClientProfileUpdatePage() {
       const listData = await listRes.json();
 
       const match = (listData.clients || []).find(
-        (c) => (c.email || '').toLowerCase() === emailParam.toLowerCase()
-      );
+  c =>
+    (c.email || '').toLowerCase() === emailParam.toLowerCase() ||
+    String(c.id) === emailParam
+);
 
       if (!match) {
         setError('Client not found.');
