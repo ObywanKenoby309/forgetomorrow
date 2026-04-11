@@ -220,7 +220,15 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
           boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
           minWidth: 160, overflow: 'hidden',
         }}>
-          {client.slug     && menuItem('View Profile', () => { window.location.href = `/profile/${client.slug}`; })}
+          menuItem('View Profile', () => {
+  if (client.clientId) {
+    // Forge user → go to platform profile
+    window.location.href = `/profile/${client.clientId}`;
+  } else {
+    // External client → go to coaching profile page
+    window.location.href = `/dashboard/coaching/clients/${client.id}`;
+  }
+})
           {client.clientId && menuItem('Message', () => onMessage(client.clientId))}
           {client.clientId && menuItem('Report',  handleReport)}
           {client.clientId && menuItem('Block',   handleBlock)}
