@@ -8,6 +8,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 const GLASS = {
   borderRadius: 14,
@@ -136,6 +137,7 @@ function statusBadgeStyle(s) {
 }
 
 function ActionsDropdown({ client, onDelete, onMessage }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = React.useRef(null);
 
@@ -159,7 +161,9 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
         body: JSON.stringify({ targetUserId: client.clientId, reason: reason.trim(), source: 'client-hub', contextType: 'client' }),
       });
       alert('Report submitted. Our team will review it.');
-    } catch { alert('Could not submit report. Please try again.'); }
+    } catch {
+      alert('Could not submit report. Please try again.');
+    }
   }
 
   async function handleBlock() {
@@ -172,7 +176,9 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
         body: JSON.stringify({ targetUserId: client.clientId }),
       });
       alert(`${client.name} has been blocked.`);
-    } catch { alert('Could not block this user. Please try again.'); }
+    } catch {
+      alert('Could not block this user. Please try again.');
+    }
   }
 
   const menuItem = (label, onClick, danger = false) => (
@@ -180,10 +186,17 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
       type="button"
       onClick={() => { setOpen(false); onClick(); }}
       style={{
-        display: 'block', width: '100%', textAlign: 'left',
-        padding: '8px 14px', fontSize: 13, background: 'none', border: 'none',
-        cursor: 'pointer', color: danger ? '#C62828' : '#37474F',
-        fontFamily: 'inherit', fontWeight: danger ? 700 : 500,
+        display: 'block',
+        width: '100%',
+        textAlign: 'left',
+        padding: '8px 14px',
+        fontSize: 13,
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: danger ? '#C62828' : '#37474F',
+        fontFamily: 'inherit',
+        fontWeight: danger ? 700 : 500,
         borderTop: danger ? '1px solid rgba(0,0,0,0.06)' : 'none',
       }}
       onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
@@ -199,39 +212,51 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
         type="button"
         onClick={() => setOpen(o => !o)}
         style={{
-          background: 'white', color: '#FF7043',
+          background: 'white',
+          color: '#FF7043',
           border: '1px solid rgba(255,112,67,0.4)',
-          borderRadius: 8, padding: '5px 12px',
-          fontSize: 12, fontWeight: 700, cursor: 'pointer',
-          fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4,
+          borderRadius: 8,
+          padding: '5px 12px',
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
         }}
       >
         Actions
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M3 4.5l3 3 3-3" stroke="#FF7043" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3 4.5l3 3 3-3" stroke="#FF7043" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
       {open && (
-        <div style={{
-          position: 'absolute', right: 0, top: 'calc(100% + 4px)',
-          zIndex: 9999, background: 'white',
-          border: '1px solid rgba(0,0,0,0.1)', borderRadius: 10,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
-          minWidth: 160, overflow: 'hidden',
-        }}>
-          menuItem('View Profile', () => {
-  if (client.clientId) {
-    // Forge user → go to platform profile
-    window.location.href = `/profile/${client.clientId}`;
-  } else {
-    // External client → go to coaching profile page
-    window.location.href = `/dashboard/coaching/clients/${client.id}`;
-  }
-})
+        <div
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: 'calc(100% + 4px)',
+            zIndex: 9999,
+            background: 'white',
+            border: '1px solid rgba(0,0,0,0.1)',
+            borderRadius: 10,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
+            minWidth: 160,
+            overflow: 'hidden',
+          }}
+        >
+          {menuItem('View Profile', () => {
+            if (client.clientId) {
+              router.push(`/profile/${client.clientId}`);
+            } else {
+              router.push(`/dashboard/coaching/clients/${client.id}`);
+            }
+          })}
           {client.clientId && menuItem('Message', () => onMessage(client.clientId))}
-          {client.clientId && menuItem('Report',  handleReport)}
-          {client.clientId && menuItem('Block',   handleBlock)}
+          {client.clientId && menuItem('Report', handleReport)}
+          {client.clientId && menuItem('Block', handleBlock)}
           {menuItem('Delete client', () => onDelete(client.id), true)}
         </div>
       )}
@@ -240,34 +265,40 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
 }
 
 export default function ClientsModule() {
-  const [search, setSearch]   = useState('');
-  const [status, setStatus]   = useState('All');
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('All');
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modal state
-  const [modalOpen, setModalOpen]             = useState(false);
-  const [modalMode, setModalMode]             = useState('internal');
-  const [saving, setSaving]                   = useState(false);
-  const [contactQuery, setContactQuery]       = useState('');
-  const [contactResults, setContactResults]   = useState([]);
-  const [contactLoading, setContactLoading]   = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('internal');
+  const [saving, setSaving] = useState(false);
+  const [contactQuery, setContactQuery] = useState('');
+  const [contactResults, setContactResults] = useState([]);
+  const [contactLoading, setContactLoading] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
   const [newClientStatus, setNewClientStatus] = useState('Active');
-  const [extName, setExtName]                 = useState('');
-  const [extEmail, setExtEmail]               = useState('');
-  const [extStatus, setExtStatus]             = useState('Active');
+  const [extName, setExtName] = useState('');
+  const [extEmail, setExtEmail] = useState('');
+  const [extStatus, setExtStatus] = useState('Active');
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
         const res = await fetch('/api/coaching/clients');
-        if (!res.ok) { if (!cancelled) setClients([]); return; }
+        if (!res.ok) {
+          if (!cancelled) setClients([]);
+          return;
+        }
         const data = await res.json();
         if (!cancelled) setClients(Array.isArray(data.clients) ? data.clients : []);
-      } catch { if (!cancelled) setClients([]); }
-      finally  { if (!cancelled) setLoading(false); }
+      } catch {
+        if (!cancelled) setClients([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     load();
     return () => { cancelled = true; };
@@ -275,7 +306,7 @@ export default function ClientsModule() {
 
   const filtered = useMemo(() => clients.filter((c) => {
     const bySearch = !search
-      || (c.name  || '').toLowerCase().includes(search.toLowerCase())
+      || (c.name || '').toLowerCase().includes(search.toLowerCase())
       || (c.email || '').toLowerCase().includes(search.toLowerCase());
     const byStatus = status === 'All' ? true : c.status === status;
     return bySearch && byStatus;
@@ -286,9 +317,14 @@ export default function ClientsModule() {
     if (!confirm('Delete this client? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/coaching/clients/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      if (!res.ok) { alert('Could not delete client. Please try again.'); return; }
+      if (!res.ok) {
+        alert('Could not delete client. Please try again.');
+        return;
+      }
       setClients((prev) => prev.filter((c) => c.id !== id));
-    } catch { alert('Could not delete client. Please try again.'); }
+    } catch {
+      alert('Could not delete client. Please try again.');
+    }
   };
 
   const startCoachThread = async (targetUserId) => {
@@ -300,54 +336,93 @@ export default function ClientsModule() {
         body: JSON.stringify({ channel: 'coach', targetUserId }),
       });
       const json = await res.json();
-      if (!res.ok) { alert(json.error || 'Could not start conversation.'); return; }
+      if (!res.ok) {
+        alert(json.error || 'Could not start conversation.');
+        return;
+      }
       if (json.conversationId) window.location.href = `/coaching/messaging?conversationId=${json.conversationId}`;
-    } catch { alert('Could not start conversation.'); }
+    } catch {
+      alert('Could not start conversation.');
+    }
   };
 
   const searchContacts = async (query) => {
     setContactQuery(query);
     setSelectedContact(null);
-    if (!query.trim()) { setContactResults([]); return; }
+    if (!query.trim()) {
+      setContactResults([]);
+      return;
+    }
     try {
       setContactLoading(true);
       const res = await fetch(`/api/contacts/search?q=${encodeURIComponent(query.trim())}`);
-      if (!res.ok) { setContactResults([]); return; }
+      if (!res.ok) {
+        setContactResults([]);
+        return;
+      }
       const data = await res.json();
       setContactResults(Array.isArray(data.contacts) ? data.contacts : (data.results || []));
-    } catch { setContactResults([]); }
-    finally { setContactLoading(false); }
+    } catch {
+      setContactResults([]);
+    } finally {
+      setContactLoading(false);
+    }
   };
 
   const openAddClientModal = () => {
     setModalMode('internal');
-    setContactQuery(''); setContactResults([]); setSelectedContact(null);
-    setNewClientStatus('Active'); setExtName(''); setExtEmail(''); setExtStatus('Active');
+    setContactQuery('');
+    setContactResults([]);
+    setSelectedContact(null);
+    setNewClientStatus('Active');
+    setExtName('');
+    setExtEmail('');
+    setExtStatus('Active');
     setModalOpen(true);
   };
 
   const handleSaveClient = async (e) => {
     e.preventDefault();
-    if (modalMode === 'internal' && !selectedContact) { alert('Please select a contact.'); return; }
-    if (modalMode === 'external' && !extName.trim())  { alert('Please enter a name.'); return; }
+    if (modalMode === 'internal' && !selectedContact) {
+      alert('Please select a contact.');
+      return;
+    }
+    if (modalMode === 'external' && !extName.trim()) {
+      alert('Please enter a name.');
+      return;
+    }
     try {
       setSaving(true);
       const payload = modalMode === 'internal'
         ? { mode: 'internal', status: newClientStatus, contactUserId: selectedContact.id, contactId: selectedContact.contactId }
         : { mode: 'external', status: extStatus, name: extName.trim(), email: extEmail.trim() || null };
-      const res  = await fetch('/api/coaching/clients', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const res = await fetch('/api/coaching/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) { alert(json.error || 'Could not add client.'); return; }
+      if (!res.ok) {
+        alert(json.error || 'Could not add client.');
+        return;
+      }
       const created = json.client || json;
       setClients((prev) => {
         if (!created?.id) return prev;
         const idx = prev.findIndex((c) => c.id === created.id);
-        if (idx >= 0) { const copy = [...prev]; copy[idx] = created; return copy; }
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy[idx] = created;
+          return copy;
+        }
         return [...prev, created];
       });
       setModalOpen(false);
-    } catch { alert('Could not add client. Please try again.'); }
-    finally { setSaving(false); }
+    } catch {
+      alert('Could not add client. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -381,8 +456,6 @@ export default function ClientsModule() {
       `}</style>
 
       <div style={{ display: 'grid', gap: 14, minWidth: 0 }}>
-
-        {/* Filters + Add */}
         <div style={{ ...GLASS, padding: '14px 16px' }}>
           <div className="cm-filter-grid">
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email…" style={inputStyle} />
@@ -398,7 +471,6 @@ export default function ClientsModule() {
           </div>
         </div>
 
-        {/* Client list */}
         <div style={{ ...GLASS, padding: '18px 20px', overflow: 'visible', backdropFilter: 'none', WebkitBackdropFilter: 'none', background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(255,255,255,0.55)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontSize: 18, color: '#FF7043', ...ORANGE_HEADING_LIFT }}>Clients</div>
@@ -409,7 +481,6 @@ export default function ClientsModule() {
             <div style={{ padding: '24px 0', color: '#90A4AE', fontSize: 13 }}>Loading clients…</div>
           ) : (
             <>
-              {/* Desktop table */}
               <div className="cm-table-wrap">
                 <table className="cm-table">
                   <thead>
@@ -446,7 +517,6 @@ export default function ClientsModule() {
                 </table>
               </div>
 
-              {/* Mobile cards */}
               <div className="cm-cards">
                 {filtered.length === 0 ? (
                   <div style={{ padding: 14, color: '#90A4AE', background: 'rgba(255,255,255,0.6)', borderRadius: 10, border: '1px dashed rgba(0,0,0,0.1)', fontSize: 13 }}>
@@ -480,7 +550,6 @@ export default function ClientsModule() {
         </div>
       </div>
 
-      {/* Add Client Modal */}
       {modalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
           <form onSubmit={handleSaveClient} style={{ background: 'white', borderRadius: 14, padding: '22px 24px', width: 'min(440px,95vw)', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 20px 60px rgba(0,0,0,0.18)' }}>
