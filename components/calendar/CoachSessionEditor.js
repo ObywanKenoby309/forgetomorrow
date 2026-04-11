@@ -82,7 +82,32 @@ export default function CoachSessionEditor({
 
       if (!res.ok) throw new Error();
       const data = await res.json();
-      onSaved?.(data.session || data);
+const session = data.session || data;
+
+// 🔥 AUTO-CREATE CLIENT (non-blocking)
+try {
+  await fetch('/api/coaching/clients', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(
+      form.clientType === 'internal'
+        ? {
+            mode: 'internal',
+            contactUserId: form.clientUserId,
+            status: 'Active',
+          }
+        : {
+            mode: 'external',
+            name: form.clientName.trim(),
+            status: 'Active',
+          }
+    ),
+  });
+} catch (err) {
+  console.warn('Client auto-create failed (non-blocking)', err);
+}
+
+onSaved?.(session);
     } catch {
       alert('Save failed');
     } finally {
