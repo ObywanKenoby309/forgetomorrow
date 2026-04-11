@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
 function toSafeArray(value) {
   if (Array.isArray(value)) return value;
@@ -132,10 +133,10 @@ export default function ClientProfileUpdatePage() {
       const listData = await listRes.json();
 
       const match = (listData.clients || []).find(
-  c =>
-    (c.email || '').toLowerCase() === emailParam.toLowerCase() ||
-    String(c.id) === emailParam
-);
+        c =>
+          (c.email || '').toLowerCase() === emailParam.toLowerCase() ||
+          String(c.id) === emailParam
+      );
 
       if (!match) {
         setError('Client not found.');
@@ -351,6 +352,13 @@ export default function ClientProfileUpdatePage() {
   const notes = toSafeArray(client?.coachingNotes);
   const docs = toSafeArray(client?.coachingDocuments);
 
+  const avatarUrl =
+    client?.avatarUrl ||
+    client?.image ||
+    client?.profileImage ||
+    client?.userAvatarUrl ||
+    '';
+
   const recentActivity = useMemo(() => {
     const items = [];
 
@@ -384,12 +392,16 @@ export default function ClientProfileUpdatePage() {
       .slice(0, 8);
   }, [client, sessions, notes]);
 
+  const RightRail = <RightRailPlacementManager slot="right_rail_1" />;
+
   if (loading) {
     return (
       <CoachingLayout
         title="Client Profile Preview | ForgeTomorrow"
         activeNav="clients"
         sidebarInitialOpen={{ coaching: true, seeker: false }}
+        right={RightRail}
+        rightVariant="light"
       >
         <style>{shimmerCSS}</style>
         <div style={{ display: 'grid', gap: 14 }}>
@@ -416,6 +428,8 @@ export default function ClientProfileUpdatePage() {
         title="Client Profile Preview | ForgeTomorrow"
         activeNav="clients"
         sidebarInitialOpen={{ coaching: true, seeker: false }}
+        right={RightRail}
+        rightVariant="light"
       >
         <section className={sectionClasses(true)}>
           <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
@@ -445,6 +459,8 @@ export default function ClientProfileUpdatePage() {
       title={`${client.name} | ForgeTomorrow`}
       activeNav="clients"
       sidebarInitialOpen={{ coaching: true, seeker: false }}
+      right={RightRail}
+      rightVariant="light"
     >
       <style>{`
         ${shimmerCSS}
@@ -494,7 +510,7 @@ export default function ClientProfileUpdatePage() {
                     width: 88,
                     height: 88,
                     borderRadius: '999px',
-                    background: `linear-gradient(135deg, ${avatarBg}, ${avatarDark})`,
+                    background: avatarUrl ? 'transparent' : `linear-gradient(135deg, ${avatarBg}, ${avatarDark})`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -504,9 +520,23 @@ export default function ClientProfileUpdatePage() {
                     boxShadow: `0 4px 16px ${avatarBg}70`,
                     outline: `3px solid ${cfg.ring}50`,
                     outlineOffset: 3,
+                    overflow: 'hidden',
                   }}
                 >
-                  {initials(client.name)}
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={client.name || 'Client avatar'}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                      }}
+                    />
+                  ) : (
+                    initials(client.name)
+                  )}
                 </div>
 
                 <div>

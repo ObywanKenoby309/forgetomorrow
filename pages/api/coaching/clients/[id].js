@@ -1,4 +1,3 @@
-// pages/api/coaching/clients/[id].js
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
@@ -16,7 +15,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid client id' });
   }
 
-  // ── Verify ownership ──────────────────────────────────────────────────────
   const client = await prisma.coachingClient.findFirst({
     where: { id, coachId },
   });
@@ -25,7 +23,6 @@ export default async function handler(req, res) {
     return res.status(404).json({ error: 'Client not found' });
   }
 
-  // ── GET ───────────────────────────────────────────────────────────────────
   if (req.method === 'GET') {
     try {
       const full = await prisma.coachingClient.findUnique({
@@ -48,21 +45,35 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Client not found' });
       }
 
-      // Hydrate display name/email from linked User if internal client
       let displayName = full.name;
       let displayEmail = full.email;
+      let displayAvatarUrl = '';
+      let displaySlug = '';
 
       if (full.clientId) {
         const user = await prisma.user.findUnique({
           where: { id: full.clientId },
-          select: { id: true, name: true, firstName: true, lastName: true, email: true },
+          select: {
+            id: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            slug: true,
+            avatarUrl: true,
+            image: true,
+          },
         });
+
         if (user) {
           displayName =
             user.name ||
             `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
             full.name;
+
           displayEmail = user.email || full.email;
+          displayAvatarUrl = user.avatarUrl || user.image || '';
+          displaySlug = user.slug || '';
         }
       }
 
@@ -71,6 +82,8 @@ export default async function handler(req, res) {
           id: full.id,
           coachId: full.coachId,
           clientId: full.clientId,
+          slug: displaySlug,
+          avatarUrl: displayAvatarUrl,
           name: displayName,
           email: displayEmail,
           status: full.status,
@@ -110,7 +123,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── PUT ───────────────────────────────────────────────────────────────────
   if (req.method === 'PUT') {
     try {
       const body = req.body || {};
@@ -151,7 +163,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── DELETE ────────────────────────────────────────────────────────────────
   if (req.method === 'DELETE') {
     try {
       await prisma.coachingClient.delete({ where: { id } });
