@@ -1,3 +1,4 @@
+// pages/recruiter/pools.js
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
@@ -431,9 +432,8 @@ export default function RecruiterPools() {
     setShowCandidateModal(true);
   }
 
-function openFullProfileFromModal(entryArg) {
+async function openFullProfileFromModal(entryArg) {
   const e = entryArg && typeof entryArg === "object" ? entryArg : modalEntry;
-
   const candidateUserId = String(e?.candidateUserId || "").trim();
 
   if (!candidateUserId) {
@@ -443,14 +443,25 @@ function openFullProfileFromModal(entryArg) {
     return;
   }
 
-  setSelectedCandidate({
-    id: candidateUserId,
-    name: e.name,
-    headline: e.headline,
-    email: e.email,
-  });
+  setSaving(true);
+  setError("");
 
-  setShowProfileModal(true);
+  try {
+    const res = await fetch(`/api/recruiter/candidates/${encodeURIComponent(candidateUserId)}`);
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data?.error || "Failed to load candidate profile.");
+    }
+
+    setSelectedCandidate(data?.candidate || null);
+    setShowProfileModal(true);
+  } catch (e) {
+    console.error("[Pools] openFullProfileFromModal error:", e);
+    setError(String(e?.message || e || "Failed to load candidate profile."));
+  } finally {
+    setSaving(false);
+  }
 }
 
   async function savePoolEntryEdits(payload) {

@@ -422,26 +422,37 @@ export default function TalentPoolsModule() {
     setShowCandidateModal(true);
   }
 
-  function openFullProfileFromModal(entryArg) {
-    const e = entryArg && typeof entryArg === "object" ? entryArg : modalEntry;
-    const candidateUserId = String(e?.candidateUserId || "").trim();
+  async function openFullProfileFromModal(entryArg) {
+  const e = entryArg && typeof entryArg === "object" ? entryArg : modalEntry;
+  const candidateUserId = String(e?.candidateUserId || "").trim();
 
-    if (!candidateUserId) {
-      setError(
-        "This pool entry is missing an internal candidate ID. Cannot open Candidate Profile."
-      );
-      return;
+  if (!candidateUserId) {
+    setError(
+      "This pool entry is missing an internal candidate ID. Cannot open Candidate Profile."
+    );
+    return;
+  }
+
+  setSaving(true);
+  setError("");
+
+  try {
+    const res = await fetch(`/api/recruiter/candidates/${encodeURIComponent(candidateUserId)}`);
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data?.error || "Failed to load candidate profile.");
     }
 
-    setSelectedCandidate({
-      id: candidateUserId,
-      name: e.name,
-      headline: e.headline,
-      email: e.email,
-    });
-
+    setSelectedCandidate(data?.candidate || null);
     setShowProfileModal(true);
+  } catch (e) {
+    console.error("[Pools] openFullProfileFromModal error:", e);
+    setError(String(e?.message || e || "Failed to load candidate profile."));
+  } finally {
+    setSaving(false);
   }
+}
 
   async function savePoolEntryEdits(payload) {
     const poolId = String(selectedPoolId || "").trim();

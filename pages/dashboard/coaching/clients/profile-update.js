@@ -8,7 +8,65 @@ import RightRailPlacementManager from '@/components/ads/RightRailPlacementManage
 function toSafeArray(value) {
   if (Array.isArray(value)) return value;
   if (!value) return [];
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+    return trimmed.split(',').map((v) => v.trim()).filter(Boolean);
+  }
   return [];
+}
+
+function toStringArray(value) {
+  return toSafeArray(value)
+    .map((item) => {
+      if (typeof item === 'string') return item.trim();
+      if (item && typeof item === 'object') {
+        return String(item.label || item.name || item.value || item.title || '').trim();
+      }
+      return String(item || '').trim();
+    })
+    .filter(Boolean);
+}
+
+function toEducationObjects(value) {
+  return toSafeArray(value)
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      return {
+        school: String(item.school || item.name || '').trim(),
+        degree: String(item.degree || '').trim(),
+        field: String(item.field || item.study || '').trim(),
+        startYear: String(item.startYear || '').trim(),
+        endYear: String(item.endYear || '').trim(),
+      };
+    })
+    .filter(Boolean);
+}
+
+function getExperienceList(value) {
+  return toSafeArray(value)
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const highlights = toStringArray(
+        item.highlights || item.bullets || item.description || item.details || []
+      );
+      return {
+        title: String(item.title || item.role || item.jobTitle || '').trim(),
+        company: String(item.company || item.employer || '').trim(),
+        range: String(
+          item.range ||
+            [item.startDate || item.start || item.from, item.endDate || item.end || item.to]
+              .filter(Boolean)
+              .join(' - ')
+        ).trim(),
+        highlights,
+      };
+    })
+    .filter(Boolean);
 }
 
 function avatarColor(name = '') {
@@ -449,10 +507,72 @@ export default function ClientProfileUpdatePage() {
   const [avatarBg, avatarDark] = avatarColor(client.name);
   const cfg = STATUS[form.status] || defaultStatus;
 
+  const profileHref =
+    (typeof form.profileUrl === 'string' && form.profileUrl.trim()) ||
+    (typeof client.profileUrl === 'string' && client.profileUrl.trim()) ||
+    (typeof client.profileSlug === 'string' && client.profileSlug.trim()
+      ? `/profile/${client.profileSlug.trim()}`
+      : '') ||
+    (client.clientId ? `/member-profile?userId=${client.clientId}` : '');
+
   const summaryText =
-    form.notes?.trim() ||
-    notes[0]?.body ||
-    'This client profile is ready for coach planning, progress tracking, and session continuity.';
+  client.summary?.trim?.() ||
+  client.aboutMe?.trim?.() ||
+  client.profileSummary?.trim?.() ||
+  client.headline?.trim?.() ||
+  form.notes?.trim() ||
+  notes[0]?.body ||
+  'This client profile is ready for coach planning, progress tracking, and session continuity.';
+
+  const skillsList = toStringArray(
+    client.skills ||
+      client.skillsJson ||
+      client.skillsProfile ||
+      client.topSkills ||
+      client.resumeSkills
+  );
+
+  const experienceList = getExperienceList(
+    client.experience || client.workHistory || client.profileExperience || client.resumeExperience
+  );
+
+  const educationList = toEducationObjects(
+    client.education || client.educationJson || client.profileEducation
+  );
+
+  const preferredLocations = toStringArray(
+    client.preferredLocations ||
+      client.workPreferences?.preferredLocations ||
+      client.workPreferences?.locations
+  );
+
+  const workStatus =
+    client.workStatus || client.workPreferences?.workStatus || client.workPreferences?.status || '';
+
+  const preferredWorkType =
+    client.preferredWorkType ||
+    client.workPreferences?.preferredWorkType ||
+    client.workPreferences?.workType ||
+    '';
+
+  const willingToRelocate =
+    client.willingToRelocate ??
+    client.workPreferences?.willingToRelocate ??
+    client.workPreferences?.relocate ??
+    '';
+
+  const hasWorkPrefs = Boolean(
+    workStatus || preferredWorkType || preferredLocations.length || String(willingToRelocate || '').trim()
+  );
+
+  const openProfile = () => {
+    if (!profileHref) return;
+    if (/^https?:\/\//i.test(profileHref)) {
+      window.open(profileHref, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    router.push(profileHref);
+  };
 
   return (
     <CoachingLayout
@@ -582,6 +702,15 @@ export default function ClientProfileUpdatePage() {
                   >
                     Message
                   </button>
+                  {profileHref ? (
+                    <button
+                      type="button"
+                      onClick={openProfile}
+                      className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+                    >
+                      View Profile
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </section>
@@ -589,9 +718,76 @@ export default function ClientProfileUpdatePage() {
             {/* Summary */}
             <section className={sectionClasses(!summaryText?.trim())}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">Summary</div>
-              <div className="text-sm leading-7 text-slate-700 whitespace-pre-line">
-                {summaryText}
-              </div>
+              {summaryText?.trim() ? (
+                <div className="text-sm leading-7 text-slate-700 whitespace-pre-line">
+                  {summaryText}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500">
+                  No profile summary available yet.
+                  <span className="block text-xs text-slate-400 mt-1">
+                    Add profile information or resume data to give the coach better context.
+                  </span>
+                </div>
+              )}
+            </section>
+
+            {/* Experience */}
+            <section className={sectionClasses(experienceList.length === 0)}>
+              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Experience</div>
+              {experienceList.length > 0 ? (
+                <div className="space-y-3">
+                  {experienceList.map((exp, idx) => (
+                    <div key={`${exp.title}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
+                      <div className="font-semibold text-slate-900 break-words">
+                        {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
+                      </div>
+                      {exp.range ? (
+                        <div className="text-slate-500 text-sm mt-1">{exp.range}</div>
+                      ) : null}
+                      {exp.highlights?.length ? (
+                        <ul className="list-disc pl-5 mt-2 space-y-1 text-sm text-slate-700">
+                          {exp.highlights.slice(0, 4).map((item, i) => (
+                            <li key={i}>{item}</li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500">
+                  No experience is available on this client yet.
+                </div>
+              )}
+            </section>
+
+            {/* Education */}
+            <section className={sectionClasses(educationList.length === 0)}>
+              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Education</div>
+              {educationList.length > 0 ? (
+                <div className="space-y-3">
+                  {educationList.map((edu, idx) => (
+                    <div key={`${edu.school}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
+                      <div className="font-semibold text-slate-900 break-words">
+                        {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
+                      </div>
+                      {edu.school ? (
+                        <div className="text-slate-500 text-sm mt-1">{edu.school}</div>
+                      ) : null}
+                      {[edu.startYear, edu.endYear].filter(Boolean).length ? (
+                        <div className="text-slate-400 text-xs mt-1">
+                          {[edu.startYear, edu.endYear].filter(Boolean).join(' – ')}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500">
+                  No education details are available yet.
+                </div>
+              )}
             </section>
 
             {/* Session History */}
@@ -855,6 +1051,76 @@ export default function ClientProfileUpdatePage() {
                   />
                 </div>
               </div>
+            </section>
+
+            {/* Work Preferences */}
+            <section className={sectionClasses(!hasWorkPrefs)}>
+              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
+                Work Preferences
+              </div>
+
+              {hasWorkPrefs ? (
+                <div className="divide-y divide-slate-100">
+                  <MetaRow label="Status" value={workStatus} />
+                  <MetaRow label="Work type" value={preferredWorkType} />
+                  <MetaRow
+                    label="Willing to relocate"
+                    value={
+                      typeof willingToRelocate === 'boolean'
+                        ? willingToRelocate
+                          ? 'Yes'
+                          : 'No'
+                        : String(willingToRelocate || '').trim()
+                    }
+                  />
+                  {preferredLocations.length > 0 ? (
+                    <div className="py-1.5 border-b border-slate-100 last:border-0">
+                      <div className="text-xs text-slate-500 mb-1">Preferred locations</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {preferredLocations.map((loc, idx) => (
+                          <span
+                            key={`${loc}-${idx}`}
+                            className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700"
+                          >
+                            {loc}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500">
+                  No work preferences are available for this client yet.
+                </div>
+              )}
+            </section>
+
+            {/* Skills */}
+            <section className={sectionClasses(skillsList.length === 0)}>
+              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
+                Skills
+              </div>
+              <div className="text-[11px] text-slate-400 mb-3">
+                Read-only profile context for coaching.
+              </div>
+
+              {skillsList.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {skillsList.map((skill, idx) => (
+                    <span
+                      key={`${skill}-${idx}`}
+                      className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500">
+                  No skills are available on this client yet.
+                </div>
+              )}
             </section>
 
             {/* Focus Areas / Plan */}
