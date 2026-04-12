@@ -1,7 +1,7 @@
 // pages/api/coaching/clients/profile/[id].js
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]';
+import { authOptions } from '../../../auth/[...nextauth]';
 
 function safeJsonParse(str) {
   try {
