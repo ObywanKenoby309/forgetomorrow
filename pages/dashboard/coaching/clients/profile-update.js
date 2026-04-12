@@ -161,6 +161,7 @@ export default function ClientProfileUpdatePage() {
   const emailParam = router.query.email ? decodeURIComponent(String(router.query.email)) : '';
 
   const [client, setClient] = useState(null);
+  const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -191,7 +192,7 @@ export default function ClientProfileUpdatePage() {
       const listData = await listRes.json();
 
       const match = (listData.clients || []).find(
-        c =>
+        (c) =>
           (c.email || '').toLowerCase() === emailParam.toLowerCase() ||
           String(c.id) === emailParam
       );
@@ -233,6 +234,24 @@ export default function ClientProfileUpdatePage() {
           : [];
 
       setPlanItems(pinnedPlan);
+
+      if (full?.clientId) {
+        try {
+          const profileRes = await fetch(`/api/coaching/clients/profile/${full.clientId}`);
+          const profileJson = await profileRes.json().catch(() => ({}));
+
+          if (profileRes.ok) {
+            setProfileData(profileJson.profile || null);
+          } else {
+            setProfileData(null);
+          }
+        } catch (profileErr) {
+          console.error('Failed to load profile data:', profileErr);
+          setProfileData(null);
+        }
+      } else {
+        setProfileData(null);
+      }
     } catch (err) {
       console.error('Error loading client:', err);
       setError('Failed to load client.');
@@ -504,61 +523,64 @@ export default function ClientProfileUpdatePage() {
     );
   }
 
+  const source = profileData || client;
   const [avatarBg, avatarDark] = avatarColor(client.name);
   const cfg = STATUS[form.status] || defaultStatus;
 
   const profileHref =
+    (typeof source.profileUrl === 'string' && source.profileUrl.trim()) ||
     (typeof form.profileUrl === 'string' && form.profileUrl.trim()) ||
     (typeof client.profileUrl === 'string' && client.profileUrl.trim()) ||
+    (typeof source.slug === 'string' && source.slug.trim() ? `/profile/${source.slug.trim()}` : '') ||
     (typeof client.profileSlug === 'string' && client.profileSlug.trim()
       ? `/profile/${client.profileSlug.trim()}`
       : '') ||
     (client.clientId ? `/member-profile?userId=${client.clientId}` : '');
 
   const summaryText =
-  client.summary?.trim?.() ||
-  client.aboutMe?.trim?.() ||
-  client.profileSummary?.trim?.() ||
-  client.headline?.trim?.() ||
-  form.notes?.trim() ||
-  notes[0]?.body ||
-  'This client profile is ready for coach planning, progress tracking, and session continuity.';
+    source.summary?.trim?.() ||
+    source.aboutMe?.trim?.() ||
+    source.profileSummary?.trim?.() ||
+    source.headline?.trim?.() ||
+    form.notes?.trim() ||
+    notes[0]?.body ||
+    '';
 
   const skillsList = toStringArray(
-    client.skills ||
-      client.skillsJson ||
-      client.skillsProfile ||
-      client.topSkills ||
-      client.resumeSkills
+    source.skills ||
+      source.skillsJson ||
+      source.skillsProfile ||
+      source.topSkills ||
+      source.resumeSkills
   );
 
   const experienceList = getExperienceList(
-    client.experience || client.workHistory || client.profileExperience || client.resumeExperience
+    source.experience || source.workHistory || source.profileExperience || source.resumeExperience
   );
 
   const educationList = toEducationObjects(
-    client.education || client.educationJson || client.profileEducation
+    source.education || source.educationJson || source.profileEducation
   );
 
   const preferredLocations = toStringArray(
-    client.preferredLocations ||
-      client.workPreferences?.preferredLocations ||
-      client.workPreferences?.locations
+    source.preferredLocations ||
+      source.workPreferences?.preferredLocations ||
+      source.workPreferences?.locations
   );
 
   const workStatus =
-    client.workStatus || client.workPreferences?.workStatus || client.workPreferences?.status || '';
+    source.workStatus || source.workPreferences?.workStatus || source.workPreferences?.status || '';
 
   const preferredWorkType =
-    client.preferredWorkType ||
-    client.workPreferences?.preferredWorkType ||
-    client.workPreferences?.workType ||
+    source.preferredWorkType ||
+    source.workPreferences?.preferredWorkType ||
+    source.workPreferences?.workType ||
     '';
 
   const willingToRelocate =
-    client.willingToRelocate ??
-    client.workPreferences?.willingToRelocate ??
-    client.workPreferences?.relocate ??
+    source.willingToRelocate ??
+    source.workPreferences?.willingToRelocate ??
+    source.workPreferences?.relocate ??
     '';
 
   const hasWorkPrefs = Boolean(
@@ -589,7 +611,6 @@ export default function ClientProfileUpdatePage() {
       <div className="fixed inset-0 -z-10 bg-[linear-gradient(180deg,rgba(248,250,252,0.22),rgba(241,245,249,0.34))]" />
 
       <div className="w-full max-w-[1400px] mx-auto rounded-[28px] border border-white/25 bg-[rgba(248,250,252,0.82)] shadow-[0_30px_80px_rgba(2,6,23,0.18)] backdrop-blur-xl overflow-hidden">
-        {/* Header */}
         <div className="px-5 py-5 sm:px-6 sm:py-6 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.88),rgba(248,250,252,0.72))] flex items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="text-[24px] font-black tracking-tight text-slate-900 truncate">
@@ -618,11 +639,8 @@ export default function ClientProfileUpdatePage() {
           </div>
         </div>
 
-        {/* Body */}
         <div className="p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-5 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,250,252,0.22),rgba(241,245,249,0.34))]">
-          {/* Left column */}
           <div className="lg:col-span-2 space-y-5">
-            {/* Hero */}
             <section className={sectionClasses(false)}>
               <div className="grid grid-cols-1 md:grid-cols-[88px_1fr_auto] gap-5 items-center">
                 <div
@@ -715,7 +733,6 @@ export default function ClientProfileUpdatePage() {
               </div>
             </section>
 
-            {/* Summary */}
             <section className={sectionClasses(!summaryText?.trim())}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">Summary</div>
               {summaryText?.trim() ? (
@@ -732,7 +749,6 @@ export default function ClientProfileUpdatePage() {
               )}
             </section>
 
-            {/* Experience */}
             <section className={sectionClasses(experienceList.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Experience</div>
               {experienceList.length > 0 ? (
@@ -762,7 +778,6 @@ export default function ClientProfileUpdatePage() {
               )}
             </section>
 
-            {/* Education */}
             <section className={sectionClasses(educationList.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Education</div>
               {educationList.length > 0 ? (
@@ -790,7 +805,6 @@ export default function ClientProfileUpdatePage() {
               )}
             </section>
 
-            {/* Session History */}
             <section className={sectionClasses(sessions.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
                 Session History
@@ -861,7 +875,6 @@ export default function ClientProfileUpdatePage() {
               )}
             </section>
 
-            {/* Recent Coaching Activity */}
             <section className={sectionClasses(recentActivity.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
                 Recent Coaching Activity
@@ -892,7 +905,6 @@ export default function ClientProfileUpdatePage() {
               )}
             </section>
 
-            {/* Documents */}
             <section className={sectionClasses(docs.length === 0 && !showDocForm)}>
               <div className="flex items-center justify-between mb-3 gap-3">
                 <div>
@@ -991,9 +1003,7 @@ export default function ClientProfileUpdatePage() {
             </section>
           </div>
 
-          {/* Right column */}
           <div className="space-y-5">
-            {/* Client Details */}
             <section className={sectionClasses(false)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
                 Client Details
@@ -1053,7 +1063,6 @@ export default function ClientProfileUpdatePage() {
               </div>
             </section>
 
-            {/* Work Preferences */}
             <section className={sectionClasses(!hasWorkPrefs)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
                 Work Preferences
@@ -1096,7 +1105,6 @@ export default function ClientProfileUpdatePage() {
               )}
             </section>
 
-            {/* Skills */}
             <section className={sectionClasses(skillsList.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
                 Skills
@@ -1123,7 +1131,6 @@ export default function ClientProfileUpdatePage() {
               )}
             </section>
 
-            {/* Focus Areas / Plan */}
             <section className={sectionClasses(planItems.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
                 Focus Areas / Plan
@@ -1177,7 +1184,6 @@ export default function ClientProfileUpdatePage() {
               </div>
             </section>
 
-            {/* Context */}
             <section className={sectionClasses(false)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
                 Client Context
@@ -1193,7 +1199,6 @@ export default function ClientProfileUpdatePage() {
               </div>
             </section>
 
-            {/* Notes */}
             <section className={sectionClasses(notes.length === 0 && !(form.notes || '').trim())}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Notes</div>
 
