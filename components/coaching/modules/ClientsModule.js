@@ -247,7 +247,7 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
             overflow: 'hidden',
           }}
         >
-          menuItem('View Profile', () => {
+		{menuItem('View Profile', () => {
 			if (client.email) {
 				router.push(`/dashboard/coaching/clients/profile?email=${encodeURIComponent(client.email)}`);
 			} else if (client.id) {
