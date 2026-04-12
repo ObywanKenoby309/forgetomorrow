@@ -90,6 +90,14 @@ export default async function handler(req, res) {
           nextSession: full.nextSession?.toISOString() ?? null,
           lastContact: full.lastContact?.toISOString() ?? null,
           notes: full.notes ?? '',
+          manualSummary: full.manualSummary ?? '',
+          manualExperience: full.manualExperience ?? '',
+          manualEducation: full.manualEducation ?? '',
+          manualSkills: full.manualSkills ?? '',
+          manualWorkStatus: full.manualWorkStatus ?? '',
+          manualPreferredWorkType: full.manualPreferredWorkType ?? '',
+          manualPreferredLocations: full.manualPreferredLocations ?? '',
+          manualWillingToRelocate: full.manualWillingToRelocate ?? '',
           createdAt: full.createdAt.toISOString(),
           updatedAt: full.updatedAt.toISOString(),
           coachingNotes: (full.coachingNotes || []).map((n) => ({
@@ -126,7 +134,22 @@ export default async function handler(req, res) {
   if (req.method === 'PUT') {
     try {
       const body = req.body || {};
-      const { name, email, status, nextSession, lastContact, notes } = body;
+      const {
+        name,
+        email,
+        status,
+        nextSession,
+        lastContact,
+        notes,
+        manualSummary,
+        manualExperience,
+        manualEducation,
+        manualSkills,
+        manualWorkStatus,
+        manualPreferredWorkType,
+        manualPreferredLocations,
+        manualWillingToRelocate,
+      } = body;
 
       const updated = await prisma.coachingClient.update({
         where: { id },
@@ -143,6 +166,36 @@ export default async function handler(req, res) {
           ...(lastContact !== undefined && {
             lastContact: lastContact ? new Date(lastContact) : null,
           }),
+          ...(manualSummary !== undefined && {
+            manualSummary: manualSummary ? String(manualSummary).trim() : null,
+          }),
+          ...(manualExperience !== undefined && {
+            manualExperience: manualExperience ? String(manualExperience).trim() : null,
+          }),
+          ...(manualEducation !== undefined && {
+            manualEducation: manualEducation ? String(manualEducation).trim() : null,
+          }),
+          ...(manualSkills !== undefined && {
+            manualSkills: manualSkills ? String(manualSkills).trim() : null,
+          }),
+          ...(manualWorkStatus !== undefined && {
+            manualWorkStatus: manualWorkStatus ? String(manualWorkStatus).trim() : null,
+          }),
+          ...(manualPreferredWorkType !== undefined && {
+            manualPreferredWorkType: manualPreferredWorkType
+              ? String(manualPreferredWorkType).trim()
+              : null,
+          }),
+          ...(manualPreferredLocations !== undefined && {
+            manualPreferredLocations: manualPreferredLocations
+              ? String(manualPreferredLocations).trim()
+              : null,
+          }),
+          ...(manualWillingToRelocate !== undefined && {
+            manualWillingToRelocate: manualWillingToRelocate
+              ? String(manualWillingToRelocate).trim()
+              : null,
+          }),
         },
       });
 
@@ -155,6 +208,14 @@ export default async function handler(req, res) {
           nextSession: updated.nextSession?.toISOString() ?? null,
           lastContact: updated.lastContact?.toISOString() ?? null,
           notes: updated.notes ?? '',
+          manualSummary: updated.manualSummary ?? '',
+          manualExperience: updated.manualExperience ?? '',
+          manualEducation: updated.manualEducation ?? '',
+          manualSkills: updated.manualSkills ?? '',
+          manualWorkStatus: updated.manualWorkStatus ?? '',
+          manualPreferredWorkType: updated.manualPreferredWorkType ?? '',
+          manualPreferredLocations: updated.manualPreferredLocations ?? '',
+          manualWillingToRelocate: updated.manualWillingToRelocate ?? '',
         },
       });
     } catch (err) {

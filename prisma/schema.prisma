@@ -549,6 +549,14 @@ model CoachingClient {
   coachingDocuments CoachingDocument[] @relation("ClientDocuments")
   coachingNotes     CoachingNote[]     @relation("ClientNotes")
   sessions          CoachingSession[]  @relation("ClientSessions")
+  manualSummary            String?
+  manualExperience         String?
+  manualEducation          String?
+  manualSkills             String?
+  manualWorkStatus         String?
+  manualPreferredWorkType  String?
+  manualPreferredLocations String?
+  manualWillingToRelocate  String?
 
   @@index([coachId])
   @@index([clientId])

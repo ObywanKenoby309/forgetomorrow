@@ -524,6 +524,7 @@ export default function ClientProfileUpdatePage() {
   }
 
   const source = profileData || client;
+  const isFTUser = Boolean(profileData);
   const [avatarBg, avatarDark] = avatarColor(client.name);
   const cfg = STATUS[form.status] || defaultStatus;
 
@@ -735,11 +736,22 @@ export default function ClientProfileUpdatePage() {
 
             <section className={sectionClasses(!summaryText?.trim())}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">Summary</div>
-              {summaryText?.trim() ? (
-                <div className="text-sm leading-7 text-slate-700 whitespace-pre-line">
-                  {summaryText}
-                </div>
-              ) : (
+              {isFTUser ? (
+  summaryText?.trim() ? (
+    <div className="text-sm leading-7 text-slate-700 whitespace-pre-line">
+      {summaryText}
+    </div>
+  ) : (
+    <div className="text-sm text-slate-500">No profile summary available.</div>
+  )
+) : (
+  <textarea
+    className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
+    placeholder="Enter client summary..."
+    value={form.summary || ''}
+    onChange={(e) => setForm(prev => ({ ...prev, summary: e.target.value }))}
+  />
+)}
                 <div className="text-sm text-slate-500">
                   No profile summary available yet.
                   <span className="block text-xs text-slate-400 mt-1">
@@ -751,7 +763,26 @@ export default function ClientProfileUpdatePage() {
 
             <section className={sectionClasses(experienceList.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Experience</div>
-              {experienceList.length > 0 ? (
+              {isFTUser ? (
+  experienceList.length > 0 ? (
+    <div className="space-y-3">
+      {experienceList.map((exp, idx) => (
+        <div key={`${exp.title}-${idx}`}>
+          {exp.title}
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div className="text-sm text-slate-500">No experience available.</div>
+  )
+) : (
+  <textarea
+    className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
+    placeholder="Enter experience manually..."
+    value={form.experience || ''}
+    onChange={(e) => setForm(prev => ({ ...prev, experience: e.target.value }))}
+  />
+)}
                 <div className="space-y-3">
                   {experienceList.map((exp, idx) => (
                     <div key={`${exp.title}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
@@ -780,7 +811,16 @@ export default function ClientProfileUpdatePage() {
 
             <section className={sectionClasses(educationList.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Education</div>
-              {educationList.length > 0 ? (
+              {isFTUser ? (
+  educationList.length > 0 ? (
+  ) : (
+  <textarea
+    className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
+    placeholder="Enter education manually..."
+    value={form.education || ''}
+    onChange={(e) => setForm(prev => ({ ...prev, education: e.target.value }))}
+  />
+)}
                 <div className="space-y-3">
                   {educationList.map((edu, idx) => (
                     <div key={`${edu.school}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
@@ -1113,7 +1153,16 @@ export default function ClientProfileUpdatePage() {
                 Read-only profile context for coaching.
               </div>
 
-              {skillsList.length > 0 ? (
+              {isFTUser ? (
+  skillsList.length > 0 ? (
+  ) : (
+  <input
+    className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
+    placeholder="Enter skills (comma separated)"
+    value={form.skills || ''}
+    onChange={(e) => setForm(prev => ({ ...prev, skills: e.target.value }))}
+  />
+)}
                 <div className="flex flex-wrap gap-2">
                   {skillsList.map((skill, idx) => (
                     <span
