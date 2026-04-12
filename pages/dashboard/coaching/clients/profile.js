@@ -69,6 +69,33 @@ function getExperienceList(value) {
     .filter(Boolean);
 }
 
+function parseManualExperience(text) {
+  return String(text || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => ({
+      title: line,
+      company: '',
+      range: '',
+      highlights: [],
+    }));
+}
+
+function parseManualEducation(text) {
+  return String(text || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => ({
+      school: line,
+      degree: '',
+      field: '',
+      startYear: '',
+      endYear: '',
+    }));
+}
+
 function avatarColor(name = '') {
   const palette = [
     ['#FF7043', '#BF360C'],
@@ -222,6 +249,14 @@ export default function ClientProfileUpdatePage() {
         lastContact: full.lastContact || '',
         notes: full.notes || '',
         profileUrl: full.profileUrl || '',
+        manualSummary: full.manualSummary || '',
+        manualExperience: full.manualExperience || '',
+        manualEducation: full.manualEducation || '',
+        manualSkills: full.manualSkills || '',
+        manualWorkStatus: full.manualWorkStatus || '',
+        manualPreferredWorkType: full.manualPreferredWorkType || '',
+        manualPreferredLocations: full.manualPreferredLocations || '',
+        manualWillingToRelocate: full.manualWillingToRelocate || '',
       });
 
       const pinnedPlan =
@@ -280,17 +315,30 @@ export default function ClientProfileUpdatePage() {
         .filter(Boolean)
         .join('\n');
 
+      const payload = {
+        name: form.name,
+        email: form.email || null,
+        status: form.status,
+        nextSession: form.nextSession || null,
+        lastContact: form.lastContact || null,
+        notes: notesWithPlan,
+      };
+
+      if (!profileData) {
+        payload.manualSummary = form.manualSummary || null;
+        payload.manualExperience = form.manualExperience || null;
+        payload.manualEducation = form.manualEducation || null;
+        payload.manualSkills = form.manualSkills || null;
+        payload.manualWorkStatus = form.manualWorkStatus || null;
+        payload.manualPreferredWorkType = form.manualPreferredWorkType || null;
+        payload.manualPreferredLocations = form.manualPreferredLocations || null;
+        payload.manualWillingToRelocate = form.manualWillingToRelocate || null;
+      }
+
       const res = await fetch(`/api/coaching/clients/${client.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email || null,
-          status: form.status,
-          nextSession: form.nextSession || null,
-          lastContact: form.lastContact || null,
-          notes: notesWithPlan,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -523,8 +571,23 @@ export default function ClientProfileUpdatePage() {
     );
   }
 
-  const source = profileData || client;
   const isFTUser = Boolean(profileData);
+
+  const source = isFTUser
+    ? profileData
+    : {
+        ...client,
+        summary: form.manualSummary || '',
+        aboutMe: form.manualSummary || '',
+        skills: toStringArray(form.manualSkills || ''),
+        experience: parseManualExperience(form.manualExperience || ''),
+        education: parseManualEducation(form.manualEducation || ''),
+        workStatus: form.manualWorkStatus || '',
+        preferredWorkType: form.manualPreferredWorkType || '',
+        willingToRelocate: form.manualWillingToRelocate || '',
+        preferredLocations: toStringArray(form.manualPreferredLocations || ''),
+      };
+
   const [avatarBg, avatarDark] = avatarColor(client.name);
   const cfg = STATUS[form.status] || defaultStatus;
 
@@ -543,8 +606,6 @@ export default function ClientProfileUpdatePage() {
     source.aboutMe?.trim?.() ||
     source.profileSummary?.trim?.() ||
     source.headline?.trim?.() ||
-    form.notes?.trim() ||
-    notes[0]?.body ||
     '';
 
   const skillsList = toStringArray(
@@ -611,7 +672,7 @@ export default function ClientProfileUpdatePage() {
 
       <div className="fixed inset-0 -z-10" />
 
-      <div className="w-full max-w-[1400px] mx-auto'> rounded-[28px] border border-white/25 bg-[rgba(248,250,252,0.82)] shadow-[0_30px_80px_rgba(2,6,23,0.18)] backdrop-blur-xl overflow-hidden">
+      <div className="w-full max-w-[1400px] mx-auto rounded-[28px] border border-white/25 bg-[rgba(248,250,252,0.82)] shadow-[0_30px_80px_rgba(2,6,23,0.18)] backdrop-blur-xl overflow-hidden">
         <div className="px-5 py-5 sm:px-6 sm:py-6 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.88),rgba(248,250,252,0.72))] flex items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="text-[24px] font-black tracking-tight text-slate-900 truncate">
@@ -635,7 +696,7 @@ export default function ClientProfileUpdatePage() {
               disabled={saving}
               className="rounded-xl border border-[#FF7043] bg-[#FF7043] px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#F4511E] transition disabled:opacity-70"
             >
-              {saving ? 'Saving…' : 'Save Changes'}
+              {saving ? 'Saving…' : saved ? 'Saved' : 'Save Changes'}
             </button>
           </div>
         </div>
@@ -737,111 +798,96 @@ export default function ClientProfileUpdatePage() {
             <section className={sectionClasses(!summaryText?.trim())}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">Summary</div>
               {isFTUser ? (
-  summaryText?.trim() ? (
-    <div className="text-sm leading-7 text-slate-700 whitespace-pre-line">
-      {summaryText}
-    </div>
-  ) : (
-    <div className="text-sm text-slate-500">No profile summary available.</div>
-  )
-) : (
-  <textarea
-    className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
-    placeholder="Enter client summary..."
-    value={form.summary || ''}
-    onChange={(e) => setForm(prev => ({ ...prev, summary: e.target.value }))}
-  />
-)}
-                <div className="text-sm text-slate-500">
-                  No profile summary available yet.
-                  <span className="block text-xs text-slate-400 mt-1">
-                    Add profile information or resume data to give the coach better context.
-                  </span>
-                </div>
+                summaryText?.trim() ? (
+                  <div className="text-sm leading-7 text-slate-700 whitespace-pre-line">
+                    {summaryText}
+                  </div>
+                ) : (
+                  <div className="text-sm text-slate-500">
+                    No profile summary available yet.
+                  </div>
+                )
+              ) : (
+                <textarea
+                  className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
+                  placeholder="Enter client summary..."
+                  value={form.manualSummary || ''}
+                  onChange={onChange('manualSummary')}
+                />
               )}
             </section>
 
             <section className={sectionClasses(experienceList.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Experience</div>
               {isFTUser ? (
-  experienceList.length > 0 ? (
-    <div className="space-y-3">
-      {experienceList.map((exp, idx) => (
-        <div key={`${exp.title}-${idx}`}>
-          {exp.title}
-        </div>
-      ))}
-    </div>
-  ) : (
-    <div className="text-sm text-slate-500">No experience available.</div>
-  )
-) : (
-  <textarea
-    className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
-    placeholder="Enter experience manually..."
-    value={form.experience || ''}
-    onChange={(e) => setForm(prev => ({ ...prev, experience: e.target.value }))}
-  />
-)}
-                <div className="space-y-3">
-                  {experienceList.map((exp, idx) => (
-                    <div key={`${exp.title}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
-                      <div className="font-semibold text-slate-900 break-words">
-                        {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
+                experienceList.length > 0 ? (
+                  <div className="space-y-3">
+                    {experienceList.map((exp, idx) => (
+                      <div key={`${exp.title}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
+                        <div className="font-semibold text-slate-900 break-words">
+                          {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
+                        </div>
+                        {exp.range ? (
+                          <div className="text-slate-500 text-sm mt-1">{exp.range}</div>
+                        ) : null}
+                        {exp.highlights?.length ? (
+                          <ul className="list-disc pl-5 mt-2 space-y-1 text-sm text-slate-700">
+                            {exp.highlights.slice(0, 4).map((item, i) => (
+                              <li key={i}>{item}</li>
+                            ))}
+                          </ul>
+                        ) : null}
                       </div>
-                      {exp.range ? (
-                        <div className="text-slate-500 text-sm mt-1">{exp.range}</div>
-                      ) : null}
-                      {exp.highlights?.length ? (
-                        <ul className="list-disc pl-5 mt-2 space-y-1 text-sm text-slate-700">
-                          {exp.highlights.slice(0, 4).map((item, i) => (
-                            <li key={i}>{item}</li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-slate-500">
+                    No experience is available on this client yet.
+                  </div>
+                )
               ) : (
-                <div className="text-sm text-slate-500">
-                  No experience is available on this client yet.
-                </div>
+                <textarea
+                  className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[140px] text-sm bg-white/85"
+                  placeholder="Enter experience manually. Use one line per role, employer, or summary item."
+                  value={form.manualExperience || ''}
+                  onChange={onChange('manualExperience')}
+                />
               )}
             </section>
 
             <section className={sectionClasses(educationList.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Education</div>
               {isFTUser ? (
-  educationList.length > 0 ? (
-  ) : (
-  <textarea
-    className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
-    placeholder="Enter education manually..."
-    value={form.education || ''}
-    onChange={(e) => setForm(prev => ({ ...prev, education: e.target.value }))}
-  />
-)}
-                <div className="space-y-3">
-                  {educationList.map((edu, idx) => (
-                    <div key={`${edu.school}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
-                      <div className="font-semibold text-slate-900 break-words">
-                        {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
-                      </div>
-                      {edu.school ? (
-                        <div className="text-slate-500 text-sm mt-1">{edu.school}</div>
-                      ) : null}
-                      {[edu.startYear, edu.endYear].filter(Boolean).length ? (
-                        <div className="text-slate-400 text-xs mt-1">
-                          {[edu.startYear, edu.endYear].filter(Boolean).join(' – ')}
+                educationList.length > 0 ? (
+                  <div className="space-y-3">
+                    {educationList.map((edu, idx) => (
+                      <div key={`${edu.school}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
+                        <div className="font-semibold text-slate-900 break-words">
+                          {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
                         </div>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
+                        {edu.school ? (
+                          <div className="text-slate-500 text-sm mt-1">{edu.school}</div>
+                        ) : null}
+                        {[edu.startYear, edu.endYear].filter(Boolean).length ? (
+                          <div className="text-slate-400 text-xs mt-1">
+                            {[edu.startYear, edu.endYear].filter(Boolean).join(' – ')}
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-slate-500">
+                    No education details are available yet.
+                  </div>
+                )
               ) : (
-                <div className="text-sm text-slate-500">
-                  No education details are available yet.
-                </div>
+                <textarea
+                  className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
+                  placeholder="Enter education manually. Use one line per school, degree, or program."
+                  value={form.manualEducation || ''}
+                  onChange={onChange('manualEducation')}
+                />
               )}
             </section>
 
@@ -1103,80 +1149,124 @@ export default function ClientProfileUpdatePage() {
               </div>
             </section>
 
-            <section className={sectionClasses(!hasWorkPrefs)}>
+            <section className={sectionClasses(!hasWorkPrefs && isFTUser)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
                 Work Preferences
               </div>
 
-              {hasWorkPrefs ? (
-                <div className="divide-y divide-slate-100">
-                  <MetaRow label="Status" value={workStatus} />
-                  <MetaRow label="Work type" value={preferredWorkType} />
-                  <MetaRow
-                    label="Willing to relocate"
-                    value={
-                      typeof willingToRelocate === 'boolean'
-                        ? willingToRelocate
-                          ? 'Yes'
-                          : 'No'
-                        : String(willingToRelocate || '').trim()
-                    }
-                  />
-                  {preferredLocations.length > 0 ? (
-                    <div className="py-1.5 border-b border-slate-100 last:border-0">
-                      <div className="text-xs text-slate-500 mb-1">Preferred locations</div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {preferredLocations.map((loc, idx) => (
-                          <span
-                            key={`${loc}-${idx}`}
-                            className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700"
-                          >
-                            {loc}
-                          </span>
-                        ))}
+              {isFTUser ? (
+                hasWorkPrefs ? (
+                  <div className="divide-y divide-slate-100">
+                    <MetaRow label="Status" value={workStatus} />
+                    <MetaRow label="Work type" value={preferredWorkType} />
+                    <MetaRow
+                      label="Willing to relocate"
+                      value={
+                        typeof willingToRelocate === 'boolean'
+                          ? willingToRelocate
+                            ? 'Yes'
+                            : 'No'
+                          : String(willingToRelocate || '').trim()
+                      }
+                    />
+                    {preferredLocations.length > 0 ? (
+                      <div className="py-1.5 border-b border-slate-100 last:border-0">
+                        <div className="text-xs text-slate-500 mb-1">Preferred locations</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {preferredLocations.map((loc, idx) => (
+                            <span
+                              key={`${loc}-${idx}`}
+                              className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700"
+                            >
+                              {loc}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ) : null}
-                </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="text-sm text-slate-500">
+                    No work preferences are available for this client yet.
+                  </div>
+                )
               ) : (
-                <div className="text-sm text-slate-500">
-                  No work preferences are available for this client yet.
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1.5">Status</label>
+                    <input
+                      className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
+                      placeholder="Ex: Actively Seeking"
+                      value={form.manualWorkStatus || ''}
+                      onChange={onChange('manualWorkStatus')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1.5">Work Type</label>
+                    <input
+                      className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
+                      placeholder="Ex: Remote, Hybrid, Full-time"
+                      value={form.manualPreferredWorkType || ''}
+                      onChange={onChange('manualPreferredWorkType')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1.5">Preferred Locations</label>
+                    <input
+                      className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
+                      placeholder="Comma separated"
+                      value={form.manualPreferredLocations || ''}
+                      onChange={onChange('manualPreferredLocations')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1.5">Willing to Relocate</label>
+                    <input
+                      className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
+                      placeholder="Yes / No / Maybe"
+                      value={form.manualWillingToRelocate || ''}
+                      onChange={onChange('manualWillingToRelocate')}
+                    />
+                  </div>
                 </div>
               )}
             </section>
 
-            <section className={sectionClasses(skillsList.length === 0)}>
+            <section className={sectionClasses(skillsList.length === 0 && isFTUser)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
                 Skills
               </div>
               <div className="text-[11px] text-slate-400 mb-3">
-                Read-only profile context for coaching.
+                {isFTUser ? 'Read-only profile context for coaching.' : 'Coach-managed profile context for non-FT clients.'}
               </div>
 
               {isFTUser ? (
-  skillsList.length > 0 ? (
-  ) : (
-  <input
-    className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
-    placeholder="Enter skills (comma separated)"
-    value={form.skills || ''}
-    onChange={(e) => setForm(prev => ({ ...prev, skills: e.target.value }))}
-  />
-)}
-                <div className="flex flex-wrap gap-2">
-                  {skillsList.map((skill, idx) => (
-                    <span
-                      key={`${skill}-${idx}`}
-                      className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
+                skillsList.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {skillsList.map((skill, idx) => (
+                      <span
+                        key={`${skill}-${idx}`}
+                        className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-slate-500">
+                    No skills are available on this client yet.
+                  </div>
+                )
               ) : (
-                <div className="text-sm text-slate-500">
-                  No skills are available on this client yet.
-                </div>
+                <input
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
+                  placeholder="Enter skills (comma separated)"
+                  value={form.manualSkills || ''}
+                  onChange={onChange('manualSkills')}
+                />
               )}
             </section>
 
