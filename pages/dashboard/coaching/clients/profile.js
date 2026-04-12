@@ -610,7 +610,7 @@ export default function ClientProfileUpdatePage() {
 
       <div className="fixed inset-0 -z-10 bg-[linear-gradient(180deg,rgba(248,250,252,0.22),rgba(241,245,249,0.34))]" />
 
-      <div className="w-full max-w-[1400px] mx-auto rounded-[28px] border border-white/25 bg-[rgba(248,250,252,0.82)] shadow-[0_30px_80px_rgba(2,6,23,0.18)] backdrop-blur-xl overflow-hidden">
+      <div className="w-full max-w-[1400px] mx-auto">
         <div className="px-5 py-5 sm:px-6 sm:py-6 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.88),rgba(248,250,252,0.72))] flex items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="text-[24px] font-black tracking-tight text-slate-900 truncate">
