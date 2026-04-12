@@ -528,9 +528,14 @@ export default function ClientProfileUpdatePage() {
   const cfg = STATUS[form.status] || defaultStatus;
 
   const profileHref =
-    client?.email
-      ? `/dashboard/coaching/clients/profile?email=${encodeURIComponent(client.email)}`
-      : '';
+    (typeof source.profileUrl === 'string' && source.profileUrl.trim()) ||
+    (typeof form.profileUrl === 'string' && form.profileUrl.trim()) ||
+    (typeof client.profileUrl === 'string' && client.profileUrl.trim()) ||
+    (typeof source.slug === 'string' && source.slug.trim() ? `/profile/${source.slug.trim()}` : '') ||
+    (typeof client.profileSlug === 'string' && client.profileSlug.trim()
+      ? `/profile/${client.profileSlug.trim()}`
+      : '') ||
+    (client.clientId ? `/member-profile?userId=${client.clientId}` : '');
 
   const summaryText =
     source.summary?.trim?.() ||

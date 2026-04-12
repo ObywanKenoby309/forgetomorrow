@@ -247,12 +247,12 @@ function ActionsDropdown({ client, onDelete, onMessage }) {
             overflow: 'hidden',
           }}
         >
-          {menuItem('View Profile', () => {
-            if (client.clientId) {
-              router.push(`/profile/${client.clientId}`);
-            } else {
-              router.push(`/dashboard/coaching/clients/${client.id}`);
-            }
+          menuItem('View Profile', () => {
+			if (client.email) {
+				router.push(`/dashboard/coaching/clients/profile?email=${encodeURIComponent(client.email)}`);
+			} else if (client.id) {
+			router.push(`/dashboard/coaching/clients/profile?email=${encodeURIComponent(client.id)}`);
+			}
           })}
           {client.clientId && menuItem('Message', () => onMessage(client.clientId))}
           {client.clientId && menuItem('Report', handleReport)}
