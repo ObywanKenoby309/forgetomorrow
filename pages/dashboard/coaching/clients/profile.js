@@ -222,6 +222,14 @@ export default function ClientProfileUpdatePage() {
         lastContact: full.lastContact || '',
         notes: full.notes || '',
         profileUrl: full.profileUrl || '',
+        manualSummary: full.manualSummary || '',
+        manualExperience: full.manualExperience || '',
+        manualEducation: full.manualEducation || '',
+        manualSkills: full.manualSkills || '',
+        manualWorkStatus: full.manualWorkStatus || '',
+        manualPreferredWorkType: full.manualPreferredWorkType || '',
+        manualPreferredLocations: full.manualPreferredLocations || '',
+        manualWillingToRelocate: full.manualWillingToRelocate || '',
       });
 
       const pinnedPlan =
@@ -290,6 +298,14 @@ export default function ClientProfileUpdatePage() {
           nextSession: form.nextSession || null,
           lastContact: form.lastContact || null,
           notes: notesWithPlan,
+          manualSummary: form.manualSummary || null,
+          manualExperience: form.manualExperience || null,
+          manualEducation: form.manualEducation || null,
+          manualSkills: form.manualSkills || null,
+          manualWorkStatus: form.manualWorkStatus || null,
+          manualPreferredWorkType: form.manualPreferredWorkType || null,
+          manualPreferredLocations: form.manualPreferredLocations || null,
+          manualWillingToRelocate: form.manualWillingToRelocate || null,
         }),
       });
 
@@ -611,7 +627,7 @@ export default function ClientProfileUpdatePage() {
 
       <div className="fixed inset-0 -z-10" />
 
-      <div className="w-full max-w-[1400px] mx-auto'> rounded-[28px] border border-white/25 bg-[rgba(248,250,252,0.82)] shadow-[0_30px_80px_rgba(2,6,23,0.18)] backdrop-blur-xl overflow-hidden">
+      <div className="w-full max-w-[1400px] mx-auto rounded-[28px] border border-white/25 bg-[rgba(248,250,252,0.82)] shadow-[0_30px_80px_rgba(2,6,23,0.18)] backdrop-blur-xl overflow-hidden">
         <div className="px-5 py-5 sm:px-6 sm:py-6 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.88),rgba(248,250,252,0.72))] flex items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="text-[24px] font-black tracking-tight text-slate-900 truncate">
@@ -1048,8 +1064,6 @@ export default function ClientProfileUpdatePage() {
                 </div>
               )}
             </section>
-          </div>
-
           <div className="space-y-5">
             <section className={sectionClasses(false)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
