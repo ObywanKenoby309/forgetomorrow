@@ -1065,10 +1065,15 @@ export default function ClientProfileUpdatePage() {
                             />
                           </div>
                         )}
-                      </SectionCard>
-                    </d{activeTab === 'coaching' ? (
+                                            </SectionCard>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {activeTab === 'coaching' ? (
                 <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-3">
-<div className="space-y-3">
+                  <div className="space-y-3">
                     <SectionCard title="Coach Controls">
                       <div className="space-y-3">
                         <div>

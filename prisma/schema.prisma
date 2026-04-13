@@ -557,6 +557,11 @@ model CoachingClient {
   manualPreferredWorkType  String?
   manualPreferredLocations String?
   manualWillingToRelocate  String?
+  targetCompanies         String?
+  strategyBackground      String?
+  strategyThemes          String?
+  strategyRoleLanes       String?
+  strategyNextStep        String?
 
   @@index([coachId])
   @@index([clientId])
