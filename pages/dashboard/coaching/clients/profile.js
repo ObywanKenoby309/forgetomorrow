@@ -1152,40 +1152,42 @@ export default function ClientProfileUpdatePage() {
               )}
             </section>
 
-            <section className={sectionClasses(skillsList.length === 0)}>
-              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
-                Skills
-              </div>
-              <div className="text-[11px] text-slate-400 mb-3">
-                Read-only profile context for coaching.
-              </div>
+            <section className={sectionClasses(skillsList.length === 0 && isFTUser)}>
+  <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
+    Skills
+  </div>
+  <div className="text-[11px] text-slate-400 mb-3">
+    {isFTUser
+      ? 'Read-only profile context for coaching.'
+      : 'Coach-managed profile context for non-FT clients.'}
+  </div>
 
-              {isFTUser ? (
-  skillsList.length > 0 ? (
+  {isFTUser ? (
+    skillsList.length > 0 ? (
+      <div className="flex flex-wrap gap-2">
+        {skillsList.map((skill, idx) => (
+          <span
+            key={`${skill}-${idx}`}
+            className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300"
+          >
+            {skill}
+          </span>
+        ))}
+      </div>
+    ) : (
+      <div className="text-sm text-slate-500">
+        No skills are available on this client yet.
+      </div>
+    )
   ) : (
-  <input
-    className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
-    placeholder="Enter skills (comma separated)"
-    value={form.skills || ''}
-    onChange={(e) => setForm(prev => ({ ...prev, skills: e.target.value }))}
-  />
-)}
-                <div className="flex flex-wrap gap-2">
-                  {skillsList.map((skill, idx) => (
-                    <span
-                      key={`${skill}-${idx}`}
-                      className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-slate-500">
-                  No skills are available on this client yet.
-                </div>
-              )}
-            </section>
+    <input
+      className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
+      placeholder="Enter skills (comma separated)"
+      value={form.manualSkills || ''}
+      onChange={onChange('manualSkills')}
+    />
+  )}
+</section>
 
             <section className={sectionClasses(planItems.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
