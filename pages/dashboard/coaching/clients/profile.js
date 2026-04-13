@@ -751,100 +751,106 @@ export default function ClientProfileUpdatePage() {
           </div>
 
           <div className="space-y-5">
-            <section className={sectionClasses(!summaryText?.trim())}>
-              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">Summary</div>
-              {isFTUser ? (
-  summaryText?.trim() ? (
-    <div className="text-sm leading-7 text-slate-700 whitespace-pre-line">
-      {summaryText}
+
+  {/* SUMMARY */}
+  <section className={sectionClasses(!summaryText?.trim())}>
+    <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
+      Summary
     </div>
-  ) : (
-    <div className="text-sm text-slate-500">No profile summary available.</div>
-  )
-) : (
-  <textarea
-    className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
-    placeholder="Enter client summary..."
-    value={form.summary || ''}
-    onChange={(e) => setForm(prev => ({ ...prev, summary: e.target.value }))}
-  />
-)}
-                <div className="text-sm text-slate-500">
-                  No profile summary available yet.
-                  <span className="block text-xs text-slate-400 mt-1">
-                    Add profile information or resume data to give the coach better context.
-                  </span>
-                </div>
-              )}
-            </section>
 
-            <section className={sectionClasses(experienceList.length === 0)}>
-  <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
-    Experience
-  </div>
-
-  {isFTUser ? (
-    experienceList.length > 0 ? (
-      <div className="space-y-3">
-        {experienceList.map((exp, idx) => (
-          <div
-            key={`${exp.title}-${idx}`}
-            className="border-b border-slate-100 last:border-0 pb-3"
-          >
-            <div className="font-semibold text-slate-900 break-words">
-              {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
-            </div>
-          </div>
-        ))}
-      </div>
+    {isFTUser ? (
+      summaryText?.trim() ? (
+        <div className="text-sm leading-7 text-slate-700 whitespace-pre-line">
+          {summaryText}
+        </div>
+      ) : (
+        <div className="text-sm text-slate-500">
+          No profile summary available yet.
+        </div>
+      )
     ) : (
-      <div className="text-sm text-slate-500">
-        No experience is available on this client yet.
-      </div>
-    )
-  ) : (
-    <textarea
-      className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
-      placeholder="Enter experience manually..."
-      value={form.manualExperience || ''}
-      onChange={onChange('manualExperience')}
-    />
-  )}
-</section>
+      <textarea
+        className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
+        placeholder="Enter client summary..."
+        value={form.manualSummary || ''}
+        onChange={onChange('manualSummary')}
+      />
+    )}
+  </section>
 
-            <section className={sectionClasses(educationList.length === 0)}>
-  <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
-    Education
-  </div>
 
-  {isFTUser ? (
-    educationList.length > 0 ? (
-      <div className="space-y-3">
-        {educationList.map((edu, idx) => (
-          <div
-            key={`${edu.school}-${idx}`}
-            className="border-b border-slate-100 last:border-0 pb-3"
-          >
-            <div className="font-semibold text-slate-900 break-words">
-              {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
+  {/* EXPERIENCE */}
+  <section className={sectionClasses(experienceList.length === 0)}>
+    <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
+      Experience
+    </div>
+
+    {isFTUser ? (
+      experienceList.length > 0 ? (
+        <div className="space-y-3">
+          {experienceList.map((exp, idx) => (
+            <div
+              key={`${exp.title}-${idx}`}
+              className="border-b border-slate-100 last:border-0 pb-3"
+            >
+              <div className="font-semibold text-slate-900 break-words">
+                {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-sm text-slate-500">
+          No experience is available on this client yet.
+        </div>
+      )
     ) : (
-      <div className="text-sm text-slate-500">
-        No education details are available yet.
-      </div>
-    )
-  ) : (
-    <textarea
-      className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
-      placeholder="Enter education manually..."
-      value={form.manualEducation || ''}
-      onChange={onChange('manualEducation')}
-    />
-  )}
-</section>
+      <textarea
+        className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
+        placeholder="Enter experience manually..."
+        value={form.manualExperience || ''}
+        onChange={onChange('manualExperience')}
+      />
+    )}
+  </section>
+
+
+  {/* EDUCATION */}
+  <section className={sectionClasses(educationList.length === 0)}>
+    <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
+      Education
+    </div>
+
+    {isFTUser ? (
+      educationList.length > 0 ? (
+        <div className="space-y-3">
+          {educationList.map((edu, idx) => (
+            <div
+              key={`${edu.school}-${idx}`}
+              className="border-b border-slate-100 last:border-0 pb-3"
+            >
+              <div className="font-semibold text-slate-900 break-words">
+                {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-sm text-slate-500">
+          No education details are available yet.
+        </div>
+      )
+    ) : (
+      <textarea
+        className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
+        placeholder="Enter education manually..."
+        value={form.manualEducation || ''}
+        onChange={onChange('manualEducation')}
+      />
+    )}
+  </section>
+
+</div>
 
             <section className={sectionClasses(sessions.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
