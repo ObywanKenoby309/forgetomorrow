@@ -108,7 +108,7 @@ function MentorshipModule() {
         const normalized = list.map(a => ({
           id:           a.id,
           userId:       a.userId       || '',
-          userSlug:     a.userSlug     || '',
+          userSlug:     a.userSlug     || null,
           userAvatarUrl: a.userAvatarUrl || '',
           name:         a.name         || '',
           headline:     a.headline     || '',
