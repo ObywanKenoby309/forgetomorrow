@@ -41,6 +41,7 @@ export default function CoachingLayout({
   const defaultFromNav =
     {
       overview: 'Your Coaching Dashboard',
+      dashboard: 'Your Coaching Dashboard',
       clients: 'Clients',
       sessions: 'Sessions',
       resources: 'Resources',

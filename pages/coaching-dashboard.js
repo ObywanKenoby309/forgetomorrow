@@ -508,7 +508,7 @@ export default function CoachingDashboardPage() {
 
   if (isMobile === null) {
     return (
-      <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="overview" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
+      <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="dashboard" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
         <div style={{ minHeight:200 }} />
       </CoachingLayout>
     );
@@ -519,7 +519,7 @@ export default function CoachingDashboardPage() {
     const greeting = getTimeGreeting();
 
     return (
-      <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="overview" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
+      <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="dashboard" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
         <div style={{ display:'grid', gap:GAP, width:'100%' }}>
 
           <CoachingTitleCard
@@ -700,7 +700,7 @@ export default function CoachingDashboardPage() {
   const greeting = getTimeGreeting();
 
   return (
-    <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="overview" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
+    <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="dashboard" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
       <div style={{ width:'100%', padding:0, margin:0, paddingRight:16, boxSizing:'border-box' }}>
         {error && (
           <div style={{ background:'#FDECEA', borderRadius:8, padding:10, border:'1px solid #FFCDD2', color:'#C62828', fontSize:13, marginBottom:16 }}>
