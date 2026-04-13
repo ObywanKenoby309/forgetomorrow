@@ -760,66 +760,43 @@ export default function PostViewPage({ initialPost, notFound }) {
 
                 <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
                   {post.attachments.map((a, idx) => {
-                    const raw = typeof a === 'string' ? a : JSON.stringify(a);
-                    const url = typeof a === 'string' ? a : null;
-                    const showImage = url && isLikelyImageUrl(url);
+                    // Normalize: handle object, JSON string, or plain URL string
+                    let normalized = a;
+                    if (typeof a === 'string') {
+                      try { normalized = JSON.parse(a); } catch { normalized = { url: a, type: isLikelyImageUrl(a) ? 'image' : 'link', name: '' }; }
+                    }
+                    const url = String(normalized?.url || '').trim();
+                    const type = String(normalized?.type || '').toLowerCase();
+                    const name = String(normalized?.name || '').trim();
+
+                    if (!url) return null;
+
+                    if (type === 'image' || isLikelyImageUrl(url)) {
+                      return (
+                        <div key={idx} style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(15,23,42,0.10)', background: '#ECEFF1' }}>
+                          <img
+                            src={url}
+                            alt={name || 'Image attachment'}
+                            style={{ width: '100%', maxHeight: 420, objectFit: 'contain', background: '#ECEFF1', display: 'block' }}
+                            onError={(e) => { try { e.currentTarget.style.display = 'none'; } catch {} }}
+                          />
+                        </div>
+                      );
+                    }
+
+                    if (type === 'video') {
+                      return (
+                        <div key={idx} style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(15,23,42,0.10)', background: '#000' }}>
+                          <video src={url} controls style={{ width: '100%', maxHeight: 420, display: 'block' }} />
+                        </div>
+                      );
+                    }
 
                     return (
-                      <div
-                        key={idx}
-                        style={{
-                          borderRadius: 12,
-                          border: '1px solid rgba(15,23,42,0.10)',
-                          background: 'rgba(255,255,255,0.75)',
-                          padding: 12,
-                        }}
-                      >
-                        {showImage ? (
-                          <div style={{ display: 'grid', gap: 8 }}>
-                            <img
-                              src={url}
-                              alt="Attachment"
-                              style={{
-                                width: '100%',
-                                maxHeight: 360,
-                                borderRadius: 10,
-                                objectFit: 'cover',
-                                background: '#ECEFF1',
-                              }}
-                            />
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                fontSize: 12,
-                                fontWeight: 800,
-                                color: '#FF7043',
-                                wordBreak: 'break-all',
-                              }}
-                            >
-                              Open image
-                            </a>
-                          </div>
-                        ) : isLikelyUrl(url) ? (
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 800,
-                              color: '#FF7043',
-                              wordBreak: 'break-all',
-                            }}
-                          >
-                            {url}
-                          </a>
-                        ) : (
-                          <div style={{ fontSize: 13, color: '#37474F', wordBreak: 'break-all' }}>
-                            {raw}
-                          </div>
-                        )}
+                      <div key={idx} style={{ borderRadius: 12, border: '1px solid rgba(15,23,42,0.10)', background: 'rgba(255,255,255,0.75)', padding: 12 }}>
+                        <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: 13, fontWeight: 800, color: '#FF7043', wordBreak: 'break-all', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          🔗 {name || url}
+                        </a>
                       </div>
                     );
                   })}
@@ -1216,12 +1193,8 @@ export async function getServerSideProps(ctx) {
     }, {});
   }
 
-  const { body, attachments: contentAttachments } = parseContent(row.content);
-  // Prefer the dedicated attachments column; fall back to any attachments
-  // embedded in content for legacy posts created before the column existed.
-  const attachments = Array.isArray(row.attachments) && row.attachments.length > 0
-    ? row.attachments
-    : contentAttachments;
+  const { body } = parseContent(row.content);
+  const attachments = Array.isArray(row.attachments) ? row.attachments : safeJsonArray(row.attachments);
 
   const initialPost = {
     id: row.id,
