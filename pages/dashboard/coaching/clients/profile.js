@@ -272,6 +272,9 @@ export default function ClientProfileUpdatePage() {
         manualPreferredWorkType: full.manualPreferredWorkType || '',
         manualPreferredLocations: full.manualPreferredLocations || '',
         manualWillingToRelocate: full.manualWillingToRelocate || '',
+        targetCompanies: '',
+        strategyBackground: '',
+        strategyOutput: null,
       });
 
       const pinnedPlan =
@@ -1063,36 +1066,121 @@ export default function ClientProfileUpdatePage() {
                           </div>
                         )}
                       </SectionCard>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              {activeTab === 'coaching' ? (
+                    </d{activeTab === 'coaching' ? (
                 <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-3">
-                  <div className="space-y-3">
+<div className="space-y-3">
                     <SectionCard title="Coach Controls">
-                      {/* NO CHANGES */}
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1.5">Name</label>
+                          <input
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            value={form.name}
+                            onChange={onChange('name')}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1.5">Email</label>
+                          <input
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            value={form.email}
+                            onChange={onChange('email')}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1.5">Status</label>
+                          <select
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            value={form.status}
+                            onChange={onChange('status')}
+                          >
+                            <option value="Active">Active</option>
+                            <option value="At Risk">At Risk</option>
+                            <option value="New Intake">New Intake</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1.5">Next Session</label>
+                          <input
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            type="datetime-local"
+                            value={toDateInputValue(form.nextSession)}
+                            onChange={onChange('nextSession')}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1.5">Last Contact</label>
+                          <input
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            type="datetime-local"
+                            value={toDateInputValue(form.lastContact)}
+                            onChange={onChange('lastContact')}
+                          />
+                        </div>
+                      </div>
                     </SectionCard>
 
                     <SectionCard title="Focus Areas / Plan" helperText="Private to the coach.">
-                      {/* NO CHANGES */}
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {planItems.length > 0 ? (
+                          planItems.map((item, i) => (
+                            <span
+                              key={`${item}-${i}`}
+                              className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1 break-words"
+                            >
+                              {item}
+                              <button
+                                type="button"
+                                onClick={() => removePlanItem(i)}
+                                className="ml-1 text-slate-500 hover:text-slate-700"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))
+                        ) : (
+                          <div className="text-sm text-slate-500">No plan items added yet.</div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                          placeholder="Add a plan item…"
+                          value={planInput}
+                          onChange={(e) => setPlanInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addPlanItem();
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={addPlanItem}
+                          className="px-2.5 py-1.5 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
+                        >
+                          Add
+                        </button>
+                      </div>
                     </SectionCard>
                   </div>
 
-                  {/* 🔥🔥🔥 NEW MODULE START */}
-                  <div className="space-y-3">
 
+                  <div className="space-y-3">
                     <SectionCard
                       title="Target Strategy"
                       helperText="Convert target companies into role direction and coaching plan"
                     >
                       <div className="space-y-3">
-
-                        {/* Inputs */}
                         <textarea
-                          className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[100px] text-sm bg-white/88"
-                          placeholder="Paste target companies..."
+                          className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[110px] text-sm bg-white/88"
+                          placeholder="Paste target companies or categories..."
                           value={form.targetCompanies || ''}
                           onChange={(e) =>
                             setForm((prev) => ({ ...prev, targetCompanies: e.target.value }))
@@ -1100,76 +1188,165 @@ export default function ClientProfileUpdatePage() {
                         />
 
                         <textarea
-                          className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[100px] text-sm bg-white/88"
-                          placeholder="Quick background summary..."
+                          className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[110px] text-sm bg-white/88"
+                          placeholder="Add quick background summary, strengths, or role clues..."
                           value={form.strategyBackground || ''}
                           onChange={(e) =>
                             setForm((prev) => ({ ...prev, strategyBackground: e.target.value }))
                           }
                         />
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const text = (form.targetCompanies || '').toLowerCase();
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const combinedText = [
+                                form.targetCompanies || '',
+                                form.strategyBackground || '',
+                              ]
+                                .join(' ')
+                                .toLowerCase();
 
-                            let themes = [];
-                            if (text.includes('health')) themes.push('Health / Wellness');
-                            if (text.includes('church') || text.includes('faith'))
-                              themes.push('Faith-based');
-                            if (text.includes('veteran')) themes.push('Veteran Support');
-                            if (text.includes('education')) themes.push('Education');
+                              const themes = [];
+                              if (
+                                combinedText.includes('health') ||
+                                combinedText.includes('wellness') ||
+                                combinedText.includes('medicine') ||
+                                combinedText.includes('nutrition')
+                              ) {
+                                themes.push('Health / Wellness');
+                              }
+                              if (
+                                combinedText.includes('faith') ||
+                                combinedText.includes('church') ||
+                                combinedText.includes('christian') ||
+                                combinedText.includes('ministry')
+                              ) {
+                                themes.push('Faith-based / Mission');
+                              }
+                              if (
+                                combinedText.includes('veteran') ||
+                                combinedText.includes('military')
+                              ) {
+                                themes.push('Veteran Support');
+                              }
+                              if (
+                                combinedText.includes('education') ||
+                                combinedText.includes('school') ||
+                                combinedText.includes('curriculum') ||
+                                combinedText.includes('homeschool')
+                              ) {
+                                themes.push('Education');
+                              }
+                              if (
+                                combinedText.includes('media') ||
+                                combinedText.includes('content') ||
+                                combinedText.includes('communications')
+                              ) {
+                                themes.push('Media / Communications');
+                              }
 
-                            const roles = [
-                              'Customer Success / Support',
-                              'Operations / Coordination',
-                              'Community / Outreach',
-                            ];
+                              const roles = [];
+                              if (
+                                combinedText.includes('support') ||
+                                combinedText.includes('customer') ||
+                                combinedText.includes('member')
+                              ) {
+                                roles.push('Customer Success / Support');
+                              }
+                              if (
+                                combinedText.includes('operations') ||
+                                combinedText.includes('coordination') ||
+                                combinedText.includes('admin') ||
+                                combinedText.includes('project')
+                              ) {
+                                roles.push('Operations / Coordination');
+                              }
+                              if (
+                                combinedText.includes('community') ||
+                                combinedText.includes('outreach') ||
+                                combinedText.includes('partnership') ||
+                                combinedText.includes('engagement')
+                              ) {
+                                roles.push('Community / Outreach');
+                              }
+                              if (
+                                combinedText.includes('recruit') ||
+                                combinedText.includes('talent') ||
+                                combinedText.includes('people')
+                              ) {
+                                roles.push('Recruiting / Talent Support');
+                              }
 
-                            setForm((prev) => ({
-                              ...prev,
-                              strategyOutput: {
-                                themes,
-                                roles,
-                              },
-                            }));
-                          }}
-                          className="px-3 py-2 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E]"
-                        >
-                          Generate Strategy
-                        </button>
+                              const finalThemes = themes.length
+                                ? themes
+                                : ['Mission / values alignment needs review'];
 
-                        {/* Output */}
+                              const finalRoles = roles.length
+                                ? roles
+                                : [
+                                    'Customer Success / Support',
+                                    'Operations / Coordination',
+                                    'Community / Outreach',
+                                  ];
+
+                              setForm((prev) => ({
+                                ...prev,
+                                strategyOutput: {
+                                  themes: finalThemes,
+                                  roles: finalRoles,
+                                  nextStep:
+                                    'Focus on 10–15 best-fit companies and align outreach to these role lanes.',
+                                },
+                              }));
+                            }}
+                            className="px-3 py-2 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
+                          >
+                            Generate Strategy
+                          </button>
+                        </div>
+
                         {form.strategyOutput ? (
-                          <div className="mt-3 space-y-2 text-sm">
-
+                          <div className="rounded-2xl border border-slate-200 bg-white/72 px-3 py-3 space-y-3">
                             <div>
-                              <span className="font-semibold text-slate-900">Themes:</span>
-                              <div className="text-slate-600">
-                                {form.strategyOutput.themes.join(', ')}
+                              <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-500">
+                                Themes
+                              </div>
+                              <div className="mt-1 flex flex-wrap gap-2">
+                                {(form.strategyOutput.themes || []).map((theme, idx) => (
+                                  <span
+                                    key={`${theme}-${idx}`}
+                                    className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300"
+                                  >
+                                    {theme}
+                                  </span>
+                                ))}
                               </div>
                             </div>
 
                             <div>
-                              <span className="font-semibold text-slate-900">Role Lanes:</span>
-                              <div className="text-slate-600">
-                                {form.strategyOutput.roles.join(', ')}
+                              <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-500">
+                                Role Lanes
+                              </div>
+                              <div className="mt-1 text-sm text-slate-700">
+                                {(form.strategyOutput.roles || []).join(', ')}
                               </div>
                             </div>
 
                             <div>
-                              <span className="font-semibold text-slate-900">Next Step:</span>
-                              <div className="text-slate-600">
-                                Focus on 10–15 companies and align outreach to these roles.
+                              <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-500">
+                                Next Step
+                              </div>
+                              <div className="mt-1 text-sm text-slate-700">
+                                {form.strategyOutput.nextStep}
                               </div>
                             </div>
-
                           </div>
                         ) : null}
                       </div>
                     </SectionCard>
 
-                    <SectionCard title="Session History" helperText="Coaching timeline and recent sessions">
+                  <SectionCard title="Session History" helperText="Coaching timeline and recent sessions">
                     {sessions.length === 0 ? (
                       <div className="text-sm text-slate-500">
                         No sessions recorded yet.
@@ -1235,6 +1412,8 @@ export default function ClientProfileUpdatePage() {
                       </div>
                     )}
                   </SectionCard>
+
+                  </div>
 
                   <div className="space-y-3">
                     <SectionCard title="Coach Notes" helperText="Pinned context plus timestamped note log">
@@ -1323,6 +1502,11 @@ export default function ClientProfileUpdatePage() {
                         </div>
                       )}
                     </SectionCard>
+                  </div>
+                </div>
+              ) : null}
+
+              rd>
                   </div>
                 </div>
               ) : null}
