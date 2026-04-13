@@ -372,9 +372,19 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
 
 // ─── Desktop tile ────────────────────────────────────────────────────────────
 function DesktopTile({ tile, onOpen, withChrome }) {
+  const isLink = tile.id === "resume";
+
   const tileStyle = {
-    ...GLASS, padding: 16, display: "grid", gap: 8, minHeight: 106,
+    ...GLASS,
+    padding: 16,
+    display: "grid",
+    gap: 8,
+    minHeight: 106,
+    cursor: "pointer",
+    textDecoration: "none",
+    transition: "box-shadow 0.15s, transform 0.1s",
   };
+
   const titleStyle = {
     margin: 0,
     fontSize: 18,
@@ -390,8 +400,17 @@ function DesktopTile({ tile, onOpen, withChrome }) {
     fontSize: 13, lineHeight: 1.2,
   };
 
-  return (
-    <div style={tileStyle}>
+  const handleMouseEnter = (e) => {
+    e.currentTarget.style.boxShadow = "0 16px 36px rgba(0,0,0,0.16)";
+    e.currentTarget.style.transform = "translateY(-2px)";
+  };
+  const handleMouseLeave = (e) => {
+    e.currentTarget.style.boxShadow = GLASS.boxShadow;
+    e.currentTarget.style.transform = "none";
+  };
+
+  const inner = (
+    <>
       <h2 style={titleStyle}>{tile.title}</h2>
       <p style={descStyle}>{tile.desc}</p>
       {tile.note && (
@@ -399,13 +418,34 @@ function DesktopTile({ tile, onOpen, withChrome }) {
           <strong>{tile.note}</strong>
         </div>
       )}
-      {tile.id === "resume" ? (
-        <a href={withChrome("/resume-cover")} style={linkStyle}>Open →</a>
-      ) : (
-        <a href="#" onClick={(e) => { e.preventDefault(); onOpen(tile.id); }} style={linkStyle}>
-          Open →
-        </a>
-      )}
+      <span style={linkStyle}>Open →</span>
+    </>
+  );
+
+  if (isLink) {
+    return (
+      <a
+        href={withChrome("/resume-cover")}
+        style={tileStyle}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {inner}
+      </a>
+    );
+  }
+
+  return (
+    <div
+      style={tileStyle}
+      onClick={() => onOpen(tile.id)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpen(tile.id); }}
+    >
+      {inner}
     </div>
   );
 }
