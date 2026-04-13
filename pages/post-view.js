@@ -1,6 +1,7 @@
 // pages/post-view.js
 import { useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import { getServerSession } from 'next-auth/next';
@@ -8,9 +9,11 @@ import { authOptions } from './api/auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { useConnect } from '@/components/actions/useConnect';
 import QuickEmojiBar from '@/components/feed/QuickEmojiBar';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
 
 // Helper: parse FeedPost.content into { body, attachments[] }
 function parseContent(content) {
@@ -147,23 +150,26 @@ function formatDateTime(d) {
   }
 }
 
-function GlassPanel({ children, style }) {
-  return (
-    <div
-      style={{
-        borderRadius: 14,
-        border: '1px solid rgba(255,255,255,0.22)',
-        background: 'rgba(255,255,255,0.58)',
-        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
+const GLASS = {
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
+const WHITE_CARD = {
+  background: 'rgba(255,255,255,0.92)',
+  border: '1px solid rgba(0,0,0,0.08)',
+  borderRadius: 12,
+  boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+};
+
+const ORANGE_HEADING_LIFT = {
+  textShadow: '0 2px 4px rgba(15,23,42,0.18)',
+  fontWeight: 900,
+};
 
 function PillStat({ label, value }) {
   return (
@@ -194,21 +200,18 @@ export default function PostViewPage({ initialPost, notFound }) {
 
   const [post, setPost] = useState(initialPost || null);
 
-  // Avatar popovers (post author + comment rows)
   const [authorMenuOpen, setAuthorMenuOpen] = useState(false);
   const [commentMenuKey, setCommentMenuKey] = useState(null);
   const [connectingKey, setConnectingKey] = useState(null);
 
-  // Inline comments UX
   const [commentsExpanded, setCommentsExpanded] = useState(false);
 
-  // ✅ Per-comment reply composers (including root "Add a comment")
-  const [activeReplyKey, setActiveReplyKey] = useState(null); // 'root' | commentKey
+  const [activeReplyKey, setActiveReplyKey] = useState(null);
   const [replyTextByKey, setReplyTextByKey] = useState({});
   const [replyBusyKey, setReplyBusyKey] = useState(null);
 
   const commentsSectionRef = useRef(null);
-  const replyBoxRefs = useRef({}); // key -> textarea element
+  const replyBoxRefs = useRef({});
 
   const myId = session?.user?.id ? String(session.user.id) : '';
   const myName = useMemo(() => {
@@ -227,12 +230,10 @@ export default function PostViewPage({ initialPost, notFound }) {
 
   const myAvatar = session?.user?.avatarUrl || session?.user?.image || null;
 
-  // keep chrome param on navigation
   const chrome = String(router.query?.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // Visible comments only (hide soft-deleted)
   const visibleComments = useMemo(() => {
     const all = Array.isArray(post?.comments) ? post.comments : [];
     return all.filter((c) => !(c && c.deleted === true));
@@ -268,7 +269,6 @@ export default function PostViewPage({ initialPost, notFound }) {
     }
   };
 
-  // ✅ helper: append emoji into the right composer
   const appendEmojiToKey = (key, emoji) => {
     try {
       const e = String(emoji || '').trim();
@@ -294,11 +294,8 @@ export default function PostViewPage({ initialPost, notFound }) {
     scrollToComments();
   };
 
-  // ✅ Root composer should NOT scroll the page down (this fixes the “drops too far” feeling)
   const openRootComposer = () => {
     setActiveReplyKey('root');
-    // do NOT expand comments
-    // do NOT scroll to comments section
     focusReplyBox('root');
   };
 
@@ -334,7 +331,6 @@ export default function PostViewPage({ initialPost, notFound }) {
     setReplyTextByKey((prev) => ({ ...(prev || {}), [key]: val }));
   };
 
-  // Minimal: reply handler (uses your existing comment API)
   const handleReply = async (postId, text) => {
     try {
       const res = await fetch('/api/feed/comments', {
@@ -366,7 +362,6 @@ export default function PostViewPage({ initialPost, notFound }) {
 
     setReplyBusyKey(key);
 
-    // Optimistic append (flat comment model)
     try {
       const optimistic = {
         id: `tmp_${Date.now()}`,
@@ -439,9 +434,6 @@ export default function PostViewPage({ initialPost, notFound }) {
     setActiveReplyKey(null);
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // Member actions
-  // ─────────────────────────────────────────────────────────────
   const logProfileView = async (targetUserId, source) => {
     try {
       await fetch('/api/profile/views', {
@@ -512,7 +504,24 @@ export default function PostViewPage({ initialPost, notFound }) {
     }
   };
 
-  // If the post was deleted / missing
+  const greeting = getTimeGreeting();
+
+  const HeaderBox = (
+    <SeekerTitleCard
+      greeting={greeting}
+      title="Post Detail"
+      subtitle={
+        <>
+          See the full post, track engagement, and respond without losing context. Head back to{' '}
+          <Link href={withChrome('/feed')} style={{ color: '#FF7043', fontWeight: 700 }}>
+            the feed
+          </Link>{' '}
+          when you’re done.
+        </>
+      }
+    />
+  );
+
   if (notFound) {
     return (
       <>
@@ -522,39 +531,37 @@ export default function PostViewPage({ initialPost, notFound }) {
 
         <SeekerLayout
           title="Post | ForgeTomorrow"
-          right={<RightRailPlacementManager />}
+          right={<RightRailPlacementManager surfaceId="post_view" />}
+          rightVariant="light"
           activeNav="feed"
-          header={
-            <GlassPanel
-              style={{
-                padding: '18px 16px',
-                margin: '0 auto',
-                maxWidth: 1320,
-              }}
-            >
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ color: '#FF7043', fontSize: 26, fontWeight: 900, margin: 0 }}>
-                  Post
-                </div>
-                <div style={{ marginTop: 6, color: '#546E7A', fontSize: 14 }}>
-                  This post could not be found.
-                </div>
-              </div>
-            </GlassPanel>
-          }
+          header={HeaderBox}
         >
-          <GlassPanel style={{ padding: '24px 16px' }}>
-            <div className="text-sm text-gray-700">
-              This post could not be found. It may have been deleted or is no longer available.
-            </div>
-
-            <button
-              className="mt-4 px-4 py-2 rounded-md bg-[#FF7043] text-white font-semibold"
-              onClick={handleBack}
-            >
-              Back to Feed
-            </button>
-          </GlassPanel>
+          <div style={{ ...GLASS, padding: 16, width: '100%' }}>
+            <section style={{ ...WHITE_CARD, padding: 24 }}>
+              <h2
+                style={{
+                  color: '#FF7043',
+                  marginTop: 0,
+                  marginBottom: 8,
+                  fontSize: 18,
+                  lineHeight: 1.25,
+                  letterSpacing: '-0.01em',
+                  ...ORANGE_HEADING_LIFT,
+                }}
+              >
+                Post not found
+              </h2>
+              <p style={{ color: '#607D8B', fontSize: 14, marginBottom: 16 }}>
+                This post may have been deleted or is no longer available.
+              </p>
+              <button
+                className="px-4 py-2 rounded-md bg-[#FF7043] text-white font-semibold"
+                onClick={handleBack}
+              >
+                Back to Feed
+              </button>
+            </section>
+          </div>
         </SeekerLayout>
       </>
     );
@@ -573,56 +580,13 @@ export default function PostViewPage({ initialPost, notFound }) {
 
       <SeekerLayout
         title="Post | ForgeTomorrow"
-        right={<RightRailPlacementManager />}
+        right={<RightRailPlacementManager surfaceId="post_view" />}
+        rightVariant="light"
         activeNav="feed"
-        header={
-          <GlassPanel
-            style={{
-              padding: '18px 16px',
-              margin: '0 auto',
-              maxWidth: 1320,
-            }}
-          >
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#FF7043', fontSize: 26, fontWeight: 900, margin: 0 }}>
-                Post detail
-              </div>
-              <div style={{ marginTop: 4, color: '#546E7A', fontSize: 14 }}>
-                A focused view for analytics and deep engagement.
-              </div>
-
-              <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
-                <button
-                  className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
-                  onClick={handleBack}
-                >
-                  ← Back to Feed
-                </button>
-              </div>
-            </div>
-          </GlassPanel>
-        }
+        header={HeaderBox}
       >
-        <GlassPanel
-          style={{
-            padding: '18px 16px',
-            margin: '20px 0 0',
-            width: '100%',
-            maxWidth: 'none',
-            minHeight: '60vh',
-          }}
-        >
-          {/* Main post card */}
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.92)',
-              borderRadius: 14,
-              border: '1px solid rgba(15,23,42,0.10)',
-              boxShadow: '0 10px 24px rgba(0,0,0,0.10)',
-              padding: 18,
-            }}
-          >
-            {/* Author row */}
+        <div style={{ ...GLASS, padding: 16, width: '100%' }}>
+          <section style={{ ...WHITE_CARD, padding: 18 }}>
             <div
               style={{
                 display: 'flex',
@@ -630,236 +594,350 @@ export default function PostViewPage({ initialPost, notFound }) {
                 justifyContent: 'space-between',
                 gap: 12,
                 flexWrap: 'wrap',
+                marginBottom: 14,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!canTargetPostAuthor) return;
-                      setAuthorMenuOpen((v) => !v);
-                    }}
-                    onBlur={() => setAuthorMenuOpen(false)}
-                    className="shrink-0"
-                    style={{ cursor: canTargetPostAuthor ? 'pointer' : 'default' }}
-                    aria-label={canTargetPostAuthor ? 'Open member actions' : 'Author avatar'}
-                  >
-                    {post.authorAvatar ? (
-                      <img
-                        src={post.authorAvatar}
-                        alt={post.author || 'Author'}
-                        style={{
-                          width: 46,
-                          height: 46,
-                          borderRadius: 999,
-                          objectFit: 'cover',
-                          background: '#E5E7EB',
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 46,
-                          height: 46,
-                          borderRadius: 999,
-                          background: '#E5E7EB',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#546E7A',
-                          fontWeight: 900,
-                        }}
-                      >
-                        {post.author?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
-                    )}
-                  </button>
-
-                  {authorMenuOpen && canTargetPostAuthor ? (
-                    <div
-                      className="absolute left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-30 overflow-hidden"
-                      role="menu"
-                    >
-                      <button
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handleViewProfile(postAuthorId)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                        role="menuitem"
-                      >
-                        View profile
-                      </button>
-
-                      <button
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handleConnect(postAuthorId, 'post_author')}
-                        disabled={connectingKey === 'post_author'}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:text-gray-400 disabled:bg-white"
-                        role="menuitem"
-                      >
-                        {connectingKey === 'post_author' ? 'Sending…' : 'Connect'}
-                      </button>
-
-                      <button
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handleMessage(postAuthorId)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                        role="menuitem"
-                      >
-                        Message
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div>
-                  <div style={{ fontWeight: 900, color: '#102027', fontSize: 15 }}>
-                    {post.author || 'Member'}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#607D8B' }}>
-                    {createdAtLabel} • {post.type || 'business'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats + ✅ Add a comment button lives up here now */}
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <PillStat label="Likes" value={formatCompactNumber(likesCount)} />
-                <PillStat label="Comments" value={formatCompactNumber(commentsCount)} />
-
-                <button
-                  className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
-                  onClick={openRootComposer}
-                >
-                  Add a comment
-                </button>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div style={{ marginTop: 14 }}>
-              <div
-                style={{
-                  fontSize: 16,
-                  color: '#102027',
-                  lineHeight: 1.55,
-                  whiteSpace: 'pre-wrap',
-                }}
-              >
-                {post.body}
-              </div>
-            </div>
-
-            {/* Attachments */}
-            {Array.isArray(post.attachments) && post.attachments.length > 0 ? (
-              <div style={{ marginTop: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 900, color: '#37474F' }}>Attachments</div>
-
-                <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
-                  {post.attachments.map((a, idx) => {
-                    // Normalize: handle object, JSON string, or plain URL string
-                    let normalized = a;
-                    if (typeof a === 'string') {
-                      try { normalized = JSON.parse(a); } catch { normalized = { url: a, type: isLikelyImageUrl(a) ? 'image' : 'link', name: '' }; }
-                    }
-                    const url = String(normalized?.url || '').trim();
-                    const type = String(normalized?.type || '').toLowerCase();
-                    const name = String(normalized?.name || '').trim();
-
-                    if (!url) return null;
-
-                    if (type === 'image' || isLikelyImageUrl(url)) {
-                      return (
-                        <div key={idx} style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(15,23,42,0.10)', background: '#ECEFF1' }}>
-                          <img
-                            src={url}
-                            alt={name || 'Image attachment'}
-                            style={{ width: '100%', maxHeight: 420, objectFit: 'contain', background: '#ECEFF1', display: 'block' }}
-                            onError={(e) => { try { e.currentTarget.style.display = 'none'; } catch {} }}
-                          />
-                        </div>
-                      );
-                    }
-
-                    if (type === 'video') {
-                      return (
-                        <div key={idx} style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(15,23,42,0.10)', background: '#000' }}>
-                          <video src={url} controls style={{ width: '100%', maxHeight: 420, display: 'block' }} />
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div key={idx} style={{ borderRadius: 12, border: '1px solid rgba(15,23,42,0.10)', background: 'rgba(255,255,255,0.75)', padding: 12 }}>
-                        <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: 13, fontWeight: 800, color: '#FF7043', wordBreak: 'break-all', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                          🔗 {name || url}
-                        </a>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-
-            {/* ✅ Root composer opens under the post card */}
-            {activeReplyKey === 'root' ? (
-              <div
-                style={{
-                  marginTop: 14,
-                  borderRadius: 14,
-                  border: '1px solid rgba(15,23,42,0.10)',
-                  background: 'rgba(255,255,255,0.75)',
-                  padding: 14,
-                }}
-              >
-                <div style={{ fontWeight: 900, color: '#263238', marginBottom: 8 }}>Reply</div>
-
-                <textarea
-                  ref={(el) => {
-                    replyBoxRefs.current['root'] = el;
+              <div>
+                <h2
+                  style={{
+                    color: '#FF7043',
+                    margin: 0,
+                    fontSize: 18,
+                    lineHeight: 1.25,
+                    letterSpacing: '-0.01em',
+                    ...ORANGE_HEADING_LIFT,
                   }}
-                  value={getReplyText('root')}
-                  onChange={(e) => setReplyText('root', e.target.value)}
-                  rows={3}
-                  className="w-full border rounded-md p-3"
-                  placeholder="Write your comment…"
-                />
+                >
+                  Post
+                </h2>
+                <div style={{ marginTop: 4, color: '#607D8B', fontSize: 14 }}>
+                  Full context, comments, and engagement in one place.
+                </div>
+              </div>
 
-                {/* ✅ Emoji bar for root composer */}
-                <QuickEmojiBar
-                  onPick={(emoji) => appendEmojiToKey('root', emoji)}
-                  emojis={['👍', '🔥', '🎉', '👏', '❤️']}
-                />
+              <button
+                className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
+                onClick={handleBack}
+              >
+                ← Back to Feed
+              </button>
+            </div>
 
-                <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.96)',
+                borderRadius: 14,
+                border: '1px solid rgba(15,23,42,0.10)',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.08)',
+                padding: 18,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!canTargetPostAuthor) return;
+                        setAuthorMenuOpen((v) => !v);
+                      }}
+                      onBlur={() => setAuthorMenuOpen(false)}
+                      className="shrink-0"
+                      style={{ cursor: canTargetPostAuthor ? 'pointer' : 'default' }}
+                      aria-label={canTargetPostAuthor ? 'Open member actions' : 'Author avatar'}
+                    >
+                      {post.authorAvatar ? (
+                        <img
+                          src={post.authorAvatar}
+                          alt={post.author || 'Author'}
+                          style={{
+                            width: 46,
+                            height: 46,
+                            borderRadius: 999,
+                            objectFit: 'cover',
+                            background: '#E5E7EB',
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: 46,
+                            height: 46,
+                            borderRadius: 999,
+                            background: '#E5E7EB',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#546E7A',
+                            fontWeight: 900,
+                          }}
+                        >
+                          {post.author?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                      )}
+                    </button>
+
+                    {authorMenuOpen && canTargetPostAuthor ? (
+                      <div
+                        className="absolute left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-30 overflow-hidden"
+                        role="menu"
+                      >
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleViewProfile(postAuthorId)}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                          role="menuitem"
+                        >
+                          View profile
+                        </button>
+
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleConnect(postAuthorId, 'post_author')}
+                          disabled={connectingKey === 'post_author'}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:text-gray-400 disabled:bg-white"
+                          role="menuitem"
+                        >
+                          {connectingKey === 'post_author' ? 'Sending…' : 'Connect'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleMessage(postAuthorId)}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                          role="menuitem"
+                        >
+                          Message
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div>
+                    <div style={{ fontWeight: 900, color: '#102027', fontSize: 15 }}>
+                      {post.author || 'Member'}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#607D8B' }}>
+                      {createdAtLabel} • {post.type || 'business'}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <PillStat label="Likes" value={formatCompactNumber(likesCount)} />
+                  <PillStat label="Comments" value={formatCompactNumber(commentsCount)} />
+
                   <button
                     className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
-                    onClick={() => {
-                      setReplyTextByKey((prev) => ({ ...(prev || {}), root: '' }));
-                      closeComposer();
-                    }}
-                    disabled={replyBusyKey === 'root'}
+                    onClick={openRootComposer}
                   >
-                    Cancel
-                  </button>
-
-                  <button
-                    className="px-4 py-2 rounded-md bg-[#ff8a65] text-white font-semibold disabled:opacity-50"
-                    onClick={() => submitReplyForKey('root')}
-                    disabled={!getReplyText('root').trim() || replyBusyKey === 'root'}
-                  >
-                    {replyBusyKey === 'root' ? 'Posting…' : 'Post reply'}
+                    Add a comment
                   </button>
                 </div>
               </div>
-            ) : null}
-          </div>
 
-          {/* Comments section */}
-          <div style={{ marginTop: 16 }} ref={commentsSectionRef}>
+              <div style={{ marginTop: 16 }}>
+                <div
+                  style={{
+                    fontSize: 16,
+                    color: '#102027',
+                    lineHeight: 1.65,
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {post.body}
+                </div>
+              </div>
+
+              {Array.isArray(post.attachments) && post.attachments.length > 0 ? (
+                <div style={{ marginTop: 18 }}>
+                  <div
+                    style={{
+                      color: '#FF7043',
+                      marginBottom: 10,
+                      fontSize: 16,
+                      lineHeight: 1.25,
+                      letterSpacing: '-0.01em',
+                      ...ORANGE_HEADING_LIFT,
+                    }}
+                  >
+                    Attachments
+                  </div>
+
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {post.attachments.map((a, idx) => {
+                      let normalized = a;
+                      if (typeof a === 'string') {
+                        try {
+                          normalized = JSON.parse(a);
+                        } catch {
+                          normalized = {
+                            url: a,
+                            type: isLikelyImageUrl(a) ? 'image' : 'link',
+                            name: '',
+                          };
+                        }
+                      }
+
+                      const url = String(normalized?.url || '').trim();
+                      const type = String(normalized?.type || '').toLowerCase();
+                      const name = String(normalized?.name || '').trim();
+
+                      if (!url) return null;
+
+                      if (type === 'image' || isLikelyImageUrl(url)) {
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              borderRadius: 12,
+                              overflow: 'hidden',
+                              border: '1px solid rgba(15,23,42,0.10)',
+                              background: '#ECEFF1',
+                            }}
+                          >
+                            <img
+                              src={url}
+                              alt={name || 'Image attachment'}
+                              style={{
+                                width: '100%',
+                                maxHeight: 420,
+                                objectFit: 'contain',
+                                background: '#ECEFF1',
+                                display: 'block',
+                              }}
+                              onError={(e) => {
+                                try {
+                                  e.currentTarget.style.display = 'none';
+                                } catch {
+                                  // ignore
+                                }
+                              }}
+                            />
+                          </div>
+                        );
+                      }
+
+                      if (type === 'video') {
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              borderRadius: 12,
+                              overflow: 'hidden',
+                              border: '1px solid rgba(15,23,42,0.10)',
+                              background: '#000',
+                            }}
+                          >
+                            <video
+                              src={url}
+                              controls
+                              style={{ width: '100%', maxHeight: 420, display: 'block' }}
+                            />
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            borderRadius: 12,
+                            border: '1px solid rgba(15,23,42,0.10)',
+                            background: 'rgba(255,255,255,0.75)',
+                            padding: 12,
+                          }}
+                        >
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 800,
+                              color: '#FF7043',
+                              wordBreak: 'break-all',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                            }}
+                          >
+                            🔗 {name || url}
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {activeReplyKey === 'root' ? (
+                <div
+                  style={{
+                    marginTop: 16,
+                    borderRadius: 14,
+                    border: '1px solid rgba(15,23,42,0.10)',
+                    background: 'rgba(255,255,255,0.75)',
+                    padding: 14,
+                  }}
+                >
+                  <div style={{ fontWeight: 900, color: '#263238', marginBottom: 8 }}>Reply</div>
+
+                  <textarea
+                    ref={(el) => {
+                      replyBoxRefs.current.root = el;
+                    }}
+                    value={getReplyText('root')}
+                    onChange={(e) => setReplyText('root', e.target.value)}
+                    rows={3}
+                    className="w-full border rounded-md p-3"
+                    placeholder="Write your comment…"
+                  />
+
+                  <QuickEmojiBar
+                    onPick={(emoji) => appendEmojiToKey('root', emoji)}
+                    emojis={['👍', '🔥', '🎉', '👏', '❤️']}
+                  />
+
+                  <div
+                    style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 10 }}
+                  >
+                    <button
+                      className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
+                      onClick={() => {
+                        setReplyTextByKey((prev) => ({ ...(prev || {}), root: '' }));
+                        closeComposer();
+                      }}
+                      disabled={replyBusyKey === 'root'}
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      className="px-4 py-2 rounded-md bg-[#ff8a65] text-white font-semibold disabled:opacity-50"
+                      onClick={() => submitReplyForKey('root')}
+                      disabled={!getReplyText('root').trim() || replyBusyKey === 'root'}
+                    >
+                      {replyBusyKey === 'root' ? 'Posting…' : 'Post reply'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </section>
+
+          <section ref={commentsSectionRef} style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
             <div
               style={{
                 display: 'flex',
@@ -867,9 +945,21 @@ export default function PostViewPage({ initialPost, notFound }) {
                 justifyContent: 'space-between',
                 gap: 12,
                 flexWrap: 'wrap',
+                marginBottom: 10,
               }}
             >
-              <div style={{ fontWeight: 900, color: '#263238' }}>Top comments</div>
+              <h2
+                style={{
+                  color: '#FF7043',
+                  margin: 0,
+                  fontSize: 18,
+                  lineHeight: 1.25,
+                  letterSpacing: '-0.01em',
+                  ...ORANGE_HEADING_LIFT,
+                }}
+              >
+                Top comments
+              </h2>
 
               {!commentsExpanded ? (
                 <button
@@ -888,13 +978,12 @@ export default function PostViewPage({ initialPost, notFound }) {
               )}
             </div>
 
-            {/* Inline list: preview or expanded */}
             {(commentsExpanded ? visibleComments : previewComments).length === 0 ? (
-              <div style={{ marginTop: 10, fontSize: 13, color: '#607D8B' }}>
+              <div style={{ fontSize: 13, color: '#607D8B' }}>
                 No comments yet. Be the first to respond.
               </div>
             ) : (
-              <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
+              <div style={{ display: 'grid', gap: 10 }}>
                 {(commentsExpanded ? visibleComments : previewComments).map((c, idx) => {
                   const name = c?.by || 'Member';
                   const text = c?.text || '';
@@ -1017,13 +1106,12 @@ export default function PostViewPage({ initialPost, notFound }) {
                           fontSize: 14,
                           color: '#263238',
                           whiteSpace: 'pre-wrap',
-                          lineHeight: 1.5,
+                          lineHeight: 1.55,
                         }}
                       >
                         {text}
                       </div>
 
-                      {/* ✅ Reply button opens composer under *this* comment */}
                       <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
                         <button
                           className="text-sm font-semibold"
@@ -1034,7 +1122,6 @@ export default function PostViewPage({ initialPost, notFound }) {
                         </button>
                       </div>
 
-                      {/* ✅ Per-comment composer */}
                       {composerOpen ? (
                         <div
                           style={{
@@ -1060,7 +1147,6 @@ export default function PostViewPage({ initialPost, notFound }) {
                             placeholder={`Reply to ${name}…`}
                           />
 
-                          {/* ✅ Emoji bar for this comment composer */}
                           <QuickEmojiBar
                             onPick={(emoji) => appendEmojiToKey(commentKey, emoji)}
                             emojis={['👍', '🔥', '🎉', '👏', '❤️']}
@@ -1091,7 +1177,9 @@ export default function PostViewPage({ initialPost, notFound }) {
                             <button
                               className="px-4 py-2 rounded-md bg-[#ff8a65] text-white font-semibold disabled:opacity-50"
                               onClick={() => submitReplyForKey(commentKey)}
-                              disabled={!getReplyText(commentKey).trim() || replyBusyKey === commentKey}
+                              disabled={
+                                !getReplyText(commentKey).trim() || replyBusyKey === commentKey
+                              }
                             >
                               {replyBusyKey === commentKey ? 'Posting…' : 'Post reply'}
                             </button>
@@ -1103,8 +1191,8 @@ export default function PostViewPage({ initialPost, notFound }) {
                 })}
               </div>
             )}
-          </div>
-        </GlassPanel>
+          </section>
+        </div>
       </SeekerLayout>
     </>
   );
@@ -1152,7 +1240,6 @@ export async function getServerSideProps(ctx) {
     return { props: { initialPost: null, notFound: true } };
   }
 
-  // author avatar
   let authorAvatar = null;
   if (row.authorId) {
     const u = await prisma.user.findUnique({
@@ -1162,7 +1249,6 @@ export async function getServerSideProps(ctx) {
     authorAvatar = u?.avatarUrl || u?.image || null;
   }
 
-  // Enrich commenters (avatars + names)
   const rawComments = safeJsonArray(row.comments);
   const commenterIds = Array.from(
     new Set(
@@ -1194,7 +1280,9 @@ export async function getServerSideProps(ctx) {
   }
 
   const { body } = parseContent(row.content);
-  const attachments = Array.isArray(row.attachments) ? row.attachments : safeJsonArray(row.attachments);
+  const attachments = Array.isArray(row.attachments)
+    ? row.attachments
+    : safeJsonArray(row.attachments);
 
   const initialPost = {
     id: row.id,
