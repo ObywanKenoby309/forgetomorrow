@@ -191,7 +191,7 @@ export async function getServerSideProps(context) {
 
   const allowed =
     effectiveVisibility === 'PUBLIC'            ? true
-    : effectiveVisibility === 'RECRUITERS_ONLY' ? isOwner || isAdmin || isRecruiter
+    : effectiveVisibility === 'RECRUITERS_ONLY' ? isOwner || isAdmin || isRecruiter || Boolean(hasSpotlight)
     : isOwner || isAdmin || Boolean(hasSpotlight);
 
   if (!allowed) return { notFound: true };
