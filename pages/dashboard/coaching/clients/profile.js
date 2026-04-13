@@ -136,9 +136,9 @@ function toDateInputValue(iso) {
 function MetaRow({ label, value }) {
   if (!value && value !== 0) return null;
   return (
-    <div className="flex items-start justify-between gap-3 py-2 border-b border-slate-100 last:border-0">
-      <span className="text-xs text-slate-500 shrink-0">{label}</span>
-      <span className="text-xs text-slate-800 font-medium text-right">{value}</span>
+    <div className="flex items-start justify-between gap-2 py-1.5 border-b border-slate-100 last:border-0">
+      <span className="text-[11px] text-slate-500 shrink-0">{label}</span>
+      <span className="text-[11px] text-slate-800 font-medium text-right">{value}</span>
     </div>
   );
 }
@@ -146,12 +146,12 @@ function MetaRow({ label, value }) {
 function SectionCard({ title, action, helperText, children, className = '', bodyClassName = '' }) {
   return (
     <section
-      className={`rounded-2xl border border-white/30 bg-[rgba(255,255,255,0.72)] shadow-[0_12px_28px_rgba(15,23,42,0.12)] backdrop-blur-xl ${className}`}
+      className={`rounded-[18px] border border-white/26 bg-[rgba(255,255,255,0.70)] shadow-[0_10px_22px_rgba(15,23,42,0.11)] backdrop-blur-xl ${className}`}
     >
-      <div className={`p-4 sm:p-5 ${bodyClassName}`}>
+      <div className={`p-3.5 sm:p-4 ${bodyClassName}`}>
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="min-w-0">
-            <div className="text-[18px] font-black tracking-tight text-[#FF7043] drop-shadow-[0_2px_4px_rgba(15,23,42,0.45)]">
+            <div className="text-[15px] font-black tracking-tight text-[#FF7043] drop-shadow-[0_2px_4px_rgba(15,23,42,0.45)]">
               {title}
             </div>
             {helperText ? <div className="text-xs text-slate-500 mt-1">{helperText}</div> : null}
@@ -170,7 +170,7 @@ function TabButton({ id, label, activeTab, setActiveTab, badge }) {
     <button
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+      className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition ${
         active
           ? 'border border-[#FF7043] bg-[rgba(255,112,67,0.12)] text-[#FF7043] shadow-sm'
           : 'border border-slate-200 bg-white/80 text-slate-700 hover:bg-white'
@@ -178,7 +178,7 @@ function TabButton({ id, label, activeTab, setActiveTab, badge }) {
     >
       <span>{label}</span>
       {badge ? (
-        <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-white/90 px-1.5 text-[11px] font-bold text-slate-700 border border-slate-200">
+        <span className="inline-flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-white/90 px-1.5 text-[11px] font-bold text-slate-700 border border-slate-200">
           {badge}
         </span>
       ) : null}
@@ -671,16 +671,16 @@ export default function ClientProfileUpdatePage() {
     >
       <style>{shimmerCSS}</style>
 
-      <div className="w-full pr-4 box-border">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-4 w-full min-w-0">
-          <section className="rounded-[26px] border border-white/25 bg-[rgba(248,250,252,0.80)] shadow-[0_28px_72px_rgba(2,6,23,0.18)] backdrop-blur-xl overflow-hidden xl:col-[1/2]">
-            <div className="px-5 py-5 sm:px-6 sm:py-6 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(248,250,252,0.78))]">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="w-full pr-3 box-border">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-3 w-full min-w-0">
+          <section className="rounded-[22px] border border-white/24 bg-[rgba(248,250,252,0.80)] shadow-[0_20px_50px_rgba(2,6,23,0.16)] backdrop-blur-xl overflow-hidden xl:col-[1/2]">
+            <div className="px-4 py-4 sm:px-5 sm:py-5 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(248,250,252,0.78))]">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[28px] font-black tracking-tight text-slate-900 truncate">
+                  <div className="text-[18px] font-black tracking-tight text-slate-900 truncate">
                     {client.name || 'Client'}
                   </div>
-                  <div className="mt-1 text-sm text-slate-600 truncate">
+                  <div className="mt-1 text-[13px] text-slate-600 truncate">
                     Coaching Client • {client.email || 'No email on file'}
                   </div>
                 </div>
@@ -688,7 +688,7 @@ export default function ClientProfileUpdatePage() {
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
                   <Link
                     href="/dashboard/coaching/clients"
-                    className="rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+                    className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition"
                   >
                     Back
                   </Link>
@@ -697,7 +697,7 @@ export default function ClientProfileUpdatePage() {
                     type="button"
                     onClick={handleSave}
                     disabled={saving}
-                    className="rounded-xl border border-[#FF7043] bg-[#FF7043] px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#F4511E] transition disabled:opacity-70"
+                    className="rounded-xl border border-[#FF7043] bg-[#FF7043] px-2.5 py-1.5 text-[13px] font-medium text-white shadow-sm hover:bg-[#F4511E] transition disabled:opacity-70"
                   >
                     {saving ? 'Saving…' : 'Save Changes'}
                   </button>
@@ -710,7 +710,7 @@ export default function ClientProfileUpdatePage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 mt-5">
+              <div className="flex flex-wrap gap-1.5 mt-3">
                 <TabButton
                   id="profile"
                   label="Profile"
@@ -735,16 +735,16 @@ export default function ClientProfileUpdatePage() {
               </div>
             </div>
 
-            <div className="p-5 sm:p-6 bg-[linear-gradient(180deg,rgba(248,250,252,0.24),rgba(241,245,249,0.38))]">
+            <div className="p-4 sm:p-5 bg-[linear-gradient(180deg,rgba(248,250,252,0.24),rgba(241,245,249,0.38))]">
               {activeTab === 'profile' ? (
-                <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5">
-                  <div className="space-y-5">
+                <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-4">
+                  <div className="space-y-4">
                     <SectionCard title="Client Snapshot">
                       <div className="flex flex-col items-center text-center gap-3">
                         <div
                           style={{
-                            width: 92,
-                            height: 92,
+                            width: 72,
+                            height: 72,
                             borderRadius: '999px',
                             background: avatarUrl
                               ? 'transparent'
@@ -754,7 +754,7 @@ export default function ClientProfileUpdatePage() {
                             justifyContent: 'center',
                             color: 'white',
                             fontWeight: 800,
-                            fontSize: 30,
+                            fontSize: 24,
                             boxShadow: `0 8px 24px ${avatarBg}55`,
                             outline: `3px solid ${cfg.ring}45`,
                             outlineOffset: 3,
@@ -778,7 +778,7 @@ export default function ClientProfileUpdatePage() {
                         </div>
 
                         <div>
-                          <div className="text-[22px] font-black tracking-tight text-slate-900">
+                          <div className="text-[18px] font-black tracking-tight text-slate-900">
                             {client.name}
                           </div>
                           <div className="mt-1 text-sm text-slate-500">
@@ -801,7 +801,7 @@ export default function ClientProfileUpdatePage() {
                           >
                             {form.status}
                           </span>
-                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
                             {isFTUser ? 'ForgeTomorrow User' : 'External Client'}
                           </span>
                         </div>
@@ -810,7 +810,7 @@ export default function ClientProfileUpdatePage() {
                           <button
                             type="button"
                             onClick={() => router.push('/dashboard/coaching/sessions')}
-                            className="rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+                            className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition"
                           >
                             View Sessions
                           </button>
@@ -818,7 +818,7 @@ export default function ClientProfileUpdatePage() {
                           <button
                             type="button"
                             onClick={() => router.push('/coaching/messaging')}
-                            className="rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+                            className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition"
                           >
                             Message
                           </button>
@@ -827,7 +827,7 @@ export default function ClientProfileUpdatePage() {
                             <button
                               type="button"
                               onClick={openProfile}
-                              className="rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+                              className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition"
                             >
                               View Profile
                             </button>
@@ -854,11 +854,11 @@ export default function ClientProfileUpdatePage() {
                     </SectionCard>
                   </div>
 
-                  <div className="space-y-5">
+                  <div className="space-y-4">
                     <SectionCard title="Summary">
                       {isFTUser ? (
                         summaryText ? (
-                          <div className="text-sm leading-7 text-slate-700 whitespace-pre-line">
+                          <div className="text-[13px] leading-6 text-slate-700 whitespace-pre-line">
                             {summaryText}
                           </div>
                         ) : (
@@ -868,7 +868,7 @@ export default function ClientProfileUpdatePage() {
                         )
                       ) : (
                         <textarea
-                          className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[180px] text-sm bg-white/88"
+                          className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[150px] text-sm bg-white/88"
                           placeholder="Enter client summary..."
                           value={form.manualSummary || ''}
                           onChange={onChange('manualSummary')}
@@ -876,11 +876,11 @@ export default function ClientProfileUpdatePage() {
                       )}
                     </SectionCard>
 
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                       <SectionCard title="Experience">
                         {isFTUser ? (
                           experienceList.length > 0 ? (
-                            <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                            <div className="space-y-3 max-h-[240px] overflow-y-auto pr-1">
                               {experienceList.map((exp, idx) => (
                                 <div
                                   key={`${exp.title}-${idx}`}
@@ -914,7 +914,7 @@ export default function ClientProfileUpdatePage() {
                           )
                         ) : (
                           <textarea
-                            className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[240px] text-sm bg-white/88"
+                            className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[180px] text-sm bg-white/88"
                             placeholder="Enter experience manually..."
                             value={form.manualExperience || ''}
                             onChange={onChange('manualExperience')}
@@ -925,7 +925,7 @@ export default function ClientProfileUpdatePage() {
                       <SectionCard title="Education">
                         {isFTUser ? (
                           educationList.length > 0 ? (
-                            <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                            <div className="space-y-3 max-h-[240px] overflow-y-auto pr-1">
                               {educationList.map((edu, idx) => (
                                 <div
                                   key={`${edu.school}-${idx}`}
@@ -952,7 +952,7 @@ export default function ClientProfileUpdatePage() {
                           )
                         ) : (
                           <textarea
-                            className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[240px] text-sm bg-white/88"
+                            className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[180px] text-sm bg-white/88"
                             placeholder="Enter education manually..."
                             value={form.manualEducation || ''}
                             onChange={onChange('manualEducation')}
@@ -961,7 +961,7 @@ export default function ClientProfileUpdatePage() {
                       </SectionCard>
                     </div>
 
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                       <SectionCard
                         title="Skills"
                         helperText={
@@ -1069,8 +1069,8 @@ export default function ClientProfileUpdatePage() {
               ) : null}
 
               {activeTab === 'coaching' ? (
-                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.05fr)_minmax(0,0.95fr)] gap-5">
-                  <div className="space-y-5">
+                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-4">
+                  <div className="space-y-4">
                     <SectionCard title="Coach Controls">
                       <div className="space-y-3">
                         <div>
@@ -1182,7 +1182,7 @@ export default function ClientProfileUpdatePage() {
                         </span>
                       </div>
                     ) : (
-                      <div className="space-y-3 max-h-[620px] overflow-y-auto pr-1">
+                      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                         {sessions.map((s) => {
                           const sessionStatus =
                             s.status === 'Completed'
@@ -1240,7 +1240,7 @@ export default function ClientProfileUpdatePage() {
                     )}
                   </SectionCard>
 
-                  <div className="space-y-5">
+                  <div className="space-y-4">
                     <SectionCard title="Coach Notes" helperText="Pinned context plus timestamped note log">
                       <div className="space-y-4">
                         <div>
@@ -1279,7 +1279,7 @@ export default function ClientProfileUpdatePage() {
                           </div>
 
                           {notes.length > 0 ? (
-                            <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                               {notes.map((note) => (
                                 <div
                                   key={note.id}
@@ -1314,7 +1314,7 @@ export default function ClientProfileUpdatePage() {
                       {recentActivity.length === 0 ? (
                         <div className="text-sm text-slate-500">No recent coaching activity yet.</div>
                       ) : (
-                        <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1">
+                        <div className="space-y-3 max-h-[180px] overflow-y-auto pr-1">
                           {recentActivity.map((item, idx) => (
                             <div key={`${item.label}-${idx}`} className="text-sm">
                               <div className="font-semibold text-slate-900 break-words">{item.label}</div>
@@ -1339,7 +1339,7 @@ export default function ClientProfileUpdatePage() {
                     <button
                       type="button"
                       onClick={() => setShowDocForm((v) => !v)}
-                      className="rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+                      className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition"
                     >
                       {showDocForm ? 'Cancel' : '+ Add Document'}
                     </button>
@@ -1389,7 +1389,7 @@ export default function ClientProfileUpdatePage() {
                           key={doc.id}
                           className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3"
                         >
-                          <div className="w-10 h-10 rounded-lg bg-[rgba(255,112,67,0.10)] flex items-center justify-center text-base shrink-0">
+                          <div className="w-9 h-9 rounded-lg bg-[rgba(255,112,67,0.10)] flex items-center justify-center text-base shrink-0">
                             📄
                           </div>
                           <div className="flex-1 min-w-0">
@@ -1424,8 +1424,8 @@ export default function ClientProfileUpdatePage() {
             </div>
           </section>
 
-          <aside className="hidden xl:flex xl:flex-col gap-4 xl:col-[2/3] xl:row-[1/2]">
-            <div className="min-h-[180px]">
+          <aside className="hidden xl:flex xl:flex-col gap-3 xl:col-[2/3] xl:row-[1/2]">
+            <div className="min-h-[150px]">
               <RightRailPlacementManager slot="right_rail_1" />
             </div>
 
