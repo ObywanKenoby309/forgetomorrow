@@ -180,9 +180,12 @@ export async function getServerSideProps(context) {
   const isAdmin     = viewerRole === 'ADMIN';
   const isRecruiter = viewerRole === 'RECRUITER';
 
-  // Coaches who post on the Hearth have consented to public profile visibility
-  // on the Mentorship/Spotlight community page — check for an active spotlight.
-  const hasSpotlight = effectiveVisibility !== 'PUBLIC'
+  // Spotlight exception: ONLY fires when the viewer arrived via the Hearth Profile button
+  // (?from=hearth) AND is a logged-in ForgeTomorrow member.
+  // A coach's privacy setting is fully respected everywhere else —
+  // direct URL paste, search, contacts, messages, etc. all still 404 as the coach intended.
+  const fromHearth = context.query?.from === 'hearth';
+  const hasSpotlight = fromHearth && viewerId && effectiveVisibility !== 'PUBLIC'
     ? await prisma.hearthSpotlight.findUnique({
         where: { userId: user.id },
         select: { id: true },
