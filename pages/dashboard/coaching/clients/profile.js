@@ -1065,7 +1065,7 @@ export default function ClientProfileUpdatePage() {
                             />
                           </div>
                         )}
-                                            </SectionCard>
+                      </SectionCard>
                     </div>
                   </div>
                 </div>
@@ -1507,11 +1507,6 @@ export default function ClientProfileUpdatePage() {
                         </div>
                       )}
                     </SectionCard>
-                  </div>
-                </div>
-              ) : null}
-
-              rd>
                   </div>
                 </div>
               ) : null}
