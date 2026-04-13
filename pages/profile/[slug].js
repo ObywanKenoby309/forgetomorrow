@@ -179,10 +179,20 @@ export async function getServerSideProps(context) {
   const isOwner     = Boolean(viewerEmail) && Boolean(user.email) && String(user.email).toLowerCase() === String(viewerEmail).toLowerCase();
   const isAdmin     = viewerRole === 'ADMIN';
   const isRecruiter = viewerRole === 'RECRUITER';
+
+  // Coaches who post on the Hearth have consented to public profile visibility
+  // on the Mentorship/Spotlight community page — check for an active spotlight.
+  const hasSpotlight = effectiveVisibility !== 'PUBLIC'
+    ? await prisma.hearthSpotlight.findUnique({
+        where: { userId: user.id },
+        select: { id: true },
+      })
+    : null;
+
   const allowed =
     effectiveVisibility === 'PUBLIC'            ? true
     : effectiveVisibility === 'RECRUITERS_ONLY' ? isOwner || isAdmin || isRecruiter
-    : isOwner || isAdmin;
+    : isOwner || isAdmin || Boolean(hasSpotlight);
 
   if (!allowed) return { notFound: true };
 

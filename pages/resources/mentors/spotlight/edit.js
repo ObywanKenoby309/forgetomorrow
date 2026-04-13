@@ -343,6 +343,18 @@ export default function EditSpotlightPage() {
               <div />
             </div>
 
+            <div style={{
+              background: 'rgba(255,112,67,0.06)',
+              border: '1px solid rgba(255,112,67,0.22)',
+              borderRadius: 12,
+              padding: '12px 14px',
+              fontSize: 13,
+              color: '#5D3A1A',
+              lineHeight: 1.6,
+            }}>
+              <span style={{ fontWeight: 800 }}>A note on visibility:</span> Posting an offering on the Hearth gives ForgeTomorrow consent to show your profile publicly on the Mentorship &amp; Spotlight community page — even if your profile is otherwise set to private. This is so seekers can make an informed decision about who they're trusting with their career.
+            </div>
+
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button type="submit" style={btnPrimary} disabled={!canSubmit || saving}>
                 {saving ? 'Saving…' : 'Save Changes'}
