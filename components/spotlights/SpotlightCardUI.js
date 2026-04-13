@@ -205,7 +205,12 @@ export function SpotlightCard({ spotlight, selected, onSelect }) {
 
   function handleProfile(e) {
     e.stopPropagation();
-    if (userSlug) router.push(`/profile/${userSlug}`);
+    const dest = userSlug
+      ? `/profile/${userSlug}`
+      : userId
+      ? `/member-profile?userId=${userId}`
+      : null;
+    if (dest) router.push(dest);
   }
 
   function handleBook(e) {
@@ -539,7 +544,14 @@ export function SpotlightDetail({ spotlight }) {
         ) : (
           <>
             <button
-              onClick={() => userSlug && router.push(`/profile/${userSlug}`)}
+              onClick={() => {
+                const dest = userSlug
+                  ? `/profile/${userSlug}`
+                  : userId
+                  ? `/member-profile?userId=${userId}`
+                  : null;
+                if (dest) router.push(dest);
+              }}
               style={detailBtnOutline}
             >
               Profile
