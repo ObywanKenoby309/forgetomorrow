@@ -760,65 +760,10 @@ export default function PostViewPage({ initialPost, notFound }) {
 
                 <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
                   {post.attachments.map((a, idx) => {
-                    // Attachments are objects: { type, url, name } — same shape as PostCommentsModal
-                    const url = typeof a === 'string' ? a : String(a?.url || '').trim();
-                    const type = typeof a === 'string'
-                      ? (isLikelyImageUrl(a) ? 'image' : 'link')
-                      : String(a?.type || '').toLowerCase();
-                    const name = typeof a === 'object' ? String(a?.name || '').trim() : '';
+                    const raw = typeof a === 'string' ? a : JSON.stringify(a);
+                    const url = typeof a === 'string' ? a : null;
+                    const showImage = url && isLikelyImageUrl(url);
 
-                    if (!url) return null;
-
-                    if (type === 'image') {
-                      return (
-                        <div
-                          key={idx}
-                          style={{
-                            borderRadius: 12,
-                            border: '1px solid rgba(15,23,42,0.10)',
-                            overflow: 'hidden',
-                            background: '#ECEFF1',
-                          }}
-                        >
-                          <img
-                            src={url}
-                            alt={name || 'Image attachment'}
-                            style={{
-                              width: '100%',
-                              maxHeight: 420,
-                              objectFit: 'contain',
-                              background: '#ECEFF1',
-                              display: 'block',
-                            }}
-                            onError={(e) => {
-                              try { e.currentTarget.style.display = 'none'; } catch {}
-                            }}
-                          />
-                        </div>
-                      );
-                    }
-
-                    if (type === 'video') {
-                      return (
-                        <div
-                          key={idx}
-                          style={{
-                            borderRadius: 12,
-                            border: '1px solid rgba(15,23,42,0.10)',
-                            overflow: 'hidden',
-                            background: '#000',
-                          }}
-                        >
-                          <video
-                            src={url}
-                            controls
-                            style={{ width: '100%', maxHeight: 420, background: '#000', display: 'block' }}
-                          />
-                        </div>
-                      );
-                    }
-
-                    // link or fallback
                     return (
                       <div
                         key={idx}
@@ -829,22 +774,52 @@ export default function PostViewPage({ initialPost, notFound }) {
                           padding: 12,
                         }}
                       >
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 800,
-                            color: '#FF7043',
-                            wordBreak: 'break-all',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 6,
-                          }}
-                        >
-                          🔗 {name || url}
-                        </a>
+                        {showImage ? (
+                          <div style={{ display: 'grid', gap: 8 }}>
+                            <img
+                              src={url}
+                              alt="Attachment"
+                              style={{
+                                width: '100%',
+                                maxHeight: 360,
+                                borderRadius: 10,
+                                objectFit: 'cover',
+                                background: '#ECEFF1',
+                              }}
+                            />
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 800,
+                                color: '#FF7043',
+                                wordBreak: 'break-all',
+                              }}
+                            >
+                              Open image
+                            </a>
+                          </div>
+                        ) : isLikelyUrl(url) ? (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 800,
+                              color: '#FF7043',
+                              wordBreak: 'break-all',
+                            }}
+                          >
+                            {url}
+                          </a>
+                        ) : (
+                          <div style={{ fontSize: 13, color: '#37474F', wordBreak: 'break-all' }}>
+                            {raw}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1192,6 +1167,7 @@ export async function getServerSideProps(ctx) {
       likes: true,
       comments: true,
       reactions: true,
+      attachments: true,
     },
   });
 
@@ -1240,7 +1216,12 @@ export async function getServerSideProps(ctx) {
     }, {});
   }
 
-  const { body, attachments } = parseContent(row.content);
+  const { body, attachments: contentAttachments } = parseContent(row.content);
+  // Prefer the dedicated attachments column; fall back to any attachments
+  // embedded in content for legacy posts created before the column existed.
+  const attachments = Array.isArray(row.attachments) && row.attachments.length > 0
+    ? row.attachments
+    : contentAttachments;
 
   const initialPost = {
     id: row.id,
