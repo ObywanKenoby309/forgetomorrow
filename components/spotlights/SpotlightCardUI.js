@@ -205,8 +205,9 @@ export function SpotlightCard({ spotlight, selected, onSelect }) {
 
   function handleProfile(e) {
     e.stopPropagation();
-    const dest = userSlug
-      ? `/profile/${userSlug}`
+    const slug = (userSlug || '').trim();
+    const dest = slug
+      ? `/profile/${slug}`
       : userId
       ? `/member-profile?userId=${userId}`
       : null;
@@ -545,8 +546,9 @@ export function SpotlightDetail({ spotlight }) {
           <>
             <button
               onClick={() => {
-                const dest = userSlug
-                  ? `/profile/${userSlug}`
+                const slug = (userSlug || '').trim();
+                const dest = slug
+                  ? `/profile/${slug}`
                   : userId
                   ? `/member-profile?userId=${userId}`
                   : null;
