@@ -24,6 +24,8 @@ type ProfileDetails = {
   pronouns: string | null;
   avatarUrl: string | null;
   coverUrl: string | null;
+  profileVisibility: "PUBLIC" | "PRIVATE" | "RECRUITERS_ONLY" | null;
+  isProfilePublic: boolean;
 
   // Sections
   aboutMe: string | null;
@@ -51,6 +53,11 @@ function getCookie(req: NextApiRequest, name: string) {
 
 function getJwtSecret() {
   return process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
+}
+
+function normalizeProfileVisibility(value: any): "PUBLIC" | "PRIVATE" | "RECRUITERS_ONLY" | null {
+  if (value === "PUBLIC" || value === "PRIVATE" || value === "RECRUITERS_ONLY") return value;
+  return null;
 }
 
 function normalizeWorkPreferences(input: any) {
@@ -143,6 +150,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             pronouns: true,
             avatarUrl: true,
             coverUrl: true,
+            profileVisibility: true,
+            isProfilePublic: true,
 
             aboutMe: true,
             workPreferences: true,
@@ -179,6 +188,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             pronouns: record.pronouns,
             avatarUrl: record.avatarUrl ?? null,
             coverUrl: record.coverUrl ?? null,
+            profileVisibility:
+              normalizeProfileVisibility((record as any).profileVisibility) ??
+              ((record as any).isProfilePublic ? "PUBLIC" : "PRIVATE"),
+            isProfilePublic: Boolean((record as any).isProfilePublic),
 
             aboutMe: record.aboutMe,
             workPreferences: normalizeWorkPreferences(record.workPreferences),
@@ -216,6 +229,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (body.pronouns !== undefined) data.pronouns = body.pronouns;
       if (body.avatarUrl !== undefined) data.avatarUrl = body.avatarUrl;
       if (body.coverUrl !== undefined) data.coverUrl = body.coverUrl;
+      if (body.profileVisibility !== undefined) {
+        const normalizedVisibility = normalizeProfileVisibility(body.profileVisibility);
+        data.profileVisibility = normalizedVisibility;
+        data.isProfilePublic = normalizedVisibility === "PUBLIC";
+      }
 
       if (body.aboutMe !== undefined) data.aboutMe = body.aboutMe;
       if (body.workPreferences !== undefined) {
@@ -245,6 +263,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 pronouns: true,
                 avatarUrl: true,
                 coverUrl: true,
+                profileVisibility: true,
+                isProfilePublic: true,
 
                 aboutMe: true,
                 workPreferences: true,
@@ -269,6 +289,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 pronouns: true,
                 avatarUrl: true,
                 coverUrl: true,
+                profileVisibility: true,
+                isProfilePublic: true,
 
                 aboutMe: true,
                 workPreferences: true,
@@ -323,6 +345,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         pronouns: updatedUser.pronouns ?? null,
         avatarUrl: (updatedUser as any).avatarUrl ?? null,
         coverUrl: (updatedUser as any).coverUrl ?? null,
+        profileVisibility:
+          normalizeProfileVisibility((updatedUser as any).profileVisibility) ??
+          ((updatedUser as any).isProfilePublic ? "PUBLIC" : "PRIVATE"),
+        isProfilePublic: Boolean((updatedUser as any).isProfilePublic),
 
         aboutMe: updatedUser.aboutMe ?? null,
         workPreferences: normalizeWorkPreferences(updatedUser.workPreferences),

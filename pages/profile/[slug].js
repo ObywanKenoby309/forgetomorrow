@@ -234,6 +234,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
     bannerMode: serverBannerMode, bannerHeight: serverBannerH, bannerFocalY: serverFocalY,
     corporateBannerKey, corporateBannerLocked,
     workPreferences: serverWorkPrefs,
+    profileVisibility: serverProfileVisibility,
     customSectionJson: serverCustomSectionJson,
   } = user;
 
@@ -272,6 +273,11 @@ const [prefStartDate,            setPrefStartDate]            = useState(wp.star
 const [prefScheduleAvailability, setPrefScheduleAvailability] = useState(wp.scheduleAvailability);
 const [prefLocations,            setPrefLocations]            = useState(wp.locations);
 const [prefLocationInput,        setPrefLocationInput]        = useState('');
+const [profileVisibility,        setProfileVisibility]        = useState(
+  serverProfileVisibility === 'PUBLIC' || serverProfileVisibility === 'PRIVATE' || serverProfileVisibility === 'RECRUITERS_ONLY'
+    ? serverProfileVisibility
+    : (effectiveVisibility || 'PRIVATE')
+);
 
   // Chip/draft helpers
   const [skillInput,  setSkillInput]  = useState('');
@@ -407,6 +413,7 @@ const flushPendingSave = useCallback(async (force = false) => {
           avatarUrl: avatarUrl || null,
           coverUrl: coverUrl || null,
           aboutMe: aboutMe || '',
+          profileVisibility,
           workPreferences: {
             workStatus: prefWorkStatus || '',
             workType: prefWorkType || '',
@@ -462,6 +469,7 @@ const flushPendingSave = useCallback(async (force = false) => {
   location,
   status,
   aboutMe,
+  profileVisibility,
   prefWorkStatus,
   prefWorkType,
   prefSchedule,
@@ -499,6 +507,7 @@ flushPendingSaveRef.current = flushPendingSave;
             body: JSON.stringify({
               pronouns, headline, location, status,
               avatarUrl: avatarUrl || null, coverUrl: coverUrl || null, aboutMe: aboutMe || '',
+              profileVisibility,
               workPreferences: {
                 workStatus: prefWorkStatus || '',
                 workType: prefWorkType || '',
@@ -525,7 +534,7 @@ flushPendingSaveRef.current = flushPendingSave;
     return () => { controller.abort(); if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [
     editMode, avatarUrl, coverUrl, wallpaperUrl, bannerMode, bannerH, focalY,
-    socialLinks, pronouns, headline, location, status, aboutMe,
+    socialLinks, pronouns, headline, location, status, aboutMe, profileVisibility,
     prefWorkStatus, prefWorkType, prefSchedule, prefWillingToRelocate,
     prefStartDate, prefScheduleAvailability, prefLocations,
     skills, languages, hobbies, education, certifications, projects, customSection,
@@ -1034,6 +1043,7 @@ flushPendingSaveRef.current = flushPendingSave;
                   slug={slug} profileUrl={profileUrl}
                   copied={copied} handleCopyProfileUrl={handleCopyProfileUrl}
                   primaryResume={primaryResume} effectiveVisibility={effectiveVisibility}
+                  profileVisibility={profileVisibility} setProfileVisibility={setProfileVisibility}
                   isOwner={isOwner} onEditClick={() => setEditMode(true)}
                   fileInputRef={fileInputRef} handleAvatarFileChange={handleAvatarFileChange}
                   handleAvatarRemove={handleAvatarRemove} setAvatarUrl={setAvatarUrl}
@@ -1392,6 +1402,8 @@ flushPendingSaveRef.current = flushPendingSave;
                       {/* About */}
                       <div className={`ft-mobile-panel${mobileTab === 'about' ? ' active' : ''}`}>
                         {effectiveVisibility === 'PUBLIC' && <div className="ft-mobile-live-badge"><div className="ft-mobile-live-dot" />Public Portfolio</div>}
+                        {effectiveVisibility === 'RECRUITERS_ONLY' && <div className="ft-mobile-live-badge" style={{ background:'rgba(251,191,36,0.10)', border:'1px solid rgba(251,191,36,0.22)', color:'#fbbf24' }}><div className="ft-mobile-live-dot" style={{ background:'#fbbf24' }} />Recruiters Only</div>}
+                        {effectiveVisibility === 'PRIVATE' && <div className="ft-mobile-live-badge" style={{ background:'rgba(148,163,184,0.10)', border:'1px solid rgba(148,163,184,0.22)', color:'#94a3b8' }}><div className="ft-mobile-live-dot" style={{ background:'#94a3b8' }} />Private Portfolio</div>}
                         <div className="ft-mobile-stats-row">
                           <div className="ft-mobile-stat"><div className="ft-mobile-stat-n">{skills.length}<em>+</em></div><div className="ft-mobile-stat-l">Skills</div></div>
                           <div className="ft-mobile-stat"><div className="ft-mobile-stat-n">{education.length}<em>+</em></div><div className="ft-mobile-stat-l">Education</div></div>
@@ -1504,6 +1516,7 @@ flushPendingSaveRef.current = flushPendingSave;
                         { id:'education', label:'Education',            icon:'🎓' },
                         { id:'more',      label:'Languages & Interests',icon:'🌐' },
                         { id:'prefs',     label:'Work Preferences',     icon:'💼' },
+                        { id:'visibility', label:'Profile Visibility',   icon:'👁' },
                       ].map(item => (
                         <button key={item.id} type="button" onClick={() => setMobileSheet(item.id)}
                           style={{ display:'flex', alignItems:'center', gap:12, padding:'13px 14px', borderRadius:12, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.10)', color:'var(--white)', font:'inherit', cursor:'pointer', textAlign:'left' }}>
@@ -1521,6 +1534,14 @@ flushPendingSaveRef.current = flushPendingSave;
                       <div className="ft-dark-grid-2">
                         <div className="ft-dark-field"><label className="ft-dark-label">Location</label><input className="ft-dark-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="City or Remote" /></div>
                         <div className="ft-dark-field"><label className="ft-dark-label">Status</label><input className="ft-dark-input" value={status} onChange={e => setStatus(e.target.value)} placeholder="Open to work" /></div>
+                      </div>
+                      <div className="ft-dark-field">
+                        <label className="ft-dark-label">Profile Visibility</label>
+                        <select className="ft-dark-select" value={profileVisibility} onChange={e => setProfileVisibility(e.target.value)}>
+                          <option value="PUBLIC">Public</option>
+                          <option value="PRIVATE">Private</option>
+                          <option value="RECRUITERS_ONLY">Recruiters Only</option>
+                        </select>
                       </div>
                       <div className="ft-dark-field">
                         <label className="ft-dark-label">Profile Photo</label>
@@ -1595,6 +1616,26 @@ flushPendingSaveRef.current = flushPendingSave;
                   <div className="ft-dark-section-label" style={{ marginBottom:10 }}>Interests</div>
                   <div className="ft-chip-input-row" style={{ marginBottom:4 }}><input className="ft-dark-input" value={hobbyInput} onChange={e => setHobbyInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && hobbyInput.trim()) { setHobbies(p => [...p, hobbyInput.trim()]); setHobbyInput(''); e.preventDefault(); }}} placeholder="Add an interest…" /><button type="button" className="ft-add-btn" onClick={() => { if (hobbyInput.trim()) { setHobbies(p => [...p, hobbyInput.trim()]); setHobbyInput(''); }}}>+ Add</button></div>
                   <div className="ft-dark-chips">{hobbies.map((h,i) => <span key={h+i} className="ft-dark-chip">{h}<button type="button" className="ft-dark-chip-x" onClick={() => setHobbies(p => p.filter((_,idx) => idx !== i))}>×</button></span>)}</div>
+                </div>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
+              )}
+
+              {mobileSheet === 'visibility' && (
+                <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">Profile Visibility</div></div>
+                <div className="ft-sheet-body">
+                  <div style={{ display:'grid', gap:14 }}>
+                    <div className="ft-dark-field">
+                      <label className="ft-dark-label">Who can view your profile</label>
+                      <select className="ft-dark-select" value={profileVisibility} onChange={e => setProfileVisibility(e.target.value)}>
+                        <option value="PUBLIC">Public</option>
+                        <option value="PRIVATE">Private</option>
+                        <option value="RECRUITERS_ONLY">Recruiters Only</option>
+                      </select>
+                    </div>
+                    <div style={{ fontSize: 12, lineHeight: 1.7, color: 'rgba(255,255,255,0.55)' }}>
+                      Public makes your portfolio visible to anyone with the link. Private restricts it to you and admins. Recruiters Only allows recruiter access while keeping it hidden from the general public.
+                    </div>
+                  </div>
                 </div>
                 <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
               )}
@@ -1978,7 +2019,7 @@ function BannerSection({ editMode, bannerImage, bannerPos, resolvedBannerHeight,
   );
 }
 
-function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullName, pronouns, setPronouns, headline, setHeadline, location, setLocation, status, setStatus, slug, profileUrl, copied, handleCopyProfileUrl, primaryResume, effectiveVisibility, isOwner, onEditClick, fileInputRef, handleAvatarFileChange, handleAvatarRemove, setAvatarUrl, AvatarWrap, socialLinks, updateSocial, openResumeModal }) {
+function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullName, pronouns, setPronouns, headline, setHeadline, location, setLocation, status, setStatus, slug, profileUrl, copied, handleCopyProfileUrl, primaryResume, effectiveVisibility, profileVisibility, setProfileVisibility, isOwner, onEditClick, fileInputRef, handleAvatarFileChange, handleAvatarRemove, setAvatarUrl, AvatarWrap, socialLinks, updateSocial, openResumeModal }) {
   const [showAvatarPanel, setShowAvatarPanel] = useState(false);
   useEffect(() => { if (!editMode) setShowAvatarPanel(false); }, [editMode]);
   return (
@@ -2047,6 +2088,16 @@ function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullN
             ))}
           </div>
         )}
+        {editMode && (
+          <div style={{ marginTop: 14, maxWidth: 240 }}>
+            <label className="ft-dark-label" style={{ marginBottom: 6 }}>Profile Visibility</label>
+            <select className="ft-dark-select" value={profileVisibility} onChange={e => setProfileVisibility(e.target.value)}>
+              <option value="PUBLIC">Public</option>
+              <option value="PRIVATE">Private</option>
+              <option value="RECRUITERS_ONLY">Recruiters Only</option>
+            </select>
+          </div>
+        )}
         <div className="ft-actions-row">
           {/* URL pill — shrinks to fit, doesn't flex-grow */}
           <span className="ft-url-pill" style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 280 }}>{profileUrl}</span>
@@ -2081,10 +2132,24 @@ function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullN
             </a>
           )}
         </div>
-        {effectiveVisibility === 'PUBLIC' && !editMode && (
+        {!editMode && (
           <span className="ft-visibility-pill">
-            <svg width="10" height="10" fill="none" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.2" /><path d="M1 5h8M5 1c-1.5 1.2-2 2.5-2 4s.5 2.8 2 4M5 1c1.5 1.2 2 2.5 2 4s-.5 2.8-2 4" stroke="currentColor" strokeWidth="1.2" /></svg>
-            Public portfolio
+            {effectiveVisibility === 'PUBLIC' ? (
+              <>
+                <svg width="10" height="10" fill="none" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.2" /><path d="M1 5h8M5 1c-1.5 1.2-2 2.5-2 4s.5 2.8 2 4M5 1c1.5 1.2 2 2.5 2 4s-.5 2.8-2 4" stroke="currentColor" strokeWidth="1.2" /></svg>
+                Public portfolio
+              </>
+            ) : effectiveVisibility === 'RECRUITERS_ONLY' ? (
+              <>
+                <svg width="10" height="10" fill="none" viewBox="0 0 10 10"><path d="M5 1.2a2 2 0 110 4 2 2 0 010-4zM1.6 8.8a3.4 3.4 0 016.8 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /><path d="M7.8 2.2h1.6M8.6 1.4v1.6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
+                Recruiters only
+              </>
+            ) : (
+              <>
+                <svg width="10" height="10" fill="none" viewBox="0 0 10 10"><rect x="2.2" y="4.4" width="5.6" height="4" rx="1" stroke="currentColor" strokeWidth="1.2" /><path d="M3.4 4.4V3.2a1.6 1.6 0 113.2 0v1.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
+                Private portfolio
+              </>
+            )}
           </span>
         )}
       </div>
