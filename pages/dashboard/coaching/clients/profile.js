@@ -148,7 +148,7 @@ function SectionCard({ title, action, helperText, children, className = '', body
     <section
       className={`rounded-[18px] border border-white/26 bg-[rgba(255,255,255,0.70)] shadow-[0_10px_22px_rgba(15,23,42,0.11)] backdrop-blur-xl ${className}`}
     >
-      <div className={`p-3.5 sm:p-4 ${bodyClassName}`}>
+      <div className={`p-2.5 sm:p-3 ${bodyClassName}`}>
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="min-w-0">
             <div className="text-[15px] font-black tracking-tight text-[#FF7043] drop-shadow-[0_2px_4px_rgba(15,23,42,0.45)]">
@@ -170,7 +170,7 @@ function TabButton({ id, label, activeTab, setActiveTab, badge }) {
     <button
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition ${
+      className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[13px] font-semibold transition ${
         active
           ? 'border border-[#FF7043] bg-[rgba(255,112,67,0.12)] text-[#FF7043] shadow-sm'
           : 'border border-slate-200 bg-white/80 text-slate-700 hover:bg-white'
@@ -674,10 +674,10 @@ export default function ClientProfileUpdatePage() {
       <div className="w-full pr-3 box-border">
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-3 w-full min-w-0">
           <section className="rounded-[22px] border border-white/24 bg-[rgba(248,250,252,0.80)] shadow-[0_20px_50px_rgba(2,6,23,0.16)] backdrop-blur-xl overflow-hidden xl:col-[1/2]">
-            <div className="px-4 py-4 sm:px-5 sm:py-5 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(248,250,252,0.78))]">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div className="px-3 py-3 sm:px-4 sm:py-4 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(248,250,252,0.78))]">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-[18px] font-black tracking-tight text-slate-900 truncate">
+                  <div className="text-[16px] font-black tracking-tight text-slate-900 truncate">
                     {client.name || 'Client'}
                   </div>
                   <div className="mt-1 text-[13px] text-slate-600 truncate">
@@ -735,16 +735,16 @@ export default function ClientProfileUpdatePage() {
               </div>
             </div>
 
-            <div className="p-4 sm:p-5 bg-[linear-gradient(180deg,rgba(248,250,252,0.24),rgba(241,245,249,0.38))]">
+            <div className="p-3 sm:p-3.5 bg-[linear-gradient(180deg,rgba(248,250,252,0.24),rgba(241,245,249,0.38))]">
               {activeTab === 'profile' ? (
-                <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-4">
-                  <div className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-3">
+                  <div className="space-y-3">
                     <SectionCard title="Client Snapshot">
                       <div className="flex flex-col items-center text-center gap-3">
                         <div
                           style={{
-                            width: 72,
-                            height: 72,
+                            width: 64,
+                            height: 64,
                             borderRadius: '999px',
                             background: avatarUrl
                               ? 'transparent'
@@ -778,7 +778,7 @@ export default function ClientProfileUpdatePage() {
                         </div>
 
                         <div>
-                          <div className="text-[18px] font-black tracking-tight text-slate-900">
+                          <div className="text-[16px] font-black tracking-tight text-slate-900">
                             {client.name}
                           </div>
                           <div className="mt-1 text-sm text-slate-500">
@@ -854,7 +854,7 @@ export default function ClientProfileUpdatePage() {
                     </SectionCard>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <SectionCard title="Summary">
                       {isFTUser ? (
                         summaryText ? (
@@ -876,7 +876,7 @@ export default function ClientProfileUpdatePage() {
                       )}
                     </SectionCard>
 
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                       <SectionCard title="Experience">
                         {isFTUser ? (
                           experienceList.length > 0 ? (
@@ -961,7 +961,7 @@ export default function ClientProfileUpdatePage() {
                       </SectionCard>
                     </div>
 
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                       <SectionCard
                         title="Skills"
                         helperText={
@@ -1069,8 +1069,8 @@ export default function ClientProfileUpdatePage() {
               ) : null}
 
               {activeTab === 'coaching' ? (
-                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-4">
-                  <div className="space-y-4">
+                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-3">
+                  <div className="space-y-3">
                     <SectionCard title="Coach Controls">
                       <div className="space-y-3">
                         <div>
@@ -1165,7 +1165,7 @@ export default function ClientProfileUpdatePage() {
                         <button
                           type="button"
                           onClick={addPlanItem}
-                          className="px-3 py-2 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
+                          className="px-2.5 py-1.5 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
                         >
                           Add
                         </button>
@@ -1240,9 +1240,9 @@ export default function ClientProfileUpdatePage() {
                     )}
                   </SectionCard>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <SectionCard title="Coach Notes" helperText="Pinned context plus timestamped note log">
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         <div>
                           <label className="block text-xs text-slate-500 mb-1.5">Pinned Context</label>
                           <textarea
@@ -1373,7 +1373,7 @@ export default function ClientProfileUpdatePage() {
                         type="button"
                         onClick={handleAddDoc}
                         disabled={savingDoc || !docTitle.trim() || !docUrl.trim()}
-                        className="px-3 py-2 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm disabled:opacity-50 transition"
+                        className="px-2.5 py-1.5 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm disabled:opacity-50 transition"
                       >
                         {savingDoc ? 'Adding…' : 'Add'}
                       </button>
