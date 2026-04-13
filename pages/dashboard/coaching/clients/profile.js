@@ -15,7 +15,10 @@ function toSafeArray(value) {
       const parsed = JSON.parse(trimmed);
       if (Array.isArray(parsed)) return parsed;
     } catch {}
-    return trimmed.split(',').map((v) => v.trim()).filter(Boolean);
+    return trimmed
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
   }
   return [];
 }
@@ -51,9 +54,11 @@ function getExperienceList(value) {
   return toSafeArray(value)
     .map((item) => {
       if (!item || typeof item !== 'object') return null;
+
       const highlights = toStringArray(
         item.highlights || item.bullets || item.description || item.details || []
       );
+
       return {
         title: String(item.title || item.role || item.jobTitle || '').trim(),
         company: String(item.company || item.employer || '').trim(),
@@ -84,13 +89,15 @@ function avatarColor(name = '') {
 }
 
 function initials(name = '') {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase() || '?';
+  return (
+    name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase() || '?'
+  );
 }
 
 function fmtDate(iso) {
@@ -130,21 +137,34 @@ function toDateInputValue(iso) {
   }
 }
 
-function sectionClasses(isEmpty = false) {
-  return `rounded-2xl border p-4 sm:p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ${
-    isEmpty
-      ? 'bg-white/70 border-slate-200'
-      : 'bg-white/88 border-white/60 backdrop-blur-sm'
-  }`;
-}
-
 function MetaRow({ label, value }) {
-  if (!value) return null;
+  if (!value && value !== 0) return null;
   return (
-    <div className="flex items-start justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
+    <div className="flex items-start justify-between gap-3 py-2 border-b border-slate-100 last:border-0">
       <span className="text-xs text-slate-500 shrink-0">{label}</span>
       <span className="text-xs text-slate-800 font-medium text-right">{value}</span>
     </div>
+  );
+}
+
+function SectionCard({ title, action, helperText, children, className = '' }) {
+  return (
+    <section
+      className={`rounded-2xl border border-white/30 bg-[rgba(255,255,255,0.72)] shadow-[0_12px_28px_rgba(15,23,42,0.12)] backdrop-blur-xl ${className}`}
+    >
+      <div className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="min-w-0">
+            <div className="text-[18px] font-black tracking-tight text-[#FF7043] drop-shadow-[0_2px_4px_rgba(15,23,42,0.45)]">
+              {title}
+            </div>
+            {helperText ? <div className="text-xs text-slate-500 mt-1">{helperText}</div> : null}
+          </div>
+          {action ? <div className="shrink-0">{action}</div> : null}
+        </div>
+        {children}
+      </div>
+    </section>
   );
 }
 
@@ -155,6 +175,7 @@ const STATUS = {
 };
 
 const defaultStatus = { bg: '#F5F5F5', color: '#546E7A', ring: '#90A4AE' };
+const shimmerCSS = `@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`;
 
 export default function ClientProfileUpdatePage() {
   const router = useRouter();
@@ -213,6 +234,7 @@ export default function ClientProfileUpdatePage() {
       }
 
       const full = detailData.client;
+
       setClient(full);
       setForm({
         name: full.name || '',
@@ -485,16 +507,13 @@ export default function ClientProfileUpdatePage() {
       .slice(0, 8);
   }, [client, sessions, notes]);
 
-  const RightRail = <RightRailPlacementManager slot="right_rail_1" />;
-
   if (loading) {
     return (
       <CoachingLayout
-        title="Client Profile Preview | ForgeTomorrow"
+        title="Client Profile | ForgeTomorrow"
         activeNav="clients"
+        contentFullBleed
         sidebarInitialOpen={{ coaching: true, seeker: false }}
-        right={RightRail}
-        rightVariant="light"
       >
         <style>{shimmerCSS}</style>
         <div style={{ display: 'grid', gap: 14 }}>
@@ -518,23 +537,19 @@ export default function ClientProfileUpdatePage() {
   if (error || !client || !form) {
     return (
       <CoachingLayout
-        title="Client Profile Preview | ForgeTomorrow"
+        title="Client Profile | ForgeTomorrow"
         activeNav="clients"
+        contentFullBleed
         sidebarInitialOpen={{ coaching: true, seeker: false }}
-        right={RightRail}
-        rightVariant="light"
       >
-        <section className={sectionClasses(true)}>
-          <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
-            Client Not Found
-          </div>
+        <SectionCard title="Client Not Found">
           <p className="text-sm text-slate-500 mb-4">
             {error || 'No client found for the provided email.'}
           </p>
           <Link href="/dashboard/coaching/clients" className="text-sm font-semibold text-[#FF7043]">
             ← Back to Clients
           </Link>
-        </section>
+        </SectionCard>
       </CoachingLayout>
     );
   }
@@ -554,51 +569,59 @@ export default function ClientProfileUpdatePage() {
       : '') ||
     (client.clientId ? `/member-profile?userId=${client.clientId}` : '');
 
-  const summaryText =
-    source.summary?.trim?.() ||
-    source.aboutMe?.trim?.() ||
-    source.profileSummary?.trim?.() ||
-    source.headline?.trim?.() ||
-    form.notes?.trim() ||
-    notes[0]?.body ||
-    '';
+  const summaryText = isFTUser
+    ? source.summary?.trim?.() ||
+      source.aboutMe?.trim?.() ||
+      source.profileSummary?.trim?.() ||
+      source.headline?.trim?.() ||
+      ''
+    : form.manualSummary?.trim() || '';
 
-  const skillsList = toStringArray(
-    source.skills ||
-      source.skillsJson ||
-      source.skillsProfile ||
-      source.topSkills ||
-      source.resumeSkills
-  );
+  const skillsList = isFTUser
+    ? toStringArray(
+        source.skills ||
+          source.skillsJson ||
+          source.skillsProfile ||
+          source.topSkills ||
+          source.resumeSkills
+      )
+    : toStringArray(form.manualSkills || '');
 
-  const experienceList = getExperienceList(
-    source.experience || source.workHistory || source.profileExperience || source.resumeExperience
-  );
+  const experienceList = isFTUser
+    ? getExperienceList(
+        source.experience || source.workHistory || source.profileExperience || source.resumeExperience
+      )
+    : [];
 
-  const educationList = toEducationObjects(
-    source.education || source.educationJson || source.profileEducation
-  );
+  const educationList = isFTUser
+    ? toEducationObjects(source.education || source.educationJson || source.profileEducation)
+    : [];
 
-  const preferredLocations = toStringArray(
-    source.preferredLocations ||
-      source.workPreferences?.preferredLocations ||
-      source.workPreferences?.locations
-  );
+  const preferredLocations = isFTUser
+    ? toStringArray(
+        source.preferredLocations ||
+          source.workPreferences?.preferredLocations ||
+          source.workPreferences?.locations
+      )
+    : toStringArray(form.manualPreferredLocations || '');
 
-  const workStatus =
-    source.workStatus || source.workPreferences?.workStatus || source.workPreferences?.status || '';
+  const workStatus = isFTUser
+    ? source.workStatus || source.workPreferences?.workStatus || source.workPreferences?.status || ''
+    : form.manualWorkStatus || '';
 
-  const preferredWorkType =
-    source.preferredWorkType ||
-    source.workPreferences?.preferredWorkType ||
-    source.workPreferences?.workType ||
-    '';
+  const preferredWorkType = isFTUser
+    ? source.preferredWorkType ||
+      source.workPreferences?.preferredWorkType ||
+      source.workPreferences?.workType ||
+      ''
+    : form.manualPreferredWorkType || '';
 
-  const willingToRelocate =
-    source.willingToRelocate ??
-    source.workPreferences?.willingToRelocate ??
-    source.workPreferences?.relocate ??
-    '';
+  const willingToRelocate = isFTUser
+    ? source.willingToRelocate ??
+      source.workPreferences?.willingToRelocate ??
+      source.workPreferences?.relocate ??
+      ''
+    : form.manualWillingToRelocate || '';
 
   const hasWorkPrefs = Boolean(
     workStatus || preferredWorkType || preferredLocations.length || String(willingToRelocate || '').trim()
@@ -617,392 +640,520 @@ export default function ClientProfileUpdatePage() {
     <CoachingLayout
       title={`${client.name} | ForgeTomorrow`}
       activeNav="clients"
+      contentFullBleed
       sidebarInitialOpen={{ coaching: true, seeker: false }}
-      right={RightRail}
-      rightVariant="light"
     >
-      <style>{`
-        ${shimmerCSS}
-      `}</style>
+      <style>{shimmerCSS}</style>
 
-      <div className="fixed inset-0 -z-10" />
-
-      <div className="w-full max-w-[1400px] mx-auto rounded-[28px] border border-white/25 bg-[rgba(248,250,252,0.82)] shadow-[0_30px_80px_rgba(2,6,23,0.18)] backdrop-blur-xl overflow-hidden">
-        <div className="px-5 py-5 sm:px-6 sm:py-6 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.88),rgba(248,250,252,0.72))] flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <div className="text-[24px] font-black tracking-tight text-slate-900 truncate">
-              {client.name || 'Client'}
-            </div>
-            <div className="mt-1 text-sm text-slate-600 truncate">
-              Coaching Client • {client.email || 'No email on file'}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <Link
-              href="/dashboard/coaching/clients"
-              className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
-            >
-              Back
-            </Link>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="rounded-xl border border-[#FF7043] bg-[#FF7043] px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#F4511E] transition disabled:opacity-70"
-            >
-              {saving ? 'Saving…' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
-
-        <div className="p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)_340px] gap-5 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,250,252,0.22),rgba(241,245,249,0.34))]">
-          <div className="space-y-5">
-            <section className={sectionClasses(false)}>
-              <div className="flex flex-col items-center text-center gap-3">
-                <div
-                  style={{
-                    width: 88,
-                    height: 88,
-                    borderRadius: '999px',
-                    background: avatarUrl ? 'transparent' : `linear-gradient(135deg, ${avatarBg}, ${avatarDark})`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: 800,
-                    fontSize: 28,
-                    boxShadow: `0 4px 16px ${avatarBg}70`,
-                    outline: `3px solid ${cfg.ring}50`,
-                    outlineOffset: 3,
-                    overflow: 'hidden',
-                  }}
-                >
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt={client.name || 'Client avatar'}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        display: 'block',
-                      }}
-                    />
-                  ) : (
-                    initials(client.name)
-                  )}
-                </div>
-
-                <div>
-                  <div className="text-[22px] font-black tracking-tight text-slate-900">
-                    {client.name}
+      <div className="w-full pr-4 box-border">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-4 w-full min-w-0">
+          <section className="rounded-[26px] border border-white/25 bg-[rgba(248,250,252,0.80)] shadow-[0_28px_72px_rgba(2,6,23,0.18)] backdrop-blur-xl overflow-hidden xl:col-[1/2]">
+            <div className="px-5 py-5 sm:px-6 sm:py-6 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(248,250,252,0.78))]">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="text-[28px] font-black tracking-tight text-slate-900 truncate">
+                    {client.name || 'Client'}
                   </div>
-                  <div className="mt-1 text-sm text-slate-500">
-                    {client.email || 'No email on file'}
+                  <div className="mt-1 text-sm text-slate-600 truncate">
+                    Coaching Client • {client.email || 'No email on file'}
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 800,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      padding: '4px 10px',
-                      borderRadius: 999,
-                      background: cfg.bg,
-                      color: cfg.color,
-                    }}
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <Link
+                    href="/dashboard/coaching/clients"
+                    className="rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
                   >
-                    {form.status}
-                  </span>
-                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-                    {isFTUser ? 'ForgeTomorrow User' : 'External Client'}
-                  </span>
-                </div>
+                    Back
+                  </Link>
 
-                <div className="grid grid-cols-1 gap-2 w-full">
                   <button
                     type="button"
-                    onClick={() => router.push('/dashboard/coaching/sessions')}
-                    className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="rounded-xl border border-[#FF7043] bg-[#FF7043] px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#F4511E] transition disabled:opacity-70"
                   >
-                    View Sessions
+                    {saving ? 'Saving…' : 'Save Changes'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => router.push('/coaching/messaging')}
-                    className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
-                  >
-                    Message
-                  </button>
-                  {profileHref ? (
-                    <button
-                      type="button"
-                      onClick={openProfile}
-                      className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
-                    >
-                      View Profile
-                    </button>
+
+                  {saved ? (
+                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">
+                      Saved
+                    </span>
                   ) : null}
                 </div>
               </div>
-            </section>
-
-            <section className={sectionClasses(false)}>
-              <div className="text-[18px] font-bold tracking-tight text-slate-900 mb-3">
-                Snapshot
-              </div>
-              <div className="divide-y divide-slate-100">
-                <MetaRow label="Status" value={form.status} />
-                <MetaRow label="Next session" value={form.nextSession ? fmtDateTime(form.nextSession) : ''} />
-                <MetaRow label="Last contact" value={form.lastContact ? fmtDateTime(form.lastContact) : ''} />
-                <MetaRow label="Documents" value={`${docs.length}`} />
-                <MetaRow label="Notes" value={`${notes.length}`} />
-                <MetaRow label="Sessions" value={`${sessions.length}`} />
-              </div>
-            </section>
-          </div>
-
-          <div className="space-y-5">
-
-  {/* SUMMARY */}
-  <section className={sectionClasses(!summaryText?.trim())}>
-    <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
-      Summary
-    </div>
-
-    {isFTUser ? (
-      summaryText?.trim() ? (
-        <div className="text-sm leading-7 text-slate-700 whitespace-pre-line">
-          {summaryText}
-        </div>
-      ) : (
-        <div className="text-sm text-slate-500">
-          No profile summary available yet.
-        </div>
-      )
-    ) : (
-      <textarea
-        className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
-        placeholder="Enter client summary..."
-        value={form.manualSummary || ''}
-        onChange={onChange('manualSummary')}
-      />
-    )}
-  </section>
-
-
-  {/* EXPERIENCE */}
-  <section className={sectionClasses(experienceList.length === 0)}>
-    <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
-      Experience
-    </div>
-
-    {isFTUser ? (
-      experienceList.length > 0 ? (
-        <div className="space-y-3">
-          {experienceList.map((exp, idx) => (
-            <div
-              key={`${exp.title}-${idx}`}
-              className="border-b border-slate-100 last:border-0 pb-3"
-            >
-              <div className="font-semibold text-slate-900 break-words">
-                {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
-              </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-sm text-slate-500">
-          No experience is available on this client yet.
-        </div>
-      )
-    ) : (
-      <textarea
-        className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
-        placeholder="Enter experience manually..."
-        value={form.manualExperience || ''}
-        onChange={onChange('manualExperience')}
-      />
-    )}
-  </section>
 
-
-  {/* EDUCATION */}
-  <section className={sectionClasses(educationList.length === 0)}>
-    <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
-      Education
-    </div>
-
-    {isFTUser ? (
-      educationList.length > 0 ? (
-        <div className="space-y-3">
-          {educationList.map((edu, idx) => (
-            <div
-              key={`${edu.school}-${idx}`}
-              className="border-b border-slate-100 last:border-0 pb-3"
-            >
-              <div className="font-semibold text-slate-900 break-words">
-                {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-sm text-slate-500">
-          No education details are available yet.
-        </div>
-      )
-    ) : (
-      <textarea
-        className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
-        placeholder="Enter education manually..."
-        value={form.manualEducation || ''}
-        onChange={onChange('manualEducation')}
-      />
-    )}
-  </section>
-
-</div>
-
-            <section className={sectionClasses(sessions.length === 0)}>
-              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
-                Session History
-              </div>
-
-              {sessions.length === 0 ? (
-                <div className="text-sm text-slate-500">
-                  No sessions recorded yet.
-                  <span className="block text-xs text-slate-400 mt-1">
-                    Once sessions are created, they will appear here as part of the coaching timeline.
-                  </span>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {sessions.map((s) => {
-                    const sessionStatus =
-                      s.status === 'Completed'
-                        ? { bg: '#E8F5E9', color: '#2E7D32' }
-                        : s.status === 'Cancelled'
-                        ? { bg: '#FDECEA', color: '#C62828' }
-                        : { bg: '#E3F2FD', color: '#1565C0' };
-
-                    return (
+            <div className="p-5 sm:p-6 bg-[linear-gradient(180deg,rgba(248,250,252,0.24),rgba(241,245,249,0.38))]">
+              <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5">
+                <div className="space-y-5">
+                  <SectionCard title="Client Snapshot">
+                    <div className="flex flex-col items-center text-center gap-3">
                       <div
-                        key={s.id}
-                        className="border-b border-slate-100 last:border-0 pb-3"
+                        style={{
+                          width: 92,
+                          height: 92,
+                          borderRadius: '999px',
+                          background: avatarUrl
+                            ? 'transparent'
+                            : `linear-gradient(135deg, ${avatarBg}, ${avatarDark})`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 800,
+                          fontSize: 30,
+                          boxShadow: `0 8px 24px ${avatarBg}55`,
+                          outline: `3px solid ${cfg.ring}45`,
+                          outlineOffset: 3,
+                          overflow: 'hidden',
+                        }}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="font-semibold text-slate-900 break-words">
-                              {s.type || 'Session'}
-                            </div>
-                            <div className="text-slate-500 break-words">
-                              {fmtDateTime(s.startAt)} • {s.durationMin} min
-                            </div>
-                          </div>
-                          <span
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={client.name || 'Client avatar'}
                             style={{
-                              fontSize: 10,
-                              fontWeight: 800,
-                              letterSpacing: '0.05em',
-                              textTransform: 'uppercase',
-                              padding: '4px 8px',
-                              borderRadius: 999,
-                              background: sessionStatus.bg,
-                              color: sessionStatus.color,
-                              whiteSpace: 'nowrap',
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              display: 'block',
                             }}
+                          />
+                        ) : (
+                          initials(client.name)
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="text-[22px] font-black tracking-tight text-slate-900">
+                          {client.name}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-500">
+                          {client.email || 'No email on file'}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase',
+                            padding: '4px 10px',
+                            borderRadius: 999,
+                            background: cfg.bg,
+                            color: cfg.color,
+                          }}
+                        >
+                          {form.status}
+                        </span>
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                          {isFTUser ? 'ForgeTomorrow User' : 'External Client'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2 w-full pt-1">
+                        <button
+                          type="button"
+                          onClick={() => router.push('/dashboard/coaching/sessions')}
+                          className="rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+                        >
+                          View Sessions
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => router.push('/coaching/messaging')}
+                          className="rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+                        >
+                          Message
+                        </button>
+
+                        {profileHref ? (
+                          <button
+                            type="button"
+                            onClick={openProfile}
+                            className="rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
                           >
-                            {s.status}
-                          </span>
+                            View Profile
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard title="Command Snapshot">
+                    <div className="divide-y divide-slate-100">
+                      <MetaRow label="Status" value={form.status} />
+                      <MetaRow
+                        label="Next session"
+                        value={form.nextSession ? fmtDateTime(form.nextSession) : ''}
+                      />
+                      <MetaRow
+                        label="Last contact"
+                        value={form.lastContact ? fmtDateTime(form.lastContact) : ''}
+                      />
+                      <MetaRow label="Sessions" value={sessions.length} />
+                      <MetaRow label="Notes" value={notes.length} />
+                      <MetaRow label="Documents" value={docs.length} />
+                    </div>
+                  </SectionCard>
+                </div>
+
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-5">
+                    <SectionCard title="Summary">
+                      {isFTUser ? (
+                        summaryText ? (
+                          <div className="text-sm leading-7 text-slate-700 whitespace-pre-line">
+                            {summaryText}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-500">
+                            No profile summary available yet.
+                          </div>
+                        )
+                      ) : (
+                        <textarea
+                          className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[180px] text-sm bg-white/88"
+                          placeholder="Enter client summary..."
+                          value={form.manualSummary || ''}
+                          onChange={onChange('manualSummary')}
+                        />
+                      )}
+                    </SectionCard>
+
+                    <SectionCard title="Coach Controls">
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1.5">Name</label>
+                          <input
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            value={form.name}
+                            onChange={onChange('name')}
+                          />
                         </div>
 
-                        {(s.notes || s.followUpDueAt) && (
-                          <div className="mt-2 text-sm text-slate-700 space-y-1">
-                            {s.notes ? <div>{s.notes}</div> : null}
-                            {s.followUpDueAt ? (
-                              <div className="text-xs text-slate-500">
-                                Follow-up: {s.followUpDone ? 'Done' : `Due ${fmtDate(s.followUpDueAt)}`}
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1.5">Email</label>
+                          <input
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            value={form.email}
+                            onChange={onChange('email')}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1.5">Status</label>
+                          <select
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            value={form.status}
+                            onChange={onChange('status')}
+                          >
+                            <option value="Active">Active</option>
+                            <option value="At Risk">At Risk</option>
+                            <option value="New Intake">New Intake</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1.5">Next Session</label>
+                          <input
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            type="datetime-local"
+                            value={toDateInputValue(form.nextSession)}
+                            onChange={onChange('nextSession')}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1.5">Last Contact</label>
+                          <input
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            type="datetime-local"
+                            value={toDateInputValue(form.lastContact)}
+                            onChange={onChange('lastContact')}
+                          />
+                        </div>
+                      </div>
+                    </SectionCard>
+                  </div>
+
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                    <SectionCard title="Experience">
+                      {isFTUser ? (
+                        experienceList.length > 0 ? (
+                          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                            {experienceList.map((exp, idx) => (
+                              <div
+                                key={`${exp.title}-${idx}`}
+                                className="border-b border-slate-100 last:border-0 pb-3"
+                              >
+                                <div className="font-semibold text-slate-900 break-words">
+                                  {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
+                                </div>
+                                {exp.range ? (
+                                  <div className="text-xs text-slate-500 mt-1">{exp.range}</div>
+                                ) : null}
+                                {exp.highlights?.length ? (
+                                  <ul className="mt-2 space-y-1">
+                                    {exp.highlights.slice(0, 3).map((item, itemIdx) => (
+                                      <li
+                                        key={`${item}-${itemIdx}`}
+                                        className="text-sm text-slate-700 leading-6"
+                                      >
+                                        • {item}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-500">
+                            No experience is available on this client yet.
+                          </div>
+                        )
+                      ) : (
+                        <textarea
+                          className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[220px] text-sm bg-white/88"
+                          placeholder="Enter experience manually..."
+                          value={form.manualExperience || ''}
+                          onChange={onChange('manualExperience')}
+                        />
+                      )}
+                    </SectionCard>
+
+                    <SectionCard title="Education">
+                      {isFTUser ? (
+                        educationList.length > 0 ? (
+                          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                            {educationList.map((edu, idx) => (
+                              <div
+                                key={`${edu.school}-${idx}`}
+                                className="border-b border-slate-100 last:border-0 pb-3"
+                              >
+                                <div className="font-semibold text-slate-900 break-words">
+                                  {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
+                                </div>
+                                <div className="text-sm text-slate-600 mt-1 break-words">
+                                  {edu.school || 'School not listed'}
+                                </div>
+                                {(edu.startYear || edu.endYear) ? (
+                                  <div className="text-xs text-slate-500 mt-1">
+                                    {[edu.startYear, edu.endYear].filter(Boolean).join(' - ')}
+                                  </div>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-500">
+                            No education details are available yet.
+                          </div>
+                        )
+                      ) : (
+                        <textarea
+                          className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[220px] text-sm bg-white/88"
+                          placeholder="Enter education manually..."
+                          value={form.manualEducation || ''}
+                          onChange={onChange('manualEducation')}
+                        />
+                      )}
+                    </SectionCard>
+                  </div>
+
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                    <SectionCard
+                      title="Skills"
+                      helperText={
+                        isFTUser
+                          ? 'Read-only profile context for coaching.'
+                          : 'Coach-managed profile context for non-FT clients.'
+                      }
+                    >
+                      {isFTUser ? (
+                        skillsList.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {skillsList.map((skill, idx) => (
+                              <span
+                                key={`${skill}-${idx}`}
+                                className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300"
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-500">
+                            No skills are available on this client yet.
+                          </div>
+                        )
+                      ) : (
+                        <input
+                          className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                          placeholder="Enter skills (comma separated)"
+                          value={form.manualSkills || ''}
+                          onChange={onChange('manualSkills')}
+                        />
+                      )}
+                    </SectionCard>
+
+                    <SectionCard title="Work Preferences">
+                      {isFTUser ? (
+                        hasWorkPrefs ? (
+                          <div className="divide-y divide-slate-100">
+                            <MetaRow label="Status" value={workStatus} />
+                            <MetaRow label="Work type" value={preferredWorkType} />
+                            <MetaRow
+                              label="Willing to relocate"
+                              value={
+                                typeof willingToRelocate === 'boolean'
+                                  ? willingToRelocate
+                                    ? 'Yes'
+                                    : 'No'
+                                  : String(willingToRelocate || '').trim()
+                              }
+                            />
+                            {preferredLocations.length > 0 ? (
+                              <div className="py-2">
+                                <div className="text-xs text-slate-500 mb-2">Preferred locations</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {preferredLocations.map((loc, idx) => (
+                                    <span
+                                      key={`${loc}-${idx}`}
+                                      className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700"
+                                    >
+                                      {loc}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
                             ) : null}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                        ) : (
+                          <div className="text-sm text-slate-500">
+                            No work preferences are available for this client yet.
+                          </div>
+                        )
+                      ) : (
+                        <div className="space-y-3">
+                          <input
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            placeholder="Work status"
+                            value={form.manualWorkStatus || ''}
+                            onChange={onChange('manualWorkStatus')}
+                          />
+                          <input
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            placeholder="Preferred work type"
+                            value={form.manualPreferredWorkType || ''}
+                            onChange={onChange('manualPreferredWorkType')}
+                          />
+                          <input
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            placeholder="Preferred locations (comma separated)"
+                            value={form.manualPreferredLocations || ''}
+                            onChange={onChange('manualPreferredLocations')}
+                          />
+                          <input
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                            placeholder="Willing to relocate"
+                            value={form.manualWillingToRelocate || ''}
+                            onChange={onChange('manualWillingToRelocate')}
+                          />
+                        </div>
+                      )}
+                    </SectionCard>
+                  </div>
                 </div>
-              )}
-            </section>
+              </div>
+            </div>
+          </section>
 
-            <section className={sectionClasses(recentActivity.length === 0)}>
-              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
-                Recent Coaching Activity
+          <aside className="hidden xl:flex xl:flex-col gap-4 xl:col-[2/3] xl:row-[1/2]">
+            <div className="min-h-[180px]">
+              <RightRailPlacementManager slot="right_rail_1" />
+            </div>
+
+            <SectionCard title="Focus Areas / Plan" helperText="Private to the coach.">
+              <div className="flex flex-wrap gap-2 mb-3">
+                {planItems.length > 0 ? (
+                  planItems.map((item, i) => (
+                    <span
+                      key={`${item}-${i}`}
+                      className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1 break-words"
+                    >
+                      {item}
+                      <button
+                        type="button"
+                        onClick={() => removePlanItem(i)}
+                        className="ml-1 text-slate-500 hover:text-slate-700"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))
+                ) : (
+                  <div className="text-sm text-slate-500">No plan items added yet.</div>
+                )}
               </div>
 
-              {recentActivity.length === 0 ? (
-                <div className="text-sm text-slate-500">
-                  No recent coaching activity yet.
-                </div>
-              ) : (
-                <div className="space-y-3 overflow-y-auto max-h-[320px] pr-2">
-                  {recentActivity.map((item, idx) => (
-                    <div key={`${item.label}-${idx}`} className="text-sm">
-                      <div className="font-semibold text-slate-900 break-words">
-                        {item.label}
-                      </div>
-                      <div className="text-slate-500 break-words">
-                        {fmtDateTime(item.ts)}
-                      </div>
-                      {item.detail ? (
-                        <div className="text-slate-600 mt-1 break-words">
-                          {item.detail}
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+              <div className="flex items-center gap-2">
+                <input
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                  placeholder="Add a plan item…"
+                  value={planInput}
+                  onChange={(e) => setPlanInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addPlanItem();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={addPlanItem}
+                  className="px-3 py-2 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
+                >
+                  Add
+                </button>
+              </div>
+            </SectionCard>
 
-            <section className={sectionClasses(docs.length === 0 && !showDocForm)}>
-              <div className="flex items-center justify-between mb-3 gap-3">
-                <div>
-                  <div className="text-[22px] font-bold tracking-tight text-slate-900">
-                    Documents
-                  </div>
-                  <div className="text-xs text-slate-400 mt-1">
-                    Resumes, plans, resources, and supporting materials
-                  </div>
-                </div>
+            <SectionCard
+              title="Documents"
+              action={
                 <button
                   type="button"
                   onClick={() => setShowDocForm((v) => !v)}
-                  className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+                  className="rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
                 >
-                  {showDocForm ? 'Cancel' : '+ Add Document'}
+                  {showDocForm ? 'Cancel' : '+ Add'}
                 </button>
-              </div>
-
-              {showDocForm && (
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_180px_auto] gap-3 mb-4">
+              }
+            >
+              {showDocForm ? (
+                <div className="grid grid-cols-1 gap-2 mb-4">
                   <input
-                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/85"
+                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/88"
                     value={docTitle}
                     onChange={(e) => setDocTitle(e.target.value)}
                     placeholder="Document title"
                   />
                   <input
-                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/85"
+                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/88"
                     value={docUrl}
                     onChange={(e) => setDocUrl(e.target.value)}
                     placeholder="https://..."
                   />
                   <select
-                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/85"
+                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/88"
                     value={docType}
                     onChange={(e) => setDocType(e.target.value)}
                   >
@@ -1017,17 +1168,15 @@ export default function ClientProfileUpdatePage() {
                     disabled={savingDoc || !docTitle.trim() || !docUrl.trim()}
                     className="px-3 py-2 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm disabled:opacity-50 transition"
                   >
-                    {savingDoc ? 'Adding…' : 'Add'}
+                    {savingDoc ? 'Adding…' : 'Add Document'}
                   </button>
                 </div>
-              )}
+              ) : null}
 
               {docs.length === 0 ? (
-                <div className="text-sm text-slate-500">
-                  No documents attached yet.
-                </div>
+                <div className="text-sm text-slate-500">No documents attached yet.</div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
                   {docs.map((doc) => (
                     <div
                       key={doc.id}
@@ -1063,265 +1212,244 @@ export default function ClientProfileUpdatePage() {
                   ))}
                 </div>
               )}
-            </section>
-          <div className="space-y-5">
-            <section className={sectionClasses(false)}>
-              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
-                Client Details
-              </div>
+            </SectionCard>
+          </aside>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-slate-500 mb-1.5">Name</label>
-                  <input
-                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
-                    value={form.name}
-                    onChange={onChange('name')}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-slate-500 mb-1.5">Email</label>
-                  <input
-                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
-                    value={form.email}
-                    onChange={onChange('email')}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-slate-500 mb-1.5">Status</label>
-                  <select
-                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
-                    value={form.status}
-                    onChange={onChange('status')}
-                  >
-                    <option value="Active">Active</option>
-                    <option value="At Risk">At Risk</option>
-                    <option value="New Intake">New Intake</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-slate-500 mb-1.5">Next Session</label>
-                  <input
-                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
-                    type="datetime-local"
-                    value={toDateInputValue(form.nextSession)}
-                    onChange={onChange('nextSession')}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-slate-500 mb-1.5">Last Contact</label>
-                  <input
-                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
-                    type="datetime-local"
-                    value={toDateInputValue(form.lastContact)}
-                    onChange={onChange('lastContact')}
-                  />
-                </div>
-              </div>
-            </section>
-
-            <section className={sectionClasses(!hasWorkPrefs)}>
-              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
-                Work Preferences
-              </div>
-
-              {hasWorkPrefs ? (
-                <div className="divide-y divide-slate-100">
-                  <MetaRow label="Status" value={workStatus} />
-                  <MetaRow label="Work type" value={preferredWorkType} />
-                  <MetaRow
-                    label="Willing to relocate"
-                    value={
-                      typeof willingToRelocate === 'boolean'
-                        ? willingToRelocate
-                          ? 'Yes'
-                          : 'No'
-                        : String(willingToRelocate || '').trim()
-                    }
-                  />
-                  {preferredLocations.length > 0 ? (
-                    <div className="py-1.5 border-b border-slate-100 last:border-0">
-                      <div className="text-xs text-slate-500 mb-1">Preferred locations</div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {preferredLocations.map((loc, idx) => (
-                          <span
-                            key={`${loc}-${idx}`}
-                            className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700"
-                          >
-                            {loc}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
+          <div className="xl:col-[1/-1] xl:ml-[-252px] grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)_minmax(0,0.9fr)] gap-4 min-w-0">
+            <SectionCard title="Session History" helperText="Coaching timeline and recent sessions">
+              {sessions.length === 0 ? (
+                <div className="text-sm text-slate-500">
+                  No sessions recorded yet.
+                  <span className="block text-xs text-slate-400 mt-1">
+                    Once sessions are created, they will appear here.
+                  </span>
                 </div>
               ) : (
-                <div className="text-sm text-slate-500">
-                  No work preferences are available for this client yet.
+                <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                  {sessions.map((s) => {
+                    const sessionStatus =
+                      s.status === 'Completed'
+                        ? { bg: '#E8F5E9', color: '#2E7D32' }
+                        : s.status === 'Cancelled'
+                        ? { bg: '#FDECEA', color: '#C62828' }
+                        : { bg: '#E3F2FD', color: '#1565C0' };
+
+                    return (
+                      <div
+                        key={s.id}
+                        className="border-b border-slate-100 last:border-0 pb-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-slate-900 break-words">
+                              {s.type || 'Session'}
+                            </div>
+                            <div className="text-slate-500 break-words text-sm">
+                              {fmtDateTime(s.startAt)} • {s.durationMin} min
+                            </div>
+                          </div>
+
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              letterSpacing: '0.05em',
+                              textTransform: 'uppercase',
+                              padding: '4px 8px',
+                              borderRadius: 999,
+                              background: sessionStatus.bg,
+                              color: sessionStatus.color,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {s.status}
+                          </span>
+                        </div>
+
+                        {(s.notes || s.followUpDueAt) ? (
+                          <div className="mt-2 text-sm text-slate-700 space-y-1">
+                            {s.notes ? <div>{s.notes}</div> : null}
+                            {s.followUpDueAt ? (
+                              <div className="text-xs text-slate-500">
+                                Follow-up: {s.followUpDone ? 'Done' : `Due ${fmtDate(s.followUpDueAt)}`}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
-            </section>
+            </SectionCard>
 
-            <section className={sectionClasses(skillsList.length === 0 && isFTUser)}>
-  <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
-    Skills
-  </div>
-  <div className="text-[11px] text-slate-400 mb-3">
-    {isFTUser
-      ? 'Read-only profile context for coaching.'
-      : 'Coach-managed profile context for non-FT clients.'}
-  </div>
-
-  {isFTUser ? (
-    skillsList.length > 0 ? (
-      <div className="flex flex-wrap gap-2">
-        {skillsList.map((skill, idx) => (
-          <span
-            key={`${skill}-${idx}`}
-            className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300"
-          >
-            {skill}
-          </span>
-        ))}
-      </div>
-    ) : (
-      <div className="text-sm text-slate-500">
-        No skills are available on this client yet.
-      </div>
-    )
-  ) : (
-    <input
-      className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
-      placeholder="Enter skills (comma separated)"
-      value={form.manualSkills || ''}
-      onChange={onChange('manualSkills')}
-    />
-  )}
-</section>
-
-            <section className={sectionClasses(planItems.length === 0)}>
-              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-2">
-                Focus Areas / Plan
-              </div>
-              <div className="text-[11px] text-slate-400 mb-3">
-                Private to the coach. Use this like recruiter skills, but for action planning.
-              </div>
-
-              <div className="flex flex-wrap gap-2 mb-3">
-                {planItems.length > 0 ? (
-                  planItems.map((item, i) => (
-                    <span
-                      key={`${item}-${i}`}
-                      className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1 break-words"
-                    >
-                      {item}
-                      <button
-                        type="button"
-                        onClick={() => removePlanItem(i)}
-                        className="ml-1 text-slate-500 hover:text-slate-700"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))
-                ) : (
-                  <div className="text-sm text-slate-500">No plan items added yet.</div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
-                  placeholder="Add a plan item…"
-                  value={planInput}
-                  onChange={(e) => setPlanInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addPlanItem();
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={addPlanItem}
-                  className="px-3 py-2 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
-                >
-                  Add
-                </button>
-              </div>
-            </section>
-
-            <section className={sectionClasses(false)}>
-              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
-                Client Context
-              </div>
-
-              <div className="divide-y divide-slate-100">
-                <MetaRow label="Status" value={form.status} />
-                <MetaRow label="Next session" value={form.nextSession ? fmtDateTime(form.nextSession) : ''} />
-                <MetaRow label="Last contact" value={form.lastContact ? fmtDateTime(form.lastContact) : ''} />
-                <MetaRow label="Documents" value={`${docs.length}`} />
-                <MetaRow label="Notes" value={`${notes.length}`} />
-                <MetaRow label="Sessions" value={`${sessions.length}`} />
-              </div>
-            </section>
-
-            <section className={sectionClasses(notes.length === 0 && !(form.notes || '').trim())}>
-              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Notes</div>
-
-              <textarea
-                className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
-                placeholder="Pinned client context visible to you…"
-                value={form.notes}
-                onChange={onChange('notes')}
-              />
-              <div className="mt-1 text-[11px] text-slate-400">
-                This stays private to the coach workspace.
-              </div>
-
-              <div className="mt-4 border-t border-slate-100 pt-4">
-                <div className="text-sm font-semibold text-slate-900 mb-2">Notes Log</div>
-
-                <div className="flex items-start gap-2 mb-3">
+            <SectionCard title="Coach Notes" helperText="Pinned context plus timestamped note log">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1.5">Pinned Context</label>
                   <textarea
-                    className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[84px] text-sm bg-white/85"
-                    placeholder="Add a timestamped coaching note…"
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
+                    className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/88"
+                    placeholder="Pinned client context visible to you…"
+                    value={form.notes}
+                    onChange={onChange('notes')}
                   />
-                  <button
-                    type="button"
-                    onClick={handleAddNote}
-                    disabled={savingNote || !newNote.trim()}
-                    className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition disabled:opacity-50"
-                  >
-                    {savingNote ? 'Adding…' : 'Add'}
-                  </button>
+                  <div className="mt-1 text-[11px] text-slate-400">
+                    This stays private to the coach workspace.
+                  </div>
                 </div>
 
-                {notes.length > 0 ? (
-                  <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
-                    {notes.map((note) => (
-                      <div
-                        key={note.id}
-                        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 flex gap-3"
+                <div className="border-t border-slate-100 pt-4">
+                  <div className="text-sm font-semibold text-slate-900 mb-2">Add Note</div>
+
+                  <div className="flex flex-col gap-2 mb-3">
+                    <textarea
+                      className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[84px] text-sm bg-white/88"
+                      placeholder="Add a timestamped coaching note…"
+                      value={newNote}
+                      onChange={(e) => setNewNote(e.target.value)}
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleAddNote}
+                        disabled={savingNote || !newNote.trim()}
+                        className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition disabled:opacity-50"
                       >
-                        <div className="flex-1">
-                          <div className="text-sm text-slate-700 whitespace-pre-wrap">
-                            {note.body}
+                        {savingNote ? 'Adding…' : 'Add Note'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {notes.length > 0 ? (
+                    <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                      {notes.map((note) => (
+                        <div
+                          key={note.id}
+                          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 flex gap-3"
+                        >
+                          <div className="flex-1">
+                            <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                              {note.body}
+                            </div>
+                            <div className="text-[11px] text-slate-400 mt-2">
+                              {fmtDateTime(note.createdAt)}
+                            </div>
                           </div>
-                          <div className="text-[11px] text-slate-400 mt-2">
-                            {fmtDateTime(note.createdAt)}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteNote(note.id)}
+                            className="text-slate-400 hover:text-slate-700 text-sm"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-slate-500">No note history yet.</div>
+                  )}
+                </div>
+              </div>
+            </SectionCard>
+
+            <div className="space-y-4">
+              <SectionCard title="Recent Coaching Activity">
+                {recentActivity.length === 0 ? (
+                  <div className="text-sm text-slate-500">No recent coaching activity yet.</div>
+                ) : (
+                  <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                    {recentActivity.map((item, idx) => (
+                      <div key={`${item.label}-${idx}`} className="text-sm">
+                        <div className="font-semibold text-slate-900 break-words">{item.label}</div>
+                        <div className="text-slate-500 break-words">{fmtDateTime(item.ts)}</div>
+                        {item.detail ? (
+                          <div className="text-slate-600 mt-1 break-words">{item.detail}</div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SectionCard>
+
+              <SectionCard
+                title="Documents"
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setShowDocForm((v) => !v)}
+                    className="xl:hidden rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+                  >
+                    {showDocForm ? 'Cancel' : '+ Add'}
+                  </button>
+                }
+                className="xl:hidden"
+              >
+                {showDocForm ? (
+                  <div className="grid grid-cols-1 gap-2 mb-4">
+                    <input
+                      className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/88"
+                      value={docTitle}
+                      onChange={(e) => setDocTitle(e.target.value)}
+                      placeholder="Document title"
+                    />
+                    <input
+                      className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/88"
+                      value={docUrl}
+                      onChange={(e) => setDocUrl(e.target.value)}
+                      placeholder="https://..."
+                    />
+                    <select
+                      className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/88"
+                      value={docType}
+                      onChange={(e) => setDocType(e.target.value)}
+                    >
+                      <option value="Resume">Resume</option>
+                      <option value="Cover">Cover Letter</option>
+                      <option value="Notes">Notes</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleAddDoc}
+                      disabled={savingDoc || !docTitle.trim() || !docUrl.trim()}
+                      className="px-3 py-2 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm disabled:opacity-50 transition"
+                    >
+                      {savingDoc ? 'Adding…' : 'Add Document'}
+                    </button>
+                  </div>
+                ) : null}
+
+                {docs.length === 0 ? (
+                  <div className="text-sm text-slate-500">No documents attached yet.</div>
+                ) : (
+                  <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                    {docs.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-[rgba(255,112,67,0.10)] flex items-center justify-center text-base shrink-0">
+                          📄
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-slate-900 truncate">
+                            {doc.title}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            {doc.type} • Added {fmtDate(doc.uploadedAt)}
                           </div>
                         </div>
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-semibold text-[#FF7043] whitespace-nowrap"
+                        >
+                          View →
+                        </a>
                         <button
                           type="button"
-                          onClick={() => handleDeleteNote(note.id)}
+                          onClick={() => handleDeleteDoc(doc.id)}
                           className="text-slate-400 hover:text-slate-700 text-sm"
                         >
                           ✕
@@ -1329,16 +1457,62 @@ export default function ClientProfileUpdatePage() {
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="text-sm text-slate-500">No note history yet.</div>
                 )}
+              </SectionCard>
+
+              <SectionCard title="Focus Areas / Plan" className="xl:hidden">
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {planItems.length > 0 ? (
+                    planItems.map((item, i) => (
+                      <span
+                        key={`${item}-${i}`}
+                        className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1 break-words"
+                      >
+                        {item}
+                        <button
+                          type="button"
+                          onClick={() => removePlanItem(i)}
+                          className="ml-1 text-slate-500 hover:text-slate-700"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))
+                  ) : (
+                    <div className="text-sm text-slate-500">No plan items added yet.</div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                    placeholder="Add a plan item…"
+                    value={planInput}
+                    onChange={(e) => setPlanInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addPlanItem();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addPlanItem}
+                    className="px-3 py-2 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
+                  >
+                    Add
+                  </button>
+                </div>
+              </SectionCard>
+
+              <div className="xl:hidden">
+                <RightRailPlacementManager slot="right_rail_1" />
               </div>
-            </section>
+            </div>
           </div>
         </div>
       </div>
     </CoachingLayout>
   );
 }
-
-const shimmerCSS = `@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`;
