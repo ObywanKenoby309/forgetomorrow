@@ -779,88 +779,72 @@ export default function ClientProfileUpdatePage() {
             </section>
 
             <section className={sectionClasses(experienceList.length === 0)}>
-              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Experience</div>
-              {isFTUser ? (
-  experienceList.length > 0 ? (
-    <div className="space-y-3">
-      {experienceList.map((exp, idx) => (
-        <div key={`${exp.title}-${idx}`}>
-          {exp.title}
-        </div>
-      ))}
-    </div>
+  <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
+    Experience
+  </div>
+
+  {isFTUser ? (
+    experienceList.length > 0 ? (
+      <div className="space-y-3">
+        {experienceList.map((exp, idx) => (
+          <div
+            key={`${exp.title}-${idx}`}
+            className="border-b border-slate-100 last:border-0 pb-3"
+          >
+            <div className="font-semibold text-slate-900 break-words">
+              {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="text-sm text-slate-500">
+        No experience is available on this client yet.
+      </div>
+    )
   ) : (
-    <div className="text-sm text-slate-500">No experience available.</div>
-  )
-) : (
-  <textarea
-    className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
-    placeholder="Enter experience manually..."
-    value={form.experience || ''}
-    onChange={(e) => setForm(prev => ({ ...prev, experience: e.target.value }))}
-  />
-)}
-                <div className="space-y-3">
-                  {experienceList.map((exp, idx) => (
-                    <div key={`${exp.title}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
-                      <div className="font-semibold text-slate-900 break-words">
-                        {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
-                      </div>
-                      {exp.range ? (
-                        <div className="text-slate-500 text-sm mt-1">{exp.range}</div>
-                      ) : null}
-                      {exp.highlights?.length ? (
-                        <ul className="list-disc pl-5 mt-2 space-y-1 text-sm text-slate-700">
-                          {exp.highlights.slice(0, 4).map((item, i) => (
-                            <li key={i}>{item}</li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-slate-500">
-                  No experience is available on this client yet.
-                </div>
-              )}
-            </section>
+    <textarea
+      className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
+      placeholder="Enter experience manually..."
+      value={form.manualExperience || ''}
+      onChange={onChange('manualExperience')}
+    />
+  )}
+</section>
 
             <section className={sectionClasses(educationList.length === 0)}>
-              <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">Education</div>
-              {isFTUser ? (
-  educationList.length > 0 ? (
+  <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
+    Education
+  </div>
+
+  {isFTUser ? (
+    educationList.length > 0 ? (
+      <div className="space-y-3">
+        {educationList.map((edu, idx) => (
+          <div
+            key={`${edu.school}-${idx}`}
+            className="border-b border-slate-100 last:border-0 pb-3"
+          >
+            <div className="font-semibold text-slate-900 break-words">
+              {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="text-sm text-slate-500">
+        No education details are available yet.
+      </div>
+    )
   ) : (
-  <textarea
-    className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
-    placeholder="Enter education manually..."
-    value={form.education || ''}
-    onChange={(e) => setForm(prev => ({ ...prev, education: e.target.value }))}
-  />
-)}
-                <div className="space-y-3">
-                  {educationList.map((edu, idx) => (
-                    <div key={`${edu.school}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
-                      <div className="font-semibold text-slate-900 break-words">
-                        {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
-                      </div>
-                      {edu.school ? (
-                        <div className="text-slate-500 text-sm mt-1">{edu.school}</div>
-                      ) : null}
-                      {[edu.startYear, edu.endYear].filter(Boolean).length ? (
-                        <div className="text-slate-400 text-xs mt-1">
-                          {[edu.startYear, edu.endYear].filter(Boolean).join(' – ')}
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-slate-500">
-                  No education details are available yet.
-                </div>
-              )}
-            </section>
+    <textarea
+      className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/85"
+      placeholder="Enter education manually..."
+      value={form.manualEducation || ''}
+      onChange={onChange('manualEducation')}
+    />
+  )}
+</section>
 
             <section className={sectionClasses(sessions.length === 0)}>
               <div className="text-[22px] font-bold tracking-tight text-slate-900 mb-3">
