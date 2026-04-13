@@ -9,7 +9,7 @@
 // 'coaching-documents' via /api/coaching/documents (multipart POST).
 // Public URL is stored back in CoachingDocument.url.
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingTitleCard from '@/components/coaching/CoachingTitleCard';
@@ -62,6 +62,11 @@ function formatDate(d) {
   });
 }
 
+// Strip extension from filename to use as default title
+function fileToTitle(filename = '') {
+  return filename.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').trim();
+}
+
 // ─── Primitives ───────────────────────────────────────────────────────────────
 function TypeTag({ type }) {
   const s = TYPE_STYLES[type] || TYPE_STYLES.Other;
@@ -84,22 +89,111 @@ function TH({ children, right }) {
   );
 }
 
-function EmptyState({ message, action, onAction }) {
+// ─── Drop Zone empty state ────────────────────────────────────────────────────
+function DropZoneEmptyState({ onFileDropped, onBrowse, filterActive, filterLabel }) {
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef(null);
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setDragging(true);
+  };
+  const handleDragLeave = () => setDragging(false);
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) onFileDropped(file);
+  };
+  const handleBrowse = (e) => {
+    const file = e.target.files?.[0];
+    if (file) onFileDropped(file);
+  };
+
+  if (filterActive) {
+    return (
+      <div style={{
+        padding: '40px 24px', textAlign: 'center',
+        background: 'rgba(255,255,255,0.6)', borderRadius: 10,
+        border: '1px dashed rgba(0,0,0,0.12)',
+      }}>
+        <div style={{ fontSize: 13, color: '#607D8B', fontWeight: 600 }}>
+          No {filterLabel.toLowerCase()}s uploaded yet.
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{
-      padding: '40px 24px', textAlign: 'center',
-      background: 'rgba(255,255,255,0.6)', borderRadius: 10,
-      border: '1px dashed rgba(0,0,0,0.12)',
-    }}>
-      <div style={{ fontSize: 13, color: '#90A4AE', marginBottom: action ? 14 : 0 }}>{message}</div>
-      {action && (
-        <button onClick={onAction} style={{
-          background: '#FF7043', color: 'white', border: 'none', borderRadius: 8,
-          padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-        }}>
-          {action}
-        </button>
-      )}
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      style={{
+        padding: '52px 24px',
+        textAlign: 'center',
+        borderRadius: 12,
+        border: dragging
+          ? '2px dashed #FF7043'
+          : '2px dashed rgba(0,0,0,0.14)',
+        background: dragging
+          ? 'rgba(255,112,67,0.05)'
+          : 'rgba(255,255,255,0.55)',
+        transition: 'border-color 0.15s, background 0.15s',
+        cursor: 'default',
+      }}
+    >
+      {/* Icon */}
+      <div style={{
+        fontSize: 36, marginBottom: 14, lineHeight: 1,
+        filter: dragging ? 'none' : 'grayscale(0.3)',
+        transition: 'filter 0.15s',
+      }}>
+        📂
+      </div>
+
+      <div style={{
+        fontSize: 15, fontWeight: 800,
+        color: dragging ? '#FF7043' : '#334155',
+        marginBottom: 6, transition: 'color 0.15s',
+      }}>
+        {dragging ? 'Release to get started' : 'Drop a file to get started'}
+      </div>
+
+      <div style={{ fontSize: 13, color: '#64748B', marginBottom: 20, lineHeight: 1.5 }}>
+        {dragging
+          ? 'We\'ll open it so you can set the title and pick a client.'
+          : 'We\'ll handle the rest — just pick a client and you\'re done.'}
+      </div>
+
+      {/* Browse fallback */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPTED_TYPES}
+        style={{ display: 'none' }}
+        onChange={handleBrowse}
+      />
+      <button
+        onClick={() => inputRef.current?.click()}
+        style={{
+          background: 'none',
+          border: '1px solid rgba(0,0,0,0.18)',
+          borderRadius: 8,
+          padding: '7px 18px',
+          fontSize: 12,
+          fontWeight: 700,
+          color: '#546E7A',
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+        }}
+      >
+        or browse files
+      </button>
+
+      <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 12 }}>
+        PDF, Word, Excel, or plain text · Max 20 MB
+      </div>
     </div>
   );
 }
@@ -117,7 +211,7 @@ function InlineError({ message }) {
 }
 
 // ─── Tab: My Documents ────────────────────────────────────────────────────────
-function MyDocumentsTab({ docs, loading, error, onAdd, onDelete }) {
+function MyDocumentsTab({ docs, loading, error, onFileDropped, onDelete }) {
   const [filter, setFilter] = useState('All');
   const filters = ['All', ...DOC_TYPES];
   const visible = filter === 'All' ? docs : docs.filter(d => d.type === filter);
@@ -142,12 +236,10 @@ function MyDocumentsTab({ docs, loading, error, onAdd, onDelete }) {
       {loading ? (
         <div style={{ color: '#90A4AE', fontSize: 13, padding: 16 }}>Loading documents…</div>
       ) : visible.length === 0 ? (
-        <EmptyState
-          message={filter === 'All'
-            ? 'No documents yet. Upload your first template, guide, or worksheet.'
-            : `No ${filter.toLowerCase()}s uploaded yet.`}
-          action={filter === 'All' ? '+ Upload document' : null}
-          onAction={onAdd}
+        <DropZoneEmptyState
+          onFileDropped={onFileDropped}
+          filterActive={filter !== 'All'}
+          filterLabel={filter}
         />
       ) : (
         <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
@@ -208,7 +300,20 @@ function SharedTab({ docs, loading }) {
 
   if (loading) return <div style={{ color: '#90A4AE', fontSize: 13, padding: 16 }}>Loading…</div>;
   if (groups.length === 0) {
-    return <EmptyState message="No documents uploaded yet. Documents will appear here organized by client." />;
+    return (
+      <div style={{
+        padding: '40px 24px', textAlign: 'center',
+        background: 'rgba(255,255,255,0.6)', borderRadius: 10,
+        border: '1px dashed rgba(0,0,0,0.12)',
+      }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#1E293B', marginBottom: 6 }}>
+          No documents shared yet.
+        </div>
+        <div style={{ fontSize: 13, color: '#334155', fontWeight: 500 }}>
+          Documents will appear here organized by client once uploaded.
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -306,14 +411,22 @@ function NewsletterTab() {
 }
 
 // ─── Upload Modal ─────────────────────────────────────────────────────────────
-function UploadModal({ clients, onClose, onUploaded }) {
-  const [title, setTitle] = useState('');
+function UploadModal({ clients, onClose, onUploaded, prefillFile = null }) {
+  const [title, setTitle] = useState(prefillFile ? fileToTitle(prefillFile.name) : '');
   const [type, setType] = useState('Template');
   const [clientId, setClientId] = useState('');
-  const [file, setFile] = useState(null);
+  const [file, setFile] = useState(prefillFile);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
+
+  // Auto-focus the client dropdown when a file is pre-filled
+  const clientRef = useRef(null);
+  useEffect(() => {
+    if (prefillFile && clientRef.current) {
+      setTimeout(() => clientRef.current?.focus(), 80);
+    }
+  }, [prefillFile]);
 
   const inputStyle = {
     width: '100%', padding: '9px 12px', fontSize: 13, border: '1px solid #e0e0e0',
@@ -339,7 +452,6 @@ function UploadModal({ clients, onClose, onUploaded }) {
       const res = await fetch('/api/coaching/documents', {
         method: 'POST',
         body: form,
-        // No Content-Type header — browser sets it with boundary for multipart
       });
 
       const data = await res.json();
@@ -361,9 +473,15 @@ function UploadModal({ clients, onClose, onUploaded }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
     }}>
       <div style={{ ...WHITE_CARD, padding: 28, width: 440, maxWidth: '90vw' }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#112033', marginBottom: 18 }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#112033', marginBottom: 4 }}>
           Upload document
         </div>
+        {prefillFile && (
+          <div style={{ fontSize: 12, color: '#64748B', marginBottom: 16 }}>
+            <span style={{ fontWeight: 600, color: '#334155' }}>{prefillFile.name}</span> is ready — just pick a client and you're done.
+          </div>
+        )}
+        {!prefillFile && <div style={{ marginBottom: 18 }} />}
         <InlineError message={error} />
         <div style={{ display: 'grid', gap: 14 }}>
           <div>
@@ -387,27 +505,48 @@ function UploadModal({ clients, onClose, onUploaded }) {
           </div>
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: '#546E7A', display: 'block', marginBottom: 5 }}>
-              Client
+              Client <span style={{ color: '#FF7043' }}>*</span>
             </label>
-            <select value={clientId} onChange={e => setClientId(e.target.value)} style={inputStyle}>
+            <select ref={clientRef} value={clientId} onChange={e => setClientId(e.target.value)} style={inputStyle}>
               <option value="">Select a client…</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#546E7A', display: 'block', marginBottom: 5 }}>
-              File
-            </label>
-            <input
-              type="file"
-              accept={ACCEPTED_TYPES}
-              onChange={e => setFile(e.target.files[0] || null)}
-              style={{ ...inputStyle, padding: '6px 12px', cursor: 'pointer' }}
-            />
-            <div style={{ fontSize: 11, color: '#90A4AE', marginTop: 5 }}>
-              PDF, Word, Excel, or plain text · Max 20 MB
+          {/* Only show file picker if no prefill */}
+          {!prefillFile && (
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#546E7A', display: 'block', marginBottom: 5 }}>
+                File
+              </label>
+              <input
+                type="file"
+                accept={ACCEPTED_TYPES}
+                onChange={e => setFile(e.target.files[0] || null)}
+                style={{ ...inputStyle, padding: '6px 12px', cursor: 'pointer' }}
+              />
+              <div style={{ fontSize: 11, color: '#90A4AE', marginTop: 5 }}>
+                PDF, Word, Excel, or plain text · Max 20 MB
+              </div>
             </div>
-          </div>
+          )}
+          {/* Show file name chip when prefilled */}
+          {prefillFile && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: 'rgba(255,112,67,0.06)', border: '1px solid rgba(255,112,67,0.20)',
+              borderRadius: 8, padding: '8px 12px',
+            }}>
+              <span style={{ fontSize: 18 }}>📄</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {prefillFile.name}
+                </div>
+                <div style={{ fontSize: 11, color: '#64748B' }}>
+                  {(prefillFile.size / 1024 / 1024).toFixed(2)} MB
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 22, alignItems: 'center' }}>
           {progress && (
@@ -443,6 +582,7 @@ export default function CoachingResourcesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showUpload, setShowUpload] = useState(false);
+  const [prefillFile, setPrefillFile] = useState(null);
 
   const TABS = [
     { id: 'docs',          label: 'My documents' },
@@ -479,6 +619,23 @@ export default function CoachingResourcesPage() {
     loadClients();
   }, [loadDocs, loadClients]);
 
+  // Called from drop zone or browse — opens modal with file pre-filled
+  const handleFileDropped = useCallback((file) => {
+    setPrefillFile(file);
+    setShowUpload(true);
+  }, []);
+
+  // Called from header Upload button — opens modal clean
+  const handleUploadClick = useCallback(() => {
+    setPrefillFile(null);
+    setShowUpload(true);
+  }, []);
+
+  const handleModalClose = useCallback(() => {
+    setShowUpload(false);
+    setPrefillFile(null);
+  }, []);
+
   async function handleDelete(id) {
     if (!confirm('Delete this document? This cannot be undone.')) return;
     try {
@@ -499,8 +656,9 @@ export default function CoachingResourcesPage() {
       {showUpload && (
         <UploadModal
           clients={clients}
-          onClose={() => setShowUpload(false)}
+          onClose={handleModalClose}
           onUploaded={doc => setDocs(prev => [doc, ...prev])}
+          prefillFile={prefillFile}
         />
       )}
 
@@ -565,7 +723,7 @@ export default function CoachingResourcesPage() {
                 ))}
               </div>
               {activeTab === 'docs' && (
-                <button onClick={() => setShowUpload(true)} style={{
+                <button onClick={handleUploadClick} style={{
                   background: '#FF7043', color: 'white', border: 'none', borderRadius: 8,
                   padding: '7px 16px', fontSize: 12, fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit', ...ORANGE_HEADING_LIFT,
@@ -580,7 +738,8 @@ export default function CoachingResourcesPage() {
               {activeTab === 'docs' && (
                 <MyDocumentsTab
                   docs={docs} loading={loading} error={error}
-                  onAdd={() => setShowUpload(true)} onDelete={handleDelete}
+                  onFileDropped={handleFileDropped}
+                  onDelete={handleDelete}
                 />
               )}
               {activeTab === 'shared' && <SharedTab docs={docs} loading={loading} />}
