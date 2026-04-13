@@ -203,10 +203,15 @@ export default function FeedbackModule() {
         {loading ? (
           <div style={{ color: '#90A4AE', fontSize: 13 }}>Loading feedback…</div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: '40px 0', textAlign: 'center', color: '#90A4AE', fontSize: 13 }}>
-            {responses.length === 0
-              ? 'No feedback yet. Responses will appear here after clients submit the CSAT form.'
-              : 'No responses match your current filters.'}
+          <div style={{ padding: '40px 0', textAlign: 'center' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#1E293B', marginBottom: 6 }}>
+              {responses.length === 0 ? 'No feedback yet.' : 'No responses match your current filters.'}
+            </div>
+            {responses.length === 0 && (
+              <div style={{ fontSize: 13, color: '#334155', fontWeight: 500, lineHeight: 1.6 }}>
+                Responses will appear here after clients submit the CSAT form.
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
