@@ -60,8 +60,10 @@ WRONG: "Mission-driven media organizations"
 RIGHT: "Conservative / values-driven media platforms with strong audience identity (Daily Wire, Blaze Media, Salem Network)"
 RIGHT: "Faith-integrated digital platforms blending content and community (YouVersion, Life.Church, Proverbs 31 Ministries)"
 
-TRANSFERABILITY must explain the arc of the background, not list skills:
+TRANSFERABILITY must explain behavioral patterns from the career arc, not KPI buzzwords:
+WRONG: "Proven track record of reducing churn"
 WRONG: "Client success leadership experience translates to this sector"
+RIGHT: "Has repeatedly entered broken or undefined environments and built structure that improved retention, training speed, and team consistency — this behavioral pattern is the asset, not the title"
 RIGHT: "Has repeatedly built structure in chaotic environments (military to corrections to IT operations) — this pattern translates directly to stabilizing underdeveloped teams and systems in high-pressure orgs"
 
 NARRATIVE GAPS must be direct and honest — not polite:
@@ -76,6 +78,20 @@ STRETCH / SAFE HARBOR must explain WHY and tie to a specific gap or signal:
 WRONG: "Large nonprofit organizations (stretch)"
 RIGHT: "Life.Church digital team — strong mission alignment and content background, but stretch because no portfolio of digital content work exists yet; closing the content production gap is the unlock"
 
+FAITH-BASED TARGETING — REQUIRED RISK NOTE:
+If target companies include faith-based organizations (churches, Christian media, ministry platforms), you MUST flag this in stretchTargets or safeHarborTargets as applicable:
+"High alignment IF faith is authentically central to his identity and narrative — risky if not, as faith-based orgs hire for cultural fit first and will detect inauthenticity quickly. Coach must verify this is genuine before pursuing."
+
+MARKET POSITIONING WARNING — ALWAYS REQUIRED:
+Every brief must include a marketPositionWarning that honestly describes how this person is likely being perceived by employers RIGHT NOW with their current story. Not how they should be seen — how they ARE being seen. This is the gap the whole strategy must close.
+
+EXECUTION PLAN — ALWAYS REQUIRED:
+Every brief must include an executionPlan with 3–5 concrete, sequenced actions for this week. Not philosophy. Actual moves:
+- Build 1 case study from a specific past win tied to target sector
+- Rewrite LinkedIn headline using the positioningInsight frame
+- Identify 5 target orgs and find one warm contact at each
+- Draft a 3-sentence mission alignment statement for outreach
+
 OUTPUT FORMAT — RETURN ONLY VALID JSON, NO MARKDOWN, NO COMMENTARY:
 {
   "themes": [],
@@ -83,8 +99,10 @@ OUTPUT FORMAT — RETURN ONLY VALID JSON, NO MARKDOWN, NO COMMENTARY:
   "transferabilitySignals": [],
   "narrativeGaps": [],
   "positioningInsight": "",
+  "marketPositionWarning": "",
   "stretchTargets": [],
   "safeHarborTargets": [],
+  "executionPlan": [],
   "nextStep": "",
   "sessionFocus": "",
   "reasoning": []
@@ -93,12 +111,14 @@ OUTPUT FORMAT — RETURN ONLY VALID JSON, NO MARKDOWN, NO COMMENTARY:
 FIELD DEFINITIONS:
 - themes: 2–4 specific sector/mission patterns derived from target companies + client background. Must name real patterns AND reference real organizations as anchors.
 - roleLanes: 3–5 prioritized strategic role directions with brief explanation of why this lane fits this person's arc. Not job titles.
-- transferabilitySignals: 3–5 signals that explain the arc of the client's background and what it means in the target environment. Not resume bullets — coach intelligence.
+- transferabilitySignals: 3–5 behavioral patterns from the client's career arc that carry into the target environment. Story-level transfer — not KPI buzzwords or resume language.
 - narrativeGaps: 2–4 specific, honest gaps in this client's story relative to the target direction. Direct language. No softening.
-- positioningInsight: ONE sentence that reframes how this client should be seen in the market. The bridge between their past and their future. The strategy's North Star.
-- stretchTargets: 1–3 aspirational targets with explanation of WHY they're a stretch and what specific gap must close first.
-- safeHarborTargets: 1–3 immediate-win targets with explanation of WHY they're achievable now given current readiness.
-- nextStep: ONE concrete action the coach should take with this client before the next session. Specific enough to execute today.
+- positioningInsight: ONE sentence that reframes how this client should be seen in the market. The strategy's North Star.
+- marketPositionWarning: ONE to two sentences describing how this person is likely being perceived by employers RIGHT NOW. Honest. This is the gap the whole strategy must close.
+- stretchTargets: 1–3 aspirational targets with explanation of WHY they're a stretch and what gap must close first. Include faith alignment risk note if applicable.
+- safeHarborTargets: 1–3 immediate-win targets with explanation of WHY they're achievable now.
+- executionPlan: 3–5 concrete, sequenced actions for this week. Specific enough to execute today.
+- nextStep: The single most important action from the executionPlan. One sentence.
 - sessionFocus: The specific coaching agenda item for the next session, tied directly to this strategy.
 - reasoning: 3–5 statements that map outputs back to actual input signals. Show the work explicitly.`;
 }
@@ -229,8 +249,10 @@ function parseAndValidate(raw) {
     transferabilitySignals: arr(parsed.transferabilitySignals).slice(0, 6),
     narrativeGaps:          arr(parsed.narrativeGaps).slice(0, 5),
     positioningInsight:     str(parsed.positioningInsight),
+    marketPositionWarning:  str(parsed.marketPositionWarning),
     stretchTargets:         arr(parsed.stretchTargets).slice(0, 4),
     safeHarborTargets:      arr(parsed.safeHarborTargets).slice(0, 4),
+    executionPlan:          arr(parsed.executionPlan).slice(0, 6),
     nextStep:               str(parsed.nextStep),
     sessionFocus:           str(parsed.sessionFocus),
     reasoning:              arr(parsed.reasoning).slice(0, 6),

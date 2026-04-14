@@ -545,6 +545,14 @@ export default function ClientProfileUpdatePage() {
                                   </div>
                                 )}
 
+                                {/* Market Position Warning */}
+                                {form.strategyBrief.marketPositionWarning && (
+                                  <div className="rounded-2xl border border-red-200 bg-red-50/60 px-3 py-3">
+                                    <div className="text-[10px] font-black tracking-[0.10em] text-red-600 uppercase mb-1.5">How They're Being Seen Right Now</div>
+                                    <div className="text-[12px] font-medium text-red-900 leading-5">{form.strategyBrief.marketPositionWarning}</div>
+                                  </div>
+                                )}
+
                                 {/* Role Lanes — chips */}
                                 {form.strategyBrief.roleLanes?.length > 0 && (
                                   <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
@@ -612,6 +620,21 @@ export default function ClientProfileUpdatePage() {
                                     </div>
                                   )}
                                 </div>
+
+                                {/* Execution Plan */}
+                                {form.strategyBrief.executionPlan?.length > 0 && (
+                                  <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
+                                    <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2">This Week's Execution Plan</div>
+                                    <ul className="space-y-1.5">
+                                      {form.strategyBrief.executionPlan.map((step, i) => (
+                                        <li key={i} className="text-[12px] text-slate-700 leading-5 flex gap-2">
+                                          <span className="text-[#FF7043] shrink-0 font-black">{i + 1}.</span>
+                                          <span>{step}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
 
                                 {/* Next Step — strong block */}
                                 {form.strategyBrief.nextStep && (
