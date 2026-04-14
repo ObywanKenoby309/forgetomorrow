@@ -1150,11 +1150,11 @@ export default function ClientProfileUpdatePage() {
               ) : null}
 
               {activeTab === 'coaching' ? (
-                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-3">
-                  <div className="space-y-3">
+  <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-3 items-stretch">
+                  <div className="flex flex-col gap-3 h-full">
 					<SectionCard
   title="Coach Controls"
-  className="min-h-[420px]"
+  className="min-h-[420px] flex-1"
   bodyClassName="h-full flex flex-col"
 >
                       <div className="space-y-3">
@@ -1265,11 +1265,11 @@ export default function ClientProfileUpdatePage() {
 </SectionCard>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3 h-full">
                     <SectionCard
                       title="Target Strategy"
                       helperText="Convert target companies into role direction and coaching plan"
-                      className="min-h-[420px]"
+                      className="min-h-[420px] flex-1"
                       bodyClassName="h-full flex flex-col"
                       action={
                         <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white/85 p-1 shadow-sm">
@@ -1457,11 +1457,11 @@ export default function ClientProfileUpdatePage() {
 </SectionCard>
 </div>
 
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3 h-full">
                     <SectionCard
   title="Coach Notes"
   helperText="Pinned context plus timestamped note log"
-  className="min-h-[420px]"
+  className="min-h-[420px] flex-1"
   bodyClassName="h-full flex flex-col"
 >
                       <div className="space-y-3">
@@ -1532,7 +1532,11 @@ export default function ClientProfileUpdatePage() {
                       </div>
                     </SectionCard>
 
-                    <SectionCard title="Recent Coaching Activity">
+                    <SectionCard
+                      title="Recent Coaching Activity"
+                      className="min-h-[160px]"
+                      bodyClassName="h-full flex flex-col"
+                    >
                       {recentActivity.length === 0 ? (
                         <div className="text-sm text-slate-500">No recent coaching activity yet.</div>
                       ) : (
