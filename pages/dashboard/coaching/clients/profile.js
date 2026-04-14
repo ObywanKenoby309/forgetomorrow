@@ -1152,7 +1152,11 @@ export default function ClientProfileUpdatePage() {
               {activeTab === 'coaching' ? (
                 <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-3">
                   <div className="space-y-3">
-                    <SectionCard title="Coach Controls">
+					<SectionCard
+  title="Coach Controls"
+  className="min-h-[420px]"
+  bodyClassName="h-full flex flex-col"
+>
                       <div className="space-y-3">
                         <div>
                           <label className="block text-xs text-slate-500 mb-1.5">Name</label>
@@ -1454,7 +1458,12 @@ export default function ClientProfileUpdatePage() {
 </div>
 
                   <div className="space-y-3">
-                    <SectionCard title="Coach Notes" helperText="Pinned context plus timestamped note log">
+                    <SectionCard
+  title="Coach Notes"
+  helperText="Pinned context plus timestamped note log"
+  className="min-h-[420px]"
+  bodyClassName="h-full flex flex-col"
+>
                       <div className="space-y-3">
                         <div>
                           <label className="block text-xs text-slate-500 mb-1.5">Pinned Context</label>
