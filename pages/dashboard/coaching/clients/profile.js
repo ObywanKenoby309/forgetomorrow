@@ -1207,51 +1207,58 @@ export default function ClientProfileUpdatePage() {
                       </div>
                     </SectionCard>
 
-                    <SectionCard title="Focus Areas / Plan" helperText="Private to the coach.">
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {planItems.length > 0 ? (
-                          planItems.map((item, i) => (
-                            <span
-                              key={`${item}-${i}`}
-                              className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1 break-words"
-                            >
-                              {item}
-                              <button
-                                type="button"
-                                onClick={() => removePlanItem(i)}
-                                className="ml-1 text-slate-500 hover:text-slate-700"
-                              >
-                                ×
-                              </button>
-                            </span>
-                          ))
-                        ) : (
-                          <div className="text-sm text-slate-500">No plan items added yet.</div>
-                        )}
-                      </div>
+                    <SectionCard
+  title="Focus Areas / Plan"
+  helperText="Private to the coach."
+  className="min-h-[160px]"
+  bodyClassName="h-full flex flex-col"
+>
+  <div className="flex-1 min-h-0 flex flex-col">
+    <div className="flex flex-wrap gap-2 mb-3">
+      {planItems.length > 0 ? (
+        planItems.map((item, i) => (
+          <span
+            key={`${item}-${i}`}
+            className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1 break-words"
+          >
+            {item}
+            <button
+              type="button"
+              onClick={() => removePlanItem(i)}
+              className="ml-1 text-slate-500 hover:text-slate-700"
+            >
+              ×
+            </button>
+          </span>
+        ))
+      ) : (
+        <div className="text-sm text-slate-500">No plan items added yet.</div>
+      )}
+    </div>
 
-                      <div className="flex items-center gap-2">
-                        <input
-                          className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
-                          placeholder="Add a plan item…"
-                          value={planInput}
-                          onChange={(e) => setPlanInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              addPlanItem();
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={addPlanItem}
-                          className="px-2.5 py-1.5 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </SectionCard>
+    <div className="mt-auto flex items-center gap-2">
+      <input
+        className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+        placeholder="Add a plan item…"
+        value={planInput}
+        onChange={(e) => setPlanInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            addPlanItem();
+          }
+        }}
+      />
+      <button
+        type="button"
+        onClick={addPlanItem}
+        className="px-2.5 py-1.5 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
+      >
+        Add
+      </button>
+    </div>
+  </div>
+</SectionCard>
                   </div>
 
                   <div className="space-y-3">
@@ -1371,74 +1378,80 @@ export default function ClientProfileUpdatePage() {
                       </div>
                     </SectionCard>
 
-                    <SectionCard title="Session History" helperText="Coaching timeline and recent sessions">
+                    <SectionCard
+  title="Session History"
+  helperText="Coaching timeline and recent sessions"
+  className="min-h-[160px]"
+  bodyClassName="h-full flex flex-col"
+>
+  <div className="flex-1 min-h-0">
+    {sessions.length === 0 ? (
+      <div className="text-sm text-slate-500">
+        No sessions recorded yet.
+        <span className="block text-xs text-slate-400 mt-1">
+          Once sessions are created, they will appear here.
+        </span>
+      </div>
+    ) : (
+      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+        {sessions.map((s) => {
+          const sessionStatus =
+            s.status === 'Completed'
+              ? { bg: '#E8F5E9', color: '#2E7D32' }
+              : s.status === 'Cancelled'
+              ? { bg: '#FDECEA', color: '#C62828' }
+              : { bg: '#E3F2FD', color: '#1565C0' };
 
-                    {sessions.length === 0 ? (
-                      <div className="text-sm text-slate-500">
-                        No sessions recorded yet.
-                        <span className="block text-xs text-slate-400 mt-1">
-                          Once sessions are created, they will appear here.
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                        {sessions.map((s) => {
-                          const sessionStatus =
-                            s.status === 'Completed'
-                              ? { bg: '#E8F5E9', color: '#2E7D32' }
-                              : s.status === 'Cancelled'
-                              ? { bg: '#FDECEA', color: '#C62828' }
-                              : { bg: '#E3F2FD', color: '#1565C0' };
+          return (
+            <div
+              key={s.id}
+              className="border-b border-slate-100 last:border-0 pb-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-900 break-words">
+                    {s.type || 'Session'}
+                  </div>
+                  <div className="text-slate-500 break-words text-sm">
+                    {fmtDateTime(s.startAt)} • {s.durationMin} min
+                  </div>
+                </div>
 
-                          return (
-                            <div
-                              key={s.id}
-                              className="border-b border-slate-100 last:border-0 pb-3"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <div className="font-semibold text-slate-900 break-words">
-                                    {s.type || 'Session'}
-                                  </div>
-                                  <div className="text-slate-500 break-words text-sm">
-                                    {fmtDateTime(s.startAt)} • {s.durationMin} min
-                                  </div>
-                                </div>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    padding: '4px 8px',
+                    borderRadius: 999,
+                    background: sessionStatus.bg,
+                    color: sessionStatus.color,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {s.status}
+                </span>
+              </div>
 
-                                <span
-                                  style={{
-                                    fontSize: 10,
-                                    fontWeight: 800,
-                                    letterSpacing: '0.05em',
-                                    textTransform: 'uppercase',
-                                    padding: '4px 8px',
-                                    borderRadius: 999,
-                                    background: sessionStatus.bg,
-                                    color: sessionStatus.color,
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  {s.status}
-                                </span>
-                              </div>
-
-                              {(s.notes || s.followUpDueAt) ? (
-                                <div className="mt-2 text-sm text-slate-700 space-y-1">
-                                  {s.notes ? <div>{s.notes}</div> : null}
-                                  {s.followUpDueAt ? (
-                                    <div className="text-xs text-slate-500">
-                                      Follow-up: {s.followUpDone ? 'Done' : `Due ${fmtDate(s.followUpDueAt)}`}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              ) : null}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </SectionCard>
-				  </div>
+              {(s.notes || s.followUpDueAt) ? (
+                <div className="mt-2 text-sm text-slate-700 space-y-1">
+                  {s.notes ? <div>{s.notes}</div> : null}
+                  {s.followUpDueAt ? (
+                    <div className="text-xs text-slate-500">
+                      Follow-up: {s.followUpDone ? 'Done' : `Due ${fmtDate(s.followUpDueAt)}`}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+</SectionCard>
+</div>
 
                   <div className="space-y-3">
                     <SectionCard title="Coach Notes" helperText="Pinned context plus timestamped note log">
