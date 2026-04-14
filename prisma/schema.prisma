@@ -562,6 +562,7 @@ model CoachingClient {
   strategyThemes          String?
   strategyRoleLanes       String?
   strategyNextStep        String?
+  strategyJson            Json?
 
   @@index([coachId])
   @@index([clientId])

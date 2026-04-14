@@ -15,7 +15,6 @@ import {
   toStringArray,
   toEducationObjects,
   getExperienceList,
-  buildTargetStrategy,
   STATUS,
   defaultStatus,
   shimmerCSS,
@@ -39,6 +38,7 @@ export default function ClientProfileUpdatePage() {
     planInput, setPlanInput, planItems, addPlanItem, removePlanItem,
     activeTab, setActiveTab,
     strategyView, setStrategyView,
+    generatingStrategy, handleGenerateStrategy,
     sessions, notes, docs, avatarUrl, recentActivity,
     onChange,
   } = useClientProfile();
@@ -159,23 +159,7 @@ export default function ClientProfileUpdatePage() {
     documents: docs.length || null,
   };
 
-  const strategyThemesList    = toStringArray(form.strategyThemes || '');
-  const strategyRoleLanesList = toStringArray(form.strategyRoleLanes || '');
-  const strategyHasResults    = Boolean(
-    strategyThemesList.length || strategyRoleLanesList.length || String(form.strategyNextStep || '').trim()
-  );
-
-  const handleGenerateStrategy = () => {
-    const result = buildTargetStrategy(form.targetCompanies, form.strategyBackground);
-    setForm((prev) => ({
-      ...prev,
-      strategyThemes:    result.themes.join(', '),
-      strategyRoleLanes: result.roles.join(', '),
-      strategyNextStep:  result.nextStep,
-      strategyError:     result.error || '',
-    }));
-    if (!result.error) setStrategyView('results');
-  };
+  const strategyHasResults = Boolean(form.strategyBrief);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -503,43 +487,163 @@ export default function ClientProfileUpdatePage() {
                       <div className="flex-1 min-h-0">
                         {strategyView === 'input' ? (
                           <div className="h-full flex flex-col gap-3">
+                            {/* Contextual help */}
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[12px] text-slate-600 leading-5">
+                              {isFTUser ? (
+                                <>
+                                  <span className="font-semibold text-slate-700">ForgeTomorrow member</span> — we'll pull {client.name?.split(' ')[0]}'s profile summary, skills, and work preferences automatically. Just add their target companies and any coaching context below.
+                                </>
+                              ) : (
+                                <>
+                                  <span className="font-semibold text-slate-700">External client</span> — fill in their background on the{' '}
+                                  <button type="button" onClick={() => setActiveTab('profile')} className="text-[#FF7043] font-semibold underline-offset-2 hover:underline">
+                                    Profile tab
+                                  </button>{' '}
+                                  first. The more context you add, the sharper the strategy.
+                                </>
+                              )}
+                            </div>
                             <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[104px] text-sm bg-white/88" placeholder="Paste target companies or categories..." value={form.targetCompanies || ''} onChange={onChange('targetCompanies')} />
                             <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[104px] text-sm bg-white/88" placeholder="Add quick background summary, strengths, or role clues..." value={form.strategyBackground || ''} onChange={onChange('strategyBackground')} />
                             {form.strategyError ? (
                               <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">{form.strategyError}</div>
                             ) : null}
                             <div className="mt-auto flex justify-end">
-                              <button type="button" onClick={handleGenerateStrategy} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition">
-                                Generate Strategy
+                              <button
+                                type="button"
+                                onClick={handleGenerateStrategy}
+                                disabled={generatingStrategy || !form.targetCompanies?.trim()}
+                                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                {generatingStrategy ? 'Generating…' : 'Generate Strategy'}
                               </button>
                             </div>
                           </div>
                         ) : (
-                          <div className="h-full overflow-y-auto pr-1 space-y-4">
-                            <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
-                              <div className="text-[11px] font-bold tracking-[0.08em] text-slate-500 uppercase mb-2">Themes</div>
-                              {strategyThemesList.length > 0 ? (
-                                <div className="flex flex-wrap gap-2">
-                                  {strategyThemesList.map((theme, idx) => (
-                                    <span key={`${theme}-${idx}`} className="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-2.5 py-1 text-[12px] text-slate-700">{theme}</span>
-                                  ))}
+                          <div className="h-full overflow-y-auto pr-1 space-y-3">
+                            {!form.strategyBrief ? (
+                              <div className="text-sm text-slate-500 py-4 text-center">No strategy generated yet. Switch to the input view to get started.</div>
+                            ) : (
+                              <>
+                                {/* Themes — chips */}
+                                {form.strategyBrief.themes?.length > 0 && (
+                                  <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
+                                    <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2">Sector Alignment</div>
+                                    <div className="flex flex-wrap gap-2">
+                                      {form.strategyBrief.themes.map((t, i) => (
+                                        <span key={i} className="inline-flex items-center rounded-xl border border-[rgba(255,112,67,0.30)] bg-[rgba(255,112,67,0.07)] px-2.5 py-1 text-[12px] font-medium text-[#993C1D]">{t}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Role Lanes — chips */}
+                                {form.strategyBrief.roleLanes?.length > 0 && (
+                                  <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
+                                    <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2">Role Lanes</div>
+                                    <div className="flex flex-wrap gap-2">
+                                      {form.strategyBrief.roleLanes.map((r, i) => (
+                                        <span key={i} className="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-2.5 py-1 text-[12px] text-slate-700">{r}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Transferability + Gaps — side by side */}
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                                  {form.strategyBrief.transferabilitySignals?.length > 0 && (
+                                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-3 py-3">
+                                      <div className="text-[10px] font-black tracking-[0.10em] text-emerald-700 uppercase mb-2">What Carries Over</div>
+                                      <ul className="space-y-1.5">
+                                        {form.strategyBrief.transferabilitySignals.map((s, i) => (
+                                          <li key={i} className="text-[12px] text-emerald-900 leading-5 flex gap-2">
+                                            <span className="text-emerald-500 shrink-0 mt-0.5">✓</span>
+                                            <span>{s}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+
+                                  {form.strategyBrief.narrativeGaps?.length > 0 && (
+                                    <div className="rounded-2xl border border-amber-200 bg-amber-50/60 px-3 py-3">
+                                      <div className="text-[10px] font-black tracking-[0.10em] text-amber-700 uppercase mb-2">Narrative Gaps</div>
+                                      <ul className="space-y-1.5">
+                                        {form.strategyBrief.narrativeGaps.map((g, i) => (
+                                          <li key={i} className="text-[12px] text-amber-900 leading-5 flex gap-2">
+                                            <span className="text-amber-500 shrink-0 mt-0.5">△</span>
+                                            <span>{g}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
                                 </div>
-                              ) : (
-                                <div className="text-sm text-slate-500">No themes generated yet.</div>
-                              )}
-                            </div>
-                            <div>
-                              <div className="text-[11px] font-bold tracking-[0.08em] text-slate-500 uppercase mb-2">Role Lanes</div>
-                              {strategyRoleLanesList.length > 0 ? (
-                                <div className="text-sm leading-6 text-slate-700">{strategyRoleLanesList.join(', ')}</div>
-                              ) : (
-                                <div className="text-sm text-slate-500">No role lanes generated yet.</div>
-                              )}
-                            </div>
-                            <div>
-                              <div className="text-[11px] font-bold tracking-[0.08em] text-slate-500 uppercase mb-2">Next Step</div>
-                              <div className="text-sm leading-6 text-slate-700">{form.strategyNextStep || 'Generate strategy to view the next step.'}</div>
-                            </div>
+
+                                {/* Stretch + Safe Harbor */}
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                                  {form.strategyBrief.stretchTargets?.length > 0 && (
+                                    <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
+                                      <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2">Stretch Targets</div>
+                                      <ul className="space-y-1.5">
+                                        {form.strategyBrief.stretchTargets.map((t, i) => (
+                                          <li key={i} className="text-[12px] text-slate-700 leading-5">↑ {t}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+
+                                  {form.strategyBrief.safeHarborTargets?.length > 0 && (
+                                    <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
+                                      <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2">Safe Harbor Targets</div>
+                                      <ul className="space-y-1.5">
+                                        {form.strategyBrief.safeHarborTargets.map((t, i) => (
+                                          <li key={i} className="text-[12px] text-slate-700 leading-5">→ {t}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Next Step — strong block */}
+                                {form.strategyBrief.nextStep && (
+                                  <div className="rounded-2xl border border-[rgba(255,112,67,0.25)] bg-[rgba(255,112,67,0.06)] px-3 py-3">
+                                    <div className="text-[10px] font-black tracking-[0.10em] text-[#FF7043] uppercase mb-1.5">Next Step</div>
+                                    <div className="text-[13px] font-semibold text-slate-900 leading-5">{form.strategyBrief.nextStep}</div>
+                                  </div>
+                                )}
+
+                                {/* Session Focus — strong block */}
+                                {form.strategyBrief.sessionFocus && (
+                                  <div className="rounded-2xl border border-slate-200 bg-[rgba(51,65,85,0.05)] px-3 py-3">
+                                    <div className="text-[10px] font-black tracking-[0.10em] text-slate-500 uppercase mb-1.5">Session Focus</div>
+                                    <div className="text-[13px] font-semibold text-slate-800 leading-5">{form.strategyBrief.sessionFocus}</div>
+                                  </div>
+                                )}
+
+                                {/* Reasoning — separated */}
+                                {form.strategyBrief.reasoning?.length > 0 && (
+                                  <div className="rounded-2xl border border-slate-200 bg-white/60 px-3 py-3">
+                                    <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2">Why This Strategy</div>
+                                    <ul className="space-y-2">
+                                      {form.strategyBrief.reasoning.map((r, i) => (
+                                        <li key={i} className="text-[12px] text-slate-600 leading-5 flex gap-2">
+                                          <span className="text-slate-400 shrink-0 font-black">{i + 1}.</span>
+                                          <span>{r}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {/* Regenerate nudge */}
+                                <div className="flex justify-end pt-1">
+                                  <button type="button" onClick={() => setStrategyView('input')} className="text-[12px] font-semibold text-slate-500 hover:text-[#FF7043] transition">
+                                    ← Edit inputs & regenerate
+                                  </button>
+                                </div>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>

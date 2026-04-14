@@ -34,6 +34,7 @@ export function useClientProfile() {
 
   const [activeTab, setActiveTab] = useState('coaching');
   const [strategyView, setStrategyView] = useState('input');
+  const [generatingStrategy, setGeneratingStrategy] = useState(false);
 
   // ─── Load ─────────────────────────────────────────────────────────────────
   const loadClient = useCallback(async () => {
@@ -88,10 +89,14 @@ export function useClientProfile() {
         manualWillingToRelocate: full.manualWillingToRelocate || '',
         targetCompanies: full.targetCompanies || '',
         strategyBackground: full.strategyBackground || '',
-        strategyThemes: full.strategyThemes || '',
-        strategyRoleLanes: full.strategyRoleLanes || '',
-        strategyNextStep: full.strategyNextStep || '',
+        strategyBrief: full.strategyJson || null,
+        strategyError: '',
       });
+
+      // Auto-show results if a saved brief exists
+      if (full.strategyJson) {
+        setStrategyView('results');
+      }
 
       const pinnedPlan =
         typeof full.notes === 'string' && full.notes.includes('PLAN:')
@@ -333,6 +338,47 @@ export function useClientProfile() {
       .slice(0, 8);
   }, [client, sessions, notes]);
 
+  // ─── Strategy generation ──────────────────────────────────────────────────
+  const handleGenerateStrategy = async () => {
+    if (!client?.id || !form?.targetCompanies?.trim()) return;
+
+    setGeneratingStrategy(true);
+    setForm((prev) => ({ ...prev, strategyError: '' }));
+
+    try {
+      const res = await fetch('/api/coaching/clients/strategy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: client.id,
+          targetCompanies: form.targetCompanies,
+          strategyBackground: form.strategyBackground,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setForm((prev) => ({ ...prev, strategyError: data.error || 'Strategy generation failed.' }));
+        return;
+      }
+
+      // Store full brief, keep inputs intact
+      setForm((prev) => ({
+        ...prev,
+        strategyBrief: data.strategy,
+        strategyError: '',
+      }));
+
+      setStrategyView('results');
+    } catch (err) {
+      console.error('[handleGenerateStrategy]', err);
+      setForm((prev) => ({ ...prev, strategyError: 'Strategy generation failed. Please try again.' }));
+    } finally {
+      setGeneratingStrategy(false);
+    }
+  };
+
   return {
     // data
     client, setClient,
@@ -355,6 +401,7 @@ export function useClientProfile() {
     // tabs & strategy
     activeTab, setActiveTab,
     strategyView, setStrategyView,
+    generatingStrategy, handleGenerateStrategy,
     // derived
     sessions, notes, docs, avatarUrl, recentActivity,
     // form helper
