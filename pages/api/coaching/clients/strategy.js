@@ -60,11 +60,13 @@ WRONG: "Mission-driven media organizations"
 RIGHT: "Conservative / values-driven media platforms with strong audience identity (Daily Wire, Blaze Media, Salem Network)"
 RIGHT: "Faith-integrated digital platforms blending content and community (YouVersion, Life.Church, Proverbs 31 Ministries)"
 
-TRANSFERABILITY must explain behavioral patterns from the career arc, not KPI buzzwords:
+TRANSFERABILITY must show repeatable behavioral patterns, not general strengths or KPI summaries:
 WRONG: "Proven track record of reducing churn"
 WRONG: "Client success leadership experience translates to this sector"
-RIGHT: "Has repeatedly entered broken or undefined environments and built structure that improved retention, training speed, and team consistency — this behavioral pattern is the asset, not the title"
-RIGHT: "Has repeatedly built structure in chaotic environments (military to corrections to IT operations) — this pattern translates directly to stabilizing underdeveloped teams and systems in high-pressure orgs"
+WRONG: "He has done things in operations that apply here"
+RIGHT: "He repeatedly enters broken systems, builds structure, stabilizes teams, and improves retention under pressure — that is a pattern, not a job, and it transfers directly into any org that needs to be rebuilt"
+RIGHT: "Has repeatedly built structure in chaotic environments (military to corrections to IT operations) — this behavioral loop is the asset, not the title it happened under"
+The test: does it describe something he does over and over, or something he once had on a resume? Pattern language only.
 
 NARRATIVE GAPS must be direct and honest — not polite:
 WRONG: "Lack of specific examples in the nonprofit sector"
@@ -83,7 +85,12 @@ If target companies include faith-based organizations (churches, Christian media
 "High alignment IF faith is authentically central to his identity and narrative — risky if not, as faith-based orgs hire for cultural fit first and will detect inauthenticity quickly. Coach must verify this is genuine before pursuing."
 
 MARKET POSITIONING WARNING — ALWAYS REQUIRED:
-Every brief must include a marketPositionWarning that honestly describes how this person is likely being perceived by employers RIGHT NOW with their current story. Not how they should be seen — how they ARE being seen. This is the gap the whole strategy must close.
+Every brief must include a marketPositionWarning with two things:
+1. How this person is likely being perceived by employers RIGHT NOW with their current story
+2. The specific rejection pattern they are at risk of — name the pattern explicitly
+WRONG: "May need to clarify his background"
+RIGHT: "Without repositioning, he risks being passed over as overqualified but misaligned — a common rejection pattern for operational leaders entering mission-driven sectors, where hiring managers choose culture fit over capability when forced to choose"
+The warning must create urgency. It must name what happens if nothing changes.
 
 EXECUTION PLAN — ALWAYS REQUIRED:
 Every brief must include an executionPlan with 3–5 concrete, sequenced actions for this week. Not philosophy. Actual moves:
@@ -111,10 +118,10 @@ OUTPUT FORMAT — RETURN ONLY VALID JSON, NO MARKDOWN, NO COMMENTARY:
 FIELD DEFINITIONS:
 - themes: 2–4 specific sector/mission patterns derived from target companies + client background. Must name real patterns AND reference real organizations as anchors.
 - roleLanes: 3–5 prioritized strategic role directions with brief explanation of why this lane fits this person's arc. Not job titles.
-- transferabilitySignals: 3–5 behavioral patterns from the client's career arc that carry into the target environment. Story-level transfer — not KPI buzzwords or resume language.
+- transferabilitySignals: 3–5 repeatable behavioral patterns from the client's career arc. Pattern language only — what does he do over and over, regardless of the title it happened under. Not KPI summaries, not general strengths.
 - narrativeGaps: 2–4 specific, honest gaps in this client's story relative to the target direction. Direct language. No softening.
 - positioningInsight: ONE sentence that reframes how this client should be seen in the market. The strategy's North Star.
-- marketPositionWarning: ONE to two sentences describing how this person is likely being perceived by employers RIGHT NOW. Honest. This is the gap the whole strategy must close.
+- marketPositionWarning: Two sentences. First: how this person is being perceived RIGHT NOW. Second: the specific rejection pattern they're at risk of if nothing changes. Must create urgency — name what happens if this isn't fixed.
 - stretchTargets: 1–3 aspirational targets with explanation of WHY they're a stretch and what gap must close first. Include faith alignment risk note if applicable.
 - safeHarborTargets: 1–3 immediate-win targets with explanation of WHY they're achievable now.
 - executionPlan: 3–5 concrete, sequenced actions for this week. Specific enough to execute today.
