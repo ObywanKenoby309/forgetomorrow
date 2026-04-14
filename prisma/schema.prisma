@@ -1911,3 +1911,22 @@ model HireQuality {
   @@index([jobId])
   @@map("hire_quality")
 }
+
+model ToolFeedback {
+  id              String   @id @default(cuid())
+
+  toolName        String   // "target_strategy"
+  entityId        String?  // clientId, userId, etc.
+
+  inputSnapshot   Json?
+  outputSnapshot  Json?
+
+  feedbackScore   String   // "up" | "down"
+  feedbackType    String?  // "wrong_direction" | "too_generic" | "missed_insight"
+  feedbackComment String?
+
+  createdAt       DateTime @default(now())
+
+  @@index([toolName])
+  @@index([entityId])
+}

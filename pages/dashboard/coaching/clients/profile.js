@@ -636,6 +636,71 @@ export default function ClientProfileUpdatePage() {
                                   </div>
                                 )}
 
+<div className="flex items-center justify-between pt-3 border-t border-slate-200">
+  <div className="text-[11px] text-slate-400">
+    Was this strategy useful?
+  </div>
+
+  <div className="flex items-center gap-2">
+    <button
+      type="button"
+      onClick={async () => {
+        await fetch('/api/tools/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            toolName: 'target_strategy',
+            entityId: client.id,
+            inputSnapshot: {
+              targetCompanies: form.targetCompanies,
+              strategyBackground: form.strategyBackground,
+            },
+            outputSnapshot: form.strategyBrief,
+            feedbackScore: 'up',
+          }),
+        }).catch(() => {});
+        alert('Feedback saved');
+      }}
+      className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white/80 text-slate-700 text-xs hover:bg-white"
+    >
+      👍 Useful
+    </button>
+
+    <button
+      type="button"
+      onClick={async () => {
+        const feedbackType = prompt(
+          'What was wrong?\n- wrong_direction\n- too_generic\n- missed_insight'
+        );
+
+        if (!feedbackType) return;
+
+        const feedbackComment = prompt('Optional: what should it have said?');
+
+        await fetch('/api/tools/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            toolName: 'target_strategy',
+            entityId: client.id,
+            inputSnapshot: {
+              targetCompanies: form.targetCompanies,
+              strategyBackground: form.strategyBackground,
+            },
+            outputSnapshot: form.strategyBrief,
+            feedbackScore: 'down',
+            feedbackType,
+            feedbackComment,
+          }),
+        }).catch(() => {});
+        alert('Feedback saved');
+      }}
+      className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white/80 text-slate-700 text-xs hover:bg-white"
+    >
+      👎 Needs Work
+    </button>
+  </div>
+</div>
                                 {/* Regenerate nudge */}
                                 <div className="flex justify-end pt-1">
                                   <button type="button" onClick={() => setStrategyView('input')} className="text-[12px] font-semibold text-slate-500 hover:text-[#FF7043] transition">
