@@ -1438,6 +1438,7 @@ export default function ClientProfileUpdatePage() {
                       </div>
                     )}
                   </SectionCard>
+				  </div>
 
                   <div className="space-y-3">
                     <SectionCard title="Coach Notes" helperText="Pinned context plus timestamped note log">
