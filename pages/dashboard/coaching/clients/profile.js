@@ -537,6 +537,14 @@ export default function ClientProfileUpdatePage() {
                                   </div>
                                 )}
 
+                                {/* Positioning Insight — North Star */}
+                                {form.strategyBrief.positioningInsight && (
+                                  <div className="rounded-2xl border-2 border-[rgba(255,112,67,0.35)] bg-[rgba(255,112,67,0.08)] px-4 py-3.5">
+                                    <div className="text-[10px] font-black tracking-[0.10em] text-[#FF7043] uppercase mb-1.5">How to Position This Person</div>
+                                    <div className="text-[14px] font-bold text-slate-900 leading-5">{form.strategyBrief.positioningInsight}</div>
+                                  </div>
+                                )}
+
                                 {/* Role Lanes — chips */}
                                 {form.strategyBrief.roleLanes?.length > 0 && (
                                   <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
