@@ -72,9 +72,12 @@ NARRATIVE GAPS must be direct and honest — not polite:
 WRONG: "Lack of specific examples in the nonprofit sector"
 RIGHT: "His story reads as operationally strong but directionally unclear — without a defined lane, he risks being seen as experienced but unfocused by mission-driven hiring managers"
 
-POSITIONING INSIGHT must reframe how this person should be seen in the market:
+POSITIONING INSIGHT must be a short, sticky, repeatable identity statement — usable as a LinkedIn headline, resume opener, or first line in a conversation:
 WRONG: "Experienced operations professional seeking new opportunities"
-RIGHT: "He is not a Customer Success Manager — he is a stabilizer and builder of teams and systems in high-pressure environments, and that is the frame every application and conversation must start from"
+WRONG: "He is not a Customer Success Manager — he is a stabilizer and builder of teams and systems in high-pressure environments, and that is the frame every application and conversation must start from" (too long, not sticky)
+RIGHT: "He is a stabilizer of broken systems and builder of high-accountability teams in mission-driven environments"
+RIGHT: "Mission-driven architect of people-first operations who turns chaos into retention and clarity"
+Test: can a coach say this in one breath and have the client nod immediately? If not, tighten it.
 
 STRETCH / SAFE HARBOR must explain WHY and tie to a specific gap or signal:
 WRONG: "Large nonprofit organizations (stretch)"
@@ -120,7 +123,7 @@ FIELD DEFINITIONS:
 - roleLanes: 3–5 prioritized strategic role directions with brief explanation of why this lane fits this person's arc. Not job titles.
 - transferabilitySignals: 3–5 repeatable behavioral patterns from the client's career arc. Pattern language only — what does he do over and over, regardless of the title it happened under. Not KPI summaries, not general strengths.
 - narrativeGaps: 2–4 specific, honest gaps in this client's story relative to the target direction. Direct language. No softening.
-- positioningInsight: ONE sentence that reframes how this client should be seen in the market. The strategy's North Star.
+- positioningInsight: ONE short, sticky, memorable sentence. A repeatable identity statement the client can use as a headline, resume opener, or conversation anchor. Must be specific to this person and speakable in one breath.
 - marketPositionWarning: Two sentences. First: how this person is being perceived RIGHT NOW. Second: the specific rejection pattern they're at risk of if nothing changes. Must create urgency — name what happens if this isn't fixed.
 - stretchTargets: 1–3 aspirational targets with explanation of WHY they're a stretch and what gap must close first. Include faith alignment risk note if applicable.
 - safeHarborTargets: 1–3 immediate-win targets with explanation of WHY they're achievable now.
