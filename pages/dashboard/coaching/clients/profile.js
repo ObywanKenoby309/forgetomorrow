@@ -186,6 +186,59 @@ function TabButton({ id, label, activeTab, setActiveTab, badge }) {
   );
 }
 
+
+function buildTargetStrategy(targetCompanies = '', strategyBackground = '') {
+  const companyText = String(targetCompanies || '').trim();
+  const backgroundText = String(strategyBackground || '').trim();
+  const combined = `${companyText}\n${backgroundText}`.toLowerCase();
+
+  if (!companyText) {
+    return {
+      error: 'Add at least one target company or category before generating strategy.',
+      themes: [],
+      roles: [],
+      nextStep: '',
+    };
+  }
+
+  const themeRules = [
+    { label: 'Health / Wellness', terms: ['health', 'wellness', 'medicine', 'medical', 'nutrition', 'vitamin', 'supplement'] },
+    { label: 'Faith-based', terms: ['church', 'faith', 'christian', 'ministry', 'gospel', 'bible', 'evangel', 'life.church', 'youversion'] },
+    { label: 'Veteran Support', terms: ['veteran', 'warrior', 'heroes', 'military', 'honor'] },
+    { label: 'Education', terms: ['school', 'education', 'curriculum', 'college', 'university', 'homeschool', 'classical'] },
+    { label: 'Media / Communications', terms: ['media', 'broadcast', 'radio', 'news', 'wire', 'blaze', 'signal', 'studios'] },
+    { label: 'Local / Immediate Search', terms: ['san antonio', 'available immediately', 'immediately'] },
+  ];
+
+  const detectedThemes = themeRules
+    .filter((rule) => rule.terms.some((term) => combined.includes(term)))
+    .map((rule) => rule.label);
+
+  const themes = detectedThemes.length > 0 ? detectedThemes : ['Mission / values alignment needs review'];
+
+  const roleSet = new Set();
+  if (combined.includes('media') || combined.includes('broadcast') || combined.includes('radio') || combined.includes('communications')) {
+    roleSet.add('Content / Communications');
+  }
+  if (combined.includes('community') || combined.includes('mission') || combined.includes('church') || combined.includes('faith') || combined.includes('veteran')) {
+    roleSet.add('Community / Outreach');
+  }
+  if (combined.includes('health') || combined.includes('wellness') || combined.includes('customer') || combined.includes('member')) {
+    roleSet.add('Customer Success / Support');
+  }
+  roleSet.add('Operations / Coordination');
+
+  const roles = Array.from(roleSet);
+
+  let nextStep = 'Focus on 10–15 best-fit companies and align outreach to these role lanes.';
+  if (themes.includes('Local / Immediate Search')) {
+    nextStep = 'Prioritize the fastest local or remote opportunities first, then narrow outreach to 10–15 best-fit companies.';
+  }
+
+  return { error: '', themes, roles, nextStep };
+}
+
+
 const STATUS = {
   Active: { bg: '#E8F5E9', color: '#2E7D32', ring: '#43A047' },
   'At Risk': { bg: '#FFF3E0', color: '#E65100', ring: '#FF7043' },
@@ -221,6 +274,7 @@ export default function ClientProfileUpdatePage() {
   const [planItems, setPlanItems] = useState([]);
 
   const [activeTab, setActiveTab] = useState('coaching');
+  const [strategyView, setStrategyView] = useState('input');
 
   const loadClient = useCallback(async () => {
     if (!emailParam) return;
@@ -272,9 +326,11 @@ export default function ClientProfileUpdatePage() {
         manualPreferredWorkType: full.manualPreferredWorkType || '',
         manualPreferredLocations: full.manualPreferredLocations || '',
         manualWillingToRelocate: full.manualWillingToRelocate || '',
-        targetCompanies: '',
-        strategyBackground: '',
-        strategyOutput: null,
+        targetCompanies: full.targetCompanies || '',
+        strategyBackground: full.strategyBackground || '',
+        strategyThemes: full.strategyThemes || '',
+        strategyRoleLanes: full.strategyRoleLanes || '',
+        strategyNextStep: full.strategyNextStep || '',
       });
 
       const pinnedPlan =
@@ -663,6 +719,28 @@ export default function ClientProfileUpdatePage() {
     profile: null,
     coaching: notes.length + sessions.length,
     documents: docs.length || null,
+  };
+
+  const strategyThemesList = toStringArray(form.strategyThemes || '');
+  const strategyRoleLanesList = toStringArray(form.strategyRoleLanes || '');
+  const strategyHasResults = Boolean(
+    strategyThemesList.length || strategyRoleLanesList.length || String(form.strategyNextStep || '').trim()
+  );
+
+  const handleGenerateStrategy = () => {
+    const result = buildTargetStrategy(form.targetCompanies, form.strategyBackground);
+
+    setForm((prev) => ({
+      ...prev,
+      strategyThemes: result.themes.join(', '),
+      strategyRoleLanes: result.roles.join(', '),
+      strategyNextStep: result.nextStep,
+      strategyError: result.error || '',
+    }));
+
+    if (!result.error) {
+      setStrategyView('results');
+    }
   };
 
   return (
@@ -1176,182 +1254,125 @@ export default function ClientProfileUpdatePage() {
                     </SectionCard>
                   </div>
 
-
                   <div className="space-y-3">
                     <SectionCard
                       title="Target Strategy"
                       helperText="Convert target companies into role direction and coaching plan"
-                    >
-                      <div className="space-y-3">
-                        <textarea
-                          className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[110px] text-sm bg-white/88"
-                          placeholder="Paste target companies or categories..."
-                          value={form.targetCompanies || ''}
-                          onChange={(e) =>
-                            setForm((prev) => ({ ...prev, targetCompanies: e.target.value }))
-                          }
-                        />
-
-                        <textarea
-                          className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[110px] text-sm bg-white/88"
-                          placeholder="Add quick background summary, strengths, or role clues..."
-                          value={form.strategyBackground || ''}
-                          onChange={(e) =>
-                            setForm((prev) => ({ ...prev, strategyBackground: e.target.value }))
-                          }
-                        />
-
-                        <div className="flex justify-end">
+                      className="min-h-[420px]"
+                      bodyClassName="h-full flex flex-col"
+                      action={
+                        <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white/85 p-1 shadow-sm">
+                          <button
+                            type="button"
+                            onClick={() => setStrategyView('input')}
+                            className={`rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition ${
+                              strategyView === 'input'
+                                ? 'bg-[rgba(255,112,67,0.14)] text-[#FF7043]'
+                                : 'text-slate-600 hover:text-slate-800'
+                            }`}
+                          >
+                            Target Strategy
+                          </button>
                           <button
                             type="button"
                             onClick={() => {
-                              const combinedText = [
-                                form.targetCompanies || '',
-                                form.strategyBackground || '',
-                              ]
-                                .join(' ')
-                                .toLowerCase();
-
-                              const themes = [];
-                              if (
-                                combinedText.includes('health') ||
-                                combinedText.includes('wellness') ||
-                                combinedText.includes('medicine') ||
-                                combinedText.includes('nutrition')
-                              ) {
-                                themes.push('Health / Wellness');
-                              }
-                              if (
-                                combinedText.includes('faith') ||
-                                combinedText.includes('church') ||
-                                combinedText.includes('christian') ||
-                                combinedText.includes('ministry')
-                              ) {
-                                themes.push('Faith-based / Mission');
-                              }
-                              if (
-                                combinedText.includes('veteran') ||
-                                combinedText.includes('military')
-                              ) {
-                                themes.push('Veteran Support');
-                              }
-                              if (
-                                combinedText.includes('education') ||
-                                combinedText.includes('school') ||
-                                combinedText.includes('curriculum') ||
-                                combinedText.includes('homeschool')
-                              ) {
-                                themes.push('Education');
-                              }
-                              if (
-                                combinedText.includes('media') ||
-                                combinedText.includes('content') ||
-                                combinedText.includes('communications')
-                              ) {
-                                themes.push('Media / Communications');
-                              }
-
-                              const roles = [];
-                              if (
-                                combinedText.includes('support') ||
-                                combinedText.includes('customer') ||
-                                combinedText.includes('member')
-                              ) {
-                                roles.push('Customer Success / Support');
-                              }
-                              if (
-                                combinedText.includes('operations') ||
-                                combinedText.includes('coordination') ||
-                                combinedText.includes('admin') ||
-                                combinedText.includes('project')
-                              ) {
-                                roles.push('Operations / Coordination');
-                              }
-                              if (
-                                combinedText.includes('community') ||
-                                combinedText.includes('outreach') ||
-                                combinedText.includes('partnership') ||
-                                combinedText.includes('engagement')
-                              ) {
-                                roles.push('Community / Outreach');
-                              }
-                              if (
-                                combinedText.includes('recruit') ||
-                                combinedText.includes('talent') ||
-                                combinedText.includes('people')
-                              ) {
-                                roles.push('Recruiting / Talent Support');
-                              }
-
-                              const finalThemes = themes.length
-                                ? themes
-                                : ['Mission / values alignment needs review'];
-
-                              const finalRoles = roles.length
-                                ? roles
-                                : [
-                                    'Customer Success / Support',
-                                    'Operations / Coordination',
-                                    'Community / Outreach',
-                                  ];
-
-                              setForm((prev) => ({
-                                ...prev,
-                                strategyOutput: {
-                                  themes: finalThemes,
-                                  roles: finalRoles,
-                                  nextStep:
-                                    'Focus on 10–15 best-fit companies and align outreach to these role lanes.',
-                                },
-                              }));
+                              if (strategyHasResults) setStrategyView('results');
                             }}
-                            className="px-3 py-2 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
+                            disabled={!strategyHasResults}
+                            className={`rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition ${
+                              strategyView === 'results'
+                                ? 'bg-[rgba(255,112,67,0.14)] text-[#FF7043]'
+                                : 'text-slate-600 hover:text-slate-800'
+                            } disabled:opacity-45 disabled:cursor-not-allowed`}
                           >
-                            Generate Strategy
+                            Results
                           </button>
                         </div>
+                      }
+                    >
+                      <div className="flex-1 min-h-0">
+                        {strategyView === 'input' ? (
+                          <div className="h-full flex flex-col gap-3">
+                            <textarea
+                              className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[104px] text-sm bg-white/88"
+                              placeholder="Paste target companies or categories..."
+                              value={form.targetCompanies || ''}
+                              onChange={onChange('targetCompanies')}
+                            />
 
-                        {form.strategyOutput ? (
-                          <div className="rounded-2xl border border-slate-200 bg-white/72 px-3 py-3 space-y-3">
-                            <div>
-                              <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-500">
+                            <textarea
+                              className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[104px] text-sm bg-white/88"
+                              placeholder="Add quick background summary, strengths, or role clues..."
+                              value={form.strategyBackground || ''}
+                              onChange={onChange('strategyBackground')}
+                            />
+
+                            {form.strategyError ? (
+                              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+                                {form.strategyError}
+                              </div>
+                            ) : null}
+
+                            <div className="mt-auto flex justify-end">
+                              <button
+                                type="button"
+                                onClick={handleGenerateStrategy}
+                                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
+                              >
+                                Generate Strategy
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-full overflow-y-auto pr-1 space-y-4">
+                            <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
+                              <div className="text-[11px] font-bold tracking-[0.08em] text-slate-500 uppercase mb-2">
                                 Themes
                               </div>
-                              <div className="mt-1 flex flex-wrap gap-2">
-                                {(form.strategyOutput.themes || []).map((theme, idx) => (
-                                  <span
-                                    key={`${theme}-${idx}`}
-                                    className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300"
-                                  >
-                                    {theme}
-                                  </span>
-                                ))}
-                              </div>
+                              {strategyThemesList.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {strategyThemesList.map((theme, idx) => (
+                                    <span
+                                      key={`${theme}-${idx}`}
+                                      className="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-2.5 py-1 text-[12px] text-slate-700"
+                                    >
+                                      {theme}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-sm text-slate-500">No themes generated yet.</div>
+                              )}
                             </div>
 
                             <div>
-                              <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-500">
+                              <div className="text-[11px] font-bold tracking-[0.08em] text-slate-500 uppercase mb-2">
                                 Role Lanes
                               </div>
-                              <div className="mt-1 text-sm text-slate-700">
-                                {(form.strategyOutput.roles || []).join(', ')}
-                              </div>
+                              {strategyRoleLanesList.length > 0 ? (
+                                <div className="text-sm leading-6 text-slate-700">
+                                  {strategyRoleLanesList.join(', ')}
+                                </div>
+                              ) : (
+                                <div className="text-sm text-slate-500">No role lanes generated yet.</div>
+                              )}
                             </div>
 
                             <div>
-                              <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-500">
+                              <div className="text-[11px] font-bold tracking-[0.08em] text-slate-500 uppercase mb-2">
                                 Next Step
                               </div>
-                              <div className="mt-1 text-sm text-slate-700">
-                                {form.strategyOutput.nextStep}
+                              <div className="text-sm leading-6 text-slate-700">
+                                {form.strategyNextStep || 'Generate strategy to view the next step.'}
                               </div>
                             </div>
                           </div>
-                        ) : null}
+                        )}
                       </div>
                     </SectionCard>
 
-                  <SectionCard title="Session History" helperText="Coaching timeline and recent sessions">
+                    <SectionCard title="Session History" helperText="Coaching timeline and recent sessions">
+
                     {sessions.length === 0 ? (
                       <div className="text-sm text-slate-500">
                         No sessions recorded yet.
@@ -1417,8 +1438,6 @@ export default function ClientProfileUpdatePage() {
                       </div>
                     )}
                   </SectionCard>
-
-                  </div>
 
                   <div className="space-y-3">
                     <SectionCard title="Coach Notes" helperText="Pinned context plus timestamped note log">
