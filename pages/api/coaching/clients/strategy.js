@@ -148,6 +148,17 @@ This must influence:
 
 If the output does not make it clear how this person wins against other candidates, it is incomplete.
 
+STEP 6 — INTERNAL PROBLEM MATCHING (MANDATORY):
+
+For each target company or role lane, you must identify a likely internal problem or gap that team is experiencing.
+
+Then explicitly connect the client’s past pattern to solving that problem.
+
+Do not describe the company generally.
+Describe what is likely broken, missing, or underdeveloped — and why this person would be brought in to fix it.
+
+If you cannot name a problem, the target is too generic and must be refined.
+
 ═══════════════════════════════════════════════════════
 
 HARD RULES — NEVER VIOLATE THESE:
