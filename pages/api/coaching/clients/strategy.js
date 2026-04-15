@@ -201,6 +201,13 @@ RIGHT (nonprofit): "His story emphasizes efficiency over community impact — no
 RIGHT (faith): "There is no evidence of faith as identity in his current narrative — faith-based orgs will notice immediately and it will cost him interviews"
 
 POSITIONING INSIGHT must be short, sticky, and environment-matched:
+
+It MUST:
+- Describe WHEN a company would hire this person (trigger moment)
+- Imply the problem the company is trying to solve
+- Feel specific enough that a hiring manager would recognize their situation in it
+- Be speakable in one breath and memorable
+
 RIGHT (enterprise): "He is the operator enterprise CS teams hire when they need retention fixed, not managed"
 RIGHT (nonprofit): "He is a builder of operational infrastructure for organizations that run on mission, not margin"
 RIGHT (faith): "He is a systems builder whose operational discipline is matched only by his commitment to the communities he serves"
@@ -208,6 +215,21 @@ RIGHT (workforce): "He is an operations-focused leader ready to turn informal le
 Test: one breath. Client nods. Environment-specific. Not generic.
 
 STRETCH / SAFE HARBOR must explain WHY and tie to a specific gap or signal.
+
+Each target MUST:
+- Name the company or role clearly
+- Explain WHY this company specifically benefits from this candidate’s pattern
+- Tie the candidate’s strength to a business function (growth, retention, product, operations, etc.)
+
+WRONG:
+- "Loom — where his experience could be valuable"
+- "Google — strong alignment with his skills"
+
+RIGHT:
+- "Loom — a product-led company where user engagement directly impacts retention, making his experience in building customer success systems immediately relevant"
+- "Notion — a fast-scaling product org where his ability to structure operations can support product teams struggling with growth complexity"
+- "Amazon Fulfillment — an operations-heavy environment where his experience optimizing logistics systems directly aligns with efficiency and throughput goals"
+
 FAITH-BASED TARGETING: Always include alignment risk note — see faith-based section above.
 
 TARGET FIELD CONTRACT — REQUIRED:
@@ -226,10 +248,21 @@ RIGHT (faith): "Without explicit faith identity in his narrative, he risks being
 
 EXECUTION PLAN — ALWAYS REQUIRED:
 3–5 concrete, sequenced actions. Environment-specific. Not philosophy.
-Enterprise execution looks different from nonprofit execution looks different from faith-based execution looks different from workforce execution.
-Enterprise: quantify past wins, build case studies with metrics, target CS leadership communities
-Nonprofit: volunteer or consult first to build sector credibility, find a board seat, reframe resume around community impact
-Faith-based: establish authentic faith narrative, find warm introductions through church or ministry networks, lead with values not resume
+
+Each action MUST:
+- Include a clear mechanism (where, how, or with whom)
+- Be immediately executable within 7 days
+- Avoid vague language like "network", "engage", "explore" unless paired with specificity
+
+WRONG:
+- "Engage with startup communities"
+- "Network with professionals"
+
+RIGHT:
+- "Join 2 product communities (e.g. Mind the Product, Product Coalition) and initiate 3 conversations with operators at target companies"
+- "Write 1 case study quantifying a past operational win and share it with 2 hiring managers or peers for feedback"
+
+Enterprise execution looks different from nonprofit execution looks different from faith-based execution — reflect that in specificity.
 Workforce: quantify operational improvements, highlight informal leadership, target realistic supervisor or lead roles, and use plain language with measurable results
 
 OUTPUT FORMAT — RETURN ONLY VALID JSON, NO MARKDOWN, NO COMMENTARY:
