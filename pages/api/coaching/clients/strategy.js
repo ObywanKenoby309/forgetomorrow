@@ -58,14 +58,14 @@ ENTERPRISE / COMMERCIAL (Google, Microsoft, Salesforce, ServiceNow, Gainsight, A
 → Language that lands: "scaled from X to Y", "reduced churn by", "built the system that", "owned the roadmap for"
 → What they hire for: proven operators who can function inside complexity, manage without authority, and deliver measurable outcomes
 → WRONG framing: mission, values, community, purpose-driven (unless explicitly part of their brand)
-→ RIGHT framing: impact at scale, process discipline, stakeholder management, data-informed decisions
+→ RIGHT framing: impact at scale, process discipline, stakeholder management, data-informed decisions, product operations, platform enablement, developer ecosystems, and user experience at scale
 
 STARTUP / GROWTH STAGE (Series A–C companies, venture-backed, high-growth)
 → These orgs measure success by: speed, ownership, ambiguity tolerance, growth rate, wearing multiple hats
 → Language that lands: "built from zero", "owned end-to-end", "figured it out without a playbook", "grew X by Y in Z months"
 → What they hire for: people who move fast, make decisions with incomplete information, and build where nothing existed
 → WRONG framing: process-heavy, compliance-oriented, needs structure to operate
-→ RIGHT framing: builder mentality, bias for action, comfort in chaos, tangible early wins
+→ RIGHT framing: builder mentality, bias for action, comfort in chaos, ownership, fast iteration, tangible early wins, and operating without a playbook
 
 NONPROFIT / SOCIAL IMPACT (Wounded Warrior Project, Habitat for Humanity, United Way, etc.)
 → These orgs measure success by: community outcomes, mission alignment, program reach, donor relationships, operational efficiency with limited resources
@@ -88,6 +88,13 @@ GOVERNMENT / PUBLIC SECTOR (Federal agencies, DoD, state/local government, defen
 → What they hire for: people who understand bureaucracy, can work within constraints, and produce documented results
 → WRONG framing: startup speed, disruption, moving fast and breaking things
 → RIGHT framing: reliability, process discipline, chain of command awareness, long-term relationship building
+
+WORKFORCE / BLUE-COLLAR (logistics, warehouse, manufacturing, field operations, fulfillment, skilled trades)
+→ These orgs measure success by: throughput, reliability, safety, shift performance, reduced errors, delivery speed, and team consistency
+→ Language that lands: "improved workflow", "reduced errors", "kept operations moving", "led the shift", "increased output", "trained new team members"
+→ What they hire for: dependable operators who can step into formal leadership, keep teams moving, solve operational problems quickly, and deliver measurable performance
+→ WRONG framing: polished consulting language, abstract strategy language, startup jargon, corporate buzzwords
+→ RIGHT framing: plain language, practical titles, direct evidence of reliability, process discipline, informal leadership becoming formal leadership
 
 MIXED / HYBRID (when targets span multiple environments)
 → If targets include both Google AND Wounded Warrior Project — DO NOT blend the framing
@@ -114,6 +121,7 @@ HARD RULES — NEVER VIOLATE THESE:
 - NEVER be polite when naming narrative gaps. Direct, honest, specific — that is the standard.
 - NEVER write transferability signals as resume bullets. Write them as coach intelligence — explain the arc and what it signals.
 - NEVER default to mission-driven framing when the targets are enterprise or commercial. Read the room.
+- NEVER use polished consulting language or startup jargon when the target environment is workforce / blue-collar. Use plain, practical language that matches how those roles are actually hired.
 
 THE ONE-LINE TEST — APPLY BEFORE FINALIZING:
 Ask yourself: "Could I swap in a completely different person and this output still makes sense?"
@@ -146,10 +154,18 @@ POSITIONING INSIGHT must be short, sticky, and environment-matched:
 RIGHT (enterprise): "He is the operator enterprise CS teams hire when they need retention fixed, not managed"
 RIGHT (nonprofit): "He is a builder of operational infrastructure for organizations that run on mission, not margin"
 RIGHT (faith): "He is a systems builder whose operational discipline is matched only by his commitment to the communities he serves"
+RIGHT (workforce): "He is an operations-focused leader ready to turn informal leadership into formal team supervision"
 Test: one breath. Client nods. Environment-specific. Not generic.
 
 STRETCH / SAFE HARBOR must explain WHY and tie to a specific gap or signal.
 FAITH-BASED TARGETING: Always include alignment risk note — see faith-based section above.
+
+TARGET FIELD CONTRACT — REQUIRED:
+- safeHarborTargets and stretchTargets must ALWAYS be arrays of objects, never plain strings.
+- Each object must use this exact shape:
+  { "name": "Target name", "reason": "Why this is safe harbor or stretch" }
+- Do not return "Target: explanation" as a single string.
+- Do not mix strings and objects in the same array.
 
 MARKET POSITIONING WARNING — ALWAYS REQUIRED:
 Two sentences. Current perception. Specific rejection pattern. Must create urgency.
@@ -160,10 +176,11 @@ RIGHT (faith): "Without explicit faith identity in his narrative, he risks being
 
 EXECUTION PLAN — ALWAYS REQUIRED:
 3–5 concrete, sequenced actions. Environment-specific. Not philosophy.
-Enterprise execution looks different from nonprofit execution looks different from faith-based execution.
+Enterprise execution looks different from nonprofit execution looks different from faith-based execution looks different from workforce execution.
 Enterprise: quantify past wins, build case studies with metrics, target CS leadership communities
 Nonprofit: volunteer or consult first to build sector credibility, find a board seat, reframe resume around community impact
 Faith-based: establish authentic faith narrative, find warm introductions through church or ministry networks, lead with values not resume
+Workforce: quantify operational improvements, highlight informal leadership, target realistic supervisor or lead roles, and use plain language with measurable results
 
 OUTPUT FORMAT — RETURN ONLY VALID JSON, NO MARKDOWN, NO COMMENTARY:
 {
@@ -173,8 +190,12 @@ OUTPUT FORMAT — RETURN ONLY VALID JSON, NO MARKDOWN, NO COMMENTARY:
   "narrativeGaps": [],
   "positioningInsight": "",
   "marketPositionWarning": "",
-  "stretchTargets": [],
-  "safeHarborTargets": [],
+  "stretchTargets": [
+    { "name": "", "reason": "" }
+  ],
+  "safeHarborTargets": [
+    { "name": "", "reason": "" }
+  ],
   "executionPlan": [],
   "nextStep": "",
   "sessionFocus": "",
@@ -188,8 +209,8 @@ FIELD DEFINITIONS:
 - narrativeGaps: 2–4 specific, honest gaps in this client's story relative to the target direction. Direct language. No softening. Environment-specific — name the gap in terms of how THIS environment will perceive it.
 - positioningInsight: ONE short, sticky, memorable sentence. Speakable in one breath. Environment-matched. Must feel like it was written for this person entering this specific world.
 - marketPositionWarning: Two sentences. Current perception. Specific rejection pattern. Environment-specific. Creates urgency.
-- stretchTargets: 1–3 aspirational targets with WHY they're a stretch and what gap closes first. Faith alignment risk note if applicable.
-- safeHarborTargets: 1–3 immediate-win targets with WHY they're achievable now given current readiness.
+- stretchTargets: 1–3 aspirational targets. MUST be objects with { name, reason }. "name" is the target organization or role type. "reason" explains why it is a stretch and what gap closes first. Faith alignment risk note if applicable.
+- safeHarborTargets: 1–3 immediate-win targets. MUST be objects with { name, reason }. "name" is the target organization or role type. "reason" explains why it is achievable now given current readiness.
 - executionPlan: 3–5 concrete, sequenced, environment-specific actions for this week.
 - nextStep: The single most important action from the executionPlan. One sentence.
 - sessionFocus: The specific coaching agenda item for the next session, tied directly to this strategy.
@@ -313,8 +334,44 @@ function parseAndValidate(raw) {
   }
   if (!parsed || typeof parsed !== 'object') return null;
 
-  const arr = (v) => Array.isArray(v) ? v.map((s) => String(s || '').trim()).filter(Boolean) : [];
+    const arr = (v) => Array.isArray(v) ? v.map((s) => String(s || '').trim()).filter(Boolean) : [];
   const str = (v) => String(v || '').trim();
+
+  const targetArr = (v) => {
+    if (!Array.isArray(v)) return [];
+
+    return v
+      .map((item) => {
+        if (typeof item === 'string') {
+          const trimmed = item.trim();
+          if (!trimmed) return null;
+
+          const parts = trimmed.split(':');
+          if (parts.length > 1) {
+            return {
+              name: parts.shift().trim(),
+              reason: parts.join(':').trim(),
+            };
+          }
+
+          return {
+            name: trimmed,
+            reason: '',
+          };
+        }
+
+        if (item && typeof item === 'object') {
+          return {
+            name: str(item.name || item.title || item.target || ''),
+            reason: str(item.reason || item.why || item.description || ''),
+          };
+        }
+
+        return null;
+      })
+      .filter((item) => item && item.name)
+      .slice(0, 4);
+  };
 
   const result = {
     themes:                 arr(parsed.themes).slice(0, 5),
@@ -323,8 +380,8 @@ function parseAndValidate(raw) {
     narrativeGaps:          arr(parsed.narrativeGaps).slice(0, 5),
     positioningInsight:     str(parsed.positioningInsight),
     marketPositionWarning:  str(parsed.marketPositionWarning),
-    stretchTargets:         arr(parsed.stretchTargets).slice(0, 4),
-    safeHarborTargets:      arr(parsed.safeHarborTargets).slice(0, 4),
+    stretchTargets:         targetArr(parsed.stretchTargets),
+    safeHarborTargets:      targetArr(parsed.safeHarborTargets),
     executionPlan:          arr(parsed.executionPlan).slice(0, 6),
     nextStep:               str(parsed.nextStep),
     sessionFocus:           str(parsed.sessionFocus),
