@@ -400,6 +400,9 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'Strategy generation failed to produce a valid brief. Please try again.' });
     }
 
+    // Stamp with generation time
+    result.generatedAt = new Date().toISOString();
+
     // Save inputs + full strategy JSON + legacy fields
     await prisma.coachingClient.update({
       where: { id: clientId },

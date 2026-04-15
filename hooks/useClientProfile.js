@@ -379,6 +379,30 @@ export function useClientProfile() {
     }
   };
 
+  // ─── Feedback ─────────────────────────────────────────────────────────────
+  const handleFeedback = async ({ score, feedbackType, feedbackComment }) => {
+    try {
+      await fetch('/api/tools/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toolName: 'target_strategy',
+          entityId: client?.id || null,
+          inputSnapshot: {
+            targetCompanies: form?.targetCompanies,
+            strategyBackground: form?.strategyBackground,
+          },
+          outputSnapshot: form?.strategyBrief,
+          feedbackScore: score,
+          feedbackType: feedbackType || null,
+          feedbackComment: feedbackComment || null,
+        }),
+      });
+    } catch (err) {
+      console.error('[handleFeedback]', err);
+    }
+  };
+
   return {
     // data
     client, setClient,
@@ -402,6 +426,7 @@ export function useClientProfile() {
     activeTab, setActiveTab,
     strategyView, setStrategyView,
     generatingStrategy, handleGenerateStrategy,
+    handleFeedback,
     // derived
     sessions, notes, docs, avatarUrl, recentActivity,
     // form helper

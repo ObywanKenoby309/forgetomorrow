@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { MetaRow, SectionCard, TabButton } from '@/components/coaching/clients/ClientProfilePrimitives';
+import CommandBrief from '@/components/coaching/clients/CommandBrief';
 import { useClientProfile } from '@/hooks/useClientProfile';
 import {
   avatarColor,
@@ -39,6 +40,7 @@ export default function ClientProfileUpdatePage() {
     activeTab, setActiveTab,
     strategyView, setStrategyView,
     generatingStrategy, handleGenerateStrategy,
+    handleFeedback,
     sessions, notes, docs, avatarUrl, recentActivity,
     onChange,
   } = useClientProfile();
@@ -408,441 +410,228 @@ export default function ClientProfileUpdatePage() {
 
               {/* ── Coaching tab ── */}
               {activeTab === 'coaching' ? (
-                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-3 items-stretch">
-                  <div className="flex flex-col gap-3 h-full">
-                    <SectionCard title="Coach Controls" className="min-h-[420px] flex-1" bodyClassName="h-full flex flex-col">
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-xs text-slate-500 mb-1.5">Name</label>
-                          <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" value={form.name} onChange={onChange('name')} />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-slate-500 mb-1.5">Email</label>
-                          <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" value={form.email} onChange={onChange('email')} />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-slate-500 mb-1.5">Status</label>
-                          <select className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" value={form.status} onChange={onChange('status')}>
-                            <option value="Active">Active</option>
-                            <option value="At Risk">At Risk</option>
-                            <option value="New Intake">New Intake</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs text-slate-500 mb-1.5">Next Session</label>
-                          <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" type="datetime-local" value={toDateInputValue(form.nextSession)} onChange={onChange('nextSession')} />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-slate-500 mb-1.5">Last Contact</label>
-                          <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" type="datetime-local" value={toDateInputValue(form.lastContact)} onChange={onChange('lastContact')} />
-                        </div>
-                      </div>
-                    </SectionCard>
-
-                    <SectionCard title="Focus Areas / Plan" helperText="Private to the coach." className="min-h-[160px]" bodyClassName="h-full flex flex-col">
-                      <div className="flex-1 min-h-0 flex flex-col">
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {planItems.length > 0 ? (
-                            planItems.map((item, i) => (
-                              <span key={`${item}-${i}`} className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1 break-words">
-                                {item}
-                                <button type="button" onClick={() => removePlanItem(i)} className="ml-1 text-slate-500 hover:text-slate-700">×</button>
-                              </span>
-                            ))
-                          ) : (
-                            <div className="text-sm text-slate-500">No plan items added yet.</div>
-                          )}
-                        </div>
-                        <div className="mt-auto flex items-center gap-2">
-                          <input
-                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
-                            placeholder="Add a plan item…"
-                            value={planInput}
-                            onChange={(e) => setPlanInput(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPlanItem(); } }}
-                          />
-                          <button type="button" onClick={addPlanItem} className="px-2.5 py-1.5 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition">Add</button>
-                        </div>
-                      </div>
-                    </SectionCard>
-                  </div>
-
-                  <div className="flex flex-col gap-3 h-full">
-                    <SectionCard
-                      title="Target Strategy"
-                      helperText="Convert target companies into role direction and coaching plan"
-                      className="min-h-[420px] flex-1"
-                      bodyClassName="h-full flex flex-col"
-                      action={
-                        <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white/85 p-1 shadow-sm">
-                          <button type="button" onClick={() => setStrategyView('input')} className={`rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition ${strategyView === 'input' ? 'bg-[rgba(255,112,67,0.14)] text-[#FF7043]' : 'text-slate-600 hover:text-slate-800'}`}>
-                            Target Strategy
-                          </button>
-                          <button type="button" onClick={() => { if (strategyHasResults) setStrategyView('results'); }} disabled={!strategyHasResults} className={`rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition ${strategyView === 'results' ? 'bg-[rgba(255,112,67,0.14)] text-[#FF7043]' : 'text-slate-600 hover:text-slate-800'} disabled:opacity-45 disabled:cursor-not-allowed`}>
-                            Results
-                          </button>
-                        </div>
-                      }
-                    >
-                      <div className="flex-1 min-h-0">
-                        {strategyView === 'input' ? (
-                          <div className="h-full flex flex-col gap-3">
-                            {/* Contextual help */}
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[12px] text-slate-600 leading-5">
-                              {isFTUser ? (
-                                <>
-                                  <span className="font-semibold text-slate-700">ForgeTomorrow member</span> — we'll pull {client.name?.split(' ')[0]}'s profile summary, skills, and work preferences automatically. Just add their target companies and any coaching context below.
-                                </>
-                              ) : (
-                                <>
-                                  <span className="font-semibold text-slate-700">External client</span> — fill in their background on the{' '}
-                                  <button type="button" onClick={() => setActiveTab('profile')} className="text-[#FF7043] font-semibold underline-offset-2 hover:underline">
-                                    Profile tab
-                                  </button>{' '}
-                                  first. The more context you add, the sharper the strategy.
-                                </>
-                              )}
-                            </div>
-                            <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[104px] text-sm bg-white/88" placeholder="Paste target companies or categories..." value={form.targetCompanies || ''} onChange={onChange('targetCompanies')} />
-                            <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[104px] text-sm bg-white/88" placeholder="Add quick background summary, strengths, or role clues..." value={form.strategyBackground || ''} onChange={onChange('strategyBackground')} />
-                            {form.strategyError ? (
-                              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">{form.strategyError}</div>
-                            ) : null}
-                            <div className="mt-auto flex justify-end">
-                              <button
-                                type="button"
-                                onClick={handleGenerateStrategy}
-                                disabled={generatingStrategy || !form.targetCompanies?.trim()}
-                                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
-                              >
-                                {generatingStrategy ? 'Generating…' : 'Generate Strategy'}
-                              </button>
-                            </div>
+                strategyView === 'results' && form.strategyBrief ? (
+                  // ── Brief mode — full width Command Brief ──
+                  <CommandBrief
+                    clientName={client.name}
+                    generatedAt={form.strategyBrief?.generatedAt || client.updatedAt}
+                    strategyBrief={form.strategyBrief}
+                    onEditInputs={() => setStrategyView('input')}
+                    onFeedback={handleFeedback}
+                  />
+                ) : (
+                  // ── Input mode — three-column layout ──
+                  <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-3 items-stretch">
+                    <div className="flex flex-col gap-3 h-full">
+                      <SectionCard title="Coach Controls" className="min-h-[420px] flex-1" bodyClassName="h-full flex flex-col">
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-1.5">Name</label>
+                            <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" value={form.name} onChange={onChange('name')} />
                           </div>
-                        ) : (
-                          <div className="h-full overflow-y-auto pr-1 space-y-3">
-                            {!form.strategyBrief ? (
-                              <div className="text-sm text-slate-500 py-4 text-center">No strategy generated yet. Switch to the input view to get started.</div>
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-1.5">Email</label>
+                            <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" value={form.email} onChange={onChange('email')} />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-1.5">Status</label>
+                            <select className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" value={form.status} onChange={onChange('status')}>
+                              <option value="Active">Active</option>
+                              <option value="At Risk">At Risk</option>
+                              <option value="New Intake">New Intake</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-1.5">Next Session</label>
+                            <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" type="datetime-local" value={toDateInputValue(form.nextSession)} onChange={onChange('nextSession')} />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-1.5">Last Contact</label>
+                            <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" type="datetime-local" value={toDateInputValue(form.lastContact)} onChange={onChange('lastContact')} />
+                          </div>
+                        </div>
+                      </SectionCard>
+
+                      <SectionCard title="Focus Areas / Plan" helperText="Private to the coach." className="min-h-[160px]" bodyClassName="h-full flex flex-col">
+                        <div className="flex-1 min-h-0 flex flex-col">
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {planItems.length > 0 ? (
+                              planItems.map((item, i) => (
+                                <span key={`${item}-${i}`} className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1 break-words">
+                                  {item}
+                                  <button type="button" onClick={() => removePlanItem(i)} className="ml-1 text-slate-500 hover:text-slate-700">×</button>
+                                </span>
+                              ))
+                            ) : (
+                              <div className="text-sm text-slate-500">No plan items added yet.</div>
+                            )}
+                          </div>
+                          <div className="mt-auto flex items-center gap-2">
+                            <input
+                              className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+                              placeholder="Add a plan item…"
+                              value={planInput}
+                              onChange={(e) => setPlanInput(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPlanItem(); } }}
+                            />
+                            <button type="button" onClick={addPlanItem} className="px-2.5 py-1.5 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition">Add</button>
+                          </div>
+                        </div>
+                      </SectionCard>
+                    </div>
+
+                    <div className="flex flex-col gap-3 h-full">
+                      <SectionCard
+                        title="Target Strategy"
+                        helperText="Convert target companies into role direction and coaching plan"
+                        className="min-h-[420px] flex-1"
+                        bodyClassName="h-full flex flex-col"
+                        action={
+                          strategyHasResults ? (
+                            <button
+                              type="button"
+                              onClick={() => setStrategyView('results')}
+                              className="rounded-xl border border-[#FF7043] bg-[rgba(255,112,67,0.08)] px-2.5 py-1.5 text-[12px] font-semibold text-[#FF7043] hover:bg-[rgba(255,112,67,0.14)] transition shadow-sm"
+                            >
+                              View Brief →
+                            </button>
+                          ) : null
+                        }
+                      >
+                        <div className="h-full flex flex-col gap-3">
+                          {/* Contextual help */}
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[12px] text-slate-600 leading-5">
+                            {isFTUser ? (
+                              <>
+                                <span className="font-semibold text-slate-700">ForgeTomorrow member</span> — we'll pull {client.name?.split(' ')[0]}'s profile summary, skills, and work preferences automatically. Just add their target companies and any coaching context below.
+                              </>
                             ) : (
                               <>
-                                {/* Themes — chips */}
-                                {form.strategyBrief.themes?.length > 0 && (
-                                  <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
-                                    <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2">Sector Alignment</div>
-                                    <div className="flex flex-wrap gap-2">
-                                      {form.strategyBrief.themes.map((t, i) => (
-                                        <span key={i} className="inline-flex items-center rounded-xl border border-[rgba(255,112,67,0.30)] bg-[rgba(255,112,67,0.07)] px-2.5 py-1 text-[12px] font-medium text-[#993C1D]">{t}</span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Positioning Insight — North Star */}
-                                {form.strategyBrief.positioningInsight && (
-                                  <div className="rounded-2xl border-2 border-[rgba(255,112,67,0.35)] bg-[rgba(255,112,67,0.08)] px-4 py-3.5">
-                                    <div className="text-[10px] font-black tracking-[0.10em] text-[#FF7043] uppercase mb-1.5">How to Position This Person</div>
-                                    <div className="text-[14px] font-bold text-slate-900 leading-5">{form.strategyBrief.positioningInsight}</div>
-                                  </div>
-                                )}
-
-                                {/* Market Position Warning */}
-                                {form.strategyBrief.marketPositionWarning && (
-                                  <div className="rounded-2xl border border-red-200 bg-red-50/60 px-3 py-3">
-                                    <div className="text-[10px] font-black tracking-[0.10em] text-red-600 uppercase mb-1.5">How They're Being Seen Right Now</div>
-                                    <div className="text-[12px] font-medium text-red-900 leading-5">{form.strategyBrief.marketPositionWarning}</div>
-                                  </div>
-                                )}
-
-                                {/* Role Lanes — chips */}
-                                {form.strategyBrief.roleLanes?.length > 0 && (
-                                  <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
-                                    <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2">Role Lanes</div>
-                                    <div className="flex flex-wrap gap-2">
-                                      {form.strategyBrief.roleLanes.map((r, i) => (
-                                        <span key={i} className="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-2.5 py-1 text-[12px] text-slate-700">{r}</span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Transferability + Gaps — side by side */}
-                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                                  {form.strategyBrief.transferabilitySignals?.length > 0 && (
-                                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-3 py-3">
-                                      <div className="text-[10px] font-black tracking-[0.10em] text-emerald-700 uppercase mb-2">What Carries Over</div>
-                                      <ul className="space-y-1.5">
-                                        {form.strategyBrief.transferabilitySignals.map((s, i) => (
-                                          <li key={i} className="text-[12px] text-emerald-900 leading-5 flex gap-2">
-                                            <span className="text-emerald-500 shrink-0 mt-0.5">✓</span>
-                                            <span>{s}</span>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-
-                                  {form.strategyBrief.narrativeGaps?.length > 0 && (
-                                    <div className="rounded-2xl border border-amber-200 bg-amber-50/60 px-3 py-3">
-                                      <div className="text-[10px] font-black tracking-[0.10em] text-amber-700 uppercase mb-2">Narrative Gaps</div>
-                                      <ul className="space-y-1.5">
-                                        {form.strategyBrief.narrativeGaps.map((g, i) => (
-                                          <li key={i} className="text-[12px] text-amber-900 leading-5 flex gap-2">
-                                            <span className="text-amber-500 shrink-0 mt-0.5">△</span>
-                                            <span>{g}</span>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Stretch + Safe Harbor */}
-                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                                  {form.strategyBrief.stretchTargets?.length > 0 && (
-                                    <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
-                                      <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2">Stretch Targets</div>
-                                      <ul className="space-y-1.5">
-                                        {form.strategyBrief.stretchTargets.map((t, i) => (
-                                          <li key={i} className="text-[12px] text-slate-700 leading-5">↑ {t}</li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-
-                                  {form.strategyBrief.safeHarborTargets?.length > 0 && (
-                                    <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
-                                      <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2">Safe Harbor Targets</div>
-                                      <ul className="space-y-1.5">
-                                        {form.strategyBrief.safeHarborTargets.map((t, i) => (
-                                          <li key={i} className="text-[12px] text-slate-700 leading-5">→ {t}</li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Execution Plan */}
-                                {form.strategyBrief.executionPlan?.length > 0 && (
-                                  <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3">
-                                    <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2">This Week's Execution Plan</div>
-                                    <ul className="space-y-1.5">
-                                      {form.strategyBrief.executionPlan.map((step, i) => (
-                                        <li key={i} className="text-[12px] text-slate-700 leading-5 flex gap-2">
-                                          <span className="text-[#FF7043] shrink-0 font-black">{i + 1}.</span>
-                                          <span>{step}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-
-                                {/* Next Step — strong block */}
-                                {form.strategyBrief.nextStep && (
-                                  <div className="rounded-2xl border border-[rgba(255,112,67,0.25)] bg-[rgba(255,112,67,0.06)] px-3 py-3">
-                                    <div className="text-[10px] font-black tracking-[0.10em] text-[#FF7043] uppercase mb-1.5">Next Step</div>
-                                    <div className="text-[13px] font-semibold text-slate-900 leading-5">{form.strategyBrief.nextStep}</div>
-                                  </div>
-                                )}
-
-                                {/* Session Focus — strong block */}
-                                {form.strategyBrief.sessionFocus && (
-                                  <div className="rounded-2xl border border-slate-200 bg-[rgba(51,65,85,0.05)] px-3 py-3">
-                                    <div className="text-[10px] font-black tracking-[0.10em] text-slate-500 uppercase mb-1.5">Session Focus</div>
-                                    <div className="text-[13px] font-semibold text-slate-800 leading-5">{form.strategyBrief.sessionFocus}</div>
-                                  </div>
-                                )}
-
-                                {/* Reasoning — separated */}
-                                {form.strategyBrief.reasoning?.length > 0 && (
-                                  <div className="rounded-2xl border border-slate-200 bg-white/60 px-3 py-3">
-                                    <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2">Why This Strategy</div>
-                                    <ul className="space-y-2">
-                                      {form.strategyBrief.reasoning.map((r, i) => (
-                                        <li key={i} className="text-[12px] text-slate-600 leading-5 flex gap-2">
-                                          <span className="text-slate-400 shrink-0 font-black">{i + 1}.</span>
-                                          <span>{r}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-
-<div className="flex items-center justify-between pt-3 border-t border-slate-200">
-  <div className="text-[11px] text-slate-400">
-    Was this strategy useful?
-  </div>
-
-  <div className="flex items-center gap-2">
-    <button
-      type="button"
-      onClick={async () => {
-        await fetch('/api/tools/feedback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            toolName: 'target_strategy',
-            entityId: client.id,
-            inputSnapshot: {
-              targetCompanies: form.targetCompanies,
-              strategyBackground: form.strategyBackground,
-            },
-            outputSnapshot: form.strategyBrief,
-            feedbackScore: 'up',
-          }),
-        }).catch(() => {});
-        alert('Feedback saved');
-      }}
-      className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white/80 text-slate-700 text-xs hover:bg-white"
-    >
-      👍 Useful
-    </button>
-
-    <button
-      type="button"
-      onClick={async () => {
-        const feedbackType = prompt(
-          'What was wrong?\n- wrong_direction\n- too_generic\n- missed_insight'
-        );
-
-        if (!feedbackType) return;
-
-        const feedbackComment = prompt('Optional: what should it have said?');
-
-        await fetch('/api/tools/feedback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            toolName: 'target_strategy',
-            entityId: client.id,
-            inputSnapshot: {
-              targetCompanies: form.targetCompanies,
-              strategyBackground: form.strategyBackground,
-            },
-            outputSnapshot: form.strategyBrief,
-            feedbackScore: 'down',
-            feedbackType,
-            feedbackComment,
-          }),
-        }).catch(() => {});
-        alert('Feedback saved');
-      }}
-      className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white/80 text-slate-700 text-xs hover:bg-white"
-    >
-      👎 Needs Work
-    </button>
-  </div>
-</div>
-                                {/* Regenerate nudge */}
-                                <div className="flex justify-end pt-1">
-                                  <button type="button" onClick={() => setStrategyView('input')} className="text-[12px] font-semibold text-slate-500 hover:text-[#FF7043] transition">
-                                    ← Edit inputs & regenerate
-                                  </button>
-                                </div>
+                                <span className="font-semibold text-slate-700">External client</span> — fill in their background on the{' '}
+                                <button type="button" onClick={() => setActiveTab('profile')} className="text-[#FF7043] font-semibold underline-offset-2 hover:underline">
+                                  Profile tab
+                                </button>{' '}
+                                first. The more context you add, the sharper the strategy.
                               </>
                             )}
                           </div>
-                        )}
-                      </div>
-                    </SectionCard>
-
-                    <SectionCard title="Session History" helperText="Coaching timeline and recent sessions" className="min-h-[160px]" bodyClassName="h-full flex flex-col">
-                      <div className="flex-1 min-h-0">
-                        {sessions.length === 0 ? (
-                          <div className="text-sm text-slate-500">
-                            No sessions recorded yet.
-                            <span className="block text-xs text-slate-400 mt-1">Once sessions are created, they will appear here.</span>
+                          <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[104px] text-sm bg-white/88" placeholder="Paste target companies or categories..." value={form.targetCompanies || ''} onChange={onChange('targetCompanies')} />
+                          <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[104px] text-sm bg-white/88" placeholder="Add quick background summary, strengths, or role clues..." value={form.strategyBackground || ''} onChange={onChange('strategyBackground')} />
+                          {form.strategyError ? (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">{form.strategyError}</div>
+                          ) : null}
+                          <div className="mt-auto flex justify-end">
+                            <button
+                              type="button"
+                              onClick={handleGenerateStrategy}
+                              disabled={generatingStrategy || !form.targetCompanies?.trim()}
+                              className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {generatingStrategy ? 'Generating…' : 'Generate Strategy'}
+                            </button>
                           </div>
-                        ) : (
-                          <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                            {sessions.map((s) => {
-                              const sessionStatus =
-                                s.status === 'Completed' ? { bg: '#E8F5E9', color: '#2E7D32' }
-                                : s.status === 'Cancelled' ? { bg: '#FDECEA', color: '#C62828' }
-                                : { bg: '#E3F2FD', color: '#1565C0' };
-                              return (
-                                <div key={s.id} className="border-b border-slate-100 last:border-0 pb-3">
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                      <div className="font-semibold text-slate-900 break-words">{s.type || 'Session'}</div>
-                                      <div className="text-slate-500 break-words text-sm">{fmtDateTime(s.startAt)} • {s.durationMin} min</div>
-                                    </div>
-                                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '4px 8px', borderRadius: 999, background: sessionStatus.bg, color: sessionStatus.color, whiteSpace: 'nowrap' }}>
-                                      {s.status}
-                                    </span>
-                                  </div>
-                                  {(s.notes || s.followUpDueAt) ? (
-                                    <div className="mt-2 text-sm text-slate-700 space-y-1">
-                                      {s.notes ? <div>{s.notes}</div> : null}
-                                      {s.followUpDueAt ? (
-                                        <div className="text-xs text-slate-500">Follow-up: {s.followUpDone ? 'Done' : `Due ${fmtDate(s.followUpDueAt)}`}</div>
-                                      ) : null}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </SectionCard>
-                  </div>
-
-                  <div className="flex flex-col gap-3 h-full">
-                    <SectionCard title="Coach Notes" helperText="Pinned context plus timestamped note log" className="min-h-[420px] flex-1" bodyClassName="h-full flex flex-col">
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-xs text-slate-500 mb-1.5">Pinned Context</label>
-                          <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/88" placeholder="Pinned client context visible to you…" value={form.notes} onChange={onChange('notes')} />
-                          <div className="mt-1 text-[11px] text-slate-400">This stays private to the coach workspace.</div>
                         </div>
+                      </SectionCard>
 
-                        <div className="border-t border-slate-100 pt-4">
-                          <div className="text-sm font-semibold text-slate-900 mb-2">Add Note</div>
-                          <div className="flex flex-col gap-2 mb-3">
-                            <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[84px] text-sm bg-white/88" placeholder="Add a timestamped coaching note…" value={newNote} onChange={(e) => setNewNote(e.target.value)} />
-                            <div className="flex justify-end">
-                              <button type="button" onClick={handleAddNote} disabled={savingNote || !newNote.trim()} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition disabled:opacity-50">
-                                {savingNote ? 'Adding…' : 'Add Note'}
-                              </button>
-                            </div>
-                          </div>
-
-                          {notes.length > 0 ? (
-                            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                              {notes.map((note) => (
-                                <div key={note.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 flex gap-3">
-                                  <div className="flex-1">
-                                    <div className="text-sm text-slate-700 whitespace-pre-wrap">{note.body}</div>
-                                    <div className="text-[11px] text-slate-400 mt-2">{fmtDateTime(note.createdAt)}</div>
-                                  </div>
-                                  <button type="button" onClick={() => handleDeleteNote(note.id)} className="text-slate-400 hover:text-slate-700 text-sm">✕</button>
-                                </div>
-                              ))}
+                      <SectionCard title="Session History" helperText="Coaching timeline and recent sessions" className="min-h-[160px]" bodyClassName="h-full flex flex-col">
+                        <div className="flex-1 min-h-0">
+                          {sessions.length === 0 ? (
+                            <div className="text-sm text-slate-500">
+                              No sessions recorded yet.
+                              <span className="block text-xs text-slate-400 mt-1">Once sessions are created, they will appear here.</span>
                             </div>
                           ) : (
-                            <div className="text-sm text-slate-500">No note history yet.</div>
+                            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                              {sessions.map((s) => {
+                                const sessionStatus =
+                                  s.status === 'Completed' ? { bg: '#E8F5E9', color: '#2E7D32' }
+                                  : s.status === 'Cancelled' ? { bg: '#FDECEA', color: '#C62828' }
+                                  : { bg: '#E3F2FD', color: '#1565C0' };
+                                return (
+                                  <div key={s.id} className="border-b border-slate-100 last:border-0 pb-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <div className="font-semibold text-slate-900 break-words">{s.type || 'Session'}</div>
+                                        <div className="text-slate-500 break-words text-sm">{fmtDateTime(s.startAt)} • {s.durationMin} min</div>
+                                      </div>
+                                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '4px 8px', borderRadius: 999, background: sessionStatus.bg, color: sessionStatus.color, whiteSpace: 'nowrap' }}>
+                                        {s.status}
+                                      </span>
+                                    </div>
+                                    {(s.notes || s.followUpDueAt) ? (
+                                      <div className="mt-2 text-sm text-slate-700 space-y-1">
+                                        {s.notes ? <div>{s.notes}</div> : null}
+                                        {s.followUpDueAt ? (
+                                          <div className="text-xs text-slate-500">Follow-up: {s.followUpDone ? 'Done' : `Due ${fmtDate(s.followUpDueAt)}`}</div>
+                                        ) : null}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           )}
                         </div>
-                      </div>
-                    </SectionCard>
+                      </SectionCard>
+                    </div>
 
-                    <SectionCard title="Recent Coaching Activity" className="min-h-[160px]" bodyClassName="h-full flex flex-col">
-                      {recentActivity.length === 0 ? (
-                        <div className="text-sm text-slate-500">No recent coaching activity yet.</div>
-                      ) : (
-                        <div className="space-y-3 max-h-[180px] overflow-y-auto pr-1">
-                          {recentActivity.map((item, idx) => (
-                            <div key={`${item.label}-${idx}`} className="text-sm">
-                              <div className="font-semibold text-slate-900 break-words">{item.label}</div>
-                              <div className="text-slate-500 break-words">{fmtDateTime(item.ts)}</div>
-                              {item.detail ? <div className="text-slate-600 mt-1 break-words">{item.detail}</div> : null}
+                    <div className="flex flex-col gap-3 h-full">
+                      <SectionCard title="Coach Notes" helperText="Pinned context plus timestamped note log" className="min-h-[420px] flex-1" bodyClassName="h-full flex flex-col">
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-1.5">Pinned Context</label>
+                            <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/88" placeholder="Pinned client context visible to you…" value={form.notes} onChange={onChange('notes')} />
+                            <div className="mt-1 text-[11px] text-slate-400">This stays private to the coach workspace.</div>
+                          </div>
+
+                          <div className="border-t border-slate-100 pt-4">
+                            <div className="text-sm font-semibold text-slate-900 mb-2">Add Note</div>
+                            <div className="flex flex-col gap-2 mb-3">
+                              <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[84px] text-sm bg-white/88" placeholder="Add a timestamped coaching note…" value={newNote} onChange={(e) => setNewNote(e.target.value)} />
+                              <div className="flex justify-end">
+                                <button type="button" onClick={handleAddNote} disabled={savingNote || !newNote.trim()} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition disabled:opacity-50">
+                                  {savingNote ? 'Adding…' : 'Add Note'}
+                                </button>
+                              </div>
                             </div>
-                          ))}
+
+                            {notes.length > 0 ? (
+                              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                                {notes.map((note) => (
+                                  <div key={note.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 flex gap-3">
+                                    <div className="flex-1">
+                                      <div className="text-sm text-slate-700 whitespace-pre-wrap">{note.body}</div>
+                                      <div className="text-[11px] text-slate-400 mt-2">{fmtDateTime(note.createdAt)}</div>
+                                    </div>
+                                    <button type="button" onClick={() => handleDeleteNote(note.id)} className="text-slate-400 hover:text-slate-700 text-sm">✕</button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-slate-500">No note history yet.</div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </SectionCard>
+                      </SectionCard>
+
+                      <SectionCard title="Recent Coaching Activity" className="min-h-[160px]" bodyClassName="h-full flex flex-col">
+                        {recentActivity.length === 0 ? (
+                          <div className="text-sm text-slate-500">No recent coaching activity yet.</div>
+                        ) : (
+                          <div className="space-y-3 max-h-[180px] overflow-y-auto pr-1">
+                            {recentActivity.map((item, idx) => (
+                              <div key={`${item.label}-${idx}`} className="text-sm">
+                                <div className="font-semibold text-slate-900 break-words">{item.label}</div>
+                                <div className="text-slate-500 break-words">{fmtDateTime(item.ts)}</div>
+                                {item.detail ? <div className="text-slate-600 mt-1 break-words">{item.detail}</div> : null}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </SectionCard>
+                    </div>
                   </div>
-                </div>
+                )
               ) : null}
 
               {/* ── Documents tab ── */}
