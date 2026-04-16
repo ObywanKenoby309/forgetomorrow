@@ -276,11 +276,11 @@ TARGET FIELD CONTRACT — REQUIRED:
 - Do not mix strings and objects in the same array.
 
 Each target MUST explicitly describe:
-- a likely internal team-level problem
-- why that problem exists in that company’s growth stage
+- a specific internal team-level problem
+- why that problem exists at this company’s growth stage
 - how this candidate’s past pattern directly solves that problem
 
-If the target reads as general alignment instead of problem-solution matching, it is invalid.
+If any of these are missing, the target is invalid.
 
 If a target does NOT clearly identify a specific internal problem and explain why this candidate would be hired to solve it, discard it and rewrite.
 
@@ -340,7 +340,8 @@ OUTPUT FORMAT — RETURN ONLY VALID JSON, NO MARKDOWN, NO COMMENTARY:
 
 FIELD DEFINITIONS:
 - themes: 2–4 specific sector/mission patterns derived from target companies + client background. Must name real patterns AND reference real organizations as anchors. Language must match detected environment.
-- roleLanes: 3–5 prioritized strategic role directions with brief explanation of why this lane fits this person's arc. Do NOT default to standard resume titles alone. Prefer team/problem-shaped lanes that describe where this person would be inserted and what they would help fix. Environment-matched language.
+- roleLanes: 3–5 prioritized strategic role directions with brief explanation of why this lane fits this person's arc. Do NOT use recognizable job titles (e.g., Product Manager, Customer Success Manager, Program Manager, Technical Program Manager). Each role lane must be written as a functional description of where this person sits and what problem they solve inside the organization. If a role lane contains a standard job title, it is invalid and must be rewritten. Environment-matched language only.
+- roleLanes must describe team placement first, problem ownership second, and only imply function indirectly.
 - transferabilitySignals: 3–5 repeatable behavioral patterns from the client's career arc. Pattern language only. Environment-matched framing — what this pattern means in THIS target world specifically.
 - narrativeGaps: 2–4 specific, honest gaps in this client's story relative to the target direction. Direct language. No softening. Environment-specific — name the gap in terms of how THIS environment will perceive it.
 - positioningInsight: ONE short, sticky, memorable sentence. Speakable in one breath. Environment-matched. Must feel like it was written for this person entering this specific world.
