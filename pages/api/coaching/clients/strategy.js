@@ -65,7 +65,7 @@ STARTUP / GROWTH STAGE (Series A–C companies, venture-backed, high-growth)
 → Language that lands: "built from zero", "owned end-to-end", "figured it out without a playbook", "grew X by Y in Z months"
 → What they hire for: people who move fast, make decisions with incomplete information, and build where nothing existed
 → WRONG framing: process-heavy, compliance-oriented, needs structure to operate
-→ RIGHT framing: builder mentality, bias for action, comfort in chaos, ownership, fast iteration, tangible early wins, and operating without a playbook
+→ RIGHT framing: builder mentality, bias for action, comfort in chaos, ownership, fast iteration, tangible early wins, operating without a playbook, and solving messy team or product problems before they become bottlenecks
 
 NONPROFIT / SOCIAL IMPACT (Wounded Warrior Project, Habitat for Humanity, United Way, etc.)
 → These orgs measure success by: community outcomes, mission alignment, program reach, donor relationships, operational efficiency with limited resources
@@ -211,6 +211,7 @@ It MUST:
 - Imply the problem the company is trying to solve
 - Feel specific enough that a hiring manager would recognize their situation in it
 - Be speakable in one breath and memorable
+- roleLanes must follow the same logic: describe the team need or operational problem first, and only then imply the function this person would serve
 
 RIGHT (enterprise): "He is the operator enterprise CS teams hire when they need retention fixed, not managed"
 RIGHT (nonprofit): "He is a builder of operational infrastructure for organizations that run on mission, not margin"
@@ -221,11 +222,12 @@ Test: one breath. Client nods. Environment-specific. Not generic.
 STRETCH / SAFE HARBOR must explain WHY and tie to a specific gap or signal.
 
 Each target MUST:
-- Name the company or role clearly
+- Name the company clearly and use the actual provided target list unless excluding a company for a specific strategic reason
 - Explain WHY this company specifically benefits from this candidate’s pattern
 - Tie the candidate’s strength to a business function (growth, retention, product, operations, etc.)
 - Describe an internal team-level problem, bottleneck, or need this candidate would likely help solve
 - Avoid generic company descriptions
+- If one or more named target companies are not used in safeHarborTargets or stretchTargets, explain that omission in the reasoning field
 
 WRONG:
 - "Loom — where his experience could be valuable"
@@ -234,7 +236,7 @@ WRONG:
 
 RIGHT:
 - "Loom — a product-led company where user engagement directly impacts retention, making his experience in building customer success systems immediately relevant"
-- "Notion — a fast-scaling product org where his ability to structure operations can support product teams struggling with growth complexity"
+- "Notion — a fast-scaling product org where product teams can lose speed as complexity grows, making his pattern of structuring messy operations directly relevant"
 - "Amazon Fulfillment — an operations-heavy environment where his experience optimizing logistics systems directly aligns with efficiency and throughput goals"
 - "Linear — a product-led org where internal tooling efficiency directly impacts developer velocity, aligning with his background in optimizing operational systems under pressure"
 
@@ -261,6 +263,7 @@ Each action MUST:
 - Include a clear mechanism (where, how, or with whom)
 - Be immediately executable within 7 days
 - Reference at least one specific company, platform, or named environment from the target list whenever possible
+- Name a concrete deliverable or output when relevant (case study, outreach message, post, conversation, document, intro request)
 - Avoid vague language like "network", "engage", "explore" unless paired with specificity
 
 WRONG:
@@ -268,7 +271,7 @@ WRONG:
 - "Network with professionals"
 
 RIGHT:
-- "Join 2 product communities (e.g. Mind the Product, Product Coalition) and initiate 3 conversations with operators at target companies"
+- "Join 2 product communities (e.g. Mind the Product, Product Coalition), comment on 2 discussions about startup operations or onboarding, and initiate 3 conversations with operators at target companies"
 - "Write 1 case study quantifying a past operational win and share it with 2 hiring managers or peers for feedback"
 - "Identify 1 hiring manager at Notion, Figma, and Linear and send targeted outreach referencing how their product teams scale user engagement"
 
@@ -300,7 +303,7 @@ OUTPUT FORMAT — RETURN ONLY VALID JSON, NO MARKDOWN, NO COMMENTARY:
 
 FIELD DEFINITIONS:
 - themes: 2–4 specific sector/mission patterns derived from target companies + client background. Must name real patterns AND reference real organizations as anchors. Language must match detected environment.
-- roleLanes: 3–5 prioritized strategic role directions with brief explanation of why this lane fits this person's arc. Not job titles. Environment-matched language.
+- roleLanes: 3–5 prioritized strategic role directions with brief explanation of why this lane fits this person's arc. Do NOT default to standard resume titles alone. Prefer team/problem-shaped lanes that describe where this person would be inserted and what they would help fix. Environment-matched language.
 - transferabilitySignals: 3–5 repeatable behavioral patterns from the client's career arc. Pattern language only. Environment-matched framing — what this pattern means in THIS target world specifically.
 - narrativeGaps: 2–4 specific, honest gaps in this client's story relative to the target direction. Direct language. No softening. Environment-specific — name the gap in terms of how THIS environment will perceive it.
 - positioningInsight: ONE short, sticky, memorable sentence. Speakable in one breath. Environment-matched. Must feel like it was written for this person entering this specific world.
