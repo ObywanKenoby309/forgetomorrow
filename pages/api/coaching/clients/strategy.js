@@ -224,15 +224,19 @@ Each target MUST:
 - Name the company or role clearly
 - Explain WHY this company specifically benefits from this candidate’s pattern
 - Tie the candidate’s strength to a business function (growth, retention, product, operations, etc.)
+- Describe an internal team-level problem, bottleneck, or need this candidate would likely help solve
+- Avoid generic company descriptions
 
 WRONG:
 - "Loom — where his experience could be valuable"
 - "Google — strong alignment with his skills"
+- "Linear aligns with operations"
 
 RIGHT:
 - "Loom — a product-led company where user engagement directly impacts retention, making his experience in building customer success systems immediately relevant"
 - "Notion — a fast-scaling product org where his ability to structure operations can support product teams struggling with growth complexity"
 - "Amazon Fulfillment — an operations-heavy environment where his experience optimizing logistics systems directly aligns with efficiency and throughput goals"
+- "Linear — a product-led org where internal tooling efficiency directly impacts developer velocity, aligning with his background in optimizing operational systems under pressure"
 
 FAITH-BASED TARGETING: Always include alignment risk note — see faith-based section above.
 
@@ -256,6 +260,7 @@ EXECUTION PLAN — ALWAYS REQUIRED:
 Each action MUST:
 - Include a clear mechanism (where, how, or with whom)
 - Be immediately executable within 7 days
+- Reference at least one specific company, platform, or named environment from the target list whenever possible
 - Avoid vague language like "network", "engage", "explore" unless paired with specificity
 
 WRONG:
@@ -265,6 +270,9 @@ WRONG:
 RIGHT:
 - "Join 2 product communities (e.g. Mind the Product, Product Coalition) and initiate 3 conversations with operators at target companies"
 - "Write 1 case study quantifying a past operational win and share it with 2 hiring managers or peers for feedback"
+- "Identify 1 hiring manager at Notion, Figma, and Linear and send targeted outreach referencing how their product teams scale user engagement"
+
+If an action could apply to any person, it is wrong.
 
 Enterprise execution looks different from nonprofit execution looks different from faith-based execution — reflect that in specificity.
 Workforce: quantify operational improvements, highlight informal leadership, target realistic supervisor or lead roles, and use plain language with measurable results
@@ -297,7 +305,7 @@ FIELD DEFINITIONS:
 - narrativeGaps: 2–4 specific, honest gaps in this client's story relative to the target direction. Direct language. No softening. Environment-specific — name the gap in terms of how THIS environment will perceive it.
 - positioningInsight: ONE short, sticky, memorable sentence. Speakable in one breath. Environment-matched. Must feel like it was written for this person entering this specific world.
 - marketPositionWarning: Two sentences. Current perception. Specific rejection pattern. Environment-specific. Creates urgency.
-- hiddenSignalGap: A single direct statement identifying the mismatch between the client’s actual capability and how the market currently perceives them. Format: "You are operating at [X], but your current narrative signals [Y]." This must be blunt, specific, and high-signal.
+- hiddenSignalGap: MANDATORY whenever any narrativeGaps exist. A single direct statement identifying the mismatch between the client’s actual capability and how the market currently perceives them. Format: "You are operating at [X], but your current narrative signals [Y]." This must be blunt, specific, high-signal, and feel like a contradiction between reality and perception.
 - stretchTargets: 1–3 aspirational targets. MUST be objects with { name, reason }. "name" is the target organization or role type. "reason" explains why it is a stretch and what gap closes first. Faith alignment risk note if applicable.
 - safeHarborTargets: 1–3 immediate-win targets. MUST be objects with { name, reason }. "name" is the target organization or role type. "reason" explains why it is achievable now given current readiness.
 - executionPlan: 3–5 concrete, sequenced, environment-specific actions for this week.

@@ -187,7 +187,7 @@ export default function CommandBrief({ clientName, generatedAt, strategyBrief, o
                 {b.safeHarborTargets.map((t, i) => (
                   <li key={i} className="text-sm text-slate-700 leading-5 flex gap-2">
                     <span className="text-emerald-500 shrink-0 mt-0.5">→</span>
-                    <span>
+                    <div className="min-w-0">
   <div className="font-semibold text-slate-800">
     {t.name}
   </div>
@@ -196,7 +196,7 @@ export default function CommandBrief({ clientName, generatedAt, strategyBrief, o
       {t.reason}
     </div>
   )}
-</span>
+</div>
                   </li>
                 ))}
               </ul>
@@ -209,7 +209,7 @@ export default function CommandBrief({ clientName, generatedAt, strategyBrief, o
                 {b.stretchTargets.map((t, i) => (
                   <li key={i} className="text-sm text-slate-700 leading-5 flex gap-2">
                     <span className="text-[#FF7043] shrink-0 mt-0.5">↑</span>
-                    <span>
+                    <div className="min-w-0">
   <div className="font-semibold text-slate-800">
     {t.name}
   </div>
@@ -218,7 +218,7 @@ export default function CommandBrief({ clientName, generatedAt, strategyBrief, o
       {t.reason}
     </div>
   )}
-</span>
+</div>
                   </li>
                 ))}
               </ul>
