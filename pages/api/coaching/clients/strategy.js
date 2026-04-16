@@ -275,7 +275,7 @@ OUTPUT FORMAT — RETURN ONLY VALID JSON, NO MARKDOWN, NO COMMENTARY:
   "roleLanes": [],
   "transferabilitySignals": [],
   "narrativeGaps": [],
-  ""positioningInsight": "",
+  "positioningInsight": "",
 "marketPositionWarning": "",
 "hiddenSignalGap": "",
 "stretchTargets": [

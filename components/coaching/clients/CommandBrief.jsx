@@ -127,20 +127,6 @@ export default function CommandBrief({ clientName, generatedAt, strategyBrief, o
     )}
   </div>
 )}
-          )}
-          {b.themes?.length > 0 && (
-            <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-4">
-              <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2.5">Sector Alignment</div>
-              <div className="flex flex-wrap gap-2">
-                {b.themes.map((t, i) => (
-                  <span key={i} className="inline-flex items-center rounded-xl border border-[rgba(255,112,67,0.30)] bg-[rgba(255,112,67,0.07)] px-3 py-1.5 text-[12px] font-medium text-[#993C1D]">{t}</span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* DIRECTION */}
       {activeTab === 'direction' && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
