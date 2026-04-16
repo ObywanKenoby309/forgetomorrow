@@ -1,3 +1,4 @@
+// components/resume-form/templates/SignalResumeTestTemplate.js
 import React from 'react';
 
 const ORANGE = '#FF7043';
@@ -35,14 +36,11 @@ function getPositioningLine(data) {
 
   if (info.targetedRole && summary) {
     const shortSummary = summary.split('.').slice(0, 1).join('.').slice(0, 140);
-
-return info.targetedRole
-  ? `${info.targetedRole} — ${shortSummary}`
-  : shortSummary;
+    return `${info.targetedRole} — ${shortSummary}`;
   }
 
   if (info.targetedRole) return info.targetedRole;
-  if (summary) return summary;
+  if (summary) return summary.split('.').slice(0, 1).join('.').slice(0, 140);
 
   return 'Positioning statement goes here';
 }
@@ -52,7 +50,7 @@ function collectImpactSnapshot(data) {
 
   if (achievements.length) {
     return achievements
-      .sort((a, b) => b.length - a.length) // prioritize stronger bullets
+      .sort((a, b) => String(b).length - String(a).length)
       .slice(0, 5);
   }
 
@@ -218,6 +216,9 @@ export default function SignalResumeTestTemplate({ data }) {
   const languages = normalizeArray(data?.languages);
   const customSections = normalizeArray(data?.customSections);
 
+  const singleRole = employerSpine.length <= 1;
+  const singleRoleItem = singleRole ? employerSpine[0] : null;
+
   return (
     <div style={{ display: 'grid', gap: 24, color: '#111827' }}>
       {/* PAGE 1 — SIGNAL PAGE */}
@@ -300,45 +301,70 @@ export default function SignalResumeTestTemplate({ data }) {
           </div>
         </Card>
 
-        <Card>
-  <SectionTitle>Employer Spine</SectionTitle>
-  <div style={{ display: 'grid', gap: 8 }}>
-    {employerSpine.length ? (
-      employerSpine.map((item, idx) => (
-        <div
-          key={`${item.company}-${idx}`}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) auto',
-            gap: 10,
-            fontSize: 13,
-            alignItems: 'baseline',
-            opacity: idx > 2 ? 0.6 : 1,
-            borderBottom: idx !== employerSpine.length - 1 ? '1px solid #F1F5F9' : 'none',
-            paddingBottom: idx !== employerSpine.length - 1 ? 8 : 0,
-          }}
-        >
-          <div style={{ fontWeight: 800, color: '#111827' }}>
-            {item.company || 'Company'}
-          </div>
+        {singleRole ? (
+          <Card>
+            <SectionTitle>Current Role Context</SectionTitle>
+            {singleRoleItem ? (
+              <div style={{ display: 'grid', gap: 6 }}>
+                <div style={{ fontWeight: 900, fontSize: 14, color: '#111827' }}>
+                  {singleRoleItem.company || 'Company'}
+                </div>
 
-          <div style={{ color: '#334155', fontWeight: idx === 0 ? 700 : 500 }}>
-            {item.title || 'Role'}
-          </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>
+                  {singleRoleItem.title || 'Role'}
+                </div>
 
-          <div style={{ color: '#64748B', whiteSpace: 'nowrap' }}>
-            {item.range || ''}
-          </div>
-        </div>
-      ))
-    ) : (
-      <div style={{ fontSize: 14, color: '#64748B' }}>
-        Add experience to see your employer spine.
+                <div style={{ fontSize: 12, color: '#64748B' }}>
+                  {singleRoleItem.range || ''}
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 14, color: '#64748B' }}>
+                Add experience to show current role context.
+              </div>
+            )}
+          </Card>
+        ) : (
+          <Card>
+            <SectionTitle>Employer Spine</SectionTitle>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {employerSpine.length ? (
+                employerSpine.map((item, idx) => (
+                  <div
+                    key={`${item.company}-${idx}`}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) auto',
+                      gap: 10,
+                      fontSize: 13,
+                      alignItems: 'baseline',
+                      opacity: idx > 2 ? 0.6 : 1,
+                      borderBottom: idx !== employerSpine.length - 1 ? '1px solid #F1F5F9' : 'none',
+                      paddingBottom: idx !== employerSpine.length - 1 ? 8 : 0,
+                    }}
+                  >
+                    <div style={{ fontWeight: 800, color: '#111827' }}>
+                      {item.company || 'Company'}
+                    </div>
+
+                    <div style={{ color: '#334155', fontWeight: idx === 0 ? 700 : 500 }}>
+                      {item.title || 'Role'}
+                    </div>
+
+                    <div style={{ color: '#64748B', whiteSpace: 'nowrap' }}>
+                      {item.range || ''}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ fontSize: 14, color: '#64748B' }}>
+                  Add experience to see your employer spine.
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
       </div>
-    )}
-  </div>
-</Card>
-</div>
 
       {/* PAGE BREAK VISUAL */}
       <div
