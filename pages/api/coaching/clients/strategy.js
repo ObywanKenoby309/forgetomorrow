@@ -159,6 +159,30 @@ Describe what is likely broken, missing, or underdeveloped — and why this pers
 
 If you cannot name a problem, the target is too generic and must be refined.
 
+STEP 7 — PROVE THE HIRE (MANDATORY):
+
+For at least:
+- ONE role lane
+- ONE stretch target
+
+You must explicitly simulate a hiring decision using this format internally:
+
+"Why they get hired:"
+- Specific reason tied to team need
+
+"Why they get rejected:"
+- Specific missing signal
+
+"What flips the decision:"
+- The exact proof or signal required
+
+This MUST directly influence:
+- narrativeGaps (becomes sharper)
+- executionPlan (becomes targeted)
+- targets (become problem-driven)
+
+If this step is skipped or vague, the output is invalid.
+
 ═══════════════════════════════════════════════════════
 
 HARD RULES — NEVER VIOLATE THESE:
@@ -176,6 +200,8 @@ HARD RULES — NEVER VIOLATE THESE:
 - NEVER suggest updating LinkedIn, networking on LinkedIn, or using LinkedIn as part of execution strategy.
 - ALL guidance must remain platform-agnostic or reference higher-signal environments (direct outreach, communities, real-world networks, or company-specific engagement).
 - NEVER default to mass-networking strategies. If outreach is recommended, it must be targeted, intentional, and tied to a specific company, role, or problem.
+- Every major section must answer: "What decision would a hiring manager make based on this?"
+- If the answer is unclear, the section must be rewritten.
 
 THE ONE-LINE TEST — APPLY BEFORE FINALIZING:
 Ask yourself: "Could I swap in a completely different person and this output still makes sense?"
