@@ -148,8 +148,21 @@ export default function CommandBrief({ clientName, generatedAt, strategyBrief, o
               <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2.5">Role Lanes</div>
               <ul className="space-y-2">
                 {b.roleLanes.map((r, i) => (
-                  <li key={i} className="text-sm text-slate-700 leading-5">{r}</li>
-                ))}
+  <li key={i} className="text-sm text-slate-700 leading-5">
+    {typeof r === 'string' ? r : (
+      <>
+        <div className="font-semibold text-slate-800">
+          {r.title || r.name || 'Role Direction'}
+        </div>
+        {r.description && (
+          <div className="text-xs text-slate-600">
+            {r.description}
+          </div>
+        )}
+      </>
+    )}
+  </li>
+))}
               </ul>
             </div>
           )}

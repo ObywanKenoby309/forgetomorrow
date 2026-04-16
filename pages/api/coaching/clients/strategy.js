@@ -275,6 +275,13 @@ TARGET FIELD CONTRACT — REQUIRED:
 - Do not return "Target: explanation" as a single string.
 - Do not mix strings and objects in the same array.
 
+Each target MUST explicitly describe:
+- a likely internal team-level problem
+- why that problem exists in that company’s growth stage
+- how this candidate’s past pattern directly solves that problem
+
+If the target reads as general alignment instead of problem-solution matching, it is invalid.
+
 MARKET POSITIONING WARNING — ALWAYS REQUIRED:
 Two sentences. Current perception. Specific rejection pattern. Must create urgency.
 WRONG: "May need to clarify his background"
