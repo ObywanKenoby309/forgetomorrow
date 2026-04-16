@@ -2,6 +2,12 @@
 import React from 'react';
 
 const ORANGE = '#FF7043';
+const SLATE = '#334155';
+const MUTED = '#64748B';
+const DARK = '#111827';
+const RULE = '#E5E7EB';
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function normalizeArray(value) {
   return Array.isArray(value) ? value : [];
@@ -27,7 +33,7 @@ function getContactLine(data) {
     info.ftProfile,
   ]
     .filter(Boolean)
-    .join(' • ');
+    .join('  ·  ');
 }
 
 function getPositioningLine(data) {
@@ -35,19 +41,16 @@ function getPositioningLine(data) {
   const summary = String(data?.summary || '').trim();
 
   if (info.targetedRole && summary) {
-    const shortSummary = summary.split('.').slice(0, 1).join('.').slice(0, 140);
+    const shortSummary = summary.split('.').slice(0, 1).join('.').slice(0, 160);
     return `${info.targetedRole} — ${shortSummary}`;
   }
-
   if (info.targetedRole) return info.targetedRole;
-  if (summary) return summary.split('.').slice(0, 1).join('.').slice(0, 140);
-
+  if (summary) return summary.split('.').slice(0, 1).join('.').slice(0, 160);
   return 'Positioning statement goes here';
 }
 
 function collectImpactSnapshot(data) {
   const achievements = normalizeArray(data?.achievements).filter(Boolean);
-
   if (achievements.length) {
     return achievements
       .sort((a, b) => String(b).length - String(a).length)
@@ -56,10 +59,8 @@ function collectImpactSnapshot(data) {
 
   const work = normalizeArray(data?.workExperiences);
   const bullets = [];
-
   for (const role of work) {
     const roleBullets = normalizeArray(role?.bullets || role?.highlights);
-
     for (const bullet of roleBullets) {
       if (
         bullet &&
@@ -69,7 +70,6 @@ function collectImpactSnapshot(data) {
       }
     }
   }
-
   return bullets.slice(0, 5);
 }
 
@@ -83,7 +83,7 @@ function buildEmployerSpine(data) {
       role?.range ||
       [role?.startDate || role?.start, role?.endDate || role?.end]
         .filter(Boolean)
-        .join(' — '),
+        .join(' – '),
   }));
 }
 
@@ -98,64 +98,27 @@ function groupSkills(skills) {
   };
 
   const toolHints = [
-    'salesforce',
-    'jira',
-    'servicenow',
-    'excel',
-    'sql',
-    'tableau',
-    'power bi',
-    'zendesk',
-    'hubspot',
-    'figma',
-    'notion',
-    'asana',
-    'trello',
-    'slack',
-    'google analytics',
-    'workday',
-    'sap',
-    'oracle',
-    'microsoft',
+    'salesforce', 'jira', 'servicenow', 'excel', 'sql', 'tableau',
+    'power bi', 'zendesk', 'hubspot', 'figma', 'notion', 'asana',
+    'trello', 'slack', 'google analytics', 'workday', 'sap', 'oracle', 'microsoft',
   ];
-
   const leadershipHints = [
-    'leadership',
-    'coaching',
-    'training',
-    'mentoring',
-    'management',
-    'cross-functional',
-    'stakeholder',
-    'program',
-    'delivery',
-    'team',
+    'leadership', 'coaching', 'training', 'mentoring', 'management',
+    'cross-functional', 'stakeholder', 'program', 'delivery', 'team',
   ];
-
   const systemsHints = [
-    'operations',
-    'process',
-    'workflow',
-    'onboarding',
-    'support ops',
-    'continuous improvement',
-    'quality',
-    'compliance',
-    'optimization',
-    'system',
-    'implementation',
-    'scaling',
-    'efficiency',
+    'operations', 'process', 'workflow', 'onboarding', 'support ops',
+    'continuous improvement', 'quality', 'compliance', 'optimization',
+    'system', 'implementation', 'scaling', 'efficiency',
   ];
 
   all.forEach((skill) => {
     const s = String(skill).toLowerCase();
-
-    if (toolHints.some((hint) => s.includes(hint))) {
+    if (toolHints.some((h) => s.includes(h))) {
       buckets['Tools & Platforms'].push(skill);
-    } else if (leadershipHints.some((hint) => s.includes(hint))) {
+    } else if (leadershipHints.some((h) => s.includes(h))) {
       buckets['Leadership & Delivery'].push(skill);
-    } else if (systemsHints.some((hint) => s.includes(hint))) {
+    } else if (systemsHints.some((h) => s.includes(h))) {
       buckets['Systems & Operations'].push(skill);
     } else {
       buckets['Domain & Functional'].push(skill);
@@ -169,16 +132,21 @@ function groupSkills(skills) {
   return buckets;
 }
 
-function SectionTitle({ children }) {
+// ─── Design primitives ──────────────────────────────────────────────────────
+
+function SectionLabel({ children }) {
   return (
     <div
       style={{
-        fontSize: 12,
+        fontSize: 10,
         fontWeight: 900,
-        letterSpacing: '0.08em',
+        letterSpacing: '0.12em',
         textTransform: 'uppercase',
         color: ORANGE,
-        marginBottom: 8,
+        marginBottom: 10,
+        paddingBottom: 6,
+        borderBottom: `2px solid ${ORANGE}`,
+        display: 'inline-block',
       }}
     >
       {children}
@@ -186,20 +154,11 @@ function SectionTitle({ children }) {
   );
 }
 
-function Card({ children }) {
-  return (
-    <div
-      style={{
-        border: '1px solid #E5E7EB',
-        borderRadius: 12,
-        padding: 14,
-        background: '#FFFFFF',
-      }}
-    >
-      {children}
-    </div>
-  );
+function Divider() {
+  return <div style={{ height: 1, background: RULE, margin: '0 0 18px' }} />;
 }
+
+// ─── Main component ─────────────────────────────────────────────────────────
 
 export default function SignalResumeTestTemplate({ data }) {
   const name = getName(data);
@@ -219,314 +178,496 @@ export default function SignalResumeTestTemplate({ data }) {
   const singleRole = employerSpine.length <= 1;
   const singleRoleItem = singleRole ? employerSpine[0] : null;
 
+  const hasSkills = Object.values(skillBuckets).some((arr) => arr.length > 0);
+
   return (
-    <div style={{ display: 'grid', gap: 24, color: '#111827' }}>
-      {/* PAGE 1 — SIGNAL PAGE */}
-      <div style={{ display: 'grid', gap: 14 }}>
+    <div style={{ fontFamily: "'DM Sans', 'Sora', sans-serif", color: DARK, lineHeight: 1.5 }}>
+
+      {/* ══════════════════════════════════════════
+          PAGE 1 — SIGNAL PAGE
+      ══════════════════════════════════════════ */}
+
+      {/* ── Header Strip ── */}
+      <div style={{ marginBottom: 24 }}>
         <div
           style={{
-            borderBottom: '2px solid #F3F4F6',
-            paddingBottom: 12,
+            fontSize: 30,
+            fontWeight: 900,
+            color: DARK,
+            letterSpacing: '-0.02em',
+            lineHeight: 1.1,
+            marginBottom: 4,
           }}
         >
+          {name}
+        </div>
+
+        {positioningLine && (
           <div
             style={{
-              fontSize: 28,
-              fontWeight: 900,
-              lineHeight: 1.1,
-              color: '#111827',
-            }}
-          >
-            {name}
-          </div>
-
-          {contactLine ? (
-            <div
-              style={{
-                marginTop: 6,
-                fontSize: 12,
-                color: '#475569',
-                lineHeight: 1.5,
-              }}
-            >
-              {contactLine}
-            </div>
-          ) : null}
-
-          <div
-            style={{
-              marginTop: 10,
-              fontSize: 15,
+              fontSize: 13,
               fontWeight: 700,
-              color: '#1F2937',
-              lineHeight: 1.45,
+              color: SLATE,
+              marginBottom: 6,
+              lineHeight: 1.4,
             }}
           >
             {positioningLine}
           </div>
-        </div>
+        )}
 
-        <Card>
-          <SectionTitle>Impact Snapshot</SectionTitle>
-          {impactSnapshot.length ? (
-            <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 8 }}>
-              {impactSnapshot.map((item, idx) => (
-                <li key={idx} style={{ fontSize: 14, lineHeight: 1.45 }}>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div style={{ fontSize: 14, color: '#64748B' }}>
-              Add 3–5 strongest wins to test the signal-first layout.
-            </div>
-          )}
-        </Card>
+        {contactLine && (
+          <div style={{ fontSize: 11.5, color: MUTED, letterSpacing: '0.01em' }}>
+            {contactLine}
+          </div>
+        )}
 
-        <Card>
-          <SectionTitle>Core Capabilities</SectionTitle>
-          <div style={{ display: 'grid', gap: 10 }}>
+        <div style={{ height: 3, background: ORANGE, borderRadius: 2, marginTop: 14 }} />
+      </div>
+
+      {/* ── Impact Snapshot ── */}
+      <div style={{ marginBottom: 22 }}>
+        <SectionLabel>Impact Snapshot</SectionLabel>
+        {impactSnapshot.length ? (
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 7 }}>
+            {impactSnapshot.map((item, idx) => (
+              <li
+                key={idx}
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  alignItems: 'flex-start',
+                  fontSize: 13,
+                  color: '#1E293B',
+                  lineHeight: 1.45,
+                }}
+              >
+                <span
+                  style={{
+                    flexShrink: 0,
+                    marginTop: 5,
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: ORANGE,
+                  }}
+                />
+                {item}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>
+            Add 3–5 strongest wins to populate your signal layer.
+          </div>
+        )}
+      </div>
+
+      {/* ── Core Capabilities ── */}
+      {hasSkills && (
+        <div style={{ marginBottom: 22 }}>
+          <SectionLabel>Core Capabilities</SectionLabel>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px' }}>
             {Object.entries(skillBuckets).map(([label, items]) =>
               items.length ? (
                 <div key={label}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 4 }}>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 900,
+                      color: SLATE,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      marginBottom: 3,
+                    }}
+                  >
                     {label}
                   </div>
-                  <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>
-                    {items.join(' · ')}
+                  <div style={{ fontSize: 12.5, color: '#374151', lineHeight: 1.5 }}>
+                    {items.join('  ·  ')}
                   </div>
                 </div>
               ) : null
             )}
           </div>
-        </Card>
+        </div>
+      )}
+
+      {/* ── Employer Spine ── */}
+      <div style={{ marginBottom: 8 }}>
+        <SectionLabel>
+          {singleRole ? 'Current Role' : 'Career at a Glance'}
+        </SectionLabel>
 
         {singleRole ? (
-          <Card>
-            <SectionTitle>Current Role Context</SectionTitle>
-            {singleRoleItem ? (
-              <div style={{ display: 'grid', gap: 6 }}>
-                <div style={{ fontWeight: 900, fontSize: 14, color: '#111827' }}>
-                  {singleRoleItem.company || 'Company'}
-                </div>
-
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>
-                  {singleRoleItem.title || 'Role'}
-                </div>
-
-                <div style={{ fontSize: 12, color: '#64748B' }}>
-                  {singleRoleItem.range || ''}
-                </div>
+          singleRoleItem ? (
+            <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', flexWrap: 'wrap' }}>
+              <div style={{ fontWeight: 900, fontSize: 14, color: DARK }}>
+                {singleRoleItem.company || 'Company'}
               </div>
-            ) : (
-              <div style={{ fontSize: 14, color: '#64748B' }}>
-                Add experience to show current role context.
+              <div style={{ fontSize: 13, fontWeight: 700, color: SLATE }}>
+                {singleRoleItem.title || 'Role'}
               </div>
-            )}
-          </Card>
-        ) : (
-          <Card>
-            <SectionTitle>Employer Spine</SectionTitle>
-            <div style={{ display: 'grid', gap: 8 }}>
-              {employerSpine.length ? (
-                employerSpine.map((item, idx) => (
-                  <div
-                    key={`${item.company}-${idx}`}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) auto',
-                      gap: 10,
-                      fontSize: 13,
-                      alignItems: 'baseline',
-                      opacity: idx > 2 ? 0.6 : 1,
-                      borderBottom: idx !== employerSpine.length - 1 ? '1px solid #F1F5F9' : 'none',
-                      paddingBottom: idx !== employerSpine.length - 1 ? 8 : 0,
-                    }}
-                  >
-                    <div style={{ fontWeight: 800, color: '#111827' }}>
-                      {item.company || 'Company'}
-                    </div>
-
-                    <div style={{ color: '#334155', fontWeight: idx === 0 ? 700 : 500 }}>
-                      {item.title || 'Role'}
-                    </div>
-
-                    <div style={{ color: '#64748B', whiteSpace: 'nowrap' }}>
-                      {item.range || ''}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div style={{ fontSize: 14, color: '#64748B' }}>
-                  Add experience to see your employer spine.
-                </div>
+              {singleRoleItem.range && (
+                <div style={{ fontSize: 12, color: MUTED }}>{singleRoleItem.range}</div>
               )}
             </div>
-          </Card>
-        )}
-      </div>
-
-      {/* PAGE BREAK VISUAL */}
-      <div
-        style={{
-          borderTop: '3px dashed #E5E7EB',
-          paddingTop: 10,
-          textAlign: 'center',
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          color: '#94A3B8',
-        }}
-      >
-        Story Pages — Full Chronological History
-      </div>
-
-      {/* PAGE 2+ — STORY PAGES */}
-      <div style={{ display: 'grid', gap: 18 }}>
-        <Card>
-          <SectionTitle>Professional Experience</SectionTitle>
-          <div style={{ display: 'grid', gap: 16 }}>
-            {work.length ? (
-              work.map((role, idx) => {
-                const bullets = normalizeArray(role?.bullets || role?.highlights);
-                const range =
-                  role?.dateRange ||
-                  role?.range ||
-                  [role?.startDate || role?.start, role?.endDate || role?.end]
-                    .filter(Boolean)
-                    .join(' — ');
-
-                return (
-                  <div key={idx} style={{ display: 'grid', gap: 6 }}>
-                    <div>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>
-                        {role?.title || role?.role || 'Role'}
-                      </div>
-                      <div style={{ fontSize: 13, color: '#334155', fontWeight: 700 }}>
-                        {role?.company || 'Company'}
-                        {role?.location ? ` • ${role.location}` : ''}
-                        {range ? ` • ${range}` : ''}
-                      </div>
-                    </div>
-
-                    {bullets.length ? (
-                      <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6 }}>
-                        {bullets.map((bullet, bulletIdx) => (
-                          <li key={bulletIdx} style={{ fontSize: 13, lineHeight: 1.45, color: '#374151' }}>
-                            {bullet}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                );
-              })
-            ) : (
-              <div style={{ fontSize: 14, color: '#64748B' }}>No experience added yet.</div>
-            )}
-          </div>
-        </Card>
-
-        {education.length ? (
-          <Card>
-            <SectionTitle>Education</SectionTitle>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {education.map((item, idx) => (
-                <div key={idx}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#111827' }}>
-                    {item?.degree || item?.program || 'Degree'}
-                    {item?.field ? `, ${item.field}` : ''}
-                  </div>
-                  <div style={{ fontSize: 13, color: '#475569' }}>
-                    {item?.school || item?.institution || 'School'}
-                    {item?.startDate || item?.endDate
-                      ? ` • ${[item?.startDate, item?.endDate].filter(Boolean).join(' — ')}`
-                      : ''}
-                  </div>
+          ) : (
+            <div style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>
+              Add experience to show your current role.
+            </div>
+          )
+        ) : employerSpine.length ? (
+          <div>
+            {/* Table header */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1.4fr 1fr auto',
+                gap: 12,
+                paddingBottom: 5,
+                marginBottom: 6,
+                borderBottom: `1px solid ${RULE}`,
+              }}
+            >
+              {['Company', 'Title', 'Dates'].map((h) => (
+                <div
+                  key={h}
+                  style={{
+                    fontSize: 9.5,
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.10em',
+                    color: MUTED,
+                  }}
+                >
+                  {h}
                 </div>
               ))}
             </div>
-          </Card>
-        ) : null}
 
-        {projects.length ? (
-          <Card>
-            <SectionTitle>Projects</SectionTitle>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {projects.map((project, idx) => {
-                const bullets = normalizeArray(project?.bullets || project?.highlights);
-                return (
-                  <div key={idx}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#111827' }}>
-                      {project?.title || project?.name || 'Project'}
-                    </div>
-                    {project?.company ? (
-                      <div style={{ fontSize: 13, color: '#475569', marginTop: 2 }}>
-                        {project.company}
-                      </div>
-                    ) : null}
-                    {bullets.length ? (
-                      <ul style={{ margin: '6px 0 0', paddingLeft: 18, display: 'grid', gap: 5 }}>
-                        {bullets.map((bullet, bulletIdx) => (
-                          <li key={bulletIdx} style={{ fontSize: 13, lineHeight: 1.45, color: '#374151' }}>
-                            {bullet}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        ) : null}
-
-        {(certifications.length || languages.length || customSections.length) ? (
-          <Card>
-            <SectionTitle>Additional</SectionTitle>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {certifications.length ? (
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 4 }}>
-                    Certifications
-                  </div>
-                  <div style={{ fontSize: 13, color: '#475569' }}>
-                    {certifications
-                      .map((c) => (typeof c === 'string' ? c : c?.name || 'Certification'))
-                      .filter(Boolean)
-                      .join(' • ')}
-                  </div>
+            {employerSpine.map((item, idx) => (
+              <div
+                key={`${item.company}-${idx}`}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1.4fr 1fr auto',
+                  gap: 12,
+                  alignItems: 'baseline',
+                  padding: '6px 0',
+                  borderBottom: idx !== employerSpine.length - 1 ? `1px solid ${RULE}` : 'none',
+                  opacity: idx > 3 ? 0.55 : 1,
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: 13, color: DARK }}>
+                  {item.company || 'Company'}
                 </div>
-              ) : null}
-
-              {languages.length ? (
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 4 }}>
-                    Languages
-                  </div>
-                  <div style={{ fontSize: 13, color: '#475569' }}>{languages.join(' • ')}</div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: SLATE,
+                    fontWeight: idx === 0 ? 700 : 500,
+                  }}
+                >
+                  {item.title || 'Role'}
                 </div>
-              ) : null}
-
-              {customSections.length ? (
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 4 }}>
-                    Custom Sections
-                  </div>
-                  <div style={{ display: 'grid', gap: 6 }}>
-                    {customSections.map((section, idx) => (
-                      <div key={idx} style={{ fontSize: 13, color: '#475569' }}>
-                        {section?.title || section?.name || 'Custom Section'}
-                      </div>
-                    ))}
-                  </div>
+                <div style={{ fontSize: 12, color: MUTED, whiteSpace: 'nowrap' }}>
+                  {item.range || ''}
                 </div>
-              ) : null}
-            </div>
-          </Card>
-        ) : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>
+            Add work experience to generate your career timeline.
+          </div>
+        )}
       </div>
+
+      {/* ══════════════════════════════════════════
+          PAGE BREAK
+      ══════════════════════════════════════════ */}
+      <div
+        style={{
+          margin: '32px 0 28px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <div style={{ flex: 1, height: 1, background: '#D1D5DB' }} />
+        <div
+          style={{
+            fontSize: 9.5,
+            fontWeight: 900,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: '#9CA3AF',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Full Career History
+        </div>
+        <div style={{ flex: 1, height: 1, background: '#D1D5DB' }} />
+      </div>
+
+      {/* ══════════════════════════════════════════
+          PAGE 2+ — STORY PAGES
+      ══════════════════════════════════════════ */}
+
+      {/* ── Professional Experience ── */}
+      {work.length > 0 && (
+        <div style={{ marginBottom: 26 }}>
+          <SectionLabel>Professional Experience</SectionLabel>
+          <div style={{ display: 'grid', gap: 20 }}>
+            {work.map((role, idx) => {
+              const bullets = normalizeArray(role?.bullets || role?.highlights);
+              const range =
+                role?.dateRange ||
+                role?.range ||
+                [role?.startDate || role?.start, role?.endDate || role?.end]
+                  .filter(Boolean)
+                  .join(' – ');
+
+              return (
+                <div key={idx}>
+                  {/* Role header */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      flexWrap: 'wrap',
+                      gap: 4,
+                      marginBottom: 6,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: DARK, lineHeight: 1.2 }}>
+                        {role?.title || role?.role || 'Role'}
+                      </div>
+                      <div style={{ fontSize: 12.5, color: SLATE, fontWeight: 700, marginTop: 1 }}>
+                        {role?.company || 'Company'}
+                        {role?.location ? `  ·  ${role.location}` : ''}
+                      </div>
+                    </div>
+                    {range && (
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          color: MUTED,
+                          whiteSpace: 'nowrap',
+                          paddingTop: 2,
+                        }}
+                      >
+                        {range}
+                      </div>
+                    )}
+                  </div>
+
+                  {bullets.length > 0 && (
+                    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 5 }}>
+                      {bullets.map((bullet, bIdx) => (
+                        <li
+                          key={bIdx}
+                          style={{
+                            display: 'flex',
+                            gap: 9,
+                            alignItems: 'flex-start',
+                            fontSize: 12.5,
+                            color: '#374151',
+                            lineHeight: 1.45,
+                          }}
+                        >
+                          <span
+                            style={{
+                              flexShrink: 0,
+                              marginTop: 6,
+                              width: 4,
+                              height: 4,
+                              borderRadius: '50%',
+                              background: '#9CA3AF',
+                            }}
+                          />
+                          {bullet}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {idx < work.length - 1 && (
+                    <div style={{ marginTop: 18, height: 1, background: '#F1F5F9' }} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Education ── */}
+      {education.length > 0 && (
+        <div style={{ marginBottom: 22 }}>
+          <SectionLabel>Education</SectionLabel>
+          <div style={{ display: 'grid', gap: 10 }}>
+            {education.map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  flexWrap: 'wrap',
+                  gap: 4,
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: DARK }}>
+                    {item?.degree || item?.program || 'Degree'}
+                    {item?.field ? `, ${item.field}` : ''}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: SLATE }}>
+                    {item?.school || item?.institution || 'School'}
+                  </div>
+                </div>
+                {(item?.startDate || item?.endDate) && (
+                  <div style={{ fontSize: 11.5, color: MUTED, whiteSpace: 'nowrap' }}>
+                    {[item?.startDate, item?.endDate].filter(Boolean).join(' – ')}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Projects ── */}
+      {projects.length > 0 && (
+        <div style={{ marginBottom: 22 }}>
+          <SectionLabel>Projects</SectionLabel>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {projects.map((project, idx) => {
+              const bullets = normalizeArray(project?.bullets || project?.highlights);
+              return (
+                <div key={idx}>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: DARK }}>
+                    {project?.title || project?.name || 'Project'}
+                  </div>
+                  {project?.company && (
+                    <div style={{ fontSize: 12.5, color: SLATE, marginTop: 1 }}>
+                      {project.company}
+                    </div>
+                  )}
+                  {bullets.length > 0 && (
+                    <ul style={{ margin: '6px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 4 }}>
+                      {bullets.map((bullet, bIdx) => (
+                        <li
+                          key={bIdx}
+                          style={{
+                            display: 'flex',
+                            gap: 9,
+                            alignItems: 'flex-start',
+                            fontSize: 12.5,
+                            color: '#374151',
+                            lineHeight: 1.45,
+                          }}
+                        >
+                          <span
+                            style={{
+                              flexShrink: 0,
+                              marginTop: 6,
+                              width: 4,
+                              height: 4,
+                              borderRadius: '50%',
+                              background: '#9CA3AF',
+                            }}
+                          />
+                          {bullet}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Additional (Certs / Languages / Custom) ── */}
+      {(certifications.length > 0 || languages.length > 0 || customSections.length > 0) && (
+        <div style={{ marginBottom: 8 }}>
+          <SectionLabel>Additional</SectionLabel>
+          <div style={{ display: 'grid', gap: 10 }}>
+            {certifications.length > 0 && (
+              <div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 900,
+                    color: SLATE,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    marginBottom: 3,
+                  }}
+                >
+                  Certifications
+                </div>
+                <div style={{ fontSize: 12.5, color: '#374151' }}>
+                  {certifications
+                    .map((c) => (typeof c === 'string' ? c : c?.name || 'Certification'))
+                    .filter(Boolean)
+                    .join('  ·  ')}
+                </div>
+              </div>
+            )}
+
+            {languages.length > 0 && (
+              <div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 900,
+                    color: SLATE,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    marginBottom: 3,
+                  }}
+                >
+                  Languages
+                </div>
+                <div style={{ fontSize: 12.5, color: '#374151' }}>
+                  {languages.join('  ·  ')}
+                </div>
+              </div>
+            )}
+
+            {customSections.length > 0 && (
+              <div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 900,
+                    color: SLATE,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    marginBottom: 3,
+                  }}
+                >
+                  Other
+                </div>
+                <div style={{ display: 'grid', gap: 4 }}>
+                  {customSections.map((section, idx) => (
+                    <div key={idx} style={{ fontSize: 12.5, color: '#374151' }}>
+                      {section?.title || section?.name || 'Custom Section'}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

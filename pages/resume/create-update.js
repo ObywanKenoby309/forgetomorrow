@@ -18,6 +18,7 @@ import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
 import { uploadJD } from '@/lib/jd/uploadToApi';
 import SignalResumeTestTemplate from '@/components/resume-form/templates/SignalResumeTestTemplate';
 import BulkExportCTA from '@/components/BulkExportCTA';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 // === IMPORT 3 BUTTONS ===
 import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
 import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
@@ -852,60 +853,38 @@ export default function CreateResumePage() {
     <section
       style={{
         ...GLASS_CARD,
-        padding: 18,
-        textAlign: 'center',
+        padding: '18px 24px',
       }}
       aria-label="Resume Builder header"
     >
-      <h1 style={{ margin: 0, color: ORANGE, fontSize: 24, fontWeight: 900 }}>
-  Resume Builder
-</h1>
+      <h1
+        style={{
+          margin: 0,
+          color: ORANGE,
+          fontSize: 26,
+          fontWeight: 900,
+          letterSpacing: '-0.01em',
+          textShadow: '0 2px 8px rgba(255,112,67,0.18)',
+        }}
+      >
+        Resume Builder
+      </h1>
 
-<p
-  style={{
-    margin: '8px auto 0',
-    color: '#263238',
-    maxWidth: 860,
-    fontWeight: 700,
-    fontSize: 14,
-    lineHeight: 1.4,
-  }}
->
-  2 formats. 1 goal: get you seen. <strong>Reverse Chronological</strong> for structured review.
-  <strong> Hybrid</strong> for fast human scanning. No fluff. Only what works.
-</p>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
-        <button
-          onClick={() => router.push(withChrome('/resume/create'))}
-          style={{
-            borderRadius: 999,
-            padding: '10px 14px',
-            background: ORANGE,
-            color: 'white',
-            border: '1px solid rgba(255,112,67,0.55)',
-            fontWeight: 900,
-            cursor: 'pointer',
-          }}
-        >
-          1. Resume
-        </button>
-        <span style={{ width: 46, height: 1, background: 'rgba(0,0,0,0.12)' }} />
-        <button
-          onClick={() => router.push(withChrome('/cover/create'))}
-          style={{
-            borderRadius: 999,
-            padding: '10px 14px',
-            background: 'rgba(255,255,255,0.75)',
-            color: '#334155',
-            border: '1px solid rgba(0,0,0,0.10)',
-            fontWeight: 900,
-            cursor: 'pointer',
-          }}
-        >
-          2. Cover Letter
-        </button>
-      </div>
+      <p
+        style={{
+          margin: '6px 0 0',
+          color: '#334155',
+          fontWeight: 700,
+          fontSize: 13.5,
+          lineHeight: 1.5,
+          maxWidth: 700,
+        }}
+      >
+        Build your resume once. Export anywhere.{' '}
+        <strong>Reverse Chronological</strong> and <strong>Hybrid</strong> for
+        traditional markets. <strong>ForgeFormat</strong> — signal-first, two-layer,
+        built for people with real careers.
+      </p>
     </section>
   );
 
@@ -1084,7 +1063,7 @@ export default function CreateResumePage() {
       : null;
 
   return (
-    <SeekerLayout title="Resume Builder" header={Header} right={null} footer={Footer} activeNav="resume-cover">
+    <SeekerLayout title="Resume Builder" header={Header} right={<RightRailPlacementManager slot="right_rail_1" />} rightVariant="light" footer={Footer} activeNav="resume-cover">
       {/* ✅ Guardrails (profile-style) */}
       <style jsx global>{`
         html,
@@ -1192,7 +1171,7 @@ export default function CreateResumePage() {
           cursor: 'pointer',
         }}
       >
-        Signal Test Format
+        ForgeFormat
       </button>
     </div>
   </div>
