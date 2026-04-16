@@ -282,6 +282,10 @@ Each target MUST explicitly describe:
 
 If the target reads as general alignment instead of problem-solution matching, it is invalid.
 
+If a target does NOT clearly identify a specific internal problem and explain why this candidate would be hired to solve it, discard it and rewrite.
+
+If a role lane reads like a job title instead of describing where this person sits and what problem they solve, discard it and rewrite.
+
 MARKET POSITIONING WARNING — ALWAYS REQUIRED:
 Two sentences. Current perception. Specific rejection pattern. Must create urgency.
 WRONG: "May need to clarify his background"
