@@ -209,8 +209,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const jdPreview = jdText.length > 1800 ? jdText.slice(0, 1800) + '\n\n[truncated]' : jdText;
 
     const userPrompt = `
-You are a resume-writing COACH helping a job seeker improve their resume against a specific JD.
-Be concrete, kind, and focused on real-world improvements — no generic fluff.
+You are a senior hiring strategist embedded inside ForgeTomorrow.
+
+You are NOT a generic writing assistant.
+You are evaluating why this resume would get rejected or advanced for this specific job description.
 
 JOB DESCRIPTION (JD)
 --------------------
@@ -230,14 +232,69 @@ ${expSnippets || '[No experience provided]'}
 Education:
 ${eduSnippets || '[No education data provided]'}
 
-INSTRUCTIONS
+FORGETOMORROW RESUME COACHING MODE
+----------------------------------
+Before generating any suggestion, you MUST:
+
+1) Detect the dominant hiring environment from the JD:
+- Enterprise / Commercial
+- Startup / Growth
+- Nonprofit / Mission-driven
+- Government / Public sector
+
+2) Think like the hiring manager:
+- Why would this resume get rejected right now?
+- What signal is missing?
+- What exact wording would improve the decision?
+
+3) Focus on decision-changing improvements only:
+- missing hiring signals
+- weak or generic phrasing
+- missing keywords/tools only if they are clearly relevant
+- missing proof of ownership, outcomes, scale, speed, or ambiguity tolerance depending on the environment
+
+OUTPUT RULES
 ------------
-1) Start with one short, encouraging sentence.
-2) Provide 3–7 specific, ATS-friendly improvements.
-   - Call out missing keywords/tools from the JD.
-   - Suggest 1–2 measurable bullet ideas (%, $, time).
-3) Do NOT rewrite the entire resume. Focus on changes they can make in 15–30 minutes.
-4) Return plain text, structured so it can be split into bullet points.
+Return ONLY valid JSON in this exact shape:
+
+{
+  "opening": "",
+  "environment": "",
+  "matchAssessment": "",
+  "signalGaps": [],
+  "improvementActions": [],
+  "bulletFixes": [
+    {
+      "original": "",
+      "improved": "",
+      "reason": ""
+    }
+  ],
+  "summaryFix": {
+    "original": "",
+    "improved": "",
+    "reason": ""
+  },
+  "reasoning": []
+}
+
+QUALITY RULES
+-------------
+- NEVER return plain text outside JSON
+- NEVER return markdown
+- NEVER give generic advice like "improve clarity" or "tailor more"
+- EVERY improvement must map to a hiring decision signal
+- EVERY bulletFix.improved must be immediately usable on the resume
+- EVERY reason must explain why the change matters to this hiring team
+- Do NOT rewrite the entire resume
+- Focus on the highest-impact changes the user can make in 15–30 minutes
+
+FINAL TEST
+----------
+Would this change how a hiring manager sees the candidate for this JD?
+If not, rewrite it.
+
+Return ONLY valid JSON.
 `.trim();
 
     // Groq OpenAI-compatible chat completions endpoint
@@ -250,7 +307,7 @@ INSTRUCTIONS
       body: JSON.stringify({
         model,
         messages: [
-          { role: 'system', content: 'You are a supportive, practical resume coach. Return plain text.' },
+          { role: 'system', content: 'You are ForgeTomorrow resume intelligence. Return ONLY valid JSON. No markdown. No extra text.' },
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.4,
@@ -263,21 +320,72 @@ INSTRUCTIONS
       throw new Error(`Groq API error: ${response.status} - ${err}`);
     }
 
-    const data = await response.json();
+        const data = await response.json();
     const raw = data.choices?.[0]?.message?.content?.toString().trim() || '';
 
-    const lines = raw.split('\n').map((l: string) => l.trim());
-    const tips: string[] = [];
-
-    for (const line of lines) {
-      if (!line) continue;
-      const cleaned = line.replace(/^[-•\d.)\s]+/, '').trim();
-      if (cleaned) tips.push(cleaned);
+    let parsed: any = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const start = raw.indexOf('{');
+      const end = raw.lastIndexOf('}');
+      if (start >= 0 && end > start) {
+        try {
+          parsed = JSON.parse(raw.slice(start, end + 1));
+        } catch {
+          parsed = null;
+        }
+      }
     }
+
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('Coach returned invalid JSON');
+    }
+
+    const tips: string[] = [
+      ...(Array.isArray(parsed.signalGaps) ? parsed.signalGaps : []),
+      ...(Array.isArray(parsed.improvementActions) ? parsed.improvementActions : []),
+    ]
+      .map((x: any) => String(x || '').trim())
+      .filter(Boolean);
+
+    const bulletFixText = Array.isArray(parsed.bulletFixes)
+      ? parsed.bulletFixes
+          .map((b: any, i: number) => {
+            const improved = String(b?.improved || '').trim();
+            const reason = String(b?.reason || '').trim();
+            if (!improved) return '';
+            return `${i + 1}. ${improved}${reason ? ` — Why: ${reason}` : ''}`;
+          })
+          .filter(Boolean)
+          .join('\n')
+      : '';
+
+    const summaryFixText =
+      parsed.summaryFix && typeof parsed.summaryFix === 'object'
+        ? [
+            String(parsed.summaryFix.improved || '').trim(),
+            String(parsed.summaryFix.reason || '').trim()
+              ? `Why: ${String(parsed.summaryFix.reason || '').trim()}`
+              : '',
+          ]
+            .filter(Boolean)
+            .join('\n')
+        : '';
+
+    const textParts = [
+      String(parsed.opening || '').trim(),
+      String(parsed.matchAssessment || '').trim() ? `Match Assessment: ${String(parsed.matchAssessment).trim()}` : '',
+      bulletFixText ? `Bullet Fixes:\n${bulletFixText}` : '',
+      summaryFixText ? `Summary Fix:\n${summaryFixText}` : '',
+      Array.isArray(parsed.improvementActions) && parsed.improvementActions.length
+        ? `Improvement Actions:\n${parsed.improvementActions.map((x: any) => `• ${String(x || '').trim()}`).join('\n')}`
+        : '',
+    ].filter(Boolean);
 
     return res.status(200).json({
       ok: true,
-      text: raw,
+      text: textParts.join('\n\n'),
       tips,
       raw,
     });
