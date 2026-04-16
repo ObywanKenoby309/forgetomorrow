@@ -172,6 +172,10 @@ HARD RULES — NEVER VIOLATE THESE:
 - NEVER write transferability signals as resume bullets. Write them as coach intelligence — explain the arc and what it signals.
 - NEVER default to mission-driven framing when the targets are enterprise or commercial. Read the room.
 - NEVER use polished consulting language or startup jargon when the target environment is workforce / blue-collar. Use plain, practical language that matches how those roles are actually hired.
+- NEVER reference LinkedIn, LinkedIn profiles, or LinkedIn optimization in any output.
+- NEVER suggest updating LinkedIn, networking on LinkedIn, or using LinkedIn as part of execution strategy.
+- ALL guidance must remain platform-agnostic or reference higher-signal environments (direct outreach, communities, real-world networks, or company-specific engagement).
+- NEVER default to mass-networking strategies. If outreach is recommended, it must be targeted, intentional, and tied to a specific company, role, or problem.
 
 THE ONE-LINE TEST — APPLY BEFORE FINALIZING:
 Ask yourself: "Could I swap in a completely different person and this output still makes sense?"
@@ -271,9 +275,10 @@ OUTPUT FORMAT — RETURN ONLY VALID JSON, NO MARKDOWN, NO COMMENTARY:
   "roleLanes": [],
   "transferabilitySignals": [],
   "narrativeGaps": [],
-  "positioningInsight": "",
-  "marketPositionWarning": "",
-  "stretchTargets": [
+  ""positioningInsight": "",
+"marketPositionWarning": "",
+"hiddenSignalGap": "",
+"stretchTargets": [
     { "name": "", "reason": "" }
   ],
   "safeHarborTargets": [
@@ -292,6 +297,7 @@ FIELD DEFINITIONS:
 - narrativeGaps: 2–4 specific, honest gaps in this client's story relative to the target direction. Direct language. No softening. Environment-specific — name the gap in terms of how THIS environment will perceive it.
 - positioningInsight: ONE short, sticky, memorable sentence. Speakable in one breath. Environment-matched. Must feel like it was written for this person entering this specific world.
 - marketPositionWarning: Two sentences. Current perception. Specific rejection pattern. Environment-specific. Creates urgency.
+- hiddenSignalGap: A single direct statement identifying the mismatch between the client’s actual capability and how the market currently perceives them. Format: "You are operating at [X], but your current narrative signals [Y]." This must be blunt, specific, and high-signal.
 - stretchTargets: 1–3 aspirational targets. MUST be objects with { name, reason }. "name" is the target organization or role type. "reason" explains why it is a stretch and what gap closes first. Faith alignment risk note if applicable.
 - safeHarborTargets: 1–3 immediate-win targets. MUST be objects with { name, reason }. "name" is the target organization or role type. "reason" explains why it is achievable now given current readiness.
 - executionPlan: 3–5 concrete, sequenced, environment-specific actions for this week.
@@ -456,13 +462,14 @@ function parseAndValidate(raw) {
       .slice(0, 4);
   };
 
-  const result = {
+    const result = {
     themes:                 arr(parsed.themes).slice(0, 5),
     roleLanes:              arr(parsed.roleLanes).slice(0, 6),
     transferabilitySignals: arr(parsed.transferabilitySignals).slice(0, 6),
     narrativeGaps:          arr(parsed.narrativeGaps).slice(0, 5),
     positioningInsight:     str(parsed.positioningInsight),
     marketPositionWarning:  str(parsed.marketPositionWarning),
+    hiddenSignalGap:        str(parsed.hiddenSignalGap),
     stretchTargets:         targetArr(parsed.stretchTargets),
     safeHarborTargets:      targetArr(parsed.safeHarborTargets),
     executionPlan:          arr(parsed.executionPlan).slice(0, 6),
