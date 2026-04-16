@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import { ResumeContext } from '@/context/ResumeContext';
 import ContactInfoSection from '@/components/resume-form/ContactInfoSection';
 import WorkExperienceSection from '@/components/resume-form/WorkExperienceSection';
@@ -849,43 +851,14 @@ export default function CreateResumePage() {
 
   const fireMeta = atsJobMeta || jobMeta;
 
-  const Header = (
-    <section
-      style={{
-        ...GLASS_CARD,
-        padding: '18px 24px',
-      }}
-      aria-label="Resume Builder header"
-    >
-      <h1
-        style={{
-          margin: 0,
-          color: ORANGE,
-          fontSize: 26,
-          fontWeight: 900,
-          letterSpacing: '-0.01em',
-          textShadow: '0 2px 8px rgba(255,112,67,0.18)',
-        }}
-      >
-        Resume Builder
-      </h1>
+  const greeting = getTimeGreeting();
 
-      <p
-        style={{
-          margin: '6px 0 0',
-          color: '#334155',
-          fontWeight: 700,
-          fontSize: 13.5,
-          lineHeight: 1.5,
-          maxWidth: 700,
-        }}
-      >
-        Build your resume once. Export anywhere.{' '}
-        <strong>Reverse Chronological</strong> and <strong>Hybrid</strong> for
-        traditional markets. <strong>ForgeFormat</strong> — signal-first, two-layer,
-        built for people with real careers.
-      </p>
-    </section>
+  const Header = (
+    <SeekerTitleCard
+      greeting={greeting}
+      title="Resume Builder"
+      subtitle="Build your resume once. Export anywhere. Reverse Chronological and Hybrid for traditional markets — ForgeFormat for people with real careers."
+    />
   );
 
   const Footer = (
