@@ -340,9 +340,21 @@ OUTPUT FORMAT — RETURN ONLY VALID JSON, NO MARKDOWN, NO COMMENTARY:
 
 FIELD DEFINITIONS:
 - themes: 2–4 specific sector/mission patterns derived from target companies + client background. Must name real patterns AND reference real organizations as anchors. Language must match detected environment.
-- roleLanes: 3–5 prioritized strategic role directions with brief explanation of why this lane fits this person's arc. Do NOT use recognizable job titles (e.g., Product Manager, Customer Success Manager, Program Manager, Technical Program Manager). Each role lane must be written as a functional description of where this person sits and what problem they solve inside the organization. If a role lane contains a standard job title, it is invalid and must be rewritten. Environment-matched language only.
-- roleLanes must describe team placement first, problem ownership second, and only imply function indirectly.
-- transferabilitySignals: 3–5 repeatable behavioral patterns from the client's career arc. Pattern language only. Environment-matched framing — what this pattern means in THIS target world specifically.
+- roleLanes: 3–5 prioritized strategic role directions.
+
+Each role lane must represent a real hiring scenario — not a job title and not a generic function.
+
+Each role lane MUST:
+- Describe the situation inside the company when this person gets hired
+- Identify what is breaking, missing, or not scaling
+- Make clear why this team would bring this person in over someone else
+- Reflect how hiring managers in this environment actually think
+
+Each role lane must feel like a hiring trigger:
+"When X is happening, they bring in someone like this to fix it."
+
+Avoid describing responsibilities.
+Focus on the problem this person is being inserted to solve.- transferabilitySignals: 3–5 repeatable behavioral patterns from the client's career arc. Pattern language only. Environment-matched framing — what this pattern means in THIS target world specifically.
 - narrativeGaps: 2–4 specific, honest gaps in this client's story relative to the target direction. Direct language. No softening. Environment-specific — name the gap in terms of how THIS environment will perceive it.
 - positioningInsight: ONE short, sticky, memorable sentence. Speakable in one breath. Environment-matched. Must feel like it was written for this person entering this specific world.
 - marketPositionWarning: Two sentences. Current perception. Specific rejection pattern. Environment-specific. Creates urgency.
