@@ -75,15 +75,23 @@ export default function CommandBrief({ clientName, generatedAt, strategyBrief, o
       <div className="rounded-2xl border-2 border-[rgba(255,112,67,0.30)] bg-white/80 px-5 py-5 shadow-sm">
         {b.positioningInsight && (
           <>
-            <div className="text-[10px] font-black tracking-[0.10em] text-[#FF7043] uppercase mb-2">Who This Person Is</div>
-            <div className="text-[17px] font-bold text-slate-900 leading-6 mb-4">{b.positioningInsight}</div>
+            <div className="text-[10px] font-black tracking-[0.10em] text-[#FF7043] uppercase mb-2">
+              Who This Person Is
+            </div>
+            <div className="text-[17px] font-bold text-slate-900 leading-6 mb-4">
+              {b.positioningInsight}
+            </div>
           </>
         )}
 
         {b.marketPositionWarning && (
           <>
-            <div className="text-[10px] font-black tracking-[0.10em] text-red-500 uppercase mb-2">Market Reality — How They're Being Seen Right Now</div>
-            <div className="text-[13px] font-medium text-red-800 leading-5">{b.marketPositionWarning}</div>
+            <div className="text-[10px] font-black tracking-[0.10em] text-red-500 uppercase mb-2">
+              Market Reality — How They're Being Seen Right Now
+            </div>
+            <div className="text-[13px] font-medium text-red-800 leading-5">
+              {b.marketPositionWarning}
+            </div>
           </>
         )}
 
@@ -99,6 +107,26 @@ export default function CommandBrief({ clientName, generatedAt, strategyBrief, o
         )}
       </div>
     )}
+
+    {b.themes?.length > 0 && (
+      <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-4">
+        <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2.5">
+          Sector Alignment
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {b.themes.map((theme, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center rounded-xl border border-[rgba(255,112,67,0.30)] bg-[rgba(255,112,67,0.07)] px-2.5 py-1 text-[12px] font-medium text-[#993C1D]"
+            >
+              {theme}
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+)}
           )}
           {b.themes?.length > 0 && (
             <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-4">
