@@ -34,7 +34,11 @@ function getPositioningLine(data) {
   const summary = String(data?.summary || '').trim();
 
   if (info.targetedRole && summary) {
-    return `${info.targetedRole} — ${summary}`;
+    const shortSummary = summary.split('.').slice(0, 1).join('.').slice(0, 140);
+
+return info.targetedRole
+  ? `${info.targetedRole} — ${shortSummary}`
+  : shortSummary;
   }
 
   if (info.targetedRole) return info.targetedRole;
@@ -45,17 +49,27 @@ function getPositioningLine(data) {
 
 function collectImpactSnapshot(data) {
   const achievements = normalizeArray(data?.achievements).filter(Boolean);
-  if (achievements.length) return achievements.slice(0, 5);
+
+  if (achievements.length) {
+    return achievements
+      .sort((a, b) => b.length - a.length) // prioritize stronger bullets
+      .slice(0, 5);
+  }
 
   const work = normalizeArray(data?.workExperiences);
   const bullets = [];
 
   for (const role of work) {
     const roleBullets = normalizeArray(role?.bullets || role?.highlights);
+
     for (const bullet of roleBullets) {
-      if (bullet && bullets.length < 5) bullets.push(bullet);
+      if (
+        bullet &&
+        /%|\$|million|k|reduced|increased|scaled|launched|built/i.test(bullet)
+      ) {
+        bullets.push(bullet);
+      }
     }
-    if (bullets.length >= 5) break;
   }
 
   return bullets.slice(0, 5);
@@ -151,7 +165,7 @@ function groupSkills(skills) {
   });
 
   Object.keys(buckets).forEach((key) => {
-    buckets[key] = buckets[key].slice(0, 8);
+    buckets[key] = buckets[key].slice(0, 6);
   });
 
   return buckets;
@@ -278,7 +292,7 @@ export default function SignalResumeTestTemplate({ data }) {
                     {label}
                   </div>
                   <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>
-                    {items.join(' • ')}
+                    {items.join(' · ')}
                   </div>
                 </div>
               ) : null
@@ -287,35 +301,44 @@ export default function SignalResumeTestTemplate({ data }) {
         </Card>
 
         <Card>
-          <SectionTitle>Employer Spine</SectionTitle>
-          <div style={{ display: 'grid', gap: 8 }}>
-            {employerSpine.length ? (
-              employerSpine.map((item, idx) => (
-                <div
-                  key={`${item.company}-${idx}`}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) auto',
-                    gap: 10,
-                    fontSize: 13,
-                    alignItems: 'baseline',
-                    borderBottom: idx !== employerSpine.length - 1 ? '1px solid #F1F5F9' : 'none',
-                    paddingBottom: idx !== employerSpine.length - 1 ? 8 : 0,
-                  }}
-                >
-                  <div style={{ fontWeight: 800, color: '#111827' }}>{item.company || 'Company'}</div>
-                  <div style={{ color: '#334155' }}>{item.title || 'Role'}</div>
-                  <div style={{ color: '#64748B', whiteSpace: 'nowrap' }}>{item.range || ''}</div>
-                </div>
-              ))
-            ) : (
-              <div style={{ fontSize: 14, color: '#64748B' }}>
-                Add experience to see your employer spine.
-              </div>
-            )}
+  <SectionTitle>Employer Spine</SectionTitle>
+  <div style={{ display: 'grid', gap: 8 }}>
+    {employerSpine.length ? (
+      employerSpine.map((item, idx) => (
+        <div
+          key={`${item.company}-${idx}`}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) auto',
+            gap: 10,
+            fontSize: 13,
+            alignItems: 'baseline',
+            opacity: idx > 2 ? 0.6 : 1,
+            borderBottom: idx !== employerSpine.length - 1 ? '1px solid #F1F5F9' : 'none',
+            paddingBottom: idx !== employerSpine.length - 1 ? 8 : 0,
+          }}
+        >
+          <div style={{ fontWeight: 800, color: '#111827' }}>
+            {item.company || 'Company'}
           </div>
-        </Card>
+
+          <div style={{ color: '#334155', fontWeight: idx === 0 ? 700 : 500 }}>
+            {item.title || 'Role'}
+          </div>
+
+          <div style={{ color: '#64748B', whiteSpace: 'nowrap' }}>
+            {item.range || ''}
+          </div>
+        </div>
+      ))
+    ) : (
+      <div style={{ fontSize: 14, color: '#64748B' }}>
+        Add experience to see your employer spine.
       </div>
+    )}
+  </div>
+</Card>
+</div>
 
       {/* PAGE BREAK VISUAL */}
       <div
