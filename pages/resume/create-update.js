@@ -337,6 +337,11 @@ export default function CreateResumePage() {
   const [openCerts, setOpenCerts] = useState(false);
   const [openCustom, setOpenCustom] = useState(false);
 
+  // ✅ Sora layout modes
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
+  const [previewPage, setPreviewPage] = useState(1);
+
   // ✅ Clear loaded job / ATS fire
   const clearJobFire = async () => {
     setJd('');
@@ -1043,20 +1048,6 @@ export default function CreateResumePage() {
         body {
           overflow-x: hidden;
         }
-
-        /* Responsive: stack columns on smaller widths */
-        .ft-resume-create-grid {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-          gap: 16px;
-          align-items: start;
-        }
-
-        @media (max-width: 1024px) {
-          .ft-resume-create-grid {
-            grid-template-columns: minmax(0, 1fr);
-          }
-        }
       `}</style>
 
       <div
@@ -1067,9 +1058,112 @@ export default function CreateResumePage() {
         }}
         className="overflow-x-hidden"
       >
-        <div className="ft-resume-create-grid">
+        {/* Focus Mode toggle bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => { setIsFocusMode((v) => !v); if (!isFocusMode) setIsLeftCollapsed(false); }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '7px 16px',
+              borderRadius: 999,
+              border: isFocusMode ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.12)',
+              background: isFocusMode ? `rgba(255,112,67,0.12)` : 'rgba(255,255,255,0.80)',
+              color: isFocusMode ? '#C2410C' : '#334155',
+              fontWeight: 800,
+              fontSize: 13,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span>{isFocusMode ? '← Exit Focus' : '🎯 Focus Resume'}</span>
+          </button>
+          {!isFocusMode && (
+            <button
+              type="button"
+              onClick={() => setIsLeftCollapsed((v) => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '7px 14px',
+                borderRadius: 999,
+                border: isLeftCollapsed ? `2px solid #334155` : '1px solid rgba(0,0,0,0.12)',
+                background: isLeftCollapsed ? 'rgba(51,65,85,0.10)' : 'rgba(255,255,255,0.80)',
+                color: '#334155',
+                fontWeight: 800,
+                fontSize: 13,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {isLeftCollapsed ? '→ Expand Panel' : '← Collapse Panel'}
+            </button>
+          )}
+        </div>
+
+        {/* Dynamic grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isFocusMode
+              ? 'minmax(0, 1fr)'
+              : isLeftCollapsed
+              ? '52px minmax(0, 1fr)'
+              : 'minmax(0, 1fr) minmax(0, 1fr)',
+            gap: 16,
+            alignItems: 'start',
+            transition: 'grid-template-columns 0.25s ease',
+          }}
+        >
           {/* LEFT: INPUT */}
-          <div style={{ display: 'grid', gap: 12, position: 'sticky', top: 20 }}>
+          {!isFocusMode && (
+          <div style={{ display: 'grid', gap: 12, position: 'sticky', top: 20, overflow: 'hidden' }}>
+          {isLeftCollapsed ? (
+            /* Collapsed icon rail */
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 8,
+                paddingTop: 8,
+              }}
+            >
+              {[
+                { label: 'R', title: 'Required' },
+                { label: 'O', title: 'Optional' },
+                { label: '🔥', title: 'Forge Hammer' },
+              ].map(({ label, title }) => (
+                <div
+                  key={label}
+                  title={title}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    background: 'rgba(255,255,255,0.70)',
+                    border: '1px solid rgba(0,0,0,0.10)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 900,
+                    fontSize: 13,
+                    color: '#334155',
+                    cursor: 'default',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.07)',
+                  }}
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
             {/* TEMPLATE SWITCHER */}
             <div style={{ ...GLASS_CARD, padding: 12 }}>
               <Banner>
@@ -1455,7 +1549,10 @@ export default function CreateResumePage() {
                 />
               )}
             </Section>
+          </> 
+          )} {/* end isLeftCollapsed else */}
           </div>
+          )} {/* end !isFocusMode */}
 
           {/* RIGHT: LIVE RESUME PREVIEW */}
           <div
@@ -1467,31 +1564,99 @@ export default function CreateResumePage() {
               background: 'rgba(255,255,255,0.58)',
             }}
           >
+            {/* Preview header */}
             <div
               style={{
-                padding: '14px 16px',
+                padding: '10px 16px',
                 background: 'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',
                 color: 'white',
                 fontWeight: 900,
                 fontSize: 13,
                 letterSpacing: 0.4,
-                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
               }}
             >
-              LIVE RESUME PREVIEW
+              <span>LIVE RESUME PREVIEW</span>
+              {/* Page pagination */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setPreviewPage((p) => Math.max(1, p - 1))}
+                  disabled={previewPage <= 1}
+                  style={{
+                    background: previewPage <= 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.30)',
+                    border: 'none',
+                    color: 'white',
+                    borderRadius: 6,
+                    padding: '3px 8px',
+                    cursor: previewPage <= 1 ? 'default' : 'pointer',
+                    fontWeight: 800,
+                    fontSize: 13,
+                    opacity: previewPage <= 1 ? 0.4 : 1,
+                  }}
+                >
+                  ‹
+                </button>
+                <span style={{ fontSize: 12, opacity: 0.85 }}>Pg {previewPage}</span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewPage((p) => p + 1)}
+                  style={{
+                    background: 'rgba(255,255,255,0.30)',
+                    border: 'none',
+                    color: 'white',
+                    borderRadius: 6,
+                    padding: '3px 8px',
+                    cursor: 'pointer',
+                    fontWeight: 800,
+                    fontSize: 13,
+                  }}
+                >
+                  ›
+                </button>
+              </div>
             </div>
-            <div id="resume-preview" style={{ padding: 18, background: 'rgba(255,255,255,0.88)', minHeight: '60vh' }}>
-              <div style={{ borderRadius: 14, overflow: 'hidden', background: '#fff', boxShadow: '0 20px 50px rgba(0,0,0,0.10)' }}>
-                <div style={{ padding: 24, background: '#fff' }}>
+
+            {/* Page-view resume: clipped to one page height at a time */}
+            <div
+              id="resume-preview"
+              style={{
+                padding: 18,
+                background: 'rgba(255,255,255,0.88)',
+                height: '80vh',
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              <div
+                style={{
+                  borderRadius: 14,
+                  overflow: 'hidden',
+                  background: '#fff',
+                  boxShadow: '0 20px 50px rgba(0,0,0,0.10)',
+                  height: '100%',
+                  overflowY: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    padding: 24,
+                    background: '#fff',
+                    transform: `translateY(calc(-${previewPage - 1} * 80vh))`,
+                    transition: 'transform 0.35s ease',
+                  }}
+                >
                   {previewMode === 'signal-test' ? (
-  <SignalResumeTestTemplate data={resumeData} />
-) : TemplateComp && typeof TemplateComp === 'function' ? (
-  <TemplateComp data={resumeData} />
-) : (
-  <div style={{ textAlign: 'center', marginTop: 80, color: '#999', fontSize: 18 }}>
-    Loading your resume template...
-  </div>
-)}
+                    <SignalResumeTestTemplate data={resumeData} />
+                  ) : TemplateComp && typeof TemplateComp === 'function' ? (
+                    <TemplateComp data={resumeData} />
+                  ) : (
+                    <div style={{ textAlign: 'center', marginTop: 80, color: '#999', fontSize: 18 }}>
+                      Loading your resume template...
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1500,7 +1665,8 @@ export default function CreateResumePage() {
       </div>
 
       {/* FLOATING TOOLS TOGGLE + BAR */}
-      <div className="fixed bottom-24 right-6 z-20 flex flex-col items-end gap-2">
+      {!isFocusMode && (
+      <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-2">
         <button
           type="button"
           onClick={() => setToolsOpen((v) => !v)}
@@ -1581,6 +1747,7 @@ export default function CreateResumePage() {
           </div>
         )}
       </div>
+      )} {/* end !isFocusMode floating tools */}
 
       {showToast && (
         <div
