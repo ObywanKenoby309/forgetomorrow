@@ -1058,54 +1058,6 @@ export default function CreateResumePage() {
         }}
         className="overflow-x-hidden"
       >
-        {/* Focus Mode toggle bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => { setIsFocusMode((v) => !v); if (!isFocusMode) setIsLeftCollapsed(false); }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '7px 16px',
-              borderRadius: 999,
-              border: isFocusMode ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.12)',
-              background: isFocusMode ? `rgba(255,112,67,0.12)` : 'rgba(255,255,255,0.80)',
-              color: isFocusMode ? '#C2410C' : '#334155',
-              fontWeight: 800,
-              fontSize: 13,
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <span>{isFocusMode ? '← Exit Focus' : '🎯 Focus Resume'}</span>
-          </button>
-          {!isFocusMode && (
-            <button
-              type="button"
-              onClick={() => setIsLeftCollapsed((v) => !v)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '7px 14px',
-                borderRadius: 999,
-                border: isLeftCollapsed ? `2px solid #334155` : '1px solid rgba(0,0,0,0.12)',
-                background: isLeftCollapsed ? 'rgba(51,65,85,0.10)' : 'rgba(255,255,255,0.80)',
-                color: '#334155',
-                fontWeight: 800,
-                fontSize: 13,
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {isLeftCollapsed ? '→ Expand Panel' : '← Collapse Panel'}
-            </button>
-          )}
-        </div>
-
         {/* Dynamic grid */}
         <div
           style={{
@@ -1240,6 +1192,52 @@ export default function CreateResumePage() {
       >
         ForgeFormat
       </button>
+    </div>
+
+    {/* Layout controls */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+      <button
+        type="button"
+        onClick={() => { setIsFocusMode((v) => !v); setIsLeftCollapsed(false); }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+          padding: '5px 12px',
+          borderRadius: 999,
+          border: isFocusMode ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.15)',
+          background: isFocusMode ? `rgba(255,112,67,0.12)` : 'rgba(255,255,255,0.80)',
+          color: isFocusMode ? '#C2410C' : '#334155',
+          fontWeight: 800,
+          fontSize: 12,
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        {isFocusMode ? '← Exit Focus' : '🎯 Focus Resume'}
+      </button>
+      {!isFocusMode && (
+        <button
+          type="button"
+          onClick={() => setIsLeftCollapsed((v) => !v)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '5px 12px',
+            borderRadius: 999,
+            border: isLeftCollapsed ? `2px solid #334155` : '1px solid rgba(0,0,0,0.15)',
+            background: isLeftCollapsed ? 'rgba(51,65,85,0.10)' : 'rgba(255,255,255,0.80)',
+            color: '#334155',
+            fontWeight: 800,
+            fontSize: 12,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {isLeftCollapsed ? '→ Expand Panel' : '← Collapse Panel'}
+        </button>
+      )}
     </div>
   </div>
 </Banner>
