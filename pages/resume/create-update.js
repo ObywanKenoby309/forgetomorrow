@@ -1609,32 +1609,31 @@ export default function CreateResumePage() {
               </div>
             </div>
 
-            {/* Page-view resume: clipped to one page height at a time */}
+            {/* Page-view resume: one US Letter page at a time (8.5x11 at 96dpi = 816x1056, scaled to fit column) */}
             <div
               id="resume-preview"
               style={{
-                padding: 18,
+                padding: 12,
                 background: 'rgba(255,255,255,0.88)',
-                height: '80vh',
+                height: 1056,
                 overflow: 'hidden',
                 position: 'relative',
               }}
             >
               <div
                 style={{
-                  borderRadius: 14,
+                  borderRadius: 8,
                   overflow: 'hidden',
                   background: '#fff',
                   boxShadow: '0 20px 50px rgba(0,0,0,0.10)',
-                  height: '100%',
-                  overflowY: 'hidden',
+                  height: 1056,
                 }}
               >
                 <div
                   style={{
                     padding: 24,
                     background: '#fff',
-                    transform: `translateY(calc(-${previewPage - 1} * 80vh))`,
+                    transform: `translateY(calc(-${previewPage - 1} * 1056px))`,
                     transition: 'transform 0.35s ease',
                   }}
                 >
