@@ -1063,8 +1063,8 @@ export default function CreateResumePage() {
               <Banner>
   <div style={{ display: 'grid', gap: 8 }}>
     {/* Row 1: Template info + Base template + Preview mode — all inline */}
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-      <span style={{ fontWeight: 900, color: '#C2410C', fontSize: 13 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', overflow: 'hidden' }}>
+      <span style={{ fontWeight: 900, color: '#C2410C', fontSize: 13, whiteSpace: 'nowrap' }}>
         Template: <strong>{templateName}</strong>
       </span>
       <span style={{ color: '#CBD5E1', fontSize: 13 }}>•</span>
@@ -1091,27 +1091,27 @@ export default function CreateResumePage() {
         }}
       >Hybrid</button>
       <span style={{ color: '#CBD5E1', fontSize: 13 }}>•</span>
-      <span style={{ fontWeight: 800, color: '#475569', fontSize: 13 }}>Preview:</span>
+      <span style={{ fontWeight: 800, color: '#475569', fontSize: 12 }}>Preview:</span>
       <button
         type="button"
         onClick={() => setPreviewMode('standard')}
         style={{
-          borderRadius: 999, padding: '4px 10px', fontSize: 12,
+          borderRadius: 999, padding: '3px 8px', fontSize: 11,
           border: previewMode === 'standard' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
           background: previewMode === 'standard' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.65)',
           color: previewMode === 'standard' ? '#C2410C' : '#475569',
-          fontWeight: 800, cursor: 'pointer',
+          fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
         }}
-      >Standard Preview</button>
+      >Standard</button>
       <button
         type="button"
         onClick={() => setPreviewMode('signal-test')}
         style={{
-          borderRadius: 999, padding: '4px 10px', fontSize: 12,
+          borderRadius: 999, padding: '3px 8px', fontSize: 11,
           border: previewMode === 'signal-test' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
           background: previewMode === 'signal-test' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.65)',
           color: previewMode === 'signal-test' ? '#C2410C' : '#475569',
-          fontWeight: 800, cursor: 'pointer',
+          fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
         }}
       >ForgeFormat</button>
     </div>
@@ -1615,7 +1615,7 @@ export default function CreateResumePage() {
               style={{
                 padding: 12,
                 background: 'rgba(255,255,255,0.88)',
-                height: 1056,
+                height: 760,
                 overflow: 'hidden',
                 position: 'relative',
               }}
@@ -1626,15 +1626,18 @@ export default function CreateResumePage() {
                   overflow: 'hidden',
                   background: '#fff',
                   boxShadow: '0 20px 50px rgba(0,0,0,0.10)',
-                  height: 1056,
+                  height: 760,
                 }}
               >
                 <div
                   style={{
                     padding: 24,
                     background: '#fff',
-                    transform: `translateY(calc(-${previewPage - 1} * 1056px))`,
+                    transform: `scale(0.72) translateY(calc(-${previewPage - 1} * 1056px))`,
+                    transformOrigin: 'top center',
                     transition: 'transform 0.35s ease',
+                    width: '138%',
+                    marginLeft: '-19%',
                   }}
                 >
                   {previewMode === 'signal-test' ? (
