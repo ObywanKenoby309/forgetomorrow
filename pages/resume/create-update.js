@@ -1119,125 +1119,143 @@ export default function CreateResumePage() {
             {/* TEMPLATE SWITCHER */}
             <div style={{ ...GLASS_CARD, padding: 12 }}>
               <Banner>
-  <div style={{ display: 'grid', gap: 10 }}>
-    <div>
-      Template: <strong>{templateName}</strong> • Live preview updates instantly on the right
-    </div>
-
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-      <span style={{ fontWeight: 800, color: '#475569' }}>Base template:</span>
-
+  <div style={{ display: 'grid', gap: 8 }}>
+    {/* Row 1: Template info + Base template + Preview mode — all inline */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <span style={{ fontWeight: 900, color: '#C2410C', fontSize: 13 }}>
+        Template: <strong>{templateName}</strong>
+      </span>
+      <span style={{ color: '#CBD5E1', fontSize: 13 }}>•</span>
+      <span style={{ fontWeight: 800, color: '#475569', fontSize: 13 }}>Base:</span>
       <button
         onClick={() => router.push(buildResumeCreateHref('reverse'))}
         style={{
           fontWeight: router.query.template !== 'hybrid' ? 900 : 700,
           color: router.query.template !== 'hybrid' ? ORANGE : '#64748B',
-          background: 'none',
-          border: 'none',
+          background: 'none', border: 'none',
           textDecoration: router.query.template !== 'hybrid' ? 'underline' : 'none',
-          cursor: 'pointer',
+          cursor: 'pointer', fontSize: 13, padding: 0,
         }}
-      >
-        Reverse
-      </button>
-
+      >Reverse</button>
       <span style={{ color: '#94A3B8' }}>|</span>
-
       <button
         onClick={() => router.push(buildResumeCreateHref('hybrid'))}
         style={{
           fontWeight: router.query.template === 'hybrid' ? 900 : 700,
           color: router.query.template === 'hybrid' ? ORANGE : '#64748B',
-          background: 'none',
-          border: 'none',
+          background: 'none', border: 'none',
           textDecoration: router.query.template === 'hybrid' ? 'underline' : 'none',
-          cursor: 'pointer',
+          cursor: 'pointer', fontSize: 13, padding: 0,
         }}
-      >
-        Hybrid
-      </button>
-    </div>
-
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-      <span style={{ fontWeight: 800, color: '#475569' }}>Preview mode:</span>
-
+      >Hybrid</button>
+      <span style={{ color: '#CBD5E1', fontSize: 13 }}>•</span>
+      <span style={{ fontWeight: 800, color: '#475569', fontSize: 13 }}>Preview:</span>
       <button
         type="button"
         onClick={() => setPreviewMode('standard')}
         style={{
-          borderRadius: 999,
-          padding: '6px 12px',
+          borderRadius: 999, padding: '4px 10px', fontSize: 12,
           border: previewMode === 'standard' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
           background: previewMode === 'standard' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.65)',
           color: previewMode === 'standard' ? '#C2410C' : '#475569',
-          fontWeight: 800,
-          cursor: 'pointer',
+          fontWeight: 800, cursor: 'pointer',
         }}
-      >
-        Standard Preview
-      </button>
-
+      >Standard Preview</button>
       <button
         type="button"
         onClick={() => setPreviewMode('signal-test')}
         style={{
-          borderRadius: 999,
-          padding: '6px 12px',
+          borderRadius: 999, padding: '4px 10px', fontSize: 12,
           border: previewMode === 'signal-test' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
           background: previewMode === 'signal-test' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.65)',
           color: previewMode === 'signal-test' ? '#C2410C' : '#475569',
-          fontWeight: 800,
-          cursor: 'pointer',
+          fontWeight: 800, cursor: 'pointer',
         }}
-      >
-        ForgeFormat
-      </button>
+      >ForgeFormat</button>
     </div>
 
-    {/* Layout controls */}
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+    {/* Row 2: Layout controls + divider + export/save tools */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      {/* Layout group */}
       <button
         type="button"
         onClick={() => { setIsFocusMode((v) => !v); setIsLeftCollapsed(false); }}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 5,
-          padding: '5px 12px',
-          borderRadius: 999,
+          borderRadius: 999, padding: '5px 12px', fontSize: 12,
           border: isFocusMode ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.15)',
-          background: isFocusMode ? `rgba(255,112,67,0.12)` : 'rgba(255,255,255,0.80)',
+          background: isFocusMode ? 'rgba(255,112,67,0.12)' : 'rgba(255,255,255,0.80)',
           color: isFocusMode ? '#C2410C' : '#334155',
-          fontWeight: 800,
-          fontSize: 12,
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
+          fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease',
         }}
-      >
-        {isFocusMode ? '← Exit Focus' : '🎯 Focus Resume'}
-      </button>
+      >{isFocusMode ? '← Exit Focus' : '🎯 Focus Resume'}</button>
       {!isFocusMode && (
         <button
           type="button"
           onClick={() => setIsLeftCollapsed((v) => !v)}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-            padding: '5px 12px',
-            borderRadius: 999,
-            border: isLeftCollapsed ? `2px solid #334155` : '1px solid rgba(0,0,0,0.15)',
+            borderRadius: 999, padding: '5px 12px', fontSize: 12,
+            border: isLeftCollapsed ? '2px solid #334155' : '1px solid rgba(0,0,0,0.15)',
             background: isLeftCollapsed ? 'rgba(51,65,85,0.10)' : 'rgba(255,255,255,0.80)',
             color: '#334155',
-            fontWeight: 800,
-            fontSize: 12,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease',
           }}
-        >
-          {isLeftCollapsed ? '→ Expand Panel' : '← Collapse Panel'}
-        </button>
+        >{isLeftCollapsed ? '→ Expand Panel' : '← Collapse Panel'}</button>
       )}
+
+      {/* Divider */}
+      <span style={{ width: 1, height: 22, background: 'rgba(0,0,0,0.12)', margin: '0 4px', flexShrink: 0 }} />
+
+      {/* Export/Save group */}
+      {router.query.template === 'hybrid' ? (
+        <HybridATSButton data={resumeData}>
+          <div style={{ background: '#0F766E', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+            System PDF
+          </div>
+        </HybridATSButton>
+      ) : (
+        <ReverseATSButton data={resumeData}>
+          <div style={{ background: '#0F766E', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+            System PDF
+          </div>
+        </ReverseATSButton>
+      )}
+      <DesignedPDFButton data={resumeData} template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}>
+        <div style={{ background: ORANGE, color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+          Designed PDF
+        </div>
+      </DesignedPDFButton>
+      <button
+        type="button"
+        onClick={handleSaveClick}
+        style={{ background: '#16A34A', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer' }}
+      >Save Resume</button>
+
+      {isResumeComplete && (
+        <button
+          type="button"
+          onClick={() => router.push(withChrome('/cover/create'))}
+          style={{ background: '#7C3AED', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer' }}
+        >Next: Cover Letter →</button>
+      )}
+
+      {/* Progress ring */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
+        <div style={{ position: 'relative', width: 28, height: 28 }}>
+          <svg width="28" height="28" viewBox="0 0 28 28">
+            <circle cx="14" cy="14" r="11" fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
+            <circle
+              cx="14" cy="14" r="11" fill="none"
+              stroke="#10B981" strokeWidth="2.5"
+              strokeDasharray={`${(progress / 100) * 69.1} 69.1`}
+              style={{ transition: 'stroke-dasharray 0.5s ease' }}
+            />
+          </svg>
+          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 900, color: '#374151' }}>
+            {progress}%
+          </span>
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Ready</span>
+      </div>
     </div>
   </div>
 </Banner>
@@ -1662,90 +1680,6 @@ export default function CreateResumePage() {
         </div>
       </div>
 
-      {/* FLOATING TOOLS TOGGLE + BAR */}
-      {!isFocusMode && (
-      <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-2">
-        <button
-          type="button"
-          onClick={() => setToolsOpen((v) => !v)}
-          className="flex items-center gap-2 bg-white shadow-2xl border rounded-full px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          <span>{toolsOpen ? 'Hide tools' : 'Resume tools'}</span>
-          <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-gray-100">
-            <svg
-              className={`w-3 h-3 text-gray-600 transition-transform ${toolsOpen ? 'rotate-90' : '-rotate-90'}`}
-              viewBox="0 0 20 20"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M7 5l6 5-6 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-        </button>
-
-        {toolsOpen && (
-          <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
-            {router.query.template === 'hybrid' ? (
-              <HybridATSButton data={resumeData}>
-                <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
-                  System PDF
-                </div>
-              </HybridATSButton>
-            ) : (
-              <ReverseATSButton data={resumeData}>
-                <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
-                  System PDF
-                </div>
-              </ReverseATSButton>
-            )}
-
-            <DesignedPDFButton data={resumeData} template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}>
-              <div className="bg-orange-500 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-orange-600 transition-all">
-                Designed PDF
-              </div>
-            </DesignedPDFButton>
-
-            <button
-              onClick={handleSaveClick}
-              className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700 transition-all"
-            >
-              Save Resume
-            </button>
-
-            <div className="bg-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border text-xs ml-1">
-              <div className="relative">
-                <svg className="w-6 h-6">
-                  <circle cx="12" cy="12" r="10" fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    fill="none"
-                    stroke="#10B981"
-                    strokeWidth="2.5"
-                    strokeDasharray={`${(progress / 100) * 62.8} 62.8`}
-                    className="transition-all duration-500"
-                  />
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-700">
-                  {progress}%
-                </span>
-              </div>
-              <span className="font-semibold text-gray-600">Ready</span>
-            </div>
-
-            {isResumeComplete && (
-              <button
-                onClick={() => router.push(withChrome('/cover/create'))}
-                className="ml-2 bg-purple-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-purple-700 transition-all"
-              >
-                Next: Build Cover Letter
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-      )} {/* end !isFocusMode floating tools */}
 
       {showToast && (
         <div
