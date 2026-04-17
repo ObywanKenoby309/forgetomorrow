@@ -1633,7 +1633,7 @@ export default function CreateResumePage() {
                   style={{
                     padding: 24,
                     background: '#fff',
-                    transform: `scale(0.72) translateY(calc(-${previewPage - 1} * 1056px))`,
+                    transform: `translateY(calc(-${previewPage - 1} * 760px)) scale(0.72)`,
                     transformOrigin: 'top center',
                     transition: 'transform 0.35s ease',
                     width: '138%',
