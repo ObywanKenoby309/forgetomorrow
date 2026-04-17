@@ -1058,66 +1058,8 @@ export default function CreateResumePage() {
         }}
         className="overflow-x-hidden"
       >
-        {/* Dynamic grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: isFocusMode
-              ? 'minmax(0, 1fr)'
-              : isLeftCollapsed
-              ? '52px minmax(0, 1fr)'
-              : 'minmax(0, 1fr) minmax(0, 1fr)',
-            gap: 16,
-            alignItems: 'start',
-            transition: 'grid-template-columns 0.25s ease',
-          }}
-        >
-          {/* LEFT: INPUT */}
-          {!isFocusMode && (
-          <div style={{ display: 'grid', gap: 12, position: 'sticky', top: 20, overflow: 'hidden' }}>
-          {isLeftCollapsed ? (
-            /* Collapsed icon rail */
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 8,
-                paddingTop: 8,
-              }}
-            >
-              {[
-                { label: 'R', title: 'Required' },
-                { label: 'O', title: 'Optional' },
-                { label: '🔥', title: 'Forge Hammer' },
-              ].map(({ label, title }) => (
-                <div
-                  key={label}
-                  title={title}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    background: 'rgba(255,255,255,0.70)',
-                    border: '1px solid rgba(0,0,0,0.10)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 900,
-                    fontSize: 13,
-                    color: '#334155',
-                    cursor: 'default',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.07)',
-                  }}
-                >
-                  {label}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-            {/* TEMPLATE SWITCHER */}
-            <div style={{ ...GLASS_CARD, padding: 12 }}>
+        {/* TEMPLATE SWITCHER — full width above grid */}
+        <div style={{ ...GLASS_CARD, padding: 12, marginBottom: 16 }}>
               <Banner>
   <div style={{ display: 'grid', gap: 8 }}>
     {/* Row 1: Template info + Base template + Preview mode — all inline */}
@@ -1259,7 +1201,39 @@ export default function CreateResumePage() {
     </div>
   </div>
 </Banner>
+        </div>
+
+        {/* Dynamic grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isFocusMode
+              ? 'minmax(0, 1fr)'
+              : isLeftCollapsed
+              ? '52px minmax(0, 1fr)'
+              : 'minmax(0, 1fr) minmax(0, 1fr)',
+            gap: 16,
+            alignItems: 'start',
+            transition: 'grid-template-columns 0.25s ease',
+          }}
+        >
+          {/* LEFT: INPUT */}
+          {!isFocusMode && (
+          <div style={{ display: 'grid', gap: 12, position: 'sticky', top: 20, overflow: 'hidden' }}>
+          {isLeftCollapsed ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingTop: 8 }}>
+              {[
+                { label: 'R', title: 'Required' },
+                { label: 'O', title: 'Optional' },
+                { label: '🔥', title: 'Forge Hammer' },
+              ].map(({ label, title }) => (
+                <div key={label} title={title} style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(255,255,255,0.70)', border: '1px solid rgba(0,0,0,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#334155', cursor: 'default', boxShadow: '0 2px 6px rgba(0,0,0,0.07)' }}>
+                  {label}
+                </div>
+              ))}
             </div>
+          ) : (
+            <>
 
             {/* REQUIRED (group) */}
             <Section
