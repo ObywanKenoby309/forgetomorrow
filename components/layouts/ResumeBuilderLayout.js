@@ -190,19 +190,14 @@ export default function ResumeBuilderLayout({
             </aside>
           )}
 
-          {/* Right side: ad rail top-right + content below spanning full width */}
-          <div style={{ minWidth: 0, position: 'relative' }}>
-            {/* Ad rail — positioned top right, does not affect content flow */}
+          {/* Right side: ad rail in normal flow on top, content below */}
+          <div style={{ minWidth: 0 }}>
             {!isMobile && (
-              <div style={{ position: 'absolute', top: 0, right: 0, width: 260, zIndex: 10 }}>
+              <div style={{ marginBottom: 12 }}>
                 <RightRailPlacementManager slot="right_rail_1" />
               </div>
             )}
-
-            {/* Builder content — full width, ad rail floats above it */}
-            <div style={{ minWidth: 0, paddingRight: isMobile ? 0 : 272 }}>
-              {children}
-            </div>
+            {children}
           </div>
         </div>
       </div>
