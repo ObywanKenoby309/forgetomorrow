@@ -169,11 +169,13 @@ export default function ResumeBuilderLayout({
         {/* Top nav — same as any other page */}
         <HeaderComp />
 
-        {/* 3-column page grid: left sidebar | builder canvas | right ad rail */}
+        {/* Page wrapper: left sidebar + full-width content (ad rail floats top-right) */}
         <div
           style={{
             display: isMobile ? 'block' : 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : '240px minmax(0, 1fr) 260px',
+            gridTemplateColumns: isMobile ? '1fr' : '240px 1fr',
+            gridTemplateRows: isMobile ? 'auto' : 'auto 1fr',
+            gridTemplateAreas: isMobile ? '"content"' : '"left adtop" "left content"',
             gap: 12,
             alignItems: 'start',
             width: '100%',
@@ -183,34 +185,24 @@ export default function ResumeBuilderLayout({
             overflowX: 'hidden',
           }}
         >
-          {/* Left sidebar — hidden on mobile */}
+          {/* Left sidebar */}
           {!isMobile && (
-            <aside style={{ position: 'sticky', top: 12, alignSelf: 'start', zIndex: 10 }}>
+            <aside style={{ gridArea: 'left', position: 'sticky', top: 12, alignSelf: 'start', zIndex: 10 }}>
               <SidebarComp {...sidebarProps} />
             </aside>
           )}
 
-          {/* Builder canvas — the full 3-zone grid lives here */}
-          <div style={{ minWidth: 0, width: '100%' }}>
-            {children}
-          </div>
-
-          {/* Right ad rail — hidden on mobile */}
+          {/* Ad rail — top right only */}
           {!isMobile && (
-            <aside
-              style={{
-                position: 'sticky',
-                top: 12,
-                alignSelf: 'start',
-                zIndex: 10,
-                borderRadius: 14,
-                border: '1px solid rgba(255,255,255,0.22)',
-                background: 'transparent',
-              }}
-            >
+            <aside style={{ gridArea: 'adtop', alignSelf: 'start', zIndex: 10, borderRadius: 14, border: '1px solid rgba(255,255,255,0.22)', background: 'transparent' }}>
               <RightRailPlacementManager slot="right_rail_1" />
             </aside>
           )}
+
+          {/* Builder canvas — spans full width of right column, under ad rail */}
+          <div style={{ gridArea: 'content', minWidth: 0 }}>
+            {children}
+          </div>
         </div>
       </div>
 

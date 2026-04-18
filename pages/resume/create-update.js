@@ -3,7 +3,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import SeekerLayout from '@/components/layouts/SeekerLayout';
+import ResumeBuilderLayout from '@/components/layouts/ResumeBuilderLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import { ResumeContext } from '@/context/ResumeContext';
@@ -1041,7 +1041,7 @@ export default function CreateResumePage() {
       : null;
 
   return (
-    <SeekerLayout title="Resume Builder | ForgeTomorrow" header={Header} activeNav="resume-cover" contentFullBleed>
+    <ResumeBuilderLayout title="Resume Builder | ForgeTomorrow">
       {/* ✅ Guardrails */}
       <style jsx global>{`
         html,
@@ -1678,6 +1678,6 @@ export default function CreateResumePage() {
       )}
 
       {saveModal}
-    </SeekerLayout>
+    </ResumeBuilderLayout>
   );
 }
