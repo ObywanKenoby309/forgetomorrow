@@ -1200,7 +1200,7 @@ export default function CreateResumePage() {
       width: '100%',
       maxWidth: 248,
       height: 250,
-      margin: '0 auto -48px',
+      margin: '0 auto -28px',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'flex-start',
