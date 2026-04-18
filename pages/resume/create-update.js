@@ -1195,10 +1195,26 @@ export default function CreateResumePage() {
           </div>
 
           {!isFocusMode && (
-            <div style={{ minWidth: 0 }}>
-              <RightRailPlacementManager slot="right_rail_1" />
-            </div>
-          )}
+  <div
+    style={{
+      width: '100%',
+      maxWidth: 248,
+      margin: '0 auto',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+    }}
+  >
+    <div
+      style={{
+        transform: 'scale(0.82)',
+        transformOrigin: 'top center',
+      }}
+    >
+      <RightRailPlacementManager slot="right_rail_1" />
+    </div>
+  </div>
+)}
         </div>
 
         {/* MAIN BAND: left controls | center preview | right hammer */}
