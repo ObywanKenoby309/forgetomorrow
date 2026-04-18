@@ -1219,19 +1219,20 @@ export default function CreateResumePage() {
 
         {/* MAIN BAND: left controls | center preview | right hammer */}
         <div
-          className="ft-resume-main-grid"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: isFocusMode
-              ? 'minmax(0, 1fr)'
-              : isLeftCollapsed
-              ? '52px minmax(0, 2.2fr) minmax(300px, 0.8fr)'
-              : '240px minmax(0, 2.2fr) minmax(300px, 0.8fr)',
-            gap: 16,
-            alignItems: 'start',
-            transition: 'grid-template-columns 0.25s ease',
-          }}
-        >
+  className="ft-resume-main-grid"
+  style={{
+    display: 'grid',
+    gridTemplateColumns: isFocusMode
+      ? 'minmax(0, 1fr)'
+      : isLeftCollapsed
+      ? '52px minmax(0, 2.2fr) minmax(300px, 0.8fr)'
+      : '240px minmax(0, 2.2fr) minmax(300px, 0.8fr)',
+    gap: 16,
+    alignItems: 'start',
+    marginTop: -18,
+    transition: 'grid-template-columns 0.25s ease',
+  }}
+>
           {!isFocusMode && (
             <div style={{ display: 'grid', gap: 12, position: 'sticky', top: 20, overflow: 'hidden' }}>
               {isLeftCollapsed ? (
