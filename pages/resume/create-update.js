@@ -1231,7 +1231,7 @@ export default function CreateResumePage() {
       : '240px minmax(0, 2.2fr) minmax(300px, 0.8fr)',
     gap: 16,
     alignItems: 'start',
-    marginTop: 10,
+    marginTop: 16,
     transition: 'grid-template-columns 0.25s ease',
   }}
 >
