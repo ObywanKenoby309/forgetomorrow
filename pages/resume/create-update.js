@@ -1206,8 +1206,8 @@ export default function CreateResumePage() {
             gridTemplateColumns: isFocusMode
               ? 'minmax(0, 1fr)'
               : isLeftCollapsed
-              ? '52px minmax(0, 1fr) minmax(280px, 1fr)'
-              : '240px minmax(0, 1.6fr) minmax(280px, 1fr)',
+              ? '52px minmax(0, 2.2fr) minmax(300px, 0.8fr)'
+              : '240px minmax(0, 2.2fr) minmax(300px, 0.8fr)',
             gap: 16,
             alignItems: 'start',
             transition: 'grid-template-columns 0.25s ease',
@@ -1476,6 +1476,10 @@ export default function CreateResumePage() {
               overflowY: 'auto',
             }}
           >
+		  {/* Ad Card */}
+  <div style={{ marginBottom: 12 }}>
+    <RightRailPlacementManager slot="right_rail_1" />
+  </div>
             {/* ── Header ── */}
             <div
               style={{

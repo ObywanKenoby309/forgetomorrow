@@ -192,15 +192,6 @@ export default function ResumeBuilderLayout({
 
           {/* Right side: ad rail in normal flow on top, content below */}
           <div style={{ minWidth: 0 }}>
-            {!isMobile && (
-              <div style={{ marginBottom: 12 }}>
-                <RightRailPlacementManager slot="right_rail_1" />
-              </div>
-            )}
-            {children}
-          </div>
-        </div>
-      </div>
 
       {/* Mobile bottom bar — same as SeekerLayout */}
       <MobileBottomBar
