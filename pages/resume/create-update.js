@@ -3,7 +3,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import SeekerLayout from '@/components/layouts/SeekerLayout';
+import ResumeBuilderLayout from '@/components/layouts/ResumeBuilderLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import { ResumeContext } from '@/context/ResumeContext';
@@ -1041,7 +1041,7 @@ export default function CreateResumePage() {
       : null;
 
   return (
-    <SeekerLayout title="Resume Builder | ForgeTomorrow" header={Header} right={<RightRailPlacementManager slot="right_rail_1" />} rightVariant="light" activeNav="resume-cover" contentFullBleed>
+    <ResumeBuilderLayout title="Resume Builder | ForgeTomorrow">
       {/* ✅ Guardrails */}
       <style jsx global>{`
         html,
@@ -1049,6 +1049,10 @@ export default function CreateResumePage() {
           overflow-x: hidden;
         }
       `}</style>
+
+      <div style={{ width: '100%', boxSizing: 'border-box' }} className="overflow-x-hidden">
+        {/* Page header — title card above the builder */}
+        <div style={{ marginBottom: 12 }}>{Header}</div>
 
         {/* TEMPLATE SWITCHER — full width above grid */}
         <div style={{ ...GLASS_CARD, padding: 12, marginBottom: 16 }}>
@@ -1202,8 +1206,8 @@ export default function CreateResumePage() {
             gridTemplateColumns: isFocusMode
               ? 'minmax(0, 1fr)'
               : isLeftCollapsed
-              ? '52px minmax(0, 1fr) 300px'
-              : '280px minmax(0, 1fr) 300px',
+              ? '52px minmax(0, 1fr) minmax(0, 0.85fr)'
+              : 'minmax(0, 0.75fr) minmax(0, 1.4fr) minmax(0, 0.85fr)',
             gap: 16,
             alignItems: 'start',
             transition: 'grid-template-columns 0.25s ease',
@@ -1651,6 +1655,9 @@ export default function CreateResumePage() {
           </div>
           )}
         </div>
+      </div>
+
+
       {showToast && (
         <div
           style={{
@@ -1671,6 +1678,6 @@ export default function CreateResumePage() {
       )}
 
       {saveModal}
-    </SeekerLayout>
+    </ResumeBuilderLayout>
   );
 }
