@@ -3,7 +3,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import ResumeBuilderLayout from '@/components/layouts/ResumeBuilderLayout';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import { ResumeContext } from '@/context/ResumeContext';
@@ -1041,7 +1041,7 @@ export default function CreateResumePage() {
       : null;
 
   return (
-    <ResumeBuilderLayout title="Resume Builder | ForgeTomorrow">
+    <SeekerLayout title="Resume Builder | ForgeTomorrow" header={Header} activeNav="resume-cover" contentFullBleed>
       {/* ✅ Guardrails */}
       <style jsx global>{`
         html,
@@ -1206,8 +1206,8 @@ export default function CreateResumePage() {
             gridTemplateColumns: isFocusMode
               ? 'minmax(0, 1fr)'
               : isLeftCollapsed
-              ? '52px minmax(0, 1fr) minmax(0, 0.85fr)'
-              : 'minmax(0, 0.75fr) minmax(0, 1.4fr) minmax(0, 0.85fr)',
+              ? '52px minmax(0, 1fr) 320px'
+              : '260px minmax(0, 1fr) 320px',
             gap: 16,
             alignItems: 'start',
             transition: 'grid-template-columns 0.25s ease',
@@ -1678,6 +1678,6 @@ export default function CreateResumePage() {
       )}
 
       {saveModal}
-    </ResumeBuilderLayout>
+    </SeekerLayout>
   );
 }
