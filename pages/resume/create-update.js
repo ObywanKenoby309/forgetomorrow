@@ -7,14 +7,6 @@ import ResumeBuilderLayout from '@/components/layouts/ResumeBuilderLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import { ResumeContext } from '@/context/ResumeContext';
-import ContactInfoSection from '@/components/resume-form/ContactInfoSection';
-import WorkExperienceSection from '@/components/resume-form/WorkExperienceSection';
-import EducationSection from '@/components/resume-form/EducationSection';
-import SkillsSection from '@/components/resume-form/SkillsSection';
-import SummarySection from '@/components/resume-form/SummarySection';
-import ProjectsSection from '@/components/resume-form/ProjectsSection';
-import CertificationsSection from '@/components/resume-form/CertificationsSection';
-import CustomSection from '@/components/resume-form/CustomSection';
 import { getResumeTemplateComponent } from '@/lib/templates';
 import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
 import { uploadJD } from '@/lib/jd/uploadToApi';
@@ -34,27 +26,6 @@ const DRAFT_KEYS = {
   LAST_UPLOADED_RESUME_TEXT: 'ft_last_uploaded_resume_text',
 };
 
-function Banner({ children, tone = 'orange' }) {
-  const toneStyles =
-    tone === 'blue'
-      ? { background: '#E3F2FD', border: '1px solid #90CAF9', color: '#0D47A1' }
-      : { background: '#FFF3E0', border: '1px solid #FFCC80', color: '#E65100' };
-
-  return (
-    <div
-      style={{
-        ...toneStyles,
-        borderRadius: 12,
-        padding: 14,
-        fontSize: 14,
-        fontWeight: 700,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
 const GLASS_CARD = {
   borderRadius: 14,
   border: '1px solid rgba(255,255,255,0.22)',
@@ -63,201 +34,6 @@ const GLASS_CARD = {
   backdropFilter: 'blur(10px)',
   WebkitBackdropFilter: 'blur(10px)',
 };
-
-function Section({ title, open, onToggle, children, required = false, dense = false, subtitle = '' }) {
-  const headerPad = dense ? '12px 14px' : '14px 16px';
-  const bodyPad = dense ? '14px 14px' : '18px 16px';
-
-  return (
-    <div
-      style={{
-        ...GLASS_CARD,
-        overflow: 'hidden',
-        background: dense ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.58)',
-        border: required ? '1px solid rgba(255,112,67,0.30)' : GLASS_CARD.border,
-      }}
-    >
-      <button
-        onClick={onToggle}
-        type="button"
-        style={{
-          width: '100%',
-          padding: headerPad,
-          background: required
-            ? 'linear-gradient(180deg, rgba(255,112,67,0.10), rgba(255,255,255,0))'
-            : 'linear-gradient(180deg, rgba(0,0,0,0.03), rgba(255,255,255,0))',
-          textAlign: 'left',
-          fontWeight: 900,
-          fontSize: dense ? 13 : 15,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          border: 'none',
-          cursor: 'pointer',
-          gap: 12,
-        }}
-        aria-expanded={open ? 'true' : 'false'}
-      >
-        <span style={{ minWidth: 0 }}>
-          <span style={{ color: required ? ORANGE : '#111827', fontWeight: 900 }}>{title}</span>
-          {!!subtitle && (
-            <div style={{ marginTop: 4, color: '#334155', fontSize: 12, fontWeight: 700 }}>
-              {subtitle}
-            </div>
-          )}
-        </span>
-
-        <span
-          style={{
-            width: 26,
-            height: 26,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: 999,
-            background: 'rgba(255,255,255,0.75)',
-            border: '1px solid rgba(0,0,0,0.08)',
-            flexShrink: 0,
-          }}
-        >
-          <svg
-            className="w-5 h-5 text-gray-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {open ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            )}
-          </svg>
-        </span>
-      </button>
-
-      {open && (
-        <div
-          style={{
-            padding: bodyPad,
-            borderTop: '1px solid rgba(0,0,0,0.06)',
-          }}
-        >
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function LanguagesInlineSection({ languages, setLanguages }) {
-  const [val, setVal] = useState('');
-
-  const add = () => {
-    const v = String(val || '').trim();
-    if (!v) return;
-    setLanguages((prev) => {
-      const next = Array.isArray(prev) ? [...prev] : [];
-      if (next.some((x) => String(x).toLowerCase() === v.toLowerCase())) return next;
-      next.push(v);
-      return next;
-    });
-    setVal('');
-  };
-
-  const remove = (idx) => {
-    setLanguages((prev) => {
-      const arr = Array.isArray(prev) ? [...prev] : [];
-      arr.splice(idx, 1);
-      return arr;
-    });
-  };
-
-  return (
-    <div style={{ display: 'grid', gap: 10 }}>
-      <div style={{ fontWeight: 800, fontSize: 14, color: '#111827' }}>Languages</div>
-      <div style={{ display: 'flex', gap: 10 }}>
-        <input
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          placeholder="Add a language (e.g., English - Native)"
-          style={{
-            flex: 1,
-            border: '1px solid rgba(0,0,0,0.12)',
-            borderRadius: 10,
-            padding: '10px 12px',
-            fontSize: 14,
-            background: 'rgba(255,255,255,0.85)',
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              add();
-            }
-          }}
-        />
-        <button
-          type="button"
-          onClick={add}
-          style={{
-            background: ORANGE,
-            color: 'white',
-            border: 'none',
-            borderRadius: 10,
-            padding: '10px 14px',
-            fontWeight: 800,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          Add
-        </button>
-      </div>
-      {Array.isArray(languages) && languages.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {languages.map((l, idx) => (
-            <div
-              key={`${l}-${idx}`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                border: '1px solid rgba(0,0,0,0.10)',
-                borderRadius: 999,
-                padding: '6px 10px',
-                background: 'rgba(255,255,255,0.75)',
-                fontSize: 13,
-                fontWeight: 700,
-                color: '#374151',
-              }}
-            >
-              <span>{l}</span>
-              <button
-                type="button"
-                onClick={() => remove(idx)}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  fontWeight: 900,
-                  color: '#6B7280',
-                  lineHeight: 1,
-                }}
-                aria-label={`Remove ${l}`}
-                title="Remove"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div style={{ fontSize: 12, color: '#6B7280' }}>
-        Tip: use “Language - Proficiency” format (example: “Spanish — Professional”).
-      </div>
-    </div>
-  );
-}
 
 export default function CreateResumePage() {
   const router = useRouter();
@@ -300,7 +76,7 @@ export default function CreateResumePage() {
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [existingResumes, setExistingResumes] = useState([]);
-
+  const [selectedResumeId, setSelectedResumeId] = useState('');
 
   const [jdLoading, setJdLoading] = useState(false);
   const [jdStatus, setJdStatus] = useState('');
@@ -310,17 +86,6 @@ export default function CreateResumePage() {
   const [atsAppliedFromContext, setAtsAppliedFromContext] = useState(false);
 
   const [jobMeta, setJobMeta] = useState(null);
-
-  const [openContact, setOpenContact] = useState(false);
-  const [openWork, setOpenWork] = useState(false);
-  const [openEducation, setOpenEducation] = useState(false);
-  const [openSkills, setOpenSkills] = useState(false);
-
-  const [openLanguages, setOpenLanguages] = useState(false);
-  const [openSummary, setOpenSummary] = useState(false);
-  const [openProjects, setOpenProjects] = useState(false);
-  const [openCerts, setOpenCerts] = useState(false);
-  const [openCustom, setOpenCustom] = useState(false);
 
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isHammerOpen, setIsHammerOpen] = useState(false);
@@ -487,13 +252,6 @@ export default function CreateResumePage() {
     ? new Date(saveEventAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '';
 
-  const checks = [
-    summary?.trim().length > 20,
-    skills?.length >= 8,
-    experiences?.length > 0 && experiences.every((e) => e.title && e.company && e.bullets?.length >= 2),
-    educationList?.length > 0 && educationList.some((edu) => (edu.school || edu.institution) && (edu.degree || edu.field)),
-  ];
-
   const hasAnyResumeContent =
     (formData &&
       (formData.email ||
@@ -515,10 +273,54 @@ export default function CreateResumePage() {
     (certifications && certifications.length > 0) ||
     (customSections && customSections.length > 0);
 
-  let progress = Math.round((checks.filter(Boolean).length / 4) * 100);
-  if (!hasAnyResumeContent) progress = 0;
+  const isUsable = !!(
+    hasAnyResumeContent &&
+    (summary?.trim() || experiences?.length > 0 || projects?.length > 0) &&
+    (skills?.length > 0 || experiences?.length > 0)
+  );
 
-  const isResumeComplete = progress === 100;
+  const isTargeted = !!jd;
+  const isReadyToSend = !!(
+    jd &&
+    (summary?.trim() || experiences?.length > 0) &&
+    (experiences?.length > 0 || projects?.length > 0) &&
+    skills?.length > 0
+  );
+
+  const statusLabel = !hasAnyResumeContent
+    ? 'Draft'
+    : isReadyToSend
+    ? 'Ready to Send'
+    : isTargeted
+    ? 'Targeted'
+    : isUsable
+    ? 'Usable'
+    : 'Draft';
+
+  const statusStyles =
+    statusLabel === 'Ready to Send'
+      ? {
+          color: '#10B981',
+          background: 'rgba(16,185,129,0.10)',
+          border: '1px solid rgba(16,185,129,0.30)',
+        }
+      : statusLabel === 'Targeted'
+      ? {
+          color: '#0EA5E9',
+          background: 'rgba(14,165,233,0.10)',
+          border: '1px solid rgba(14,165,233,0.30)',
+        }
+      : statusLabel === 'Usable'
+      ? {
+          color: ORANGE,
+          background: 'rgba(255,112,67,0.10)',
+          border: '1px solid rgba(255,112,67,0.30)',
+        }
+      : {
+          color: '#94A3B8',
+          background: 'rgba(148,163,184,0.10)',
+          border: '1px solid rgba(148,163,184,0.30)',
+        };
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -534,6 +336,26 @@ export default function CreateResumePage() {
       return () => clearTimeout(t);
     }
   }, [saveEventAt]);
+
+  useEffect(() => {
+    async function loadResumeList() {
+      try {
+        const res = await fetch('/api/resume/list');
+        if (!res.ok) return;
+        const json = await res.json();
+        const list = json?.resumes || [];
+        setExistingResumes(list);
+
+        if (!selectedResumeId && list.length > 0) {
+          const currentId = String(router.query.resumeId || '').trim();
+          setSelectedResumeId(currentId || String(list[0].id));
+        }
+      } catch (err) {
+        console.error('[resume/create] Failed to load resume list', err);
+      }
+    }
+    loadResumeList();
+  }, [router.query.resumeId, selectedResumeId]);
 
   useEffect(() => {
     async function loadProfileDefaults() {
@@ -616,6 +438,7 @@ export default function CreateResumePage() {
         if (applied) {
           hasAppliedResumeLoadRef.current = resumeId;
           hasAppliedUploadRef.current = true;
+          setSelectedResumeId(resumeId);
         }
       } catch (err) {
         console.error('[resume/create] Failed to hydrate resume from resumeId', err);
@@ -744,7 +567,7 @@ export default function CreateResumePage() {
     }
 
     applyUploadedResume();
-  }, [router.isReady, router.query, formData.fullName, formData.name, summary, setFormData, setSummary]);
+  }, [router.isReady, router.query, formData.fullName, formData.name, setFormData]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -814,7 +637,11 @@ export default function CreateResumePage() {
       const res = await fetch('/api/resume/list');
       if (res.ok) {
         const json = await res.json();
-        setExistingResumes(json.resumes || []);
+        const list = json.resumes || [];
+        setExistingResumes(list);
+        if (!selectedResumeId && list.length > 0) {
+          setSelectedResumeId(String(list[0].id));
+        }
       } else {
         setExistingResumes([]);
       }
@@ -853,6 +680,18 @@ export default function CreateResumePage() {
     } catch {
       alert('Save failed. Try again.');
     }
+  };
+
+  const handleLoadSelectedResume = async () => {
+    if (!selectedResumeId) return;
+    const href = withChrome(`/resume/create?resumeId=${encodeURIComponent(selectedResumeId)}&template=${router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}`);
+    await router.push(href);
+  };
+
+  const handleCreateNewResume = async () => {
+    setSelectedResumeId('');
+    hasAppliedResumeLoadRef.current = false;
+    await router.push(withChrome(`/resume/create?template=${router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}`));
   };
 
   const saveModal =
@@ -983,7 +822,7 @@ export default function CreateResumePage() {
           overflow-x: hidden;
         }
 
-        @media (max-width: 1279px) {
+        @media (max-width: 1023px) {
           .ft-resume-top-grid,
           .ft-resume-main-grid {
             grid-template-columns: 1fr !important;
@@ -992,72 +831,365 @@ export default function CreateResumePage() {
       `}</style>
 
       <div style={{ width: '100%', boxSizing: 'border-box' }} className="overflow-x-hidden">
-        {/* TOP BAND: header + toolbar stretch across center content width, ad stays in right rail */}
         <div
           className="ft-resume-top-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: isFocusMode ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) 260px',
+            gridTemplateColumns: isFocusMode ? '1fr' : '1fr 260px',
             gap: 16,
             alignItems: 'start',
             marginBottom: 4,
+            width: '100%',
           }}
         >
           <div style={{ minWidth: 0, display: 'grid', gap: 12 }}>
             <div>{Header}</div>
 
-            <div style={{ ...GLASS_CARD, padding: '10px 14px', minHeight: 130 }}>
-              {/* ROW 1: Template + Mode + Preview */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-                <span style={{ fontWeight: 900, color: '#C2410C', fontSize: 13, whiteSpace: 'nowrap' }}>
-                  {templateName}
-                </span>
-                <span style={{ color: '#CBD5E1' }}>•</span>
-                <span style={{ fontWeight: 700, color: '#475569', fontSize: 12 }}>Base:</span>
-                <button onClick={() => router.push(buildResumeCreateHref('reverse'))} style={{ fontWeight: router.query.template !== 'hybrid' ? 900 : 700, color: router.query.template !== 'hybrid' ? ORANGE : '#64748B', background: 'none', border: 'none', textDecoration: router.query.template !== 'hybrid' ? 'underline' : 'none', cursor: 'pointer', fontSize: 13, padding: 0 }}>Reverse</button>
-                <span style={{ color: '#94A3B8' }}>|</span>
-                <button onClick={() => router.push(buildResumeCreateHref('hybrid'))} style={{ fontWeight: router.query.template === 'hybrid' ? 900 : 700, color: router.query.template === 'hybrid' ? ORANGE : '#64748B', background: 'none', border: 'none', textDecoration: router.query.template === 'hybrid' ? 'underline' : 'none', cursor: 'pointer', fontSize: 13, padding: 0 }}>Hybrid</button>
-                <span style={{ color: '#CBD5E1' }}>•</span>
-                <span style={{ fontWeight: 700, color: '#475569', fontSize: 12 }}>Preview:</span>
-                <button type="button" onClick={() => setPreviewMode('standard')} style={{ borderRadius: 999, padding: '3px 8px', fontSize: 11, border: previewMode === 'standard' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)', background: previewMode === 'standard' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.65)', color: previewMode === 'standard' ? '#C2410C' : '#475569', fontWeight: 800, cursor: 'pointer' }}>Standard</button>
-                <button type="button" onClick={() => setPreviewMode('signal-test')} style={{ borderRadius: 999, padding: '3px 8px', fontSize: 11, border: previewMode === 'signal-test' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)', background: previewMode === 'signal-test' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.65)', color: previewMode === 'signal-test' ? '#C2410C' : '#475569', fontWeight: 800, cursor: 'pointer' }}>ForgeFormat</button>
+            <div
+              style={{
+                ...GLASS_CARD,
+                padding: '12px 16px',
+                minHeight: 132,
+                width: '100%',
+              }}
+            >
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(260px, 1.5fr) minmax(220px, auto) minmax(220px, auto) auto',
+                  gap: 12,
+                  alignItems: 'center',
+                  marginBottom: 12,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 900, fontSize: 14, color: '#111827', whiteSpace: 'nowrap' }}>Resume:</span>
+
+                  <select
+                    value={selectedResumeId}
+                    onChange={(e) => setSelectedResumeId(e.target.value)}
+                    style={{
+                      minWidth: 240,
+                      maxWidth: 360,
+                      height: 36,
+                      borderRadius: 999,
+                      border: '1px solid rgba(0,0,0,0.10)',
+                      background: 'rgba(255,255,255,0.85)',
+                      padding: '0 14px',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: '#334155',
+                      outline: 'none',
+                    }}
+                  >
+                    {existingResumes.length === 0 ? (
+                      <option value="">No saved resumes yet</option>
+                    ) : (
+                      existingResumes.map((r) => (
+                        <option key={r.id} value={String(r.id)}>
+                          {r.name || r.resumeName || 'Untitled Resume'}
+                        </option>
+                      ))
+                    )}
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={handleLoadSelectedResume}
+                    style={{
+                      borderRadius: 999,
+                      padding: '7px 14px',
+                      fontSize: 12,
+                      border: '1px solid rgba(0,0,0,0.12)',
+                      background: 'rgba(255,255,255,0.80)',
+                      color: '#334155',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Load
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCreateNewResume}
+                    style={{
+                      borderRadius: 999,
+                      padding: '7px 14px',
+                      fontSize: 12,
+                      border: '1px solid rgba(0,0,0,0.12)',
+                      background: 'rgba(255,255,255,0.80)',
+                      color: '#334155',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    New
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 700, color: '#475569', fontSize: 12, whiteSpace: 'nowrap' }}>
+                    Base Template:
+                  </span>
+                  <button
+                    onClick={() => router.push(buildResumeCreateHref('reverse'))}
+                    style={{
+                      borderRadius: 999,
+                      padding: '5px 12px',
+                      fontSize: 12,
+                      border: router.query.template !== 'hybrid' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
+                      background: router.query.template !== 'hybrid' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
+                      color: router.query.template !== 'hybrid' ? '#C2410C' : '#64748B',
+                      fontWeight: router.query.template !== 'hybrid' ? 900 : 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Reverse
+                  </button>
+                  <button
+                    onClick={() => router.push(buildResumeCreateHref('hybrid'))}
+                    style={{
+                      borderRadius: 999,
+                      padding: '5px 12px',
+                      fontSize: 12,
+                      border: router.query.template === 'hybrid' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
+                      background: router.query.template === 'hybrid' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
+                      color: router.query.template === 'hybrid' ? '#C2410C' : '#64748B',
+                      fontWeight: router.query.template === 'hybrid' ? 900 : 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Hybrid
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 700, color: '#475569', fontSize: 12, whiteSpace: 'nowrap' }}>
+                    View:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('standard')}
+                    style={{
+                      borderRadius: 999,
+                      padding: '5px 12px',
+                      fontSize: 12,
+                      border: previewMode === 'standard' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
+                      background: previewMode === 'standard' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
+                      color: previewMode === 'standard' ? '#C2410C' : '#475569',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Standard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('signal-test')}
+                    style={{
+                      borderRadius: 999,
+                      padding: '5px 12px',
+                      fontSize: 12,
+                      border: previewMode === 'signal-test' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
+                      background: previewMode === 'signal-test' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
+                      color: previewMode === 'signal-test' ? '#C2410C' : '#475569',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ForgeFormat
+                  </button>
+                </div>
+
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, justifySelf: 'end' }}>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: '#94A3B8',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                    }}
+                  >
+                    Status:
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 900,
+                      borderRadius: 999,
+                      padding: '5px 12px',
+                      ...statusStyles,
+                    }}
+                  >
+                    {statusLabel}
+                  </span>
+                </div>
               </div>
 
-              {/* ROW 2: Actions + Status */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => setIsHammerOpen((v) => !v)} style={{ borderRadius: 999, padding: '5px 12px', fontSize: 12, border: `1px solid rgba(255,112,67,0.40)`, background: 'rgba(255,112,67,0.10)', color: '#C2410C', fontWeight: 800, cursor: 'pointer' }}>🔨 Open Hammer</button>
-                <button type="button" onClick={() => setIsFocusMode((v) => !v)} style={{ borderRadius: 999, padding: '5px 12px', fontSize: 12, border: isFocusMode ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.15)', background: isFocusMode ? 'rgba(255,112,67,0.12)' : 'rgba(255,255,255,0.80)', color: isFocusMode ? '#C2410C' : '#334155', fontWeight: 800, cursor: 'pointer' }}>{isFocusMode ? '← Exit Focus' : '🎯 Focus Resume'}</button>
-                <span style={{ width: 1, height: 20, background: 'rgba(0,0,0,0.12)', flexShrink: 0 }} />
-                {router.query.template === 'hybrid' ? (
-                  <HybridATSButton data={resumeData}><div style={{ background: '#0F766E', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>System PDF</div></HybridATSButton>
-                ) : (
-                  <ReverseATSButton data={resumeData}><div style={{ background: '#0F766E', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>System PDF</div></ReverseATSButton>
-                )}
-                <DesignedPDFButton data={resumeData} template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}><div style={{ background: ORANGE, color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>Designed PDF</div></DesignedPDFButton>
-                <button type="button" onClick={handleSaveClick} style={{ background: '#16A34A', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer' }}>Save Resume</button>
-                {isResumeComplete && (
-                  <button type="button" onClick={() => router.push(withChrome('/cover/create'))} style={{ background: '#7C3AED', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer' }}>Next: Cover Letter →</button>
-                )}
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status:</span>
-                  <span style={{
-                    fontSize: 12,
-                    fontWeight: 900,
-                    color: !summary && !experiences?.length ? '#94A3B8'
-                      : jd ? '#10B981'
-                      : '#FF7043',
-                    background: !summary && !experiences?.length ? 'rgba(148,163,184,0.10)'
-                      : jd ? 'rgba(16,185,129,0.10)'
-                      : 'rgba(255,112,67,0.10)',
-                    border: `1px solid ${!summary && !experiences?.length ? 'rgba(148,163,184,0.30)' : jd ? 'rgba(16,185,129,0.30)' : 'rgba(255,112,67,0.30)'}`,
-                    borderRadius: 999,
-                    padding: '3px 10px',
-                  }}>
-                    {!summary && !experiences?.length ? 'Draft'
-                      : !jd && (summary || experiences?.length) ? 'Usable'
-                      : jd && !(summary && experiences?.length) ? 'Targeted'
-                      : 'Ready to Send'}
-                  </span>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(320px, 1fr) auto',
+                  gap: 12,
+                  alignItems: 'center',
+                  width: '100%',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    flexWrap: 'wrap',
+                    width: '100%',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setIsEditMode(true)}
+                    style={{
+                      borderRadius: 999,
+                      padding: '7px 14px',
+                      fontSize: 12,
+                      border: isEditMode ? `1px solid rgba(255,112,67,0.40)` : '1px solid rgba(0,0,0,0.12)',
+                      background: isEditMode ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.80)',
+                      color: isEditMode ? '#C2410C' : '#334155',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ✏️ Edit Resume
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsEditMode(false)}
+                    style={{
+                      borderRadius: 999,
+                      padding: '7px 14px',
+                      fontSize: 12,
+                      border: !isEditMode ? `1px solid rgba(255,112,67,0.40)` : '1px solid rgba(0,0,0,0.12)',
+                      background: !isEditMode ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.80)',
+                      color: !isEditMode ? '#C2410C' : '#334155',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    👁 View Resume
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsHammerOpen((v) => !v)}
+                    style={{
+                      borderRadius: 999,
+                      padding: '7px 14px',
+                      fontSize: 12,
+                      border: '1px solid rgba(255,112,67,0.40)',
+                      background: 'rgba(255,112,67,0.10)',
+                      color: '#C2410C',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    🔨 Open Forge Hammer
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsFocusMode((v) => !v)}
+                    style={{
+                      borderRadius: 999,
+                      padding: '7px 14px',
+                      fontSize: 12,
+                      border: isFocusMode ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.15)',
+                      background: isFocusMode ? 'rgba(255,112,67,0.12)' : 'rgba(255,255,255,0.80)',
+                      color: isFocusMode ? '#C2410C' : '#334155',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {isFocusMode ? '← Exit Focus' : '🎯 Focus Resume'}
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: 10,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  {router.query.template === 'hybrid' ? (
+                    <HybridATSButton data={resumeData}>
+                      <div
+                        style={{
+                          background: '#0F766E',
+                          color: 'white',
+                          padding: '7px 14px',
+                          borderRadius: 999,
+                          fontWeight: 800,
+                          fontSize: 12,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        System PDF
+                      </div>
+                    </HybridATSButton>
+                  ) : (
+                    <ReverseATSButton data={resumeData}>
+                      <div
+                        style={{
+                          background: '#0F766E',
+                          color: 'white',
+                          padding: '7px 14px',
+                          borderRadius: 999,
+                          fontWeight: 800,
+                          fontSize: 12,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        System PDF
+                      </div>
+                    </ReverseATSButton>
+                  )}
+
+                  <DesignedPDFButton data={resumeData} template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}>
+                    <div
+                      style={{
+                        background: ORANGE,
+                        color: 'white',
+                        padding: '7px 14px',
+                        borderRadius: 999,
+                        fontWeight: 800,
+                        fontSize: 12,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Designed PDF
+                    </div>
+                  </DesignedPDFButton>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveClick}
+                    style={{
+                      background: '#16A34A',
+                      color: 'white',
+                      padding: '7px 14px',
+                      borderRadius: 999,
+                      fontWeight: 800,
+                      fontSize: 12,
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Save Resume
+                  </button>
                 </div>
               </div>
             </div>
@@ -1070,20 +1202,16 @@ export default function CreateResumePage() {
           )}
         </div>
 
-        {/* MAIN BAND: full resume workspace */}
         <div
-  className="ft-resume-main-grid"
-  style={{
-    display: 'grid',
-    gridTemplateColumns: isFocusMode ? 'minmax(0, 1fr)' : 'minmax(0, 1fr)',
-    gap: 16,
-    alignItems: 'start',
-    marginTop: 16,
-  }}
->
-          {/* Phase 3: Left panel removed — editing happens directly on resume */}
-
-          {/* Phase 4: Full-width live resume editor */}
+          className="ft-resume-main-grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr)',
+            gap: 16,
+            alignItems: 'start',
+            marginTop: 8,
+          }}
+        >
           <div
             style={{
               ...GLASS_CARD,
@@ -1091,30 +1219,71 @@ export default function CreateResumePage() {
               overflow: 'hidden',
             }}
           >
-            {/* Preview header */}
-            <div style={{ padding: '10px 16px', background: 'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))', color: 'white', fontWeight: 900, fontSize: 13, letterSpacing: 0.4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div
+              style={{
+                padding: '10px 16px',
+                background: 'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',
+                color: 'white',
+                fontWeight: 900,
+                fontSize: 13,
+                letterSpacing: 0.4,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <span>{isEditMode ? '✏️ LIVE RESUME EDITOR' : '👁 RESUME PREVIEW'}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button type="button" onClick={() => setIsEditMode((v) => !v)} style={{ background: 'rgba(255,255,255,0.20)', border: 'none', color: 'white', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontWeight: 800, fontSize: 11 }}>{isEditMode ? 'View' : 'Edit'}</button>
-                <button type="button" onClick={() => setPreviewPage((p) => Math.max(1, p - 1))} disabled={previewPage <= 1} style={{ background: previewPage <= 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.30)', border: 'none', color: 'white', borderRadius: 6, padding: '3px 8px', cursor: previewPage <= 1 ? 'default' : 'pointer', fontWeight: 800, fontSize: 13, opacity: previewPage <= 1 ? 0.4 : 1 }}>‹</button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewPage((p) => Math.max(1, p - 1))}
+                  disabled={previewPage <= 1}
+                  style={{
+                    background: previewPage <= 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.30)',
+                    border: 'none',
+                    color: 'white',
+                    borderRadius: 6,
+                    padding: '3px 8px',
+                    cursor: previewPage <= 1 ? 'default' : 'pointer',
+                    fontWeight: 800,
+                    fontSize: 13,
+                    opacity: previewPage <= 1 ? 0.4 : 1,
+                  }}
+                >
+                  ‹
+                </button>
                 <span style={{ fontSize: 12, opacity: 0.85 }}>Pg {previewPage}</span>
-                <button type="button" onClick={() => setPreviewPage((p) => p + 1)} style={{ background: 'rgba(255,255,255,0.30)', border: 'none', color: 'white', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontWeight: 800, fontSize: 13 }}>›</button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewPage((p) => p + 1)}
+                  style={{
+                    background: 'rgba(255,255,255,0.30)',
+                    border: 'none',
+                    color: 'white',
+                    borderRadius: 6,
+                    padding: '3px 8px',
+                    cursor: 'pointer',
+                    fontWeight: 800,
+                    fontSize: 13,
+                  }}
+                >
+                  ›
+                </button>
               </div>
             </div>
 
-            {/* Resume canvas — full width, no transform hacks */}
             <div id="resume-preview" style={{ padding: 24, background: '#fff', minHeight: 760, overflow: 'auto' }}>
               {previewMode === 'signal-test' ? (
                 <SignalResumeTestTemplate data={resumeData} />
               ) : TemplateComp && typeof TemplateComp === 'function' ? (
                 <TemplateComp data={resumeData} isEditable={isEditMode} />
               ) : (
-                <div style={{ textAlign: 'center', marginTop: 80, color: '#999', fontSize: 18 }}>Loading your resume template...</div>
+                <div style={{ textAlign: 'center', marginTop: 80, color: '#999', fontSize: 18 }}>
+                  Loading your resume template...
+                </div>
               )}
             </div>
           </div>
-
-          {/* Phase 5: Static hammer column removed — hammer is now a slide panel */}
         </div>
       </div>
 
@@ -1139,52 +1308,179 @@ export default function CreateResumePage() {
 
       {saveModal}
 
-      {/* Phase 5: Forge Hammer Slide Panel */}
       {isHammerOpen && (
-        <div style={{ position: 'fixed', top: 0, right: 0, width: 420, height: '100vh', background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', zIndex: 1000, boxShadow: '-10px 0 30px rgba(0,0,0,0.20)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-          {/* Hammer header */}
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,112,67,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.95)', position: 'sticky', top: 0, zIndex: 1 }}>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            right: 0,
+            width: 420,
+            height: '100vh',
+            background: 'rgba(255,255,255,0.97)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            zIndex: 1000,
+            boxShadow: '-10px 0 30px rgba(0,0,0,0.20)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto',
+          }}
+        >
+          <div
+            style={{
+              padding: '14px 16px',
+              borderBottom: '1px solid rgba(255,112,67,0.20)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(255,255,255,0.95)',
+              position: 'sticky',
+              top: 0,
+              zIndex: 1,
+            }}
+          >
             <div>
               <div style={{ fontWeight: 900, fontSize: 15, color: '#FF7043' }}>🔨 The Forge Hammer</div>
               <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>AI hammer + resume steel + job fire</div>
             </div>
-            <button type="button" onClick={() => setIsHammerOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 22, color: '#64748B', lineHeight: 1 }}>×</button>
+            <button
+              type="button"
+              onClick={() => setIsHammerOpen(false)}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: 22,
+                color: '#64748B',
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
           </div>
 
-          {/* Job fire state */}
           <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
             {atsPack ? (
               <>
                 <div style={{ fontWeight: 800, fontSize: 13, color: '#0D47A1', marginBottom: 4 }}>🔥 Job fire loaded</div>
-                {atsJobMeta && <div style={{ fontSize: 13, color: '#1E293B', marginBottom: 4 }}><strong>{atsJobMeta.title}</strong>{atsJobMeta.company ? ` at ${atsJobMeta.company}` : ''}</div>}
-                {hasRealAts && atsPack.ats?.score !== undefined && <div style={{ fontSize: 12, color: '#334155' }}>Match: <strong>{atsPack.ats.score}%</strong></div>}
+                {atsJobMeta && (
+                  <div style={{ fontSize: 13, color: '#1E293B', marginBottom: 4 }}>
+                    <strong>{atsJobMeta.title}</strong>
+                    {atsJobMeta.company ? ` at ${atsJobMeta.company}` : ''}
+                  </div>
+                )}
+                {hasRealAts && atsPack.ats?.score !== undefined && (
+                  <div style={{ fontSize: 12, color: '#334155' }}>
+                    Match: <strong>{atsPack.ats.score}%</strong>
+                  </div>
+                )}
               </>
             ) : jd ? (
               <>
                 <div style={{ fontWeight: 800, fontSize: 13, color: '#0D47A1', marginBottom: 4 }}>🔥 Job fire loaded</div>
-                <div style={{ fontSize: 12, color: '#334155' }}><strong>{fireMeta?.title || 'Job'}</strong>{fireMeta?.company ? ` at ${fireMeta.company}` : ''}</div>
-                <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>Your keyword coverage and match insights are now based on this posting.</div>
+                <div style={{ fontSize: 12, color: '#334155' }}>
+                  <strong>{fireMeta?.title || 'Job'}</strong>
+                  {fireMeta?.company ? ` at ${fireMeta.company}` : ''}
+                </div>
+                <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
+                  Your keyword coverage and match insights are now based on this posting.
+                </div>
               </>
             ) : (
               <>
                 <div style={{ fontWeight: 800, fontSize: 13, color: '#FF7043', marginBottom: 6 }}>🔥 Add the fire.</div>
-                <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>Drop a job description to unlock match insights, keyword coverage, and tailored guidance for this role.</div>
+                <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>
+                  Drop a job description to unlock match insights, keyword coverage, and tailored guidance for this role.
+                </div>
               </>
             )}
-            {(jd || atsPack) && <button type="button" onClick={clearJobFire} style={{ marginTop: 8, background: 'transparent', border: 'none', color: '#B91C1C', fontWeight: 800, fontSize: 12, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Clear loaded job</button>}
+            {(jd || atsPack) && (
+              <button
+                type="button"
+                onClick={clearJobFire}
+                style={{
+                  marginTop: 8,
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#B91C1C',
+                  fontWeight: 800,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  padding: 0,
+                }}
+              >
+                Clear loaded job
+              </button>
+            )}
           </div>
 
-          {/* JD drop zone */}
-          <div ref={dropRef} onClick={() => { if (fileInputRef.current) fileInputRef.current.value = ''; fileInputRef.current?.click(); }} style={{ margin: '12px 16px', padding: 16, border: '2px dashed rgba(144,202,249,0.95)', borderRadius: 14, textAlign: 'center', background: 'rgba(227,242,253,0.85)', cursor: 'pointer' }}>
+          <div
+            ref={dropRef}
+            onClick={() => {
+              if (fileInputRef.current) fileInputRef.current.value = '';
+              fileInputRef.current?.click();
+            }}
+            style={{
+              margin: '12px 16px',
+              padding: 16,
+              border: '2px dashed rgba(144,202,249,0.95)',
+              borderRadius: 14,
+              textAlign: 'center',
+              background: 'rgba(227,242,253,0.85)',
+              cursor: 'pointer',
+            }}
+          >
             <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#334155' }}>
-              Drop a job description here<br />or{' '}
-              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (fileInputRef.current) fileInputRef.current.value = ''; fileInputRef.current?.click(); }} style={{ color: ORANGE, background: 'none', border: 0, fontWeight: 900, textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>upload file</button>
+              Drop a job description here
+              <br />
+              or{' '}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                  fileInputRef.current?.click();
+                }}
+                style={{
+                  color: ORANGE,
+                  background: 'none',
+                  border: 0,
+                  fontWeight: 900,
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                }}
+              >
+                upload file
+              </button>
             </p>
-            <input ref={fileInputRef} type="file" accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} style={{ display: 'none' }} />
-            {(jdLoading || jdStatus) && <div style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: jdStatus?.startsWith?.('Failed') ? '#B91C1C' : '#0D47A1' }}>{jdLoading ? 'Processing…' : jdStatus}</div>}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleFile(f);
+                e.target.value = '';
+              }}
+              style={{ display: 'none' }}
+            />
+            {(jdLoading || jdStatus) && (
+              <div
+                style={{
+                  marginTop: 8,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: jdStatus?.startsWith?.('Failed') ? '#B91C1C' : '#0D47A1',
+                }}
+              >
+                {jdLoading ? 'Processing…' : jdStatus}
+              </div>
+            )}
           </div>
 
-          {/* Intelligence panel */}
           {jd && (
             <div style={{ padding: '0 16px 16px' }}>
               <ForgeHammerPanel
@@ -1196,10 +1492,15 @@ export default function CreateResumePage() {
                 education={educationList}
                 jobMeta={fireMeta || null}
                 onAddSkill={(k) => setSkills((s) => [...s, k])}
-                onAddSummary={(k) => setSummary((s) => (s ? `${s}
-
-${k}` : k))}
-                onAddBullet={(k) => { const lastExp = experiences[experiences.length - 1]; if (lastExp) { setExperiences((exp) => exp.map((e, i) => (i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e))); } }}
+                onAddSummary={(k) => setSummary((s) => (s ? `${s}\n\n${k}` : k))}
+                onAddBullet={(k) => {
+                  const lastExp = experiences[experiences.length - 1];
+                  if (lastExp) {
+                    setExperiences((exp) =>
+                      exp.map((e, i) => (i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e))
+                    );
+                  }
+                }}
               />
             </div>
           )}
