@@ -169,13 +169,11 @@ export default function ResumeBuilderLayout({
         {/* Top nav — same as any other page */}
         <HeaderComp />
 
-        {/* Page wrapper: left sidebar + full-width content (ad rail floats top-right) */}
+        {/* Page: left sidebar | right content+adrail */}
         <div
           style={{
             display: isMobile ? 'block' : 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : '240px 1fr',
-            gridTemplateRows: isMobile ? 'auto' : 'auto 1fr',
-            gridTemplateAreas: isMobile ? '"content"' : '"left adtop" "left content"',
+            gridTemplateColumns: isMobile ? '1fr' : '240px minmax(0, 1fr)',
             gap: 12,
             alignItems: 'start',
             width: '100%',
@@ -187,21 +185,24 @@ export default function ResumeBuilderLayout({
         >
           {/* Left sidebar */}
           {!isMobile && (
-            <aside style={{ gridArea: 'left', position: 'sticky', top: 12, alignSelf: 'start', zIndex: 10 }}>
+            <aside style={{ position: 'sticky', top: 12, alignSelf: 'start', zIndex: 10 }}>
               <SidebarComp {...sidebarProps} />
             </aside>
           )}
 
-          {/* Ad rail — top right only */}
-          {!isMobile && (
-            <aside style={{ gridArea: 'adtop', alignSelf: 'start', zIndex: 10, borderRadius: 14, border: '1px solid rgba(255,255,255,0.22)', background: 'transparent' }}>
-              <RightRailPlacementManager slot="right_rail_1" />
-            </aside>
-          )}
+          {/* Right side: ad rail top-right + content below spanning full width */}
+          <div style={{ minWidth: 0, position: 'relative' }}>
+            {/* Ad rail — positioned top right, does not affect content flow */}
+            {!isMobile && (
+              <div style={{ position: 'absolute', top: 0, right: 0, width: 260, zIndex: 10 }}>
+                <RightRailPlacementManager slot="right_rail_1" />
+              </div>
+            )}
 
-          {/* Builder canvas — spans full width of right column, under ad rail */}
-          <div style={{ gridArea: 'content', minWidth: 0 }}>
-            {children}
+            {/* Builder content — full width, ad rail floats above it */}
+            <div style={{ minWidth: 0, paddingRight: isMobile ? 0 : 272 }}>
+              {children}
+            </div>
           </div>
         </div>
       </div>
