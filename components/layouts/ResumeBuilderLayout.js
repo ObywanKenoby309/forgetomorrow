@@ -22,6 +22,11 @@ import SeekerHeader from '@/components/seeker/SeekerHeader';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 import MobileBottomBar from '@/components/mobile/MobileBottomBar';
+import SeekerSidebar from '@/components/SeekerSidebar';
+import CoachingSidebar from '@/components/coaching/CoachingSidebar';
+import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import useSidebarCounts from '@/components/hooks/useSidebarCounts';
 
 // ✅ Match SeekerLayout: isomorphic layout effect
 const useIsomorphicLayoutEffect =
@@ -103,6 +108,21 @@ export default function ResumeBuilderLayout({
     }
   }, [chromeMode]);
 
+  // ── Sidebar + counts ───────────────────────────────────────────────────────
+  const seekerCounts = useSidebarCounts();
+
+  const { SidebarComp, sidebarProps } = useMemo(() => {
+    switch (chromeMode) {
+      case 'coach':
+        return { SidebarComp: CoachingSidebar, sidebarProps: { active: 'resume-cover' } };
+      case 'recruiter-smb':
+      case 'recruiter-ent':
+        return { SidebarComp: RecruiterSidebar, sidebarProps: { active: 'resume-cover' } };
+      default:
+        return { SidebarComp: SeekerSidebar, sidebarProps: { active: 'resume-cover', counts: seekerCounts } };
+    }
+  }, [chromeMode, seekerCounts]);
+
   // ── Mobile ─────────────────────────────────────────────────────────────────
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -149,19 +169,48 @@ export default function ResumeBuilderLayout({
         {/* Top nav — same as any other page */}
         <HeaderComp />
 
-        {/* Full-width canvas below nav — no sidebar, no ad rail */}
+        {/* 3-column page grid: left sidebar | builder canvas | right ad rail */}
         <div
           style={{
+            display: isMobile ? 'block' : 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '240px minmax(0, 1fr) 260px',
+            gap: 12,
+            alignItems: 'start',
             width: '100%',
             maxWidth: '100vw',
             boxSizing: 'border-box',
-            padding: isMobile
-              ? '12px 10px 100px'  // bottom pad for mobile bottom bar
-              : '16px 16px 24px',
+            padding: isMobile ? '12px 10px 100px' : '12px 12px 24px',
             overflowX: 'hidden',
           }}
         >
-          {children}
+          {/* Left sidebar — hidden on mobile */}
+          {!isMobile && (
+            <aside style={{ position: 'sticky', top: 12, alignSelf: 'start', zIndex: 10 }}>
+              <SidebarComp {...sidebarProps} />
+            </aside>
+          )}
+
+          {/* Builder canvas — the full 3-zone grid lives here */}
+          <div style={{ minWidth: 0, width: '100%' }}>
+            {children}
+          </div>
+
+          {/* Right ad rail — hidden on mobile */}
+          {!isMobile && (
+            <aside
+              style={{
+                position: 'sticky',
+                top: 12,
+                alignSelf: 'start',
+                zIndex: 10,
+                borderRadius: 14,
+                border: '1px solid rgba(255,255,255,0.22)',
+                background: 'transparent',
+              }}
+            >
+              <RightRailPlacementManager slot="right_rail_1" />
+            </aside>
+          )}
         </div>
       </div>
 
@@ -241,9 +290,7 @@ export default function ResumeBuilderLayout({
                 ×
               </button>
             </div>
-            <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>
-              Use a desktop browser for the full Resume Builder experience.
-            </p>
+            <SeekerSidebar active="resume-cover" counts={seekerCounts} />
           </div>
         </div>
       )}
