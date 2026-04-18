@@ -1206,8 +1206,8 @@ export default function CreateResumePage() {
             gridTemplateColumns: isFocusMode
               ? 'minmax(0, 1fr)'
               : isLeftCollapsed
-              ? '52px minmax(0, 1fr) 320px'
-              : '260px minmax(0, 1fr) 320px',
+              ? '52px minmax(0, 1fr) minmax(280px, 1fr)'
+              : '240px minmax(0, 1.6fr) minmax(280px, 1fr)',
             gap: 16,
             alignItems: 'start',
             transition: 'grid-template-columns 0.25s ease',
