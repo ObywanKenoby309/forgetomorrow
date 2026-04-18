@@ -1194,27 +1194,21 @@ export default function CreateResumePage() {
             </div>
           </div>
 
-          {!isFocusMode && (
-  <div
-    style={{
-      width: '100%',
-      maxWidth: 248,
-      margin: '0 auto',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'flex-start',
-    }}
-  >
-    <div
-      style={{
-        transform: 'scale(0.82)',
-        transformOrigin: 'top center',
-      }}
-    >
-      <RightRailPlacementManager slot="right_rail_1" />
-    </div>
-  </div>
-)}
+          <div
+  className="ft-resume-main-grid"
+  style={{
+    display: 'grid',
+    gridTemplateColumns: isFocusMode
+      ? 'minmax(0, 1fr)'
+      : isLeftCollapsed
+      ? '52px minmax(0, 2.2fr) minmax(300px, 0.8fr)'
+      : '240px minmax(0, 2.2fr) minmax(300px, 0.8fr)',
+    gap: 16,
+    alignItems: 'start',
+    marginTop: -18,
+    transition: 'grid-template-columns 0.25s ease',
+  }}
+>
         </div>
 
         {/* MAIN BAND: left controls | center preview | right hammer */}
