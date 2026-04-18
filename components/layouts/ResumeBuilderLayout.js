@@ -1,16 +1,14 @@
 // components/layouts/ResumeBuilderLayout.js
 //
 // Full-width layout for the Resume Builder.
-// Keeps the ForgeTomorrow top nav and wallpaper — removes left sidebar and right ad rail.
-// The entire viewport below the nav is the builder canvas.
+// Keeps the ForgeTomorrow top nav and wallpaper.
+// This layout owns only:
+// - top nav
+// - left sidebar
+// - main content canvas
 //
-// DO NOT use SeekerLayout on the resume builder page.
-// This layout owns that page entirely.
-//
-// Props:
-//   title       — <title> string
-//   children    — the 3-zone builder grid
-//   forceChrome — optional chrome override (seeker / recruiter-smb / recruiter-ent / coach)
+// The page itself owns any right-rail composition.
+// DO NOT render RightRailPlacementManager here.
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
@@ -25,10 +23,8 @@ import MobileBottomBar from '@/components/mobile/MobileBottomBar';
 import SeekerSidebar from '@/components/SeekerSidebar';
 import CoachingSidebar from '@/components/coaching/CoachingSidebar';
 import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
-import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import useSidebarCounts from '@/components/hooks/useSidebarCounts';
 
-// ✅ Match SeekerLayout: isomorphic layout effect
 const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
@@ -41,9 +37,7 @@ function normalizeChrome(input) {
   if (raw === 'recruiter') return 'recruiter-smb';
   if (raw === 'recruiter_smb' || raw === 'smb') return 'recruiter-smb';
   if (raw === 'recruiter-ent' || raw === 'enterprise' || raw === 'ent') return 'recruiter-ent';
-  if (raw.startsWith('recruiter')) {
-    return raw.includes('ent') ? 'recruiter-ent' : 'recruiter-smb';
-  }
+  if (raw.startsWith('recruiter')) return raw.includes('ent') ? 'recruiter-ent' : 'recruiter-smb';
   if (raw === 'coach') return 'coach';
   if (raw === 'seeker') return 'seeker';
   return '';
@@ -57,16 +51,16 @@ export default function ResumeBuilderLayout({
   const router = useRouter();
   const { isLoaded: planLoaded, plan, role } = usePlan();
 
-  // ── Chrome mode (same logic as SeekerLayout) ──────────────────────────────
-  const [chromeMode, setChromeMode] = useState(() => {
-    return normalizeChrome(forceChrome) || 'seeker';
-  });
+  const [chromeMode, setChromeMode] = useState(() => normalizeChrome(forceChrome) || 'seeker');
 
   useEffect(() => {
     if (!router?.isReady) return;
 
     const forced = normalizeChrome(forceChrome);
-    if (forced) { setChromeMode(forced); return; }
+    if (forced) {
+      setChromeMode(forced);
+      return;
+    }
 
     const urlChrome = normalizeChrome(router.query?.chrome);
     const dbRole = String(role || '').toLowerCase();
@@ -78,7 +72,9 @@ export default function ResumeBuilderLayout({
 
     const dbPreferred = planLoaded && isRecruiterAccount
       ? isEnterpriseAccount ? 'recruiter-ent' : 'recruiter-smb'
-      : planLoaded && isCoachAccount ? 'coach' : 'seeker';
+      : planLoaded && isCoachAccount
+      ? 'coach'
+      : 'seeker';
 
     if (urlChrome === 'recruiter-smb' || urlChrome === 'recruiter-ent') {
       if (planLoaded && isRecruiterAccount) {
@@ -95,20 +91,20 @@ export default function ResumeBuilderLayout({
     }
 
     if (planLoaded) setChromeMode(dbPreferred);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router?.isReady, router?.query?.chrome, forceChrome, planLoaded, plan, role]);
 
-  // ── Header selection ───────────────────────────────────────────────────────
   const HeaderComp = useMemo(() => {
     switch (chromeMode) {
-      case 'coach':        return CoachingHeader;
+      case 'coach':
+        return CoachingHeader;
       case 'recruiter-smb':
-      case 'recruiter-ent': return RecruiterHeader;
-      default:             return SeekerHeader;
+      case 'recruiter-ent':
+        return RecruiterHeader;
+      default:
+        return SeekerHeader;
     }
   }, [chromeMode]);
 
-  // ── Sidebar + counts ───────────────────────────────────────────────────────
   const seekerCounts = useSidebarCounts();
 
   const { SidebarComp, sidebarProps } = useMemo(() => {
@@ -123,7 +119,6 @@ export default function ResumeBuilderLayout({
     }
   }, [chromeMode, seekerCounts]);
 
-  // ── Mobile ─────────────────────────────────────────────────────────────────
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.innerWidth < 1024;
@@ -141,7 +136,6 @@ export default function ResumeBuilderLayout({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // ── Wallpaper ──────────────────────────────────────────────────────────────
   const { wallpaperUrl } = useUserWallpaper();
 
   const backgroundStyle = wallpaperUrl
@@ -158,7 +152,6 @@ export default function ResumeBuilderLayout({
         backgroundColor: '#ECEFF1',
       };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
       <Head>
@@ -166,10 +159,8 @@ export default function ResumeBuilderLayout({
       </Head>
 
       <div style={backgroundStyle}>
-        {/* Top nav — same as any other page */}
         <HeaderComp />
 
-        {/* Page: left sidebar | right content+adrail */}
         <div
           style={{
             display: isMobile ? 'block' : 'grid',
@@ -183,24 +174,24 @@ export default function ResumeBuilderLayout({
             overflowX: 'hidden',
           }}
         >
-          {/* Left sidebar */}
           {!isMobile && (
             <aside style={{ position: 'sticky', top: 12, alignSelf: 'start', zIndex: 10 }}>
               <SidebarComp {...sidebarProps} />
             </aside>
           )}
 
-          {/* Right side: ad rail in normal flow on top, content below */}
           <div style={{ minWidth: 0 }}>
+            {children}
+          </div>
+        </div>
+      </div>
 
-      {/* Mobile bottom bar — same as SeekerLayout */}
       <MobileBottomBar
         isMobile={isMobile}
         chromeMode={chromeMode}
         onOpenTools={handleOpenTools}
       />
 
-      {/* Mobile tools sheet — minimal, no sidebar needed for builder */}
       {isMobile && mobileToolsOpen && (
         <div
           style={{

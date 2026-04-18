@@ -19,18 +19,15 @@ import { getResumeTemplateComponent } from '@/lib/templates';
 import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
 import { uploadJD } from '@/lib/jd/uploadToApi';
 import SignalResumeTestTemplate from '@/components/resume-form/templates/SignalResumeTestTemplate';
-import BulkExportCTA from '@/components/BulkExportCTA';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
-// === IMPORT 3 BUTTONS ===
 import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
 import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
-import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton'; // ← NEW
+import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton';
 
 const ForgeHammerPanel = dynamic(() => import('@/components/hammer/ForgeHammerPanel'), { ssr: false });
 
 const ORANGE = '#FF7043';
 
-// Draft keys (DB-backed)
 const DRAFT_KEYS = {
   LAST_JOB_TEXT: 'ft_last_job_text',
   ATS_PACK: 'forge-ats-pack',
@@ -90,7 +87,7 @@ function Section({ title, open, onToggle, children, required = false, dense = fa
             ? 'linear-gradient(180deg, rgba(255,112,67,0.10), rgba(255,255,255,0))'
             : 'linear-gradient(180deg, rgba(0,0,0,0.03), rgba(255,255,255,0))',
           textAlign: 'left',
-          fontWeight: dense ? 900 : 900,
+          fontWeight: 900,
           fontSize: dense ? 13 : 15,
           display: 'flex',
           justifyContent: 'space-between',
@@ -102,9 +99,7 @@ function Section({ title, open, onToggle, children, required = false, dense = fa
         aria-expanded={open ? 'true' : 'false'}
       >
         <span style={{ minWidth: 0 }}>
-          <span style={{ color: required ? ORANGE : '#111827', fontWeight: 900 }}>
-  {title}
-</span>
+          <span style={{ color: required ? ORANGE : '#111827', fontWeight: 900 }}>{title}</span>
           {!!subtitle && (
             <div style={{ marginTop: 4, color: '#334155', fontSize: 12, fontWeight: 700 }}>
               {subtitle}
@@ -155,7 +150,6 @@ function Section({ title, open, onToggle, children, required = false, dense = fa
   );
 }
 
-// ✅ Languages input block (uses context state now)
 function LanguagesInlineSection({ languages, setLanguages }) {
   const [val, setVal] = useState('');
 
@@ -272,8 +266,8 @@ export default function CreateResumePage() {
 
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
-  const hasAppliedUploadRef = useRef(false); // ensure we only parse once per uploaded flow
-  const hasAppliedResumeLoadRef = useRef(false); // ensure resumeId hydration runs once per id
+  const hasAppliedUploadRef = useRef(false);
+  const hasAppliedResumeLoadRef = useRef(false);
 
   const {
     formData,
@@ -307,25 +301,18 @@ export default function CreateResumePage() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [existingResumes, setExistingResumes] = useState([]);
 
-  // ✅ UX: default collapsed (user chooses what they see)
   const [openRequired, setOpenRequired] = useState(false);
   const [openOptional, setOpenOptional] = useState(false);
-  const [openTailor, setOpenTailor] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(true); // collapsible tools bar
 
-  // ✅ NEW: visible JD processing status (permanent)
   const [jdLoading, setJdLoading] = useState(false);
   const [jdStatus, setJdStatus] = useState('');
 
-  // ATS context passed from jobs page (via resume-cover)
   const [atsPack, setAtsPack] = useState(null);
   const [atsJobMeta, setAtsJobMeta] = useState(null);
   const [atsAppliedFromContext, setAtsAppliedFromContext] = useState(false);
 
-  // ✅ NEW: job meta lookup for Resume-Role Align flow (jobId without pack)
   const [jobMeta, setJobMeta] = useState(null);
 
-  // ✅ Section-level collapse (user controls visibility)
   const [openContact, setOpenContact] = useState(false);
   const [openWork, setOpenWork] = useState(false);
   const [openEducation, setOpenEducation] = useState(false);
@@ -337,12 +324,10 @@ export default function CreateResumePage() {
   const [openCerts, setOpenCerts] = useState(false);
   const [openCustom, setOpenCustom] = useState(false);
 
-  // ✅ Sora layout modes
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [previewPage, setPreviewPage] = useState(1);
 
-  // ✅ Clear loaded job / ATS fire
   const clearJobFire = async () => {
     setJd('');
     setJdStatus('');
@@ -350,7 +335,7 @@ export default function CreateResumePage() {
     setAtsJobMeta(null);
     setJobMeta(null);
     setAtsAppliedFromContext(true);
-    hasAppliedUploadRef.current = false; // keep your intent
+    hasAppliedUploadRef.current = false;
 
     try {
       await fetch('/api/drafts/set', {
@@ -368,7 +353,6 @@ export default function CreateResumePage() {
     }
   };
 
-  // ✅ GLOBAL drag/drop kill switch (prevents browser opening PDFs)
   useEffect(() => {
     const prevent = (e) => {
       e.preventDefault();
@@ -384,7 +368,6 @@ export default function CreateResumePage() {
     };
   }, []);
 
-  // Draft API helpers (DB-backed)
   const getDraft = async (key) => {
     try {
       const res = await fetch(`/api/drafts/get?key=${encodeURIComponent(key)}`);
@@ -397,7 +380,6 @@ export default function CreateResumePage() {
     }
   };
 
-  // ✅ FIX: use /api/drafts/set (you do not have /api/drafts/save)
   const saveDraft = async (key, content) => {
     try {
       await fetch('/api/drafts/set', {
@@ -410,7 +392,6 @@ export default function CreateResumePage() {
     }
   };
 
-  // ✅ hydration helpers
   const coerceUploadedDraftText = (raw) => {
     if (typeof raw === 'string') return raw;
     if (raw && typeof raw === 'object' && typeof raw.text === 'string') return raw.text;
@@ -420,18 +401,8 @@ export default function CreateResumePage() {
   const applyResumePayloadToState = (payload) => {
     if (!payload || typeof payload !== 'object') return false;
 
-    const source =
-      payload.resume ||
-      payload.data ||
-      payload.item ||
-      payload.document ||
-      payload;
-
-    const sourceForm =
-      source.formData ||
-      source.personalInfo ||
-      source.contact ||
-      {};
+    const source = payload.resume || payload.data || payload.item || payload.document || payload;
+    const sourceForm = source.formData || source.personalInfo || source.contact || {};
 
     setFormData((prev) => ({
       ...prev,
@@ -447,12 +418,8 @@ export default function CreateResumePage() {
     }));
 
     if (typeof source.summary === 'string') setSummary(source.summary);
-    if (Array.isArray(source.experiences || source.workExperiences)) {
-      setExperiences(source.experiences || source.workExperiences);
-    }
-    if (Array.isArray(source.educationList || source.education)) {
-      setEducationList(source.educationList || source.education);
-    }
+    if (Array.isArray(source.experiences || source.workExperiences)) setExperiences(source.experiences || source.workExperiences);
+    if (Array.isArray(source.educationList || source.education)) setEducationList(source.educationList || source.education);
     if (Array.isArray(source.skills)) setSkills(source.skills);
     if (Array.isArray(source.projects)) setProjects(source.projects);
     if (Array.isArray(source.certifications)) setCertifications(source.certifications);
@@ -514,7 +481,6 @@ export default function CreateResumePage() {
     return withChrome(`/resume/create${qs ? `?${qs}` : ''}`);
   };
 
-  // Helper: detect if atsPack is a real result vs demo
   const hasRealAts =
     !!(atsPack && atsPack.ats && typeof atsPack.ats.score === 'number' && !/demo|sample/i.test(atsPack.ats.summary || ''));
 
@@ -522,7 +488,6 @@ export default function CreateResumePage() {
     ? new Date(saveEventAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '';
 
-  // ✅ REQUIRED completion checks (now includes EDUCATION)
   const checks = [
     summary?.trim().length > 20,
     skills?.length >= 8,
@@ -530,8 +495,6 @@ export default function CreateResumePage() {
     educationList?.length > 0 && educationList.some((edu) => (edu.school || edu.institution) && (edu.degree || edu.field)),
   ];
 
-  // Detect if the resume is effectively empty and clamp progress to 0 in that case.
-  // IMPORTANT: Ignore auto-populated fields (fullName + forgeUrl/ftProfile) so "Ready" stays 0% until user actually enters content.
   const hasAnyResumeContent =
     (formData &&
       (formData.email ||
@@ -558,15 +521,13 @@ export default function CreateResumePage() {
 
   const isResumeComplete = progress === 100;
 
-  // Load resume template
   useEffect(() => {
     if (!router.isReady) return;
     const id = router.query.template === 'hybrid' ? 'hybrid' : 'reverse';
     const comp = getResumeTemplateComponent(id);
-    setTemplateComp(() => (typeof comp === 'function' ? comp : ReverseResumeTemplate));
+    setTemplateComp(() => (typeof comp === 'function' ? comp : SignalResumeTestTemplate));
   }, [router.isReady, router.query.template]);
 
-  // Toast on save
   useEffect(() => {
     if (saveEventAt) {
       setShowToast(true);
@@ -575,7 +536,6 @@ export default function CreateResumePage() {
     }
   }, [saveEventAt]);
 
-  // 🔹 Auto-load ForgeTomorrow profile URL + name for the authenticated user
   useEffect(() => {
     async function loadProfileDefaults() {
       try {
@@ -599,7 +559,6 @@ export default function CreateResumePage() {
     loadProfileDefaults();
   }, [formData.fullName, formData.forgeUrl, formData.ftProfile, setFormData]);
 
-  // ✅ NEW: If jobId is present, fetch job meta so we can show title/company/location even without a pack
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -636,7 +595,6 @@ export default function CreateResumePage() {
     };
   }, [router.isReady, router.query.jobId]);
 
-  // ✅ NEW: hydrate exact saved resume when resumeId is present
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -672,7 +630,6 @@ export default function CreateResumePage() {
     };
   }, [router.isReady, router.query.resumeId]);
 
-  // Handle manual JD file upload / drop
   const handleFile = async (file) => {
     if (!file) return;
 
@@ -685,11 +642,9 @@ export default function CreateResumePage() {
     try {
       let raw = '';
 
-      // Non-PDF: client extract only (fast)
       if (!isPdf) {
         raw = await extractTextFromFile(file);
       } else {
-        // PDF: attempt client extract, then fallback to server if empty
         setJdStatus('Processing… (PDF parse)');
         raw = await extractTextFromFile(file);
 
@@ -737,17 +692,14 @@ export default function CreateResumePage() {
     },
     summary: summary || '',
     workExperiences: experiences,
-    projects: projects,
-    educationList: educationList,
-    certifications: certifications,
-    skills: skills,
-    languages: languages,
-    customSections: customSections,
+    projects,
+    educationList,
+    certifications,
+    skills,
+    languages,
+    customSections,
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // Autofill from uploaded resume text (from resume-cover → DB drafts)
-  // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!router.isReady) return;
     if (hasAppliedUploadRef.current) return;
@@ -764,7 +716,6 @@ export default function CreateResumePage() {
         const text = coerceUploadedDraftText(raw);
         if (!text) return;
 
-        // 🔧 FIX: Send to AI parser instead of dumping raw text into summary
         const res = await fetch('/api/resume/parse', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -773,12 +724,10 @@ export default function CreateResumePage() {
 
         if (res.ok) {
           const parsed = await res.json();
-          applyResumePayloadToState(parsed); // ← already handles all fields correctly
+          applyResumePayloadToState(parsed);
         } else {
-          // Graceful fallback: at least populate contact fields via regex
           const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
           const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-          // 🔧 FIX: tighter phone regex - avoids matching dates/zip codes
           const phoneMatch = text.match(/(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/);
 
           setFormData((prev) => ({
@@ -787,7 +736,6 @@ export default function CreateResumePage() {
             email: prev.email || (emailMatch ? emailMatch[0] : ''),
             phone: prev.phone || (phoneMatch ? phoneMatch[0].trim() : ''),
           }));
-          // ⚠️ Do NOT setSummary(raw text) — leave it blank for the user to fill
         }
 
         hasAppliedUploadRef.current = true;
@@ -799,9 +747,6 @@ export default function CreateResumePage() {
     applyUploadedResume();
   }, [router.isReady, router.query, formData.fullName, formData.name, summary, setFormData, setSummary]);
 
-  // ─────────────────────────────────────────────────────────────
-  // Apply ATS pack + JD context from resume-cover (DB drafts)
-  // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!router.isReady) return;
     if (atsAppliedFromContext) return;
@@ -855,7 +800,6 @@ export default function CreateResumePage() {
   }, [router.isReady, router.query, jd, atsAppliedFromContext]);
 
   const fireMeta = atsJobMeta || jobMeta;
-
   const greeting = getTimeGreeting();
 
   const Header = (
@@ -864,12 +808,6 @@ export default function CreateResumePage() {
       title="Resume Builder"
       subtitle="Build your resume once. Export anywhere. Reverse Chronological and Hybrid for traditional markets — ForgeFormat for people with real careers."
     />
-  );
-
-  const Footer = (
-    <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
-      Tip: Structured formatting improves compatibility with hiring systems. <em>Results vary by role and market.</em>
-    </div>
   );
 
   const handleSaveClick = async () => {
@@ -881,7 +819,7 @@ export default function CreateResumePage() {
       } else {
         setExistingResumes([]);
       }
-    } catch (e) {
+    } catch {
       setExistingResumes([]);
     }
     setShowSaveModal(true);
@@ -913,7 +851,7 @@ export default function CreateResumePage() {
       if (!res.ok) throw new Error('Save failed');
 
       setSaveEventAt(new Date().toISOString());
-    } catch (e) {
+    } catch {
       alert('Save failed. Try again.');
     }
   };
@@ -943,9 +881,7 @@ export default function CreateResumePage() {
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 6 }}>
-                Save Resume
-              </div>
+              <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 6 }}>Save Resume</div>
 
               <div style={{ color: '#64748B', fontSize: 14, marginBottom: 20 }}>
                 Save as a new resume, or overwrite an existing one.
@@ -1042,165 +978,232 @@ export default function CreateResumePage() {
 
   return (
     <ResumeBuilderLayout title="Resume Builder | ForgeTomorrow">
-      {/* ✅ Guardrails */}
       <style jsx global>{`
         html,
         body {
           overflow-x: hidden;
         }
+
+        @media (max-width: 1279px) {
+          .ft-resume-top-grid,
+          .ft-resume-main-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
       `}</style>
 
       <div style={{ width: '100%', boxSizing: 'border-box' }} className="overflow-x-hidden">
-        {/* Page header — title card above the builder */}
-        <div style={{ marginBottom: 12 }}>{Header}</div>
-
-        {/* TEMPLATE SWITCHER — full width above grid */}
-        <div style={{ ...GLASS_CARD, padding: 12, marginBottom: 16 }}>
-              <Banner>
-  <div style={{ display: 'grid', gap: 8 }}>
-    {/* Row 1: Template info + Base template + Preview mode — all inline */}
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', overflow: 'hidden' }}>
-      <span style={{ fontWeight: 900, color: '#C2410C', fontSize: 13, whiteSpace: 'nowrap' }}>
-        Template: <strong>{templateName}</strong>
-      </span>
-      <span style={{ color: '#CBD5E1', fontSize: 13 }}>•</span>
-      <span style={{ fontWeight: 800, color: '#475569', fontSize: 13 }}>Base:</span>
-      <button
-        onClick={() => router.push(buildResumeCreateHref('reverse'))}
-        style={{
-          fontWeight: router.query.template !== 'hybrid' ? 900 : 700,
-          color: router.query.template !== 'hybrid' ? ORANGE : '#64748B',
-          background: 'none', border: 'none',
-          textDecoration: router.query.template !== 'hybrid' ? 'underline' : 'none',
-          cursor: 'pointer', fontSize: 13, padding: 0,
-        }}
-      >Reverse</button>
-      <span style={{ color: '#94A3B8' }}>|</span>
-      <button
-        onClick={() => router.push(buildResumeCreateHref('hybrid'))}
-        style={{
-          fontWeight: router.query.template === 'hybrid' ? 900 : 700,
-          color: router.query.template === 'hybrid' ? ORANGE : '#64748B',
-          background: 'none', border: 'none',
-          textDecoration: router.query.template === 'hybrid' ? 'underline' : 'none',
-          cursor: 'pointer', fontSize: 13, padding: 0,
-        }}
-      >Hybrid</button>
-      <span style={{ color: '#CBD5E1', fontSize: 13 }}>•</span>
-      <span style={{ fontWeight: 800, color: '#475569', fontSize: 12 }}>Preview:</span>
-      <button
-        type="button"
-        onClick={() => setPreviewMode('standard')}
-        style={{
-          borderRadius: 999, padding: '3px 8px', fontSize: 11,
-          border: previewMode === 'standard' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
-          background: previewMode === 'standard' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.65)',
-          color: previewMode === 'standard' ? '#C2410C' : '#475569',
-          fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
-        }}
-      >Standard</button>
-      <button
-        type="button"
-        onClick={() => setPreviewMode('signal-test')}
-        style={{
-          borderRadius: 999, padding: '3px 8px', fontSize: 11,
-          border: previewMode === 'signal-test' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
-          background: previewMode === 'signal-test' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.65)',
-          color: previewMode === 'signal-test' ? '#C2410C' : '#475569',
-          fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
-        }}
-      >ForgeFormat</button>
-    </div>
-
-    {/* Row 2: Layout controls + divider + export/save tools */}
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-      {/* Layout group */}
-      <button
-        type="button"
-        onClick={() => { setIsFocusMode((v) => !v); setIsLeftCollapsed(false); }}
-        style={{
-          borderRadius: 999, padding: '5px 12px', fontSize: 12,
-          border: isFocusMode ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.15)',
-          background: isFocusMode ? 'rgba(255,112,67,0.12)' : 'rgba(255,255,255,0.80)',
-          color: isFocusMode ? '#C2410C' : '#334155',
-          fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease',
-        }}
-      >{isFocusMode ? '← Exit Focus' : '🎯 Focus Resume'}</button>
-      {!isFocusMode && (
-        <button
-          type="button"
-          onClick={() => setIsLeftCollapsed((v) => !v)}
-          style={{
-            borderRadius: 999, padding: '5px 12px', fontSize: 12,
-            border: isLeftCollapsed ? '2px solid #334155' : '1px solid rgba(0,0,0,0.15)',
-            background: isLeftCollapsed ? 'rgba(51,65,85,0.10)' : 'rgba(255,255,255,0.80)',
-            color: '#334155',
-            fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease',
-          }}
-        >{isLeftCollapsed ? '→ Expand Panel' : '← Collapse Panel'}</button>
-      )}
-
-      {/* Divider */}
-      <span style={{ width: 1, height: 22, background: 'rgba(0,0,0,0.12)', margin: '0 4px', flexShrink: 0 }} />
-
-      {/* Export/Save group */}
-      {router.query.template === 'hybrid' ? (
-        <HybridATSButton data={resumeData}>
-          <div style={{ background: '#0F766E', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
-            System PDF
-          </div>
-        </HybridATSButton>
-      ) : (
-        <ReverseATSButton data={resumeData}>
-          <div style={{ background: '#0F766E', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
-            System PDF
-          </div>
-        </ReverseATSButton>
-      )}
-      <DesignedPDFButton data={resumeData} template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}>
-        <div style={{ background: ORANGE, color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
-          Designed PDF
-        </div>
-      </DesignedPDFButton>
-      <button
-        type="button"
-        onClick={handleSaveClick}
-        style={{ background: '#16A34A', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer' }}
-      >Save Resume</button>
-
-      {isResumeComplete && (
-        <button
-          type="button"
-          onClick={() => router.push(withChrome('/cover/create'))}
-          style={{ background: '#7C3AED', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer' }}
-        >Next: Cover Letter →</button>
-      )}
-
-      {/* Progress ring */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
-        <div style={{ position: 'relative', width: 28, height: 28 }}>
-          <svg width="28" height="28" viewBox="0 0 28 28">
-            <circle cx="14" cy="14" r="11" fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
-            <circle
-              cx="14" cy="14" r="11" fill="none"
-              stroke="#10B981" strokeWidth="2.5"
-              strokeDasharray={`${(progress / 100) * 69.1} 69.1`}
-              style={{ transition: 'stroke-dasharray 0.5s ease' }}
-            />
-          </svg>
-          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 900, color: '#374151' }}>
-            {progress}%
-          </span>
-        </div>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Ready</span>
-      </div>
-    </div>
-  </div>
-</Banner>
-        </div>
-
-        {/* 3-Zone Grid: Left=Controls | Center=Preview | Right=Forge Hammer */}
+        {/* TOP BAND: header + toolbar stretch across center content width, ad stays in right rail */}
         <div
+          className="ft-resume-top-grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isFocusMode ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) 260px',
+            gap: 16,
+            alignItems: 'start',
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ minWidth: 0, display: 'grid', gap: 12 }}>
+            <div>{Header}</div>
+
+            <div style={{ ...GLASS_CARD, padding: 12 }}>
+              <Banner>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', overflow: 'hidden' }}>
+                    <span style={{ fontWeight: 900, color: '#C2410C', fontSize: 13, whiteSpace: 'nowrap' }}>
+                      Template: <strong>{templateName}</strong>
+                    </span>
+                    <span style={{ color: '#CBD5E1', fontSize: 13 }}>•</span>
+                    <span style={{ fontWeight: 800, color: '#475569', fontSize: 13 }}>Base:</span>
+                    <button
+                      onClick={() => router.push(buildResumeCreateHref('reverse'))}
+                      style={{
+                        fontWeight: router.query.template !== 'hybrid' ? 900 : 700,
+                        color: router.query.template !== 'hybrid' ? ORANGE : '#64748B',
+                        background: 'none',
+                        border: 'none',
+                        textDecoration: router.query.template !== 'hybrid' ? 'underline' : 'none',
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        padding: 0,
+                      }}
+                    >
+                      Reverse
+                    </button>
+                    <span style={{ color: '#94A3B8' }}>|</span>
+                    <button
+                      onClick={() => router.push(buildResumeCreateHref('hybrid'))}
+                      style={{
+                        fontWeight: router.query.template === 'hybrid' ? 900 : 700,
+                        color: router.query.template === 'hybrid' ? ORANGE : '#64748B',
+                        background: 'none',
+                        border: 'none',
+                        textDecoration: router.query.template === 'hybrid' ? 'underline' : 'none',
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        padding: 0,
+                      }}
+                    >
+                      Hybrid
+                    </button>
+                    <span style={{ color: '#CBD5E1', fontSize: 13 }}>•</span>
+                    <span style={{ fontWeight: 800, color: '#475569', fontSize: 12 }}>Preview:</span>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode('standard')}
+                      style={{
+                        borderRadius: 999,
+                        padding: '3px 8px',
+                        fontSize: 11,
+                        border: previewMode === 'standard' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
+                        background: previewMode === 'standard' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.65)',
+                        color: previewMode === 'standard' ? '#C2410C' : '#475569',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Standard
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode('signal-test')}
+                      style={{
+                        borderRadius: 999,
+                        padding: '3px 8px',
+                        fontSize: 11,
+                        border: previewMode === 'signal-test' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
+                        background: previewMode === 'signal-test' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.65)',
+                        color: previewMode === 'signal-test' ? '#C2410C' : '#475569',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      ForgeFormat
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsFocusMode((v) => !v);
+                        setIsLeftCollapsed(false);
+                      }}
+                      style={{
+                        borderRadius: 999,
+                        padding: '5px 12px',
+                        fontSize: 12,
+                        border: isFocusMode ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.15)',
+                        background: isFocusMode ? 'rgba(255,112,67,0.12)' : 'rgba(255,255,255,0.80)',
+                        color: isFocusMode ? '#C2410C' : '#334155',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {isFocusMode ? '← Exit Focus' : '🎯 Focus Resume'}
+                    </button>
+
+                    {!isFocusMode && (
+                      <button
+                        type="button"
+                        onClick={() => setIsLeftCollapsed((v) => !v)}
+                        style={{
+                          borderRadius: 999,
+                          padding: '5px 12px',
+                          fontSize: 12,
+                          border: isLeftCollapsed ? '2px solid #334155' : '1px solid rgba(0,0,0,0.15)',
+                          background: isLeftCollapsed ? 'rgba(51,65,85,0.10)' : 'rgba(255,255,255,0.80)',
+                          color: '#334155',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        {isLeftCollapsed ? '→ Expand Panel' : '← Collapse Panel'}
+                      </button>
+                    )}
+
+                    <span style={{ width: 1, height: 22, background: 'rgba(0,0,0,0.12)', margin: '0 4px', flexShrink: 0 }} />
+
+                    {router.query.template === 'hybrid' ? (
+                      <HybridATSButton data={resumeData}>
+                        <div style={{ background: '#0F766E', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                          System PDF
+                        </div>
+                      </HybridATSButton>
+                    ) : (
+                      <ReverseATSButton data={resumeData}>
+                        <div style={{ background: '#0F766E', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                          System PDF
+                        </div>
+                      </ReverseATSButton>
+                    )}
+
+                    <DesignedPDFButton data={resumeData} template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}>
+                      <div style={{ background: ORANGE, color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                        Designed PDF
+                      </div>
+                    </DesignedPDFButton>
+
+                    <button
+                      type="button"
+                      onClick={handleSaveClick}
+                      style={{ background: '#16A34A', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer' }}
+                    >
+                      Save Resume
+                    </button>
+
+                    {isResumeComplete && (
+                      <button
+                        type="button"
+                        onClick={() => router.push(withChrome('/cover/create'))}
+                        style={{ background: '#7C3AED', color: 'white', padding: '5px 12px', borderRadius: 999, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer' }}
+                      >
+                        Next: Cover Letter →
+                      </button>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
+                      <div style={{ position: 'relative', width: 28, height: 28 }}>
+                        <svg width="28" height="28" viewBox="0 0 28 28">
+                          <circle cx="14" cy="14" r="11" fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
+                          <circle
+                            cx="14"
+                            cy="14"
+                            r="11"
+                            fill="none"
+                            stroke="#10B981"
+                            strokeWidth="2.5"
+                            strokeDasharray={`${(progress / 100) * 69.1} 69.1`}
+                            style={{ transition: 'stroke-dasharray 0.5s ease' }}
+                          />
+                        </svg>
+                        <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 900, color: '#374151' }}>
+                          {progress}%
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Ready</span>
+                    </div>
+                  </div>
+                </div>
+              </Banner>
+            </div>
+          </div>
+
+          {!isFocusMode && (
+            <div style={{ minWidth: 0 }}>
+              <RightRailPlacementManager slot="right_rail_1" />
+            </div>
+          )}
+        </div>
+
+        {/* MAIN BAND: left controls | center preview | right hammer */}
+        <div
+          className="ft-resume-main-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: isFocusMode
@@ -1213,148 +1216,158 @@ export default function CreateResumePage() {
             transition: 'grid-template-columns 0.25s ease',
           }}
         >
-          {/* LEFT: INPUT */}
           {!isFocusMode && (
-          <div style={{ display: 'grid', gap: 12, position: 'sticky', top: 20, overflow: 'hidden' }}>
-          {isLeftCollapsed ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingTop: 8 }}>
-              {[
-                { label: 'R', title: 'Required' },
-                { label: 'O', title: 'Optional' },
-                { label: '🔥', title: 'Forge Hammer' },
-              ].map(({ label, title }) => (
-                <div key={label} title={title} style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(255,255,255,0.70)', border: '1px solid rgba(0,0,0,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#334155', cursor: 'default', boxShadow: '0 2px 6px rgba(0,0,0,0.07)' }}>
-                  {label}
+            <div style={{ display: 'grid', gap: 12, position: 'sticky', top: 20, overflow: 'hidden' }}>
+              {isLeftCollapsed ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingTop: 8 }}>
+                  {[
+                    { label: 'R', title: 'Required' },
+                    { label: 'O', title: 'Optional' },
+                  ].map(({ label, title }) => (
+                    <div
+                      key={label}
+                      title={title}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        background: 'rgba(255,255,255,0.70)',
+                        border: '1px solid rgba(0,0,0,0.10)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 900,
+                        fontSize: 13,
+                        color: '#334155',
+                        cursor: 'default',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.07)',
+                      }}
+                    >
+                      {label}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <>
-
-            {/* REQUIRED (group) */}
-            <Section
-              title="Required"
-              subtitle="Start here — these drive the core score"
-              open={openRequired}
-              onToggle={() => setOpenRequired((v) => !v)}
-              required
-            >
-              <div style={{ display: 'grid', gap: 10 }}>
-                <Section
-                  title="Contact information"
-                  subtitle="How recruiters reach you"
-                  open={openContact}
-                  onToggle={() => setOpenContact((v) => !v)}
-                  dense
-                  required
-                >
-                  <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
-                </Section>
-
-                <Section
-                  title="Work experience"
-                  subtitle="Your proof of impact"
-                  open={openWork}
-                  onToggle={() => setOpenWork((v) => !v)}
-                  dense
-                  required
-                >
-                  <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
-                </Section>
-
-                <div id="education-section">
+              ) : (
+                <>
                   <Section
-                    title="Education"
-                    subtitle="Degrees, programs, certifications"
-                    open={openEducation}
-                    onToggle={() => setOpenEducation((v) => !v)}
-                    dense
+                    title="Required"
+                    subtitle="Start here — these drive the core score"
+                    open={openRequired}
+                    onToggle={() => setOpenRequired((v) => !v)}
                     required
                   >
-                    <EducationSection embedded educationList={educationList} setEducationList={setEducationList} />
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      <Section
+                        title="Contact information"
+                        subtitle="How recruiters reach you"
+                        open={openContact}
+                        onToggle={() => setOpenContact((v) => !v)}
+                        dense
+                        required
+                      >
+                        <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
+                      </Section>
+
+                      <Section
+                        title="Work experience"
+                        subtitle="Your proof of impact"
+                        open={openWork}
+                        onToggle={() => setOpenWork((v) => !v)}
+                        dense
+                        required
+                      >
+                        <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
+                      </Section>
+
+                      <div id="education-section">
+                        <Section
+                          title="Education"
+                          subtitle="Degrees, programs, certifications"
+                          open={openEducation}
+                          onToggle={() => setOpenEducation((v) => !v)}
+                          dense
+                          required
+                        >
+                          <EducationSection embedded educationList={educationList} setEducationList={setEducationList} />
+                        </Section>
+                      </div>
+
+                      <Section
+                        title="Skills"
+                        subtitle="8–12 is the sweet spot"
+                        open={openSkills}
+                        onToggle={() => setOpenSkills((v) => !v)}
+                        dense
+                        required
+                      >
+                        <SkillsSection embedded skills={skills} setSkills={setSkills} />
+                      </Section>
+                    </div>
                   </Section>
-                </div>
 
-                <Section
-                  title="Skills"
-                  subtitle="8–12 is the sweet spot"
-                  open={openSkills}
-                  onToggle={() => setOpenSkills((v) => !v)}
-                  dense
-                  required
-                >
-                  <SkillsSection embedded skills={skills} setSkills={setSkills} />
-                </Section>
-              </div>
-            </Section>
+                  <Section
+                    title="Optional"
+                    subtitle="Add depth without clutter"
+                    open={openOptional}
+                    onToggle={() => setOpenOptional((v) => !v)}
+                  >
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      <Section
+                        title="Languages"
+                        subtitle="Spoken or programming"
+                        open={openLanguages}
+                        onToggle={() => setOpenLanguages((v) => !v)}
+                        dense
+                      >
+                        <LanguagesInlineSection languages={languages} setLanguages={setLanguages} />
+                      </Section>
 
-            {/* OPTIONAL (group) */}
-            <Section
-              title="Optional"
-              subtitle="Add depth without clutter"
-              open={openOptional}
-              onToggle={() => setOpenOptional((v) => !v)}
-            >
-              <div style={{ display: 'grid', gap: 10 }}>
-                <Section
-                  title="Languages"
-                  subtitle="Spoken or programming"
-                  open={openLanguages}
-                  onToggle={() => setOpenLanguages((v) => !v)}
-                  dense
-                >
-                  <LanguagesInlineSection languages={languages} setLanguages={setLanguages} />
-                </Section>
+                      <Section
+                        title="Summary"
+                        subtitle="6–10 lines, high signal"
+                        open={openSummary}
+                        onToggle={() => setOpenSummary((v) => !v)}
+                        dense
+                      >
+                        <SummarySection embedded summary={summary} setSummary={setSummary} />
+                      </Section>
 
-                <Section
-                  title="Summary"
-                  subtitle="6–10 lines, high signal"
-                  open={openSummary}
-                  onToggle={() => setOpenSummary((v) => !v)}
-                  dense
-                >
-                  <SummarySection embedded summary={summary} setSummary={setSummary} />
-                </Section>
+                      <Section
+                        title="Projects"
+                        subtitle="When projects prove fit"
+                        open={openProjects}
+                        onToggle={() => setOpenProjects((v) => !v)}
+                        dense
+                      >
+                        <ProjectsSection embedded projects={projects} setProjects={setProjects} />
+                      </Section>
 
-                <Section
-                  title="Projects"
-                  subtitle="When projects prove fit"
-                  open={openProjects}
-                  onToggle={() => setOpenProjects((v) => !v)}
-                  dense
-                >
-                  <ProjectsSection embedded projects={projects} setProjects={setProjects} />
-                </Section>
+                      <Section
+                        title="Certifications"
+                        subtitle="Badges that matter"
+                        open={openCerts}
+                        onToggle={() => setOpenCerts((v) => !v)}
+                        dense
+                      >
+                        <CertificationsSection embedded certifications={certifications} setCertifications={setCertifications} />
+                      </Section>
 
-                <Section
-                  title="Certifications"
-                  subtitle="Badges that matter"
-                  open={openCerts}
-                  onToggle={() => setOpenCerts((v) => !v)}
-                  dense
-                >
-                  <CertificationsSection embedded certifications={certifications} setCertifications={setCertifications} />
-                </Section>
+                      <Section
+                        title="Custom sections"
+                        subtitle="Tailor to the role"
+                        open={openCustom}
+                        onToggle={() => setOpenCustom((v) => !v)}
+                        dense
+                      >
+                        <CustomSection embedded customSections={customSections} setCustomSections={setCustomSections} />
+                      </Section>
+                    </div>
+                  </Section>
+                </>
+              )}
+            </div>
+          )}
 
-                <Section
-                  title="Custom sections"
-                  subtitle="Tailor to the role"
-                  open={openCustom}
-                  onToggle={() => setOpenCustom((v) => !v)}
-                  dense
-                >
-                  <CustomSection embedded customSections={customSections} setCustomSections={setCustomSections} />
-                </Section>
-              </div>
-            </Section>
-
-            {/* The Forge Hammer lives in the right rail — relocated */}
-          </> 
-          )} {/* end isLeftCollapsed else */}
-          </div>
-          )} {/* end !isFocusMode */}
-
-          {/* CENTER: LIVE RESUME PREVIEW — dominant surface */}
           <div
             style={{
               position: 'sticky',
@@ -1364,7 +1377,6 @@ export default function CreateResumePage() {
               background: 'rgba(255,255,255,0.58)',
             }}
           >
-            {/* Preview header */}
             <div
               style={{
                 padding: '10px 16px',
@@ -1379,7 +1391,7 @@ export default function CreateResumePage() {
               }}
             >
               <span>LIVE RESUME PREVIEW</span>
-              {/* Page pagination */}
+
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <button
                   type="button"
@@ -1419,7 +1431,6 @@ export default function CreateResumePage() {
               </div>
             </div>
 
-            {/* Page-view resume */}
             <div
               id="resume-preview"
               style={{
@@ -1464,203 +1475,193 @@ export default function CreateResumePage() {
             </div>
           </div>
 
-          {/* RIGHT: FORGE HAMMER — persistent intelligence rail */}
           {!isFocusMode && (
-          <div
-            style={{
-              position: 'sticky',
-              top: 20,
-              display: 'grid',
-              gap: 12,
-              maxHeight: 'calc(100vh - 40px)',
-              overflowY: 'auto',
-            }}
-          >
-		  {/* Ad Card */}
-  <div style={{ marginBottom: 12 }}>
-    <RightRailPlacementManager slot="right_rail_1" />
-  </div>
-            {/* ── Header ── */}
             <div
               style={{
-                borderRadius: 14,
-                border: '1px solid rgba(255,112,67,0.25)',
-                background: 'rgba(255,255,255,0.70)',
-                backdropFilter: 'blur(10px)',
-                padding: '12px 14px',
+                position: 'sticky',
+                top: 20,
+                display: 'grid',
+                gap: 12,
+                maxHeight: 'calc(100vh - 40px)',
+                overflowY: 'auto',
               }}
             >
-              <div style={{ fontWeight: 900, fontSize: 14, color: '#FF7043', marginBottom: 2 }}>
-                🔨 The Forge Hammer
-              </div>
-              <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>
-                AI hammer + resume steel + job fire
-              </div>
-            </div>
-
-            {/* ── Job Fire State ── */}
-            <div
-              style={{
-                borderRadius: 14,
-                border: '1px solid rgba(0,0,0,0.10)',
-                background: 'rgba(255,255,255,0.70)',
-                backdropFilter: 'blur(10px)',
-                padding: '12px 14px',
-              }}
-            >
-              {atsPack ? (
-                <>
-                  <div style={{ fontWeight: 800, fontSize: 13, color: '#0D47A1', marginBottom: 6 }}>🔥 Job fire loaded</div>
-                  {atsJobMeta && (
-                    <div style={{ fontSize: 13, color: '#1E293B', marginBottom: 4 }}>
-                      <strong>{atsJobMeta.title}</strong>
-                      {atsJobMeta.company ? ` at ${atsJobMeta.company}` : ''}
-                    </div>
-                  )}
-                  {hasRealAts && atsPack.ats?.score !== undefined && (
-                    <div style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>
-                      Match: <strong>{atsPack.ats.score}%</strong>
-                    </div>
-                  )}
-                </>
-              ) : jd ? (
-                <>
-                  <div style={{ fontWeight: 800, fontSize: 13, color: '#0D47A1', marginBottom: 4 }}>🔥 Job fire loaded</div>
-                  <div style={{ fontSize: 12, color: '#334155' }}>
-                    <strong>{fireMeta?.title || 'Job'}</strong>
-                    {fireMeta?.company ? ` at ${fireMeta.company}` : ''}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
-                    Your keyword coverage and match insights are now based on this posting.
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{ fontWeight: 800, fontSize: 13, color: '#FF7043', marginBottom: 6 }}>
-                    🔥 Add the fire.
-                  </div>
-                  <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>
-                    Drop a job description to unlock match insights, keyword coverage, and tailored guidance for this role.
-                  </div>
-                </>
-              )}
-
-              {(jd || atsPack) && (
-                <button
-                  type="button"
-                  onClick={clearJobFire}
-                  style={{
-                    marginTop: 8,
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#B91C1C',
-                    fontWeight: 800,
-                    fontSize: 12,
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    padding: 0,
-                  }}
-                >
-                  Clear loaded job
-                </button>
-              )}
-            </div>
-
-            {/* ── JD Drop Zone ── */}
-            <div
-              ref={dropRef}
-              onClick={() => {
-                if (fileInputRef.current) fileInputRef.current.value = '';
-                fileInputRef.current?.click();
-              }}
-              style={{
-                padding: 16,
-                border: '2px dashed rgba(144,202,249,0.95)',
-                borderRadius: 14,
-                textAlign: 'center',
-                background: 'rgba(227,242,253,0.85)',
-                cursor: 'pointer',
-              }}
-            >
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#334155' }}>
-                Drop a job description here
-                <br />
-                or{' '}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                    fileInputRef.current?.click();
-                  }}
-                  style={{
-                    color: ORANGE,
-                    background: 'none',
-                    border: 0,
-                    fontWeight: 900,
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                    fontSize: 13,
-                  }}
-                >
-                  upload file
-                </button>
-              </p>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleFile(f);
-                  e.target.value = '';
+              <div
+                style={{
+                  borderRadius: 14,
+                  border: '1px solid rgba(255,112,67,0.25)',
+                  background: 'rgba(255,255,255,0.70)',
+                  backdropFilter: 'blur(10px)',
+                  padding: '12px 14px',
                 }}
-                style={{ display: 'none' }}
-              />
-
-              {(jdLoading || jdStatus) && (
-                <div
-                  style={{
-                    marginTop: 8,
-                    fontSize: 12,
-                    fontWeight: 800,
-                    color: jdStatus?.startsWith?.('Failed') ? '#B91C1C' : '#0D47A1',
-                  }}
-                >
-                  {jdLoading ? 'Processing…' : jdStatus}
+              >
+                <div style={{ fontWeight: 900, fontSize: 14, color: '#FF7043', marginBottom: 2 }}>
+                  🔨 The Forge Hammer
                 </div>
+                <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>
+                  AI hammer + resume steel + job fire
+                </div>
+              </div>
+
+              <div
+                style={{
+                  borderRadius: 14,
+                  border: '1px solid rgba(0,0,0,0.10)',
+                  background: 'rgba(255,255,255,0.70)',
+                  backdropFilter: 'blur(10px)',
+                  padding: '12px 14px',
+                }}
+              >
+                {atsPack ? (
+                  <>
+                    <div style={{ fontWeight: 800, fontSize: 13, color: '#0D47A1', marginBottom: 6 }}>🔥 Job fire loaded</div>
+                    {atsJobMeta && (
+                      <div style={{ fontSize: 13, color: '#1E293B', marginBottom: 4 }}>
+                        <strong>{atsJobMeta.title}</strong>
+                        {atsJobMeta.company ? ` at ${atsJobMeta.company}` : ''}
+                      </div>
+                    )}
+                    {hasRealAts && atsPack.ats?.score !== undefined && (
+                      <div style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>
+                        Match: <strong>{atsPack.ats.score}%</strong>
+                      </div>
+                    )}
+                  </>
+                ) : jd ? (
+                  <>
+                    <div style={{ fontWeight: 800, fontSize: 13, color: '#0D47A1', marginBottom: 4 }}>🔥 Job fire loaded</div>
+                    <div style={{ fontSize: 12, color: '#334155' }}>
+                      <strong>{fireMeta?.title || 'Job'}</strong>
+                      {fireMeta?.company ? ` at ${fireMeta.company}` : ''}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
+                      Your keyword coverage and match insights are now based on this posting.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontWeight: 800, fontSize: 13, color: '#FF7043', marginBottom: 6 }}>
+                      🔥 Add the fire.
+                    </div>
+                    <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>
+                      Drop a job description to unlock match insights, keyword coverage, and tailored guidance for this role.
+                    </div>
+                  </>
+                )}
+
+                {(jd || atsPack) && (
+                  <button
+                    type="button"
+                    onClick={clearJobFire}
+                    style={{
+                      marginTop: 8,
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#B91C1C',
+                      fontWeight: 800,
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      padding: 0,
+                    }}
+                  >
+                    Clear loaded job
+                  </button>
+                )}
+              </div>
+
+              <div
+                ref={dropRef}
+                onClick={() => {
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                  fileInputRef.current?.click();
+                }}
+                style={{
+                  padding: 16,
+                  border: '2px dashed rgba(144,202,249,0.95)',
+                  borderRadius: 14,
+                  textAlign: 'center',
+                  background: 'rgba(227,242,253,0.85)',
+                  cursor: 'pointer',
+                }}
+              >
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#334155' }}>
+                  Drop a job description here
+                  <br />
+                  or{' '}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                      fileInputRef.current?.click();
+                    }}
+                    style={{
+                      color: ORANGE,
+                      background: 'none',
+                      border: 0,
+                      fontWeight: 900,
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                      fontSize: 13,
+                    }}
+                  >
+                    upload file
+                  </button>
+                </p>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFile(f);
+                    e.target.value = '';
+                  }}
+                  style={{ display: 'none' }}
+                />
+
+                {(jdLoading || jdStatus) && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: jdStatus?.startsWith?.('Failed') ? '#B91C1C' : '#0D47A1',
+                    }}
+                  >
+                    {jdLoading ? 'Processing…' : jdStatus}
+                  </div>
+                )}
+              </div>
+
+              {jd && (
+                <ForgeHammerPanel
+                  jdText={jd}
+                  resumeData={resumeData}
+                  summary={summary}
+                  skills={skills}
+                  experiences={experiences}
+                  education={educationList}
+                  jobMeta={fireMeta || null}
+                  onAddSkill={(k) => setSkills((s) => [...s, k])}
+                  onAddSummary={(k) => setSummary((s) => (s ? `${s}\n\n${k}` : k))}
+                  onAddBullet={(k) => {
+                    const lastExp = experiences[experiences.length - 1];
+                    if (lastExp) {
+                      setExperiences((exp) =>
+                        exp.map((e, i) => (i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e))
+                      );
+                    }
+                  }}
+                />
               )}
             </div>
-
-            {/* ── Forge Hammer Intelligence — only when JD loaded ── */}
-            {jd && (
-              <ForgeHammerPanel
-                jdText={jd}
-                resumeData={resumeData}
-                summary={summary}
-                skills={skills}
-                experiences={experiences}
-                education={educationList}
-                jobMeta={fireMeta || null}
-                onAddSkill={(k) => setSkills((s) => [...s, k])}
-                onAddSummary={(k) => setSummary((s) => (s ? `${s}\n\n${k}` : k))}
-                onAddBullet={(k) => {
-                  const lastExp = experiences[experiences.length - 1];
-                  if (lastExp) {
-                    setExperiences((exp) =>
-                      exp.map((e, i) => (i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e))
-                    );
-                  }
-                }}
-              />
-            )}
-          </div>
           )}
         </div>
       </div>
-
 
       {showToast && (
         <div
