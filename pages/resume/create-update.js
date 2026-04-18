@@ -3,7 +3,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import ResumeBuilderLayout from '@/components/layouts/ResumeBuilderLayout';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import { ResumeContext } from '@/context/ResumeContext';
@@ -1041,7 +1041,7 @@ export default function CreateResumePage() {
       : null;
 
   return (
-    <ResumeBuilderLayout title="Resume Builder | ForgeTomorrow">
+    <SeekerLayout title="Resume Builder | ForgeTomorrow" header={Header} right={<RightRailPlacementManager slot="right_rail_1" />} rightVariant="light" activeNav="resume-cover" contentFullBleed>
       {/* ✅ Guardrails */}
       <style jsx global>{`
         html,
@@ -1049,10 +1049,6 @@ export default function CreateResumePage() {
           overflow-x: hidden;
         }
       `}</style>
-
-      <div style={{ width: '100%', boxSizing: 'border-box' }} className="overflow-x-hidden">
-        {/* Page header — title card above the builder */}
-        <div style={{ marginBottom: 12 }}>{Header}</div>
 
         {/* TEMPLATE SWITCHER — full width above grid */}
         <div style={{ ...GLASS_CARD, padding: 12, marginBottom: 16 }}>
@@ -1655,9 +1651,6 @@ export default function CreateResumePage() {
           </div>
           )}
         </div>
-      </div>
-
-
       {showToast && (
         <div
           style={{
@@ -1678,6 +1671,6 @@ export default function CreateResumePage() {
       )}
 
       {saveModal}
-    </ResumeBuilderLayout>
+    </SeekerLayout>
   );
 }
