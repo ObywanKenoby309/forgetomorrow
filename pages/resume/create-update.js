@@ -1203,15 +1203,15 @@ export default function CreateResumePage() {
 </Banner>
         </div>
 
-        {/* Dynamic grid */}
+        {/* 3-Zone Grid: Left=Controls | Center=Preview | Right=Forge Hammer */}
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: isFocusMode
               ? 'minmax(0, 1fr)'
               : isLeftCollapsed
-              ? '52px minmax(0, 1fr)'
-              : 'minmax(0, 1fr) minmax(0, 1fr)',
+              ? '52px minmax(0, 1fr) 300px'
+              : '280px minmax(0, 1fr) 300px',
             gap: 16,
             alignItems: 'start',
             transition: 'grid-template-columns 0.25s ease',
@@ -1352,199 +1352,13 @@ export default function CreateResumePage() {
               </div>
             </Section>
 
-            {/* The Forge Hammer (own section, not Optional) */}
-            <Section
-              title="The Forge Hammer"
-              subtitle="AI hammer + resume steel + job fire"
-              open={openTailor}
-              onToggle={() => setOpenTailor((v) => !v)}
-              required={false}
-            >
-              {/* Job fire banner */}
-              {atsPack ? (
-                <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
-                  <Banner tone="blue">
-                    <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job fire loaded</div>
-                    <div style={{ fontSize: 14, marginBottom: 6 }}>
-                      This job is now the <strong>fire</strong> heating your resume steel.
-                    </div>
-                    {atsJobMeta && (
-                      <div style={{ fontSize: 14, marginBottom: 4 }}>
-                        <strong>{atsJobMeta.title}</strong>
-                        {atsJobMeta.company ? ` at ${atsJobMeta.company}` : ''}
-                        {atsJobMeta.location ? ` — ${atsJobMeta.location}` : ''}
-                      </div>
-                    )}
-                    {hasRealAts ? (
-                      <>
-                        <div style={{ fontSize: 13, marginBottom: 6 }}>
-                          Current estimated match: <strong>{atsPack.ats.score}%</strong>
-                        </div>
-                        {atsPack.ats.summary && (
-                          <div style={{ fontSize: 13, marginBottom: 6 }}>
-                            <strong>AI read of this role:</strong> {atsPack.ats.summary}
-                          </div>
-                        )}
-                        {Array.isArray(atsPack.ats.recommendations) && atsPack.ats.recommendations.length > 0 && (
-                          <div style={{ fontSize: 13 }}>
-                            <strong>Key improvements to consider:</strong>
-                            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
-                              {atsPack.ats.recommendations.map((rec, idx) => (
-                                <li key={idx}>{rec}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div style={{ fontSize: 13, marginTop: 4 }}>
-                        This job is loaded as your fire, but it hasn’t been fully scored yet.
-                      </div>
-                    )}
-                  </Banner>
-                </div>
-              ) : jd ? (
-                <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
-                  <Banner tone="blue">
-                    <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job fire loaded</div>
-                    <div style={{ fontSize: 14 }}>
-                      <strong>{fireMeta?.title || 'Job'}</strong>
-                      {fireMeta?.company ? ` at ${fireMeta.company}` : ''}
-                      {fireMeta?.location ? ` — ${fireMeta.location}` : ''}
-                    </div>
-                    <div style={{ fontSize: 13, marginTop: 6 }}>
-                      Your keyword coverage and match insights are now based on this posting.
-                    </div>
-                  </Banner>
-                </div>
-              ) : (
-                <Banner>
-                  <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Add the fire.</div>
-                  <div style={{ fontSize: 14 }}>
-                    Your resume is the <strong>steel</strong>. This page is the <strong>anvil</strong>. The AI tools are your{' '}
-                    <strong>hammer</strong>. Add a job description to supply the <strong>fire</strong> — and unlock match insights,
-                    keyword coverage, and tailored guidance for this specific role.
-                  </div>
-                </Banner>
-              )}
-
-              {(jd || atsPack) && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-                  <button
-                    type="button"
-                    onClick={clearJobFire}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#B91C1C',
-                      fontWeight: 800,
-                      fontSize: 13,
-                      cursor: 'pointer',
-                      textDecoration: 'underline',
-                    }}
-                  >
-                    Clear loaded job
-                  </button>
-                </div>
-              )}
-
-              {/* ✅ PERMANENT: dropzone owns its handlers (no addEventListener timing issues) */}
-              <div
-                ref={dropRef}
-                onClick={() => {
-                  if (fileInputRef.current) fileInputRef.current.value = '';
-                  fileInputRef.current?.click();
-                }}
-                style={{
-                  padding: 22,
-                  border: '3px dashed rgba(144,202,249,0.95)',
-                  borderRadius: 16,
-                  textAlign: 'center',
-                  background: 'rgba(227,242,253,0.85)',
-                  cursor: 'pointer',
-                  marginTop: 12,
-                }}
-              >
-                <p style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>
-                  Drop a job description here
-                  <br />
-                  or{' '}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                      fileInputRef.current?.click();
-                    }}
-                    style={{
-                      color: ORANGE,
-                      background: 'none',
-                      border: 0,
-                      fontWeight: 900,
-                      textDecoration: 'underline',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    upload file
-                  </button>
-                </p>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    console.log('[Hammer] input change fired:', f?.name, f?.type, f?.size);
-                    if (f) handleFile(f);
-                    e.target.value = '';
-                  }}
-                  style={{ display: 'none' }}
-                />
-
-                {(jdLoading || jdStatus) && (
-                  <div
-                    style={{
-                      marginTop: 12,
-                      fontSize: 13,
-                      fontWeight: 800,
-                      color: jdStatus?.startsWith?.('Failed') ? '#B91C1C' : '#0D47A1',
-                    }}
-                  >
-                    {jdLoading ? 'Processing…' : jdStatus}
-                  </div>
-                )}
-              </div>
-
-              {jd && (
-                <ForgeHammerPanel
-                  jdText={jd}
-                  resumeData={resumeData}
-                  summary={summary}
-                  skills={skills}
-                  experiences={experiences}
-                  education={educationList}
-                  jobMeta={fireMeta || null}
-                  onAddSkill={(k) => setSkills((s) => [...s, k])}
-                  onAddSummary={(k) => setSummary((s) => (s ? `${s}\n\n${k}` : k))}
-                  onAddBullet={(k) => {
-                    const lastExp = experiences[experiences.length - 1];
-                    if (lastExp) {
-                      setExperiences((exp) =>
-                        exp.map((e, i) => (i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e))
-                      );
-                    }
-                  }}
-                />
-              )}
-            </Section>
+            {/* The Forge Hammer lives in the right rail — relocated */}
           </> 
           )} {/* end isLeftCollapsed else */}
           </div>
           )} {/* end !isFocusMode */}
 
-          {/* RIGHT: LIVE RESUME PREVIEW */}
+          {/* CENTER: LIVE RESUME PREVIEW — dominant surface */}
           <div
             style={{
               position: 'sticky',
@@ -1609,7 +1423,7 @@ export default function CreateResumePage() {
               </div>
             </div>
 
-            {/* Page-view resume: one US Letter page at a time (8.5x11 at 96dpi = 816x1056, scaled to fit column) */}
+            {/* Page-view resume */}
             <div
               id="resume-preview"
               style={{
@@ -1653,6 +1467,197 @@ export default function CreateResumePage() {
               </div>
             </div>
           </div>
+
+          {/* RIGHT: FORGE HAMMER — persistent intelligence rail */}
+          {!isFocusMode && (
+          <div
+            style={{
+              position: 'sticky',
+              top: 20,
+              display: 'grid',
+              gap: 12,
+              maxHeight: 'calc(100vh - 40px)',
+              overflowY: 'auto',
+            }}
+          >
+            {/* ── Header ── */}
+            <div
+              style={{
+                borderRadius: 14,
+                border: '1px solid rgba(255,112,67,0.25)',
+                background: 'rgba(255,255,255,0.70)',
+                backdropFilter: 'blur(10px)',
+                padding: '12px 14px',
+              }}
+            >
+              <div style={{ fontWeight: 900, fontSize: 14, color: '#FF7043', marginBottom: 2 }}>
+                🔨 The Forge Hammer
+              </div>
+              <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>
+                AI hammer + resume steel + job fire
+              </div>
+            </div>
+
+            {/* ── Job Fire State ── */}
+            <div
+              style={{
+                borderRadius: 14,
+                border: '1px solid rgba(0,0,0,0.10)',
+                background: 'rgba(255,255,255,0.70)',
+                backdropFilter: 'blur(10px)',
+                padding: '12px 14px',
+              }}
+            >
+              {atsPack ? (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: '#0D47A1', marginBottom: 6 }}>🔥 Job fire loaded</div>
+                  {atsJobMeta && (
+                    <div style={{ fontSize: 13, color: '#1E293B', marginBottom: 4 }}>
+                      <strong>{atsJobMeta.title}</strong>
+                      {atsJobMeta.company ? ` at ${atsJobMeta.company}` : ''}
+                    </div>
+                  )}
+                  {hasRealAts && atsPack.ats?.score !== undefined && (
+                    <div style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>
+                      Match: <strong>{atsPack.ats.score}%</strong>
+                    </div>
+                  )}
+                </>
+              ) : jd ? (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: '#0D47A1', marginBottom: 4 }}>🔥 Job fire loaded</div>
+                  <div style={{ fontSize: 12, color: '#334155' }}>
+                    <strong>{fireMeta?.title || 'Job'}</strong>
+                    {fireMeta?.company ? ` at ${fireMeta.company}` : ''}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
+                    Your keyword coverage and match insights are now based on this posting.
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: '#FF7043', marginBottom: 6 }}>
+                    🔥 Add the fire.
+                  </div>
+                  <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>
+                    Drop a job description to unlock match insights, keyword coverage, and tailored guidance for this role.
+                  </div>
+                </>
+              )}
+
+              {(jd || atsPack) && (
+                <button
+                  type="button"
+                  onClick={clearJobFire}
+                  style={{
+                    marginTop: 8,
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#B91C1C',
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: 0,
+                  }}
+                >
+                  Clear loaded job
+                </button>
+              )}
+            </div>
+
+            {/* ── JD Drop Zone ── */}
+            <div
+              ref={dropRef}
+              onClick={() => {
+                if (fileInputRef.current) fileInputRef.current.value = '';
+                fileInputRef.current?.click();
+              }}
+              style={{
+                padding: 16,
+                border: '2px dashed rgba(144,202,249,0.95)',
+                borderRadius: 14,
+                textAlign: 'center',
+                background: 'rgba(227,242,253,0.85)',
+                cursor: 'pointer',
+              }}
+            >
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#334155' }}>
+                Drop a job description here
+                <br />
+                or{' '}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    fileInputRef.current?.click();
+                  }}
+                  style={{
+                    color: ORANGE,
+                    background: 'none',
+                    border: 0,
+                    fontWeight: 900,
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                  }}
+                >
+                  upload file
+                </button>
+              </p>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFile(f);
+                  e.target.value = '';
+                }}
+                style={{ display: 'none' }}
+              />
+
+              {(jdLoading || jdStatus) && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: jdStatus?.startsWith?.('Failed') ? '#B91C1C' : '#0D47A1',
+                  }}
+                >
+                  {jdLoading ? 'Processing…' : jdStatus}
+                </div>
+              )}
+            </div>
+
+            {/* ── Forge Hammer Intelligence — only when JD loaded ── */}
+            {jd && (
+              <ForgeHammerPanel
+                jdText={jd}
+                resumeData={resumeData}
+                summary={summary}
+                skills={skills}
+                experiences={experiences}
+                education={educationList}
+                jobMeta={fireMeta || null}
+                onAddSkill={(k) => setSkills((s) => [...s, k])}
+                onAddSummary={(k) => setSummary((s) => (s ? `${s}\n\n${k}` : k))}
+                onAddBullet={(k) => {
+                  const lastExp = experiences[experiences.length - 1];
+                  if (lastExp) {
+                    setExperiences((exp) =>
+                      exp.map((e, i) => (i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e))
+                    );
+                  }
+                }}
+              />
+            )}
+          </div>
+          )}
         </div>
       </div>
 
