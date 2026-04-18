@@ -1001,7 +1001,7 @@ export default function CreateResumePage() {
             gridTemplateColumns: isFocusMode ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) 260px',
             gap: 16,
             alignItems: 'start',
-            marginBottom: 16,
+            marginBottom: 4,
           }}
         >
           <div style={{ minWidth: 0, display: 'grid', gap: 12 }}>
