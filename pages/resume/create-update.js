@@ -846,354 +846,372 @@ export default function CreateResumePage() {
             <div>{Header}</div>
 
             <div
-              style={{
-                ...GLASS_CARD,
-                padding: '12px 16px',
-                minHeight: 132,
-                width: '100%',
-              }}
-            >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(260px, 1.5fr) minmax(220px, auto) minmax(220px, auto) auto',
-                  gap: 12,
-                  alignItems: 'center',
-                  marginBottom: 12,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 900, fontSize: 14, color: '#111827', whiteSpace: 'nowrap' }}>Resume:</span>
+  style={{
+    ...GLASS_CARD,
+    padding: '14px 16px',
+    minHeight: 148,
+    width: '100%',
+  }}
+>
+  {/* ROW 1 */}
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: 'minmax(320px, 1.5fr) minmax(220px, auto) minmax(220px, auto) auto',
+      gap: 14,
+      alignItems: 'start',
+      marginBottom: 14,
+    }}
+  >
+    <div style={{ display: 'grid', gap: 10, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        <span style={{ fontWeight: 900, fontSize: 14, color: '#111827', whiteSpace: 'nowrap' }}>
+          Resume:
+        </span>
 
-                  <select
-                    value={selectedResumeId}
-                    onChange={(e) => setSelectedResumeId(e.target.value)}
-                    style={{
-                      minWidth: 240,
-                      maxWidth: 360,
-                      height: 36,
-                      borderRadius: 999,
-                      border: '1px solid rgba(0,0,0,0.10)',
-                      background: 'rgba(255,255,255,0.85)',
-                      padding: '0 14px',
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: '#334155',
-                      outline: 'none',
-                    }}
-                  >
-                    {existingResumes.length === 0 ? (
-                      <option value="">No saved resumes yet</option>
-                    ) : (
-                      existingResumes.map((r) => (
-                        <option key={r.id} value={String(r.id)}>
-                          {r.name || r.resumeName || 'Untitled Resume'}
-                        </option>
-                      ))
-                    )}
-                  </select>
+        <select
+          value={selectedResumeId}
+          onChange={(e) => setSelectedResumeId(e.target.value)}
+          style={{
+            minWidth: 220,
+            maxWidth: 320,
+            height: 38,
+            borderRadius: 999,
+            border: '1px solid rgba(0,0,0,0.10)',
+            background: 'rgba(255,255,255,0.85)',
+            padding: '0 14px',
+            fontSize: 13,
+            fontWeight: 700,
+            color: '#334155',
+            outline: 'none',
+            flex: 1,
+          }}
+        >
+          {existingResumes.length === 0 ? (
+            <option value="">No saved resumes yet</option>
+          ) : (
+            existingResumes.map((r) => (
+              <option key={r.id} value={String(r.id)}>
+                {r.name || r.resumeName || 'Untitled Resume'}
+              </option>
+            ))
+          )}
+        </select>
+      </div>
 
-                  <button
-                    type="button"
-                    onClick={handleLoadSelectedResume}
-                    style={{
-                      borderRadius: 999,
-                      padding: '7px 14px',
-                      fontSize: 12,
-                      border: '1px solid rgba(0,0,0,0.12)',
-                      background: 'rgba(255,255,255,0.80)',
-                      color: '#334155',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Load
-                  </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={handleLoadSelectedResume}
+          style={{
+            borderRadius: 999,
+            padding: '7px 14px',
+            fontSize: 12,
+            border: '1px solid rgba(0,0,0,0.12)',
+            background: 'rgba(255,255,255,0.80)',
+            color: '#334155',
+            fontWeight: 800,
+            cursor: 'pointer',
+          }}
+        >
+          Load
+        </button>
 
-                  <button
-                    type="button"
-                    onClick={handleCreateNewResume}
-                    style={{
-                      borderRadius: 999,
-                      padding: '7px 14px',
-                      fontSize: 12,
-                      border: '1px solid rgba(0,0,0,0.12)',
-                      background: 'rgba(255,255,255,0.80)',
-                      color: '#334155',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    New
-                  </button>
-                </div>
+        <button
+          type="button"
+          onClick={handleCreateNewResume}
+          style={{
+            borderRadius: 999,
+            padding: '7px 14px',
+            fontSize: 12,
+            border: '1px solid rgba(0,0,0,0.12)',
+            background: 'rgba(255,255,255,0.80)',
+            color: '#334155',
+            fontWeight: 800,
+            cursor: 'pointer',
+          }}
+        >
+          New
+        </button>
+      </div>
+    </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 700, color: '#475569', fontSize: 12, whiteSpace: 'nowrap' }}>
-                    Base Template:
-                  </span>
-                  <button
-                    onClick={() => router.push(buildResumeCreateHref('reverse'))}
-                    style={{
-                      borderRadius: 999,
-                      padding: '5px 12px',
-                      fontSize: 12,
-                      border: router.query.template !== 'hybrid' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
-                      background: router.query.template !== 'hybrid' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
-                      color: router.query.template !== 'hybrid' ? '#C2410C' : '#64748B',
-                      fontWeight: router.query.template !== 'hybrid' ? 900 : 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Reverse
-                  </button>
-                  <button
-                    onClick={() => router.push(buildResumeCreateHref('hybrid'))}
-                    style={{
-                      borderRadius: 999,
-                      padding: '5px 12px',
-                      fontSize: 12,
-                      border: router.query.template === 'hybrid' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
-                      background: router.query.template === 'hybrid' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
-                      color: router.query.template === 'hybrid' ? '#C2410C' : '#64748B',
-                      fontWeight: router.query.template === 'hybrid' ? 900 : 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Hybrid
-                  </button>
-                </div>
+    <div style={{ display: 'grid', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 700, color: '#475569', fontSize: 12, whiteSpace: 'nowrap' }}>
+          Base Template:
+        </span>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 700, color: '#475569', fontSize: 12, whiteSpace: 'nowrap' }}>
-                    View:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewMode('standard')}
-                    style={{
-                      borderRadius: 999,
-                      padding: '5px 12px',
-                      fontSize: 12,
-                      border: previewMode === 'standard' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
-                      background: previewMode === 'standard' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
-                      color: previewMode === 'standard' ? '#C2410C' : '#475569',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Standard
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewMode('signal-test')}
-                    style={{
-                      borderRadius: 999,
-                      padding: '5px 12px',
-                      fontSize: 12,
-                      border: previewMode === 'signal-test' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
-                      background: previewMode === 'signal-test' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
-                      color: previewMode === 'signal-test' ? '#C2410C' : '#475569',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    ForgeFormat
-                  </button>
-                </div>
+        <button
+          onClick={() => router.push(buildResumeCreateHref('reverse'))}
+          style={{
+            borderRadius: 999,
+            padding: '5px 12px',
+            fontSize: 12,
+            border: router.query.template !== 'hybrid' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
+            background: router.query.template !== 'hybrid' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
+            color: router.query.template !== 'hybrid' ? '#C2410C' : '#64748B',
+            fontWeight: router.query.template !== 'hybrid' ? 900 : 700,
+            cursor: 'pointer',
+          }}
+        >
+          Reverse
+        </button>
 
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, justifySelf: 'end' }}>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: '#94A3B8',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                    }}
-                  >
-                    Status:
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 900,
-                      borderRadius: 999,
-                      padding: '5px 12px',
-                      ...statusStyles,
-                    }}
-                  >
-                    {statusLabel}
-                  </span>
-                </div>
-              </div>
+        <button
+          onClick={() => router.push(buildResumeCreateHref('hybrid'))}
+          style={{
+            borderRadius: 999,
+            padding: '5px 12px',
+            fontSize: 12,
+            border: router.query.template === 'hybrid' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
+            background: router.query.template === 'hybrid' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
+            color: router.query.template === 'hybrid' ? '#C2410C' : '#64748B',
+            fontWeight: router.query.template === 'hybrid' ? 900 : 700,
+            cursor: 'pointer',
+          }}
+        >
+          Hybrid
+        </button>
+      </div>
+    </div>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(320px, 1fr) auto',
-                  gap: 12,
-                  alignItems: 'center',
-                  width: '100%',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    flexWrap: 'wrap',
-                    width: '100%',
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setIsEditMode(true)}
-                    style={{
-                      borderRadius: 999,
-                      padding: '7px 14px',
-                      fontSize: 12,
-                      border: isEditMode ? `1px solid rgba(255,112,67,0.40)` : '1px solid rgba(0,0,0,0.12)',
-                      background: isEditMode ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.80)',
-                      color: isEditMode ? '#C2410C' : '#334155',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    ✏️ Edit Resume
-                  </button>
+    <div style={{ display: 'grid', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 700, color: '#475569', fontSize: 12, whiteSpace: 'nowrap' }}>
+          View:
+        </span>
 
-                  <button
-                    type="button"
-                    onClick={() => setIsEditMode(false)}
-                    style={{
-                      borderRadius: 999,
-                      padding: '7px 14px',
-                      fontSize: 12,
-                      border: !isEditMode ? `1px solid rgba(255,112,67,0.40)` : '1px solid rgba(0,0,0,0.12)',
-                      background: !isEditMode ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.80)',
-                      color: !isEditMode ? '#C2410C' : '#334155',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    👁 View Resume
-                  </button>
+        <button
+          type="button"
+          onClick={() => setPreviewMode('standard')}
+          style={{
+            borderRadius: 999,
+            padding: '5px 12px',
+            fontSize: 12,
+            border: previewMode === 'standard' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
+            background: previewMode === 'standard' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
+            color: previewMode === 'standard' ? '#C2410C' : '#475569',
+            fontWeight: 800,
+            cursor: 'pointer',
+          }}
+        >
+          Standard
+        </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setIsHammerOpen((v) => !v)}
-                    style={{
-                      borderRadius: 999,
-                      padding: '7px 14px',
-                      fontSize: 12,
-                      border: '1px solid rgba(255,112,67,0.40)',
-                      background: 'rgba(255,112,67,0.10)',
-                      color: '#C2410C',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    🔨 Open Forge Hammer
-                  </button>
+        <button
+          type="button"
+          onClick={() => setPreviewMode('signal-test')}
+          style={{
+            borderRadius: 999,
+            padding: '5px 12px',
+            fontSize: 12,
+            border: previewMode === 'signal-test' ? `1px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
+            background: previewMode === 'signal-test' ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
+            color: previewMode === 'signal-test' ? '#C2410C' : '#475569',
+            fontWeight: 800,
+            cursor: 'pointer',
+          }}
+        >
+          ForgeFormat
+        </button>
+      </div>
+    </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setIsFocusMode((v) => !v)}
-                    style={{
-                      borderRadius: 999,
-                      padding: '7px 14px',
-                      fontSize: 12,
-                      border: isFocusMode ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.15)',
-                      background: isFocusMode ? 'rgba(255,112,67,0.12)' : 'rgba(255,255,255,0.80)',
-                      color: isFocusMode ? '#C2410C' : '#334155',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {isFocusMode ? '← Exit Focus' : '🎯 Focus Resume'}
-                  </button>
-                </div>
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: '#94A3B8',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+          }}
+        >
+          Status:
+        </span>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    gap: 10,
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  {router.query.template === 'hybrid' ? (
-                    <HybridATSButton data={resumeData}>
-                      <div
-                        style={{
-                          background: '#0F766E',
-                          color: 'white',
-                          padding: '7px 14px',
-                          borderRadius: 999,
-                          fontWeight: 800,
-                          fontSize: 12,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        System PDF
-                      </div>
-                    </HybridATSButton>
-                  ) : (
-                    <ReverseATSButton data={resumeData}>
-                      <div
-                        style={{
-                          background: '#0F766E',
-                          color: 'white',
-                          padding: '7px 14px',
-                          borderRadius: 999,
-                          fontWeight: 800,
-                          fontSize: 12,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        System PDF
-                      </div>
-                    </ReverseATSButton>
-                  )}
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 900,
+            borderRadius: 999,
+            padding: '5px 12px',
+            ...statusStyles,
+          }}
+        >
+          {statusLabel}
+        </span>
+      </div>
+    </div>
+  </div>
 
-                  <DesignedPDFButton data={resumeData} template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}>
-                    <div
-                      style={{
-                        background: ORANGE,
-                        color: 'white',
-                        padding: '7px 14px',
-                        borderRadius: 999,
-                        fontWeight: 800,
-                        fontSize: 12,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Designed PDF
-                    </div>
-                  </DesignedPDFButton>
+  {/* ROW 2 */}
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: 'minmax(0, 1fr) auto',
+      gap: 14,
+      alignItems: 'center',
+      width: '100%',
+    }}
+  >
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        flexWrap: 'wrap',
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setIsEditMode(true)}
+        style={{
+          borderRadius: 999,
+          padding: '7px 14px',
+          fontSize: 12,
+          border: isEditMode ? `1px solid rgba(255,112,67,0.40)` : '1px solid rgba(0,0,0,0.12)',
+          background: isEditMode ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.80)',
+          color: isEditMode ? '#C2410C' : '#334155',
+          fontWeight: 800,
+          cursor: 'pointer',
+        }}
+      >
+        ✏️ Edit Resume
+      </button>
 
-                  <button
-                    type="button"
-                    onClick={handleSaveClick}
-                    style={{
-                      background: '#16A34A',
-                      color: 'white',
-                      padding: '7px 14px',
-                      borderRadius: 999,
-                      fontWeight: 800,
-                      fontSize: 12,
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Save Resume
-                  </button>
-                </div>
-              </div>
-            </div>
+      <button
+        type="button"
+        onClick={() => setIsEditMode(false)}
+        style={{
+          borderRadius: 999,
+          padding: '7px 14px',
+          fontSize: 12,
+          border: !isEditMode ? `1px solid rgba(255,112,67,0.40)` : '1px solid rgba(0,0,0,0.12)',
+          background: !isEditMode ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.80)',
+          color: !isEditMode ? '#C2410C' : '#334155',
+          fontWeight: 800,
+          cursor: 'pointer',
+        }}
+      >
+        👁 View Resume
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setIsHammerOpen((v) => !v)}
+        style={{
+          borderRadius: 999,
+          padding: '7px 14px',
+          fontSize: 12,
+          border: '1px solid rgba(255,112,67,0.40)',
+          background: 'rgba(255,112,67,0.10)',
+          color: '#C2410C',
+          fontWeight: 800,
+          cursor: 'pointer',
+        }}
+      >
+        🔨 Open Forge Hammer
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setIsFocusMode((v) => !v)}
+        style={{
+          borderRadius: 999,
+          padding: '7px 14px',
+          fontSize: 12,
+          border: isFocusMode ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.15)',
+          background: isFocusMode ? 'rgba(255,112,67,0.12)' : 'rgba(255,255,255,0.80)',
+          color: isFocusMode ? '#C2410C' : '#334155',
+          fontWeight: 800,
+          cursor: 'pointer',
+        }}
+      >
+        {isFocusMode ? '← Exit Focus' : '🎯 Focus Resume'}
+      </button>
+    </div>
+
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: 10,
+        flexWrap: 'wrap',
+      }}
+    >
+      {router.query.template === 'hybrid' ? (
+        <HybridATSButton data={resumeData}>
+          <div
+            style={{
+              background: '#0F766E',
+              color: 'white',
+              padding: '7px 14px',
+              borderRadius: 999,
+              fontWeight: 800,
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            System PDF
           </div>
+        </HybridATSButton>
+      ) : (
+        <ReverseATSButton data={resumeData}>
+          <div
+            style={{
+              background: '#0F766E',
+              color: 'white',
+              padding: '7px 14px',
+              borderRadius: 999,
+              fontWeight: 800,
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            System PDF
+          </div>
+        </ReverseATSButton>
+      )}
+
+      <DesignedPDFButton data={resumeData} template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}>
+        <div
+          style={{
+            background: ORANGE,
+            color: 'white',
+            padding: '7px 14px',
+            borderRadius: 999,
+            fontWeight: 800,
+            fontSize: 12,
+            cursor: 'pointer',
+          }}
+        >
+          Designed PDF
+        </div>
+      </DesignedPDFButton>
+
+      <button
+        type="button"
+        onClick={handleSaveClick}
+        style={{
+          background: '#16A34A',
+          color: 'white',
+          padding: '7px 14px',
+          borderRadius: 999,
+          fontWeight: 800,
+          fontSize: 12,
+          border: 'none',
+          cursor: 'pointer',
+        }}
+      >
+        Save Resume
+      </button>
+    </div>
+  </div>
+</div>
 
           {!isFocusMode && (
             <div style={{ width: '260px', flexShrink: 0 }}>
