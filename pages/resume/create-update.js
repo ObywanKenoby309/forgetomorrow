@@ -1212,7 +1212,8 @@ export default function CreateResumePage() {
     </div>
   </div>
 </div>
-
+          </div>
+		  
           {!isFocusMode && (
             <div style={{ width: '260px', flexShrink: 0 }}>
               <RightRailPlacementManager slot="right_rail_1" />
