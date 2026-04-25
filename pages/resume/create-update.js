@@ -408,21 +408,17 @@ export default function CreateResumePage() {
         @media (max-width: 1100px) { .ft-rb-main { grid-template-columns: 1fr !important; } }
       `}</style>
 
-      <div style={{width:'100%',boxSizing:'border-box',padding:'0 4px'}}>
-        {/* PAGE GRID: main content | ad rail */}
-        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0,1fr) 220px',gap:16,alignItems:'start'}}>
-          {/* LEFT: all content */}
-          <div style={{minWidth:0}}>
+      <div style={{width:'100%',boxSizing:'border-box'}} className="overflow-x-hidden">
 
-            {/* TITLE */}
+        {/* TOP GRID: title + command card on left | ad rail on right */}
+        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 260px',gap:16,alignItems:'start',marginBottom:8,width:'100%'}}>
+          <div style={{minWidth:0,display:'grid',gap:12}}>
             <SeekerTitleCard
               greeting={greeting}
               title="Resume Builder"
               subtitle="Build your resume once. Export anywhere. Reverse Chronological and Hybrid for traditional markets — ForgeFormat for people with real careers."
             />
-
-            {/* COMMAND CARD */}
-            <div style={{...GLASS_CARD,padding:'14px 18px',marginTop:12,marginBottom:14}}>
+            <div style={{...GLASS_CARD,padding:'14px 18px'}}>
           {/* Row 1 */}
           <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:10}}>
             <span style={{fontWeight:900,fontSize:13,color:'#111827',whiteSpace:'nowrap'}}>Resume:</span>
@@ -478,8 +474,16 @@ export default function CreateResumePage() {
         </div>
 
             </div>{/* end command card */}
+          </div>{/* end left col */}
 
-            {/* MAIN GRID */}
+          {!isFocusMode&&(
+            <div style={{width:'260px',flexShrink:0}}>
+              <RightRailPlacementManager slot="right_rail_1"/>
+            </div>
+          )}
+        </div>{/* end top grid */}
+
+        {/* MAIN GRID */}
         <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0, 1fr) 340px',gap:16,alignItems:'start'}}>
 
           {/* CENTER: Resume (inline editable) */}
@@ -576,15 +580,6 @@ export default function CreateResumePage() {
             </div>
           )}
         </div>
-          </div>{/* end left column */}
-
-          {/* RIGHT: Ad rail */}
-          {!isFocusMode&&(
-            <div style={{position:'sticky',top:12}}>
-              <RightRailPlacementManager slot="right_rail_1"/>
-            </div>
-          )}
-        </div>{/* end page grid */}
       </div>
 
       {/* Toast */}
