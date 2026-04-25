@@ -471,8 +471,6 @@ export default function CreateResumePage() {
               <span style={{fontSize:12,fontWeight:700,color:'#374151'}}>Ready</span>
             </div>
           </div>
-        </div>
-
             </div>{/* end command card */}
           </div>{/* end left col */}
 
