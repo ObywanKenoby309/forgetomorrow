@@ -475,7 +475,7 @@ export default function CreateResumePage() {
 
           {/* AD RAIL — beside title + command card only, without forcing a tall spacer */}
           {!isFocusMode&&(
-            <div style={{width:'220px',height:224,flexShrink:0,overflow:'hidden',borderRadius:14}}>
+            <div style={{width:'220px',height:272,flexShrink:0,overflow:'hidden',borderRadius:14}}>
               <div style={{width:280,transform:'scale(0.78)',transformOrigin:'top left'}}>
                 <RightRailPlacementManager slot="right_rail_1"/>
               </div>
