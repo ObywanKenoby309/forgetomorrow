@@ -411,7 +411,7 @@ export default function CreateResumePage() {
       <div style={{width:'100%',boxSizing:'border-box'}} className="overflow-x-hidden">
 
         {/* TOP GRID: title + command card on left | ad rail on right */}
-        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 260px',gap:16,alignItems:'start',marginBottom:8,width:'100%'}}>
+        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 200px',gap:16,alignItems:'start',marginBottom:8,width:'100%'}}>
           <div style={{minWidth:0,display:'grid',gap:12}}>
             <SeekerTitleCard
               greeting={greeting}
@@ -432,7 +432,10 @@ export default function CreateResumePage() {
             <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
             <span style={{fontSize:11,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>Status:</span>
             <span style={{fontSize:12,fontWeight:900,borderRadius:999,padding:'4px 10px',...statusStyles}}>{statusLabel}</span>
-            <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
+          </div>
+
+          {/* Row 2 */}
+          <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
             <span style={{fontWeight:700,color:'#475569',fontSize:12,whiteSpace:'nowrap'}}>Base:</span>
             <button onClick={()=>router.push(buildResumeCreateHref('reverse'))} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:!isHybrid?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:!isHybrid?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:!isHybrid?'#C2410C':'#64748B',fontWeight:!isHybrid?900:700,cursor:'pointer'}}>Reverse</button>
             <button onClick={()=>router.push(buildResumeCreateHref('hybrid'))} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:isHybrid?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:isHybrid?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:isHybrid?'#C2410C':'#64748B',fontWeight:isHybrid?900:700,cursor:'pointer'}}>Hybrid</button>
@@ -440,10 +443,7 @@ export default function CreateResumePage() {
             <span style={{fontWeight:700,color:'#475569',fontSize:12,whiteSpace:'nowrap'}}>View:</span>
             <button type="button" onClick={()=>setPreviewMode('standard')} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:previewMode==='standard'?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:previewMode==='standard'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:previewMode==='standard'?'#C2410C':'#475569',fontWeight:800,cursor:'pointer'}}>Standard</button>
             <button type="button" onClick={()=>setPreviewMode('signal-test')} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:previewMode==='signal-test'?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:previewMode==='signal-test'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:previewMode==='signal-test'?'#C2410C':'#475569',fontWeight:800,cursor:'pointer'}}>ForgeFormat</button>
-          </div>
-
-          {/* Row 2 */}
-          <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+            <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
             <button type="button" onClick={()=>setIsEditMode(true)} style={{borderRadius:999,padding:'6px 13px',fontSize:12,border:isEditMode?`1px solid rgba(255,112,67,0.40)`:'1px solid rgba(0,0,0,0.12)',background:isEditMode?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:isEditMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer'}}>✏️ Edit</button>
             <button type="button" onClick={()=>setIsEditMode(false)} style={{borderRadius:999,padding:'6px 13px',fontSize:12,border:!isEditMode?`1px solid rgba(255,112,67,0.40)`:'1px solid rgba(0,0,0,0.12)',background:!isEditMode?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:!isEditMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer'}}>👁 View</button>
             <button type="button" onClick={()=>setIsFocusMode((v)=>!v)} style={{borderRadius:999,padding:'6px 13px',fontSize:12,border:isFocusMode?`2px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.12)',background:isFocusMode?'rgba(255,112,67,0.12)':'rgba(255,255,255,0.80)',color:isFocusMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer',transition:'all 0.2s'}}>{isFocusMode?'← Exit Focus':'🎯 Focus'}</button>
@@ -475,7 +475,7 @@ export default function CreateResumePage() {
           </div>{/* end left col */}
 
           {!isFocusMode&&(
-            <div style={{width:'260px',flexShrink:0}}>
+            <div style={{width:'200px',flexShrink:0}}>
               <RightRailPlacementManager slot="right_rail_1"/>
             </div>
           )}
