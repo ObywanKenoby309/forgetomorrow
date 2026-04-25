@@ -411,7 +411,7 @@ export default function CreateResumePage() {
       <div style={{width:'100%',boxSizing:'border-box'}} className="overflow-x-hidden">
 
         {/* TOP GRID: title + command card on left | ad rail on right */}
-        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 200px',gap:16,alignItems:'start',marginBottom:8,width:'100%'}}>
+        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:16,alignItems:'start',marginBottom:8,width:'100%'}}>
           <div style={{minWidth:0,display:'grid',gap:12}}>
             <SeekerTitleCard
               greeting={greeting}
@@ -475,7 +475,7 @@ export default function CreateResumePage() {
           </div>{/* end left col */}
 
           {!isFocusMode&&(
-            <div style={{width:'200px',flexShrink:0}}>
+            <div style={{width:'220px',flexShrink:0,transformOrigin:'top right',transform:'scale(0.82)',marginRight:'-48px'}}>
               <RightRailPlacementManager slot="right_rail_1"/>
             </div>
           )}
