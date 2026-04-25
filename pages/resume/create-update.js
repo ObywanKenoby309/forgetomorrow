@@ -410,173 +410,174 @@ export default function CreateResumePage() {
 
       <div style={{width:'100%',boxSizing:'border-box'}} className="overflow-x-hidden">
 
-        {/* TOP GRID: title + command card on left | ad rail on right */}
-        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 270px',gap:16,alignItems:'start',marginBottom:4,width:'100%'}}>
-          <div style={{minWidth:0,display:'grid',gap:6}}>
-            <SeekerTitleCard
-              greeting={greeting}
-              title="Resume Builder"
-              subtitle="Build your resume once. Export anywhere. Reverse Chronological and Hybrid for traditional markets — ForgeFormat for people with real careers."
-            />
-            <div style={{...GLASS_CARD,padding:'14px 18px'}}>
-          {/* Row 1 */}
-          <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:10}}>
-            <span style={{fontWeight:900,fontSize:13,color:'#111827',whiteSpace:'nowrap'}}>Resume:</span>
-            <select value={selectedResumeId} onChange={(e)=>setSelectedResumeId(e.target.value)}
-              style={{minWidth:190,maxWidth:260,height:34,borderRadius:999,border:'1px solid rgba(0,0,0,0.10)',background:'rgba(255,255,255,0.85)',padding:'0 12px',fontSize:13,fontWeight:700,color:'#334155',outline:'none'}}>
-              {existingResumes.length===0?<option value="">No saved resumes yet</option>
-                :existingResumes.map((r)=><option key={r.id} value={String(r.id)}>{r.name||r.resumeName||'Untitled Resume'}{r.isPrimary?' ⭐':''}</option>)}
-            </select>
-            <button type="button" onClick={handleLoadSelectedResume} style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:'1px solid rgba(0,0,0,0.12)',background:'rgba(255,255,255,0.80)',color:'#334155',fontWeight:800,cursor:'pointer'}}>Load</button>
-            <button type="button" onClick={handleCreateNewResume} style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:'1px solid rgba(0,0,0,0.12)',background:'rgba(255,255,255,0.80)',color:'#334155',fontWeight:800,cursor:'pointer'}}>New</button>
-            <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
-            <span style={{fontSize:11,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>Status:</span>
-            <span style={{fontSize:12,fontWeight:900,borderRadius:999,padding:'4px 10px',...statusStyles}}>{statusLabel}</span>
-          </div>
+        {/* OUTER GRID: all content left | ad rail right */}
+        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 270px',gap:16,alignItems:'start',width:'100%'}}>
 
-          {/* Row 2 */}
-          <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-            <span style={{fontWeight:700,color:'#475569',fontSize:12,whiteSpace:'nowrap'}}>Base:</span>
-            <button onClick={()=>router.push(buildResumeCreateHref('reverse'))} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:!isHybrid?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:!isHybrid?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:!isHybrid?'#C2410C':'#64748B',fontWeight:!isHybrid?900:700,cursor:'pointer'}}>Reverse</button>
-            <button onClick={()=>router.push(buildResumeCreateHref('hybrid'))} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:isHybrid?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:isHybrid?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:isHybrid?'#C2410C':'#64748B',fontWeight:isHybrid?900:700,cursor:'pointer'}}>Hybrid</button>
-            <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
-            <span style={{fontWeight:700,color:'#475569',fontSize:12,whiteSpace:'nowrap'}}>View:</span>
-            <button type="button" onClick={()=>setPreviewMode('standard')} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:previewMode==='standard'?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:previewMode==='standard'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:previewMode==='standard'?'#C2410C':'#475569',fontWeight:800,cursor:'pointer'}}>Standard</button>
-            <button type="button" onClick={()=>setPreviewMode('signal-test')} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:previewMode==='signal-test'?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:previewMode==='signal-test'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:previewMode==='signal-test'?'#C2410C':'#475569',fontWeight:800,cursor:'pointer'}}>ForgeFormat</button>
-            <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
-            <button type="button" onClick={()=>setIsEditMode(true)} style={{borderRadius:999,padding:'6px 13px',fontSize:12,border:isEditMode?`1px solid rgba(255,112,67,0.40)`:'1px solid rgba(0,0,0,0.12)',background:isEditMode?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:isEditMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer'}}>✏️ Edit</button>
-            <button type="button" onClick={()=>setIsEditMode(false)} style={{borderRadius:999,padding:'6px 13px',fontSize:12,border:!isEditMode?`1px solid rgba(255,112,67,0.40)`:'1px solid rgba(0,0,0,0.12)',background:!isEditMode?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:!isEditMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer'}}>👁 View</button>
-            <button type="button" onClick={()=>setIsFocusMode((v)=>!v)} style={{borderRadius:999,padding:'6px 13px',fontSize:12,border:isFocusMode?`2px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.12)',background:isFocusMode?'rgba(255,112,67,0.12)':'rgba(255,255,255,0.80)',color:isFocusMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer',transition:'all 0.2s'}}>{isFocusMode?'← Exit Focus':'🎯 Focus'}</button>
-            <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
-            {isHybrid
-              ? <HybridATSButton data={resumeData}><div style={{background:'#0F766E',color:'white',padding:'6px 13px',borderRadius:999,fontWeight:800,fontSize:12,cursor:'pointer'}}>System PDF</div></HybridATSButton>
-              : <ReverseATSButton data={resumeData}><div style={{background:'#0F766E',color:'white',padding:'6px 13px',borderRadius:999,fontWeight:800,fontSize:12,cursor:'pointer'}}>System PDF</div></ReverseATSButton>}
-            <DesignedPDFButton data={resumeData} template={isHybrid?'hybrid':'reverse'}>
-              <div style={{background:ORANGE,color:'white',padding:'6px 13px',borderRadius:999,fontWeight:800,fontSize:12,cursor:'pointer'}}>Designed PDF</div>
-            </DesignedPDFButton>
-            <button type="button" onClick={handleSaveClick} style={{background:'#16A34A',color:'white',padding:'6px 13px',borderRadius:999,fontWeight:800,fontSize:12,border:'none',cursor:'pointer'}}>
-              {saveState==='saving'?'Saving…':saveState==='saved'?'✓ Saved':'Save Resume'}
-            </button>
-            <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
-            <div style={{display:'flex',alignItems:'center',gap:5}}>
-              <div style={{position:'relative',width:26,height:26}}>
-                <svg width="26" height="26" viewBox="0 0 26 26">
-                  <circle cx="13" cy="13" r="10" fill="none" stroke="#E5E7EB" strokeWidth="2.5"/>
-                  <circle cx="13" cy="13" r="10" fill="none" stroke="#10B981" strokeWidth="2.5"
-                    strokeDasharray={`${(progress/100)*62.8} 62.8`} strokeLinecap="round"
-                    style={{transition:'stroke-dasharray 0.5s ease',transformOrigin:'center',transform:'rotate(-90deg)'}}/>
-                </svg>
-                <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,fontWeight:900,color:'#374151'}}>{progress}%</span>
-              </div>
-              <span style={{fontSize:12,fontWeight:700,color:'#374151'}}>Ready</span>
+          {/* LEFT COLUMN: title + command card + resume/hammer */}
+          <div style={{minWidth:0,display:'grid',gap:8}}>
+
+            {/* TITLE */}
+            <div style={{marginBottom:0}}>
+              <SeekerTitleCard
+                greeting={greeting}
+                title="Resume Builder"
+                subtitle="Build your resume once. Export anywhere. Reverse Chronological and Hybrid for traditional markets — ForgeFormat for people with real careers."
+              />
             </div>
-          </div>
-            </div>{/* end command card */}
-          </div>{/* end left col */}
 
+            {/* COMMAND CARD */}
+            <div style={{...GLASS_CARD,padding:'14px 18px'}}>
+              {/* Row 1: Resume + Status */}
+              <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:8}}>
+                <span style={{fontWeight:900,fontSize:13,color:'#111827',whiteSpace:'nowrap'}}>Resume:</span>
+                <select value={selectedResumeId} onChange={(e)=>setSelectedResumeId(e.target.value)}
+                  style={{minWidth:190,maxWidth:260,height:34,borderRadius:999,border:'1px solid rgba(0,0,0,0.10)',background:'rgba(255,255,255,0.85)',padding:'0 12px',fontSize:13,fontWeight:700,color:'#334155',outline:'none'}}>
+                  {existingResumes.length===0?<option value="">No saved resumes yet</option>
+                    :existingResumes.map((r)=><option key={r.id} value={String(r.id)}>{r.name||r.resumeName||'Untitled Resume'}{r.isPrimary?' ⭐':''}</option>)}
+                </select>
+                <button type="button" onClick={handleLoadSelectedResume} style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:'1px solid rgba(0,0,0,0.12)',background:'rgba(255,255,255,0.80)',color:'#334155',fontWeight:800,cursor:'pointer'}}>Load</button>
+                <button type="button" onClick={handleCreateNewResume} style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:'1px solid rgba(0,0,0,0.12)',background:'rgba(255,255,255,0.80)',color:'#334155',fontWeight:800,cursor:'pointer'}}>New</button>
+                <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
+                <span style={{fontSize:11,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>Status:</span>
+                <span style={{fontSize:12,fontWeight:900,borderRadius:999,padding:'4px 10px',...statusStyles}}>{statusLabel}</span>
+              </div>
+
+              {/* Row 2: Base + View + Edit + Focus + Exports + Progress */}
+              <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                <span style={{fontWeight:700,color:'#475569',fontSize:12,whiteSpace:'nowrap'}}>Base:</span>
+                <button onClick={()=>router.push(buildResumeCreateHref('reverse'))} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:!isHybrid?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:!isHybrid?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:!isHybrid?'#C2410C':'#64748B',fontWeight:!isHybrid?900:700,cursor:'pointer'}}>Reverse</button>
+                <button onClick={()=>router.push(buildResumeCreateHref('hybrid'))} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:isHybrid?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:isHybrid?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:isHybrid?'#C2410C':'#64748B',fontWeight:isHybrid?900:700,cursor:'pointer'}}>Hybrid</button>
+                <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
+                <span style={{fontWeight:700,color:'#475569',fontSize:12,whiteSpace:'nowrap'}}>View:</span>
+                <button type="button" onClick={()=>setPreviewMode('standard')} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:previewMode==='standard'?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:previewMode==='standard'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:previewMode==='standard'?'#C2410C':'#475569',fontWeight:800,cursor:'pointer'}}>Standard</button>
+                <button type="button" onClick={()=>setPreviewMode('signal-test')} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:previewMode==='signal-test'?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:previewMode==='signal-test'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:previewMode==='signal-test'?'#C2410C':'#475569',fontWeight:800,cursor:'pointer'}}>ForgeFormat</button>
+                <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
+                <button type="button" onClick={()=>setIsEditMode(true)} style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:isEditMode?`1px solid rgba(255,112,67,0.40)`:'1px solid rgba(0,0,0,0.12)',background:isEditMode?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:isEditMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer'}}>✏️ Edit</button>
+                <button type="button" onClick={()=>setIsEditMode(false)} style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:!isEditMode?`1px solid rgba(255,112,67,0.40)`:'1px solid rgba(0,0,0,0.12)',background:!isEditMode?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:!isEditMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer'}}>👁 View</button>
+                <button type="button" onClick={()=>setIsFocusMode((v)=>!v)} style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:isFocusMode?`2px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.12)',background:isFocusMode?'rgba(255,112,67,0.12)':'rgba(255,255,255,0.80)',color:isFocusMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer',transition:'all 0.2s'}}>{isFocusMode?'← Exit Focus':'🎯 Focus'}</button>
+                <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
+                {isHybrid
+                  ? <HybridATSButton data={resumeData}><div style={{background:'#0F766E',color:'white',padding:'5px 11px',borderRadius:999,fontWeight:800,fontSize:12,cursor:'pointer'}}>System PDF</div></HybridATSButton>
+                  : <ReverseATSButton data={resumeData}><div style={{background:'#0F766E',color:'white',padding:'5px 11px',borderRadius:999,fontWeight:800,fontSize:12,cursor:'pointer'}}>System PDF</div></ReverseATSButton>}
+                <DesignedPDFButton data={resumeData} template={isHybrid?'hybrid':'reverse'}>
+                  <div style={{background:ORANGE,color:'white',padding:'5px 11px',borderRadius:999,fontWeight:800,fontSize:12,cursor:'pointer'}}>Designed PDF</div>
+                </DesignedPDFButton>
+                <button type="button" onClick={handleSaveClick} style={{background:'#16A34A',color:'white',padding:'5px 11px',borderRadius:999,fontWeight:800,fontSize:12,border:'none',cursor:'pointer'}}>
+                  {saveState==='saving'?'Saving…':saveState==='saved'?'✓ Saved':'Save Resume'}
+                </button>
+                <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
+                <div style={{display:'flex',alignItems:'center',gap:5}}>
+                  <div style={{position:'relative',width:26,height:26}}>
+                    <svg width="26" height="26" viewBox="0 0 26 26">
+                      <circle cx="13" cy="13" r="10" fill="none" stroke="#E5E7EB" strokeWidth="2.5"/>
+                      <circle cx="13" cy="13" r="10" fill="none" stroke="#10B981" strokeWidth="2.5"
+                        strokeDasharray={`${(progress/100)*62.8} 62.8`} strokeLinecap="round"
+                        style={{transition:'stroke-dasharray 0.5s ease',transformOrigin:'center',transform:'rotate(-90deg)'}}/>
+                    </svg>
+                    <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,fontWeight:900,color:'#374151'}}>{progress}%</span>
+                  </div>
+                  <span style={{fontSize:12,fontWeight:700,color:'#374151'}}>Ready</span>
+                </div>
+              </div>
+            </div>
+
+            {/* RESUME + HAMMER GRID — no gap from command card */}
+            <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0, 1fr) 340px',gap:8,alignItems:'start'}}>
+
+              {/* CENTER: Resume */}
+              <div style={{...GLASS_CARD,overflow:'hidden'}}>
+                <div style={{padding:'10px 16px',background:'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',color:'white',fontWeight:900,fontSize:13,letterSpacing:0.4,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <span>{isEditMode?'✏️ LIVE RESUME EDITOR':'👁 RESUME PREVIEW'}</span>
+                  {isEditMode&&<span style={{fontSize:11,fontWeight:600,opacity:0.75}}>
+                    {saveState==='saving'?'Auto-saving…':saveState==='saved'?'✓ Auto-saved':saveState==='error'?'Auto-save failed':'Click any section to edit'}
+                  </span>}
+                </div>
+                <div id="resume-preview" style={{padding:isEditMode?20:32,background:'#fff',minHeight:760,overflowY:'auto'}}>
+                  {previewMode==='signal-test' ? (
+                    <SignalResumeTestTemplate data={resumeData}/>
+                  ) : (
+                    <TemplateComponent
+                      data={resumeData}
+                      isEditMode={isEditMode}
+                      onUpdate={isEditMode?handleResumeUpdate:undefined}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* RIGHT: Forge Hammer permanent rail */}
+              {!isFocusMode&&(
+                <div style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20}}>
+                  <div style={{...GLASS_CARD,overflow:'hidden'}}>
+                    <div style={{padding:'12px 16px',background:'linear-gradient(135deg, rgba(255,112,67,0.15), rgba(255,112,67,0.05))',borderBottom:'1px solid rgba(255,112,67,0.15)'}}>
+                      <div style={{fontWeight:900,fontSize:15,color:ORANGE}}>🔨 The Forge Hammer</div>
+                      <div style={{fontSize:11,color:'#64748B',fontWeight:600,marginTop:2}}>AI hammer + resume steel + job fire</div>
+                    </div>
+                    <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(0,0,0,0.06)'}}>
+                      {atsPack ? (
+                        <>
+                          <div style={{fontWeight:800,fontSize:13,color:'#0D47A1',marginBottom:4}}>🔥 Job fire loaded</div>
+                          {atsJobMeta&&<div style={{fontSize:13,color:'#1E293B',marginBottom:4}}><strong>{atsJobMeta.title}</strong>{atsJobMeta.company?` at ${atsJobMeta.company}`:''}</div>}
+                          {hasRealAts&&atsPack.ats?.score!==undefined&&<div style={{fontSize:12,color:'#334155'}}>Match: <strong>{atsPack.ats.score}%</strong></div>}
+                        </>
+                      ) : jd ? (
+                        <>
+                          <div style={{fontWeight:800,fontSize:13,color:'#0D47A1',marginBottom:4}}>🔥 Job fire loaded</div>
+                          <div style={{fontSize:12,color:'#334155'}}><strong>{fireMeta?.title||'Job'}</strong>{fireMeta?.company?` at ${fireMeta.company}`:''}</div>
+                          <div style={{fontSize:11,color:'#64748B',marginTop:4}}>Match insights and keyword coverage are active.</div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{fontWeight:800,fontSize:13,color:ORANGE,marginBottom:6}}>🔥 Add the fire.</div>
+                          <div style={{fontSize:12,color:'#475569',lineHeight:1.6}}>Drop a job description to unlock match insights, keyword coverage, and tailored AI guidance.</div>
+                        </>
+                      )}
+                      {(jd||atsPack)&&<button type="button" onClick={clearJobFire} style={{marginTop:8,background:'transparent',border:'none',color:'#B91C1C',fontWeight:800,fontSize:12,cursor:'pointer',textDecoration:'underline',padding:0}}>Clear loaded job</button>}
+                    </div>
+                    <div ref={dropRef} onClick={()=>{if(fileInputRef.current) fileInputRef.current.value=''; fileInputRef.current?.click();}}
+                      style={{margin:'12px 16px',padding:'14px 16px',border:'2px dashed rgba(144,202,249,0.95)',borderRadius:12,textAlign:'center',background:'rgba(227,242,253,0.85)',cursor:'pointer'}}>
+                      <p style={{margin:0,fontSize:12,fontWeight:800,color:'#334155'}}>
+                        Drop a job description here<br/>or{' '}
+                        <button type="button" onClick={(e)=>{e.preventDefault();e.stopPropagation();if(fileInputRef.current) fileInputRef.current.value='';fileInputRef.current?.click();}}
+                          style={{color:ORANGE,background:'none',border:0,fontWeight:900,textDecoration:'underline',cursor:'pointer',fontSize:12}}>upload file</button>
+                      </p>
+                      <input ref={fileInputRef} type="file" accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
+                        onChange={(e)=>{const f=e.target.files?.[0];if(f) handleFile(f);e.target.value='';}}
+                        style={{display:'none'}}/>
+                      {(jdLoading||jdStatus)&&<div style={{marginTop:8,fontSize:12,fontWeight:800,color:jdStatus?.startsWith?.('Failed')?'#B91C1C':'#0D47A1'}}>{jdLoading?'Processing…':jdStatus}</div>}
+                    </div>
+                  </div>
+                  {jd&&(
+                    <div style={{...GLASS_CARD,padding:'12px 16px',overflowY:'auto',maxHeight:'60vh'}}>
+                      <ForgeHammerPanel
+                        jdText={jd}
+                        resumeData={resumeData}
+                        summary={summary}
+                        skills={skills}
+                        experiences={experiences}
+                        education={educationList}
+                        jobMeta={fireMeta||null}
+                        onAddSkill={(k)=>{setSkills((s)=>[...s,k]);triggerAutoSave();}}
+                        onAddSummary={(k)=>{setSummary((s)=>(s?`${s}\n\n${k}`:k));triggerAutoSave();}}
+                        onAddBullet={(k)=>{
+                          const lastExp=experiences[experiences.length-1];
+                          if(lastExp){setExperiences((exp)=>exp.map((e,i)=>i===exp.length-1?{...e,bullets:[...(e.bullets||[]),k]}:e));triggerAutoSave();}
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>{/* end left column */}
+
+          {/* RIGHT: Ad rail */}
           {!isFocusMode&&(
             <div style={{width:'270px',flexShrink:0,transformOrigin:'top right',transform:'scale(0.82)',marginRight:'-24px'}}>
               <RightRailPlacementManager slot="right_rail_1"/>
             </div>
           )}
-        </div>{/* end top grid */}
-        {/* MAIN GRID */}
-        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0, 1fr) 340px',gap:8,alignItems:'start',marginTop:4}}>
-
-          {/* CENTER: Resume (inline editable) */}
-          <div style={{...GLASS_CARD,overflow:'hidden'}}>
-            <div style={{padding:'10px 16px',background:'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',color:'white',fontWeight:900,fontSize:13,letterSpacing:0.4,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <span>{isEditMode?'✏️ LIVE RESUME EDITOR':'👁 RESUME PREVIEW'}</span>
-              {isEditMode&&<span style={{fontSize:11,fontWeight:600,opacity:0.75}}>
-                {saveState==='saving'?'Auto-saving…':saveState==='saved'?'✓ Auto-saved':saveState==='error'?'Auto-save failed':'Click any section to edit'}
-              </span>}
-            </div>
-            <div id="resume-preview" style={{padding:isEditMode?20:32,background:'#fff',minHeight:760,overflowY:'auto'}}>
-              {previewMode==='signal-test' ? (
-                <SignalResumeTestTemplate data={resumeData}/>
-              ) : (
-                <TemplateComponent
-                  data={resumeData}
-                  isEditMode={isEditMode}
-                  onUpdate={isEditMode?handleResumeUpdate:undefined}
-                />
-              )}
-            </div>
-          </div>
-
-          {/* RIGHT: Forge Hammer — always visible */}
-          {!isFocusMode&&(
-            <div style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20}}>
-              {/* Hammer card */}
-              <div style={{...GLASS_CARD,overflow:'hidden'}}>
-                <div style={{padding:'12px 16px',background:'linear-gradient(135deg, rgba(255,112,67,0.15), rgba(255,112,67,0.05))',borderBottom:'1px solid rgba(255,112,67,0.15)'}}>
-                  <div style={{fontWeight:900,fontSize:15,color:ORANGE}}>🔨 The Forge Hammer</div>
-                  <div style={{fontSize:11,color:'#64748B',fontWeight:600,marginTop:2}}>AI hammer + resume steel + job fire</div>
-                </div>
-
-                {/* Job fire status */}
-                <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(0,0,0,0.06)'}}>
-                  {atsPack ? (
-                    <>
-                      <div style={{fontWeight:800,fontSize:13,color:'#0D47A1',marginBottom:4}}>🔥 Job fire loaded</div>
-                      {atsJobMeta&&<div style={{fontSize:13,color:'#1E293B',marginBottom:4}}><strong>{atsJobMeta.title}</strong>{atsJobMeta.company?` at ${atsJobMeta.company}`:''}</div>}
-                      {hasRealAts&&atsPack.ats?.score!==undefined&&<div style={{fontSize:12,color:'#334155'}}>Match: <strong>{atsPack.ats.score}%</strong></div>}
-                    </>
-                  ) : jd ? (
-                    <>
-                      <div style={{fontWeight:800,fontSize:13,color:'#0D47A1',marginBottom:4}}>🔥 Job fire loaded</div>
-                      <div style={{fontSize:12,color:'#334155'}}><strong>{fireMeta?.title||'Job'}</strong>{fireMeta?.company?` at ${fireMeta.company}`:''}</div>
-                      <div style={{fontSize:11,color:'#64748B',marginTop:4}}>Match insights and keyword coverage are active.</div>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{fontWeight:800,fontSize:13,color:ORANGE,marginBottom:6}}>🔥 Add the fire.</div>
-                      <div style={{fontSize:12,color:'#475569',lineHeight:1.6}}>Drop a job description to unlock match insights, keyword coverage, and tailored AI guidance for this role.</div>
-                    </>
-                  )}
-                  {(jd||atsPack)&&<button type="button" onClick={clearJobFire} style={{marginTop:8,background:'transparent',border:'none',color:'#B91C1C',fontWeight:800,fontSize:12,cursor:'pointer',textDecoration:'underline',padding:0}}>Clear loaded job</button>}
-                </div>
-
-                {/* Drop zone */}
-                <div ref={dropRef} onClick={()=>{if(fileInputRef.current) fileInputRef.current.value=''; fileInputRef.current?.click();}}
-                  style={{margin:'12px 16px',padding:'14px 16px',border:'2px dashed rgba(144,202,249,0.95)',borderRadius:12,textAlign:'center',background:'rgba(227,242,253,0.85)',cursor:'pointer'}}>
-                  <p style={{margin:0,fontSize:12,fontWeight:800,color:'#334155'}}>
-                    Drop a job description here<br/>or{' '}
-                    <button type="button" onClick={(e)=>{e.preventDefault();e.stopPropagation();if(fileInputRef.current) fileInputRef.current.value='';fileInputRef.current?.click();}}
-                      style={{color:ORANGE,background:'none',border:0,fontWeight:900,textDecoration:'underline',cursor:'pointer',fontSize:12}}>upload file</button>
-                  </p>
-                  <input ref={fileInputRef} type="file" accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
-                    onChange={(e)=>{const f=e.target.files?.[0];if(f) handleFile(f);e.target.value='';}}
-                    style={{display:'none'}}/>
-                  {(jdLoading||jdStatus)&&<div style={{marginTop:8,fontSize:12,fontWeight:800,color:jdStatus?.startsWith?.('Failed')?'#B91C1C':'#0D47A1'}}>{jdLoading?'Processing…':jdStatus}</div>}
-                </div>
-              </div>
-
-              {/* ForgeHammerPanel — AI tools */}
-              {jd&&(
-                <div style={{...GLASS_CARD,padding:'12px 16px',overflowY:'auto',maxHeight:'60vh'}}>
-                  <ForgeHammerPanel
-                    jdText={jd}
-                    resumeData={resumeData}
-                    summary={summary}
-                    skills={skills}
-                    experiences={experiences}
-                    education={educationList}
-                    jobMeta={fireMeta||null}
-                    onAddSkill={(k)=>{setSkills((s)=>[...s,k]);triggerAutoSave();}}
-                    onAddSummary={(k)=>{setSummary((s)=>(s?`${s}\n\n${k}`:k));triggerAutoSave();}}
-                    onAddBullet={(k)=>{
-                      const lastExp=experiences[experiences.length-1];
-                      if(lastExp){setExperiences((exp)=>exp.map((e,i)=>i===exp.length-1?{...e,bullets:[...(e.bullets||[]),k]}:e));triggerAutoSave();}
-                    }}
-                  />
-                </div>
-              )}
-
-
-            </div>
-          )}
-        </div>
+        </div>{/* end outer grid */}
       </div>
 
       {/* Toast */}
