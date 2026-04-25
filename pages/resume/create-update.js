@@ -410,8 +410,8 @@ export default function CreateResumePage() {
 
       <div style={{width:'100%',boxSizing:'border-box'}} className="overflow-x-hidden">
 
-        {/* TOP: title + command card | ad rail — no bottom margin so resume sits flush */}
-        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 280px',gap:12,alignItems:'start',marginBottom:2,width:'100%'}}>
+        {/* TOP: title + command card | compact ad rail — ad no longer controls page spacing */}
+        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,alignItems:'start',marginBottom:8,width:'100%'}}>
           <div style={{minWidth:0,display:'grid',gap:8}}>
             <SeekerTitleCard
               greeting={greeting}
@@ -473,10 +473,12 @@ export default function CreateResumePage() {
             </div>
           </div>
 
-          {/* AD RAIL — beside title + command card only */}
+          {/* AD RAIL — beside title + command card only, without forcing a tall spacer */}
           {!isFocusMode&&(
-            <div style={{width:'280px',flexShrink:0,transform:'scale(0.78)',transformOrigin:'top right',marginRight:'-30px',overflow:'hidden',maxHeight:380,borderRadius:14}}>
-              <RightRailPlacementManager slot="right_rail_1"/>
+            <div style={{width:'220px',height:224,flexShrink:0,overflow:'hidden',borderRadius:14}}>
+              <div style={{width:280,transform:'scale(0.78)',transformOrigin:'top left'}}>
+                <RightRailPlacementManager slot="right_rail_1"/>
+              </div>
             </div>
           )}
         </div>
