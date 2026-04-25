@@ -410,15 +410,18 @@ export default function CreateResumePage() {
 
       <div style={{width:'100%',boxSizing:'border-box',padding:'0 4px'}}>
 
-        {/* TITLE */}
-        <SeekerTitleCard
-          greeting={greeting}
-          title="Resume Builder"
-          subtitle="Build your resume once. Export anywhere. Reverse Chronological and Hybrid for traditional markets — ForgeFormat for people with real careers."
-        />
+        {/* TOP GRID: title + command card | ad rail */}
+        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 260px',gap:16,alignItems:'start',marginBottom:14,width:'100%'}}>
+          <div style={{minWidth:0,display:'grid',gap:12}}>
+            {/* TITLE */}
+            <SeekerTitleCard
+              greeting={greeting}
+              title="Resume Builder"
+              subtitle="Build your resume once. Export anywhere. Reverse Chronological and Hybrid for traditional markets — ForgeFormat for people with real careers."
+            />
 
-        {/* COMMAND CARD */}
-        <div style={{...GLASS_CARD,padding:'14px 18px',marginTop:12,marginBottom:14}}>
+            {/* COMMAND CARD */}
+            <div style={{...GLASS_CARD,padding:'14px 18px'}}>
           {/* Row 1 */}
           <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:10}}>
             <span style={{fontWeight:900,fontSize:13,color:'#111827',whiteSpace:'nowrap'}}>Resume:</span>
@@ -472,6 +475,15 @@ export default function CreateResumePage() {
             </div>
           </div>
         </div>
+
+            </div>{/* end command card */}
+          </div>{/* end left column of top grid */}
+          {!isFocusMode&&(
+            <div style={{width:'260px',flexShrink:0}}>
+              <RightRailPlacementManager slot="right_rail_1"/>
+            </div>
+          )}
+        </div>{/* end top grid */}
 
         {/* MAIN GRID */}
         <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0, 1fr) 340px',gap:16,alignItems:'start'}}>
@@ -566,8 +578,7 @@ export default function CreateResumePage() {
                 </div>
               )}
 
-              {/* Ad when hammer not active */}
-              {!jd&&<RightRailPlacementManager slot="right_rail_1"/>}
+
             </div>
           )}
         </div>
