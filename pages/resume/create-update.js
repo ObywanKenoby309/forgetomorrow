@@ -411,7 +411,7 @@ export default function CreateResumePage() {
       <div style={{width:'100%',boxSizing:'border-box'}} className="overflow-x-hidden">
 
         {/* TOP GRID: title + command card on left | ad rail on right */}
-        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 270px',gap:16,alignItems:'start',marginBottom:8,width:'100%'}}>
+        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 270px',gap:16,alignItems:'start',marginBottom:4,width:'100%'}}>
           <div style={{minWidth:0,display:'grid',gap:6}}>
             <SeekerTitleCard
               greeting={greeting}
@@ -480,9 +480,8 @@ export default function CreateResumePage() {
             </div>
           )}
         </div>{/* end top grid */}
-
         {/* MAIN GRID */}
-        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0, 1fr) 340px',gap:16,alignItems:'start'}}>
+        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0, 1fr) 340px',gap:8,alignItems:'start',marginTop:4}}>
 
           {/* CENTER: Resume (inline editable) */}
           <div style={{...GLASS_CARD,overflow:'hidden'}}>
