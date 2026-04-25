@@ -411,7 +411,7 @@ export default function CreateResumePage() {
       <div style={{width:'100%',boxSizing:'border-box'}} className="overflow-x-hidden">
 
         {/* OUTER GRID: all content left | ad rail right */}
-        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 270px',gap:16,alignItems:'start',width:'100%'}}>
+        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 200px',gap:16,alignItems:'start',width:'100%'}}>
 
           {/* LEFT COLUMN: title + command card + resume/hammer */}
           <div style={{minWidth:0,display:'grid',gap:8}}>
@@ -573,7 +573,7 @@ export default function CreateResumePage() {
 
           {/* RIGHT: Ad rail */}
           {!isFocusMode&&(
-            <div style={{width:'270px',flexShrink:0,transformOrigin:'top right',transform:'scale(0.82)',marginRight:'-24px'}}>
+            <div style={{width:'200px',flexShrink:0,transformOrigin:'top right',transform:'scale(0.75)',marginRight:'-10px',maxHeight:320,overflow:'hidden',borderRadius:12}}>
               <RightRailPlacementManager slot="right_rail_1"/>
             </div>
           )}
