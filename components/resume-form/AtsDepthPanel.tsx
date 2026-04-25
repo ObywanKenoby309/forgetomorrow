@@ -432,41 +432,44 @@ export default function AtsDepthPanel({
         </div>
 
         {/* Primary action */}
-        <div
-          style={{
-            marginTop: 12,
-            padding: 14,
-            borderRadius: 16,
-            border: '1px solid #FFE0B2',
-            background: '#FFF8E1',
-          }}
-        >
-          <div style={{ fontSize: 15, fontWeight: 950, color: '#F97316', marginBottom: 5 }}>
-            Ask the Coach
-          </div>
-          <div style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.45 }}>
-            Work section-by-section before spending a scan. Get paste-ready suggestions for the exact job.
-          </div>
-          <button
-            type="button"
-            onClick={openCoachOverview}
-            style={{
-              marginTop: 12,
-              width: '100%',
-              padding: '12px 16px',
-              borderRadius: 999,
-              border: 'none',
-              background: ORANGE,
-              color: 'white',
-              fontWeight: 950,
-              fontSize: 14,
-              cursor: 'pointer',
-              boxShadow: '0 6px 16px rgba(0,0,0,0.16)',
-            }}
-          >
-            Ask the Coach
-          </button>
-        </div>
+{activePanel === 'coach' && (
+  <div style={{ marginTop: 12, padding: 14, borderRadius: 16, border: '1px solid #FFE0B2', background: '#FFF8E1' }}>
+    <div style={{ fontSize: 15, fontWeight: 950, color: '#F97316', marginBottom: 5 }}>
+      Ask the Coach
+    </div>
+    <div style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.45 }}>
+      Work section-by-section before spending a scan. Get paste-ready suggestions for the exact job.
+    </div>
+    <button type="button" onClick={openCoachOverview} style={{ marginTop: 12, width: '100%', padding: '12px 16px', borderRadius: 999, border: 'none', background: ORANGE, color: 'white', fontWeight: 950, fontSize: 14, cursor: 'pointer', boxShadow: '0 6px 16px rgba(0,0,0,0.16)' }}>
+      Ask the Coach
+    </button>
+  </div>
+)}
+
+{activePanel === 'scan' && (
+  <div style={{ marginTop: 12, padding: 14, borderRadius: 16, border: '1px solid #CBD5E1', background: '#F8FAFC' }}>
+    <div style={{ fontSize: 15, fontWeight: 950, color: '#263238', marginBottom: 5 }}>
+      AI Scan
+    </div>
+    <div style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.45 }}>
+      Run this after you use the coach and feel confident in your updates.
+    </div>
+    <button type="button" onClick={runAiScan} disabled={aiLoading} style={{ marginTop: 12, width: '100%', padding: '12px 16px', borderRadius: 999, border: 'none', background: '#263238', color: 'white', fontWeight: 950, fontSize: 14, cursor: aiLoading ? 'not-allowed' : 'pointer', opacity: aiLoading ? 0.75 : 1 }}>
+      {aiLoading ? 'Thinking…' : aiScore === null ? 'Run AI Scan' : 'Run Scan Again'}
+    </button>
+  </div>
+)}
+
+{activePanel === 'keywords' && (
+  <div style={{ marginTop: 12, padding: 14, borderRadius: 16, border: '1px solid #E2E8F0', background: '#FFFFFF' }}>
+    <div style={{ fontSize: 15, fontWeight: 950, color: '#263238', marginBottom: 5 }}>
+      Keyword Breakdown
+    </div>
+    <div style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.45 }}>
+      Use this as a supporting checklist after the coach helps tighten your wording.
+    </div>
+  </div>
+)}
 
         {/* Module selector */}
         <div
@@ -553,27 +556,6 @@ export default function AtsDepthPanel({
               <div style={{ marginTop: 5, fontSize: 12, color: '#607D8B', lineHeight: 1.45 }}>
                 Run this after you use the coach and feel confident in your updates.
               </div>
-
-              <button
-                type="button"
-                onClick={runAiScan}
-                disabled={aiLoading}
-                style={{
-                  marginTop: 12,
-                  width: '100%',
-                  padding: '11px 14px',
-                  borderRadius: 999,
-                  border: 'none',
-                  background: '#263238',
-                  color: 'white',
-                  fontWeight: 950,
-                  fontSize: 13,
-                  cursor: aiLoading ? 'not-allowed' : 'pointer',
-                  opacity: aiLoading ? 0.75 : 1,
-                }}
-              >
-                {aiLoading ? 'Thinking…' : aiScore === null ? 'Run AI Scan' : 'Run Scan Again'}
-              </button>
 
               {aiError && (
                 <div style={{ marginTop: 10, fontSize: 12, color: '#C62828', fontWeight: 800 }}>
