@@ -410,24 +410,16 @@ export default function CreateResumePage() {
 
       <div style={{width:'100%',boxSizing:'border-box'}} className="overflow-x-hidden">
 
-        {/* OUTER GRID: all content left | ad rail right */}
-        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 200px',gap:16,alignItems:'start',width:'100%'}}>
-
-          {/* LEFT COLUMN: title + command card + resume/hammer */}
+        {/* TOP: title + command card | ad rail — no bottom margin so resume sits flush */}
+        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 260px',gap:12,alignItems:'start',marginBottom:8,width:'100%'}}>
           <div style={{minWidth:0,display:'grid',gap:8}}>
-
-            {/* TITLE */}
-            <div style={{marginBottom:0}}>
-              <SeekerTitleCard
-                greeting={greeting}
-                title="Resume Builder"
-                subtitle="Build your resume once. Export anywhere. Reverse Chronological and Hybrid for traditional markets — ForgeFormat for people with real careers."
-              />
-            </div>
-
-            {/* COMMAND CARD */}
+            <SeekerTitleCard
+              greeting={greeting}
+              title="Resume Builder"
+              subtitle="Build your resume once. Export anywhere. Reverse Chronological and Hybrid for traditional markets — ForgeFormat for people with real careers."
+            />
             <div style={{...GLASS_CARD,padding:'14px 18px'}}>
-              {/* Row 1: Resume + Status */}
+              {/* Row 1 */}
               <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:8}}>
                 <span style={{fontWeight:900,fontSize:13,color:'#111827',whiteSpace:'nowrap'}}>Resume:</span>
                 <select value={selectedResumeId} onChange={(e)=>setSelectedResumeId(e.target.value)}
@@ -441,8 +433,7 @@ export default function CreateResumePage() {
                 <span style={{fontSize:11,fontWeight:700,color:'#94A3B8',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>Status:</span>
                 <span style={{fontSize:12,fontWeight:900,borderRadius:999,padding:'4px 10px',...statusStyles}}>{statusLabel}</span>
               </div>
-
-              {/* Row 2: Base + View + Edit + Focus + Exports + Progress */}
+              {/* Row 2 */}
               <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 <span style={{fontWeight:700,color:'#475569',fontSize:12,whiteSpace:'nowrap'}}>Base:</span>
                 <button onClick={()=>router.push(buildResumeCreateHref('reverse'))} style={{borderRadius:999,padding:'4px 10px',fontSize:12,border:!isHybrid?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:!isHybrid?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:!isHybrid?'#C2410C':'#64748B',fontWeight:!isHybrid?900:700,cursor:'pointer'}}>Reverse</button>
@@ -480,104 +471,106 @@ export default function CreateResumePage() {
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* RESUME + HAMMER GRID — no gap from command card */}
-            <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0, 1fr) 340px',gap:8,alignItems:'start'}}>
-
-              {/* CENTER: Resume */}
-              <div style={{...GLASS_CARD,overflow:'hidden'}}>
-                <div style={{padding:'10px 16px',background:'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',color:'white',fontWeight:900,fontSize:13,letterSpacing:0.4,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                  <span>{isEditMode?'✏️ LIVE RESUME EDITOR':'👁 RESUME PREVIEW'}</span>
-                  {isEditMode&&<span style={{fontSize:11,fontWeight:600,opacity:0.75}}>
-                    {saveState==='saving'?'Auto-saving…':saveState==='saved'?'✓ Auto-saved':saveState==='error'?'Auto-save failed':'Click any section to edit'}
-                  </span>}
-                </div>
-                <div id="resume-preview" style={{padding:isEditMode?20:32,background:'#fff',minHeight:760,overflowY:'auto'}}>
-                  {previewMode==='signal-test' ? (
-                    <SignalResumeTestTemplate data={resumeData}/>
-                  ) : (
-                    <TemplateComponent
-                      data={resumeData}
-                      isEditMode={isEditMode}
-                      onUpdate={isEditMode?handleResumeUpdate:undefined}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* RIGHT: Forge Hammer permanent rail */}
-              {!isFocusMode&&(
-                <div style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20}}>
-                  <div style={{...GLASS_CARD,overflow:'hidden'}}>
-                    <div style={{padding:'12px 16px',background:'linear-gradient(135deg, rgba(255,112,67,0.15), rgba(255,112,67,0.05))',borderBottom:'1px solid rgba(255,112,67,0.15)'}}>
-                      <div style={{fontWeight:900,fontSize:15,color:ORANGE}}>🔨 The Forge Hammer</div>
-                      <div style={{fontSize:11,color:'#64748B',fontWeight:600,marginTop:2}}>AI hammer + resume steel + job fire</div>
-                    </div>
-                    <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(0,0,0,0.06)'}}>
-                      {atsPack ? (
-                        <>
-                          <div style={{fontWeight:800,fontSize:13,color:'#0D47A1',marginBottom:4}}>🔥 Job fire loaded</div>
-                          {atsJobMeta&&<div style={{fontSize:13,color:'#1E293B',marginBottom:4}}><strong>{atsJobMeta.title}</strong>{atsJobMeta.company?` at ${atsJobMeta.company}`:''}</div>}
-                          {hasRealAts&&atsPack.ats?.score!==undefined&&<div style={{fontSize:12,color:'#334155'}}>Match: <strong>{atsPack.ats.score}%</strong></div>}
-                        </>
-                      ) : jd ? (
-                        <>
-                          <div style={{fontWeight:800,fontSize:13,color:'#0D47A1',marginBottom:4}}>🔥 Job fire loaded</div>
-                          <div style={{fontSize:12,color:'#334155'}}><strong>{fireMeta?.title||'Job'}</strong>{fireMeta?.company?` at ${fireMeta.company}`:''}</div>
-                          <div style={{fontSize:11,color:'#64748B',marginTop:4}}>Match insights and keyword coverage are active.</div>
-                        </>
-                      ) : (
-                        <>
-                          <div style={{fontWeight:800,fontSize:13,color:ORANGE,marginBottom:6}}>🔥 Add the fire.</div>
-                          <div style={{fontSize:12,color:'#475569',lineHeight:1.6}}>Drop a job description to unlock match insights, keyword coverage, and tailored AI guidance.</div>
-                        </>
-                      )}
-                      {(jd||atsPack)&&<button type="button" onClick={clearJobFire} style={{marginTop:8,background:'transparent',border:'none',color:'#B91C1C',fontWeight:800,fontSize:12,cursor:'pointer',textDecoration:'underline',padding:0}}>Clear loaded job</button>}
-                    </div>
-                    <div ref={dropRef} onClick={()=>{if(fileInputRef.current) fileInputRef.current.value=''; fileInputRef.current?.click();}}
-                      style={{margin:'12px 16px',padding:'14px 16px',border:'2px dashed rgba(144,202,249,0.95)',borderRadius:12,textAlign:'center',background:'rgba(227,242,253,0.85)',cursor:'pointer'}}>
-                      <p style={{margin:0,fontSize:12,fontWeight:800,color:'#334155'}}>
-                        Drop a job description here<br/>or{' '}
-                        <button type="button" onClick={(e)=>{e.preventDefault();e.stopPropagation();if(fileInputRef.current) fileInputRef.current.value='';fileInputRef.current?.click();}}
-                          style={{color:ORANGE,background:'none',border:0,fontWeight:900,textDecoration:'underline',cursor:'pointer',fontSize:12}}>upload file</button>
-                      </p>
-                      <input ref={fileInputRef} type="file" accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
-                        onChange={(e)=>{const f=e.target.files?.[0];if(f) handleFile(f);e.target.value='';}}
-                        style={{display:'none'}}/>
-                      {(jdLoading||jdStatus)&&<div style={{marginTop:8,fontSize:12,fontWeight:800,color:jdStatus?.startsWith?.('Failed')?'#B91C1C':'#0D47A1'}}>{jdLoading?'Processing…':jdStatus}</div>}
-                    </div>
-                  </div>
-                  {jd&&(
-                    <div style={{...GLASS_CARD,padding:'12px 16px',overflowY:'auto',maxHeight:'60vh'}}>
-                      <ForgeHammerPanel
-                        jdText={jd}
-                        resumeData={resumeData}
-                        summary={summary}
-                        skills={skills}
-                        experiences={experiences}
-                        education={educationList}
-                        jobMeta={fireMeta||null}
-                        onAddSkill={(k)=>{setSkills((s)=>[...s,k]);triggerAutoSave();}}
-                        onAddSummary={(k)=>{setSummary((s)=>(s?`${s}\n\n${k}`:k));triggerAutoSave();}}
-                        onAddBullet={(k)=>{
-                          const lastExp=experiences[experiences.length-1];
-                          if(lastExp){setExperiences((exp)=>exp.map((e,i)=>i===exp.length-1?{...e,bullets:[...(e.bullets||[]),k]}:e));triggerAutoSave();}
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>{/* end left column */}
-
-          {/* RIGHT: Ad rail */}
+          {/* AD RAIL — beside title + command card only */}
           {!isFocusMode&&(
-            <div style={{width:'200px',flexShrink:0,transformOrigin:'top right',transform:'scale(0.75)',marginRight:'-10px',maxHeight:320,overflow:'hidden',borderRadius:12}}>
+            <div style={{width:'260px',flexShrink:0}}>
               <RightRailPlacementManager slot="right_rail_1"/>
             </div>
           )}
-        </div>{/* end outer grid */}
+        </div>
+
+        {/* RESUME + HAMMER GRID — full width, no ad rail competing */}
+        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0,1fr) 340px',gap:8,alignItems:'start'}}>
+
+          {/* CENTER: Resume */}
+          <div style={{...GLASS_CARD,overflow:'hidden'}}>
+            <div style={{padding:'10px 16px',background:'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',color:'white',fontWeight:900,fontSize:13,letterSpacing:0.4,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <span>{isEditMode?'✏️ LIVE RESUME EDITOR':'👁 RESUME PREVIEW'}</span>
+              {isEditMode&&<span style={{fontSize:11,fontWeight:600,opacity:0.75}}>
+                {saveState==='saving'?'Auto-saving…':saveState==='saved'?'✓ Auto-saved':saveState==='error'?'Auto-save failed':'Click any section to edit'}
+              </span>}
+            </div>
+            <div id="resume-preview" style={{padding:isEditMode?20:32,background:'#fff',minHeight:760,overflowY:'auto'}}>
+              {previewMode==='signal-test' ? (
+                <SignalResumeTestTemplate data={resumeData}/>
+              ) : (
+                <TemplateComponent
+                  data={resumeData}
+                  isEditMode={isEditMode}
+                  onUpdate={isEditMode?handleResumeUpdate:undefined}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* FORGE HAMMER — permanent right rail */}
+          {!isFocusMode&&(
+            <div style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20}}>
+              <div style={{...GLASS_CARD,overflow:'hidden'}}>
+                <div style={{padding:'12px 16px',background:'linear-gradient(135deg, rgba(255,112,67,0.15), rgba(255,112,67,0.05))',borderBottom:'1px solid rgba(255,112,67,0.15)'}}>
+                  <div style={{fontWeight:900,fontSize:15,color:ORANGE}}>🔨 The Forge Hammer</div>
+                  <div style={{fontSize:11,color:'#64748B',fontWeight:600,marginTop:2}}>AI hammer + resume steel + job fire</div>
+                </div>
+                <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(0,0,0,0.06)'}}>
+                  {atsPack ? (
+                    <>
+                      <div style={{fontWeight:800,fontSize:13,color:'#0D47A1',marginBottom:4}}>🔥 Job fire loaded</div>
+                      {atsJobMeta&&<div style={{fontSize:13,color:'#1E293B',marginBottom:4}}><strong>{atsJobMeta.title}</strong>{atsJobMeta.company?` at ${atsJobMeta.company}`:''}</div>}
+                      {hasRealAts&&atsPack.ats?.score!==undefined&&<div style={{fontSize:12,color:'#334155'}}>Match: <strong>{atsPack.ats.score}%</strong></div>}
+                    </>
+                  ) : jd ? (
+                    <>
+                      <div style={{fontWeight:800,fontSize:13,color:'#0D47A1',marginBottom:4}}>🔥 Job fire loaded</div>
+                      <div style={{fontSize:12,color:'#334155'}}><strong>{fireMeta?.title||'Job'}</strong>{fireMeta?.company?` at ${fireMeta.company}`:''}</div>
+                      <div style={{fontSize:11,color:'#64748B',marginTop:4}}>Match insights and keyword coverage are active.</div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{fontWeight:800,fontSize:13,color:ORANGE,marginBottom:6}}>🔥 Add the fire.</div>
+                      <div style={{fontSize:12,color:'#475569',lineHeight:1.6}}>Drop a job description to unlock match insights, keyword coverage, and tailored AI guidance.</div>
+                    </>
+                  )}
+                  {(jd||atsPack)&&<button type="button" onClick={clearJobFire} style={{marginTop:8,background:'transparent',border:'none',color:'#B91C1C',fontWeight:800,fontSize:12,cursor:'pointer',textDecoration:'underline',padding:0}}>Clear loaded job</button>}
+                </div>
+                <div ref={dropRef} onClick={()=>{if(fileInputRef.current) fileInputRef.current.value=''; fileInputRef.current?.click();}}
+                  style={{margin:'12px 16px',padding:'14px 16px',border:'2px dashed rgba(144,202,249,0.95)',borderRadius:12,textAlign:'center',background:'rgba(227,242,253,0.85)',cursor:'pointer'}}>
+                  <p style={{margin:0,fontSize:12,fontWeight:800,color:'#334155'}}>
+                    Drop a job description here<br/>or{' '}
+                    <button type="button" onClick={(e)=>{e.preventDefault();e.stopPropagation();if(fileInputRef.current) fileInputRef.current.value='';fileInputRef.current?.click();}}
+                      style={{color:ORANGE,background:'none',border:0,fontWeight:900,textDecoration:'underline',cursor:'pointer',fontSize:12}}>upload file</button>
+                  </p>
+                  <input ref={fileInputRef} type="file" accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
+                    onChange={(e)=>{const f=e.target.files?.[0];if(f) handleFile(f);e.target.value='';}}
+                    style={{display:'none'}}/>
+                  {(jdLoading||jdStatus)&&<div style={{marginTop:8,fontSize:12,fontWeight:800,color:jdStatus?.startsWith?.('Failed')?'#B91C1C':'#0D47A1'}}>{jdLoading?'Processing…':jdStatus}</div>}
+                </div>
+              </div>
+              {jd&&(
+                <div style={{...GLASS_CARD,padding:'12px 16px',overflowY:'auto',maxHeight:'60vh'}}>
+                  <ForgeHammerPanel
+                    jdText={jd}
+                    resumeData={resumeData}
+                    summary={summary}
+                    skills={skills}
+                    experiences={experiences}
+                    education={educationList}
+                    jobMeta={fireMeta||null}
+                    onAddSkill={(k)=>{setSkills((s)=>[...s,k]);triggerAutoSave();}}
+                    onAddSummary={(k)=>{setSummary((s)=>(s?`${s}
+
+${k}`:k));triggerAutoSave();}}
+                    onAddBullet={(k)=>{
+                      const lastExp=experiences[experiences.length-1];
+                      if(lastExp){setExperiences((exp)=>exp.map((e,i)=>i===exp.length-1?{...e,bullets:[...(e.bullets||[]),k]}:e));triggerAutoSave();}
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Toast */}
