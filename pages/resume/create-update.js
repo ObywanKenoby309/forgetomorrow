@@ -409,10 +409,11 @@ export default function CreateResumePage() {
       `}</style>
 
       <div style={{width:'100%',boxSizing:'border-box',padding:'0 4px'}}>
+        {/* PAGE GRID: main content | ad rail */}
+        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0,1fr) 220px',gap:16,alignItems:'start'}}>
+          {/* LEFT: all content */}
+          <div style={{minWidth:0}}>
 
-        {/* TOP GRID: title + command card | ad rail */}
-        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 260px',gap:16,alignItems:'start',marginBottom:14,width:'100%'}}>
-          <div style={{minWidth:0,display:'grid',gap:12}}>
             {/* TITLE */}
             <SeekerTitleCard
               greeting={greeting}
@@ -421,7 +422,7 @@ export default function CreateResumePage() {
             />
 
             {/* COMMAND CARD */}
-            <div style={{...GLASS_CARD,padding:'14px 18px'}}>
+            <div style={{...GLASS_CARD,padding:'14px 18px',marginTop:12,marginBottom:14}}>
           {/* Row 1 */}
           <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:10}}>
             <span style={{fontWeight:900,fontSize:13,color:'#111827',whiteSpace:'nowrap'}}>Resume:</span>
@@ -477,15 +478,8 @@ export default function CreateResumePage() {
         </div>
 
             </div>{/* end command card */}
-          </div>{/* end left column of top grid */}
-          {!isFocusMode&&(
-            <div style={{width:'260px',flexShrink:0}}>
-              <RightRailPlacementManager slot="right_rail_1"/>
-            </div>
-          )}
-        </div>{/* end top grid */}
 
-        {/* MAIN GRID */}
+            {/* MAIN GRID */}
         <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0, 1fr) 340px',gap:16,alignItems:'start'}}>
 
           {/* CENTER: Resume (inline editable) */}
@@ -582,6 +576,15 @@ export default function CreateResumePage() {
             </div>
           )}
         </div>
+          </div>{/* end left column */}
+
+          {/* RIGHT: Ad rail */}
+          {!isFocusMode&&(
+            <div style={{position:'sticky',top:12}}>
+              <RightRailPlacementManager slot="right_rail_1"/>
+            </div>
+          )}
+        </div>{/* end page grid */}
       </div>
 
       {/* Toast */}
