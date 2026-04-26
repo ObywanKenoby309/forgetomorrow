@@ -509,7 +509,18 @@ export default function CreateResumePage() {
 
           {/* FORGE HAMMER — permanent right rail */}
           {!isFocusMode&&(
-            <div style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20}}>
+            <div
+  style={{
+    display:'flex',
+    flexDirection:'column',
+    gap:12,
+    position:'sticky',
+    top:20,
+    maxHeight:'calc(100vh - 40px)',
+    overflowY:'auto',
+    paddingRight:4,
+  }}
+>
               <div style={{...GLASS_CARD,overflow:'hidden'}}>
                 <div style={{padding:'12px 16px',background:'linear-gradient(135deg, rgba(255,112,67,0.15), rgba(255,112,67,0.05))',borderBottom:'1px solid rgba(255,112,67,0.15)'}}>
                   <div style={{fontWeight:900,fontSize:15,color:ORANGE}}>🔨 The Forge Hammer</div>
@@ -550,7 +561,7 @@ export default function CreateResumePage() {
                 </div>
               </div>
               {jd&&(
-                <div style={{...GLASS_CARD,padding:'12px 16px',overflowY:'auto',maxHeight:'60vh'}}>
+                <div style={{...GLASS_CARD,padding:'12px 16px'}}>
                   <ForgeHammerPanel
                     jdText={jd}
                     resumeData={resumeData}
