@@ -46,6 +46,10 @@ type CoachContext = {
   keyword?: string | null;
 };
 
+type ActivePanel = 'coach' | 'scan' | 'keywords';
+
+const ORANGE = '#FF7043';
+
 const STOP_WORDS = new Set([
   'the',
   'and',
@@ -151,7 +155,7 @@ export default function AtsDepthPanel({
   onAddSummary,
   onAddBullet,
 }: Props) {
-  const [expanded, setExpanded] = useState(true);
+  const [activePanel, setActivePanel] = useState<ActivePanel>('coach');
 
   // unified scoring
   const [aiScore, setAiScore] = useState<number | null>(null);
@@ -250,10 +254,14 @@ export default function AtsDepthPanel({
   const loadedCompany = (jobMeta?.company || '').trim();
   const loadedLocation = (jobMeta?.location || '').trim();
 
+function openCoach(section: CoachContext['section'] = 'overview', keyword: string | null = null) {
+  setCoachContext({ section, keyword });
+  setCoachOpen(true);
+}
+
   function openCoachOverview() {
-    setCoachContext({ section: 'overview', keyword: null });
-    setCoachOpen(true);
-  }
+  openCoach('overview', null);
+}
 
   async function runAiScan() {
     if (!jdText?.trim()) return;
@@ -310,6 +318,23 @@ export default function AtsDepthPanel({
   const normalizedTips: string[] = Array.isArray(aiTips)
     ? aiTips.filter((t) => typeof t === 'string' && t.trim().length > 0)
     : [];
+
+  const tabButton = (key: ActivePanel, label: string) => ({
+    type: 'button' as const,
+    onClick: () => setActivePanel(key),
+    style: {
+      border: activePanel === key ? `1px solid ${ORANGE}` : '1px solid #E2E8F0',
+      background: activePanel === key ? 'rgba(255,112,67,0.10)' : '#FFFFFF',
+      color: activePanel === key ? '#C2410C' : '#475569',
+      borderRadius: 999,
+      padding: '6px 10px',
+      fontSize: 11,
+      fontWeight: 900,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap' as const,
+    },
+    children: label,
+  });
 
   return (
     <div style={{ marginTop: 0 }}>
