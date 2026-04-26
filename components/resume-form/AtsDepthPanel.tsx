@@ -647,29 +647,53 @@ function openCoach(section: CoachContext['section'] = 'overview', keyword: strin
                 Use this as a checklist. Let the coach handle wording.
               </div>
 
-              <div style={{ marginTop: 9, display: 'grid', gap: 6 }}>
-                {buckets.map((b) => (
-                  <div
-                    key={b.key}
-                    style={{
-                      padding: 9,
-                      borderRadius: 10,
-                      border: '1px solid #ECEFF1',
-                      background: '#FAFAFA',
-                      fontSize: 12,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ fontWeight: 900, color: '#37474F' }}>{b.label}</div>
-                      <div style={{ fontWeight: 900, color: b.points > 0 ? ORANGE : '#90A4AE' }}>
-                        {b.points} pts
+                            <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                {buckets.map((b) => {
+                  const percent = Math.max(0, Math.min(100, b.points));
+
+                  return (
+                    <div key={b.key}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                          fontSize: 12,
+                          fontWeight: 900,
+                          color: '#37474F',
+                          marginBottom: 3,
+                        }}
+                      >
+                        <span>{b.label}</span>
+                        <span style={{ color: percent > 0 ? ORANGE : '#90A4AE' }}>
+                          {percent}%
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          height: 8,
+                          borderRadius: 999,
+                          background: '#ECEFF1',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${percent}%`,
+                            height: '100%',
+                            background: percent > 0 ? ORANGE : '#CFD8DC',
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ marginTop: 3, fontSize: 11, color: '#607D8B' }}>
+                        {b.total > 0 ? `${b.matched}/${b.total} matched` : '0/0 matched'}
                       </div>
                     </div>
-                    <div style={{ marginTop: 3, color: '#607D8B' }}>
-                      {b.total > 0 ? `${b.matched}/${b.total} matched` : '0/0 matched'}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <details style={{ marginTop: 10 }}>
