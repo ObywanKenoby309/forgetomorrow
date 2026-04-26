@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
-import { buildRecruiterScanPrompt } from '@/lib/forge/strategyBrain';
+const { buildRecruiterScanPrompt } = require('@/lib/forge/strategyBrain');
 
 // === TYPES ===
 type ApiResponse = {
