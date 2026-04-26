@@ -6,6 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
+import { buildSectionCoachPrompt } from '@/lib/forge/strategyBrain';
 
 type CoachRequestBody = {
   jdText?: string;
@@ -208,94 +209,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const jdPreview = jdText.length > 1800 ? jdText.slice(0, 1800) + '\n\n[truncated]' : jdText;
 
-    const userPrompt = `
-You are a senior hiring strategist embedded inside ForgeTomorrow.
-
-You are NOT a generic writing assistant.
-You are evaluating why this resume would get rejected or advanced for this specific job description.
-
-JOB DESCRIPTION (JD)
---------------------
-${jdPreview || '[No JD supplied]'}
-
-CURRENT RESUME SNAPSHOT
------------------------
-Summary:
-${summary || '[No summary provided]'}
-
-Key Skills:
-${safeSkills.length ? safeSkills.join(', ') : '[No skills provided]'}
-
-Recent Experience (top 4 roles max):
-${expSnippets || '[No experience provided]'}
-
-Education:
-${eduSnippets || '[No education data provided]'}
-
-FORGETOMORROW RESUME COACHING MODE
-----------------------------------
-Before generating any suggestion, you MUST:
-
-1) Detect the dominant hiring environment from the JD:
-- Enterprise / Commercial
-- Startup / Growth
-- Nonprofit / Mission-driven
-- Government / Public sector
-
-2) Think like the hiring manager:
-- Why would this resume get rejected right now?
-- What signal is missing?
-- What exact wording would improve the decision?
-
-3) Focus on decision-changing improvements only:
-- missing hiring signals
-- weak or generic phrasing
-- missing keywords/tools only if they are clearly relevant
-- missing proof of ownership, outcomes, scale, speed, or ambiguity tolerance depending on the environment
-
-OUTPUT RULES
-------------
-Return ONLY valid JSON in this exact shape:
-
-{
-  "opening": "",
-  "environment": "",
-  "matchAssessment": "",
-  "signalGaps": [],
-  "improvementActions": [],
-  "bulletFixes": [
-    {
-      "original": "",
-      "improved": "",
-      "reason": ""
-    }
-  ],
-  "summaryFix": {
-    "original": "",
-    "improved": "",
-    "reason": ""
+    const userPrompt = buildSectionCoachPrompt({
+  jdText,
+  resumeData: {
+    summary,
+    skills: safeSkills,
+    workExperiences: experiences,
+    educationList: education,
   },
-  "reasoning": []
-}
-
-QUALITY RULES
--------------
-- NEVER return plain text outside JSON
-- NEVER return markdown
-- NEVER give generic advice like "improve clarity" or "tailor more"
-- EVERY improvement must map to a hiring decision signal
-- EVERY bulletFix.improved must be immediately usable on the resume
-- EVERY reason must explain why the change matters to this hiring team
-- Do NOT rewrite the entire resume
-- Focus on the highest-impact changes the user can make in 15–30 minutes
-
-FINAL TEST
-----------
-Would this change how a hiring manager sees the candidate for this JD?
-If not, rewrite it.
-
-Return ONLY valid JSON.
-`.trim();
+  context: body.context || { section: 'overview', keyword: null },
+  missing: body.missing || {},
+});
 
     // Groq OpenAI-compatible chat completions endpoint
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {

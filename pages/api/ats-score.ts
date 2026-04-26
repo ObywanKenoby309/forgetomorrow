@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
+import { buildRecruiterScanPrompt } from '@/lib/forge/strategyBrain';
 
 // === TYPES ===
 type ApiResponse = {
@@ -180,49 +181,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const openai = new OpenAI({ apiKey });
 
-    const roleContext =
-      role === 'COACH'
-        ? 'You are a career coach. Grade alignment and provide session-ready feedback.'
-        : role === 'RECRUITER'
-        ? 'You are a recruiter. Grade alignment and flag hiring fit risks and red flags.'
-        : 'You are an ATS teacher grading the resume. Focus on ATS pass rate and interview readiness.';
-
-    const prompt = `
-${roleContext}
-
-Return VALID JSON ONLY (no markdown, no commentary).
-
-{
-  "score": 92,
-  "summary": "3–5 sentences explaining fit for THIS job.",
-  "recommendations": [
-    "2–4 specific, actionable recommendations for THIS resume against THIS JD."
-  ]
-}
-
-JOB DESCRIPTION:
-${jd}
-
-RESUME:
-- Targeted Role: ${targetedRole || 'Not specified'}
-- Summary: ${summary || 'None'}
-- Skills: ${(skills || []).join(', ')}
-- Experience: ${
-      experiences
-        ?.map(
-          (e: any) =>
-            `${e.jobTitle || e.title || e.role || 'Role'} at ${e.company || 'Unknown'}: ${(e.bullets || []).join(
-              '; '
-            )}`
-        )
-        .join(' | ') || 'None'
-    }
-- Education: ${
-      education
-        ?.map((e: any) => `${e.degree || 'Degree'} in ${e.field || e.program || 'Field'}`)
-        .join(', ') || 'None'
-    }
-`.trim();
+        const prompt = buildRecruiterScanPrompt({
+      jdText: jd,
+      resumeData: {
+        personalInfo: {
+          targetedRole,
+        },
+        summary,
+        skills,
+        workExperiences: experiences,
+        educationList: education,
+      },
+      role,
+    });
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4.1-mini',
