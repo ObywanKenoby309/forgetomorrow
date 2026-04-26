@@ -742,8 +742,24 @@ function openCoach(section: CoachContext['section'] = 'overview', keyword: strin
       </div>
 
       {/* Coach overlay */}
-      <CoachSuggestionsPanel
-        open={coachOpen}
+      {activePanel === 'coach' && coachOpen && (
+  <CoachSuggestionsPanel
+    open={true}
+    onClose={() => setCoachOpen(false)}
+    context={coachContext}
+    jdText={jdText}
+    resumeData={resumeData}
+    missing={{
+      high: missingTitleKeywords,
+      tools: [],
+      edu: [],
+      soft: [],
+    }}
+    onAddSkill={onAddSkill}
+    onAddSummary={onAddSummary}
+    onAddBullet={onAddBullet}
+  />
+)}
         onClose={() => setCoachOpen(false)}
         context={coachContext}
         jdText={jdText}

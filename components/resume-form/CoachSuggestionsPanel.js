@@ -198,19 +198,13 @@ export default function CoachSuggestionsPanel(props) {
   const panel = (
     <div
       style={{
-        position: 'fixed',
-        right: 24,
-        bottom: 80,
-        width: 360,
-        maxHeight: '70vh',
+        width: '100%',
         background: '#FFF8E1',
         borderRadius: 16,
         border: '1px solid #FFCC80',
         boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
         display: 'flex',
         flexDirection: 'column',
-        zIndex: 11000,
-        pointerEvents: 'auto',
       }}
     >
       <div
@@ -246,10 +240,8 @@ export default function CoachSuggestionsPanel(props) {
       <div
         style={{
           padding: '10px 14px',
-          overflowY: 'auto',
           fontSize: 13,
           color: '#5D4037',
-          flex: 1,
         }}
       >
         <p style={{ marginBottom: 8 }}>
@@ -316,5 +308,5 @@ export default function CoachSuggestionsPanel(props) {
     </div>
   );
 
-  return createPortal(panel, portalEl);
+  return panel;
 }
