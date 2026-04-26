@@ -281,11 +281,14 @@ export default function CoachSuggestionsPanel(props) {
             <div
               style={{
                 marginTop: 8,
-                padding: 8,
+                padding: 10,
                 background: '#FFF3E0',
                 borderRadius: 10,
                 border: '1px solid #FFE0B2',
                 whiteSpace: 'pre-wrap',
+                maxHeight: 260,
+                overflowY: 'auto',
+                lineHeight: 1.45,
               }}
             >
               {text}
