@@ -6,7 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
-import { buildSectionCoachPrompt } from '@/lib/forge/strategyBrain';
+const { buildSectionCoachPrompt } = require('@/lib/forge/strategyBrain');
 
 type CoachRequestBody = {
   jdText?: string;
@@ -185,29 +185,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const education = (rd.educationList || rd.education || []) as any[];
 
     const safeSkills = (skills || []).filter((s) => typeof s === 'string' && s.trim().length > 0);
-
-    const expSnippets = experiences
-      .slice(0, 4)
-      .map((exp: any, idx: number) => {
-        const title = exp.title || exp.jobTitle || exp.role || '';
-        const company = exp.company || '';
-        const bullets = Array.isArray(exp.bullets) ? exp.bullets : [];
-        const firstBullet = bullets.find((b: string) => typeof b === 'string' && b.trim().length > 0) || '';
-        return `${idx + 1}. ${title} at ${company}${firstBullet ? ` — ${firstBullet}` : ''}`;
-      })
-      .join('\n');
-
-    const eduSnippets = education
-      .slice(0, 3)
-      .map((ed: any, idx: number) => {
-        const school = ed.school || ed.institution || '';
-        const degree = ed.degree || '';
-        const field = ed.field || ed.program || '';
-        return `${idx + 1}. ${degree} ${field} at ${school}`.trim();
-      })
-      .join('\n');
-
-    const jdPreview = jdText.length > 1800 ? jdText.slice(0, 1800) + '\n\n[truncated]' : jdText;
 
     const userPrompt = buildSectionCoachPrompt({
   jdText,
