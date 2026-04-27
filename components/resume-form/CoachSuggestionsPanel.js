@@ -99,6 +99,7 @@ function parseCoachText(value) {
         ifTrue: '',
         ifNotTrue: '',
         futurePositioning: '',
+		section: '',
         other: [],
       };
       actions.push(current);
@@ -106,6 +107,10 @@ function parseCoachText(value) {
     }
 
     if (current) {
+	  if (line.startsWith('Section:')) {
+		current.section = line.replace('Section:', '').trim();
+		return;
+	  }
       if (line.startsWith('Resume evidence:')) {
         current.resumeEvidence = line.replace('Resume evidence:', '').trim();
         return;
@@ -136,6 +141,25 @@ function parseCoachText(value) {
     fallbackText: fallback.join('\n'),
   };
 }
+
+function mapSignalToSection(signal = '') {
+  const s = signal.toLowerCase();
+
+  if (s.includes('project') || s.includes('stakeholder') || s.includes('management') || s.includes('experience')) {
+    return 'experience';
+  }
+
+  if (s.includes('tool') || s.includes('api') || s.includes('llm') || s.includes('skill')) {
+    return 'skills';
+  }
+
+  if (s.includes('education') || s.includes('degree') || s.includes('certification')) {
+    return 'education';
+  }
+
+  return 'summary';
+}
+
 
 /**
  * Writing coach suggestions panel.
@@ -194,6 +218,18 @@ export default function CoachSuggestionsPanel(props) {
     : '';
 
   const parsedCoach = useMemo(() => parseCoachText(text), [text]);
+  const filteredActions = useMemo(() => {
+  if (!parsedCoach.actions.length) return [];
+
+  if (context?.section === 'overview') {
+    return parsedCoach.actions;
+  }
+
+  return parsedCoach.actions.filter((action) => {
+    const section = action.section || mapSignalToSection(action.requiredSignal);
+	return section === context?.section;
+  });
+}, [parsedCoach.actions, context?.section]);
 
   const handleAsk = async () => {
     setLoading(true);
@@ -405,9 +441,9 @@ export default function CoachSuggestionsPanel(props) {
                 </div>
               )}
 
-              {parsedCoach.actions.length > 0 ? (
+              {filteredActions.length > 0 ? (
                 <div style={{ display: 'grid', gap: 8 }}>
-                  {parsedCoach.actions.map((action, index) => (
+                  {filteredActions.map((action, index) => (
                     <div key={`${action.requiredSignal}-${index}`} style={signalCardStyle}>
                       <div style={{ fontSize: 11, fontWeight: 900, color: '#E65100', textTransform: 'uppercase' }}>
                         Required signal

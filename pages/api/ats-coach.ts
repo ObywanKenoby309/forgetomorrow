@@ -301,9 +301,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
           const evidence = String(x.resumeEvidence || x.evidence || '').trim();
           const ifTrue = String(x.ifTrue || x.if_true || '').trim();
           const ifNotTrue = String(x.ifNotTrue || x.if_not_true || '').trim();
+		  const section = String(x.section || '').trim();
 
           return [
             required ? `• Required signal: ${required}` : '',
+			section ? `  Section: ${section}` : '',
             evidence ? `  Resume evidence: ${evidence}` : '',
             ifTrue ? `  If true: ${ifTrue}` : '',
             ifNotTrue ? `  If not true: ${ifNotTrue}` : '',
