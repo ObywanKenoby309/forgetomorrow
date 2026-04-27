@@ -225,11 +225,6 @@ export default function CoachSuggestionsPanel(props) {
   return parsedCoach.actions;
 }
 
-// 🔥 NEW: summary ALWAYS gets signals
-if (context?.section === 'summary') {
-  return parsedCoach.actions;
-}
-
   return parsedCoach.actions.filter((action) => {
     const section = action.section || mapSignalToSection(action.requiredSignal);
 	return section === context?.section;
