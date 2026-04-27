@@ -211,8 +211,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
           { role: 'system', content: 'You are ForgeTomorrow resume intelligence. Return ONLY valid JSON. No markdown. No extra text.' },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.4,
-        max_tokens: 900,
+        temperature: 0.25,
+        max_tokens: 1600,
+        response_format: { type: 'json_object' },
       }),
     });
 
