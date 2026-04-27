@@ -281,8 +281,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       bulletFixText ? `Bullet Fixes:\n${bulletFixText}` : '',
       summaryFixText ? `Summary Fix:\n${summaryFixText}` : '',
       Array.isArray(parsed.improvementActions) && parsed.improvementActions.length
-        ? `Improvement Actions:\n${parsed.improvementActions.map((x: any) => `• ${String(x || '').trim()}`).join('\n')}`
-        : '',
+  ? `Improvement Actions:\n${parsed.improvementActions
+      .map((x: any) => {
+        if (typeof x === 'string') return `• ${x.trim()}`;
+
+        if (x && typeof x === 'object') {
+          const required = String(x.requiredSignal || x.signal || x.requirement || '').trim();
+          const evidence = String(x.resumeEvidence || x.evidence || '').trim();
+          const ifTrue = String(x.ifTrue || x.if_true || '').trim();
+          const ifNotTrue = String(x.ifNotTrue || x.if_not_true || '').trim();
+
+          return [
+            required ? `• Required signal: ${required}` : '',
+            evidence ? `  Resume evidence: ${evidence}` : '',
+            ifTrue ? `  If true: ${ifTrue}` : '',
+            ifNotTrue ? `  If not true: ${ifNotTrue}` : '',
+          ]
+            .filter(Boolean)
+            .join('\n');
+        }
+
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n')}`
+  : '',
     ].filter(Boolean);
 
     return res.status(200).json({
