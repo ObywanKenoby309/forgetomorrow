@@ -246,7 +246,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const tips: string[] = [
       ...(Array.isArray(parsed.signalGaps) ? parsed.signalGaps : []),
-      ...(Array.isArray(parsed.improvementActions) ? parsed.improvementActions : []),
+      ...(Array.isArray(parsed.improvementActions)
+  ? parsed.improvementActions.map((x: any) =>
+      typeof x === 'string'
+        ? x
+        : x?.requiredSignal || x?.signal || x?.requirement || ''
+    )
+  : []),
     ]
       .map((x: any) => String(x || '').trim())
       .filter(Boolean);
