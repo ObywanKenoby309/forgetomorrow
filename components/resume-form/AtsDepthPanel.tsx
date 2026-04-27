@@ -164,7 +164,7 @@ export default function AtsDepthPanel({
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiUpgrade, setAiUpgrade] = useState(false);
 
-  // Coach overlay
+  // Coach inline result
   const [coachOpen, setCoachOpen] = useState(false);
   const [coachContext, setCoachContext] = useState<CoachContext>({
     section: 'overview',
@@ -254,14 +254,14 @@ export default function AtsDepthPanel({
   const loadedCompany = (jobMeta?.company || '').trim();
   const loadedLocation = (jobMeta?.location || '').trim();
 
-function openCoach(section: CoachContext['section'] = 'overview', keyword: string | null = null) {
-  setCoachContext({ section, keyword });
-  setCoachOpen(true);
-}
+  function openCoach(section: CoachContext['section'] = 'overview', keyword: string | null = null) {
+    setCoachContext({ section, keyword });
+    setCoachOpen(true);
+  }
 
   function openCoachOverview() {
-  openCoach('overview', null);
-}
+    openCoach('overview', null);
+  }
 
   async function runAiScan() {
     if (!jdText?.trim()) return;
@@ -485,15 +485,15 @@ function openCoach(section: CoachContext['section'] = 'overview', keyword: strin
                   boxShadow: '0 6px 14px rgba(0,0,0,0.14)',
                 }}
               >
-                Ask the Coach
+                Run Full Review
               </button>
 
               <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
                 {[
-                  { label: 'Summary', section: 'summary' as const },
-                  { label: 'Skills', section: 'skills' as const },
-                  { label: 'Experience bullets', section: 'experience' as const },
-                  { label: 'Education', section: 'education' as const },
+                  { label: 'Review Summary', section: 'summary' as const },
+                  { label: 'Review Skills', section: 'skills' as const },
+                  { label: 'Review Experience', section: 'experience' as const },
+                  { label: 'Review Education', section: 'education' as const },
                 ].map((item) => (
                   <button
                     key={item.section}
@@ -521,6 +521,28 @@ function openCoach(section: CoachContext['section'] = 'overview', keyword: strin
                   </button>
                 ))}
               </div>
+
+              {coachOpen && (
+                <div style={{ marginTop: 10 }}>
+                  <CoachSuggestionsPanel
+                    open={true}
+                    embedded={true}
+                    onClose={() => setCoachOpen(false)}
+                    context={coachContext}
+                    jdText={jdText}
+                    resumeData={resumeData}
+                    missing={{
+                      high: missingTitleKeywords,
+                      tools: [],
+                      edu: [],
+                      soft: [],
+                    }}
+                    onAddSkill={onAddSkill}
+                    onAddSummary={onAddSummary}
+                    onAddBullet={onAddBullet}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -647,7 +669,7 @@ function openCoach(section: CoachContext['section'] = 'overview', keyword: strin
                 Use this as a checklist. Let the coach handle wording.
               </div>
 
-                            <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+              <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
                 {buckets.map((b) => {
                   const percent = Math.max(0, Math.min(100, b.points));
 
@@ -764,26 +786,6 @@ function openCoach(section: CoachContext['section'] = 'overview', keyword: strin
           )}
         </div>
       </div>
-
-      {/* Coach inline result */}
-      {activePanel === 'coach' && coachOpen && (
-        <CoachSuggestionsPanel
-          open={true}
-          onClose={() => setCoachOpen(false)}
-          context={coachContext}
-          jdText={jdText}
-          resumeData={resumeData}
-          missing={{
-            high: missingTitleKeywords,
-            tools: [],
-            edu: [],
-            soft: [],
-          }}
-          onAddSkill={onAddSkill}
-          onAddSummary={onAddSummary}
-          onAddBullet={onAddBullet}
-        />
-      )}
     </div>
   );
 }

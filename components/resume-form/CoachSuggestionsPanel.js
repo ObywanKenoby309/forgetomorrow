@@ -30,6 +30,7 @@ import { createPortal } from 'react-dom';
  * @property {(keyword: string) => void} [onAddSkill]
  * @property {(snippet: string) => void} [onAddSummary]
  * @property {(snippet: string) => void} [onAddBullet]
+ * @property {boolean} [embedded]
  */
 
 /** @type {React.CSSProperties} */
@@ -99,7 +100,7 @@ function parseCoachText(value) {
         ifTrue: '',
         ifNotTrue: '',
         futurePositioning: '',
-		section: '',
+        section: '',
         other: [],
       };
       actions.push(current);
@@ -107,10 +108,10 @@ function parseCoachText(value) {
     }
 
     if (current) {
-	  if (line.startsWith('Section:')) {
-		current.section = line.replace('Section:', '').trim();
-		return;
-	  }
+      if (line.startsWith('Section:')) {
+        current.section = line.replace('Section:', '').trim();
+        return;
+      }
       if (line.startsWith('Resume evidence:')) {
         current.resumeEvidence = line.replace('Resume evidence:', '').trim();
         return;
@@ -160,7 +161,6 @@ function mapSignalToSection(signal = '') {
   return 'summary';
 }
 
-
 /**
  * Writing coach suggestions panel.
  * IMPORTANT: JSDoc typing here prevents TS from inferring `context.keyword` as only `null`.
@@ -177,6 +177,7 @@ export default function CoachSuggestionsPanel(props) {
     onAddSkill,
     onAddSummary,
     onAddBullet,
+    embedded = false,
   } = props;
 
   const [portalEl, setPortalEl] = useState(null);
@@ -188,6 +189,7 @@ export default function CoachSuggestionsPanel(props) {
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
+    if (embedded) return;
 
     const el = document.createElement('div');
     el.id = 'ft-coach-portal';
@@ -201,7 +203,7 @@ export default function CoachSuggestionsPanel(props) {
         // ignore
       }
     };
-  }, []);
+  }, [embedded]);
 
   const sectionLabelMap = {
     overview: 'overall alignment',
@@ -219,17 +221,17 @@ export default function CoachSuggestionsPanel(props) {
 
   const parsedCoach = useMemo(() => parseCoachText(text), [text]);
   const filteredActions = useMemo(() => {
-  if (!parsedCoach.actions.length) return [];
+    if (!parsedCoach.actions.length) return [];
 
-  if (context?.section === 'overview') {
-  return parsedCoach.actions;
-}
+    if (context?.section === 'overview') {
+      return parsedCoach.actions;
+    }
 
-  return parsedCoach.actions.filter((action) => {
-    const section = action.section || mapSignalToSection(action.requiredSignal);
-	return section === context?.section;
-  });
-}, [parsedCoach.actions, context?.section]);
+    return parsedCoach.actions.filter((action) => {
+      const section = action.section || mapSignalToSection(action.requiredSignal);
+      return section === context?.section;
+    });
+  }, [parsedCoach.actions, context?.section]);
 
   const handleAsk = async () => {
     setLoading(true);
@@ -325,86 +327,97 @@ export default function CoachSuggestionsPanel(props) {
     }
   };
 
-  if (!open || !portalEl) return null;
+  if (!open) return null;
+  if (!embedded && !portalEl) return null;
 
   const panel = (
     <div
       style={{
         width: '100%',
         background: '#FFF8E1',
-        borderRadius: 16,
+        borderRadius: embedded ? 12 : 16,
         border: '1px solid #FFCC80',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+        boxShadow: embedded ? 'none' : '0 10px 30px rgba(0,0,0,0.25)',
         display: 'flex',
         flexDirection: 'column',
       }}
     >
-      <div
-        style={{
-          padding: '10px 14px',
-          borderBottom: '1px solid #FFE0B2',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-        }}
-      >
-        <div style={{ fontWeight: 800, fontSize: 15, color: '#E65100' }}>Writing Coach</div>
-        <button
-          type="button"
-          onClick={onClose}
+      {!embedded && (
+        <div
           style={{
-            border: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            fontWeight: 900,
-            color: '#BF360C',
-            fontSize: 18,
-            lineHeight: 1,
+            padding: '10px 14px',
+            borderBottom: '1px solid #FFE0B2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
           }}
-          aria-label="Close coach"
-          title="Close"
         >
-          ×
-        </button>
-      </div>
+          <div style={{ fontWeight: 800, fontSize: 15, color: '#E65100' }}>Writing Coach</div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              fontWeight: 900,
+              color: '#BF360C',
+              fontSize: 18,
+              lineHeight: 1,
+            }}
+            aria-label="Close coach"
+            title="Close"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <div
         style={{
-          padding: '10px 14px',
+          padding: embedded ? 10 : '10px 14px',
           fontSize: 13,
           color: '#5D4037',
         }}
       >
-        <p style={{ marginBottom: 8 }}>
-          You&apos;re editing your <strong>{humanSection}</strong>. I&apos;ll suggest wording you can paste directly
-          into your resume. {keywordHint}
-        </p>
+        {!embedded && (
+          <>
+            <p style={{ marginBottom: 8 }}>
+              You&apos;re editing your <strong>{humanSection}</strong>. I&apos;ll suggest wording you can paste directly
+              into your resume. {keywordHint}
+            </p>
 
-        {!jdText?.trim() && (
-          <p style={{ marginBottom: 8, fontStyle: 'italic', color: '#8D6E63' }}>
-            Tip: You&apos;ll get the best results once a job description is loaded.
-          </p>
+            {!jdText?.trim() && (
+              <p style={{ marginBottom: 8, fontStyle: 'italic', color: '#8D6E63' }}>
+                Tip: You&apos;ll get the best results once a job description is loaded.
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleAsk}
+              disabled={loading || !jdText?.trim()}
+              style={{
+                padding: '8px 14px',
+                borderRadius: 10,
+                border: 'none',
+                background: '#FF7043',
+                color: 'white',
+                fontWeight: 800,
+                cursor: loading || !jdText?.trim() ? 'not-allowed' : 'pointer',
+                marginBottom: 10,
+                opacity: loading || !jdText?.trim() ? 0.7 : 1,
+              }}
+            >
+              {loading ? 'Thinking…' : 'Ask the Coach'}
+            </button>
+          </>
         )}
 
-        <button
-          type="button"
-          onClick={handleAsk}
-          disabled={loading || !jdText?.trim()}
-          style={{
-            padding: '8px 14px',
-            borderRadius: 10,
-            border: 'none',
-            background: '#FF7043',
-            color: 'white',
-            fontWeight: 800,
-            cursor: loading || !jdText?.trim() ? 'not-allowed' : 'pointer',
-            marginBottom: 10,
-            opacity: loading || !jdText?.trim() ? 0.7 : 1,
-          }}
-        >
-          {loading ? 'Thinking…' : 'Ask the Coach'}
-        </button>
+        {loading && embedded && (
+          <div style={{ fontSize: 12, color: '#6D4C41', fontWeight: 800 }}>Thinking…</div>
+        )}
 
         {error && <div style={{ marginTop: 4, color: '#C62828', fontSize: 12, fontWeight: 700 }}>{error}</div>}
 
@@ -413,6 +426,7 @@ export default function CoachSuggestionsPanel(props) {
             <div
               style={{
                 ...coachCardStyle,
+                marginTop: embedded ? 0 : coachCardStyle.marginTop,
                 maxHeight: 360,
                 overflowY: 'auto',
               }}
@@ -501,20 +515,20 @@ export default function CoachSuggestionsPanel(props) {
                   ))}
                 </div>
               ) : (
-  <div
-    style={{
-      padding: 10,
-      borderRadius: 10,
-      background: '#FFFFFF',
-      border: '1px solid #FFE0B2',
-      fontSize: 12,
-      color: '#6D4C41',
-      lineHeight: 1.45,
-    }}
-  >
-    No section-specific coaching items were returned for this section.
-  </div>
-)}
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 10,
+                    background: '#FFFFFF',
+                    border: '1px solid #FFE0B2',
+                    fontSize: 12,
+                    color: '#6D4C41',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  No section-specific coaching items were returned for this section.
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -534,5 +548,6 @@ export default function CoachSuggestionsPanel(props) {
     </div>
   );
 
-  return panel;
+  if (embedded) return panel;
+  return createPortal(panel, portalEl);
 }
