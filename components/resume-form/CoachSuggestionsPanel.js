@@ -2,7 +2,7 @@
 
 // components/resume-form/CoachSuggestionsPanel.js
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 /**
@@ -42,6 +42,100 @@ const chipStyle = {
   fontWeight: 800,
   cursor: 'pointer',
 };
+
+/** @type {React.CSSProperties} */
+const coachCardStyle = {
+  marginTop: 8,
+  padding: 10,
+  background: '#FFF3E0',
+  borderRadius: 10,
+  border: '1px solid #FFE0B2',
+  lineHeight: 1.45,
+};
+
+/** @type {React.CSSProperties} */
+const signalCardStyle = {
+  marginTop: 8,
+  padding: 10,
+  background: '#FFFFFF',
+  borderRadius: 12,
+  border: '1px solid #FFE0B2',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+};
+
+function parseCoachText(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return { title: '', matchAssessment: '', actions: [], fallbackText: '' };
+
+  const lines = raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  let title = '';
+  let matchAssessment = '';
+  const actions = [];
+  let current = null;
+  const fallback = [];
+
+  lines.forEach((line) => {
+    if (!title && !line.startsWith('Match Assessment:') && !line.startsWith('Improvement Actions:')) {
+      title = line;
+      return;
+    }
+
+    if (line.startsWith('Match Assessment:')) {
+      matchAssessment = line.replace('Match Assessment:', '').trim();
+      return;
+    }
+
+    if (line.startsWith('Improvement Actions:')) return;
+
+    const requiredMatch = line.match(/^•\s*Required signal:\s*(.*)$/i);
+    if (requiredMatch) {
+      current = {
+        requiredSignal: requiredMatch[1]?.trim() || '',
+        resumeEvidence: '',
+        ifTrue: '',
+        ifNotTrue: '',
+        futurePositioning: '',
+        other: [],
+      };
+      actions.push(current);
+      return;
+    }
+
+    if (current) {
+      if (line.startsWith('Resume evidence:')) {
+        current.resumeEvidence = line.replace('Resume evidence:', '').trim();
+        return;
+      }
+      if (line.startsWith('If true:')) {
+        current.ifTrue = line.replace('If true:', '').trim();
+        return;
+      }
+      if (line.startsWith('If not true:')) {
+        current.ifNotTrue = line.replace('If not true:', '').trim();
+        return;
+      }
+      if (line.startsWith('Future positioning:')) {
+        current.futurePositioning = line.replace('Future positioning:', '').trim();
+        return;
+      }
+      current.other.push(line);
+      return;
+    }
+
+    fallback.push(line);
+  });
+
+  return {
+    title,
+    matchAssessment,
+    actions,
+    fallbackText: fallback.join('\n'),
+  };
+}
 
 /**
  * Writing coach suggestions panel.
@@ -98,6 +192,8 @@ export default function CoachSuggestionsPanel(props) {
   const keywordHint = context?.keyword
     ? `Focus especially on including the keyword "${context.keyword}" in a natural way.`
     : '';
+
+  const parsedCoach = useMemo(() => parseCoachText(text), [text]);
 
   const handleAsk = async () => {
     setLoading(true);
@@ -280,18 +376,97 @@ export default function CoachSuggestionsPanel(props) {
           <>
             <div
               style={{
-                marginTop: 8,
-                padding: 10,
-                background: '#FFF3E0',
-                borderRadius: 10,
-                border: '1px solid #FFE0B2',
-                whiteSpace: 'pre-wrap',
-                maxHeight: 260,
+                ...coachCardStyle,
+                maxHeight: 360,
                 overflowY: 'auto',
-                lineHeight: 1.45,
               }}
             >
-              {text}
+              {parsedCoach.title && (
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#E65100', marginBottom: 8 }}>
+                  {parsedCoach.title}
+                </div>
+              )}
+
+              {parsedCoach.matchAssessment && (
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 10,
+                    border: '1px solid #FFCC80',
+                    background: '#FFF8E1',
+                    color: '#5D4037',
+                    fontSize: 12,
+                    lineHeight: 1.45,
+                    marginBottom: 10,
+                  }}
+                >
+                  <div style={{ fontWeight: 900, color: '#BF360C', marginBottom: 4 }}>Match Assessment</div>
+                  <div>{parsedCoach.matchAssessment}</div>
+                </div>
+              )}
+
+              {parsedCoach.actions.length > 0 ? (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {parsedCoach.actions.map((action, index) => (
+                    <div key={`${action.requiredSignal}-${index}`} style={signalCardStyle}>
+                      <div style={{ fontSize: 11, fontWeight: 900, color: '#E65100', textTransform: 'uppercase' }}>
+                        Required signal
+                      </div>
+                      <div style={{ marginTop: 3, fontSize: 13, fontWeight: 900, color: '#263238', lineHeight: 1.35 }}>
+                        {action.requiredSignal || 'Missing signal'}
+                      </div>
+
+                      {action.resumeEvidence && (
+                        <div style={{ marginTop: 8, fontSize: 12, color: '#6D4C41', lineHeight: 1.4 }}>
+                          <strong>Resume evidence:</strong> {action.resumeEvidence}
+                        </div>
+                      )}
+
+                      {action.ifTrue && (
+                        <div
+                          style={{
+                            marginTop: 8,
+                            padding: 8,
+                            borderRadius: 10,
+                            background: '#E8F5E9',
+                            border: '1px solid #C8E6C9',
+                            fontSize: 12,
+                            color: '#1B5E20',
+                            lineHeight: 1.42,
+                          }}
+                        >
+                          <strong>If true:</strong> {action.ifTrue}
+                        </div>
+                      )}
+
+                      {action.ifNotTrue && (
+                        <div
+                          style={{
+                            marginTop: 8,
+                            padding: 8,
+                            borderRadius: 10,
+                            background: '#FFF8E1',
+                            border: '1px solid #FFE0B2',
+                            fontSize: 12,
+                            color: '#5D4037',
+                            lineHeight: 1.42,
+                          }}
+                        >
+                          <strong>If not true:</strong> {action.ifNotTrue}
+                        </div>
+                      )}
+
+                      {action.futurePositioning && (
+                        <div style={{ marginTop: 8, fontSize: 12, color: '#607D8B', lineHeight: 1.4 }}>
+                          <strong>Future positioning:</strong> {action.futurePositioning}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{text}</div>
+              )}
             </div>
 
             <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
