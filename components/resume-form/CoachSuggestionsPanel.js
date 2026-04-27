@@ -423,7 +423,7 @@ export default function CoachSuggestionsPanel(props) {
                 </div>
               )}
 
-              {parsedCoach.matchAssessment && (
+              {context?.section === 'overview' && parsedCoach.matchAssessment && (
                 <div
                   style={{
                     padding: 10,
@@ -501,8 +501,20 @@ export default function CoachSuggestionsPanel(props) {
                   ))}
                 </div>
               ) : (
-                <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{text}</div>
-              )}
+  <div
+    style={{
+      padding: 10,
+      borderRadius: 10,
+      background: '#FFFFFF',
+      border: '1px solid #FFE0B2',
+      fontSize: 12,
+      color: '#6D4C41',
+      lineHeight: 1.45,
+    }}
+  >
+    No section-specific coaching items were returned for this section.
+  </div>
+)}
             </div>
 
             <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
