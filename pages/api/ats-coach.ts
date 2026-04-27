@@ -241,8 +241,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     if (!parsed || typeof parsed !== 'object') {
-      throw new Error('Coach returned invalid JSON');
-    }
+  return res.status(200).json({
+    ok: true,
+    text: raw || 'Coach returned a response, but it could not be formatted cleanly. Try again.',
+    tips: [],
+    raw,
+  });
+}
 
     const tips: string[] = [
       ...(Array.isArray(parsed.signalGaps) ? parsed.signalGaps : []),
