@@ -73,15 +73,7 @@ function inferSectionFromSignal(signal: any) {
     return 'skills';
   }
 
-  if (
-    s.includes('project') ||
-    s.includes('stakeholder') ||
-    s.includes('management') ||
-    s.includes('experience') ||
-    s.includes('ownership') ||
-    s.includes('leadership') ||
-    s.includes('delivery')
-  ) {
+  if (s.includes('project') || s.includes('stakeholder') || s.includes('management') || s.includes('experience') || s.includes('ownership')) {
     return 'experience';
   }
 
@@ -360,14 +352,21 @@ ONE-CALL SECTION BUCKET RULE
 ----------------------------
 If selected section is overview, you are producing ONE full review that the UI will split into section cards.
 
-For selected section overview, you MUST return section-tagged improvementActions for the resume sections below:
+For selected section overview, you MUST return section-tagged improvementActions for:
 1. summary
-2. skills, if skills/tools/technologies/hard skills are relevant to the JD
-3. experience, if projects, ownership, leadership, stakeholder work, delivery, outcomes, or work history proof are relevant to the JD
-4. education, ONLY if the JD explicitly requires a degree, certification, license, or formal credential
+2. skills
+3. experience
+4. education ONLY if the JD explicitly requires a degree, certification, license, or formal credential
 
-The summary section is mandatory for overview.
+The summary, skills, and experience sections are mandatory for overview.
 Always return at least one improvementAction with "section": "summary".
+Always return at least one improvementAction with "section": "skills".
+Always return at least one improvementAction with "section": "experience".
+
+Education is the only optional section.
+
+If a section is already strong, still return an action for that section explaining what is working, what JD signal it supports, and any small improvement if useful.
+Do not invent gaps just to criticize.
 
 Do not combine multiple resume sections into one action.
 Do not put tools/API feedback into summary unless it is about how the Summary positions the candidate.
@@ -410,6 +409,33 @@ For summary actions:
 - "hiringImpact" should explain how the Summary affects first impression.
 - "ifTrue" should explain what evidence can be added to the Summary if the candidate truly has it.
 - "ifNotTrue" should explain what not to claim and what honest adjacent positioning to use instead.
+
+EXPERIENCE SECTION STANDARD
+---------------------------
+The Experience section is a review of the user's work history evidence only.
+
+For the experience action, answer this exact question:
+"Would a senior HR recruiter see enough work-history proof that this candidate has delivered relevant projects, ownership, leadership, stakeholder coordination, or outcomes for this JD?"
+
+If the Experience section is strong:
+- Say what work-history proof is working.
+- Explain which JD signal it supports.
+- Explain why that helps the hiring decision.
+- Suggest only small improvements if useful.
+
+If the Experience section is weak:
+- Say what work-history proof is missing or unclear.
+- Explain why that creates hiring risk.
+- Give honest improvement guidance using only visible resume evidence.
+- Do not claim tools, years, platforms, or project outcomes not proven by the resume.
+
+For experience actions:
+- "section" must be "experience".
+- "requiredSignal" should describe the experience/work-history signal.
+- "resumeEvidence" should compare current experience evidence to the JD.
+- "hiringImpact" should explain how that affects recruiter confidence.
+- "ifTrue" should explain what project/ownership/stakeholder/outcome evidence can be added if true.
+- "ifNotTrue" should explain what not to claim and what honest adjacent delivery evidence to strengthen instead.
 
 HONESTY RULES
 -------------
