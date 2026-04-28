@@ -560,7 +560,7 @@ setText(out);
                 </div>
               )}
 
-              {context?.section === 'overview' ? (
+              {context?.section === 'overview' && (
   <div
     style={{
       padding: 10,
@@ -584,7 +584,7 @@ setText(out);
       Open Summary, Skills, Experience, or Education for targeted section feedback.
     </div>
   </div>
-) : filteredActions.length > 0 ? (
+{context?.section !== 'overview' && filteredActions.length > 0 && (
   <div style={{ display: 'grid', gap: 8 }}>
                   {filteredActions.map((action, index) => (
                     <div key={`${action.requiredSignal}-${index}`} style={signalCardStyle}>
@@ -666,7 +666,9 @@ setText(out);
                     </div>
                   ))}
                 </div>
-              ) : (
+              )}
+
+{context?.section !== 'overview' && filteredActions.length === 0 && (
                 <div
                   style={{
                     padding: 10,
