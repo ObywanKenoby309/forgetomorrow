@@ -549,8 +549,32 @@ export default function CoachSuggestionsPanel(props) {
                 </div>
               )}
 
-              {filteredActions.length > 0 ? (
-                <div style={{ display: 'grid', gap: 8 }}>
+              {context?.section === 'overview' ? (
+  <div
+    style={{
+      padding: 10,
+      borderRadius: 10,
+      background: '#FFFFFF',
+      border: '1px solid #FFE0B2',
+      fontSize: 12,
+      color: '#5D4037',
+      lineHeight: 1.5,
+    }}
+  >
+    <div style={{ fontWeight: 900, color: '#BF360C', marginBottom: 6 }}>
+      Overall recruiter assessment
+    </div>
+
+    <div style={{ marginBottom: 10 }}>
+      {parsedCoach.matchAssessment || 'No overall assessment returned.'}
+    </div>
+
+    <div style={{ color: '#6D4C41' }}>
+      Open Summary, Skills, Experience, or Education for targeted section feedback.
+    </div>
+  </div>
+) : filteredActions.length > 0 ? (
+  <div style={{ display: 'grid', gap: 8 }}>
                   {filteredActions.map((action, index) => (
                     <div key={`${action.requiredSignal}-${index}`} style={signalCardStyle}>
                       <div style={{ fontSize: 11, fontWeight: 900, color: '#E65100', textTransform: 'uppercase' }}>
