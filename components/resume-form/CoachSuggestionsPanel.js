@@ -497,10 +497,9 @@ export default function CoachSuggestionsPanel(props) {
           <>
             <div style={{ ...coachCardStyle, maxHeight: embedded ? 460 : 380, overflowY: 'auto' }}>
 
-              {/* ── OVERVIEW: synopsis + all section cards ─────────────── */}
+              {/* ── OVERVIEW: synopsis only — details live in individual sections ── */}
               {isOverview && (
                 <>
-                  {/* Recruiter synopsis — this is the overview card the user asked for */}
                   {structured?.matchAssessment && (
                     <div
                       style={{
@@ -511,7 +510,6 @@ export default function CoachSuggestionsPanel(props) {
                         fontSize: 12,
                         color: '#5D4037',
                         lineHeight: 1.55,
-                        marginBottom: 12,
                       }}
                     >
                       <div style={{ fontWeight: 900, color: '#BF360C', marginBottom: 6, fontSize: 13 }}>
@@ -523,24 +521,9 @@ export default function CoachSuggestionsPanel(props) {
                           Detected environment: {structured.environment}
                         </div>
                       )}
-                      <div style={{ marginTop: 8, fontSize: 11, color: '#78909C', lineHeight: 1.4 }}>
+                      <div style={{ marginTop: 10, fontSize: 11, color: '#78909C', lineHeight: 1.4 }}>
                         Open Summary, Skills, Experience, or Education below for targeted section feedback.
                       </div>
-                    </div>
-                  )}
-
-                  {/* All action cards grouped by section */}
-                  {structured?.improvementActions?.length > 0 && (
-                    <div style={{ display: 'grid', gap: 10 }}>
-                      {structured.improvementActions.map((action, index) => (
-                        <ActionCard
-                          key={`${action.section}-${index}`}
-                          action={action}
-                          onAddSkill={onAddSkill}
-                          onAddSummary={onAddSummary}
-                          onAddBullet={onAddBullet}
-                        />
-                      ))}
                     </div>
                   )}
 
