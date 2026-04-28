@@ -317,13 +317,22 @@ export default function CoachSuggestionsPanel(props) {
       }
 
       const out = (data?.text || '').toString().trim();
-      if (!out) {
-        setText('');
-        setError('Coach returned an empty response. Check /api/ats-coach.');
-        return;
-      }
 
-      setText(out);
+if (data?.upgrade || out.toLowerCase().includes('too many requests') || out.toLowerCase().includes('rate limit')) {
+  setText('');
+  setError(out || 'Coach is busy right now. Try again in a few seconds.');
+  lastRequestKeyRef.current = '';
+  return;
+}
+
+if (!out) {
+  setText('');
+  setError('Coach returned an empty response. Check /api/ats-coach.');
+  lastRequestKeyRef.current = '';
+  return;
+}
+
+setText(out);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error('CoachSuggestionsPanel error', e);
