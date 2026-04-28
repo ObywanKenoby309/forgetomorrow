@@ -281,14 +281,7 @@ export default function CoachSuggestionsPanel(props) {
       return section && section === context?.section;
     });
 
-    if (exactMatches.length > 0) {
-      return exactMatches;
-    }
-
-    return parsedCoach.actions.filter((action) => {
-      const section = mapSignalToSection(action.requiredSignal);
-      return section === context?.section;
-    });
+        return exactMatches;
   }, [parsedCoach.actions, context?.section]);
 
   const handleAsk = async () => {
