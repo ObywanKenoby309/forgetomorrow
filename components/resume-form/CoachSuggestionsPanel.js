@@ -269,6 +269,11 @@ export default function CoachSuggestionsPanel(props) {
 
   const parsedCoach = useMemo(() => parseCoachText(text), [text]);
 
+const hasParsedContent =
+  parsedCoach.matchAssessment ||
+  parsedCoach.actions.length > 0 ||
+  parsedCoach.fallbackText;
+
   const filteredActions = useMemo(() => {
     if (!parsedCoach.actions.length) return [];
 
@@ -527,7 +532,7 @@ setText(out);
 
         {error && <div style={{ marginTop: 4, color: '#C62828', fontSize: 12, fontWeight: 700 }}>{error}</div>}
 
-        {!loading && text && (
+        {!loading && hasParsedContent && (
           <>
             <div
               style={{
@@ -539,24 +544,6 @@ setText(out);
               {context?.section === 'overview' && parsedCoach.title && (
                 <div style={{ fontSize: 14, fontWeight: 900, color: '#E65100', marginBottom: 8 }}>
                   {parsedCoach.title}
-                </div>
-              )}
-
-              {context?.section === 'overview' && parsedCoach.matchAssessment && (
-                <div
-                  style={{
-                    padding: 10,
-                    borderRadius: 10,
-                    border: '1px solid #FFCC80',
-                    background: '#FFF8E1',
-                    color: '#5D4037',
-                    fontSize: 12,
-                    lineHeight: 1.45,
-                    marginBottom: 10,
-                  }}
-                >
-                  <div style={{ fontWeight: 900, color: '#BF360C', marginBottom: 4 }}>Match Assessment</div>
-                  <div>{parsedCoach.matchAssessment}</div>
                 </div>
               )}
 
