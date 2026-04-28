@@ -2,7 +2,6 @@
 
 // components/resume-form/AtsDepthPanel.tsx
 // Unified Match panel – AI score first, keyword coverage as fallback.
-// FIX: Strongly type coachContext to match CoachSuggestionsPanel's CoachContext union.
 
 import React, { useEffect, useMemo, useState } from 'react';
 import CoachSuggestionsPanel from './CoachSuggestionsPanel';
@@ -50,59 +49,17 @@ type ActivePanel = 'coach' | 'scan' | 'keywords';
 const ORANGE = '#FF7043';
 
 const STOP_WORDS = new Set([
-  'the',
-  'and',
-  'for',
-  'with',
-  'that',
-  'this',
-  'from',
-  'your',
-  'you',
-  'our',
-  'are',
-  'was',
-  'were',
-  'will',
-  'shall',
-  'would',
-  'could',
-  'should',
-  'into',
-  'about',
-  'over',
-  'under',
-  'in',
-  'on',
-  'of',
-  'to',
-  'a',
-  'an',
-  'as',
-  'by',
-  'or',
-  'at',
-  'be',
-  'is',
-  'it',
-  'we',
-  'they',
-  'them',
-  'their',
-  'there',
+  'the','and','for','with','that','this','from','your','you','our','are','was','were',
+  'will','shall','would','could','should','into','about','over','under','in','on','of',
+  'to','a','an','as','by','or','at','be','is','it','we','they','them','their','there',
 ]);
 
 function extractKeyTerms(text: string, max = 8): string[] {
   if (!text) return [];
-
   const cleaned = text.toLowerCase().replace(/[^a-z0-9+\s]/g, ' ');
-  const tokens = cleaned
-    .split(/\s+/)
-    .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
-
+  const tokens = cleaned.split(/\s+/).filter((w) => w.length > 2 && !STOP_WORDS.has(w));
   const counts = new Map<string, number>();
   for (const t of tokens) counts.set(t, (counts.get(t) || 0) + 1);
-
   return Array.from(counts.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, max)
@@ -121,31 +78,15 @@ function jdPreview(text: string, maxChars = 170) {
   return n.length > maxChars ? `${n.slice(0, maxChars)}…` : n;
 }
 
-/**
- * Best-effort role/title guess from JD text (fallback when no jobMeta)
- */
 function guessJobTitle(jdText: string) {
   const jd = (jdText || '').trim();
   if (!jd) return '';
-
-  const m1 = jd.match(
-    /(?:^|\n)\s*(?:job\s*title|title|position)\s*[:\-]\s*([^\n]{3,120})/i
-  );
-
+  const m1 = jd.match(/(?:^|\n)\s*(?:job\s*title|title|position)\s*[:\-]\s*([^\n]{3,120})/i);
   if (m1 && m1[1]) return m1[1].trim();
-
-  const firstLine =
-    jd
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean)[0] || '';
-
+  const firstLine = jd.split('\n').map((s) => s.trim()).filter(Boolean)[0] || '';
   if (firstLine && firstLine.length <= 90) {
-    if (!/overview|about\s+us|introduction|who\s+we\s+are/i.test(firstLine)) {
-      return firstLine;
-    }
+    if (!/overview|about\s+us|introduction|who\s+we\s+are/i.test(firstLine)) return firstLine;
   }
-
   return '';
 }
 
@@ -163,14 +104,12 @@ export default function AtsDepthPanel({
   const [mounted, setMounted] = useState(false);
   const [activePanel, setActivePanel] = useState<ActivePanel>('coach');
 
-  // unified scoring
   const [aiScore, setAiScore] = useState<number | null>(null);
   const [aiTips, setAiTips] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiUpgrade, setAiUpgrade] = useState(false);
 
-  // Coach inline result
   const [coachOpen, setCoachOpen] = useState(false);
   const [coachContext, setCoachContext] = useState<CoachContext>({
     section: 'overview',
@@ -185,11 +124,9 @@ export default function AtsDepthPanel({
     const expBits = (experiences || [])
       .map((e) => `${e.title || ''} ${e.company || ''} ${(e.bullets || []).join(' ')}`)
       .join(' ');
-
     const eduBits = (education || [])
       .map((e) => `${e.degree || ''} ${e.field || ''} ${e.school || ''} ${e.notes || ''}`)
       .join(' ');
-
     return `${summary || ''} ${(skills || []).join(' ')} ${expBits} ${eduBits}`.toLowerCase();
   }, [summary, skills, experiences, education]);
 
@@ -210,28 +147,13 @@ export default function AtsDepthPanel({
   let statusText = '';
   let barColor = '#C62828';
 
-  if (primaryScore >= 85) {
-    statusText = 'Excellent - ready to apply.';
-    barColor = '#2E7D32';
-  } else if (primaryScore >= 70) {
-    statusText = 'Good - tighten keywords & metrics to push higher.';
-    barColor = '#F59E0B';
-  } else if (primaryScore >= 50) {
-    statusText = 'Fair - add more high-impact terms before applying.';
-    barColor = '#EF6C00';
-  } else {
-    statusText = 'Low - add more high-impact terms (aim ≥85).';
-    barColor = '#C62828';
-  }
+  if (primaryScore >= 85) { statusText = 'Excellent - ready to apply.'; barColor = '#2E7D32'; }
+  else if (primaryScore >= 70) { statusText = 'Good - tighten keywords & metrics to push higher.'; barColor = '#F59E0B'; }
+  else if (primaryScore >= 50) { statusText = 'Fair - add more high-impact terms before applying.'; barColor = '#EF6C00'; }
+  else { statusText = 'Low - add more high-impact terms (aim ≥85).'; barColor = '#C62828'; }
 
   const buckets = [
-    {
-      key: 'title',
-      label: 'Title/Role',
-      matched: matchedTitleKeywords.length,
-      total: titleKeywords.length,
-      points: keywordCoverage,
-    },
+    { key: 'title', label: 'Title/Role', matched: matchedTitleKeywords.length, total: titleKeywords.length, points: keywordCoverage },
     { key: 'hard', label: 'Hard skills', matched: 0, total: 0, points: 0 },
     { key: 'tools', label: 'Tools', matched: 0, total: 0, points: 0 },
     { key: 'edu', label: 'Education', matched: 0, total: 0, points: 0 },
@@ -241,12 +163,7 @@ export default function AtsDepthPanel({
   const missingTitleKeywords = titleKeywords.filter((k) => !matchedTitleKeywords.includes(k));
 
   const resumeData = useMemo(
-    () => ({
-      summary,
-      skills,
-      workExperiences: experiences,
-      educationList: education,
-    }),
+    () => ({ summary, skills, workExperiences: experiences, educationList: education }),
     [summary, skills, experiences, education]
   );
 
@@ -269,7 +186,6 @@ export default function AtsDepthPanel({
 
   async function runAiScan() {
     if (!jdText?.trim()) return;
-
     setAiLoading(true);
     setAiError(null);
     setAiUpgrade(false);
@@ -286,30 +202,15 @@ export default function AtsDepthPanel({
       if (data?.upgrade) {
         setAiUpgrade(true);
         setAiScore(null);
-
-        const nextTips: string[] = Array.isArray(data?.tips)
-          ? data.tips
-          : typeof data?.tips === 'string' && data.tips.trim()
-          ? [data.tips.trim()]
-          : [];
-
-        setAiTips(nextTips);
+        setAiTips(Array.isArray(data?.tips) ? data.tips : []);
         return;
       }
 
-      const s =
-        typeof data?.score === 'number'
-          ? Math.max(0, Math.min(100, Math.round(data.score)))
-          : null;
-
-      const nextTips: string[] = Array.isArray(data?.tips)
-        ? data.tips
-        : typeof data?.tips === 'string' && data.tips.trim()
-        ? [data.tips.trim()]
-        : [];
-
+      const s = typeof data?.score === 'number'
+        ? Math.max(0, Math.min(100, Math.round(data.score)))
+        : null;
       setAiScore(s);
-      setAiTips(nextTips);
+      setAiTips(Array.isArray(data?.tips) ? data.tips : []);
     } catch (e) {
       console.error('[AtsDepthPanel] AI scan failed', e);
       setAiError('AI scan failed - try again.');
@@ -340,7 +241,13 @@ export default function AtsDepthPanel({
     children: label,
   });
 
-  if (!mounted) return null;
+  // ── Hydration fix ────────────────────────────────────────────────────────
+  // Return a stable empty shell until client mounts.
+  // This keeps the server/client tree shape identical and prevents error #418.
+  if (!mounted) {
+    return <div style={{ marginTop: 0 }} />;
+  }
+
   if (!jdText?.trim()) return null;
 
   return (
@@ -377,15 +284,7 @@ export default function AtsDepthPanel({
         </div>
 
         {/* Score bar */}
-        <div
-          style={{
-            height: 7,
-            borderRadius: 999,
-            background: '#ECEFF1',
-            overflow: 'hidden',
-            marginTop: 9,
-          }}
-        >
+        <div style={{ height: 7, borderRadius: 999, background: '#ECEFF1', overflow: 'hidden', marginTop: 9 }}>
           <div
             style={{
               width: `${Math.max(0, Math.min(100, primaryScore))}%`,
@@ -635,21 +534,10 @@ export default function AtsDepthPanel({
                           AI Score: {aiScore}/100
                         </div>
                       )}
-
                       {normalizedTips.length > 0 && (
-                        <ul
-                          style={{
-                            margin: '8px 0 0',
-                            paddingLeft: 18,
-                            fontSize: 12,
-                            color: '#37474F',
-                            lineHeight: 1.42,
-                          }}
-                        >
+                        <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 12, color: '#37474F', lineHeight: 1.42 }}>
                           {normalizedTips.slice(0, 4).map((tip, i) => (
-                            <li key={i} style={{ marginBottom: 5 }}>
-                              {tip}
-                            </li>
+                            <li key={i} style={{ marginBottom: 5 }}>{tip}</li>
                           ))}
                         </ul>
                       )}
@@ -679,7 +567,6 @@ export default function AtsDepthPanel({
               <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
                 {buckets.map((b) => {
                   const percent = Math.max(0, Math.min(100, b.points));
-
                   return (
                     <div key={b.key}>
                       <div
@@ -694,19 +581,9 @@ export default function AtsDepthPanel({
                         }}
                       >
                         <span>{b.label}</span>
-                        <span style={{ color: percent > 0 ? ORANGE : '#90A4AE' }}>
-                          {percent}%
-                        </span>
+                        <span style={{ color: percent > 0 ? ORANGE : '#90A4AE' }}>{percent}%</span>
                       </div>
-
-                      <div
-                        style={{
-                          height: 8,
-                          borderRadius: 999,
-                          background: '#ECEFF1',
-                          overflow: 'hidden',
-                        }}
-                      >
+                      <div style={{ height: 8, borderRadius: 999, background: '#ECEFF1', overflow: 'hidden' }}>
                         <div
                           style={{
                             width: `${percent}%`,
@@ -716,7 +593,6 @@ export default function AtsDepthPanel({
                           }}
                         />
                       </div>
-
                       <div style={{ marginTop: 3, fontSize: 11, color: '#607D8B' }}>
                         {b.total > 0 ? `${b.matched}/${b.total} matched` : '0/0 matched'}
                       </div>
@@ -742,23 +618,11 @@ export default function AtsDepthPanel({
                   View missing role terms
                 </summary>
 
-                <div
-                  style={{
-                    marginTop: 8,
-                    padding: 10,
-                    borderRadius: 10,
-                    border: '1px solid #ECEFF1',
-                    background: '#FFFFFF',
-                  }}
-                >
+                <div style={{ marginTop: 8, padding: 10, borderRadius: 10, border: '1px solid #ECEFF1', background: '#FFFFFF' }}>
                   {titleKeywords.length === 0 ? (
-                    <p style={{ margin: 0, fontSize: 12, color: '#388E3C' }}>
-                      No missing keywords here. Nice.
-                    </p>
+                    <p style={{ margin: 0, fontSize: 12, color: '#388E3C' }}>No missing keywords here. Nice.</p>
                   ) : missingTitleKeywords.length === 0 ? (
-                    <p style={{ margin: 0, fontSize: 12, color: '#388E3C' }}>
-                      No missing title/role keywords. Strong alignment.
-                    </p>
+                    <p style={{ margin: 0, fontSize: 12, color: '#388E3C' }}>No missing title/role keywords. Strong alignment.</p>
                   ) : (
                     <>
                       <p style={{ margin: 0, fontSize: 12, color: '#546E7A', lineHeight: 1.4 }}>

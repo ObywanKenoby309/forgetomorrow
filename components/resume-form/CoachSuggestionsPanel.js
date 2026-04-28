@@ -55,7 +55,6 @@ const coachCardStyle = {
 
 /** @type {React.CSSProperties} */
 const signalCardStyle = {
-  marginTop: 8,
   padding: 10,
   background: '#FFFFFF',
   borderRadius: 12,
@@ -63,147 +62,30 @@ const signalCardStyle = {
   boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
 };
 
-function normalizeSection(value) {
-  const section = String(value || '').toLowerCase().trim();
+const sectionColors = {
+  summary:    { bg: '#E8EAF6', border: '#C5CAE9', text: '#283593', label: 'Summary' },
+  skills:     { bg: '#E0F2F1', border: '#B2DFDB', text: '#00695C', label: 'Skills' },
+  experience: { bg: '#FFF3E0', border: '#FFE0B2', text: '#E65100', label: 'Experience' },
+  education:  { bg: '#F3E5F5', border: '#E1BEE7', text: '#6A1B9A', label: 'Education' },
+};
 
-  if (section === 'summary') return 'summary';
-  if (section === 'skills') return 'skills';
-  if (section === 'experience') return 'experience';
-  if (section === 'education') return 'education';
-
-  return '';
-}
-
-function parseActionSectionFromLine(value) {
-  const match = String(value || '').match(/\bSection:\s*(summary|skills|experience|education)\b/i);
-  return match ? normalizeSection(match[1]) : '';
-}
-
-function cleanInlineSection(value) {
-  return String(value || '').replace(/\s*Section:\s*(summary|skills|experience|education)\b\s*/i, '').trim();
-}
-
-function parseCoachText(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return { title: '', matchAssessment: '', actions: [], fallbackText: '' };
-
-  const lines = raw
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  let title = '';
-  let matchAssessment = '';
-  const actions = [];
-  let current = null;
-  const fallback = [];
-  let mode = '';
-
-  lines.forEach((line) => {
-    if (line.startsWith('Match Assessment:')) {
-      mode = 'match';
-      matchAssessment = line.replace('Match Assessment:', '').trim();
-      return;
-    }
-
-    if (line.startsWith('Improvement Actions:')) {
-      mode = 'actions';
-      return;
-    }
-
-    const requiredMatch = line.match(/^•\s*Required signal:\s*(.*)$/i);
-    if (requiredMatch) {
-      const sectionFromInline = parseActionSectionFromLine(requiredMatch[1]);
-      current = {
-        requiredSignal: cleanInlineSection(requiredMatch[1]?.trim() || ''),
-        resumeEvidence: '',
-        decisionQuestion: '',
-        hiringImpact: '',
-        ifTrue: '',
-        ifNotTrue: '',
-        futurePositioning: '',
-        section: sectionFromInline,
-        other: [],
-      };
-      actions.push(current);
-      mode = 'actions';
-      return;
-    }
-
-    if (current) {
-      if (line.startsWith('Section:')) {
-        current.section = normalizeSection(line.replace('Section:', '').trim());
-        return;
-      }
-
-      if (line.startsWith('Resume evidence:')) {
-        current.resumeEvidence = line.replace('Resume evidence:', '').trim();
-        return;
-      }
-
-      if (line.startsWith('What the employer is trying to decide:')) {
-        current.decisionQuestion = line.replace('What the employer is trying to decide:', '').trim();
-        return;
-      }
-
-      if (line.startsWith('Hiring impact:')) {
-        current.hiringImpact = line.replace('Hiring impact:', '').trim();
-        return;
-      }
-
-      if (line.startsWith('If true:')) {
-        current.ifTrue = line.replace('If true:', '').trim();
-        return;
-      }
-
-      if (line.startsWith('If not true:')) {
-        current.ifNotTrue = line.replace('If not true:', '').trim();
-        return;
-      }
-
-      if (line.startsWith('Future positioning:')) {
-        current.futurePositioning = line.replace('Future positioning:', '').trim();
-        return;
-      }
-
-      current.other.push(line);
-      return;
-    }
-
-    if (mode === 'match') {
-      matchAssessment = [matchAssessment, line].filter(Boolean).join(' ');
-      return;
-    }
-
-    if (!title && !line.startsWith('Summary Fix:') && !line.startsWith('Bullet Fixes:')) {
-      title = line;
-      return;
-    }
-
-    fallback.push(line);
-  });
-
-  return {
-    title,
-    matchAssessment,
-    actions,
-    fallbackText: fallback.join('\n'),
-  };
-}
+const sectionLabelMap = {
+  overview:   'overall alignment',
+  summary:    'summary section',
+  skills:     'skills section',
+  experience: 'experience bullets',
+  education:  'education section',
+};
 
 function buildOneCallKey(jdText, resumeData, missing) {
   const summary = String(resumeData?.summary || '');
   const skills = Array.isArray(resumeData?.skills) ? resumeData.skills.join('|') : '';
   const expCount = Array.isArray(resumeData?.workExperiences)
     ? resumeData.workExperiences.length
-    : Array.isArray(resumeData?.experiences)
-      ? resumeData.experiences.length
-      : 0;
+    : Array.isArray(resumeData?.experiences) ? resumeData.experiences.length : 0;
   const eduCount = Array.isArray(resumeData?.educationList)
     ? resumeData.educationList.length
-    : Array.isArray(resumeData?.education)
-      ? resumeData.education.length
-      : 0;
+    : Array.isArray(resumeData?.education) ? resumeData.education.length : 0;
   const high = Array.isArray(missing?.high) ? missing.high.join('|') : '';
 
   return [
@@ -216,9 +98,142 @@ function buildOneCallKey(jdText, resumeData, missing) {
   ].join('::');
 }
 
+// ─── ActionCard ───────────────────────────────────────────────────────────────
+
+function ActionCard({ action, onAddSkill, onAddSummary, onAddBullet }) {
+  const colors = sectionColors[action.section] || sectionColors.summary;
+
+  return (
+    <div style={signalCardStyle}>
+      {/* Section badge */}
+      <div style={{ marginBottom: 6 }}>
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 900,
+            color: colors.text,
+            textTransform: 'uppercase',
+            letterSpacing: 0.5,
+            background: colors.bg,
+            border: `1px solid ${colors.border}`,
+            borderRadius: 999,
+            padding: '2px 8px',
+          }}
+        >
+          {colors.label}
+        </span>
+      </div>
+
+      {/* Required signal */}
+      {action.requiredSignal && (
+        <div style={{ fontSize: 13, fontWeight: 900, color: '#263238', lineHeight: 1.35, marginBottom: 6 }}>
+          {action.requiredSignal}
+        </div>
+      )}
+
+      {/* Decision question */}
+      {action.decisionQuestion && (
+        <div
+          style={{
+            marginTop: 4,
+            padding: 8,
+            borderRadius: 10,
+            background: '#E3F2FD',
+            border: '1px solid #BBDEFB',
+            fontSize: 12,
+            color: '#0D47A1',
+            lineHeight: 1.42,
+            marginBottom: 6,
+          }}
+        >
+          <strong>What the employer is deciding:</strong> {action.decisionQuestion}
+        </div>
+      )}
+
+      {/* Resume evidence */}
+      {action.resumeEvidence && (
+        <div style={{ marginTop: 4, fontSize: 12, color: '#6D4C41', lineHeight: 1.4, marginBottom: 6 }}>
+          <strong>Resume evidence:</strong> {action.resumeEvidence}
+        </div>
+      )}
+
+      {/* Hiring impact */}
+      {action.hiringImpact && (
+        <div style={{ marginTop: 4, fontSize: 12, color: '#455A64', lineHeight: 1.4, marginBottom: 6 }}>
+          <strong>Hiring impact:</strong> {action.hiringImpact}
+        </div>
+      )}
+
+      {/* If true */}
+      {action.ifTrue && (
+        <div
+          style={{
+            marginTop: 6,
+            padding: 8,
+            borderRadius: 10,
+            background: '#E8F5E9',
+            border: '1px solid #C8E6C9',
+            fontSize: 12,
+            color: '#1B5E20',
+            lineHeight: 1.42,
+          }}
+        >
+          <strong>If true:</strong> {action.ifTrue}
+        </div>
+      )}
+
+      {/* If not true */}
+      {action.ifNotTrue && (
+        <div
+          style={{
+            marginTop: 6,
+            padding: 8,
+            borderRadius: 10,
+            background: '#FFF8E1',
+            border: '1px solid #FFE0B2',
+            fontSize: 12,
+            color: '#5D4037',
+            lineHeight: 1.42,
+          }}
+        >
+          <strong>If not true:</strong> {action.ifNotTrue}
+        </div>
+      )}
+
+      {/* Future positioning */}
+      {action.futurePositioning && (
+        <div style={{ marginTop: 6, fontSize: 12, color: '#607D8B', lineHeight: 1.4 }}>
+          <strong>Future positioning:</strong> {action.futurePositioning}
+        </div>
+      )}
+
+      {/* Contextual quick-insert chips */}
+      {(onAddSkill || onAddSummary || onAddBullet) && (action.ifTrue || action.requiredSignal) && (
+        <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {action.section === 'summary' && onAddSummary && action.ifTrue && (
+            <button type="button" onClick={() => onAddSummary(action.ifTrue)} style={chipStyle}>
+              Apply to summary
+            </button>
+          )}
+          {action.section === 'skills' && onAddSkill && action.requiredSignal && (
+            <button type="button" onClick={() => onAddSkill(action.requiredSignal)} style={chipStyle}>
+              Add as skill
+            </button>
+          )}
+          {action.section === 'experience' && onAddBullet && action.ifTrue && (
+            <button type="button" onClick={() => onAddBullet(action.ifTrue)} style={chipStyle}>
+              Insert as bullet
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 /**
- * Writing coach suggestions panel.
- * IMPORTANT: JSDoc typing here prevents TS from inferring `context.keyword` as only `null`.
  * @param {Props} props
  */
 export default function CoachSuggestionsPanel(props) {
@@ -237,55 +252,42 @@ export default function CoachSuggestionsPanel(props) {
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [text, setText] = useState('');
+  const [structured, setStructured] = useState(null);
+  const [fallbackText, setFallbackText] = useState('');
   const [error, setError] = useState(null);
 
+  // Track the last request key (JD+resume snapshot) to avoid redundant API calls
   const lastRequestKeyRef = useRef('');
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const sectionLabelMap = {
-    overview: 'overall alignment',
-    summary: 'summary section',
-    skills: 'skills section',
-    experience: 'experience bullets',
-    education: 'education section',
-  };
-
   const selectedSection = context?.section || 'overview';
   const humanSection = sectionLabelMap[selectedSection] || 'this part of your resume';
-
   const keywordHint = context?.keyword
     ? `Focus especially on including the keyword "${context.keyword}" in a natural way.`
     : '';
 
-  // One full Coach review per loaded JD/resume snapshot.
-  // Section clicks only filter the already-loaded response.
+  // The request key is based on JD+resume content only — NOT section.
+  // One API call per JD+resume snapshot. Section changes only filter locally.
   const requestKey = useMemo(
     () => buildOneCallKey(jdText, resumeData, missing),
     [jdText, resumeData, missing]
   );
 
-  const parsedCoach = useMemo(() => parseCoachText(text), [text]);
+  // Filter improvement actions to the selected section
+  const filteredActions = useMemo(() => {
+    if (!structured?.improvementActions?.length) return [];
+    if (selectedSection === 'overview') return structured.improvementActions;
+    return structured.improvementActions.filter((a) => a.section === selectedSection);
+  }, [structured, selectedSection]);
 
   const hasParsedContent = Boolean(
-    parsedCoach.matchAssessment || parsedCoach.actions.length > 0 || parsedCoach.fallbackText
+    structured?.matchAssessment ||
+    structured?.improvementActions?.length > 0 ||
+    fallbackText
   );
-
-  const filteredActions = useMemo(() => {
-    if (!parsedCoach.actions.length) return [];
-
-    if (selectedSection === 'overview') {
-      return parsedCoach.actions;
-    }
-
-    return parsedCoach.actions.filter((action) => {
-      const section = normalizeSection(action.section);
-      return section && section === selectedSection;
-    });
-  }, [parsedCoach.actions, selectedSection]);
 
   const handleAsk = async () => {
     setLoading(true);
@@ -298,6 +300,8 @@ export default function CoachSuggestionsPanel(props) {
         body: JSON.stringify({
           jdText,
           resumeData,
+          // Always request overview so we get all sections in one call.
+          // The panel filters locally when the user clicks a specific section.
           context: { section: 'overview', keyword: null },
           missing,
         }),
@@ -305,21 +309,14 @@ export default function CoachSuggestionsPanel(props) {
 
       const raw = await resp.text();
       let data = null;
-
-      try {
-        data = raw ? JSON.parse(raw) : null;
-      } catch {
-        data = null;
-      }
+      try { data = raw ? JSON.parse(raw) : null; } catch { data = null; }
 
       if (!resp.ok) {
-        const msg =
-          data?.error ||
-          `Coach request failed (${resp.status}). ${resp.status === 404 ? 'Route /api/ats-coach not found.' : ''}`;
+        const msg = data?.error || `Coach request failed (${resp.status}).${resp.status === 404 ? ' Route /api/ats-coach not found.' : ''}`;
         throw new Error(msg);
       }
 
-      const out = (data?.text || '').toString().trim();
+      const out = String(data?.text || '').trim();
       const lower = out.toLowerCase();
 
       if (data?.upgrade || lower.includes('too many requests') || lower.includes('rate limit')) {
@@ -328,17 +325,27 @@ export default function CoachSuggestionsPanel(props) {
         return;
       }
 
+      // Primary path: structured JSON
+      if (data?.structured && Array.isArray(data.structured.improvementActions)) {
+        setStructured(data.structured);
+        setFallbackText('');
+        setError(null);
+        lastRequestKeyRef.current = requestKey;
+        return;
+      }
+
+      // Fallback: plain text
       if (!out) {
         setError('Coach returned an empty response. Check /api/ats-coach.');
         lastRequestKeyRef.current = '';
         return;
       }
 
-      setText(out);
+      setFallbackText(out);
+      setStructured(null);
       setError(null);
       lastRequestKeyRef.current = requestKey;
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('CoachSuggestionsPanel error', e);
       setError(e?.message || 'Coach could not load suggestions. Try again.');
       lastRequestKeyRef.current = '';
@@ -347,16 +354,17 @@ export default function CoachSuggestionsPanel(props) {
     }
   };
 
+  // Fire when panel opens or JD/resume snapshot changes.
+  // Does NOT re-fire when selectedSection changes — section changes filter locally.
   useEffect(() => {
     if (!open) {
       setLoading(false);
       return;
     }
-
     if (!jdText?.trim()) return;
-
     if (lastRequestKeyRef.current !== requestKey) {
-      setText('');
+      setStructured(null);
+      setFallbackText('');
       setError(null);
       handleAsk();
     }
@@ -364,39 +372,27 @@ export default function CoachSuggestionsPanel(props) {
   }, [open, requestKey, jdText]);
 
   const handleQuickInsert = (type) => {
-    if (!text) return;
-
+    if (!structured && !fallbackText) return;
     if (type === 'summary' && onAddSummary) {
-      onAddSummary(text);
+      const text = structured?.summaryFix?.improved || fallbackText;
+      if (text) onAddSummary(text);
     }
-
-    if (type === 'skill' && onAddSkill) {
-      text
-        .split('\n')
-        .map((l) => l.replace(/^[-•]+\s*/, '').trim())
-        .filter(Boolean)
-        .slice(0, 5)
-        .forEach((skill) => onAddSkill(skill));
+    if (type === 'skill' && onAddSkill && fallbackText) {
+      fallbackText.split('\n').map((l) => l.replace(/^[-•]+\s*/, '').trim()).filter(Boolean).slice(0, 5).forEach((s) => onAddSkill(s));
     }
-
-    if (type === 'bullet' && onAddBullet) {
-      text
-        .split('\n')
-        .filter((l) => l.trim())
-        .slice(0, 3)
-        .forEach((line) => {
-          const bullet = line.startsWith('•') ? line : `• ${line.trim()}`;
-          onAddBullet(bullet);
-        });
+    if (type === 'bullet' && onAddBullet && fallbackText) {
+      fallbackText.split('\n').filter((l) => l.trim()).slice(0, 3).forEach((line) => {
+        onAddBullet(line.startsWith('•') ? line : `• ${line.trim()}`);
+      });
     }
   };
 
   if (!mounted || !open) return null;
 
   const showReview = !loading && hasParsedContent;
-  const showOverview = showReview && selectedSection === 'overview';
-  const showSectionActions = showReview && selectedSection !== 'overview' && filteredActions.length > 0;
-  const showEmptySection = showReview && selectedSection !== 'overview' && filteredActions.length === 0;
+  const isOverview = selectedSection === 'overview';
+  const showSectionActions = showReview && !isOverview && filteredActions.length > 0;
+  const showEmptySection = showReview && !isOverview && filteredActions.length === 0 && !fallbackText;
 
   const panel = (
     <div
@@ -410,6 +406,7 @@ export default function CoachSuggestionsPanel(props) {
         flexDirection: 'column',
       }}
     >
+      {/* Header — modal mode only */}
       {!embedded && (
         <div
           style={{
@@ -425,43 +422,27 @@ export default function CoachSuggestionsPanel(props) {
           <button
             type="button"
             onClick={onClose}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              fontWeight: 900,
-              color: '#BF360C',
-              fontSize: 18,
-              lineHeight: 1,
-            }}
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 900, color: '#BF360C', fontSize: 18, lineHeight: 1 }}
             aria-label="Close coach"
-            title="Close"
           >
             ×
           </button>
         </div>
       )}
 
-      <div
-        style={{
-          padding: embedded ? 0 : '10px 14px',
-          fontSize: 13,
-          color: '#5D4037',
-        }}
-      >
+      <div style={{ padding: embedded ? 0 : '10px 14px', fontSize: 13, color: '#5D4037' }}>
+
+        {/* Modal controls */}
         {!embedded && (
           <>
             <p style={{ marginBottom: 8 }}>
-              You&apos;re editing your <strong>{humanSection}</strong>. I&apos;ll suggest wording you can paste directly
-              into your resume. {keywordHint}
+              You&apos;re editing your <strong>{humanSection}</strong>. I&apos;ll suggest wording you can paste directly into your resume. {keywordHint}
             </p>
-
             {!jdText?.trim() && (
               <p style={{ marginBottom: 8, fontStyle: 'italic', color: '#8D6E63' }}>
                 Tip: You&apos;ll get the best results once a job description is loaded.
               </p>
             )}
-
             <button
               type="button"
               onClick={handleAsk}
@@ -483,202 +464,123 @@ export default function CoachSuggestionsPanel(props) {
           </>
         )}
 
+        {/* Embedded header */}
         {embedded && (
-          <div
-            style={{
-              marginBottom: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 8,
-            }}
-          >
+          <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <div style={{ fontSize: 12, fontWeight: 900, color: '#BF360C' }}>
               Reviewing {humanSection}
             </div>
             <button
               type="button"
               onClick={onClose}
-              style={{
-                border: '1px solid #FFE0B2',
-                background: '#FFFFFF',
-                color: '#BF360C',
-                borderRadius: 999,
-                padding: '4px 8px',
-                fontSize: 11,
-                fontWeight: 900,
-                cursor: 'pointer',
-              }}
+              style={{ border: '1px solid #FFE0B2', background: '#FFFFFF', color: '#BF360C', borderRadius: 999, padding: '4px 8px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}
             >
               Close
             </button>
           </div>
         )}
 
+        {/* Loading */}
         {loading && (
-          <div
-            style={{
-              padding: 10,
-              borderRadius: 10,
-              background: '#FFFFFF',
-              border: '1px solid #FFE0B2',
-              fontSize: 12,
-              color: '#6D4C41',
-              lineHeight: 1.45,
-            }}
-          >
+          <div style={{ padding: 10, borderRadius: 10, background: '#FFFFFF', border: '1px solid #FFE0B2', fontSize: 12, color: '#6D4C41', lineHeight: 1.45 }}>
             Thinking…
           </div>
         )}
 
-        {error && <div style={{ marginTop: 4, color: '#C62828', fontSize: 12, fontWeight: 700 }}>{error}</div>}
+        {/* Error */}
+        {error && (
+          <div style={{ marginTop: 4, color: '#C62828', fontSize: 12, fontWeight: 700 }}>{error}</div>
+        )}
 
+        {/* ── Review content ─────────────────────────────────────────────── */}
         {showReview && (
           <>
-            <div
-              style={{
-                ...coachCardStyle,
-                maxHeight: embedded ? 420 : 360,
-                overflowY: 'auto',
-              }}
-            >
-              {showOverview && (
-                <div
-                  style={{
-                    padding: 10,
-                    borderRadius: 10,
-                    background: '#FFFFFF',
-                    border: '1px solid #FFE0B2',
-                    fontSize: 12,
-                    color: '#5D4037',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  <div style={{ fontWeight: 900, color: '#BF360C', marginBottom: 6 }}>
-                    Overall recruiter assessment
-                  </div>
+            <div style={{ ...coachCardStyle, maxHeight: embedded ? 460 : 380, overflowY: 'auto' }}>
 
-                  <div style={{ marginBottom: 10 }}>
-                    {parsedCoach.matchAssessment || parsedCoach.title || 'Review generated. Open each section for targeted recruiter feedback.'}
-                  </div>
+              {/* ── OVERVIEW: synopsis + all section cards ─────────────── */}
+              {isOverview && (
+                <>
+                  {/* Recruiter synopsis — this is the overview card the user asked for */}
+                  {structured?.matchAssessment && (
+                    <div
+                      style={{
+                        padding: 12,
+                        borderRadius: 10,
+                        background: '#FFFFFF',
+                        border: '1px solid #FFE0B2',
+                        fontSize: 12,
+                        color: '#5D4037',
+                        lineHeight: 1.55,
+                        marginBottom: 12,
+                      }}
+                    >
+                      <div style={{ fontWeight: 900, color: '#BF360C', marginBottom: 6, fontSize: 13 }}>
+                        Recruiter assessment
+                      </div>
+                      <div>{structured.matchAssessment}</div>
+                      {structured.environment && (
+                        <div style={{ marginTop: 8, fontSize: 11, color: '#90A4AE', fontWeight: 700 }}>
+                          Detected environment: {structured.environment}
+                        </div>
+                      )}
+                      <div style={{ marginTop: 8, fontSize: 11, color: '#78909C', lineHeight: 1.4 }}>
+                        Open Summary, Skills, Experience, or Education below for targeted section feedback.
+                      </div>
+                    </div>
+                  )}
 
-                  <div style={{ color: '#6D4C41' }}>
-                    Open Summary, Skills, Experience, or Education for targeted section feedback.
-                  </div>
-                </div>
+                  {/* All action cards grouped by section */}
+                  {structured?.improvementActions?.length > 0 && (
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      {structured.improvementActions.map((action, index) => (
+                        <ActionCard
+                          key={`${action.section}-${index}`}
+                          action={action}
+                          onAddSkill={onAddSkill}
+                          onAddSummary={onAddSummary}
+                          onAddBullet={onAddBullet}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Fallback plain text */}
+                  {!structured && fallbackText && (
+                    <div style={{ fontSize: 12, color: '#5D4037', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                      {fallbackText}
+                    </div>
+                  )}
+                </>
               )}
 
+              {/* ── SINGLE SECTION: filtered action cards ──────────────── */}
               {showSectionActions && (
-                <div style={{ display: 'grid', gap: 8 }}>
+                <div style={{ display: 'grid', gap: 10 }}>
                   {filteredActions.map((action, index) => (
-                    <div key={`${action.section}-${action.requiredSignal}-${index}`} style={signalCardStyle}>
-                      <div style={{ fontSize: 11, fontWeight: 900, color: '#E65100', textTransform: 'uppercase' }}>
-                        Required signal
-                      </div>
-                      <div style={{ marginTop: 3, fontSize: 13, fontWeight: 900, color: '#263238', lineHeight: 1.35 }}>
-                        {action.requiredSignal || 'Missing signal'}
-                      </div>
-
-                      {action.resumeEvidence && (
-                        <div style={{ marginTop: 8, fontSize: 12, color: '#6D4C41', lineHeight: 1.4 }}>
-                          <strong>Resume evidence:</strong> {action.resumeEvidence}
-                        </div>
-                      )}
-
-                      {action.decisionQuestion && (
-                        <div
-                          style={{
-                            marginTop: 8,
-                            padding: 8,
-                            borderRadius: 10,
-                            background: '#E3F2FD',
-                            border: '1px solid #BBDEFB',
-                            fontSize: 12,
-                            color: '#0D47A1',
-                            lineHeight: 1.42,
-                          }}
-                        >
-                          <strong>What the employer is trying to decide:</strong> {action.decisionQuestion}
-                        </div>
-                      )}
-
-                      {action.hiringImpact && (
-                        <div style={{ marginTop: 8, fontSize: 12, color: '#455A64', lineHeight: 1.4 }}>
-                          <strong>Hiring impact:</strong> {action.hiringImpact}
-                        </div>
-                      )}
-
-                      {action.ifTrue && (
-                        <div
-                          style={{
-                            marginTop: 8,
-                            padding: 8,
-                            borderRadius: 10,
-                            background: '#E8F5E9',
-                            border: '1px solid #C8E6C9',
-                            fontSize: 12,
-                            color: '#1B5E20',
-                            lineHeight: 1.42,
-                          }}
-                        >
-                          <strong>If true:</strong> {action.ifTrue}
-                        </div>
-                      )}
-
-                      {action.ifNotTrue && (
-                        <div
-                          style={{
-                            marginTop: 8,
-                            padding: 8,
-                            borderRadius: 10,
-                            background: '#FFF8E1',
-                            border: '1px solid #FFE0B2',
-                            fontSize: 12,
-                            color: '#5D4037',
-                            lineHeight: 1.42,
-                          }}
-                        >
-                          <strong>If not true:</strong> {action.ifNotTrue}
-                        </div>
-                      )}
-
-                      {action.futurePositioning && (
-                        <div style={{ marginTop: 8, fontSize: 12, color: '#607D8B', lineHeight: 1.4 }}>
-                          <strong>Future positioning:</strong> {action.futurePositioning}
-                        </div>
-                      )}
-                    </div>
+                    <ActionCard
+                      key={`${action.section}-${action.requiredSignal}-${index}`}
+                      action={action}
+                      onAddSkill={onAddSkill}
+                      onAddSummary={onAddSummary}
+                      onAddBullet={onAddBullet}
+                    />
                   ))}
                 </div>
               )}
 
+              {/* Empty section state */}
               {showEmptySection && (
-                <div
-                  style={{
-                    padding: 10,
-                    borderRadius: 10,
-                    background: '#FFFFFF',
-                    border: '1px solid #FFE0B2',
-                    fontSize: 12,
-                    color: '#6D4C41',
-                    lineHeight: 1.45,
-                  }}
-                >
-                  No section-specific coaching items were returned for this section.
+                <div style={{ padding: 10, borderRadius: 10, background: '#FFFFFF', border: '1px solid #FFE0B2', fontSize: 12, color: '#6D4C41', lineHeight: 1.45 }}>
+                  No section-specific coaching items were returned for this section. Try clicking &quot;Review overall alignment&quot; first.
                 </div>
               )}
             </div>
 
+            {/* Quick-insert chips */}
             <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              <button type="button" onClick={() => handleQuickInsert('summary')} style={chipStyle}>
-                Apply to summary
-              </button>
-              <button type="button" onClick={() => handleQuickInsert('skill')} style={chipStyle}>
-                Add as skills
-              </button>
-              <button type="button" onClick={() => handleQuickInsert('bullet')} style={chipStyle}>
-                Insert as bullets
-              </button>
+              <button type="button" onClick={() => handleQuickInsert('summary')} style={chipStyle}>Apply to summary</button>
+              <button type="button" onClick={() => handleQuickInsert('skill')} style={chipStyle}>Add as skills</button>
+              <button type="button" onClick={() => handleQuickInsert('bullet')} style={chipStyle}>Insert as bullets</button>
             </div>
           </>
         )}
