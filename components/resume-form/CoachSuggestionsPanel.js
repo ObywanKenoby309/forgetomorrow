@@ -212,17 +212,17 @@ function ActionCard({ action, onAddSkill, onAddSummary, onAddBullet }) {
         <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {action.section === 'summary' && onAddSummary && action.ifTrue && (
             <button type="button" onClick={() => onAddSummary(action.ifTrue)} style={chipStyle}>
-              Apply to summary
+              Use as summary guidance
             </button>
           )}
           {action.section === 'skills' && onAddSkill && action.requiredSignal && (
             <button type="button" onClick={() => onAddSkill(action.requiredSignal)} style={chipStyle}>
-              Add as skill
+              Review skill signal
             </button>
           )}
           {action.section === 'experience' && onAddBullet && action.ifTrue && (
             <button type="button" onClick={() => onAddBullet(action.ifTrue)} style={chipStyle}>
-              Insert as bullet
+              Use as bullet guidance
             </button>
           )}
         </div>
@@ -554,16 +554,9 @@ export default function CoachSuggestionsPanel(props) {
               {/* Empty section state */}
               {showEmptySection && (
                 <div style={{ padding: 10, borderRadius: 10, background: '#FFFFFF', border: '1px solid #FFE0B2', fontSize: 12, color: '#6D4C41', lineHeight: 1.45 }}>
-                  No section-specific coaching items were returned for this section. Try clicking &quot;Review overall alignment&quot; first.
+                  No education requirement was detected in this job description.
                 </div>
               )}
-            </div>
-
-            {/* Quick-insert chips */}
-            <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              <button type="button" onClick={() => handleQuickInsert('summary')} style={chipStyle}>Apply to summary</button>
-              <button type="button" onClick={() => handleQuickInsert('skill')} style={chipStyle}>Add as skills</button>
-              <button type="button" onClick={() => handleQuickInsert('bullet')} style={chipStyle}>Insert as bullets</button>
             </div>
           </>
         )}
