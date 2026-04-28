@@ -322,6 +322,8 @@ export default function CreateResumePage() {
   // ─── Derived ──────────────────────────────────────────────────────────────
   const isHybrid = router.query.template==='hybrid';
   const fireMeta = atsJobMeta||jobMeta;
+  const guessedFireTitle = jd ? jd.split('\n').map(s => s.trim()).filter(Boolean)[0]?.slice(0, 80) || 'Job description' : 'Job description';
+  const fireTitle = fireMeta?.title || guessedFireTitle;
   const greeting = getTimeGreeting();
   const hasRealAts = !!(atsPack?.ats&&typeof atsPack.ats.score==='number'&&!/demo|sample/i.test(atsPack.ats.summary||''));
   const savedTime = saveEventAt?new Date(saveEventAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
@@ -525,7 +527,7 @@ export default function CreateResumePage() {
                   ) : jd ? (
                     <>
                       <div style={{fontWeight:800,fontSize:13,color:'#0D47A1',marginBottom:4}}>🔥 Job fire loaded</div>
-                      <div style={{fontSize:12,color:'#334155'}}><strong>{fireMeta?.title||'Job'}</strong>{fireMeta?.company?` at ${fireMeta.company}`:''}</div>
+                      <div style={{fontSize:12,color:'#334155'}}><strong>{fireTitle}</strong>{fireMeta?.company?` at ${fireMeta.company}`:''}</div>
                       <div style={{fontSize:11,color:'#64748B',marginTop:4}}>Match insights and keyword coverage are active.</div>
                     </>
                   ) : (
