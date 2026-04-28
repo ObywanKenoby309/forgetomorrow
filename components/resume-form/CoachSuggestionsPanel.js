@@ -184,6 +184,31 @@ function mapSignalToSection(signal = '') {
   return 'summary';
 }
 
+function buildOneCallKey(jdText, resumeData, missing) {
+  const summary = String(resumeData?.summary || '');
+  const skills = Array.isArray(resumeData?.skills) ? resumeData.skills.join('|') : '';
+  const expCount = Array.isArray(resumeData?.workExperiences)
+    ? resumeData.workExperiences.length
+    : Array.isArray(resumeData?.experiences)
+      ? resumeData.experiences.length
+      : 0;
+  const eduCount = Array.isArray(resumeData?.educationList)
+    ? resumeData.educationList.length
+    : Array.isArray(resumeData?.education)
+      ? resumeData.education.length
+      : 0;
+  const high = Array.isArray(missing?.high) ? missing.high.join('|') : '';
+
+  return [
+    String(jdText || '').slice(0, 500),
+    summary.slice(0, 500),
+    skills.slice(0, 500),
+    expCount,
+    eduCount,
+    high.slice(0, 500),
+  ].join('::');
+}
+
 /**
  * Writing coach suggestions panel.
  * IMPORTANT: JSDoc typing here prevents TS from inferring `context.keyword` as only `null`.
@@ -223,7 +248,12 @@ export default function CoachSuggestionsPanel(props) {
     ? `Focus especially on including the keyword "${context.keyword}" in a natural way.`
     : '';
 
-  const requestKey = `${context?.section || 'overview'}:${context?.keyword || ''}`;
+  // One full Coach review per loaded JD/resume snapshot.
+  // Section clicks only filter the already-loaded response.
+  const requestKey = useMemo(
+    () => buildOneCallKey(jdText, resumeData, missing),
+    [jdText, resumeData, missing]
+  );
 
   const parsedCoach = useMemo(() => parseCoachText(text), [text]);
 
@@ -260,7 +290,7 @@ export default function CoachSuggestionsPanel(props) {
         body: JSON.stringify({
           jdText,
           resumeData,
-          context,
+          context: { section: 'overview', keyword: null },
           missing,
         }),
       });
