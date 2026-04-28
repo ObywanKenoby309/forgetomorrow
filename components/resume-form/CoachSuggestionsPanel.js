@@ -170,32 +170,6 @@ function parseCoachText(value) {
   };
 }
 
-function mapSignalToSection(signal = '') {
-  const s = signal.toLowerCase();
-
-  if (s.includes('education') || s.includes('degree') || s.includes('certification') || s.includes('license')) {
-    return 'education';
-  }
-
-  if (s.includes('tool') || s.includes('api') || s.includes('llm') || s.includes('skill')) {
-    return 'skills';
-  }
-
-  if (
-    s.includes('project') ||
-    s.includes('stakeholder') ||
-    s.includes('management') ||
-    s.includes('experience') ||
-    s.includes('ownership') ||
-    s.includes('leadership') ||
-    s.includes('delivery')
-  ) {
-    return 'experience';
-  }
-
-  return 'summary';
-}
-
 function buildOneCallKey(jdText, resumeData, missing) {
   const summary = String(resumeData?.summary || '');
   const skills = Array.isArray(resumeData?.skills) ? resumeData.skills.join('|') : '';
@@ -240,11 +214,16 @@ export default function CoachSuggestionsPanel(props) {
     embedded = false,
   } = props;
 
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState('');
   const [error, setError] = useState(null);
 
   const lastRequestKeyRef = useRef('');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const sectionLabelMap = {
     overview: 'overall alignment',
@@ -269,24 +248,23 @@ export default function CoachSuggestionsPanel(props) {
 
   const parsedCoach = useMemo(() => parseCoachText(text), [text]);
 
-const hasParsedContent =
-  parsedCoach.matchAssessment ||
-  parsedCoach.actions.length > 0 ||
-  parsedCoach.fallbackText;
+  const hasParsedContent = Boolean(
+    parsedCoach.matchAssessment ||
+      parsedCoach.actions.length > 0 ||
+      parsedCoach.fallbackText
+  );
 
   const filteredActions = useMemo(() => {
     if (!parsedCoach.actions.length) return [];
 
     if (context?.section === 'overview') {
-      return parsedCoach.actions;
+      return [];
     }
 
-    const exactMatches = parsedCoach.actions.filter((action) => {
+    return parsedCoach.actions.filter((action) => {
       const section = normalizeSection(action.section);
       return section && section === context?.section;
     });
-
-        return exactMatches;
   }, [parsedCoach.actions, context?.section]);
 
   const handleAsk = async () => {
@@ -323,21 +301,19 @@ const hasParsedContent =
 
       const out = (data?.text || '').toString().trim();
 
-if (data?.upgrade || out.toLowerCase().includes('too many requests') || out.toLowerCase().includes('rate limit')) {
-  setText('');
-  setError(out || 'Coach is busy right now. Try again in a few seconds.');
-  lastRequestKeyRef.current = '';
-  return;
-}
+      if (data?.upgrade || out.toLowerCase().includes('too many requests') || out.toLowerCase().includes('rate limit')) {
+        setError(out || 'Coach is busy right now. Try again in a few seconds.');
+        lastRequestKeyRef.current = '';
+        return;
+      }
 
-if (!out) {
-  setText('');
-  setError('Coach returned an empty response. Check /api/ats-coach.');
-  lastRequestKeyRef.current = '';
-  return;
-}
+      if (!out) {
+        setError('Coach returned an empty response. Check /api/ats-coach.');
+        lastRequestKeyRef.current = '';
+        return;
+      }
 
-setText(out);
+      setText(out);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error('CoachSuggestionsPanel error', e);
@@ -349,23 +325,17 @@ setText(out);
 
   useEffect(() => {
     if (!open) {
-  setLoading(false);
-  return;
-}
+      setLoading(false);
+      return;
+    }
 
-    if (
-  open &&
-  jdText?.trim() &&
-  lastRequestKeyRef.current !== requestKey &&
-  !text
-) {
+    if (jdText?.trim() && lastRequestKeyRef.current !== requestKey && !text) {
       lastRequestKeyRef.current = requestKey;
-      setText('');
       setError(null);
       handleAsk();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, requestKey, jdText]);
+  }, [open, requestKey, jdText, text]);
 
   const handleQuickInsert = (type) => {
     if (!text) return;
@@ -395,7 +365,11 @@ setText(out);
     }
   };
 
-  if (!open) return null;
+  if (!mounted || !open) return null;
+
+  const showOverview = context?.section === 'overview';
+  const showSectionCards = !showOverview && filteredActions.length > 0;
+  const showEmptySection = !showOverview && hasParsedContent && filteredActions.length === 0;
 
   const panel = (
     <div
@@ -541,39 +515,40 @@ setText(out);
                 overflowY: 'auto',
               }}
             >
-              {context?.section === 'overview' && parsedCoach.title && (
+              {showOverview && parsedCoach.title && (
                 <div style={{ fontSize: 14, fontWeight: 900, color: '#E65100', marginBottom: 8 }}>
                   {parsedCoach.title}
                 </div>
               )}
 
-              {context?.section === 'overview' && (
-  <div
-    style={{
-      padding: 10,
-      borderRadius: 10,
-      background: '#FFFFFF',
-      border: '1px solid #FFE0B2',
-      fontSize: 12,
-      color: '#5D4037',
-      lineHeight: 1.5,
-    }}
-  >
-    <div style={{ fontWeight: 900, color: '#BF360C', marginBottom: 6 }}>
-      Overall recruiter assessment
-    </div>
+              {showOverview && (
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 10,
+                    background: '#FFFFFF',
+                    border: '1px solid #FFE0B2',
+                    fontSize: 12,
+                    color: '#5D4037',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <div style={{ fontWeight: 900, color: '#BF360C', marginBottom: 6 }}>
+                    Overall recruiter assessment
+                  </div>
 
-    <div style={{ marginBottom: 10 }}>
-      {parsedCoach.matchAssessment || 'Review generated. Open each section for targeted recruiter feedback.'}
-    </div>
+                  <div style={{ marginBottom: 10 }}>
+                    {parsedCoach.matchAssessment || 'Review generated. Open each section for targeted recruiter feedback.'}
+                  </div>
 
-    <div style={{ color: '#6D4C41' }}>
-      Open Summary, Skills, Experience, or Education for targeted section feedback.
-    </div>
-  </div>
-)}
-{context?.section !== 'overview' && filteredActions.length > 0 && (
-  <div style={{ display: 'grid', gap: 8 }}>
+                  <div style={{ color: '#6D4C41' }}>
+                    Open Summary, Skills, Experience, or Education for targeted section feedback.
+                  </div>
+                </div>
+              )}
+
+              {showSectionCards && (
+                <div style={{ display: 'grid', gap: 8 }}>
                   {filteredActions.map((action, index) => (
                     <div key={`${action.requiredSignal}-${index}`} style={signalCardStyle}>
                       <div style={{ fontSize: 11, fontWeight: 900, color: '#E65100', textTransform: 'uppercase' }}>
@@ -656,7 +631,7 @@ setText(out);
                 </div>
               )}
 
-{context?.section !== 'overview' && filteredActions.length === 0 && (
+              {showEmptySection && (
                 <div
                   style={{
                     padding: 10,
