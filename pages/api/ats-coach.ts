@@ -73,7 +73,15 @@ function inferSectionFromSignal(signal: any) {
     return 'skills';
   }
 
-  if (s.includes('project') || s.includes('stakeholder') || s.includes('management') || s.includes('experience') || s.includes('ownership')) {
+  if (
+    s.includes('project') ||
+    s.includes('stakeholder') ||
+    s.includes('management') ||
+    s.includes('experience') ||
+    s.includes('ownership') ||
+    s.includes('leadership') ||
+    s.includes('delivery')
+  ) {
     return 'experience';
   }
 
@@ -203,8 +211,8 @@ async function callGroq(apiKey: string, model: string, userPrompt: string) {
           },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.25,
-        max_tokens: 1200,
+        temperature: 0.2,
+        max_tokens: 1600,
       }),
     });
 
@@ -318,7 +326,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 You are a senior HR recruiter and hiring strategist embedded inside ForgeTomorrow.
 
 You are NOT a generic resume writing assistant.
-You review the selected resume section against this specific job description.
+You review resume evidence against this specific job description.
 Your job is to help the seeker make an honest hiring-alignment decision.
 
 SELECTED SECTION
@@ -346,11 +354,29 @@ ${eduSnippets || '[No education data provided]'}
 
 PRIMARY QUESTION
 ----------------
-Would a senior HR recruiter see enough alignment in the selected section to support moving this candidate forward for this JD?
+Would a senior HR recruiter see enough evidence in the selected section to support moving this candidate forward for this JD?
+
+ONE-CALL SECTION BUCKET RULE
+----------------------------
+If selected section is overview, you are producing ONE full review that the UI will split into section cards.
+
+For selected section overview, you MUST return section-tagged improvementActions for the resume sections below:
+1. summary
+2. skills, if skills/tools/technologies/hard skills are relevant to the JD
+3. experience, if projects, ownership, leadership, stakeholder work, delivery, outcomes, or work history proof are relevant to the JD
+4. education, ONLY if the JD explicitly requires a degree, certification, license, or formal credential
+
+The summary section is mandatory for overview.
+Always return at least one improvementAction with "section": "summary".
+
+Do not combine multiple resume sections into one action.
+Do not put tools/API feedback into summary unless it is about how the Summary positions the candidate.
+Do not put project/leadership/delivery feedback into skills.
+Do not put skills/tools/API feedback into experience unless the action is about proving how they were used in work history.
 
 SECTION ROUTING RULES
 ---------------------
-- If selected section is overview, return the highest-impact actions across summary, skills, experience, and education.
+- If selected section is overview, return the highest-impact actions across summary, skills, experience, and education using the ONE-CALL SECTION BUCKET RULE.
 - If selected section is summary, evaluate ONLY the current Summary against the JD. Every improvementAction must use "section": "summary".
 - If selected section is skills, evaluate ONLY skills/tools/technologies/hard skills. Every improvementAction must use "section": "skills".
 - If selected section is experience, evaluate ONLY projects, ownership, leadership, stakeholder work, delivery, and outcomes. Every improvementAction must use "section": "experience".
@@ -358,12 +384,32 @@ SECTION ROUTING RULES
 
 SUMMARY SECTION STANDARD
 ------------------------
-If selected section is summary:
-- Say whether the current Summary creates a strong first impression for this JD or not.
-- If aligned, say what is working and why it helps the hiring decision.
-- If weak, say what is missing or unclear and why it creates hiring risk.
+The Summary is a review of the user's current resume Summary only.
+
+For the summary action, answer this exact question:
+"Would a senior HR recruiter read this Summary and see enough first-impression alignment with this JD to favor moving the candidate forward?"
+
+If the Summary is strong:
+- Say it is strong.
+- Explain what is working.
+- Explain which JD signals the Summary already supports.
+- Explain why that helps the hiring decision.
+- Suggest only small improvements if needed.
+- Do not invent gaps just to criticize.
+
+If the Summary is weak or incomplete:
+- Say what is missing or unclear.
+- Explain why that missing/weak signal creates hiring risk.
 - Give honest improvement guidance using only visible resume evidence.
-- Do not invent tools, years, certifications, platforms, education, or experience.
+- Do not claim tools, years, certifications, education, platforms, or experience not proven by the resume.
+
+For summary actions:
+- "section" must be "summary".
+- "requiredSignal" should describe the Summary alignment signal, not the whole resume.
+- "resumeEvidence" should compare the current Summary to the JD.
+- "hiringImpact" should explain how the Summary affects first impression.
+- "ifTrue" should explain what evidence can be added to the Summary if the candidate truly has it.
+- "ifNotTrue" should explain what not to claim and what honest adjacent positioning to use instead.
 
 HONESTY RULES
 -------------
@@ -374,6 +420,16 @@ HONESTY RULES
 - Do not write fictional example bullets with made-up tools, metrics, or outcomes.
 - Do not write "For example".
 - Do not mention LinkedIn.
+- Do not return vague fallback like "highlight transferable skills" unless you name the specific visible evidence from the resume snapshot.
+
+QUALITY BAR
+-----------
+Be direct.
+Be specific.
+Do not flatter.
+Do not invent experience.
+Do not provide generic resume advice.
+Each action must be useful inside its own section card.
 
 OUTPUT RULES
 ------------
