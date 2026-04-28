@@ -344,14 +344,16 @@ setText(out);
 
   useEffect(() => {
     if (!open) {
-      lastRequestKeyRef.current = '';
-      setText('');
-      setError(null);
-      setLoading(false);
-      return;
-    }
+  setLoading(false);
+  return;
+}
 
-    if (open && jdText?.trim() && lastRequestKeyRef.current !== requestKey) {
+    if (
+  open &&
+  jdText?.trim() &&
+  lastRequestKeyRef.current !== requestKey &&
+  !text
+) {
       lastRequestKeyRef.current = requestKey;
       setText('');
       setError(null);
@@ -575,7 +577,7 @@ setText(out);
     </div>
 
     <div style={{ marginBottom: 10 }}>
-      {parsedCoach.matchAssessment || 'No overall assessment returned.'}
+      {parsedCoach.matchAssessment || 'Review generated. Open each section for targeted recruiter feedback.'}
     </div>
 
     <div style={{ color: '#6D4C41' }}>
