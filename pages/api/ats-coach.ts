@@ -335,6 +335,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const context = body.context || { section: 'overview', keyword: null };
     const missing = body.missing || {};
     const jobMeta = body.jobMeta || null;
+    const requestedSection = String(context?.section || 'overview').toLowerCase().trim();
 
     // ── Build prompt via strategyBrain ────────────────────────────────────
     // This is the intelligence layer — environment detection, hiring lens,
