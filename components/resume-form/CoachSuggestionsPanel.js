@@ -328,7 +328,7 @@ export default function CoachSuggestionsPanel(props) {
   };
 
   if (!open) return null;
-  if (!embedded && !portalEl) return null;
+  if (!embedded && !portalEl) return <></>;  // ← not null; avoids SSR/client mismatch
 
   const panel = (
     <div
