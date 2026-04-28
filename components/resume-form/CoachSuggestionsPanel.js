@@ -584,6 +584,7 @@ setText(out);
       Open Summary, Skills, Experience, or Education for targeted section feedback.
     </div>
   </div>
+)}
 {context?.section !== 'overview' && filteredActions.length > 0 && (
   <div style={{ display: 'grid', gap: 8 }}>
                   {filteredActions.map((action, index) => (
