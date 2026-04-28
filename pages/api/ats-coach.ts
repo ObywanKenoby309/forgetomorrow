@@ -54,13 +54,40 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function formatActionForText(action: any) {
-  if (typeof action === 'string') return `• ${action.trim()}`;
+function normalizeSection(value: any) {
+  const section = String(value || '').toLowerCase().trim();
+  if (section === 'summary' || section === 'skills' || section === 'experience' || section === 'education') {
+    return section;
+  }
+  return '';
+}
 
+function inferSectionFromSignal(signal: any) {
+  const s = String(signal || '').toLowerCase();
+
+  if (s.includes('education') || s.includes('degree') || s.includes('certification') || s.includes('license')) {
+    return 'education';
+  }
+
+  if (s.includes('tool') || s.includes('api') || s.includes('llm') || s.includes('skill')) {
+    return 'skills';
+  }
+
+  if (s.includes('project') || s.includes('stakeholder') || s.includes('management') || s.includes('experience') || s.includes('ownership')) {
+    return 'experience';
+  }
+
+  return 'summary';
+}
+
+function formatActionForText(action: any) {
+  if (typeof action === 'string') return `• Required signal: ${action.trim()}`;
   if (!action || typeof action !== 'object') return '';
 
-  const section = String(action.section || '').trim();
   const required = String(action.requiredSignal || action.signal || action.requirement || '').trim();
+  if (!required) return '';
+
+  const section = normalizeSection(action.section) || inferSectionFromSignal(required);
   const evidence = String(action.resumeEvidence || action.evidence || '').trim();
   const impact = String(action.hiringImpact || '').trim();
   const ifTrue = String(action.ifTrue || action.if_true || '').trim();
@@ -68,7 +95,7 @@ function formatActionForText(action: any) {
   const future = String(action.futurePositioning || '').trim();
 
   return [
-    required ? `• Required signal: ${required}` : '',
+    `• Required signal: ${required}`,
     section ? `  Section: ${section}` : '',
     evidence ? `  Resume evidence: ${evidence}` : '',
     impact ? `  Hiring impact: ${impact}` : '',
@@ -155,6 +182,48 @@ async function resolveUserId(session: any): Promise<string | null> {
   return u?.id ? String(u.id) : null;
 }
 
+async function callGroq(apiKey: string, model: string, userPrompt: string) {
+  let lastStatus = 0;
+  let lastText = '';
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are ForgeTomorrow resume intelligence. Return ONLY valid JSON. No markdown. No extra text.',
+          },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.25,
+        max_tokens: 1200,
+      }),
+    });
+
+    if (response.ok) return response;
+
+    lastStatus = response.status;
+    lastText = await response.text();
+
+    if (response.status === 429 && attempt === 0) {
+      await sleep(1800);
+      continue;
+    }
+
+    break;
+  }
+
+  throw new Error(`Groq API error: ${lastStatus} - ${lastText}`);
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse<CoachResponse>) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -203,7 +272,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     return res.status(500).json({ ok: false, error: 'GROQ_API_KEY is not configured' });
   }
 
-  // Optional model override (keeps behavior stable + configurable)
   const model = process.env.GROQ_COACH_MODEL || 'llama-3.1-8b-instant';
 
   try {
@@ -211,11 +279,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const jdText = (body.jdText || '').toString();
     const rd = body.resumeData || {};
+    const context = body.context || { section: 'overview', keyword: null };
+    const selectedSection = String(context?.section || 'overview').toLowerCase().trim();
+    const keyword = context?.keyword ? String(context.keyword) : '';
 
     const summary = (rd.summary || '').toString();
     const skills = (rd.skills || []) as string[];
 
-    // Support both workExperiences and experiences shapes
     const experiences = (rd.workExperiences || rd.experiences || []) as any[];
     const education = (rd.educationList || rd.education || []) as any[];
 
@@ -228,7 +298,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         const company = exp.company || '';
         const bullets = Array.isArray(exp.bullets) ? exp.bullets : [];
         const firstBullet = bullets.find((b: string) => typeof b === 'string' && b.trim().length > 0) || '';
-        return `${idx + 1}. ${title} at ${company}${firstBullet ? ` — ${firstBullet}` : ''}`;
+        return `${idx + 1}. ${title} at ${company}${firstBullet ? ` - ${firstBullet}` : ''}`;
       })
       .join('\n');
 
@@ -242,16 +312,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
       .join('\n');
 
-    const jdPreview = jdText.length > 1800 ? jdText.slice(0, 1800) + '\n\n[truncated]' : jdText;
+    const jdPreview = jdText.length > 2200 ? jdText.slice(0, 2200) + '\n\n[truncated]' : jdText;
 
     const userPrompt = `
-You are a senior hiring strategist embedded inside ForgeTomorrow.
+You are a senior HR recruiter and hiring strategist embedded inside ForgeTomorrow.
 
-You are NOT a generic writing assistant.
-You are evaluating why this resume would get rejected or advanced for this specific job description.
+You are NOT a generic resume writing assistant.
+You review the selected resume section against this specific job description.
+Your job is to help the seeker make an honest hiring-alignment decision.
 
-JOB DESCRIPTION (JD)
---------------------
+SELECTED SECTION
+----------------
+${selectedSection}
+${keyword ? `FOCUS KEYWORD: ${keyword}` : ''}
+
+JOB DESCRIPTION
+---------------
 ${jdPreview || '[No JD supplied]'}
 
 CURRENT RESUME SNAPSHOT
@@ -262,32 +338,42 @@ ${summary || '[No summary provided]'}
 Key Skills:
 ${safeSkills.length ? safeSkills.join(', ') : '[No skills provided]'}
 
-Recent Experience (top 4 roles max):
+Recent Experience:
 ${expSnippets || '[No experience provided]'}
 
 Education:
 ${eduSnippets || '[No education data provided]'}
 
-FORGETOMORROW RESUME COACHING MODE
-----------------------------------
-Before generating any suggestion, you MUST:
+PRIMARY QUESTION
+----------------
+Would a senior HR recruiter see enough alignment in the selected section to support moving this candidate forward for this JD?
 
-1) Detect the dominant hiring environment from the JD:
-- Enterprise / Commercial
-- Startup / Growth
-- Nonprofit / Mission-driven
-- Government / Public sector
+SECTION ROUTING RULES
+---------------------
+- If selected section is overview, return the highest-impact actions across summary, skills, experience, and education.
+- If selected section is summary, evaluate ONLY the current Summary against the JD. Every improvementAction must use "section": "summary".
+- If selected section is skills, evaluate ONLY skills/tools/technologies/hard skills. Every improvementAction must use "section": "skills".
+- If selected section is experience, evaluate ONLY projects, ownership, leadership, stakeholder work, delivery, and outcomes. Every improvementAction must use "section": "experience".
+- If selected section is education, return education feedback only if the JD explicitly requires a degree, certification, license, or formal credential. Every improvementAction must use "section": "education".
 
-2) Think like the hiring manager:
-- Why would this resume get rejected right now?
-- What signal is missing?
-- What exact wording would improve the decision?
+SUMMARY SECTION STANDARD
+------------------------
+If selected section is summary:
+- Say whether the current Summary creates a strong first impression for this JD or not.
+- If aligned, say what is working and why it helps the hiring decision.
+- If weak, say what is missing or unclear and why it creates hiring risk.
+- Give honest improvement guidance using only visible resume evidence.
+- Do not invent tools, years, certifications, platforms, education, or experience.
 
-3) Focus on decision-changing improvements only:
-- missing hiring signals
-- weak or generic phrasing
-- missing keywords/tools only if they are clearly relevant
-- missing proof of ownership, outcomes, scale, speed, or ambiguity tolerance depending on the environment
+HONESTY RULES
+-------------
+- Do not tell the seeker to claim something not proven by the resume.
+- If a required signal is missing, use conditional guidance.
+- The ifTrue field explains what real evidence would strengthen the section if the candidate truly has it.
+- The ifNotTrue field tells the candidate not to claim it and names the closest honest adjacent evidence already visible.
+- Do not write fictional example bullets with made-up tools, metrics, or outcomes.
+- Do not write "For example".
+- Do not mention LinkedIn.
 
 OUTPUT RULES
 ------------
@@ -298,14 +384,18 @@ Return ONLY valid JSON in this exact shape:
   "environment": "",
   "matchAssessment": "",
   "signalGaps": [],
-  "improvementActions": [],
-  "bulletFixes": [
+  "improvementActions": [
     {
-      "original": "",
-      "improved": "",
-      "reason": ""
+      "section": "summary | skills | experience | education",
+      "requiredSignal": "",
+      "resumeEvidence": "",
+      "hiringImpact": "",
+      "ifTrue": "",
+      "ifNotTrue": "",
+      "futurePositioning": ""
     }
   ],
+  "bulletFixes": [],
   "summaryFix": {
     "original": "",
     "improved": "",
@@ -314,75 +404,10 @@ Return ONLY valid JSON in this exact shape:
   "reasoning": []
 }
 
-QUALITY RULES
--------------
-- NEVER return plain text outside JSON
-- NEVER return markdown
-- NEVER give generic advice like "improve clarity" or "tailor more"
-- EVERY improvement must map to a hiring decision signal
-- EVERY bulletFix.improved must be immediately usable on the resume
-- EVERY reason must explain why the change matters to this hiring team
-- Do NOT rewrite the entire resume
-- Focus on the highest-impact changes the user can make in 15–30 minutes
-
-FINAL TEST
-----------
-Would this change how a hiring manager sees the candidate for this JD?
-If not, rewrite it.
-
 Return ONLY valid JSON.
 `.trim();
 
-    const requestBody = {
-      model,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are ForgeTomorrow resume intelligence. Return ONLY valid JSON. No markdown. No extra text.',
-        },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.25,
-      max_tokens: 850,
-      response_format: { type: 'json_object' },
-    };
-
-    async function callGroq() {
-      return await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-    }
-
-    // Groq can briefly rate-limit on TPM. Retry once instead of throwing an immediate 500.
-    let response = await callGroq();
-
-    if (response.status === 429) {
-      await sleep(2200);
-      response = await callGroq();
-    }
-
-    if (!response.ok) {
-      const err = await response.text();
-
-      if (response.status === 429) {
-        return res.status(200).json({
-          ok: true,
-          text:
-            'The coach is temporarily busy because the AI provider rate limit was reached. Please run this again in a few seconds.',
-          tips: ['Temporary AI rate limit reached. Try again in a few seconds.'],
-          raw: err,
-        });
-      }
-
-      throw new Error(`Groq API error: ${response.status} - ${err}`);
-    }
-
+    const response = await callGroq(apiKey, model, userPrompt);
     const data = await response.json();
     const raw = data.choices?.[0]?.message?.content?.toString().trim() || '';
 
@@ -402,14 +427,19 @@ Return ONLY valid JSON.
     }
 
     if (!parsed || typeof parsed !== 'object') {
-      throw new Error('Coach returned invalid JSON');
+      return res.status(200).json({
+        ok: true,
+        text: raw || 'Coach returned a response, but it could not be formatted cleanly. Try again.',
+        tips: [],
+        raw,
+      });
     }
+
+    const actions = Array.isArray(parsed.improvementActions) ? parsed.improvementActions : [];
 
     const tips: string[] = [
       ...(Array.isArray(parsed.signalGaps) ? parsed.signalGaps : []),
-      ...(Array.isArray(parsed.improvementActions)
-        ? parsed.improvementActions.map((x: any) => tipFromAction(x))
-        : []),
+      ...actions.map(tipFromAction),
     ]
       .map((x: any) => String(x || '').trim())
       .filter(Boolean);
@@ -420,7 +450,7 @@ Return ONLY valid JSON.
             const improved = String(b?.improved || '').trim();
             const reason = String(b?.reason || '').trim();
             if (!improved) return '';
-            return `${i + 1}. ${improved}${reason ? ` — Why: ${reason}` : ''}`;
+            return `${i + 1}. ${improved}${reason ? ` - Why: ${reason}` : ''}`;
           })
           .filter(Boolean)
           .join('\n')
@@ -438,17 +468,17 @@ Return ONLY valid JSON.
             .join('\n')
         : '';
 
+    const actionText = actions
+      .map(formatActionForText)
+      .filter(Boolean)
+      .join('\n');
+
     const textParts = [
       String(parsed.opening || '').trim(),
       String(parsed.matchAssessment || '').trim() ? `Match Assessment: ${String(parsed.matchAssessment).trim()}` : '',
       bulletFixText ? `Bullet Fixes:\n${bulletFixText}` : '',
       summaryFixText ? `Summary Fix:\n${summaryFixText}` : '',
-      Array.isArray(parsed.improvementActions) && parsed.improvementActions.length
-        ? `Improvement Actions:\n${parsed.improvementActions
-            .map((x: any) => formatActionForText(x))
-            .filter(Boolean)
-            .join('\n')}`
-        : '',
+      actionText ? `Improvement Actions:\n${actionText}` : '',
     ].filter(Boolean);
 
     return res.status(200).json({
@@ -459,6 +489,17 @@ Return ONLY valid JSON.
     });
   } catch (err: any) {
     console.error('[ats-coach] error', err);
+
+    const message = String(err?.message || '');
+    if (message.includes('429') || message.toLowerCase().includes('rate_limit')) {
+      return res.status(200).json({
+        ok: true,
+        text: 'Coach is receiving too many requests right now. Wait a few seconds and run the coach again.',
+        tips: ['Groq rate limit reached. Wait a few seconds and retry.'],
+        raw: message,
+      });
+    }
+
     return res.status(500).json({ ok: false, error: 'AI coach request failed. Please try again.' });
   }
 }

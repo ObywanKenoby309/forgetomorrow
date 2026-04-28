@@ -3,7 +3,6 @@
 // components/resume-form/CoachSuggestionsPanel.js
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 
 /**
  * @typedef {Object} CoachContext
@@ -97,6 +96,7 @@ function parseCoachText(value) {
       current = {
         requiredSignal: requiredMatch[1]?.trim() || '',
         resumeEvidence: '',
+        hiringImpact: '',
         ifTrue: '',
         ifNotTrue: '',
         futurePositioning: '',
@@ -109,11 +109,15 @@ function parseCoachText(value) {
 
     if (current) {
       if (line.startsWith('Section:')) {
-        current.section = line.replace('Section:', '').trim();
+        current.section = line.replace('Section:', '').trim().toLowerCase();
         return;
       }
       if (line.startsWith('Resume evidence:')) {
         current.resumeEvidence = line.replace('Resume evidence:', '').trim();
+        return;
+      }
+      if (line.startsWith('Hiring impact:')) {
+        current.hiringImpact = line.replace('Hiring impact:', '').trim();
         return;
       }
       if (line.startsWith('If true:')) {
@@ -146,16 +150,16 @@ function parseCoachText(value) {
 function mapSignalToSection(signal = '') {
   const s = signal.toLowerCase();
 
-  if (s.includes('project') || s.includes('stakeholder') || s.includes('management') || s.includes('experience')) {
-    return 'experience';
+  if (s.includes('education') || s.includes('degree') || s.includes('certification') || s.includes('license')) {
+    return 'education';
   }
 
   if (s.includes('tool') || s.includes('api') || s.includes('llm') || s.includes('skill')) {
     return 'skills';
   }
 
-  if (s.includes('education') || s.includes('degree') || s.includes('certification')) {
-    return 'education';
+  if (s.includes('project') || s.includes('stakeholder') || s.includes('management') || s.includes('experience') || s.includes('ownership')) {
+    return 'experience';
   }
 
   return 'summary';
@@ -163,7 +167,6 @@ function mapSignalToSection(signal = '') {
 
 /**
  * Writing coach suggestions panel.
- * IMPORTANT: JSDoc typing here prevents TS from inferring `context.keyword` as only `null`.
  * @param {Props} props
  */
 export default function CoachSuggestionsPanel(props) {
@@ -180,30 +183,11 @@ export default function CoachSuggestionsPanel(props) {
     embedded = false,
   } = props;
 
-  const [portalEl, setPortalEl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState('');
   const [error, setError] = useState(null);
 
   const askedOnceRef = useRef(false);
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    if (embedded) return;
-
-    const el = document.createElement('div');
-    el.id = 'ft-coach-portal';
-    document.body.appendChild(el);
-    setPortalEl(el);
-
-    return () => {
-      try {
-        document.body.removeChild(el);
-      } catch {
-        // ignore
-      }
-    };
-  }, [embedded]);
 
   const sectionLabelMap = {
     overview: 'overall alignment',
@@ -297,7 +281,7 @@ export default function CoachSuggestionsPanel(props) {
       handleAsk();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, context?.section, context?.keyword]);
 
   const handleQuickInsert = (type) => {
     if (!text) return;
@@ -328,7 +312,6 @@ export default function CoachSuggestionsPanel(props) {
   };
 
   if (!open) return null;
-  if (!embedded && !portalEl) return <></>;  // ← not null; avoids SSR/client mismatch
 
   const panel = (
     <div
@@ -472,6 +455,12 @@ export default function CoachSuggestionsPanel(props) {
                         </div>
                       )}
 
+                      {action.hiringImpact && (
+                        <div style={{ marginTop: 8, fontSize: 12, color: '#6D4C41', lineHeight: 1.4 }}>
+                          <strong>Hiring impact:</strong> {action.hiringImpact}
+                        </div>
+                      )}
+
                       {action.ifTrue && (
                         <div
                           style={{
@@ -548,6 +537,5 @@ export default function CoachSuggestionsPanel(props) {
     </div>
   );
 
-  if (embedded) return panel;
-  return createPortal(panel, portalEl);
+  return panel;
 }

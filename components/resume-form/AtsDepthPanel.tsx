@@ -1,10 +1,10 @@
 'use client';
 
 // components/resume-form/AtsDepthPanel.tsx
-// Unified Match panel — coach-first flow, AI scan as confidence check.
+// Unified Match panel – AI score first, keyword coverage as fallback.
 // FIX: Strongly type coachContext to match CoachSuggestionsPanel's CoachContext union.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import CoachSuggestionsPanel from './CoachSuggestionsPanel';
 
 type Experience = {
@@ -34,7 +34,7 @@ type Props = {
   skills: string[];
   experiences: Experience[];
   education: Education[];
-  jobMeta?: JobMeta;
+  jobMeta?: JobMeta; // ✅ optional meta passed from resume/create.js
   onAddSkill?: (keyword: string) => void;
   onAddSummary?: (snippet: string) => void;
   onAddBullet?: (snippet: string) => void;
@@ -45,10 +45,6 @@ type CoachContext = {
   section: 'overview' | 'summary' | 'skills' | 'experience' | 'education';
   keyword?: string | null;
 };
-
-type ActivePanel = 'coach' | 'scan' | 'keywords';
-
-const ORANGE = '#FF7043';
 
 const STOP_WORDS = new Set([
   'the',
@@ -114,7 +110,7 @@ function countWords(text: string) {
   return t.split(/\s+/).filter(Boolean).length;
 }
 
-function jdPreview(text: string, maxChars = 120) {
+function jdPreview(text: string, maxChars = 170) {
   const n = (text || '').replace(/\s+/g, ' ').trim();
   if (!n) return '';
   return n.length > maxChars ? `${n.slice(0, maxChars)}…` : n;
@@ -155,7 +151,12 @@ export default function AtsDepthPanel({
   onAddSummary,
   onAddBullet,
 }: Props) {
-  const [activePanel, setActivePanel] = useState<ActivePanel>('coach');
+  const [expanded, setExpanded] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // unified scoring
   const [aiScore, setAiScore] = useState<number | null>(null);
@@ -170,8 +171,6 @@ export default function AtsDepthPanel({
     section: 'overview',
     keyword: null,
   });
-
-  if (!jdText?.trim()) return null;
 
   // ── Build a lightweight "resume text" blob for keyword matching
   const resumeText = useMemo(() => {
@@ -206,16 +205,16 @@ export default function AtsDepthPanel({
   let barColor = '#C62828';
 
   if (primaryScore >= 85) {
-    statusText = 'Excellent — ready for final check.';
+    statusText = 'Excellent — ready to apply.';
     barColor = '#2E7D32';
   } else if (primaryScore >= 70) {
-    statusText = 'Good — ask the coach to tighten wording.';
+    statusText = 'Good — tighten keywords & metrics to push higher.';
     barColor = '#F59E0B';
   } else if (primaryScore >= 50) {
-    statusText = 'Fair — improve summary, skills, and bullets.';
+    statusText = 'Fair — add more high-impact terms before applying.';
     barColor = '#EF6C00';
   } else {
-    statusText = 'Low — start with coach-guided improvements.';
+    statusText = 'Low — add more high-impact terms (aim ≥85).';
     barColor = '#C62828';
   }
 
@@ -260,14 +259,12 @@ export default function AtsDepthPanel({
   }
 
   function openCoachOverview() {
-    setActivePanel('coach');
     openCoach('overview', null);
   }
 
   async function runAiScan() {
     if (!jdText?.trim()) return;
 
-    setActivePanel('scan');
     setAiLoading(true);
     setAiError(null);
     setAiUpgrade(false);
@@ -321,89 +318,96 @@ export default function AtsDepthPanel({
     ? aiTips.filter((t) => typeof t === 'string' && t.trim().length > 0)
     : [];
 
-  const tabButton = (key: ActivePanel, label: string) => ({
-    type: 'button' as const,
-    onClick: () => setActivePanel(key),
-    style: {
-      border: activePanel === key ? `1px solid ${ORANGE}` : '1px solid #E2E8F0',
-      background: activePanel === key ? 'rgba(255,112,67,0.10)' : '#FFFFFF',
-      color: activePanel === key ? '#C2410C' : '#475569',
-      borderRadius: 999,
-      padding: '7px 11px',
-      fontSize: 12,
-      fontWeight: 900,
-      cursor: 'pointer',
-      whiteSpace: 'nowrap' as const,
-    },
-    children: label,
-  });
+  if (!mounted || !jdText?.trim()) return null;
 
   return (
-    <div style={{ marginTop: 0 }}>
+    <div style={{ marginTop: 20 }}>
       <div
         style={{
           background: 'white',
           borderRadius: 16,
           border: '1px solid #ECEFF1',
-          padding: 14,
-          boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
+          padding: 20,
+          boxShadow: '0 8px 30px rgba(0,0,0,0.1)',
         }}
       >
-        {/* Header */}
-        <div>
-          <div style={{ fontWeight: 900, fontSize: 16, color: '#263238' }}>
-            Forge Hammer
-          </div>
-          <div style={{ marginTop: 3, fontSize: 12, color: '#607D8B', lineHeight: 1.45 }}>
-            Start with the coach. Run the scan once your updates feel ready.
-          </div>
-        </div>
-
-        {/* Loaded job */}
+        {/* Header row */}
         <div
           style={{
-            marginTop: 12,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 16, color: '#263238' }}>
+              Resume Match (Unified)
+            </div>
+            <div style={{ marginTop: 4, fontSize: 13, color: '#607D8B' }}>
+              One score that blends AI analysis with keyword coverage for this job.
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              fontSize: 13,
+              color: '#607D8B',
+              cursor: 'pointer',
+            }}
+          >
+            {expanded ? 'Collapse' : 'Expand'}
+          </button>
+        </div>
+
+        {/* JD acknowledgement */}
+        <div
+          style={{
+            marginTop: 14,
             background: '#E3F2FD',
             border: '1px solid #BBDEFB',
             borderRadius: 12,
             padding: 12,
           }}
         >
-          <div style={{ fontWeight: 900, color: '#0D47A1', fontSize: 12 }}>
+          <div style={{ fontWeight: 800, color: '#0D47A1', fontSize: 13 }}>
             Loaded job
           </div>
 
           <div style={{ marginTop: 4, color: '#0B2A4A', fontSize: 13, lineHeight: 1.35 }}>
             <strong>{loadedTitle}</strong>
             {loadedCompany ? ` at ${loadedCompany}` : ''}
-            {loadedLocation ? ` · ${loadedLocation}` : ''}
+            {loadedLocation ? ` — ${loadedLocation}` : ''}
             <span style={{ color: '#607D8B' }}> · {words} words</span>
           </div>
 
           {preview ? (
-            <div style={{ marginTop: 6, fontSize: 12, color: '#1E3A5F', lineHeight: 1.45 }}>
-              <span style={{ fontWeight: 800, color: '#1565C0' }}>Preview: </span>
+            <div style={{ marginTop: 6, fontSize: 12, color: '#1E3A5F' }}>
+              <span style={{ fontWeight: 700, color: '#1565C0' }}>Preview: </span>
               {preview}
             </div>
           ) : null}
         </div>
 
-        {/* Score anchor */}
+        {/* Main score row – always visible */}
         <div
           style={{
-            marginTop: 12,
-            padding: 12,
-            borderRadius: 14,
-            border: '1px solid #ECEFF1',
-            background: '#FAFAFA',
+            marginTop: 14,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            <span style={{ fontSize: 32, fontWeight: 950, color: barColor, letterSpacing: -0.5 }}>
+            <span style={{ fontSize: 30, fontWeight: 800, color: barColor }}>
               {Number.isFinite(primaryScore) ? primaryScore : 0}
-              <span style={{ fontSize: 18, color: '#B0BEC5', marginLeft: 3 }}>/100</span>
+              <span style={{ fontSize: 20, color: '#B0BEC5', marginLeft: 3 }}>/100</span>
             </span>
-            <span style={{ fontSize: 12, color: '#546E7A', lineHeight: 1.35 }}>{statusText}</span>
+            <span style={{ fontSize: 13, color: '#546E7A' }}>{statusText}</span>
           </div>
 
           <div
@@ -412,7 +416,6 @@ export default function AtsDepthPanel({
               borderRadius: 999,
               background: '#ECEFF1',
               overflow: 'hidden',
-              marginTop: 8,
             }}
           >
             <div
@@ -425,340 +428,360 @@ export default function AtsDepthPanel({
             />
           </div>
 
-          <div style={{ fontSize: 11, color: '#90A4AE', marginTop: 7, lineHeight: 1.4 }}>
-            Current signal: <strong>{keywordCoverage}% keyword coverage</strong>
-            {aiScore === null ? ' · AI scan not run yet.' : ' · AI scan included.'}
+          <div style={{ fontSize: 12, color: '#90A4AE', marginTop: 4 }}>
+            Keyword coverage (title/role terms): <strong>{keywordCoverage}%</strong>
+            {aiScore === null && ' — run an AI scan to unlock full scoring.'}
           </div>
         </div>
 
-        {/* Primary action */}
-{activePanel === 'coach' && (
-  <div style={{ marginTop: 12, padding: 14, borderRadius: 16, border: '1px solid #FFE0B2', background: '#FFF8E1' }}>
-    <div style={{ fontSize: 15, fontWeight: 950, color: '#F97316', marginBottom: 5 }}>
-      Ask the Coach
-    </div>
-    <div style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.45 }}>
-      Work section-by-section before spending a scan. Get paste-ready suggestions for the exact job.
-    </div>
-    <button type="button" onClick={openCoachOverview} style={{ marginTop: 12, width: '100%', padding: '12px 16px', borderRadius: 999, border: 'none', background: ORANGE, color: 'white', fontWeight: 950, fontSize: 14, cursor: 'pointer', boxShadow: '0 6px 16px rgba(0,0,0,0.16)' }}>
-      Ask the Coach
-    </button>
-  </div>
-)}
-
-{activePanel === 'scan' && (
-  <div style={{ marginTop: 12, padding: 14, borderRadius: 16, border: '1px solid #CBD5E1', background: '#F8FAFC' }}>
-    <div style={{ fontSize: 15, fontWeight: 950, color: '#263238', marginBottom: 5 }}>
-      AI Scan
-    </div>
-    <div style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.45 }}>
-      Run this after you use the coach and feel confident in your updates.
-    </div>
-    <button type="button" onClick={runAiScan} disabled={aiLoading} style={{ marginTop: 12, width: '100%', padding: '12px 16px', borderRadius: 999, border: 'none', background: '#263238', color: 'white', fontWeight: 950, fontSize: 14, cursor: aiLoading ? 'not-allowed' : 'pointer', opacity: aiLoading ? 0.75 : 1 }}>
-      {aiLoading ? 'Thinking…' : aiScore === null ? 'Run AI Scan' : 'Run Scan Again'}
-    </button>
-  </div>
-)}
-
-{activePanel === 'keywords' && (
-  <div style={{ marginTop: 12, padding: 14, borderRadius: 16, border: '1px solid #E2E8F0', background: '#FFFFFF' }}>
-    <div style={{ fontSize: 15, fontWeight: 950, color: '#263238', marginBottom: 5 }}>
-      Keyword Breakdown
-    </div>
-    <div style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.45 }}>
-      Use this as a supporting checklist after the coach helps tighten your wording.
-    </div>
-  </div>
-)}
-
-        {/* Module selector */}
+        {/* Two action cards */}
         <div
           style={{
-            marginTop: 12,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            overflowX: 'auto',
-            paddingBottom: 2,
+            marginTop: 16,
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 16,
           }}
         >
-          <button {...tabButton('coach', 'Coach')} />
-          <button {...tabButton('scan', 'AI Scan')} />
-          <button {...tabButton('keywords', 'Keywords')} />
-        </div>
-
-        {/* Active module */}
-        <div style={{ marginTop: 10 }}>
-          {activePanel === 'coach' && (
-            <div
-              style={{
-                padding: 12,
-                borderRadius: 14,
-                border: '1px solid #E2E8F0',
-                background: '#FFFFFF',
-              }}
-            >
-              <div style={{ fontWeight: 900, fontSize: 13, color: '#263238' }}>
-                Choose where to improve first
+          <div
+            style={{
+              background: '#FFF8E1',
+              borderRadius: 16,
+              border: '1px solid #FFE0B2',
+              padding: 18,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: 170,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#F97316', marginBottom: 6 }}>
+                Match Score
               </div>
-              <div style={{ marginTop: 5, fontSize: 12, color: '#607D8B', lineHeight: 1.45 }}>
-                These open the coach with focused guidance instead of dumping everything at once.
-              </div>
-
-              <div style={{ marginTop: 10, display: 'grid', gap: 7 }}>
-                {[
-                  { label: 'Summary', section: 'summary' as const },
-                  { label: 'Skills', section: 'skills' as const },
-                  { label: 'Experience bullets', section: 'experience' as const },
-                  { label: 'Education', section: 'education' as const },
-                ].map((item) => (
-                  <button
-                    key={item.section}
-                    type="button"
-                    onClick={() => openCoach(item.section, null)}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 10,
-                      padding: '9px 10px',
-                      borderRadius: 12,
-                      border: '1px solid #E2E8F0',
-                      background: '#F8FAFC',
-                      color: '#334155',
-                      fontWeight: 900,
-                      fontSize: 12,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <span>{item.label}</span>
-                    <span style={{ color: ORANGE }}>Open</span>
-                  </button>
-                ))}
-              </div>
-
-
-              {coachOpen && (
-                <div style={{ marginTop: 10 }}>
-                  <CoachSuggestionsPanel
-                    open={true}
-                    embedded={true}
-                    onClose={() => setCoachOpen(false)}
-                    context={coachContext}
-                    jdText={jdText}
-                    resumeData={resumeData}
-                    missing={{
-                      high: missingTitleKeywords,
-                      tools: [],
-                      edu: [],
-                      soft: [],
-                    }}
-                    onAddSkill={onAddSkill}
-                    onAddSummary={onAddSummary}
-                    onAddBullet={onAddBullet}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {activePanel === 'scan' && (
-            <div
-              style={{
-                padding: 12,
-                borderRadius: 14,
-                border: '1px solid #E2E8F0',
-                background: '#FFFFFF',
-              }}
-            >
-              <div style={{ fontWeight: 900, fontSize: 13, color: '#263238' }}>
-                AI Scan
-              </div>
-              <div style={{ marginTop: 5, fontSize: 12, color: '#607D8B', lineHeight: 1.45 }}>
-                Run this after you use the coach and feel confident in your updates.
-              </div>
-
-              {aiError && (
-                <div style={{ marginTop: 10, fontSize: 12, color: '#C62828', fontWeight: 800 }}>
-                  {aiError}
-                </div>
-              )}
-
-              {(aiUpgrade || (aiScore !== null && !aiLoading) || normalizedTips.length > 0) && (
-                <div
-                  style={{
-                    marginTop: 12,
-                    padding: 12,
-                    borderRadius: 12,
-                    border: '1px solid #FFE0B2',
-                    background: '#FFF3E0',
-                  }}
-                >
-                  {aiUpgrade ? (
-                    <>
-                      <div style={{ fontWeight: 900, color: '#E65100', marginBottom: 8, fontSize: 13 }}>
-                        You&apos;ve used your free AI scans for this month.
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => (window.location.href = '/pricing')}
-                        style={{
-                          padding: '10px 14px',
-                          borderRadius: 999,
-                          border: 'none',
-                          background: ORANGE,
-                          color: 'white',
-                          fontWeight: 900,
-                          cursor: 'pointer',
-                          width: '100%',
-                        }}
-                      >
-                        Upgrade to Pro
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {aiScore !== null && (
-                        <div style={{ fontWeight: 950, fontSize: 16, color: '#263238' }}>
-                          AI Score: {aiScore}/100
-                        </div>
-                      )}
-
-                      {normalizedTips.length > 0 && (
-                        <ul style={{ margin: '10px 0 0', paddingLeft: 18, fontSize: 12, color: '#37474F', lineHeight: 1.45 }}>
-                          {normalizedTips.map((tip, i) => (
-                            <li key={i} style={{ marginBottom: 6 }}>
-                              {tip}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activePanel === 'keywords' && (
-            <div
-              style={{
-                padding: 12,
-                borderRadius: 14,
-                border: '1px solid #E2E8F0',
-                background: '#FFFFFF',
-              }}
-            >
-              <div style={{ fontWeight: 900, fontSize: 13, color: '#263238' }}>
-                Keyword coverage
-              </div>
-              <div style={{ marginTop: 5, fontSize: 12, color: '#607D8B', lineHeight: 1.45 }}>
-                Use this as a supporting checklist. The coach should handle wording.
+              <div style={{ fontSize: 14, color: '#4B5563', lineHeight: 1.4 }}>
+                Run an AI scan to generate a stronger, job-aware score and guidance.
               </div>
 
               <div
                 style={{
-                  marginTop: 10,
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
-                  gap: 8,
+                  marginTop: 14,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: 12,
+                  color: '#607D8B',
                 }}
               >
-                {buckets.map((b) => (
-                  <div
-                    key={b.key}
-                    style={{
-                      padding: 10,
-                      borderRadius: 10,
-                      border: '1px solid #ECEFF1',
-                      background: '#FAFAFA',
-                      fontSize: 12,
-                    }}
-                  >
-                    <div style={{ fontWeight: 900, color: '#37474F', marginBottom: 2 }}>
-                      {b.label}
-                    </div>
-                    <div style={{ color: '#607D8B' }}>
-                      {b.total > 0 ? `${b.matched}/${b.total} matched` : '0/0 matched'}
-                    </div>
-                    <div style={{ marginTop: 2, fontWeight: 800, color: '#455A64' }}>
-                      {b.points} pts
-                    </div>
-                  </div>
-                ))}
+                <span
+                  style={{
+                    width: 44,
+                    height: 4,
+                    borderRadius: 999,
+                    background: '#CFD8DC',
+                    display: 'inline-block',
+                  }}
+                />
+                <span>Uses AI + keyword coverage.</span>
               </div>
 
-              <details style={{ marginTop: 12 }}>
+              {aiError && (
+                <div style={{ marginTop: 10, fontSize: 12, color: '#C62828' }}>
+                  {aiError}
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={runAiScan}
+              disabled={aiLoading}
+              style={{
+                marginTop: 14,
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: 999,
+                border: 'none',
+                background: '#FF7043',
+                color: 'white',
+                fontWeight: 900,
+                fontSize: 15,
+                cursor: aiLoading ? 'not-allowed' : 'pointer',
+                opacity: aiLoading ? 0.75 : 1,
+                boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
+              }}
+            >
+              {aiLoading ? 'Thinking…' : 'Run AI Scan'}
+            </button>
+          </div>
+
+          <div
+            style={{
+              background: '#FFF8E1',
+              borderRadius: 16,
+              border: '1px solid #FFE0B2',
+              padding: 18,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: 170,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#F97316', marginBottom: 6 }}>
+                Resume Coach
+              </div>
+              <div style={{ fontSize: 14, color: '#4B5563', lineHeight: 1.4 }}>
+                Get paste-ready wording suggestions to align your summary, skills, and bullets to this job.
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={openCoachOverview}
+              style={{
+                marginTop: 14,
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: 999,
+                border: 'none',
+                background: '#FF7043',
+                color: 'white',
+                fontWeight: 900,
+                fontSize: 15,
+                cursor: 'pointer',
+                boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
+              }}
+            >
+              Ask the Coach
+            </button>
+
+            <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+              {[
+                { label: 'Summary', section: 'summary' as const },
+                { label: 'Skills', section: 'skills' as const },
+                { label: 'Experience bullets', section: 'experience' as const },
+                { label: 'Education', section: 'education' as const },
+              ].map((item) => (
+                <button
+                  key={item.section}
+                  type="button"
+                  onClick={() => openCoach(item.section, null)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                    padding: '9px 10px',
+                    borderRadius: 10,
+                    border:
+                      coachOpen && coachContext.section === item.section
+                        ? '1px solid rgba(255,112,67,0.55)'
+                        : '1px solid rgba(255,112,67,0.18)',
+                    background:
+                      coachOpen && coachContext.section === item.section
+                        ? 'rgba(255,112,67,0.08)'
+                        : 'rgba(255,255,255,0.82)',
+                    color: '#334155',
+                    fontWeight: 900,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span>{item.label}</span>
+                  <span style={{ color: '#FF7043', fontSize: 11 }}>Open</span>
+                </button>
+              ))}
+            </div>
+
+            {coachOpen && (
+              <div style={{ marginTop: 12 }}>
+                <CoachSuggestionsPanel
+                  open={true}
+                  embedded={true}
+                  onClose={() => setCoachOpen(false)}
+                  context={coachContext}
+                  jdText={jdText}
+                  resumeData={resumeData}
+                  missing={{
+                    high: missingTitleKeywords,
+                    tools: [],
+                    edu: [],
+                    soft: [],
+                  }}
+                  onAddSkill={onAddSkill}
+                  onAddSummary={onAddSummary}
+                  onAddBullet={onAddBullet}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {!expanded ? null : (
+          <>
+            {/* AI scan results */}
+            {(aiUpgrade || (aiScore !== null && !aiLoading) || normalizedTips.length > 0) && (
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: 14,
+                  borderRadius: 12,
+                  border: '1px solid #FFE0B2',
+                  background: '#FFF3E0',
+                }}
+              >
+                {aiUpgrade ? (
+                  <>
+                    <div style={{ fontWeight: 800, color: '#E65100', marginBottom: 6 }}>
+                      You&apos;ve used your free AI scans for this month.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => (window.location.href = '/pricing')}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: 10,
+                        border: 'none',
+                        background: '#FF7043',
+                        color: 'white',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Upgrade to Pro
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {aiScore !== null && (
+                      <div style={{ fontWeight: 900, fontSize: 18, color: '#263238' }}>
+                        AI Score: {aiScore}/100
+                      </div>
+                    )}
+
+                    {normalizedTips.length > 0 && (
+                      <ul style={{ margin: '10px 0 0', paddingLeft: 18, fontSize: 13, color: '#37474F' }}>
+                        {normalizedTips.map((tip, i) => (
+                          <li key={i} style={{ marginBottom: 6 }}>
+                            {tip}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Bucket mini-cards */}
+            <div
+              style={{
+                marginTop: 20,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                gap: 8,
+              }}
+            >
+              {buckets.map((b) => (
+                <div
+                  key={b.key}
+                  style={{
+                    padding: 10,
+                    borderRadius: 10,
+                    border: '1px solid #ECEFF1',
+                    background: '#FAFAFA',
+                    fontSize: 12,
+                  }}
+                >
+                  <div style={{ fontWeight: 700, color: '#37474F', marginBottom: 2 }}>
+                    {b.label}
+                  </div>
+                  <div style={{ color: '#607D8B' }}>
+                    {b.total > 0 ? `${b.matched}/${b.total} matched` : '0/0 matched'}
+                  </div>
+                  <div style={{ marginTop: 2, fontWeight: 600, color: '#455A64' }}>
+                    {b.points} pts
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Keyword breakdown */}
+            <div style={{ marginTop: 18, borderTop: '1px solid #ECEFF1', paddingTop: 14 }}>
+              <details>
                 <summary
                   style={{
                     cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: 900,
+                    fontSize: 14,
+                    fontWeight: 600,
                     color: '#37474F',
                     listStyle: 'none',
                   }}
                 >
-                  View missing role terms
+                  View keyword breakdown
                 </summary>
 
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: 12,
-                    borderRadius: 10,
-                    border: '1px solid #ECEFF1',
-                    background: '#FFFFFF',
-                  }}
-                >
-                  <div style={{ fontWeight: 900, marginBottom: 4, color: '#263238', fontSize: 12 }}>
-                    High-impact title / role terms
+                <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                  <div
+                    style={{
+                      padding: 12,
+                      borderRadius: 10,
+                      border: '1px solid #ECEFF1',
+                      background: '#FFFFFF',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, marginBottom: 4, color: '#263238' }}>
+                      High-impact title / role terms
+                    </div>
+
+                    {titleKeywords.length === 0 ? (
+                      <p style={{ margin: 0, fontSize: 13, color: '#388E3C' }}>
+                        No missing keywords here — nice!
+                      </p>
+                    ) : missingTitleKeywords.length === 0 ? (
+                      <p style={{ margin: 0, fontSize: 13, color: '#388E3C' }}>
+                        No missing title/role keywords — strong alignment.
+                      </p>
+                    ) : (
+                      <>
+                        <p style={{ margin: 0, fontSize: 13, color: '#546E7A' }}>
+                          Consider weaving in these terms somewhere in your summary, skills, or experience section:
+                        </p>
+                        <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, color: '#37474F' }}>
+                          {missingTitleKeywords.map((kw) => (
+                            <li key={kw}>{kw}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
                   </div>
 
-                  {titleKeywords.length === 0 ? (
-                    <p style={{ margin: 0, fontSize: 12, color: '#388E3C' }}>
-                      No missing keywords here — nice!
-                    </p>
-                  ) : missingTitleKeywords.length === 0 ? (
-                    <p style={{ margin: 0, fontSize: 12, color: '#388E3C' }}>
-                      No missing title/role keywords — strong alignment.
-                    </p>
-                  ) : (
-                    <>
-                      <p style={{ margin: 0, fontSize: 12, color: '#546E7A', lineHeight: 1.45 }}>
-                        Consider weaving these into your summary, skills, or experience section.
+                  {['High-impact hard skills', 'Tools / Platforms', 'Education', 'Soft skills'].map((label) => (
+                    <div
+                      key={label}
+                      style={{
+                        padding: 12,
+                        borderRadius: 10,
+                        border: '1px solid #ECEFF1',
+                        background: '#FFFFFF',
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, marginBottom: 4, color: '#263238' }}>
+                        {label}
+                      </div>
+                      <p style={{ margin: 0, fontSize: 13, color: '#388E3C' }}>
+                        No missing keywords here — nice!
                       </p>
-                      <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 12, color: '#37474F' }}>
-                        {missingTitleKeywords.map((kw) => (
-                          <li key={kw} style={{ marginBottom: 4 }}>
-                            <button
-                              type="button"
-                              onClick={() => openCoach('skills', kw)}
-                              style={{
-                                border: 'none',
-                                background: 'transparent',
-                                color: '#37474F',
-                                cursor: 'pointer',
-                                padding: 0,
-                                fontSize: 12,
-                                fontWeight: 700,
-                                textDecoration: 'underline',
-                                textDecorationColor: 'rgba(255,112,67,0.55)',
-                              }}
-                            >
-                              {kw}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
+                    </div>
+                  ))}
                 </div>
               </details>
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
