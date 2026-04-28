@@ -520,7 +520,7 @@ export default function CoachSuggestionsPanel(props) {
                 overflowY: 'auto',
               }}
             >
-              {parsedCoach.title && (
+              {context?.section === 'overview' && parsedCoach.title && (
                 <div style={{ fontSize: 14, fontWeight: 900, color: '#E65100', marginBottom: 8 }}>
                   {parsedCoach.title}
                 </div>
