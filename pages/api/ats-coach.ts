@@ -107,6 +107,7 @@ function formatActionForText(action: any) {
 
   const section = normalizeSection(action.section) || inferSectionFromSignal(required);
   const evidence = cleanCoachValue(action.resumeEvidence || action.evidence);
+  const decision = cleanCoachValue(action.decisionQuestion || action.employerDecision || action.whatEmployerIsDeciding);
   const impact = cleanCoachValue(action.hiringImpact);
   const ifTrue = cleanCoachValue(action.ifTrue || action.if_true);
   const ifNotTrue = cleanCoachValue(action.ifNotTrue || action.if_not_true);
@@ -116,6 +117,7 @@ function formatActionForText(action: any) {
     `• Required signal: ${required}`,
     section ? `  Section: ${section}` : '',
     evidence ? `  Resume evidence: ${evidence}` : '',
+	decision ? `  What the employer is trying to decide: ${decision}` : '',
     impact ? `  Hiring impact: ${impact}` : '',
     ifTrue ? `  If true: ${ifTrue}` : '',
     ifNotTrue ? `  If not true: ${ifNotTrue}` : '',
@@ -546,6 +548,20 @@ Do not provide generic resume advice.
 Every action must be useful inside its own section card.
 Every action must help the seeker decide what they can honestly add, what they must not claim, and what nearby evidence they can strengthen.
 
+DECISION LANGUAGE REQUIREMENT
+-----------------------------
+Every improvementAction must explain the hiring decision behind the advice.
+
+Do not only say what is missing.
+Explain what the employer is trying to decide and why the current resume evidence does or does not answer that question.
+
+The best answers should sound like:
+"The employer is trying to decide whether..."
+"Right now, the resume proves..."
+"The screening risk is..."
+"If true, the strongest proof would show..."
+"If not true, do not claim it. Strengthen..."
+
 OUTPUT RULES
 ------------
 Return ONLY valid JSON in this exact shape:
@@ -560,6 +576,7 @@ Return ONLY valid JSON in this exact shape:
       "section": "summary | skills | experience | education",
       "requiredSignal": "",
       "resumeEvidence": "",
+	  "decisionQuestion": "",
       "hiringImpact": "",
       "ifTrue": "",
       "ifNotTrue": "",

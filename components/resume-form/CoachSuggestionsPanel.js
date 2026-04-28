@@ -107,6 +107,8 @@ function parseCoachText(value) {
       current = {
         requiredSignal: requiredMatch[1]?.trim() || '',
         resumeEvidence: '',
+        decisionQuestion: '',
+        hiringImpact: '',
         ifTrue: '',
         ifNotTrue: '',
         futurePositioning: '',
@@ -125,6 +127,16 @@ function parseCoachText(value) {
 
       if (line.startsWith('Resume evidence:')) {
         current.resumeEvidence = line.replace('Resume evidence:', '').trim();
+        return;
+      }
+
+      if (line.startsWith('What the employer is trying to decide:')) {
+        current.decisionQuestion = line.replace('What the employer is trying to decide:', '').trim();
+        return;
+      }
+
+      if (line.startsWith('Hiring impact:')) {
+        current.hiringImpact = line.replace('Hiring impact:', '').trim();
         return;
       }
 
@@ -558,6 +570,29 @@ export default function CoachSuggestionsPanel(props) {
                       {action.resumeEvidence && (
                         <div style={{ marginTop: 8, fontSize: 12, color: '#6D4C41', lineHeight: 1.4 }}>
                           <strong>Resume evidence:</strong> {action.resumeEvidence}
+                        </div>
+                      )}
+
+                      {action.decisionQuestion && (
+                        <div
+                          style={{
+                            marginTop: 8,
+                            padding: 8,
+                            borderRadius: 10,
+                            background: '#E3F2FD',
+                            border: '1px solid #BBDEFB',
+                            fontSize: 12,
+                            color: '#0D47A1',
+                            lineHeight: 1.42,
+                          }}
+                        >
+                          <strong>What the employer is trying to decide:</strong> {action.decisionQuestion}
+                        </div>
+                      )}
+
+                      {action.hiringImpact && (
+                        <div style={{ marginTop: 8, fontSize: 12, color: '#455A64', lineHeight: 1.4 }}>
+                          <strong>Hiring impact:</strong> {action.hiringImpact}
                         </div>
                       )}
 
