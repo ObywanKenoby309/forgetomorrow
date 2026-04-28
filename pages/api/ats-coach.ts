@@ -73,26 +73,44 @@ function inferSectionFromSignal(signal: any) {
     return 'skills';
   }
 
-  if (s.includes('project') || s.includes('stakeholder') || s.includes('management') || s.includes('experience') || s.includes('ownership')) {
+  if (
+    s.includes('project') ||
+    s.includes('stakeholder') ||
+    s.includes('management') ||
+    s.includes('experience') ||
+    s.includes('ownership') ||
+    s.includes('leadership') ||
+    s.includes('delivery')
+  ) {
     return 'experience';
   }
 
   return 'summary';
 }
 
+function cleanCoachValue(value: any) {
+  return String(value || '')
+    .replace(/\bfor example\b/gi, 'such as')
+    .replace(/\be\.g\.,?\s*/gi, '')
+    .replace(/\bcould add\b/gi, 'should only add if true')
+    .replace(/\bcould include\b/gi, 'should only include if true')
+    .replace(/\btransferable skills\b/gi, 'visible adjacent evidence')
+    .trim();
+}
+
 function formatActionForText(action: any) {
   if (typeof action === 'string') return `• Required signal: ${action.trim()}`;
   if (!action || typeof action !== 'object') return '';
 
-  const required = String(action.requiredSignal || action.signal || action.requirement || '').trim();
+  const required = cleanCoachValue(action.requiredSignal || action.signal || action.requirement);
   if (!required) return '';
 
   const section = normalizeSection(action.section) || inferSectionFromSignal(required);
-  const evidence = String(action.resumeEvidence || action.evidence || '').trim();
-  const impact = String(action.hiringImpact || '').trim();
-  const ifTrue = String(action.ifTrue || action.if_true || '').trim();
-  const ifNotTrue = String(action.ifNotTrue || action.if_not_true || '').trim();
-  const future = String(action.futurePositioning || '').trim();
+  const evidence = cleanCoachValue(action.resumeEvidence || action.evidence);
+  const impact = cleanCoachValue(action.hiringImpact);
+  const ifTrue = cleanCoachValue(action.ifTrue || action.if_true);
+  const ifNotTrue = cleanCoachValue(action.ifNotTrue || action.if_not_true);
+  const future = cleanCoachValue(action.futurePositioning);
 
   return [
     `• Required signal: ${required}`,
@@ -203,8 +221,8 @@ async function callGroq(apiKey: string, model: string, userPrompt: string) {
           },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.2,
-        max_tokens: 1600,
+        temperature: 0.15,
+        max_tokens: 1900,
       }),
     });
 
@@ -292,13 +310,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const safeSkills = (skills || []).filter((s) => typeof s === 'string' && s.trim().length > 0);
 
     const expSnippets = experiences
-      .slice(0, 4)
+      .slice(0, 5)
       .map((exp: any, idx: number) => {
         const title = exp.title || exp.jobTitle || exp.role || '';
         const company = exp.company || '';
         const bullets = Array.isArray(exp.bullets) ? exp.bullets : [];
-        const firstBullet = bullets.find((b: string) => typeof b === 'string' && b.trim().length > 0) || '';
-        return `${idx + 1}. ${title} at ${company}${firstBullet ? ` - ${firstBullet}` : ''}`;
+        const bulletText = bullets
+          .filter((b: string) => typeof b === 'string' && b.trim().length > 0)
+          .slice(0, 2)
+          .join(' | ');
+        return `${idx + 1}. ${title} at ${company}${bulletText ? ` - ${bulletText}` : ''}`;
       })
       .join('\n');
 
@@ -312,14 +333,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
       .join('\n');
 
-    const jdPreview = jdText.length > 2200 ? jdText.slice(0, 2200) + '\n\n[truncated]' : jdText;
+    const jdPreview = jdText.length > 2600 ? jdText.slice(0, 2600) + '\n\n[truncated]' : jdText;
 
     const userPrompt = `
 You are a senior HR recruiter and hiring strategist embedded inside ForgeTomorrow.
 
-You are NOT a generic resume writing assistant.
-You review resume evidence against this specific job description.
-Your job is to help the seeker make an honest hiring-alignment decision.
+You are NOT a generic resume writer.
+You are NOT giving canned ATS advice.
+You are judging whether the candidate's visible resume evidence would help a senior HR recruiter move this candidate forward for THIS job description.
 
 SELECTED SECTION
 ----------------
@@ -344,13 +365,13 @@ ${expSnippets || '[No experience provided]'}
 Education:
 ${eduSnippets || '[No education data provided]'}
 
-PRIMARY QUESTION
-----------------
+PRIMARY DECISION QUESTION
+-------------------------
 Would a senior HR recruiter see enough evidence in the selected section to support moving this candidate forward for this JD?
 
 ONE-CALL SECTION BUCKET RULE
 ----------------------------
-If selected section is overview, you are producing ONE full review that the UI will split into section cards.
+If selected section is overview, produce ONE complete review that the UI will split into section cards.
 
 For selected section overview, you MUST return section-tagged improvementActions for:
 1. summary
@@ -363,23 +384,27 @@ Always return at least one improvementAction with "section": "summary".
 Always return at least one improvementAction with "section": "skills".
 Always return at least one improvementAction with "section": "experience".
 
-Education is the only optional section.
+Education is optional. Only return education if the JD explicitly requires degree, certification, license, or formal credential.
 
-If a section is already strong, still return an action for that section explaining what is working, what JD signal it supports, and any small improvement if useful.
+If a section is already strong, still return an action for that section explaining:
+- what is working
+- what JD signal it supports
+- why that helps the hiring decision
+- any small improvement if useful
+
 Do not invent gaps just to criticize.
-
-Do not combine multiple resume sections into one action.
-Do not put tools/API feedback into summary unless it is about how the Summary positions the candidate.
-Do not put project/leadership/delivery feedback into skills.
-Do not put skills/tools/API feedback into experience unless the action is about proving how they were used in work history.
 
 SECTION ROUTING RULES
 ---------------------
-- If selected section is overview, return the highest-impact actions across summary, skills, experience, and education using the ONE-CALL SECTION BUCKET RULE.
-- If selected section is summary, evaluate ONLY the current Summary against the JD. Every improvementAction must use "section": "summary".
-- If selected section is skills, evaluate ONLY skills/tools/technologies/hard skills. Every improvementAction must use "section": "skills".
-- If selected section is experience, evaluate ONLY projects, ownership, leadership, stakeholder work, delivery, and outcomes. Every improvementAction must use "section": "experience".
-- If selected section is education, return education feedback only if the JD explicitly requires a degree, certification, license, or formal credential. Every improvementAction must use "section": "education".
+- Summary = first-impression positioning and whether the current Summary creates favorable alignment.
+- Skills = tools, technologies, APIs, platforms, hard skills, skill-list placement.
+- Experience = work-history proof, projects, ownership, leadership, stakeholder coordination, delivery, outcomes.
+- Education = degrees, certifications, licenses, formal credentials only.
+
+Do not combine multiple sections into one action.
+Do not put tools/API feedback into summary unless it is specifically about how the Summary positions the candidate.
+Do not put project/leadership/delivery feedback into skills.
+Do not put skills/tools/API feedback into experience unless the action is about proving how those skills were used in work history.
 
 SUMMARY SECTION STANDARD
 ------------------------
@@ -398,21 +423,49 @@ If the Summary is strong:
 
 If the Summary is weak or incomplete:
 - Say what is missing or unclear.
-- Explain why that missing/weak signal creates hiring risk.
+- Explain why that missing or weak signal creates hiring risk.
 - Give honest improvement guidance using only visible resume evidence.
 - Do not claim tools, years, certifications, education, platforms, or experience not proven by the resume.
 
 For summary actions:
 - "section" must be "summary".
 - "requiredSignal" should describe the Summary alignment signal, not the whole resume.
-- "resumeEvidence" should compare the current Summary to the JD.
-- "hiringImpact" should explain how the Summary affects first impression.
-- "ifTrue" should explain what evidence can be added to the Summary if the candidate truly has it.
-- "ifNotTrue" should explain what not to claim and what honest adjacent positioning to use instead.
+- "resumeEvidence" must compare the current Summary to the JD.
+- "hiringImpact" must explain how the Summary affects first impression.
+- "ifTrue" must explain what evidence can be added to the Summary if the candidate truly has it.
+- "ifNotTrue" must explain what not to claim and what honest adjacent positioning to use instead.
+
+SKILLS SECTION STANDARD
+-----------------------
+The Skills section is a review of the user's skills list only.
+
+For the skills action, answer this exact question:
+"Would a senior HR recruiter see the required tools, technologies, platforms, APIs, or hard skills quickly enough in the Skills section?"
+
+If the Skills section is strong:
+- Say what is working.
+- Explain which JD skill signals it supports.
+- Explain why that helps the recruiter quickly confirm fit.
+- Suggest only small placement or naming improvements if useful.
+
+If the Skills section is weak:
+- Say what required skill/tool signal is missing or unclear.
+- Explain why that creates screening risk.
+- If the resume does not prove the skill/tool/platform/API, do not tell the user to add it as fact.
+- Use conditional guidance: only add it if the candidate has truly used it.
+- If not true, name the closest visible adjacent technical evidence from the resume snapshot.
+
+For skills actions:
+- "section" must be "skills".
+- "requiredSignal" should describe the skill/tool signal.
+- "resumeEvidence" must compare current Skills to the JD.
+- "hiringImpact" must explain how this affects fast screening.
+- "ifTrue" must explain exactly how to place proven skills/tools honestly.
+- "ifNotTrue" must explain what not to claim and which visible adjacent skill area to strengthen instead.
 
 EXPERIENCE SECTION STANDARD
 ---------------------------
-The Experience section is a review of the user's work history evidence only.
+The Experience section is a review of the user's work-history evidence only.
 
 For the experience action, answer this exact question:
 "Would a senior HR recruiter see enough work-history proof that this candidate has delivered relevant projects, ownership, leadership, stakeholder coordination, or outcomes for this JD?"
@@ -432,10 +485,32 @@ If the Experience section is weak:
 For experience actions:
 - "section" must be "experience".
 - "requiredSignal" should describe the experience/work-history signal.
-- "resumeEvidence" should compare current experience evidence to the JD.
-- "hiringImpact" should explain how that affects recruiter confidence.
-- "ifTrue" should explain what project/ownership/stakeholder/outcome evidence can be added if true.
-- "ifNotTrue" should explain what not to claim and what honest adjacent delivery evidence to strengthen instead.
+- "resumeEvidence" must compare current experience evidence to the JD.
+- "hiringImpact" must explain how that affects recruiter confidence.
+- "ifTrue" must explain what project/ownership/stakeholder/outcome evidence can be added if true.
+- "ifNotTrue" must explain what not to claim and what honest adjacent delivery evidence to strengthen instead.
+
+LANGUAGE LOCK
+-------------
+Use strong, guided, evidence-structure language.
+
+Do NOT use:
+- "could add"
+- "could include"
+- "for example"
+- "e.g."
+- "highlight transferable skills"
+- "add X" unless the resume snapshot already proves X
+- generic fallback language
+- vague advice like "improve the summary" or "tailor the resume"
+
+Use this style instead:
+- "If true, the strongest proof would show..."
+- "If true, place this as..."
+- "If not true, do not claim it. Strengthen..."
+- "The recruiter risk is..."
+- "This section already helps because..."
+- "This section is weak because..."
 
 HONESTY RULES
 -------------
@@ -444,9 +519,22 @@ HONESTY RULES
 - The ifTrue field explains what real evidence would strengthen the section if the candidate truly has it.
 - The ifNotTrue field tells the candidate not to claim it and names the closest honest adjacent evidence already visible.
 - Do not write fictional example bullets with made-up tools, metrics, or outcomes.
-- Do not write "For example".
 - Do not mention LinkedIn.
-- Do not return vague fallback like "highlight transferable skills" unless you name the specific visible evidence from the resume snapshot.
+- Do not return vague fallback like "leadership and problem-solving" unless you tie it to specific visible evidence from the resume snapshot.
+
+VISIBLE ADJACENT EVIDENCE OPTIONS
+---------------------------------
+When true experience is missing, use the closest specific visible adjacent evidence from the resume snapshot, such as:
+- ForgeTomorrow platform ownership
+- explainable AI or responsible automation
+- platform architecture and systems design
+- Next.js, APIs, or data-driven systems
+- live production delivery
+- product, architecture, and business strategy alignment
+- cross-functional leadership and mentorship
+- operational execution and delivery
+
+Only use adjacent evidence that appears supported by the resume snapshot.
 
 QUALITY BAR
 -----------
@@ -455,7 +543,8 @@ Be specific.
 Do not flatter.
 Do not invent experience.
 Do not provide generic resume advice.
-Each action must be useful inside its own section card.
+Every action must be useful inside its own section card.
+Every action must help the seeker decide what they can honestly add, what they must not claim, and what nearby evidence they can strengthen.
 
 OUTPUT RULES
 ------------
@@ -529,8 +618,8 @@ Return ONLY valid JSON.
     const bulletFixText = Array.isArray(parsed.bulletFixes)
       ? parsed.bulletFixes
           .map((b: any, i: number) => {
-            const improved = String(b?.improved || '').trim();
-            const reason = String(b?.reason || '').trim();
+            const improved = cleanCoachValue(b?.improved);
+            const reason = cleanCoachValue(b?.reason);
             if (!improved) return '';
             return `${i + 1}. ${improved}${reason ? ` - Why: ${reason}` : ''}`;
           })
@@ -541,9 +630,9 @@ Return ONLY valid JSON.
     const summaryFixText =
       parsed.summaryFix && typeof parsed.summaryFix === 'object'
         ? [
-            String(parsed.summaryFix.improved || '').trim(),
-            String(parsed.summaryFix.reason || '').trim()
-              ? `Why: ${String(parsed.summaryFix.reason || '').trim()}`
+            cleanCoachValue(parsed.summaryFix.improved),
+            cleanCoachValue(parsed.summaryFix.reason)
+              ? `Why: ${cleanCoachValue(parsed.summaryFix.reason)}`
               : '',
           ]
             .filter(Boolean)
@@ -556,8 +645,8 @@ Return ONLY valid JSON.
       .join('\n');
 
     const textParts = [
-      String(parsed.opening || '').trim(),
-      String(parsed.matchAssessment || '').trim() ? `Match Assessment: ${String(parsed.matchAssessment).trim()}` : '',
+      cleanCoachValue(parsed.opening),
+      cleanCoachValue(parsed.matchAssessment) ? `Match Assessment: ${cleanCoachValue(parsed.matchAssessment)}` : '',
       bulletFixText ? `Bullet Fixes:\n${bulletFixText}` : '',
       summaryFixText ? `Summary Fix:\n${summaryFixText}` : '',
       actionText ? `Improvement Actions:\n${actionText}` : '',
