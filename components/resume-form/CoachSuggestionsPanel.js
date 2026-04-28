@@ -220,6 +220,7 @@ export default function CoachSuggestionsPanel(props) {
   const [error, setError] = useState(null);
 
   const lastRequestKeyRef = useRef('');
+  const inFlightKeyRef = useRef('');
 
   useEffect(() => {
     setMounted(true);
@@ -249,16 +250,14 @@ export default function CoachSuggestionsPanel(props) {
   const parsedCoach = useMemo(() => parseCoachText(text), [text]);
 
   const hasParsedContent = Boolean(
-    parsedCoach.matchAssessment ||
-      parsedCoach.actions.length > 0 ||
-      parsedCoach.fallbackText
+    parsedCoach.matchAssessment || parsedCoach.actions.length > 0 || parsedCoach.fallbackText
   );
 
   const filteredActions = useMemo(() => {
     if (!parsedCoach.actions.length) return [];
 
     if (context?.section === 'overview') {
-      return [];
+      return parsedCoach.actions;
     }
 
     return parsedCoach.actions.filter((action) => {
@@ -268,8 +267,16 @@ export default function CoachSuggestionsPanel(props) {
   }, [parsedCoach.actions, context?.section]);
 
   const handleAsk = async () => {
+    if (!jdText?.trim()) {
+      setError('Load a job description first to get targeted recruiter feedback.');
+      return;
+    }
+
+    if (inFlightKeyRef.current === requestKey) return;
+
     setLoading(true);
     setError(null);
+    inFlightKeyRef.current = requestKey;
 
     try {
       const resp = await fetch('/api/ats-coach', {
@@ -300,8 +307,9 @@ export default function CoachSuggestionsPanel(props) {
       }
 
       const out = (data?.text || '').toString().trim();
+      const lowerOut = out.toLowerCase();
 
-      if (data?.upgrade || out.toLowerCase().includes('too many requests') || out.toLowerCase().includes('rate limit')) {
+      if (data?.upgrade || lowerOut.includes('too many requests') || lowerOut.includes('rate limit')) {
         setError(out || 'Coach is busy right now. Try again in a few seconds.');
         lastRequestKeyRef.current = '';
         return;
@@ -314,28 +322,41 @@ export default function CoachSuggestionsPanel(props) {
       }
 
       setText(out);
+      lastRequestKeyRef.current = requestKey;
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error('CoachSuggestionsPanel error', e);
       setError(e?.message || 'Coach could not load suggestions. Try again.');
+      lastRequestKeyRef.current = '';
     } finally {
+      inFlightKeyRef.current = '';
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!open) {
+    if (!mounted || !open) {
       setLoading(false);
       return;
     }
 
-    if (jdText?.trim() && lastRequestKeyRef.current !== requestKey && !text) {
-      lastRequestKeyRef.current = requestKey;
+    if (!jdText?.trim()) {
       setError(null);
-      handleAsk();
+      setLoading(false);
+      return;
     }
+
+    if (lastRequestKeyRef.current === requestKey && text) return;
+    if (inFlightKeyRef.current === requestKey) return;
+
+    if (lastRequestKeyRef.current && lastRequestKeyRef.current !== requestKey) {
+      setText('');
+      setError(null);
+    }
+
+    handleAsk();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, requestKey, jdText, text]);
+  }, [mounted, open, requestKey, jdText]);
 
   const handleQuickInsert = (type) => {
     if (!text) return;
@@ -367,9 +388,10 @@ export default function CoachSuggestionsPanel(props) {
 
   if (!mounted || !open) return null;
 
+  const showNoJdMessage = !jdText?.trim();
   const showOverview = context?.section === 'overview';
-  const showSectionCards = !showOverview && filteredActions.length > 0;
-  const showEmptySection = !showOverview && hasParsedContent && filteredActions.length === 0;
+  const showSectionFeedback = context?.section !== 'overview' && filteredActions.length > 0;
+  const showEmptySection = context?.section !== 'overview' && hasParsedContent && filteredActions.length === 0;
 
   const panel = (
     <div
@@ -429,7 +451,7 @@ export default function CoachSuggestionsPanel(props) {
               into your resume. {keywordHint}
             </p>
 
-            {!jdText?.trim() && (
+            {showNoJdMessage && (
               <p style={{ marginBottom: 8, fontStyle: 'italic', color: '#8D6E63' }}>
                 Tip: You&apos;ll get the best results once a job description is loaded.
               </p>
@@ -438,7 +460,7 @@ export default function CoachSuggestionsPanel(props) {
             <button
               type="button"
               onClick={handleAsk}
-              disabled={loading || !jdText?.trim()}
+              disabled={loading || showNoJdMessage}
               style={{
                 padding: '8px 14px',
                 borderRadius: 10,
@@ -446,9 +468,9 @@ export default function CoachSuggestionsPanel(props) {
                 background: '#FF7043',
                 color: 'white',
                 fontWeight: 800,
-                cursor: loading || !jdText?.trim() ? 'not-allowed' : 'pointer',
+                cursor: loading || showNoJdMessage ? 'not-allowed' : 'pointer',
                 marginBottom: 10,
-                opacity: loading || !jdText?.trim() ? 0.7 : 1,
+                opacity: loading || showNoJdMessage ? 0.7 : 1,
               }}
             >
               {loading ? 'Thinking…' : 'Ask the Coach'}
@@ -488,6 +510,22 @@ export default function CoachSuggestionsPanel(props) {
           </div>
         )}
 
+        {showNoJdMessage && (
+          <div
+            style={{
+              padding: 10,
+              borderRadius: 10,
+              background: '#FFFFFF',
+              border: '1px solid #FFE0B2',
+              fontSize: 12,
+              color: '#6D4C41',
+              lineHeight: 1.45,
+            }}
+          >
+            Load a job description first to unlock recruiter feedback.
+          </div>
+        )}
+
         {loading && (
           <div
             style={{
@@ -506,7 +544,7 @@ export default function CoachSuggestionsPanel(props) {
 
         {error && <div style={{ marginTop: 4, color: '#C62828', fontSize: 12, fontWeight: 700 }}>{error}</div>}
 
-        {!loading && hasParsedContent && (
+        {!showNoJdMessage && !loading && hasParsedContent && (
           <>
             <div
               style={{
@@ -538,7 +576,7 @@ export default function CoachSuggestionsPanel(props) {
                   </div>
 
                   <div style={{ marginBottom: 10 }}>
-                    {parsedCoach.matchAssessment || 'Review generated. Open each section for targeted recruiter feedback.'}
+                    {parsedCoach.matchAssessment || parsedCoach.fallbackText || 'Review generated.'}
                   </div>
 
                   <div style={{ color: '#6D4C41' }}>
@@ -547,10 +585,10 @@ export default function CoachSuggestionsPanel(props) {
                 </div>
               )}
 
-              {showSectionCards && (
+              {showSectionFeedback && (
                 <div style={{ display: 'grid', gap: 8 }}>
                   {filteredActions.map((action, index) => (
-                    <div key={`${action.requiredSignal}-${index}`} style={signalCardStyle}>
+                    <div key={`${action.section || 'section'}-${action.requiredSignal || 'signal'}-${index}`} style={signalCardStyle}>
                       <div style={{ fontSize: 11, fontWeight: 900, color: '#E65100', textTransform: 'uppercase' }}>
                         Required signal
                       </div>
