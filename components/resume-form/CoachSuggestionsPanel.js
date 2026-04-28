@@ -74,6 +74,15 @@ function normalizeSection(value) {
   return '';
 }
 
+function parseActionSectionFromLine(value) {
+  const match = String(value || '').match(/\bSection:\s*(summary|skills|experience|education)\b/i);
+  return match ? normalizeSection(match[1]) : '';
+}
+
+function cleanInlineSection(value) {
+  return String(value || '').replace(/\s*Section:\s*(summary|skills|experience|education)\b\s*/i, '').trim();
+}
+
 function parseCoachText(value) {
   const raw = String(value || '').trim();
   if (!raw) return { title: '', matchAssessment: '', actions: [], fallbackText: '' };
@@ -88,34 +97,36 @@ function parseCoachText(value) {
   const actions = [];
   let current = null;
   const fallback = [];
+  let mode = '';
 
   lines.forEach((line) => {
-    if (!title && !line.startsWith('Match Assessment:') && !line.startsWith('Improvement Actions:')) {
-      title = line;
-      return;
-    }
-
     if (line.startsWith('Match Assessment:')) {
+      mode = 'match';
       matchAssessment = line.replace('Match Assessment:', '').trim();
       return;
     }
 
-    if (line.startsWith('Improvement Actions:')) return;
+    if (line.startsWith('Improvement Actions:')) {
+      mode = 'actions';
+      return;
+    }
 
     const requiredMatch = line.match(/^•\s*Required signal:\s*(.*)$/i);
     if (requiredMatch) {
+      const sectionFromInline = parseActionSectionFromLine(requiredMatch[1]);
       current = {
-        requiredSignal: requiredMatch[1]?.trim() || '',
+        requiredSignal: cleanInlineSection(requiredMatch[1]?.trim() || ''),
         resumeEvidence: '',
         decisionQuestion: '',
         hiringImpact: '',
         ifTrue: '',
         ifNotTrue: '',
         futurePositioning: '',
-        section: '',
+        section: sectionFromInline,
         other: [],
       };
       actions.push(current);
+      mode = 'actions';
       return;
     }
 
@@ -156,6 +167,16 @@ function parseCoachText(value) {
       }
 
       current.other.push(line);
+      return;
+    }
+
+    if (mode === 'match') {
+      matchAssessment = [matchAssessment, line].filter(Boolean).join(' ');
+      return;
+    }
+
+    if (!title && !line.startsWith('Summary Fix:') && !line.startsWith('Bullet Fixes:')) {
+      title = line;
       return;
     }
 
@@ -220,7 +241,6 @@ export default function CoachSuggestionsPanel(props) {
   const [error, setError] = useState(null);
 
   const lastRequestKeyRef = useRef('');
-  const inFlightKeyRef = useRef('');
 
   useEffect(() => {
     setMounted(true);
@@ -234,7 +254,8 @@ export default function CoachSuggestionsPanel(props) {
     education: 'education section',
   };
 
-  const humanSection = sectionLabelMap[context?.section] || 'this part of your resume';
+  const selectedSection = context?.section || 'overview';
+  const humanSection = sectionLabelMap[selectedSection] || 'this part of your resume';
 
   const keywordHint = context?.keyword
     ? `Focus especially on including the keyword "${context.keyword}" in a natural way.`
@@ -256,27 +277,19 @@ export default function CoachSuggestionsPanel(props) {
   const filteredActions = useMemo(() => {
     if (!parsedCoach.actions.length) return [];
 
-    if (context?.section === 'overview') {
+    if (selectedSection === 'overview') {
       return parsedCoach.actions;
     }
 
     return parsedCoach.actions.filter((action) => {
       const section = normalizeSection(action.section);
-      return section && section === context?.section;
+      return section && section === selectedSection;
     });
-  }, [parsedCoach.actions, context?.section]);
+  }, [parsedCoach.actions, selectedSection]);
 
   const handleAsk = async () => {
-    if (!jdText?.trim()) {
-      setError('Load a job description first to get targeted recruiter feedback.');
-      return;
-    }
-
-    if (inFlightKeyRef.current === requestKey) return;
-
     setLoading(true);
     setError(null);
-    inFlightKeyRef.current = requestKey;
 
     try {
       const resp = await fetch('/api/ats-coach', {
@@ -307,9 +320,9 @@ export default function CoachSuggestionsPanel(props) {
       }
 
       const out = (data?.text || '').toString().trim();
-      const lowerOut = out.toLowerCase();
+      const lower = out.toLowerCase();
 
-      if (data?.upgrade || lowerOut.includes('too many requests') || lowerOut.includes('rate limit')) {
+      if (data?.upgrade || lower.includes('too many requests') || lower.includes('rate limit')) {
         setError(out || 'Coach is busy right now. Try again in a few seconds.');
         lastRequestKeyRef.current = '';
         return;
@@ -322,6 +335,7 @@ export default function CoachSuggestionsPanel(props) {
       }
 
       setText(out);
+      setError(null);
       lastRequestKeyRef.current = requestKey;
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -329,34 +343,25 @@ export default function CoachSuggestionsPanel(props) {
       setError(e?.message || 'Coach could not load suggestions. Try again.');
       lastRequestKeyRef.current = '';
     } finally {
-      inFlightKeyRef.current = '';
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!mounted || !open) {
+    if (!open) {
       setLoading(false);
       return;
     }
 
-    if (!jdText?.trim()) {
-      setError(null);
-      setLoading(false);
-      return;
-    }
+    if (!jdText?.trim()) return;
 
-    if (lastRequestKeyRef.current === requestKey && text) return;
-    if (inFlightKeyRef.current === requestKey) return;
-
-    if (lastRequestKeyRef.current && lastRequestKeyRef.current !== requestKey) {
+    if (lastRequestKeyRef.current !== requestKey) {
       setText('');
       setError(null);
+      handleAsk();
     }
-
-    handleAsk();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, open, requestKey, jdText]);
+  }, [open, requestKey, jdText]);
 
   const handleQuickInsert = (type) => {
     if (!text) return;
@@ -388,10 +393,10 @@ export default function CoachSuggestionsPanel(props) {
 
   if (!mounted || !open) return null;
 
-  const showNoJdMessage = !jdText?.trim();
-  const showOverview = context?.section === 'overview';
-  const showSectionFeedback = context?.section !== 'overview' && filteredActions.length > 0;
-  const showEmptySection = context?.section !== 'overview' && hasParsedContent && filteredActions.length === 0;
+  const showReview = !loading && hasParsedContent;
+  const showOverview = showReview && selectedSection === 'overview';
+  const showSectionActions = showReview && selectedSection !== 'overview' && filteredActions.length > 0;
+  const showEmptySection = showReview && selectedSection !== 'overview' && filteredActions.length === 0;
 
   const panel = (
     <div
@@ -451,7 +456,7 @@ export default function CoachSuggestionsPanel(props) {
               into your resume. {keywordHint}
             </p>
 
-            {showNoJdMessage && (
+            {!jdText?.trim() && (
               <p style={{ marginBottom: 8, fontStyle: 'italic', color: '#8D6E63' }}>
                 Tip: You&apos;ll get the best results once a job description is loaded.
               </p>
@@ -460,7 +465,7 @@ export default function CoachSuggestionsPanel(props) {
             <button
               type="button"
               onClick={handleAsk}
-              disabled={loading || showNoJdMessage}
+              disabled={loading || !jdText?.trim()}
               style={{
                 padding: '8px 14px',
                 borderRadius: 10,
@@ -468,9 +473,9 @@ export default function CoachSuggestionsPanel(props) {
                 background: '#FF7043',
                 color: 'white',
                 fontWeight: 800,
-                cursor: loading || showNoJdMessage ? 'not-allowed' : 'pointer',
+                cursor: loading || !jdText?.trim() ? 'not-allowed' : 'pointer',
                 marginBottom: 10,
-                opacity: loading || showNoJdMessage ? 0.7 : 1,
+                opacity: loading || !jdText?.trim() ? 0.7 : 1,
               }}
             >
               {loading ? 'Thinking…' : 'Ask the Coach'}
@@ -510,22 +515,6 @@ export default function CoachSuggestionsPanel(props) {
           </div>
         )}
 
-        {showNoJdMessage && (
-          <div
-            style={{
-              padding: 10,
-              borderRadius: 10,
-              background: '#FFFFFF',
-              border: '1px solid #FFE0B2',
-              fontSize: 12,
-              color: '#6D4C41',
-              lineHeight: 1.45,
-            }}
-          >
-            Load a job description first to unlock recruiter feedback.
-          </div>
-        )}
-
         {loading && (
           <div
             style={{
@@ -544,7 +533,7 @@ export default function CoachSuggestionsPanel(props) {
 
         {error && <div style={{ marginTop: 4, color: '#C62828', fontSize: 12, fontWeight: 700 }}>{error}</div>}
 
-        {!showNoJdMessage && !loading && hasParsedContent && (
+        {showReview && (
           <>
             <div
               style={{
@@ -553,12 +542,6 @@ export default function CoachSuggestionsPanel(props) {
                 overflowY: 'auto',
               }}
             >
-              {showOverview && parsedCoach.title && (
-                <div style={{ fontSize: 14, fontWeight: 900, color: '#E65100', marginBottom: 8 }}>
-                  {parsedCoach.title}
-                </div>
-              )}
-
               {showOverview && (
                 <div
                   style={{
@@ -576,7 +559,7 @@ export default function CoachSuggestionsPanel(props) {
                   </div>
 
                   <div style={{ marginBottom: 10 }}>
-                    {parsedCoach.matchAssessment || parsedCoach.fallbackText || 'Review generated.'}
+                    {parsedCoach.matchAssessment || parsedCoach.title || 'Review generated. Open each section for targeted recruiter feedback.'}
                   </div>
 
                   <div style={{ color: '#6D4C41' }}>
@@ -585,10 +568,10 @@ export default function CoachSuggestionsPanel(props) {
                 </div>
               )}
 
-              {showSectionFeedback && (
+              {showSectionActions && (
                 <div style={{ display: 'grid', gap: 8 }}>
                   {filteredActions.map((action, index) => (
-                    <div key={`${action.section || 'section'}-${action.requiredSignal || 'signal'}-${index}`} style={signalCardStyle}>
+                    <div key={`${action.section}-${action.requiredSignal}-${index}`} style={signalCardStyle}>
                       <div style={{ fontSize: 11, fontWeight: 900, color: '#E65100', textTransform: 'uppercase' }}>
                         Required signal
                       </div>

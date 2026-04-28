@@ -133,6 +133,85 @@ function tipFromAction(action: any) {
   return String(action.requiredSignal || action.signal || action.requirement || '').trim();
 }
 
+
+function getActionSection(action: any) {
+  return normalizeSection(action?.section) || inferSectionFromSignal(action?.requiredSignal || action?.signal || action?.requirement);
+}
+
+function fallbackAction(section: 'summary' | 'skills' | 'experience', matchAssessment: any) {
+  const base = cleanCoachValue(matchAssessment) || 'The resume needs clearer evidence against the job description.';
+
+  if (section === 'summary') {
+    return {
+      section: 'summary',
+      requiredSignal: 'First-impression alignment with the target role',
+      resumeEvidence: base,
+      decisionQuestion: 'Does the Summary quickly show why this candidate fits the role, or does the recruiter have to infer the connection?',
+      hiringImpact: 'A weak or unclear Summary can make the recruiter miss relevant experience before reaching the detailed sections.',
+      ifTrue: 'If true, add the strongest role-aligned proof already supported elsewhere in the resume.',
+      ifNotTrue: 'If not true, do not claim missing experience. Position the closest visible evidence honestly.',
+      futurePositioning: '',
+    };
+  }
+
+  if (section === 'skills') {
+    return {
+      section: 'skills',
+      requiredSignal: 'Visible hard-skill and tool alignment',
+      resumeEvidence: base,
+      decisionQuestion: 'Can the recruiter quickly verify the required tools, platforms, or hard skills from the Skills section?',
+      hiringImpact: 'If required skills are not visible, the candidate may be screened out before the work-history proof is reviewed.',
+      ifTrue: 'If true, list the proven tools and hard skills using the same language as the JD.',
+      ifNotTrue: 'If not true, do not add unproven tools. Strengthen the closest visible technical evidence.',
+      futurePositioning: '',
+    };
+  }
+
+  return {
+    section: 'experience',
+    requiredSignal: 'Work-history proof of relevant delivery',
+    resumeEvidence: base,
+    decisionQuestion: 'Does the Experience section prove this candidate has delivered the kind of work the role requires?',
+    hiringImpact: 'Without work-history proof, the recruiter may see possible fit but not enough evidence to move forward confidently.',
+    ifTrue: 'If true, add a specific project, ownership, stakeholder, or outcome bullet already supported by real experience.',
+    ifNotTrue: 'If not true, do not invent delivery proof. Strengthen the closest visible leadership, platform, or execution evidence.',
+    futurePositioning: '',
+  };
+}
+
+function normalizeImprovementActions(parsed: any) {
+  const incoming = Array.isArray(parsed?.improvementActions) ? parsed.improvementActions : [];
+  const normalized = incoming
+    .filter((action: any) => action && typeof action === 'object')
+    .map((action: any) => {
+      const required = action.requiredSignal || action.signal || action.requirement || '';
+      const section = getActionSection({ ...action, requiredSignal: required });
+      return {
+        ...action,
+        section,
+        requiredSignal: required,
+        decisionQuestion:
+          action.decisionQuestion || action.employerDecision || action.whatEmployerIsDeciding || '',
+      };
+    })
+    .filter((action: any) => normalizeSection(action.section));
+
+  const requiredSections = ['summary', 'skills', 'experience'] as const;
+  requiredSections.forEach((section) => {
+    if (!normalized.some((action: any) => normalizeSection(action.section) === section)) {
+      normalized.push(fallbackAction(section, parsed?.matchAssessment));
+    }
+  });
+
+  const seen = new Set<string>();
+  return normalized.filter((action: any) => {
+    const key = `${normalizeSection(action.section)}::${cleanCoachValue(action.requiredSignal).toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /**
  * Forge Hammer Gate (FREE = 3 uses/month across BOTH coach + score).
  * Uses User.resumeAlignFreeUses + User.resumeAlignLastResetMonth (DB source of truth).
@@ -565,6 +644,12 @@ The best answers should sound like:
 
 FIELD QUALITY RULES
 -------------------
+Hard requirement: every overview response must return at least one action with exact section value "summary", one with exact section value "skills", and one with exact section value "experience".
+Do not bury the section name in prose. Use the JSON field exactly.
+
+The opening must be one short recruiter-style sentence, not a bullet, not a required signal, and not a section review.
+The matchAssessment must be a concise whole-resume recruiter synopsis. It should not contain section labels or action fields.
+
 Do not repeat the user's section question as the decisionQuestion.
 
 Bad decisionQuestion:
@@ -574,15 +659,13 @@ Good decisionQuestion:
 "Is this candidate proven in workflow automation and AI/LLM integrations, or only adjacent technical leadership?"
 
 Each decisionQuestion must be specific to the JD signal.
+Each hiringImpact must explain the screening risk or confidence gain. Do not say "this section affects first impression" or "this affects recruiter confidence." Explain why.
 
-Each hiringImpact must explain the screening risk or confidence gain.
-Do not say "this section affects first impression" or "this affects recruiter confidence."
-Explain why.
-
-Each futurePositioning must be unique and useful.
-If it would repeat hiringImpact or decisionQuestion, return an empty string.
+Each futurePositioning must be unique and useful. If it would repeat hiringImpact, decisionQuestion, ifTrue, or ifNotTrue, return an empty string.
 
 Do not reuse the same phrase across multiple improvementActions.
+Do not provide fictional examples with specific tools unless those tools appear in the JD or resume snapshot.
+If a tool appears in the JD but not the resume, say to add it only if truly used.
 
 OUTPUT RULES
 ------------
@@ -645,7 +728,7 @@ Return ONLY valid JSON.
       });
     }
 
-    const actions = Array.isArray(parsed.improvementActions) ? parsed.improvementActions : [];
+    const actions = normalizeImprovementActions(parsed);
 
     const tips: string[] = [
       ...(Array.isArray(parsed.signalGaps) ? parsed.signalGaps : []),
@@ -686,8 +769,6 @@ Return ONLY valid JSON.
     const textParts = [
       cleanCoachValue(parsed.opening),
       cleanCoachValue(parsed.matchAssessment) ? `Match Assessment: ${cleanCoachValue(parsed.matchAssessment)}` : '',
-      bulletFixText ? `Bullet Fixes:\n${bulletFixText}` : '',
-      summaryFixText ? `Summary Fix:\n${summaryFixText}` : '',
       actionText ? `Improvement Actions:\n${actionText}` : '',
     ].filter(Boolean);
 
