@@ -495,6 +495,7 @@ For experience actions:
 LANGUAGE LOCK
 -------------
 Use strong, guided, evidence-structure language.
+Do not restate the prompt questions as answers.
 
 Do NOT use:
 - "could add"
@@ -561,6 +562,27 @@ The best answers should sound like:
 "The screening risk is..."
 "If true, the strongest proof would show..."
 "If not true, do not claim it. Strengthen..."
+
+FIELD QUALITY RULES
+-------------------
+Do not repeat the user's section question as the decisionQuestion.
+
+Bad decisionQuestion:
+"Would a senior HR recruiter read this Summary and see enough first-impression alignment?"
+
+Good decisionQuestion:
+"Is this candidate proven in workflow automation and AI/LLM integrations, or only adjacent technical leadership?"
+
+Each decisionQuestion must be specific to the JD signal.
+
+Each hiringImpact must explain the screening risk or confidence gain.
+Do not say "this section affects first impression" or "this affects recruiter confidence."
+Explain why.
+
+Each futurePositioning must be unique and useful.
+If it would repeat hiringImpact or decisionQuestion, return an empty string.
+
+Do not reuse the same phrase across multiple improvementActions.
 
 OUTPUT RULES
 ------------
