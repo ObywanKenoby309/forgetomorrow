@@ -207,7 +207,7 @@ export default function CoachSuggestionsPanel(props) {
   const [text, setText] = useState('');
   const [error, setError] = useState(null);
 
-  const askedOnceRef = useRef(false);
+  const lastRequestKeyRef = useRef('');
 
   const sectionLabelMap = {
     overview: 'overall alignment',
@@ -222,6 +222,8 @@ export default function CoachSuggestionsPanel(props) {
   const keywordHint = context?.keyword
     ? `Focus especially on including the keyword "${context.keyword}" in a natural way.`
     : '';
+
+  const requestKey = `${context?.section || 'overview'}:${context?.keyword || ''}`;
 
   const parsedCoach = useMemo(() => parseCoachText(text), [text]);
 
@@ -298,19 +300,21 @@ export default function CoachSuggestionsPanel(props) {
 
   useEffect(() => {
     if (!open) {
-      askedOnceRef.current = false;
+      lastRequestKeyRef.current = '';
       setText('');
       setError(null);
       setLoading(false);
       return;
     }
 
-    if (open && jdText?.trim() && !askedOnceRef.current) {
-      askedOnceRef.current = true;
+    if (open && jdText?.trim() && lastRequestKeyRef.current !== requestKey) {
+      lastRequestKeyRef.current = requestKey;
+      setText('');
+      setError(null);
       handleAsk();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, context?.section, context?.keyword]);
+  }, [open, requestKey, jdText]);
 
   const handleQuickInsert = (type) => {
     if (!text) return;
