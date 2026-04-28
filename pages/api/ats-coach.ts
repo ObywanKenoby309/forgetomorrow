@@ -341,7 +341,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     // full snapshot with bullets, section routing, all decision language.
     const prompt = buildSectionCoachPrompt({
       jdText,
-      resumeData,
+      resume: resumeData,
       context,
       missing,
       jobMeta,
