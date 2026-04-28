@@ -63,6 +63,17 @@ const signalCardStyle = {
   boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
 };
 
+function normalizeSection(value) {
+  const section = String(value || '').toLowerCase().trim();
+
+  if (section === 'summary') return 'summary';
+  if (section === 'skills') return 'skills';
+  if (section === 'experience') return 'experience';
+  if (section === 'education') return 'education';
+
+  return '';
+}
+
 function parseCoachText(value) {
   const raw = String(value || '').trim();
   if (!raw) return { title: '', matchAssessment: '', actions: [], fallbackText: '' };
@@ -96,7 +107,6 @@ function parseCoachText(value) {
       current = {
         requiredSignal: requiredMatch[1]?.trim() || '',
         resumeEvidence: '',
-        hiringImpact: '',
         ifTrue: '',
         ifNotTrue: '',
         futurePositioning: '',
@@ -109,29 +119,30 @@ function parseCoachText(value) {
 
     if (current) {
       if (line.startsWith('Section:')) {
-        current.section = line.replace('Section:', '').trim().toLowerCase();
+        current.section = normalizeSection(line.replace('Section:', '').trim());
         return;
       }
+
       if (line.startsWith('Resume evidence:')) {
         current.resumeEvidence = line.replace('Resume evidence:', '').trim();
         return;
       }
-      if (line.startsWith('Hiring impact:')) {
-        current.hiringImpact = line.replace('Hiring impact:', '').trim();
-        return;
-      }
+
       if (line.startsWith('If true:')) {
         current.ifTrue = line.replace('If true:', '').trim();
         return;
       }
+
       if (line.startsWith('If not true:')) {
         current.ifNotTrue = line.replace('If not true:', '').trim();
         return;
       }
+
       if (line.startsWith('Future positioning:')) {
         current.futurePositioning = line.replace('Future positioning:', '').trim();
         return;
       }
+
       current.other.push(line);
       return;
     }
@@ -158,7 +169,15 @@ function mapSignalToSection(signal = '') {
     return 'skills';
   }
 
-  if (s.includes('project') || s.includes('stakeholder') || s.includes('management') || s.includes('experience') || s.includes('ownership')) {
+  if (
+    s.includes('project') ||
+    s.includes('stakeholder') ||
+    s.includes('management') ||
+    s.includes('experience') ||
+    s.includes('ownership') ||
+    s.includes('leadership') ||
+    s.includes('delivery')
+  ) {
     return 'experience';
   }
 
@@ -167,6 +186,7 @@ function mapSignalToSection(signal = '') {
 
 /**
  * Writing coach suggestions panel.
+ * IMPORTANT: JSDoc typing here prevents TS from inferring `context.keyword` as only `null`.
  * @param {Props} props
  */
 export default function CoachSuggestionsPanel(props) {
@@ -204,6 +224,7 @@ export default function CoachSuggestionsPanel(props) {
     : '';
 
   const parsedCoach = useMemo(() => parseCoachText(text), [text]);
+
   const filteredActions = useMemo(() => {
     if (!parsedCoach.actions.length) return [];
 
@@ -211,8 +232,17 @@ export default function CoachSuggestionsPanel(props) {
       return parsedCoach.actions;
     }
 
+    const exactMatches = parsedCoach.actions.filter((action) => {
+      const section = normalizeSection(action.section);
+      return section && section === context?.section;
+    });
+
+    if (exactMatches.length > 0) {
+      return exactMatches;
+    }
+
     return parsedCoach.actions.filter((action) => {
-      const section = action.section || mapSignalToSection(action.requiredSignal);
+      const section = mapSignalToSection(action.requiredSignal);
       return section === context?.section;
     });
   }, [parsedCoach.actions, context?.section]);
@@ -266,7 +296,6 @@ export default function CoachSuggestionsPanel(props) {
     }
   };
 
-  // Auto-ask ONCE whenever the panel is opened
   useEffect(() => {
     if (!open) {
       askedOnceRef.current = false;
@@ -317,9 +346,9 @@ export default function CoachSuggestionsPanel(props) {
     <div
       style={{
         width: '100%',
-        background: '#FFF8E1',
-        borderRadius: embedded ? 12 : 16,
-        border: '1px solid #FFCC80',
+        background: embedded ? 'transparent' : '#FFF8E1',
+        borderRadius: embedded ? 0 : 16,
+        border: embedded ? 'none' : '1px solid #FFCC80',
         boxShadow: embedded ? 'none' : '0 10px 30px rgba(0,0,0,0.25)',
         display: 'flex',
         flexDirection: 'column',
@@ -359,7 +388,7 @@ export default function CoachSuggestionsPanel(props) {
 
       <div
         style={{
-          padding: embedded ? 10 : '10px 14px',
+          padding: embedded ? 0 : '10px 14px',
           fontSize: 13,
           color: '#5D4037',
         }}
@@ -398,19 +427,62 @@ export default function CoachSuggestionsPanel(props) {
           </>
         )}
 
-        {loading && embedded && (
-          <div style={{ fontSize: 12, color: '#6D4C41', fontWeight: 800 }}>Thinking…</div>
+        {embedded && (
+          <div
+            style={{
+              marginBottom: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 900, color: '#BF360C' }}>
+              Reviewing {humanSection}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                border: '1px solid #FFE0B2',
+                background: '#FFFFFF',
+                color: '#BF360C',
+                borderRadius: 999,
+                padding: '4px 8px',
+                fontSize: 11,
+                fontWeight: 900,
+                cursor: 'pointer',
+              }}
+            >
+              Close
+            </button>
+          </div>
+        )}
+
+        {loading && (
+          <div
+            style={{
+              padding: 10,
+              borderRadius: 10,
+              background: '#FFFFFF',
+              border: '1px solid #FFE0B2',
+              fontSize: 12,
+              color: '#6D4C41',
+              lineHeight: 1.45,
+            }}
+          >
+            Thinking…
+          </div>
         )}
 
         {error && <div style={{ marginTop: 4, color: '#C62828', fontSize: 12, fontWeight: 700 }}>{error}</div>}
 
-        {text && (
+        {!loading && text && (
           <>
             <div
               style={{
                 ...coachCardStyle,
-                marginTop: embedded ? 0 : coachCardStyle.marginTop,
-                maxHeight: 360,
+                maxHeight: embedded ? 420 : 360,
                 overflowY: 'auto',
               }}
             >
@@ -452,12 +524,6 @@ export default function CoachSuggestionsPanel(props) {
                       {action.resumeEvidence && (
                         <div style={{ marginTop: 8, fontSize: 12, color: '#6D4C41', lineHeight: 1.4 }}>
                           <strong>Resume evidence:</strong> {action.resumeEvidence}
-                        </div>
-                      )}
-
-                      {action.hiringImpact && (
-                        <div style={{ marginTop: 8, fontSize: 12, color: '#6D4C41', lineHeight: 1.4 }}>
-                          <strong>Hiring impact:</strong> {action.hiringImpact}
                         </div>
                       )}
 

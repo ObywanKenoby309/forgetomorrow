@@ -34,17 +34,20 @@ type Props = {
   skills: string[];
   experiences: Experience[];
   education: Education[];
-  jobMeta?: JobMeta; // ✅ optional meta passed from resume/create.js
+  jobMeta?: JobMeta;
   onAddSkill?: (keyword: string) => void;
   onAddSummary?: (snippet: string) => void;
   onAddBullet?: (snippet: string) => void;
 };
 
-// ✅ matches CoachSuggestionsPanel.js JSDoc union
 type CoachContext = {
   section: 'overview' | 'summary' | 'skills' | 'experience' | 'education';
   keyword?: string | null;
 };
+
+type ActivePanel = 'coach' | 'scan' | 'keywords';
+
+const ORANGE = '#FF7043';
 
 const STOP_WORDS = new Set([
   'the',
@@ -91,10 +94,12 @@ const STOP_WORDS = new Set([
 
 function extractKeyTerms(text: string, max = 8): string[] {
   if (!text) return [];
+
   const cleaned = text.toLowerCase().replace(/[^a-z0-9+\s]/g, ' ');
   const tokens = cleaned
     .split(/\s+/)
     .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+
   const counts = new Map<string, number>();
   for (const t of tokens) counts.set(t, (counts.get(t) || 0) + 1);
 
@@ -126,6 +131,7 @@ function guessJobTitle(jdText: string) {
   const m1 = jd.match(
     /(?:^|\n)\s*(?:job\s*title|title|position)\s*[:\-]\s*([^\n]{3,120})/i
   );
+
   if (m1 && m1[1]) return m1[1].trim();
 
   const firstLine =
@@ -133,10 +139,13 @@ function guessJobTitle(jdText: string) {
       .split('\n')
       .map((s) => s.trim())
       .filter(Boolean)[0] || '';
+
   if (firstLine && firstLine.length <= 90) {
-    if (!/overview|about\s+us|introduction|who\s+we\s+are/i.test(firstLine))
+    if (!/overview|about\s+us|introduction|who\s+we\s+are/i.test(firstLine)) {
       return firstLine;
+    }
   }
+
   return '';
 }
 
@@ -151,12 +160,8 @@ export default function AtsDepthPanel({
   onAddSummary,
   onAddBullet,
 }: Props) {
-  const [expanded, setExpanded] = useState(true);
   const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [activePanel, setActivePanel] = useState<ActivePanel>('coach');
 
   // unified scoring
   const [aiScore, setAiScore] = useState<number | null>(null);
@@ -165,14 +170,17 @@ export default function AtsDepthPanel({
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiUpgrade, setAiUpgrade] = useState(false);
 
-  // Coach overlay
+  // Coach inline result
   const [coachOpen, setCoachOpen] = useState(false);
   const [coachContext, setCoachContext] = useState<CoachContext>({
     section: 'overview',
     keyword: null,
   });
 
-  // ── Build a lightweight "resume text" blob for keyword matching
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const resumeText = useMemo(() => {
     const expBits = (experiences || [])
       .map((e) => `${e.title || ''} ${e.company || ''} ${(e.bullets || []).join(' ')}`)
@@ -185,7 +193,6 @@ export default function AtsDepthPanel({
     return `${summary || ''} ${(skills || []).join(' ')} ${expBits} ${eduBits}`.toLowerCase();
   }, [summary, skills, experiences, education]);
 
-  // ── Title/role keyword coverage (fallback engine)
   const titleKeywords = useMemo(() => extractKeyTerms(jdText, 8), [jdText]);
 
   const matchedTitleKeywords = useMemo(
@@ -200,21 +207,20 @@ export default function AtsDepthPanel({
 
   const primaryScore = aiScore !== null ? aiScore : keywordCoverage;
 
-  // ── Status text + color based on unified score
   let statusText = '';
   let barColor = '#C62828';
 
   if (primaryScore >= 85) {
-    statusText = 'Excellent — ready to apply.';
+    statusText = 'Excellent - ready to apply.';
     barColor = '#2E7D32';
   } else if (primaryScore >= 70) {
-    statusText = 'Good — tighten keywords & metrics to push higher.';
+    statusText = 'Good - tighten keywords & metrics to push higher.';
     barColor = '#F59E0B';
   } else if (primaryScore >= 50) {
-    statusText = 'Fair — add more high-impact terms before applying.';
+    statusText = 'Fair - add more high-impact terms before applying.';
     barColor = '#EF6C00';
   } else {
-    statusText = 'Low — add more high-impact terms (aim ≥85).';
+    statusText = 'Low - add more high-impact terms (aim ≥85).';
     barColor = '#C62828';
   }
 
@@ -234,7 +240,6 @@ export default function AtsDepthPanel({
 
   const missingTitleKeywords = titleKeywords.filter((k) => !matchedTitleKeywords.includes(k));
 
-  // ✅ send resume data in the API shape the backend expects
   const resumeData = useMemo(
     () => ({
       summary,
@@ -307,7 +312,7 @@ export default function AtsDepthPanel({
       setAiTips(nextTips);
     } catch (e) {
       console.error('[AtsDepthPanel] AI scan failed', e);
-      setAiError('AI scan failed — try again.');
+      setAiError('AI scan failed - try again.');
       setAiScore(null);
     } finally {
       setAiLoading(false);
@@ -318,470 +323,475 @@ export default function AtsDepthPanel({
     ? aiTips.filter((t) => typeof t === 'string' && t.trim().length > 0)
     : [];
 
-  if (!mounted || !jdText?.trim()) return null;
+  const tabButton = (key: ActivePanel, label: string) => ({
+    type: 'button' as const,
+    onClick: () => setActivePanel(key),
+    style: {
+      border: activePanel === key ? `1px solid ${ORANGE}` : '1px solid #E2E8F0',
+      background: activePanel === key ? 'rgba(255,112,67,0.10)' : '#FFFFFF',
+      color: activePanel === key ? '#C2410C' : '#475569',
+      borderRadius: 999,
+      padding: '6px 10px',
+      fontSize: 11,
+      fontWeight: 900,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap' as const,
+    },
+    children: label,
+  });
+
+  if (!mounted) return null;
+  if (!jdText?.trim()) return null;
 
   return (
-    <div style={{ marginTop: 20 }}>
+    <div style={{ marginTop: 0 }}>
       <div
         style={{
-          background: 'white',
-          borderRadius: 16,
-          border: '1px solid #ECEFF1',
-          padding: 20,
-          boxShadow: '0 8px 30px rgba(0,0,0,0.1)',
+          background: 'rgba(255,255,255,0.96)',
+          borderRadius: 14,
+          border: '1px solid rgba(226,232,240,0.95)',
+          padding: 10,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
         }}
       >
-        {/* Header row */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 16, color: '#263238' }}>
-              Resume Match (Unified)
+        {/* Compact header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 950, fontSize: 15, color: '#263238', lineHeight: 1.1 }}>
+              Forge Hammer
             </div>
-            <div style={{ marginTop: 4, fontSize: 13, color: '#607D8B' }}>
-              One score that blends AI analysis with keyword coverage for this job.
+            <div style={{ marginTop: 3, fontSize: 11, color: '#607D8B', lineHeight: 1.35 }}>
+              Coach first. Scan when ready.
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              fontSize: 13,
-              color: '#607D8B',
-              cursor: 'pointer',
-            }}
-          >
-            {expanded ? 'Collapse' : 'Expand'}
-          </button>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div style={{ fontSize: 28, fontWeight: 950, color: barColor, letterSpacing: -0.5, lineHeight: 1 }}>
+              {Number.isFinite(primaryScore) ? primaryScore : 0}
+              <span style={{ fontSize: 13, color: '#B0BEC5', marginLeft: 2 }}>/100</span>
+            </div>
+            <div style={{ marginTop: 3, fontSize: 10, color: '#78909C', fontWeight: 800 }}>
+              {aiScore === null ? 'Keyword signal' : 'AI scan included'}
+            </div>
+          </div>
         </div>
 
-        {/* JD acknowledgement */}
+        {/* Score bar */}
         <div
           style={{
-            marginTop: 14,
-            background: '#E3F2FD',
-            border: '1px solid #BBDEFB',
-            borderRadius: 12,
-            padding: 12,
+            height: 7,
+            borderRadius: 999,
+            background: '#ECEFF1',
+            overflow: 'hidden',
+            marginTop: 9,
           }}
         >
-          <div style={{ fontWeight: 800, color: '#0D47A1', fontSize: 13 }}>
-            Loaded job
-          </div>
+          <div
+            style={{
+              width: `${Math.max(0, Math.min(100, primaryScore))}%`,
+              height: '100%',
+              background: barColor,
+              transition: 'width 0.3s ease',
+            }}
+          />
+        </div>
 
-          <div style={{ marginTop: 4, color: '#0B2A4A', fontSize: 13, lineHeight: 1.35 }}>
-            <strong>{loadedTitle}</strong>
-            {loadedCompany ? ` at ${loadedCompany}` : ''}
-            {loadedLocation ? ` — ${loadedLocation}` : ''}
-            <span style={{ color: '#607D8B' }}> · {words} words</span>
-          </div>
+        <div style={{ marginTop: 6, fontSize: 11, color: '#546E7A', lineHeight: 1.3 }}>
+          {statusText}
+        </div>
+
+        {/* Loaded job - compact */}
+        <details style={{ marginTop: 9 }}>
+          <summary
+            style={{
+              cursor: 'pointer',
+              listStyle: 'none',
+              borderRadius: 12,
+              border: '1px solid #BBDEFB',
+              background: '#E3F2FD',
+              padding: '9px 10px',
+              color: '#0B2A4A',
+              fontSize: 12,
+              lineHeight: 1.35,
+            }}
+          >
+            <div style={{ fontWeight: 950, color: '#0D47A1', fontSize: 12 }}>Loaded job</div>
+            <div style={{ marginTop: 2 }}>
+              <strong>{loadedTitle}</strong>
+              {loadedCompany ? ` at ${loadedCompany}` : ''}
+              {loadedLocation ? ` · ${loadedLocation}` : ''}
+              <span style={{ color: '#607D8B' }}> · {words} words</span>
+            </div>
+          </summary>
 
           {preview ? (
-            <div style={{ marginTop: 6, fontSize: 12, color: '#1E3A5F' }}>
-              <span style={{ fontWeight: 700, color: '#1565C0' }}>Preview: </span>
+            <div
+              style={{
+                marginTop: 6,
+                borderRadius: 10,
+                border: '1px solid #D7ECFF',
+                background: '#F7FBFF',
+                padding: 10,
+                fontSize: 11,
+                color: '#1E3A5F',
+                lineHeight: 1.4,
+              }}
+            >
+              <span style={{ fontWeight: 900, color: '#1565C0' }}>Preview: </span>
               {preview}
             </div>
           ) : null}
-        </div>
+        </details>
 
-        {/* Main score row – always visible */}
+        {/* Module selector */}
         <div
           style={{
-            marginTop: 14,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
+            marginTop: 10,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gap: 6,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            <span style={{ fontSize: 30, fontWeight: 800, color: barColor }}>
-              {Number.isFinite(primaryScore) ? primaryScore : 0}
-              <span style={{ fontSize: 20, color: '#B0BEC5', marginLeft: 3 }}>/100</span>
-            </span>
-            <span style={{ fontSize: 13, color: '#546E7A' }}>{statusText}</span>
-          </div>
+          <button {...tabButton('coach', 'Coach')} />
+          <button {...tabButton('scan', 'AI Scan')} />
+          <button {...tabButton('keywords', 'Keywords')} />
+        </div>
 
-          <div
-            style={{
-              height: 8,
-              borderRadius: 999,
-              background: '#ECEFF1',
-              overflow: 'hidden',
-            }}
-          >
+        {/* Active module */}
+        <div style={{ marginTop: 10 }}>
+          {activePanel === 'coach' && (
             <div
               style={{
-                width: `${Math.max(0, Math.min(100, primaryScore))}%`,
-                height: '100%',
-                background: barColor,
-                transition: 'width 0.3s ease',
+                padding: 11,
+                borderRadius: 14,
+                border: '1px solid #FFE0B2',
+                background: '#FFF8E1',
               }}
-            />
-          </div>
-
-          <div style={{ fontSize: 12, color: '#90A4AE', marginTop: 4 }}>
-            Keyword coverage (title/role terms): <strong>{keywordCoverage}%</strong>
-            {aiScore === null && ' — run an AI scan to unlock full scoring.'}
-          </div>
-        </div>
-
-        {/* Two action cards */}
-        <div
-          style={{
-            marginTop: 16,
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 16,
-          }}
-        >
-          <div
-            style={{
-              background: '#FFF8E1',
-              borderRadius: 16,
-              border: '1px solid #FFE0B2',
-              padding: 18,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              minHeight: 170,
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: '#F97316', marginBottom: 6 }}>
-                Match Score
+            >
+              <div style={{ fontSize: 14, fontWeight: 950, color: '#F97316', marginBottom: 4 }}>
+                Ask the Coach
               </div>
-              <div style={{ fontSize: 14, color: '#4B5563', lineHeight: 1.4 }}>
-                Run an AI scan to generate a stronger, job-aware score and guidance.
+              <div style={{ fontSize: 12, color: '#4B5563', lineHeight: 1.4 }}>
+                Work one section at a time. Get section-specific guidance for this job.
               </div>
 
-              <div
+              <button
+                type="button"
+                onClick={openCoachOverview}
                 style={{
-                  marginTop: 14,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  fontSize: 12,
-                  color: '#607D8B',
+                  marginTop: 10,
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 999,
+                  border: 'none',
+                  background: ORANGE,
+                  color: 'white',
+                  fontWeight: 950,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 14px rgba(0,0,0,0.14)',
                 }}
               >
-                <span
-                  style={{
-                    width: 44,
-                    height: 4,
-                    borderRadius: 999,
-                    background: '#CFD8DC',
-                    display: 'inline-block',
-                  }}
-                />
-                <span>Uses AI + keyword coverage.</span>
+                Review overall alignment
+              </button>
+
+              <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
+                {[
+                  { label: 'Summary', section: 'summary' as const },
+                  { label: 'Skills', section: 'skills' as const },
+                  { label: 'Experience bullets', section: 'experience' as const },
+                  { label: 'Education', section: 'education' as const },
+                ].map((item) => (
+                  <button
+                    key={item.section}
+                    type="button"
+                    onClick={() => openCoach(item.section, null)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 10,
+                      padding: '8px 9px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(255,112,67,0.18)',
+                      background: 'rgba(255,255,255,0.82)',
+                      color: '#334155',
+                      fontWeight: 900,
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span>{item.label}</span>
+                    <span style={{ color: ORANGE, fontSize: 11 }}>Open</span>
+                  </button>
+                ))}
               </div>
 
-              {aiError && (
-                <div style={{ marginTop: 10, fontSize: 12, color: '#C62828' }}>
-                  {aiError}
+              {coachOpen && (
+                <div style={{ marginTop: 10 }}>
+                  <CoachSuggestionsPanel
+                    open={true}
+                    embedded={true}
+                    onClose={() => setCoachOpen(false)}
+                    context={coachContext}
+                    jdText={jdText}
+                    resumeData={resumeData}
+                    missing={{
+                      high: missingTitleKeywords,
+                      tools: [],
+                      edu: [],
+                      soft: [],
+                    }}
+                    onAddSkill={onAddSkill}
+                    onAddSummary={onAddSummary}
+                    onAddBullet={onAddBullet}
+                  />
                 </div>
               )}
             </div>
+          )}
 
-            <button
-              type="button"
-              onClick={runAiScan}
-              disabled={aiLoading}
-              style={{
-                marginTop: 14,
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: 999,
-                border: 'none',
-                background: '#FF7043',
-                color: 'white',
-                fontWeight: 900,
-                fontSize: 15,
-                cursor: aiLoading ? 'not-allowed' : 'pointer',
-                opacity: aiLoading ? 0.75 : 1,
-                boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
-              }}
-            >
-              {aiLoading ? 'Thinking…' : 'Run AI Scan'}
-            </button>
-          </div>
-
-          <div
-            style={{
-              background: '#FFF8E1',
-              borderRadius: 16,
-              border: '1px solid #FFE0B2',
-              padding: 18,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              minHeight: 170,
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: '#F97316', marginBottom: 6 }}>
-                Resume Coach
-              </div>
-              <div style={{ fontSize: 14, color: '#4B5563', lineHeight: 1.4 }}>
-                Get paste-ready wording suggestions to align your summary, skills, and bullets to this job.
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={openCoachOverview}
-              style={{
-                marginTop: 14,
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: 999,
-                border: 'none',
-                background: '#FF7043',
-                color: 'white',
-                fontWeight: 900,
-                fontSize: 15,
-                cursor: 'pointer',
-                boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
-              }}
-            >
-              Ask the Coach
-            </button>
-
-            <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
-              {[
-                { label: 'Summary', section: 'summary' as const },
-                { label: 'Skills', section: 'skills' as const },
-                { label: 'Experience bullets', section: 'experience' as const },
-                { label: 'Education', section: 'education' as const },
-              ].map((item) => (
-                <button
-                  key={item.section}
-                  type="button"
-                  onClick={() => openCoach(item.section, null)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                    padding: '9px 10px',
-                    borderRadius: 10,
-                    border:
-                      coachOpen && coachContext.section === item.section
-                        ? '1px solid rgba(255,112,67,0.55)'
-                        : '1px solid rgba(255,112,67,0.18)',
-                    background:
-                      coachOpen && coachContext.section === item.section
-                        ? 'rgba(255,112,67,0.08)'
-                        : 'rgba(255,255,255,0.82)',
-                    color: '#334155',
-                    fontWeight: 900,
-                    fontSize: 12,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <span>{item.label}</span>
-                  <span style={{ color: '#FF7043', fontSize: 11 }}>Open</span>
-                </button>
-              ))}
-            </div>
-
-            {coachOpen && (
-              <div style={{ marginTop: 12 }}>
-                <CoachSuggestionsPanel
-                  open={true}
-                  embedded={true}
-                  onClose={() => setCoachOpen(false)}
-                  context={coachContext}
-                  jdText={jdText}
-                  resumeData={resumeData}
-                  missing={{
-                    high: missingTitleKeywords,
-                    tools: [],
-                    edu: [],
-                    soft: [],
-                  }}
-                  onAddSkill={onAddSkill}
-                  onAddSummary={onAddSummary}
-                  onAddBullet={onAddBullet}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {!expanded ? null : (
-          <>
-            {/* AI scan results */}
-            {(aiUpgrade || (aiScore !== null && !aiLoading) || normalizedTips.length > 0) && (
-              <div
-                style={{
-                  marginTop: 16,
-                  padding: 14,
-                  borderRadius: 12,
-                  border: '1px solid #FFE0B2',
-                  background: '#FFF3E0',
-                }}
-              >
-                {aiUpgrade ? (
-                  <>
-                    <div style={{ fontWeight: 800, color: '#E65100', marginBottom: 6 }}>
-                      You&apos;ve used your free AI scans for this month.
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => (window.location.href = '/pricing')}
-                      style={{
-                        padding: '10px 16px',
-                        borderRadius: 10,
-                        border: 'none',
-                        background: '#FF7043',
-                        color: 'white',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Upgrade to Pro
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {aiScore !== null && (
-                      <div style={{ fontWeight: 900, fontSize: 18, color: '#263238' }}>
-                        AI Score: {aiScore}/100
-                      </div>
-                    )}
-
-                    {normalizedTips.length > 0 && (
-                      <ul style={{ margin: '10px 0 0', paddingLeft: 18, fontSize: 13, color: '#37474F' }}>
-                        {normalizedTips.map((tip, i) => (
-                          <li key={i} style={{ marginBottom: 6 }}>
-                            {tip}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Bucket mini-cards */}
+          {activePanel === 'scan' && (
             <div
               style={{
-                marginTop: 20,
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                gap: 8,
+                padding: 11,
+                borderRadius: 14,
+                border: '1px solid #E2E8F0',
+                background: '#FFFFFF',
               }}
             >
-              {buckets.map((b) => (
+              <div style={{ fontSize: 14, fontWeight: 950, color: '#263238', marginBottom: 4 }}>
+                AI Scan
+              </div>
+              <div style={{ fontSize: 12, color: '#607D8B', lineHeight: 1.4 }}>
+                Use this after coaching edits to confirm the resume is ready.
+              </div>
+
+              <button
+                type="button"
+                onClick={runAiScan}
+                disabled={aiLoading}
+                style={{
+                  marginTop: 10,
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 999,
+                  border: 'none',
+                  background: '#263238',
+                  color: 'white',
+                  fontWeight: 950,
+                  fontSize: 13,
+                  cursor: aiLoading ? 'not-allowed' : 'pointer',
+                  opacity: aiLoading ? 0.75 : 1,
+                }}
+              >
+                {aiLoading ? 'Thinking…' : aiScore === null ? 'Run AI Scan' : 'Run Scan Again'}
+              </button>
+
+              {aiError && (
+                <div style={{ marginTop: 9, fontSize: 12, color: '#C62828', fontWeight: 800 }}>
+                  {aiError}
+                </div>
+              )}
+
+              {(aiUpgrade || (aiScore !== null && !aiLoading) || normalizedTips.length > 0) && (
                 <div
-                  key={b.key}
                   style={{
-                    padding: 10,
-                    borderRadius: 10,
-                    border: '1px solid #ECEFF1',
-                    background: '#FAFAFA',
-                    fontSize: 12,
+                    marginTop: 10,
+                    padding: 11,
+                    borderRadius: 12,
+                    border: '1px solid #FFE0B2',
+                    background: '#FFF8E1',
                   }}
                 >
-                  <div style={{ fontWeight: 700, color: '#37474F', marginBottom: 2 }}>
-                    {b.label}
-                  </div>
-                  <div style={{ color: '#607D8B' }}>
-                    {b.total > 0 ? `${b.matched}/${b.total} matched` : '0/0 matched'}
-                  </div>
-                  <div style={{ marginTop: 2, fontWeight: 600, color: '#455A64' }}>
-                    {b.points} pts
-                  </div>
-                </div>
-              ))}
-            </div>
+                  {aiUpgrade ? (
+                    <>
+                      <div style={{ fontWeight: 900, color: '#E65100', marginBottom: 8, fontSize: 13 }}>
+                        You&apos;ve used your free AI scans for this month.
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => (window.location.href = '/pricing')}
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: 999,
+                          border: 'none',
+                          background: ORANGE,
+                          color: 'white',
+                          fontWeight: 900,
+                          cursor: 'pointer',
+                          width: '100%',
+                        }}
+                      >
+                        Upgrade to Pro
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {aiScore !== null && (
+                        <div style={{ fontWeight: 950, fontSize: 15, color: '#263238' }}>
+                          AI Score: {aiScore}/100
+                        </div>
+                      )}
 
-            {/* Keyword breakdown */}
-            <div style={{ marginTop: 18, borderTop: '1px solid #ECEFF1', paddingTop: 14 }}>
-              <details>
+                      {normalizedTips.length > 0 && (
+                        <ul
+                          style={{
+                            margin: '8px 0 0',
+                            paddingLeft: 18,
+                            fontSize: 12,
+                            color: '#37474F',
+                            lineHeight: 1.42,
+                          }}
+                        >
+                          {normalizedTips.slice(0, 4).map((tip, i) => (
+                            <li key={i} style={{ marginBottom: 5 }}>
+                              {tip}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activePanel === 'keywords' && (
+            <div
+              style={{
+                padding: 11,
+                borderRadius: 14,
+                border: '1px solid #E2E8F0',
+                background: '#FFFFFF',
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 950, color: '#263238', marginBottom: 4 }}>
+                Keyword Breakdown
+              </div>
+              <div style={{ fontSize: 12, color: '#607D8B', lineHeight: 1.4 }}>
+                Use this as a checklist. Let the coach handle wording.
+              </div>
+
+              <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                {buckets.map((b) => {
+                  const percent = Math.max(0, Math.min(100, b.points));
+
+                  return (
+                    <div key={b.key}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                          fontSize: 12,
+                          fontWeight: 900,
+                          color: '#37474F',
+                          marginBottom: 3,
+                        }}
+                      >
+                        <span>{b.label}</span>
+                        <span style={{ color: percent > 0 ? ORANGE : '#90A4AE' }}>
+                          {percent}%
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          height: 8,
+                          borderRadius: 999,
+                          background: '#ECEFF1',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${percent}%`,
+                            height: '100%',
+                            background: percent > 0 ? ORANGE : '#CFD8DC',
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ marginTop: 3, fontSize: 11, color: '#607D8B' }}>
+                        {b.total > 0 ? `${b.matched}/${b.total} matched` : '0/0 matched'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <details style={{ marginTop: 10 }}>
                 <summary
                   style={{
                     cursor: 'pointer',
-                    fontSize: 14,
-                    fontWeight: 600,
+                    fontSize: 12,
+                    fontWeight: 900,
                     color: '#37474F',
                     listStyle: 'none',
+                    padding: '8px 9px',
+                    borderRadius: 10,
+                    border: '1px solid #E2E8F0',
+                    background: '#F8FAFC',
                   }}
                 >
-                  View keyword breakdown
+                  View missing role terms
                 </summary>
 
-                <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-                  <div
-                    style={{
-                      padding: 12,
-                      borderRadius: 10,
-                      border: '1px solid #ECEFF1',
-                      background: '#FFFFFF',
-                    }}
-                  >
-                    <div style={{ fontWeight: 700, marginBottom: 4, color: '#263238' }}>
-                      High-impact title / role terms
-                    </div>
-
-                    {titleKeywords.length === 0 ? (
-                      <p style={{ margin: 0, fontSize: 13, color: '#388E3C' }}>
-                        No missing keywords here — nice!
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: 10,
+                    borderRadius: 10,
+                    border: '1px solid #ECEFF1',
+                    background: '#FFFFFF',
+                  }}
+                >
+                  {titleKeywords.length === 0 ? (
+                    <p style={{ margin: 0, fontSize: 12, color: '#388E3C' }}>
+                      No missing keywords here. Nice.
+                    </p>
+                  ) : missingTitleKeywords.length === 0 ? (
+                    <p style={{ margin: 0, fontSize: 12, color: '#388E3C' }}>
+                      No missing title/role keywords. Strong alignment.
+                    </p>
+                  ) : (
+                    <>
+                      <p style={{ margin: 0, fontSize: 12, color: '#546E7A', lineHeight: 1.4 }}>
+                        Consider weaving these into your summary, skills, or experience section.
                       </p>
-                    ) : missingTitleKeywords.length === 0 ? (
-                      <p style={{ margin: 0, fontSize: 13, color: '#388E3C' }}>
-                        No missing title/role keywords — strong alignment.
-                      </p>
-                    ) : (
-                      <>
-                        <p style={{ margin: 0, fontSize: 13, color: '#546E7A' }}>
-                          Consider weaving in these terms somewhere in your summary, skills, or experience section:
-                        </p>
-                        <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, color: '#37474F' }}>
-                          {missingTitleKeywords.map((kw) => (
-                            <li key={kw}>{kw}</li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-                  </div>
-
-                  {['High-impact hard skills', 'Tools / Platforms', 'Education', 'Soft skills'].map((label) => (
-                    <div
-                      key={label}
-                      style={{
-                        padding: 12,
-                        borderRadius: 10,
-                        border: '1px solid #ECEFF1',
-                        background: '#FFFFFF',
-                      }}
-                    >
-                      <div style={{ fontWeight: 700, marginBottom: 4, color: '#263238' }}>
-                        {label}
+                      <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {missingTitleKeywords.map((kw) => (
+                          <button
+                            key={kw}
+                            type="button"
+                            onClick={() => openCoach('skills', kw)}
+                            style={{
+                              border: '1px solid rgba(255,112,67,0.28)',
+                              background: 'rgba(255,112,67,0.08)',
+                              color: '#C2410C',
+                              cursor: 'pointer',
+                              padding: '5px 8px',
+                              borderRadius: 999,
+                              fontSize: 11,
+                              fontWeight: 900,
+                            }}
+                          >
+                            {kw}
+                          </button>
+                        ))}
                       </div>
-                      <p style={{ margin: 0, fontSize: 13, color: '#388E3C' }}>
-                        No missing keywords here — nice!
-                      </p>
-                    </div>
-                  ))}
+                    </>
+                  )}
                 </div>
               </details>
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
