@@ -344,7 +344,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       resume: resumeData,
       context,
       missing,
-      jobMeta,
+      jobMeta: jobMeta as any,
     });
 
     // ── Call Groq ─────────────────────────────────────────────────────────
