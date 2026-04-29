@@ -553,10 +553,10 @@ export default function CoachSuggestionsPanel(props) {
 
               {/* Empty section state */}
               {showEmptySection && (
-                <div style={{ padding: 10, borderRadius: 10, background: '#FFFFFF', border: '1px solid #FFE0B2', fontSize: 12, color: '#6D4C41', lineHeight: 1.45 }}>
-                  No education requirement was detected in this job description.
-                </div>
-              )}
+				<div style={{ padding: 10, borderRadius: 10, background: '#FFFFFF', border: '1px solid #FFE0B2', fontSize: 12, color: '#6D4C41', lineHeight: 1.45 }}>
+					No targeted feedback was returned for this section. If relevant education, certifications, or training are present, they may still support recruiter credibility even when the JD does not list them as a hard requirement.
+				</div>
+			  )}
             </div>
           </>
         )}
