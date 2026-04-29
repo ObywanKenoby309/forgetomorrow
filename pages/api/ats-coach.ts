@@ -7,7 +7,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
-import { buildSectionCoachPrompt } from '@/lib/forge/strategyBrain';
+import {
+  buildSectionCoachPrompt,
+  buildJDSignalExtractionPrompt,
+} from '@/lib/forge/strategyBrain';
 
 type CoachRequestBody = {
   jdText?: string;
@@ -114,6 +117,54 @@ function tipFromAction(action: any) {
   if (typeof action === 'string') return action;
   if (!action || typeof action !== 'object') return '';
   return safe(action.requiredSignal || action.signal || action.requirement);
+}
+
+function parseJsonObject(raw: string) {
+  let parsed: any = null;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      try { parsed = JSON.parse(raw.slice(start, end + 1)); } catch { parsed = null; }
+    }
+  }
+
+  return parsed && typeof parsed === 'object' ? parsed : null;
+}
+
+function mergeExtractedSignalsIntoMissing(missing: any, extracted: any) {
+  const hard = Array.isArray(extracted?.hardRequirements) ? extracted.hardRequirements : [];
+  const preferred = Array.isArray(extracted?.preferredSignals) ? extracted.preferredSignals : [];
+  const delivery = Array.isArray(extracted?.deliverySignals) ? extracted.deliverySignals : [];
+  const credibility = Array.isArray(extracted?.credibilitySignals) ? extracted.credibilitySignals : [];
+  const tools = Array.isArray(extracted?.toolsAndPlatforms) ? extracted.toolsAndPlatforms : [];
+  const education = Array.isArray(extracted?.educationSignals) ? extracted.educationSignals : [];
+  const soft = Array.isArray(extracted?.softSignals) ? extracted.softSignals : [];
+
+  return {
+    high: [
+      ...(Array.isArray(missing?.high) ? missing.high : []),
+      ...hard,
+      ...preferred,
+      ...delivery,
+      ...credibility,
+    ].filter(Boolean),
+    tools: [
+      ...(Array.isArray(missing?.tools) ? missing.tools : []),
+      ...tools,
+    ].filter(Boolean),
+    edu: [
+      ...(Array.isArray(missing?.edu) ? missing.edu : []),
+      ...education,
+    ].filter(Boolean),
+    soft: [
+      ...(Array.isArray(missing?.soft) ? missing.soft : []),
+      ...soft,
+    ].filter(Boolean),
+  };
 }
 
 // ─── gate ─────────────────────────────────────────────────────────────────────
@@ -337,16 +388,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const jobMeta = body.jobMeta || null;
     const requestedSection = String(context?.section || 'overview').toLowerCase().trim();
 
-    // ── Build prompt via strategyBrain ────────────────────────────────────
-    // This is the intelligence layer — environment detection, hiring lens,
-    // full snapshot with bullets, section routing, all decision language.
-    const brainPrompt = buildSectionCoachPrompt({
-      jdText,
-      resume: resumeData,
-      context,
-      missing,
-      jobMeta: jobMeta as any,
-    });
+    // ── Extract JD signals first ──────────────────────────────────────────
+// This makes Hammer JD-first instead of keyword-list-first.
+const signalPrompt = buildJDSignalExtractionPrompt({
+  jdText,
+  jobMeta: jobMeta as any,
+});
+
+const signalRes = await callGroq(apiKey, model, signalPrompt);
+const signalData = await signalRes.json();
+const signalRaw = signalData.choices?.[0]?.message?.content?.toString().trim() || '';
+const extractedSignals = parseJsonObject(signalRaw);
+
+const mergedMissing = mergeExtractedSignalsIntoMissing(missing, extractedSignals);
+
+// ── Build prompt via strategyBrain ────────────────────────────────────
+// This is the intelligence layer — environment detection, hiring lens,
+// full snapshot with bullets, section routing, all decision language.
+const brainPrompt = buildSectionCoachPrompt({
+  jdText,
+  resume: resumeData,
+  context,
+  missing: mergedMissing,
+  jobMeta: jobMeta as any,
+});
 
     // For overview calls, append a hard section-forcing instruction.
     // The brain's JSON template has section:"" which causes the 8B model
@@ -362,7 +427,7 @@ You MUST return exactly one action with "section": "experience".
 Do NOT assign the same section value to more than one action.
 Do NOT return all actions tagged as "summary".
 The "section" field must be one of: "summary", "skills", "experience", "education".
-Only include "education" if the JD explicitly requires a degree, certification, or license.`
+Include "education" if the JD explicitly requires a degree, certification, license, clearance, or if the resume contains relevant education, certifications, or technical training that strengthens recruiter confidence.`
       : brainPrompt;
 
     // ── Call Groq ─────────────────────────────────────────────────────────
