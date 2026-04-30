@@ -411,6 +411,32 @@ export default function CreateResumePage() {
     }catch{alert('Save failed. Try again.');}
   };
 
+const handleDeleteResume = async (resumeId) => {
+  if (!confirm('Delete this resume? This cannot be undone.')) return;
+
+  try {
+    const res = await fetch('/api/resume/save', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: resumeId }),
+    });
+
+    if (!res.ok) throw new Error('Delete failed');
+
+    setExistingResumes(prev =>
+      prev.filter(r => String(r.id) !== String(resumeId))
+    );
+
+    if (String(selectedResumeId) === String(resumeId)) {
+      setSelectedResumeId('');
+    }
+
+    showBriefToast('Resume deleted.');
+  } catch {
+    alert('Could not delete resume. Try again.');
+  }
+};
+
   const handleLoadSelectedResume=async()=>{ if(!selectedResumeId) return; await router.push(withChrome(`/resume/create?resumeId=${encodeURIComponent(selectedResumeId)}&template=${isHybrid?'hybrid':'reverse'}`)); };
   const handleCreateNewResume=async()=>{ setSelectedResumeId(''); hasAppliedResumeLoadRef.current=false; await router.push(withChrome(`/resume/create?template=${isHybrid?'hybrid':'reverse'}`)); };
 
@@ -437,7 +463,8 @@ export default function CreateResumePage() {
                   </div>
                   <button onClick={()=>handleOverwrite(r.id,r.name||'Resume',false)} style={{padding:'6px 12px',background:'white',border:'1px solid #E2E8F0',borderRadius:8,fontWeight:700,fontSize:12,cursor:'pointer',color:'#334155'}}>Overwrite</button>
                   <button onClick={()=>handleOverwrite(r.id,r.name||'Resume',true)} style={{padding:'6px 12px',background:ORANGE,border:'none',borderRadius:8,fontWeight:700,fontSize:12,cursor:'pointer',color:'white'}} title="Save and set as primary">⭐ Set Primary</button>
-                </div>
+				  <button onClick={() => handleDeleteResume(r.id)} style={{padding:'6px 12px',background:'white',border:'1px solid #FECACA',borderRadius:8,fontWeight:700,fontSize:12,cursor:'pointer',color:'#DC2626'}}title="Delete this resume">🗑 Delete</button>
+				</div>
               ))}
             </div>
           </>
