@@ -21,6 +21,7 @@ type CoachRequestBody = {
   };
   context?: any;
   missing?: any;
+  attemptCount?: number;
   jobMeta?: {
     title?: string;
     company?: string;
@@ -49,12 +50,21 @@ export type CoachStructured = {
   summaryFix: { original: string; improved: string; reason: string } | null;
 };
 
+type TrajectoryData = {
+  triggered: true;
+  targetRole: string;
+  gapSummary: string;
+  suggestedRoles: { role: string; reason: string }[];
+  coachMessage: string;
+} | { triggered: false };
+
 type CoachResponse =
   | {
       ok: true;
       text: string;
       tips: string[];
       structured: CoachStructured | null;
+      trajectory: TrajectoryData;
       raw?: string;
       upgrade?: boolean;
     }
@@ -284,6 +294,133 @@ function normalizeStructured(parsed: any): CoachStructured {
   };
 }
 
+// ─── trajectory evaluation ───────────────────────────────────────────────────
+
+function shouldTriggerTrajectory(structured: CoachStructured, attemptCount: number): boolean {
+  if (attemptCount < 2) return false;
+  
+  // Count survivable or worse signals across all actions
+  const weakSignals = structured.improvementActions.filter(a => {
+    const impact = (a.hiringImpact || '').toLowerCase();
+    return (
+      impact.includes('likely screen-out') ||
+      impact.includes('major screening risk') ||
+      impact.includes('moderate screening risk')
+    );
+  });
+
+  // Trigger trajectory if 2+ core sections still have moderate or worse gaps after second attempt
+  return weakSignals.length >= 2;
+}
+
+async function buildTrajectory(
+  apiKey: string,
+  model: string,
+  structured: CoachStructured,
+  jdText: string,
+  resumeData: any,
+  jobMeta: any
+): Promise<TrajectoryData> {
+  const targetRole = jobMeta?.title || 'the target role';
+  const gaps = structured.improvementActions
+    .filter(a => {
+      const impact = (a.hiringImpact || '').toLowerCase();
+      return impact.includes('screen-out') || impact.includes('screening risk');
+    })
+    .map(a => a.requiredSignal)
+    .filter(Boolean)
+    .join(', ');
+
+  const resumeText = [
+    resumeData?.summary || '',
+    (resumeData?.skills || []).join(', '),
+    (resumeData?.workExperiences || resumeData?.experiences || [])
+      .map((e: any) => `${e.title || ''} at ${e.company || ''}`)
+      .join(', '),
+  ].filter(Boolean).join('. ');
+
+  const trajectoryPrompt = `
+You are a senior career strategist at ForgeTomorrow.
+
+A seeker has attempted twice to align their resume to a target role and still has significant gaps.
+Your job is NOT to discourage them. Your job is to be honest and redirect them toward roles where they are genuinely competitive RIGHT NOW — and show them the path to eventually reach their target role.
+
+TARGET ROLE: ${targetRole}
+
+PERSISTENT GAPS AFTER TWO ATTEMPTS:
+${gaps || 'Multiple core signal gaps remain'}
+
+RESUME SNAPSHOT:
+${resumeText.slice(0, 1500)}
+
+JOB DESCRIPTION CONTEXT:
+${(jdText || '').slice(0, 800)}
+
+Return ONLY valid JSON in this exact shape:
+{
+  "gapSummary": "One honest sentence explaining why the gap to the target role is currently too wide to close with resume edits alone.",
+  "suggestedRoles": [
+    { "role": "Role title", "reason": "Why this resume is competitive for this role right now." },
+    { "role": "Role title", "reason": "Why this resume is competitive for this role right now." },
+    { "role": "Role title", "reason": "Why this resume is competitive for this role right now." }
+  ],
+  "coachMessage": "One warm, honest, forward-looking sentence. Acknowledge the ambition, validate the adjacent strength, encourage connecting with a coach or mentor to build toward the target role. Do not be dismissive. Do not be falsely positive."
+}
+
+RULES:
+- suggestedRoles must be real roles this resume could get interviews for TODAY based on what the resume actually proves.
+- Do not suggest the target role or a variation of it.
+- Do not invent experience the resume doesn't show.
+- The coachMessage must feel human, not robotic. It should sound like a mentor, not a rejection letter.
+- Return ONLY valid JSON.
+`.trim();
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: 'You are ForgeTomorrow career intelligence. Return ONLY valid JSON.' },
+          { role: 'user', content: trajectoryPrompt },
+        ],
+        temperature: 0.2,
+        max_tokens: 600,
+      }),
+    });
+
+    if (!response.ok) return { triggered: false };
+
+    const data = await response.json();
+    const raw = data.choices?.[0]?.message?.content?.toString().trim() || '';
+    
+    let parsed: any = null;
+    try { parsed = JSON.parse(raw); } catch {
+      const s = raw.indexOf('{'); const e = raw.lastIndexOf('}');
+      if (s >= 0 && e > s) try { parsed = JSON.parse(raw.slice(s, e + 1)); } catch { parsed = null; }
+    }
+
+    if (!parsed || !Array.isArray(parsed.suggestedRoles)) return { triggered: false };
+
+    return {
+      triggered: true,
+      targetRole,
+      gapSummary: safe(parsed.gapSummary),
+      suggestedRoles: parsed.suggestedRoles
+        .slice(0, 3)
+        .map((r: any) => ({ role: safe(r.role), reason: safe(r.reason) }))
+        .filter((r: any) => r.role),
+      coachMessage: safe(parsed.coachMessage),
+    };
+  } catch {
+    return { triggered: false };
+  }
+}
+
 // ─── handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<CoachResponse>) {
@@ -313,6 +450,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             'Upgrade to Seeker Pro for unlimited Coach + Score and deeper rewrites.',
           ],
           structured: null,
+          trajectory: { triggered: false },
         });
       }
     } catch (e) {
@@ -335,6 +473,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const missing = body.missing || {};
     const jobMeta = body.jobMeta || null;
     const requestedSection = String(context?.section || 'overview').toLowerCase().trim();
+    const attemptCount = Number(body.attemptCount || 1);
 
     // ── Build prompt via strategyBrain ────────────────────────────────────
     // This restores the live-safe single Groq call flow.
@@ -387,6 +526,7 @@ Include "education" if the JD explicitly requires a degree, certification, licen
         text: raw || 'Coach returned a response but it could not be formatted. Try again.',
         tips: [],
         structured: null,
+        trajectory: { triggered: false },
         raw,
       });
     }
@@ -399,11 +539,19 @@ Include "education" if the JD explicitly requires a degree, certification, licen
       ...structured.improvementActions.map((a) => a.requiredSignal),
     ].filter(Boolean);
 
+    // ── Trajectory evaluation ─────────────────────────────────────────────
+    // On second+ attempt, if core gaps persist, fire trajectory analysis.
+    let trajectory: TrajectoryData = { triggered: false };
+    if (requestedSection === 'overview' && shouldTriggerTrajectory(structured, attemptCount)) {
+      trajectory = await buildTrajectory(apiKey, model, structured, jdText, resumeData, jobMeta);
+    }
+
     return res.status(200).json({
       ok: true,
       text: structuredToText(structured),
       tips,
       structured,
+      trajectory,
       raw,
     });
 
@@ -417,6 +565,7 @@ Include "education" if the JD explicitly requires a degree, certification, licen
         text: 'Coach is receiving too many requests right now. Wait a few seconds and run the coach again.',
         tips: ['Rate limit reached. Wait a few seconds and retry.'],
         structured: null,
+        trajectory: { triggered: false },
         raw: msg,
       });
     }

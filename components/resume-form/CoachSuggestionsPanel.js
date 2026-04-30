@@ -231,6 +231,109 @@ function ActionCard({ action, onAddSkill, onAddSummary, onAddBullet }) {
   );
 }
 
+// ─── TrajectoryCard ──────────────────────────────────────────────────────────
+
+function TrajectoryCard({ trajectory, onClose }) {
+  if (!trajectory?.triggered) return null;
+
+  return (
+    <div
+      style={{
+        padding: 14,
+        borderRadius: 12,
+        background: 'linear-gradient(135deg, #FFF8E1, #FFF3E0)',
+        border: '1px solid #FFCC80',
+        boxShadow: '0 4px 16px rgba(255,112,67,0.12)',
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 18 }}>🧭</span>
+        <div style={{ fontWeight: 900, fontSize: 14, color: '#E65100' }}>
+          Career Trajectory
+        </div>
+      </div>
+
+      {/* Gap summary */}
+      <div
+        style={{
+          padding: 10,
+          borderRadius: 10,
+          background: '#FFFFFF',
+          border: '1px solid #FFE0B2',
+          fontSize: 12,
+          color: '#5D4037',
+          lineHeight: 1.55,
+          marginBottom: 12,
+        }}
+      >
+        <strong>Honest assessment:</strong> {trajectory.gapSummary}
+      </div>
+
+      {/* Where they ARE competitive */}
+      <div style={{ fontWeight: 900, fontSize: 12, color: '#BF360C', marginBottom: 8 }}>
+        Where your resume is competitive right now:
+      </div>
+
+      <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+        {trajectory.suggestedRoles.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              padding: 10,
+              borderRadius: 10,
+              background: '#E8F5E9',
+              border: '1px solid #C8E6C9',
+              fontSize: 12,
+              color: '#1B5E20',
+              lineHeight: 1.45,
+            }}
+          >
+            <div style={{ fontWeight: 900, marginBottom: 3 }}>{item.role}</div>
+            <div>{item.reason}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Coach message */}
+      <div
+        style={{
+          padding: 10,
+          borderRadius: 10,
+          background: '#E3F2FD',
+          border: '1px solid #BBDEFB',
+          fontSize: 12,
+          color: '#0D47A1',
+          lineHeight: 1.55,
+          marginBottom: 12,
+        }}
+      >
+        <span style={{ fontWeight: 900 }}>A note from your career strategist: </span>
+        {trajectory.coachMessage}
+      </div>
+
+      {/* CTA */}
+      <a
+        href="/coaching"
+        style={{
+          display: 'block',
+          textAlign: 'center',
+          padding: '10px 14px',
+          borderRadius: 999,
+          background: '#FF7043',
+          color: 'white',
+          fontWeight: 900,
+          fontSize: 13,
+          textDecoration: 'none',
+          cursor: 'pointer',
+        }}
+      >
+        Connect with a ForgeTomorrow Coach →
+      </a>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 /**
@@ -253,11 +356,14 @@ export default function CoachSuggestionsPanel(props) {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [structured, setStructured] = useState(null);
+  const [trajectory, setTrajectory] = useState(null);  // TrajectoryData | null
   const [fallbackText, setFallbackText] = useState('');
   const [error, setError] = useState(null);
 
   // Track the last request key (JD+resume snapshot) to avoid redundant API calls
   const lastRequestKeyRef = useRef('');
+  const attemptCountRef = useRef(0);          // tracks how many unique resume snapshots have been sent
+  const seenKeysRef = useRef(new Set());       // tracks which keys have been sent
 
   useEffect(() => {
     setMounted(true);
@@ -286,6 +392,7 @@ export default function CoachSuggestionsPanel(props) {
   const hasParsedContent = Boolean(
     structured?.matchAssessment ||
     structured?.improvementActions?.length > 0 ||
+    trajectory?.triggered ||
     fallbackText
   );
 
@@ -294,16 +401,21 @@ export default function CoachSuggestionsPanel(props) {
     setError(null);
 
     try {
+      // Track attempt count — increments each time a new unique resume snapshot is sent
+      if (!seenKeysRef.current.has(requestKey)) {
+        seenKeysRef.current.add(requestKey);
+        attemptCountRef.current = seenKeysRef.current.size;
+      }
+
       const resp = await fetch('/api/ats-coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jdText,
           resumeData,
-          // Always request overview so we get all sections in one call.
-          // The panel filters locally when the user clicks a specific section.
           context: { section: 'overview', keyword: null },
           missing,
+          attemptCount: attemptCountRef.current,
         }),
       });
 
@@ -330,6 +442,12 @@ export default function CoachSuggestionsPanel(props) {
         setStructured(data.structured);
         setFallbackText('');
         setError(null);
+        // Handle trajectory if triggered
+        if (data?.trajectory?.triggered) {
+          setTrajectory(data.trajectory);
+        } else {
+          setTrajectory(null);
+        }
         lastRequestKeyRef.current = requestKey;
         return;
       }
@@ -359,6 +477,7 @@ export default function CoachSuggestionsPanel(props) {
   useEffect(() => {
     if (!open) {
       setLoading(false);
+      setTrajectory(null);
       return;
     }
     if (!jdText?.trim()) return;
@@ -500,7 +619,15 @@ export default function CoachSuggestionsPanel(props) {
               {/* ── OVERVIEW: synopsis only — details live in individual sections ── */}
               {isOverview && (
                 <>
-                  {structured?.matchAssessment && (
+                  {/* Trajectory card — shown on 2nd attempt if core gaps persist */}
+                  {trajectory?.triggered && (
+                    <div style={{ marginBottom: 12 }}>
+                      <TrajectoryCard trajectory={trajectory} onClose={() => setTrajectory(null)} />
+                    </div>
+                  )}
+
+                  {/* Standard recruiter assessment — shown when no trajectory or alongside it */}
+                  {!trajectory?.triggered && structured?.matchAssessment && (
                     <div
                       style={{
                         padding: 12,
