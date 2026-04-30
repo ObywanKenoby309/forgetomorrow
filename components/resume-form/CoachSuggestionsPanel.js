@@ -314,7 +314,7 @@ function TrajectoryCard({ trajectory, onClose }) {
 
       {/* CTA */}
       <a
-        href="/coaching"
+        href="/the-hearth?module=mentorship"
         style={{
           display: 'block',
           textAlign: 'center',
@@ -359,6 +359,7 @@ export default function CoachSuggestionsPanel(props) {
   const [trajectory, setTrajectory] = useState(null);  // TrajectoryData | null
   const [fallbackText, setFallbackText] = useState('');
   const [error, setError] = useState(null);
+  const [feedbackSent, setFeedbackSent] = useState(null); // 'up' | 'down' | null
 
   // Track the last request key (JD+resume snapshot) to avoid redundant API calls
   const lastRequestKeyRef = useRef('');
@@ -396,6 +397,38 @@ export default function CoachSuggestionsPanel(props) {
     trajectory?.triggered ||
     fallbackText
   );
+
+  const sendFeedback = async (score, feedbackType = null, feedbackComment = null) => {
+    try {
+      await fetch('/api/tools/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toolName: 'forge-hammer-coach',
+          feedbackScore: score,
+          feedbackType: feedbackType || null,
+          feedbackComment: feedbackComment || null,
+          inputSnapshot: jdText ? jdText.slice(0, 500) : null,
+          outputSnapshot: structured?.matchAssessment || null,
+        }),
+      });
+    } catch (e) {
+      console.error('Feedback error', e);
+    }
+  };
+
+  const handleFeedbackUp = async () => {
+    await sendFeedback('up');
+    setFeedbackSent('up');
+  };
+
+  const handleFeedbackDown = async () => {
+    const feedbackType = window.prompt('What was wrong?\n- wrong_signals\n- too_generic\n- missed_evidence\n- other');
+    if (!feedbackType) return;
+    const feedbackComment = window.prompt('Optional: what should it have said?');
+    await sendFeedback('down', feedbackType, feedbackComment || null);
+    setFeedbackSent('down');
+  };
 
   const handleAsk = async () => {
     setLoading(true);
@@ -477,24 +510,29 @@ export default function CoachSuggestionsPanel(props) {
 
   // Fire when panel opens or JD/resume snapshot changes.
   // Does NOT re-fire when selectedSection changes — section changes filter locally.
+  // Reset state when panel closes
   useEffect(() => {
     if (!open) {
       setLoading(false);
       setTrajectory(null);
       trajectoryLockedRef.current = false;
-      return;
     }
-    if (!jdText?.trim()) return;
-    // Don't re-fire if trajectory is locked — ref-based so it survives React strict mode double-invoke
-    if (trajectoryLockedRef.current) return;
-    if (lastRequestKeyRef.current !== requestKey) {
+  }, [open]);
+
+  // When JD+resume snapshot changes, clear stale results so the user
+  // knows they need to run the coach again — but do NOT auto-fire.
+  useEffect(() => {
+    if (!open) return;
+    if (lastRequestKeyRef.current && lastRequestKeyRef.current !== requestKey) {
       setStructured(null);
       setFallbackText('');
       setError(null);
-      handleAsk();
+      setTrajectory(null);
+      trajectoryLockedRef.current = false;
+      lastRequestKeyRef.current = '';
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, requestKey, jdText]);
+  }, [requestKey]);
 
   const handleQuickInsert = (type) => {
     if (!structured && !fallbackText) return;
@@ -692,6 +730,34 @@ export default function CoachSuggestionsPanel(props) {
 			  )}
             </div>
           </>
+        )}
+        {/* Feedback row — shown after results load */}
+        {showReview && (
+          <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,224,178,0.6)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            {feedbackSent ? (
+              <span style={{ fontSize: 11, color: '#90A4AE' }}>
+                {feedbackSent === 'up' ? 'Thanks for the feedback 👍' : 'Feedback noted 👎'}
+              </span>
+            ) : (
+              <>
+                <span style={{ fontSize: 11, color: '#90A4AE', marginRight: 2 }}>Was this useful?</span>
+                <button
+                  type="button"
+                  onClick={handleFeedbackUp}
+                  style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.10)', background: 'white', fontSize: 12, cursor: 'pointer', color: '#37474F' }}
+                >
+                  👍 Useful
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFeedbackDown}
+                  style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.10)', background: 'white', fontSize: 12, cursor: 'pointer', color: '#37474F' }}
+                >
+                  👎 Needs Work
+                </button>
+              </>
+            )}
+          </div>
         )}
       </div>
     </div>

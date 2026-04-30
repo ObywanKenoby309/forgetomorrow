@@ -322,6 +322,12 @@ export default function TheHearth() {
   const chromeRaw = String(router.query.chrome || 'seeker').toLowerCase();
 
   const [activeModule, setActiveModule] = useState(null);
+  useEffect(() => {
+  const mod = router.query.module;
+  if (mod === 'mentorship' || mod === 'events' || mod === 'forums' || mod === 'resources') {
+    setActiveModule(mod);
+  }
+}, [router.isReady, router.query.module]);
 
   let Layout = SeekerLayout;
   let activeNav = 'the-hearth';

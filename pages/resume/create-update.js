@@ -44,6 +44,7 @@ export default function CreateResumePage() {
   const withChrome = (path) => (chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path);
 
   const fileInputRef = useRef(null);
+  const resumeFileInputRef = useRef(null);
   const dropRef = useRef(null);
   const hasAppliedUploadRef = useRef(false);
   const hasAppliedResumeLoadRef = useRef(false);
@@ -80,6 +81,7 @@ export default function CreateResumePage() {
   const [isEditMode, setIsEditMode] = useState(true);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [saveState, setSaveState] = useState('idle');
+  const [resumeUploadState, setResumeUploadState] = useState('idle'); // idle | uploading | done | error
 
   // ─── Resume data ──────────────────────────────────────────────────────────
   const resumeData = {
@@ -319,6 +321,53 @@ export default function CreateResumePage() {
     finally{if(fileInputRef.current) fileInputRef.current.value=''; setJdLoading(false);}
   };
 
+  // ─── Resume upload handler ───────────────────────────────────────────────
+  const handleResumeFile = async (file) => {
+    if (!file) return;
+    setResumeUploadState('uploading');
+    try {
+      // Extract text from the uploaded resume file
+      let raw = await extractTextFromFile(file);
+      if (!raw || !String(raw).trim()) {
+        setResumeUploadState('error');
+        showBriefToast('Could not read this file. Try a .docx or text-based PDF.');
+        return;
+      }
+
+      // Parse the resume text into structured data
+      const res = await fetch('/api/resume/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: raw.trim() }),
+      });
+
+      if (!res.ok) {
+        setResumeUploadState('error');
+        showBriefToast('Resume parsing failed. Try again.');
+        return;
+      }
+
+      const parsed = await res.json();
+      const applied = applyResumePayloadToState(parsed);
+
+      if (applied) {
+        setResumeUploadState('done');
+        showBriefToast('Resume imported — review and edit below.');
+        hasAppliedUploadRef.current = true;
+        triggerAutoSave();
+      } else {
+        setResumeUploadState('error');
+        showBriefToast('Could not parse resume fields. Try editing manually.');
+      }
+    } catch (e) {
+      setResumeUploadState('error');
+      showBriefToast(`Upload failed: ${e?.message || 'Unknown error'}`);
+    } finally {
+      if (resumeFileInputRef.current) resumeFileInputRef.current.value = '';
+      setTimeout(() => setResumeUploadState('idle'), 3000);
+    }
+  };
+
   // ─── Derived ──────────────────────────────────────────────────────────────
   const isHybrid = router.query.template==='hybrid';
   const fireMeta = atsJobMeta||jobMeta;
@@ -458,6 +507,22 @@ export default function CreateResumePage() {
                 <button type="button" onClick={handleSaveClick} style={{background:'#16A34A',color:'white',padding:'5px 11px',borderRadius:999,fontWeight:800,fontSize:12,border:'none',cursor:'pointer'}}>
                   {saveState==='saving'?'Saving…':saveState==='saved'?'✓ Saved':'Save Resume'}
                 </button>
+                <button
+                  type="button"
+                  onClick={()=>{if(resumeFileInputRef.current){resumeFileInputRef.current.value='';resumeFileInputRef.current.click();}}}
+                  disabled={resumeUploadState==='uploading'}
+                  style={{background:resumeUploadState==='done'?'#0F766E':resumeUploadState==='error'?'#B91C1C':'#334155',color:'white',padding:'5px 11px',borderRadius:999,fontWeight:800,fontSize:12,border:'none',cursor:resumeUploadState==='uploading'?'not-allowed':'pointer',opacity:resumeUploadState==='uploading'?0.7:1}}
+                  title="Upload an existing resume to auto-fill the builder"
+                >
+                  {resumeUploadState==='uploading'?'Importing…':resumeUploadState==='done'?'✓ Imported':'↑ Import Resume'}
+                </button>
+                <input
+                  ref={resumeFileInputRef}
+                  type="file"
+                  accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
+                  onChange={(e)=>{const f=e.target.files?.[0];if(f) handleResumeFile(f);}}
+                  style={{display:'none'}}
+                />
                 <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
                 <div style={{display:'flex',alignItems:'center',gap:5}}>
                   <div style={{position:'relative',width:26,height:26}}>
