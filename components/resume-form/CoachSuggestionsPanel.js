@@ -481,6 +481,8 @@ export default function CoachSuggestionsPanel(props) {
       return;
     }
     if (!jdText?.trim()) return;
+    // Don't re-fire if trajectory is already showing — it would overwrite it
+    if (trajectory?.triggered) return;
     if (lastRequestKeyRef.current !== requestKey) {
       setStructured(null);
       setFallbackText('');
@@ -488,7 +490,7 @@ export default function CoachSuggestionsPanel(props) {
       handleAsk();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, requestKey, jdText]);
+  }, [open, requestKey, jdText, trajectory]);
 
   const handleQuickInsert = (type) => {
     if (!structured && !fallbackText) return;
