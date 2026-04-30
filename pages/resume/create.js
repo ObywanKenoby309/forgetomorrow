@@ -411,65 +411,78 @@ export default function CreateResumePage() {
     }catch{alert('Save failed. Try again.');}
   };
 
-const handleDeleteResume = async (resumeId) => {
-  if (!confirm('Delete this resume? This cannot be undone.')) return;
+  const handleDeleteResume = async (resumeId) => {
+    if (!confirm('Delete this resume? This cannot be undone.')) return;
 
-  try {
-    const res = await fetch('/api/resume/save', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: resumeId }),
-    });
+    try {
+      const res = await fetch('/api/resume/save', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: resumeId }),
+      });
 
-    if (!res.ok) throw new Error('Delete failed');
+      if (!res.ok) throw new Error('Delete failed');
 
-    setExistingResumes(prev =>
-      prev.filter(r => String(r.id) !== String(resumeId))
-    );
+      setExistingResumes((prev) =>
+        prev.filter((r) => String(r.id) !== String(resumeId))
+      );
 
-    if (String(selectedResumeId) === String(resumeId)) {
-      setSelectedResumeId('');
+      if (String(selectedResumeId) === String(resumeId)) {
+        setSelectedResumeId('');
+      }
+
+      showBriefToast('Resume deleted.');
+    } catch {
+      alert('Could not delete resume. Try again.');
     }
-
-    showBriefToast('Resume deleted.');
-  } catch {
-    alert('Could not delete resume. Try again.');
-  }
-};
+  };
 
   const handleLoadSelectedResume=async()=>{ if(!selectedResumeId) return; await router.push(withChrome(`/resume/create?resumeId=${encodeURIComponent(selectedResumeId)}&template=${isHybrid?'hybrid':'reverse'}`)); };
   const handleCreateNewResume=async()=>{ setSelectedResumeId(''); hasAppliedResumeLoadRef.current=false; await router.push(withChrome(`/resume/create?template=${isHybrid?'hybrid':'reverse'}`)); };
 
   // ─── Save Modal ───────────────────────────────────────────────────────────
   const saveModal = typeof window!=='undefined'&&showSaveModal ? createPortal(
-    <div style={{position:'fixed',inset:0,zIndex:999999,background:'rgba(0,0,0,0.50)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setShowSaveModal(false)}>
-      <div style={{background:'white',borderRadius:20,padding:32,width:'min(520px,92vw)',boxShadow:'0 24px 60px rgba(0,0,0,0.28)'}} onClick={(e)=>e.stopPropagation()}>
-        <div style={{fontWeight:900,fontSize:20,marginBottom:6,color:'#111827'}}>Save Resume</div>
-        <div style={{color:'#64748B',fontSize:14,marginBottom:24}}>Up to {MAX_RESUMES} resumes. Set one as primary to feature it on your public profile.</div>
+    <div style={{position:'fixed',inset:0,zIndex:999999,background:'rgba(0,0,0,0.50)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}} onClick={()=>setShowSaveModal(false)}>
+      <div style={{background:'white',borderRadius:18,padding:18,width:'min(440px,92vw)',maxHeight:'78vh',overflowY:'auto',boxShadow:'0 24px 60px rgba(0,0,0,0.28)'}} onClick={(e)=>e.stopPropagation()}>
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12,marginBottom:12}}>
+          <div>
+            <div style={{fontWeight:900,fontSize:18,color:'#111827'}}>Save Resume</div>
+            <div style={{color:'#64748B',fontSize:12,marginTop:3}}>Save new, overwrite, set primary, or delete saved resumes.</div>
+          </div>
+          <button onClick={()=>setShowSaveModal(false)} style={{width:28,height:28,borderRadius:999,border:'1px solid #E2E8F0',background:'white',color:'#64748B',fontWeight:900,cursor:'pointer',lineHeight:1}}>×</button>
+        </div>
+
         {existingResumes.length<MAX_RESUMES ? (
-          <button onClick={handleSaveNew} style={{width:'100%',padding:'13px 16px',background:ORANGE,color:'white',border:'none',borderRadius:12,fontWeight:800,fontSize:15,cursor:'pointer',marginBottom:20}}>+ Save as new resume</button>
+          <button onClick={handleSaveNew} style={{width:'100%',padding:'10px 14px',background:ORANGE,color:'white',border:'none',borderRadius:12,fontWeight:900,fontSize:13,cursor:'pointer',marginBottom:12}}>+ Save as new resume</button>
         ) : (
-          <div style={{padding:'10px 14px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.20)',borderRadius:10,marginBottom:20,fontSize:13,color:'#B91C1C',fontWeight:700}}>{MAX_RESUMES}-resume limit reached. Overwrite an existing resume below.</div>
+          <div style={{padding:'9px 12px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.20)',borderRadius:10,marginBottom:12,fontSize:12,color:'#B91C1C',fontWeight:800}}>
+            {MAX_RESUMES}-resume limit reached. Overwrite or delete one below.
+          </div>
         )}
+
         {existingResumes.length>0&&(
           <>
-            <div style={{fontWeight:700,fontSize:11,color:'#94A3B8',marginBottom:10,letterSpacing:0.5,textTransform:'uppercase'}}>Overwrite Existing</div>
+            <div style={{fontWeight:800,fontSize:10,color:'#94A3B8',marginBottom:8,letterSpacing:0.6,textTransform:'uppercase'}}>Saved Resumes</div>
             <div style={{display:'grid',gap:8}}>
               {existingResumes.map((r)=>(
-                <div key={r.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'white',border:'1px solid #E2E8F0',borderRadius:10}}>
-                  <div style={{flex:1}}>
-                    <div style={{fontWeight:700,fontSize:14,color:'#1F2937'}}>{r.name||'Untitled Resume'}</div>
-                    <div style={{fontSize:12,color:'#94A3B8',marginTop:2}}>{r.isPrimary?'⭐ Primary · ':''}{r.updatedAt?`Updated ${new Date(r.updatedAt).toLocaleDateString()}`:''}</div>
+                <div key={r.id} style={{display:'grid',gridTemplateColumns:'1fr auto',alignItems:'center',gap:10,padding:'10px 12px',background:'white',border:'1px solid #E2E8F0',borderRadius:12}}>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontWeight:850,fontSize:13,color:'#1F2937',lineHeight:1.25,wordBreak:'break-word'}}>{r.name||'Untitled Resume'}</div>
+                    <div style={{fontSize:11,color:'#94A3B8',marginTop:4}}>
+                      {r.isPrimary?'⭐ Primary · ':''}{r.updatedAt?`Updated ${new Date(r.updatedAt).toLocaleDateString()}`:''}
+                    </div>
                   </div>
-                  <button onClick={()=>handleOverwrite(r.id,r.name||'Resume',false)} style={{padding:'6px 12px',background:'white',border:'1px solid #E2E8F0',borderRadius:8,fontWeight:700,fontSize:12,cursor:'pointer',color:'#334155'}}>Overwrite</button>
-                  <button onClick={()=>handleOverwrite(r.id,r.name||'Resume',true)} style={{padding:'6px 12px',background:ORANGE,border:'none',borderRadius:8,fontWeight:700,fontSize:12,cursor:'pointer',color:'white'}} title="Save and set as primary">⭐ Set Primary</button>
-				  <button onClick={() => handleDeleteResume(r.id)} style={{padding:'6px 12px',background:'white',border:'1px solid #FECACA',borderRadius:8,fontWeight:700,fontSize:12,cursor:'pointer',color:'#DC2626'}}title="Delete this resume">🗑 Delete</button>
-				</div>
+
+                  <div style={{display:'grid',gridTemplateColumns:'1fr',gap:6,minWidth:104}}>
+                    <button onClick={()=>handleOverwrite(r.id,r.name||'Resume',false)} style={{padding:'5px 9px',background:'white',border:'1px solid #E2E8F0',borderRadius:8,fontWeight:800,fontSize:11,cursor:'pointer',color:'#334155'}}>Overwrite</button>
+                    <button onClick={()=>handleOverwrite(r.id,r.name||'Resume',true)} style={{padding:'5px 9px',background:ORANGE,border:'none',borderRadius:8,fontWeight:800,fontSize:11,cursor:'pointer',color:'white'}} title="Save and set as primary">⭐ Primary</button>
+                    <button onClick={()=>handleDeleteResume(r.id)} style={{padding:'5px 9px',background:'white',border:'1px solid #FECACA',borderRadius:8,fontWeight:800,fontSize:11,cursor:'pointer',color:'#DC2626'}} title="Delete this resume">🗑 Delete</button>
+                  </div>
+                </div>
               ))}
             </div>
           </>
         )}
-        <button onClick={()=>setShowSaveModal(false)} style={{marginTop:16,width:'100%',padding:10,background:'transparent',border:'none',color:'#94A3B8',fontWeight:700,cursor:'pointer'}}>Cancel</button>
       </div>
     </div>,
     document.body
