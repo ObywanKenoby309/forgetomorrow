@@ -362,8 +362,9 @@ export default function CoachSuggestionsPanel(props) {
 
   // Track the last request key (JD+resume snapshot) to avoid redundant API calls
   const lastRequestKeyRef = useRef('');
-  const attemptCountRef = useRef(0);          // tracks how many unique resume snapshots have been sent
-  const seenKeysRef = useRef(new Set());       // tracks which keys have been sent
+  const attemptCountRef = useRef(0);
+  const seenKeysRef = useRef(new Set());
+  const trajectoryLockedRef = useRef(false);  // prevents handleAsk from firing while trajectory is showing
 
   useEffect(() => {
     setMounted(true);
@@ -445,8 +446,10 @@ export default function CoachSuggestionsPanel(props) {
         // Handle trajectory if triggered
         if (data?.trajectory?.triggered) {
           setTrajectory(data.trajectory);
+          trajectoryLockedRef.current = true;
         } else {
           setTrajectory(null);
+          trajectoryLockedRef.current = false;
         }
         lastRequestKeyRef.current = requestKey;
         return;
@@ -478,11 +481,12 @@ export default function CoachSuggestionsPanel(props) {
     if (!open) {
       setLoading(false);
       setTrajectory(null);
+      trajectoryLockedRef.current = false;
       return;
     }
     if (!jdText?.trim()) return;
-    // Don't re-fire if trajectory is already showing — it would overwrite it
-    if (trajectory?.triggered) return;
+    // Don't re-fire if trajectory is locked — ref-based so it survives React strict mode double-invoke
+    if (trajectoryLockedRef.current) return;
     if (lastRequestKeyRef.current !== requestKey) {
       setStructured(null);
       setFallbackText('');
@@ -490,7 +494,7 @@ export default function CoachSuggestionsPanel(props) {
       handleAsk();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, requestKey, jdText, trajectory]);
+  }, [open, requestKey, jdText]);
 
   const handleQuickInsert = (type) => {
     if (!structured && !fallbackText) return;
