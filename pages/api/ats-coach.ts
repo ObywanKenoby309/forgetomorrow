@@ -165,12 +165,12 @@ async function resolveUserId(session: any): Promise<string | null> {
 
 // ─── groq call ────────────────────────────────────────────────────────────────
 
-async function callGroq(apiKey: string, model: string, prompt: string) {
+async function callOpenAI(apiKey: string, model: string, prompt: string) {
   let lastStatus = 0;
   let lastText = '';
 
   for (let attempt = 0; attempt < 2; attempt++) {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -187,7 +187,7 @@ async function callGroq(apiKey: string, model: string, prompt: string) {
           { role: 'user', content: prompt },
         ],
         temperature: 0.15,
-        max_tokens: 1400,
+        max_tokens: 1600,
       }),
     });
 
@@ -197,16 +197,15 @@ async function callGroq(apiKey: string, model: string, prompt: string) {
     lastText = await response.text();
 
     if (response.status === 429 && attempt === 0) {
-      await sleep(3000);
+      await sleep(2000);
       continue;
     }
 
     break;
   }
 
-  throw new Error(`Groq API error: ${lastStatus} - ${lastText}`);
+  throw new Error(`OpenAI API error: ${lastStatus} - ${lastText}`);
 }
-
 // ─── structured → text (tips + legacy consumers) ─────────────────────────────
 
 function structuredToText(s: CoachStructured): string {
@@ -322,10 +321,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
   }
 
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return res.status(500).json({ ok: false, error: 'GROQ_API_KEY is not configured' });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(500).json({ ok: false, error: 'OPENAI_API_KEY is not configured' });
 
-  const model = process.env.GROQ_COACH_MODEL || 'llama-3.1-8b-instant';
+  const model = process.env.OPENAI_COACH_MODEL || 'gpt-4.1-mini';
 
   try {
     const body = (req.body || {}) as CoachRequestBody;
@@ -365,8 +364,8 @@ Include "education" if the JD explicitly requires a degree, certification, licen
       : brainPrompt;
 
     // ── Call Groq ─────────────────────────────────────────────────────────
-    const groqRes = await callGroq(apiKey, model, prompt);
-    const groqData = await groqRes.json();
+    const openAIRes = await callOpenAI(apiKey, model, prompt);
+    const groqData = await openAIRes.json();
     const raw = groqData.choices?.[0]?.message?.content?.toString().trim() || '';
 
     // ── Parse JSON ────────────────────────────────────────────────────────
@@ -416,7 +415,7 @@ Include "education" if the JD explicitly requires a degree, certification, licen
       return res.status(200).json({
         ok: true,
         text: 'Coach is receiving too many requests right now. Wait a few seconds and run the coach again.',
-        tips: ['Groq rate limit reached. Wait a few seconds and retry.'],
+        tips: ['Rate limit reached. Wait a few seconds and retry.'],
         structured: null,
         raw: msg,
       });
