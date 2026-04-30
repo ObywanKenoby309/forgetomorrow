@@ -187,7 +187,7 @@ async function callGroq(apiKey: string, model: string, prompt: string) {
           { role: 'user', content: prompt },
         ],
         temperature: 0.15,
-        max_tokens: 1900,
+        max_tokens: 1400,
       }),
     });
 
@@ -197,7 +197,7 @@ async function callGroq(apiKey: string, model: string, prompt: string) {
     lastText = await response.text();
 
     if (response.status === 429 && attempt === 0) {
-      await sleep(1800);
+      await sleep(3000);
       continue;
     }
 
