@@ -370,26 +370,32 @@ export default function CoachSuggestionsPanel(props) {
   // Attempt tracking via sessionStorage so it survives panel open/close cycles.
   // Key is based on JD fingerprint so it resets when a new JD is loaded.
   function getJdFingerprint() {
-    return String(jdText || '').slice(0, 120).replace(/\s+/g, ' ').trim();
+    // Safe hash — no btoa, no special char issues
+    const str = String(jdText || '').slice(0, 200).replace(/\s+/g, ' ').trim();
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return 'ft_hammer_' + Math.abs(hash).toString(36);
   }
 
   function getAttemptCount() {
     try {
-      const fp = getJdFingerprint();
-      const raw = sessionStorage.getItem('ft_hammer_attempts_' + btoa(fp).slice(0, 20));
+      const key = getJdFingerprint();
+      const raw = sessionStorage.getItem(key);
       return raw ? JSON.parse(raw) : { keys: [], count: 0 };
     } catch { return { keys: [], count: 0 }; }
   }
 
-  function recordAttempt(key) {
+  function recordAttempt(requestKey) {
     try {
-      const fp = getJdFingerprint();
-      const storageKey = 'ft_hammer_attempts_' + btoa(fp).slice(0, 20);
+      const key = getJdFingerprint();
       const data = getAttemptCount();
-      if (!data.keys.includes(key)) {
-        data.keys.push(key);
+      if (!data.keys.includes(requestKey)) {
+        data.keys.push(requestKey);
         data.count = data.keys.length;
-        sessionStorage.setItem(storageKey, JSON.stringify(data));
+        sessionStorage.setItem(key, JSON.stringify(data));
       }
       return data.count;
     } catch { return 1; }
