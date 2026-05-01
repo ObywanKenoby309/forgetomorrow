@@ -351,6 +351,7 @@ export default function CoachSuggestionsPanel(props) {
     onAddSummary,
     onAddBullet,
     embedded = false,
+    onReady,           // optional callback — called with { run } so parent can trigger handleAsk
   } = props;
 
   const [mounted, setMounted] = useState(false);
@@ -365,7 +366,7 @@ export default function CoachSuggestionsPanel(props) {
   const lastRequestKeyRef = useRef('');
   const attemptCountRef = useRef(0);
   const seenKeysRef = useRef(new Set());
-  const trajectoryLockedRef = useRef(false);  // prevents handleAsk from firing while trajectory is showing
+  const trajectoryLockedRef = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -510,7 +511,13 @@ export default function CoachSuggestionsPanel(props) {
 
   // Fire when panel opens or JD/resume snapshot changes.
   // Does NOT re-fire when selectedSection changes — section changes filter locally.
-  // Reset state when panel closes
+  // Expose handleAsk to parent via onReady callback
+  useEffect(() => {
+    if (onReady) onReady({ run: handleAsk });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reset state when panel closes entirely
   useEffect(() => {
     if (!open) {
       setLoading(false);
@@ -519,20 +526,10 @@ export default function CoachSuggestionsPanel(props) {
     }
   }, [open]);
 
-  // When JD+resume snapshot changes, clear stale results so the user
-  // knows they need to run the coach again — but do NOT auto-fire.
-  useEffect(() => {
-    if (!open) return;
-    if (lastRequestKeyRef.current && lastRequestKeyRef.current !== requestKey) {
-      setStructured(null);
-      setFallbackText('');
-      setError(null);
-      setTrajectory(null);
-      trajectoryLockedRef.current = false;
-      lastRequestKeyRef.current = '';
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestKey]);
+  // NO auto-fire. Ever.
+  // The seeker controls every call by clicking "Review overall alignment".
+  // Results persist across resume edits so the seeker can compare.
+  // Only clears when the seeker explicitly runs the coach again.
 
   const handleQuickInsert = (type) => {
     if (!structured && !fallbackText) return;

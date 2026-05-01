@@ -3,7 +3,7 @@
 // components/resume-form/AtsDepthPanel.tsx
 // Unified Match panel – AI score first, keyword coverage as fallback.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import CoachSuggestionsPanel from './CoachSuggestionsPanel';
 
 type Experience = {
@@ -115,6 +115,7 @@ export default function AtsDepthPanel({
     section: 'overview',
     keyword: null,
   });
+  const coachRunRef = useRef<{ run: () => void } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -182,6 +183,11 @@ export default function AtsDepthPanel({
 
   function openCoachOverview() {
     openCoach('overview', null);
+    // Fire the coach immediately — user clicked the button intentionally
+    // Small delay so coachOpen state propagates before the panel mounts
+    setTimeout(() => {
+      coachRunRef.current?.run();
+    }, 50);
   }
 
   async function runAiScan() {
@@ -446,6 +452,7 @@ export default function AtsDepthPanel({
                     onAddSkill={onAddSkill}
                     onAddSummary={onAddSummary}
                     onAddBullet={onAddBullet}
+                    onReady={(api) => { coachRunRef.current = api; }}
                   />
                 </div>
               )}
