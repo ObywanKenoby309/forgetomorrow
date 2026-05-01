@@ -740,6 +740,8 @@ export default function CreateResumePage() {
                 </div>
               </div>
             </div>
+          </div>
+
           {/* AD RAIL — beside title + command card only, without forcing a tall spacer */}
           {!isFocusMode&&(
             <div style={{width:'220px',height:295,flexShrink:0,overflow:'hidden',borderRadius:14}}>
