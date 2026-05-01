@@ -452,7 +452,7 @@ export default function AtsDepthPanel({
                     onAddSkill={onAddSkill}
                     onAddSummary={onAddSummary}
                     onAddBullet={onAddBullet}
-                    onReady={(api) => { coachRunRef.current = api; }}
+                    {...{ onReady: (api: any) => { coachRunRef.current = api; } } as any}
                   />
                 </div>
               )}
