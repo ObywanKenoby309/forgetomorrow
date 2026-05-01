@@ -805,7 +805,11 @@ export default function CreateResumePage() {
                   )}
                   {(jd||atsPack)&&<button type="button" onClick={clearJobFire} style={{marginTop:8,background:'transparent',border:'none',color:'#B91C1C',fontWeight:800,fontSize:12,cursor:'pointer',textDecoration:'underline',padding:0}}>Clear loaded job</button>}
                 </div>
-                <div ref={dropRef} onClick={()=>{if(fileInputRef.current) fileInputRef.current.value=''; fileInputRef.current?.click();}}
+                <div ref={dropRef}
+                  onClick={()=>{if(fileInputRef.current) fileInputRef.current.value=''; fileInputRef.current?.click();}}
+                  onDragOver={(e)=>{e.preventDefault();e.stopPropagation();e.currentTarget.style.background='rgba(187,222,251,0.95)';}}
+                  onDragLeave={(e)=>{e.preventDefault();e.stopPropagation();e.currentTarget.style.background='rgba(227,242,253,0.85)';}}
+                  onDrop={(e)=>{e.preventDefault();e.stopPropagation();e.currentTarget.style.background='rgba(227,242,253,0.85)';const f=e.dataTransfer.files?.[0];if(f) handleFile(f);}}
                   style={{margin:'12px 16px',padding:'14px 16px',border:'2px dashed rgba(144,202,249,0.95)',borderRadius:12,textAlign:'center',background:'rgba(227,242,253,0.85)',cursor:'pointer'}}>
                   <p style={{margin:0,fontSize:12,fontWeight:800,color:'#334155'}}>
                     Drop a job description here<br/>or{' '}
