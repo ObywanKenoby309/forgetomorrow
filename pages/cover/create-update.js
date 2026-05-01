@@ -1,5 +1,4 @@
 // pages/cover/create-update.js
-// added to push file update
 // Cover Letter Builder — mirrors resume builder layout exactly
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -244,17 +243,9 @@ export default function CoverLetterPage() {
   }, [jd, experiences, triggerAutoSave]);
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
-  const getDraft = async (key) => {
-    try {
-      const res = await fetch(`/api/drafts/get?key=${encodeURIComponent(key)}`);
-      if (!res.ok) return null;
-      return (await res.json())?.draft?.content ?? null;
-    } catch { return null; }
-  };
+;
 
-  const saveDraft = async (key, content) => {
-    try { await fetch('/api/drafts/set', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({key,content}) }); } catch {}
-  };
+;
 
   const showBriefToast = (msg) => {
     setToastMsg(msg); setShowToast(true);
@@ -281,113 +272,13 @@ export default function CoverLetterPage() {
     return row;
   };
 
-  const applyResumePayloadToState = (payload) => {
-    const source = normalizeSavedResumePayload(payload);
-    if (!source || typeof source !== 'object') return false;
-
-    const sf = source.formData || source.personalInfo || source.contact || {};
-    setFormData((prev) => ({
-      ...prev,
-      ...(sf || {}),
-      fullName: sf.fullName || sf.name || source.fullName || source.name || prev.fullName || prev.name || '',
-      targetedRole: sf.targetedRole ?? source.targetedRole ?? prev.targetedRole ?? '',
-      email: sf.email ?? source.email ?? prev.email ?? '',
-      phone: sf.phone ?? source.phone ?? prev.phone ?? '',
-      location: sf.location ?? source.location ?? prev.location ?? '',
-      portfolio: sf.portfolio ?? source.portfolio ?? prev.portfolio ?? '',
-      forgeUrl: sf.ftProfile ?? sf.forgeUrl ?? source.ftProfile ?? source.forgeUrl ?? prev.forgeUrl ?? '',
-      ftProfile: sf.ftProfile ?? sf.forgeUrl ?? source.ftProfile ?? source.forgeUrl ?? prev.ftProfile ?? '',
-    }));
-
-    if (typeof source.summary === 'string') setSummary(source.summary);
-    if (Array.isArray(source.experiences || source.workExperiences)) setExperiences(source.experiences || source.workExperiences);
-    if (Array.isArray(source.educationList || source.education)) setEducationList(source.educationList || source.education);
-    if (Array.isArray(source.skills)) setSkills(source.skills);
-    if (Array.isArray(source.projects)) setProjects(source.projects);
-    if (Array.isArray(source.certifications)) setCertifications(source.certifications);
-    if (Array.isArray(source.customSections)) setCustomSections(source.customSections);
-    if (Array.isArray(source.languages)) setLanguages(source.languages);
-    return true;
-  };
-
-  const fetchResumeById = async (resumeId) => {
-    const id = String(resumeId || '').trim();
-    if (!id) return null;
-
-    try {
-      const res = await fetch('/api/resume/list');
-      if (!res.ok) return null;
-
-      const json = await res.json();
-      return (json?.resumes || []).find((r) => String(r?.id) === id) || null;
-    } catch {
-      return null;
-    }
-  };
+;
 
 ;
 
   const clearJobFire = () => { setJd(''); setJdStatus(''); };
 
-  const resetResumeBuilder = async () => {
-    if (!confirm('Start a fresh resume draft? Unsaved changes on this draft may be lost.')) return;
-
-    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-
-    const preservedName = formData.fullName || formData.name || '';
-    const preservedEmail = formData.email || '';
-    const preservedPhone = formData.phone || '';
-    const preservedLocation = formData.location || '';
-    const preservedForgeUrl = formData.forgeUrl || formData.ftProfile || '';
-    const preservedExternalUrl = formData.externalurl || '';
-    const preservedGithub = formData.github || '';
-    const preservedPortfolio = formData.portfolio || '';
-
-    setSelectedResumeId('');
-    .current = false;
-    hasAppliedUploadRef.current = false;
-
-    setFormData((prev) => ({
-      ...prev,
-      fullName: preservedName,
-      name: preservedName,
-      email: preservedEmail,
-      phone: preservedPhone,
-      location: preservedLocation,
-      externalurl: preservedExternalUrl,
-      github: preservedGithub,
-      portfolio: preservedPortfolio,
-      forgeUrl: preservedForgeUrl,
-      ftProfile: preservedForgeUrl,
-      targetedRole: '',
-    }));
-
-    setSummary('');
-    setExperiences([]);
-    setProjects([]);
-    if (typeof setVolunteerExperiences === 'function') setVolunteerExperiences([]);
-    setEducationList([]);
-    setCertifications([]);
-    setLanguages([]);
-    setSkills([]);
-    if (typeof setAchievements === 'function') setAchievements([]);
-    setCustomSections([]);
-
-    setSaveState('idle');
-    setResumeUploadState('idle');
-    setPreviewMode('standard');
-    setIsEditMode(true);
-    setIsFocusMode(false);
-
-    await clearJobFire();
-
-    try {
-      if (typeof deleteResumeDraft === 'function') await deleteResumeDraft();
-    } catch {}
-
-    showBriefToast('Fresh resume draft started.');
-    await router.push(withChrome(`/resume/create?template=${isHybrid ? 'hybrid' : 'reverse'}`));
-  };
+;
 
   // ─── Effects ──────────────────────────────────────────────────────────────
   useEffect(()=>{
@@ -414,7 +305,7 @@ export default function CoverLetterPage() {
       if(!res.ok) return; const data=await res.json();
       const derivedName=data?.name||[data?.firstName,data?.lastName].filter(Boolean).join(' ')||'';
       const slug=data?.slug;
-      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
+      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://www.forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
     }).catch(()=>{});
   },[router.isReady]);
 
