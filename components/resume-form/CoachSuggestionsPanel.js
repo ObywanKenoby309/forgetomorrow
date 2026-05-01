@@ -30,6 +30,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
  * @property {(snippet: string) => void} [onAddSummary]
  * @property {(snippet: string) => void} [onAddBullet]
  * @property {boolean} [embedded]
+ * @property {(api: { run: () => void }) => void} [onReady]
  */
 
 /** @type {React.CSSProperties} */
@@ -364,9 +365,35 @@ export default function CoachSuggestionsPanel(props) {
 
   // Track the last request key (JD+resume snapshot) to avoid redundant API calls
   const lastRequestKeyRef = useRef('');
-  const attemptCountRef = useRef(0);
-  const seenKeysRef = useRef(new Set());
   const trajectoryLockedRef = useRef(false);
+
+  // Attempt tracking via sessionStorage so it survives panel open/close cycles.
+  // Key is based on JD fingerprint so it resets when a new JD is loaded.
+  function getJdFingerprint() {
+    return String(jdText || '').slice(0, 120).replace(/\s+/g, ' ').trim();
+  }
+
+  function getAttemptCount() {
+    try {
+      const fp = getJdFingerprint();
+      const raw = sessionStorage.getItem('ft_hammer_attempts_' + btoa(fp).slice(0, 20));
+      return raw ? JSON.parse(raw) : { keys: [], count: 0 };
+    } catch { return { keys: [], count: 0 }; }
+  }
+
+  function recordAttempt(key) {
+    try {
+      const fp = getJdFingerprint();
+      const storageKey = 'ft_hammer_attempts_' + btoa(fp).slice(0, 20);
+      const data = getAttemptCount();
+      if (!data.keys.includes(key)) {
+        data.keys.push(key);
+        data.count = data.keys.length;
+        sessionStorage.setItem(storageKey, JSON.stringify(data));
+      }
+      return data.count;
+    } catch { return 1; }
+  }
 
   useEffect(() => {
     setMounted(true);
@@ -436,11 +463,8 @@ export default function CoachSuggestionsPanel(props) {
     setError(null);
 
     try {
-      // Track attempt count — increments each time a new unique resume snapshot is sent
-      if (!seenKeysRef.current.has(requestKey)) {
-        seenKeysRef.current.add(requestKey);
-        attemptCountRef.current = seenKeysRef.current.size;
-      }
+      // Track attempt count via sessionStorage — survives panel open/close cycles
+      const attemptCount = recordAttempt(requestKey);
 
       const resp = await fetch('/api/ats-coach', {
         method: 'POST',
@@ -450,7 +474,7 @@ export default function CoachSuggestionsPanel(props) {
           resumeData,
           context: { section: 'overview', keyword: null },
           missing,
-          attemptCount: attemptCountRef.current,
+          attemptCount,
         }),
       });
 
