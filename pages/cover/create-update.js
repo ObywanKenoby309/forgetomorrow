@@ -437,7 +437,6 @@ export default function CoverLetterPage() {
                   style={{outline:'none',cursor:'text',padding:'2px 4px',borderRadius:4,minHeight:20}}
                   onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.06)'}
                   onBlurCapture={e=>e.currentTarget.style.background='transparent'}
-                  suppressContentEditableWarning={true}
                 >
                   {recipient||'Hiring Manager'}
                 </div>
