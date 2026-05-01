@@ -13,8 +13,6 @@ import { uploadJD } from '@/lib/jd/uploadToApi';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import CoverPDFButton from '@/components/cover-letter/export/CoverPDFButton';
 
-const CoverLetterTemplate = dynamic(() => import('@/components/cover-letter/CoverLetterTemplate'), { ssr: false });
-
 const ORANGE = '#FF7043';
 const MAX_RESUMES = 4;
 
@@ -414,83 +412,155 @@ export default function CoverLetterPage() {
         {/* EDITOR + INTELLIGENCE GRID */}
         <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0,1fr) 340px',gap:8,alignItems:'start'}}>
 
-          {/* LEFT: Cover Letter Editor */}
+          {/* LEFT: Inline Editable Cover Letter */}
           <div style={{...GLASS_CARD,overflow:'hidden'}}>
-            <div style={{padding:'10px 16px',background:'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',color:'white',fontWeight:900,fontSize:13,letterSpacing:0.4}}>
-              ✍️ COVER LETTER EDITOR
+            <div style={{padding:'10px 16px',background:'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',color:'white',fontWeight:900,fontSize:13,letterSpacing:0.4,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <span>✍️ COVER LETTER EDITOR</span>
+              <span style={{fontSize:11,fontWeight:600,opacity:0.75}}>Click any section to edit</span>
             </div>
-            <div id="cover-pdf" style={{padding:20,background:'#fff',minHeight:760,overflowY:'auto'}}>
-              <CoverLetterTemplate data={letterData} />
+            <div id="cover-pdf" style={{padding:32,background:'#fff',minHeight:760,overflowY:'auto',fontFamily:'Helvetica Neue, sans-serif',fontSize:12,lineHeight:1.7,color:'#1f2937',maxWidth:680,margin:'0 auto'}}>
+
+              {/* Header — identity, read from formData */}
+              <div style={{marginBottom:32}}>
+                <div style={{fontWeight:700,fontSize:14}}>{formData?.fullName||formData?.name||'Your Name'}</div>
+                <div style={{fontSize:10,color:'#6b7280',marginTop:4}}>
+                  {[formData?.email,formData?.phone,formData?.location].filter(Boolean).join(' · ')}
+                  {portfolio&&<span> · <span style={{color:'#1f2937',fontWeight:500}}>{portfolio}</span></span>}
+                </div>
+              </div>
+
+              {/* Recipient + Company */}
+              <div style={{marginBottom:20}}>
+                <div
+                  contentEditable suppressContentEditableWarning
+                  onBlur={e=>{setRecipient(e.currentTarget.textContent||'Hiring Manager');triggerAutoSave();}}
+                  style={{outline:'none',cursor:'text',padding:'2px 4px',borderRadius:4,minHeight:20}}
+                  onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.06)'}
+                  onBlurCapture={e=>e.currentTarget.style.background='transparent'}
+                  suppressContentEditableWarning={true}
+                >
+                  {recipient||'Hiring Manager'}
+                </div>
+                <div
+                  contentEditable suppressContentEditableWarning
+                  onBlur={e=>{setCompany(e.currentTarget.textContent||'');triggerAutoSave();}}
+                  style={{outline:'none',cursor:'text',padding:'2px 4px',borderRadius:4,minHeight:20,color:'#374151'}}
+                  onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.06)'}
+                  onBlurCapture={e=>e.currentTarget.style.background='transparent'}
+                >
+                  {company||<span style={{color:'#9ca3af'}}>Company name</span>}
+                </div>
+              </div>
+
+              {/* Greeting */}
+              <div
+                contentEditable suppressContentEditableWarning
+                onBlur={e=>{setGreeting(e.currentTarget.textContent||'Dear Hiring Manager,');triggerAutoSave();}}
+                style={{outline:'none',cursor:'text',padding:'2px 4px',borderRadius:4,marginBottom:16,fontWeight:500}}
+                onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.06)'}
+                onBlurCapture={e=>e.currentTarget.style.background='transparent'}
+              >
+                {greeting||'Dear Hiring Manager,'}
+              </div>
+
+              {/* Opening */}
+              <div style={{marginBottom:14,position:'relative'}}>
+                {!opening&&<div style={{position:'absolute',top:4,left:4,color:'#9ca3af',pointerEvents:'none',fontSize:11}}>Opening — one strong sentence. Lead with your biggest win.</div>}
+                <div
+                  contentEditable suppressContentEditableWarning
+                  onBlur={e=>{setOpening(e.currentTarget.textContent||'');triggerAutoSave();}}
+                  style={{outline:'none',cursor:'text',padding:'4px',borderRadius:4,minHeight:40,textAlign:'justify'}}
+                  onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.04)'}
+                  onBlurCapture={e=>e.currentTarget.style.background='transparent'}
+                >
+                  {opening}
+                </div>
+              </div>
+
+              {/* Body bullets */}
+              <div style={{margin:'16px 0',position:'relative'}}>
+                {!body&&<div style={{color:'#9ca3af',fontSize:11,padding:'4px'}}>Body — 3 bullets with numbers. One per line.</div>}
+                <div
+                  contentEditable suppressContentEditableWarning
+                  onBlur={e=>{setBody(e.currentTarget.innerText||'');triggerAutoSave();}}
+                  style={{outline:'none',cursor:'text',padding:'4px',borderRadius:4,minHeight:60}}
+                  onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.04)'}
+                  onBlurCapture={e=>e.currentTarget.style.background='transparent'}
+                >
+                  {body ? body.split('\n').filter(Boolean).map((line,i)=>(
+                    <div key={i} style={{display:'flex',gap:8,margin:'6px 0'}}>
+                      <span style={{fontWeight:700,flexShrink:0}}>•</span>
+                      <span>{line.replace(/^[•-]\s*/,'')}</span>
+                    </div>
+                  )) : null}
+                </div>
+              </div>
+
+              {/* Closing */}
+              <div style={{margin:'20px 0 32px',position:'relative'}}>
+                {!closing&&<div style={{color:'#9ca3af',fontSize:11,padding:'4px'}}>Closing — keep it short. "Let's talk." works.</div>}
+                <div
+                  contentEditable suppressContentEditableWarning
+                  onBlur={e=>{setClosing(e.currentTarget.textContent||'');triggerAutoSave();}}
+                  style={{outline:'none',cursor:'text',padding:'4px',borderRadius:4,minHeight:24,textAlign:'justify'}}
+                  onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.04)'}
+                  onBlurCapture={e=>e.currentTarget.style.background='transparent'}
+                >
+                  {closing}
+                </div>
+              </div>
+
+              {/* Signoff */}
+              <div style={{marginTop:40}}>
+                <div
+                  contentEditable suppressContentEditableWarning
+                  onBlur={e=>{setSignoff(e.currentTarget.textContent||'Sincerely,');triggerAutoSave();}}
+                  style={{outline:'none',cursor:'text',padding:'2px 4px',borderRadius:4,fontWeight:500}}
+                  onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.06)'}
+                  onBlurCapture={e=>e.currentTarget.style.background='transparent'}
+                >
+                  {signoff||'Sincerely,'}
+                </div>
+                <div style={{fontWeight:700,marginTop:8}}>{formData?.fullName||formData?.name||'Your Name'}</div>
+              </div>
+
+              {/* Role hint */}
+              {role&&<div style={{marginTop:24,fontSize:10,color:'#9ca3af'}}>Re: {role}</div>}
+
             </div>
           </div>
 
-          {/* RIGHT: Cover Intelligence Rail */}
+          {/* RIGHT: Cover Intelligence Rail — mirrors Forge Hammer */}
           {!isFocusMode&&(
             <div style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20,alignSelf:'start'}}>
-
-              {/* Identity + Job Target */}
               <div style={{...GLASS_CARD,overflow:'hidden'}}>
                 <div style={{padding:'12px 16px',background:'linear-gradient(135deg, rgba(255,112,67,0.15), rgba(255,112,67,0.05))',borderBottom:'1px solid rgba(255,112,67,0.15)'}}>
                   <div style={{fontWeight:900,fontSize:15,color:ORANGE}}>✍️ Cover Intelligence</div>
-                  <div style={{fontSize:11,color:'#64748B',fontWeight:600,marginTop:2}}>letter fields + job fire + AI tailor</div>
+                  <div style={{fontSize:11,color:'#64748B',fontWeight:600,marginTop:2}}>AI tailor + resume steel + job fire</div>
                 </div>
 
-                {/* Fields */}
+                {/* Quick fields — company, role, portfolio */}
                 <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(0,0,0,0.06)',display:'grid',gap:8}}>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                     <div>
                       <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Company</label>
                       <input value={company} onChange={e=>setCompany(e.target.value)} placeholder="Company XYZ"
-                        style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:8,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',boxSizing:'border-box'}}/>
+                        style={{width:'100%',padding:'6px 8px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:7,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',boxSizing:'border-box'}}/>
                     </div>
                     <div>
                       <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Role</label>
                       <input value={role} onChange={e=>setRole(e.target.value)} placeholder="Job title"
-                        style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:8,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',boxSizing:'border-box'}}/>
-                    </div>
-                  </div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                    <div>
-                      <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Recipient</label>
-                      <input value={recipient} onChange={e=>setRecipient(e.target.value)} placeholder="Hiring Manager"
-                        style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:8,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',boxSizing:'border-box'}}/>
-                    </div>
-                    <div>
-                      <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Greeting</label>
-                      <input value={greeting} onChange={e=>setGreeting(e.target.value)} placeholder="Dear Hiring Manager,"
-                        style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:8,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',boxSizing:'border-box'}}/>
-                    </div>
-                  </div>
-                  <div>
-                    <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Opening <span style={{fontWeight:500,color:'#94A3B8'}}>— 1 strong sentence</span></label>
-                    <textarea value={opening} onChange={e=>{setOpening(e.target.value);triggerAutoSave();}} placeholder="One strong sentence. Lead with your biggest win." rows={2}
-                      style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:8,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',resize:'vertical',fontFamily:'inherit',boxSizing:'border-box'}}/>
-                  </div>
-                  <div>
-                    <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Body <span style={{fontWeight:500,color:'#94A3B8'}}>— 3 bullets with numbers</span></label>
-                    <textarea value={body} onChange={e=>{setBody(e.target.value);triggerAutoSave();}} placeholder={'• Win with a number\n• Win with a number\n• Win with a number'} rows={4}
-                      style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:8,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',resize:'vertical',fontFamily:'inherit',boxSizing:'border-box'}}/>
-                  </div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                    <div>
-                      <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Closing</label>
-                      <textarea value={closing} onChange={e=>{setClosing(e.target.value);triggerAutoSave();}} placeholder="Let's talk." rows={2}
-                        style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:8,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',resize:'vertical',fontFamily:'inherit',boxSizing:'border-box'}}/>
-                    </div>
-                    <div>
-                      <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Sign-off</label>
-                      <input value={signoff} onChange={e=>setSignoff(e.target.value)} placeholder="Sincerely,"
-                        style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:8,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',boxSizing:'border-box'}}/>
+                        style={{width:'100%',padding:'6px 8px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:7,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',boxSizing:'border-box'}}/>
                     </div>
                   </div>
                   <div>
                     <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Portfolio <span style={{fontWeight:500,color:'#94A3B8'}}>(optional)</span></label>
                     <input type="url" value={portfolio} onChange={e=>setPortfolio(e.target.value)} placeholder="https://yourwebsite.com"
-                      style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:8,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',boxSizing:'border-box'}}/>
+                      style={{width:'100%',padding:'6px 8px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:7,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',boxSizing:'border-box'}}/>
                   </div>
                 </div>
 
-                {/* JD Fire */}
+                {/* JD status */}
                 <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(0,0,0,0.06)'}}>
                   {jd ? (
                     <>
@@ -501,12 +571,12 @@ export default function CoverLetterPage() {
                   ) : (
                     <>
                       <div style={{fontWeight:800,fontSize:13,color:ORANGE,marginBottom:6}}>🔥 Add the fire.</div>
-                      <div style={{fontSize:12,color:'#475569',lineHeight:1.6}}>Paste a job description to unlock AI tailoring for this cover letter.</div>
+                      <div style={{fontSize:12,color:'#475569',lineHeight:1.6}}>Paste a job description to unlock AI tailoring.</div>
                     </>
                   )}
                 </div>
 
-                {/* JD Drop zone */}
+                {/* JD drop zone */}
                 <div ref={dropRef} onClick={()=>{if(fileInputRef.current) fileInputRef.current.value=''; fileInputRef.current?.click();}}
                   onDragOver={(e)=>{e.preventDefault();e.stopPropagation();e.currentTarget.style.background='rgba(187,222,251,0.95)';}}
                   onDragLeave={(e)=>{e.preventDefault();e.stopPropagation();e.currentTarget.style.background='rgba(227,242,253,0.85)';}}
@@ -541,12 +611,6 @@ export default function CoverLetterPage() {
         </div>
       </div>
 
-      {/* Toast */}
-      {showToast&&(
-        <div style={{position:'fixed',right:28,bottom:28,background:ORANGE,color:'white',padding:'12px 22px',borderRadius:12,fontWeight:700,boxShadow:'0 10px 30px rgba(0,0,0,0.3)',zIndex:1000,fontSize:14}}>
-          {toastMsg}
-        </div>
-      )}
-    </ResumeBuilderLayout>
+          </ResumeBuilderLayout>
   );
 }
