@@ -5,6 +5,8 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { getClientSession } from '@/lib/auth-client';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import { extractTextFromFile } from '@/lib/jd/ingest';
 
 const ORANGE = '#FF7043';
@@ -558,114 +560,11 @@ export default function ResumeCoverLanding() {
   }, [sortedResumes, sortedCovers]);
 
   const HeaderHero = (
-    <Card
-      style={{
-        textAlign: 'center',
-        padding: '20px 18px 16px',
-        background: 'rgba(255,255,255,0.60)',
-        border: '1px solid rgba(255,255,255,0.22)',
-        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-      }}
-      aria-label="Resume builder overview"
-    >
-      <h1
-        style={{
-          color: '#263238',
-          fontSize: 24,
-          lineHeight: 1.15,
-          fontWeight: 800,
-          margin: 0,
-        }}
-      >
-        Resume Builder
-      </h1>
-
-      <p
-        style={{
-          color: '#37474F',
-          margin: '10px auto 0',
-          fontSize: 15,
-          lineHeight: 1.5,
-          maxWidth: 820,
-          fontWeight: 700,
-        }}
-      >
-        2 formats. 1 goal: get you seen. Reverse Chronological for structured review. Hybrid for fast human scanning. No fluff. Only what works.
-      </p>
-
-      <div
-        style={{
-          display: 'flex',
-          gap: 10,
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          marginTop: 16,
-        }}
-      >
-        <PrimaryButton
-          href={buildCreateHref({ template: 'reverse' })}
-          style={{
-            minWidth: 190,
-            background: '#FFF7F3',
-            color: ORANGE,
-            border: '1px solid rgba(255,112,67,0.35)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-          }}
-        >
-          ✦ Build a Resume
-        </PrimaryButton>
-
-        <PrimaryButton
-          onClick={onUploadClick}
-          style={{
-            minWidth: 160,
-            background: ORANGE,
-            color: '#fff',
-          }}
-        >
-          ↑ Upload existing
-        </PrimaryButton>
-
-        <PrimaryButton
-          href={buildCoverCreateHref()}
-          style={{
-            minWidth: 150,
-            background: '#FF8A65',
-            color: '#fff',
-          }}
-        >
-          ✉ Cover letter
-        </PrimaryButton>
-      </div>
-
-      {uploadState.status !== 'idle' && (
-        <div
-          style={{
-            marginTop: 12,
-            fontSize: 14,
-            color: uploadState.status === 'error' ? '#B71C1C' : '#1B5E20',
-            fontWeight: 800,
-          }}
-        >
-          {uploadState.message}
-        </div>
-      )}
-
-      {tier === 'basic' && usage && typeof usage.used === 'number' && (
-        <div style={{ marginTop: 12, color: '#455A64', fontSize: 13, fontWeight: 700 }}>
-          Free tier: {usage.used}/{usage.limit === Infinity ? '∞' : usage.limit} AI generations used
-        </div>
-      )}
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".pdf,.doc,.docx"
-        onChange={onFilePicked}
-        style={{ display: 'none' }}
-      />
-    </Card>
+    <SeekerTitleCard
+      greeting={getTimeGreeting()}
+      title="Resume & Cover Builder"
+      subtitle="2 formats. 1 goal: get you seen. Reverse Chronological for structured review. Hybrid for fast human scanning. No fluff. Only what works."
+    />
   );
 
   const ATSContextBanner =
@@ -1155,78 +1054,24 @@ export default function ResumeCoverLanding() {
   );
 
   const RightRail = (
-    <div style={{ display: 'grid', gap: 12, minWidth: 0 }}>
-      <div
-        style={{
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <RightRailPlacementManager slot="right_rail_1" />
+      {continueItems.length > 0 && (
+        <div style={{
           ...GLASS,
-          padding: 14,
+          padding: 16,
           minWidth: 0,
-          overflow: 'hidden',
-          minHeight: 250,
-          display: 'grid',
-          alignContent: 'start',
-        }}
-      >
-        <div
-          style={{
-            fontWeight: 800,
-            color: '#263238',
-            marginBottom: 10,
-            textAlign: 'center',
-            fontSize: 15,
-          }}
-        >
-          Right Rail Ad Manager
+        }}>
+          <div style={{ fontWeight: 900, fontSize: 15, color: '#263238', marginBottom: 12 }}>
+            Continue Where You Left Off
+          </div>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {continueItems.map((item) => (
+              <ContinueCard key={item.id} {...item} />
+            ))}
+          </div>
         </div>
-
-        <div style={{ minWidth: 0 }}>
-          <RightRailPlacementManager slot="right_rail_1" />
-        </div>
-      </div>
-
-      <div
-        style={{
-          ...GLASS,
-          padding: 14,
-          minWidth: 0,
-          display: 'grid',
-          gap: 12,
-        }}
-      >
-        <div style={{ fontWeight: 800, color: '#263238', fontSize: 16 }}>
-          Continue Where You Left Off
-        </div>
-
-        {continueItems.length ? (
-          continueItems.map((item) => (
-            <ContinueCard
-              key={item.id}
-              type={item.type}
-              title={item.title}
-              subtitle={item.subtitle}
-              href={item.href}
-              primary={item.primary}
-            />
-          ))
-        ) : (
-          <div
-  style={{
-    background: 'rgba(255,255,255,0.78)',
-    border: '1px solid rgba(0,0,0,0.10)',
-    borderRadius: 12,
-    padding: 14,
-    display: 'grid',
-    gap: 6,
-    color: '#455A64',
-    fontSize: 14,
-    lineHeight: 1.55,
-    fontWeight: 600,
-  }}
->
-  No saved documents yet. Start with a resume or upload an existing one to continue here.
-</div>
-        )}
-      </div>
+      )}
     </div>
   );
 
