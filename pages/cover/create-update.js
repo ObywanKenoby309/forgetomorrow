@@ -232,13 +232,11 @@ export default function CoverLetterPage() {
       ].join('\n');
       const res = await fetch('/api/ai-tailor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
       const text = await res.text();
-      const lines = text.split('
-').map((l) => l.trim());
+      const lines = text.split('\n').map((l) => l.trim());
       const openingLine = lines.find((l) => l.startsWith('OPENING:'))?.replace('OPENING:', '').trim() || '';
       const bullets = lines.filter((l) => l.match(/^BULLET[1-3]:/)).map((l) => l.replace(/^BULLET\d+:/, '').trim()).filter(Boolean);
       const closingLine = lines.find((l) => l.startsWith('CLOSING:'))?.replace('CLOSING:', '').trim() || '';
-      setOpening(openingLine); setBody(bullets.join('
-')); setClosing(closingLine);
+      setOpening(openingLine); setBody(bullets.join('\n')); setClosing(closingLine);
       triggerAutoSave();
     } catch { alert('AI Tailor failed. Try again.'); }
     finally { setIsAiLoading(false); }
@@ -581,9 +579,7 @@ export default function CoverLetterPage() {
                   </div>
                   <div>
                     <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Body <span style={{fontWeight:500,color:'#94A3B8'}}>— 3 bullets with numbers</span></label>
-                    <textarea value={body} onChange={e=>{setBody(e.target.value);triggerAutoSave();}} placeholder={'• Win with a number
-• Win with a number
-• Win with a number'} rows={4}
+                    <textarea value={body} onChange={e=>{setBody(e.target.value);triggerAutoSave();}} placeholder={'• Win with a number\n• Win with a number\n• Win with a number'} rows={4}
                       style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:8,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',resize:'vertical',fontFamily:'inherit',boxSizing:'border-box'}}/>
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
