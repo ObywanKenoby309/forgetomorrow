@@ -12,7 +12,6 @@ import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
 import { uploadJD } from '@/lib/jd/uploadToApi';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import CoverPDFButton from '@/components/cover-letter/export/CoverPDFButton';
-import { normalizeJobText } from '@/lib/jd/ingest';
 
 const CoverLetterTemplate = dynamic(() => import('@/components/cover-letter/CoverLetterTemplate'), { ssr: false });
 
@@ -305,7 +304,7 @@ export default function CoverLetterPage() {
       if(!res.ok) return; const data=await res.json();
       const derivedName=data?.name||[data?.firstName,data?.lastName].filter(Boolean).join(' ')||'';
       const slug=data?.slug;
-      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://www.forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
+      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
     }).catch(()=>{});
   },[router.isReady]);
 
@@ -335,9 +334,7 @@ export default function CoverLetterPage() {
 
   // ─── Derived ──────────────────────────────────────────────────────────────
   
-  const guessedFireTitle = jd ? jd.split('\n').map(s => s.trim()).filter(Boolean)[0]?.slice(0, 80) || 'Job description' : 'Job description';
-  const fireTitle = fireMeta?.title || guessedFireTitle;
-  const greeting = getTimeGreeting();
+      const greetingText = getTimeGreeting();
   const savedTime = saveEventAt ? new Date(saveEventAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
 
   const hasCoverContent = !!(company || role || opening || body);
@@ -366,7 +363,7 @@ export default function CoverLetterPage() {
         <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,alignItems:'start',marginBottom:8,width:'100%'}}>
           <div style={{minWidth:0,display:'grid',gap:8}}>
             <SeekerTitleCard
-              greeting={greeting}
+              greeting={greetingText}
               title="Cover Letter Builder"
               subtitle="1 letter. 3 bullets. 100% tailored. No generic paragraphs. Only your real wins. Beats 3-paragraph letters every time."
             />
