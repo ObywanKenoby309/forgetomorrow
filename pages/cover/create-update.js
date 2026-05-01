@@ -219,23 +219,17 @@ export default function CoverLetterPage() {
     try {
       const expText = (experiences || [])
         .map((exp) => `${exp.jobTitle || exp.title || 'Role'} at ${exp.company || 'Company'}: ${exp.bullets?.join('. ') || ''}`)
-        .filter(Boolean).join('
-');
-      const prompt = `You are a brutal, direct cover letter AI. Write:
-- 1 opening sentence (12 words max)
-- 3 bullet points (10 words max each)
-- 1 closing sentence (8 words max)
-Use ONLY real candidate achievements with numbers. Match job exactly. No fluff.
-JOB:
-${jd}
-CANDIDATE:
-${expText || 'No experience data'}
-OUTPUT FORMAT:
-OPENING: ...
-BULLET1: ...
-BULLET2: ...
-BULLET3: ...
-CLOSING: ...`.trim();
+        .filter(Boolean).join('\n');
+      const prompt = [
+        'You are a brutal, direct cover letter AI. Write:',
+        '- 1 opening sentence (12 words max)',
+        '- 3 bullet points (10 words max each)',
+        '- 1 closing sentence (8 words max)',
+        'Use ONLY real candidate achievements with numbers. Match job exactly. No fluff.',
+        'JOB:', jd,
+        'CANDIDATE:', expText || 'No experience data',
+        'OUTPUT FORMAT:', 'OPENING: ...', 'BULLET1: ...', 'BULLET2: ...', 'BULLET3: ...', 'CLOSING: ...',
+      ].join('\n');
       const res = await fetch('/api/ai-tailor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
       const text = await res.text();
       const lines = text.split('
