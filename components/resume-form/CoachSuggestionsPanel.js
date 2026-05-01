@@ -81,21 +81,34 @@ const sectionLabelMap = {
 function buildOneCallKey(jdText, resumeData, missing) {
   const summary = String(resumeData?.summary || '');
   const skills = Array.isArray(resumeData?.skills) ? resumeData.skills.join('|') : '';
-  const expCount = Array.isArray(resumeData?.workExperiences)
-    ? resumeData.workExperiences.length
-    : Array.isArray(resumeData?.experiences) ? resumeData.experiences.length : 0;
-  const eduCount = Array.isArray(resumeData?.educationList)
-    ? resumeData.educationList.length
-    : Array.isArray(resumeData?.education) ? resumeData.education.length : 0;
+
+  // Use actual experience content not just count — so edits to bullets change the key
+  const experiences = Array.isArray(resumeData?.workExperiences)
+    ? resumeData.workExperiences
+    : Array.isArray(resumeData?.experiences) ? resumeData.experiences : [];
+  const expText = experiences
+    .map(e => [e.title || '', e.company || '', (e.bullets || []).join(' ')].join('|'))
+    .join('::')
+    .slice(0, 500);
+
+  // Use actual education content
+  const education = Array.isArray(resumeData?.educationList)
+    ? resumeData.educationList
+    : Array.isArray(resumeData?.education) ? resumeData.education : [];
+  const eduText = education
+    .map(e => [e.degree || '', e.school || '', e.field || ''].join('|'))
+    .join('::')
+    .slice(0, 200);
+
   const high = Array.isArray(missing?.high) ? missing.high.join('|') : '';
 
   return [
     String(jdText || '').slice(0, 500),
     summary.slice(0, 500),
     skills.slice(0, 500),
-    expCount,
-    eduCount,
-    high.slice(0, 500),
+    expText,
+    eduText,
+    high.slice(0, 200),
   ].join('::');
 }
 
