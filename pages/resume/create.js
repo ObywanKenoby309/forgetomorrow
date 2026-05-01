@@ -171,14 +171,47 @@ export default function CreateResumePage() {
     setTimeout(() => setShowToast(false), 2400);
   };
 
+  const normalizeSavedResumePayload = (payload) => {
+    if (!payload || typeof payload !== 'object') return null;
+
+    const row = payload.resume || payload.item || payload.document || payload;
+
+    if (row?.content) {
+      try {
+        const parsed = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
+        if (parsed?.data && typeof parsed.data === 'object') return parsed.data;
+        if (parsed && typeof parsed === 'object') return parsed;
+      } catch {
+        return row;
+      }
+    }
+
+    if (row?.data && typeof row.data === 'object') return row.data;
+
+    return row;
+  };
+
   const applyResumePayloadToState = (payload) => {
-    if (!payload || typeof payload !== 'object') return false;
-    const source = payload.resume || payload.data || payload.item || payload.document || payload;
+    const source = normalizeSavedResumePayload(payload);
+    if (!source || typeof source !== 'object') return false;
+
     const sf = source.formData || source.personalInfo || source.contact || {};
-    setFormData((prev) => ({ ...prev, ...(sf||{}), fullName: sf.fullName||sf.name||source.fullName||source.name||prev.fullName||prev.name||'' }));
-    if (typeof source.summary==='string') setSummary(source.summary);
-    if (Array.isArray(source.experiences||source.workExperiences)) setExperiences(source.experiences||source.workExperiences);
-    if (Array.isArray(source.educationList||source.education)) setEducationList(source.educationList||source.education);
+    setFormData((prev) => ({
+      ...prev,
+      ...(sf || {}),
+      fullName: sf.fullName || sf.name || source.fullName || source.name || prev.fullName || prev.name || '',
+      targetedRole: sf.targetedRole ?? source.targetedRole ?? prev.targetedRole ?? '',
+      email: sf.email ?? source.email ?? prev.email ?? '',
+      phone: sf.phone ?? source.phone ?? prev.phone ?? '',
+      location: sf.location ?? source.location ?? prev.location ?? '',
+      portfolio: sf.portfolio ?? source.portfolio ?? prev.portfolio ?? '',
+      forgeUrl: sf.ftProfile ?? sf.forgeUrl ?? source.ftProfile ?? source.forgeUrl ?? prev.forgeUrl ?? '',
+      ftProfile: sf.ftProfile ?? sf.forgeUrl ?? source.ftProfile ?? source.forgeUrl ?? prev.ftProfile ?? '',
+    }));
+
+    if (typeof source.summary === 'string') setSummary(source.summary);
+    if (Array.isArray(source.experiences || source.workExperiences)) setExperiences(source.experiences || source.workExperiences);
+    if (Array.isArray(source.educationList || source.education)) setEducationList(source.educationList || source.education);
     if (Array.isArray(source.skills)) setSkills(source.skills);
     if (Array.isArray(source.projects)) setProjects(source.projects);
     if (Array.isArray(source.certifications)) setCertifications(source.certifications);
@@ -188,17 +221,18 @@ export default function CreateResumePage() {
   };
 
   const fetchResumeById = async (resumeId) => {
-    const id = String(resumeId||'').trim();
+    const id = String(resumeId || '').trim();
     if (!id) return null;
-    for (const url of [`/api/resume/get?id=${encodeURIComponent(id)}`,`/api/resume?id=${encodeURIComponent(id)}`,`/api/resume/list`]) {
-      try {
-        const res = await fetch(url); if (!res.ok) continue;
-        const json = await res.json();
-        if (url.includes('/list')) { const found=(json?.resumes||[]).find((r)=>String(r?.id)===id); if(found) return found; continue; }
-        return json;
-      } catch {}
+
+    try {
+      const res = await fetch('/api/resume/list');
+      if (!res.ok) return null;
+
+      const json = await res.json();
+      return (json?.resumes || []).find((r) => String(r?.id) === id) || null;
+    } catch {
+      return null;
     }
-    return null;
   };
 
   const buildResumeCreateHref = (template) => {
@@ -229,7 +263,16 @@ export default function CreateResumePage() {
         const res=await fetch('/api/resume/list'); if(!res.ok) return;
         const json=await res.json(); const list=json?.resumes||[];
         setExistingResumes(list);
-        if(!selectedResumeId&&list.length>0) { const cur=String(router.query.resumeId||'').trim(); setSelectedResumeId(cur||String(list[0].id)); }
+
+        const cur=String(router.query.resumeId||'').trim();
+        if (cur) {
+          setSelectedResumeId(cur);
+          return;
+        }
+
+        if(!selectedResumeId&&list.length>0) {
+          setSelectedResumeId(String(list[0].id));
+        }
       } catch {}
     }
     loadList();
@@ -437,7 +480,17 @@ export default function CreateResumePage() {
     }
   };
 
-  const handleLoadSelectedResume=async()=>{ if(!selectedResumeId) return; await router.push(withChrome(`/resume/create?resumeId=${encodeURIComponent(selectedResumeId)}&template=${isHybrid?'hybrid':'reverse'}`)); };
+  const handleLoadSelectedResume=async()=>{
+    if(!selectedResumeId) return;
+
+    const payload = await fetchResumeById(selectedResumeId);
+    if(payload && applyResumePayloadToState(payload)) {
+      hasAppliedResumeLoadRef.current=String(selectedResumeId);
+      hasAppliedUploadRef.current=true;
+    }
+
+    await router.push(withChrome(`/resume/create?resumeId=${encodeURIComponent(selectedResumeId)}&template=${isHybrid?'hybrid':'reverse'}`));
+  };
   const handleCreateNewResume=async()=>{ setSelectedResumeId(''); hasAppliedResumeLoadRef.current=false; await router.push(withChrome(`/resume/create?template=${isHybrid?'hybrid':'reverse'}`)); };
 
   // ─── Save Modal ───────────────────────────────────────────────────────────
