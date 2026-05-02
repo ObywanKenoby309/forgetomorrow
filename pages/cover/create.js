@@ -1,156 +1,91 @@
-// pages/cover/create.js
-import { useContext, useEffect, useRef, useState } from 'react';
+// pages/cover/create-update.js
+// Cover Letter Builder — mirrors resume builder layout exactly
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import SeekerLayout from '@/components/layouts/SeekerLayout';
+import ResumeBuilderLayout from '@/components/layouts/ResumeBuilderLayout';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import { ResumeContext } from '@/context/ResumeContext';
-import { extractTextFromFile } from '@/lib/jd/ingest';
+import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
+import { uploadJD } from '@/lib/jd/uploadToApi';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import CoverPDFButton from '@/components/cover-letter/export/CoverPDFButton';
 
-const CoverLetterTemplate = dynamic(
-  () => import('@/components/cover-letter/CoverLetterTemplate'),
-  { ssr: false }
-);
+const CoverLetterTemplate = dynamic(() => import('@/components/cover-letter/CoverLetterTemplate'), { ssr: false });
 
 const ORANGE = '#FF7043';
+const MAX_RESUMES = 4;
 
-function Banner({ children }) {
-  return (
-    <div
-      style={{
-        background: '#FFF3E0',
-        border: '1px solid #FFCC80',
-        borderRadius: 12,
-        padding: 14,
-        fontSize: 14,
-        color: '#E65100',
-        fontWeight: 700,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
+const DRAFT_KEYS = {
+  LAST_JOB_TEXT: 'ft_last_job_text',
+  ATS_PACK: 'forge-ats-pack',
+  LAST_UPLOADED_RESUME_TEXT: 'ft_last_uploaded_resume_text',
+};
 
-// Profile-like collapsible row (layout-only wrapper)
-function Section({
-  title,
-  subtitle,
-  open,
-  onToggle,
-  children,
-  required = false,
-  tone = 'default', // default | muted
-}) {
-  const bg =
-    tone === 'muted'
-      ? 'rgba(255,255,255,0.72)'
-      : required
-      ? 'rgba(255,247,230,0.85)'
-      : 'rgba(255,255,255,0.78)';
+const GLASS_CARD = {
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
 
-  const border = required ? '1px solid rgba(255,112,67,0.35)' : '1px solid rgba(255,255,255,0.22)';
+const GROUP_LABEL = {
+  fontSize: 10,
+  fontWeight: 900,
+  color: '#94A3B8',
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
+  whiteSpace: 'nowrap',
+};
 
-  return (
-    <div
-      style={{
-        borderRadius: 16,
-        overflow: 'hidden',
-        background: bg,
-        border,
-        boxShadow: '0 18px 45px rgba(0,0,0,0.16)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-      }}
-    >
-      <button
-        onClick={onToggle}
-        style={{
-          width: '100%',
-          padding: '18px 18px',
-          background: 'transparent',
-          textAlign: 'left',
-          display: 'grid',
-          gridTemplateColumns: '1fr auto',
-          alignItems: 'center',
-          gap: 12,
-          border: 'none',
-          cursor: 'pointer',
-        }}
-        aria-expanded={open ? 'true' : 'false'}
-      >
-        <div style={{ display: 'grid', gap: 4 }}>
-          <div style={{ fontWeight: 900, fontSize: 15, color: '#111827' }}>
-            <span style={{ color: required ? ORANGE : '#111827', fontWeight: 900 }}>{title}</span>
-          </div>
-          {subtitle ? (
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#334155' }}>{subtitle}</div>
-          ) : null}
-        </div>
+const TOOL_GROUP = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  flexWrap: 'wrap',
+  padding: '6px 8px',
+  borderRadius: 14,
+  background: 'rgba(255,255,255,0.46)',
+  border: '1px solid rgba(15,23,42,0.07)',
+};
 
-        <span
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 999,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(255,255,255,0.65)',
-            border: '1px solid rgba(255,255,255,0.22)',
-            boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
-          }}
-          aria-hidden="true"
-        >
-          <svg
-            width="18"
-            height="18"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            style={{ color: '#6B7280' }}
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {open ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            )}
-          </svg>
-        </span>
-      </button>
+const PILL_BUTTON = {
+  borderRadius: 999,
+  padding: '5px 11px',
+  fontSize: 12,
+  border: '1px solid rgba(0,0,0,0.12)',
+  background: 'rgba(255,255,255,0.80)',
+  color: '#334155',
+  fontWeight: 800,
+  cursor: 'pointer',
+};
 
-      {open && (
-        <div
-          style={{
-            padding: '18px 18px 20px',
-            borderTop: '1px solid rgba(255,255,255,0.22)',
-          }}
-        >
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function CoverLetterPage() {
   const router = useRouter();
-
-  // Preserve chrome mode (seeker / coach / recruiter-smb / recruiter-ent)
   const chrome = String(router.query.chrome || '').toLowerCase();
-  const withChrome = (path) =>
-    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+  const withChrome = (path) => (chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path);
 
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
+  const hasAppliedUploadRef = useRef(false);
+  const autoSaveTimer = useRef(null);
+  const resumeDataRef = useRef(null);
 
-  // Pull from ResumeContext so cover uses the same identity as resume builder
-  const { formData = {}, setFormData, saveEventAt, experiences = [] } = useContext(ResumeContext);
+  const {
+    formData, setFormData,
+    summary,
+    experiences,
+    skills,
+    educationList,
+    saveEventAt, setSaveEventAt,
+  } = useContext(ResumeContext);
 
-  const [jd, setJd] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
+  // ─── Cover letter fields ──────────────────────────────────────────────────
   const [recipient, setRecipient] = useState('Hiring Manager');
   const [company, setCompany] = useState('');
   const [role, setRole] = useState('');
@@ -159,102 +94,28 @@ export default function CoverLetterPage() {
   const [body, setBody] = useState('');
   const [closing, setClosing] = useState('');
   const [signoff, setSignoff] = useState('Sincerely,');
-
-  // Portfolio (falls back to Forge URL / FT profile)
-  const [portfolio, setPortfolio] = useState(
-    formData?.portfolio || formData?.forgeUrl || formData?.ftProfile || ''
-  );
-
-  // Profile-like: user chooses what to open (all collapsed by default)
-  const [openRequired, setOpenRequired] = useState(false);
-  const [openContent, setOpenContent] = useState(false);
-  const [openTailor, setOpenTailor] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(true);
-
-  const [showToast, setShowToast] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState(null);
-
-  // DB saved cover tracking (permanent saved covers)
+  const [portfolio, setPortfolio] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [coverId, setCoverId] = useState(null);
-
-  // Draft throttle
   const draftBusyRef = useRef(false);
   const didLoadDraftRef = useRef(false);
 
-  const nowIso = () => new Date().toISOString();
+  const [jd, setJd] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [jdLoading, setJdLoading] = useState(false);
+  const [jdStatus, setJdStatus] = useState('');
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(true);
+  const [saveState, setSaveState] = useState('idle');
 
-  const savedTime = lastSavedAt
-    ? new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : '';
-
-  const jobId =
-    router.query?.jobId && !Number.isNaN(Number(router.query.jobId))
-      ? Number(router.query.jobId)
-      : null;
-
-  const draftKey = jobId ? `cover:draft:${jobId}` : 'cover:draft';
-
-  // 1) If resume builder wrote `name` but cover expects `fullName`, sync it once.
-  useEffect(() => {
-    if (!setFormData) return;
-    if (formData?.fullName) return;
-    if (!formData?.name) return;
-
-    setFormData((prev) => ({
-      ...prev,
-      fullName: prev.fullName || prev.name || '',
-    }));
-  }, [formData?.fullName, formData?.name, setFormData]);
-
-  // 2) Auto-load profile name + URL for cover page too (only if missing).
-  useEffect(() => {
-    if (!setFormData) return;
-
-    async function loadProfileBasics() {
-      try {
-        const hasName = !!(formData?.fullName || formData?.name);
-        const hasUrl = !!(formData?.forgeUrl || formData?.ftProfile);
-
-        if (hasName && hasUrl) return;
-
-        const res = await fetch('/api/profile/header');
-        if (!res.ok) return;
-
-        const data = await res.json();
-
-        const derivedName =
-          data?.name || [data?.firstName, data?.lastName].filter(Boolean).join(' ') || '';
-
-        const slug = data?.slug || '';
-        const fullProfileUrl = slug ? `https://forgetomorrow.com/u/${slug}` : '';
-
-        setFormData((prev) => ({
-          ...prev,
-          fullName: prev.fullName || prev.name || derivedName || '',
-          forgeUrl: prev.forgeUrl || fullProfileUrl,
-          ftProfile: prev.ftProfile || fullProfileUrl,
-        }));
-      } catch (err) {
-        console.error('[cover/create] Failed to auto-load profile data', err);
-      }
-    }
-
-    loadProfileBasics();
-  }, [formData?.fullName, formData?.name, formData?.forgeUrl, formData?.ftProfile, setFormData]);
-
-  // 3) Keep portfolio state in sync if context loads after initial render.
-  useEffect(() => {
-    if (portfolio) return;
-    const next = formData?.portfolio || formData?.forgeUrl || formData?.ftProfile || '';
-    if (next) setPortfolio(next);
-  }, [portfolio, formData?.portfolio, formData?.forgeUrl, formData?.ftProfile]);
-
+  // ─── Resume data ──────────────────────────────────────────────────────────
   const letterData = {
-    fullName: formData.fullName || formData.name || 'Your Name',
-    email: formData.email || '',
-    phone: formData.phone || '',
-    location: formData.location || '',
-    portfolio: portfolio || '',
+    fullName: formData?.fullName || formData?.name || 'Your Name',
+    email: formData?.email || '',
+    phone: formData?.phone || '',
+    location: formData?.location || '',
+    portfolio: portfolio || formData?.portfolio || formData?.forgeUrl || '',
     recipient: recipient || 'Hiring Manager',
     company: company || 'the company',
     role: role || 'the position',
@@ -263,772 +124,463 @@ export default function CoverLetterPage() {
     body: body || '',
     closing: closing || '',
     signoff: signoff || 'Sincerely,',
-    jd: jd || '',
   };
 
-  const buildCoverName = () => {
-    const c = (company || '').trim();
-    const r = (role || '').trim();
-    if (c && r) return `${c} - ${r}`;
-    if (c) return `${c} - Cover Letter`;
-    if (r) return `${r} - Cover Letter`;
-    return 'General Cover Letter';
-  };
+  useEffect(() => { resumeDataRef.current = letterData; });
 
-  // -----------------------------
-  // DRAFTS (DB) via /api/drafts/*
-  // -----------------------------
-  const setCoverDraft = async (opts = { isAutosave: false }) => {
-    if (opts.isAutosave && draftBusyRef.current) return;
-
-    try {
-      if (opts.isAutosave) draftBusyRef.current = true;
-
-      const payload = {
-        // store raw editor fields for perfect restore
-        fields: { recipient, company, role, greeting, opening, body, closing, signoff, portfolio, jd },
-        coverId: coverId || null,
-        savedAt: nowIso(),
-        jobId: jobId || null,
-      };
-
-      const res = await fetch('/api/drafts/set', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: draftKey, content: payload }),
-      });
-
-      if (!res.ok) throw new Error('Draft set failed');
-
-      const ts = nowIso();
-      setLastSavedAt(ts);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2200);
-    } catch (err) {
-      console.error('[cover/create] draft save failed', err);
-    } finally {
-      draftBusyRef.current = false;
-    }
-  };
-
-  const loadCoverDraftOnce = async () => {
+  // ─── Cover draft load on mount ────────────────────────────────────────────
+  useEffect(() => {
     if (didLoadDraftRef.current) return;
     didLoadDraftRef.current = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/drafts/get?key=cover%3Adraft');
+        if (!res.ok) return;
+        const json = await res.json();
+        const f = json?.draft?.content?.fields;
+        if (!f) return;
+        if (typeof f.recipient === 'string') setRecipient(f.recipient);
+        if (typeof f.company === 'string') setCompany(f.company);
+        if (typeof f.role === 'string') setRole(f.role);
+        if (typeof f.greeting === 'string') setGreeting(f.greeting);
+        if (typeof f.opening === 'string') setOpening(f.opening);
+        if (typeof f.body === 'string') setBody(f.body);
+        if (typeof f.closing === 'string') setClosing(f.closing);
+        if (typeof f.signoff === 'string') setSignoff(f.signoff);
+        if (typeof f.portfolio === 'string') setPortfolio(f.portfolio);
+        if (json?.draft?.content?.coverId) setCoverId(json.draft.content.coverId);
+      } catch {}
+    })();
+  }, []);
 
+  // ─── Sync portfolio from formData ─────────────────────────────────────────
+  useEffect(() => {
+    if (portfolio) return;
+    const next = formData?.portfolio || formData?.forgeUrl || formData?.ftProfile || '';
+    if (next) setPortfolio(next);
+  }, [portfolio, formData?.portfolio, formData?.forgeUrl, formData?.ftProfile]);
+
+  // ─── Cover save ──────────────────────────────────────────────────────────
+  const coverName = (() => {
+    const c = (company || '').trim();
+    const r = (role || '').trim();
+    if (c && r) return `${c} — ${r}`;
+    if (c) return `${c} — Cover Letter`;
+    if (r) return `${r} — Cover Letter`;
+    return 'General Cover Letter';
+  })();
+
+  const saveCoverDraft = useCallback(async (isAutosave = false) => {
+    if (isAutosave && draftBusyRef.current) return;
     try {
-      const res = await fetch(`/api/drafts/get?key=${encodeURIComponent(draftKey)}`);
-      if (!res.ok) return;
+      if (isAutosave) draftBusyRef.current = true;
+      await fetch('/api/drafts/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: 'cover:draft',
+          content: { fields: { recipient, company, role, greeting, opening, body, closing, signoff, portfolio }, coverId: coverId || null, savedAt: new Date().toISOString() },
+        }),
+      });
+    } catch {} finally { draftBusyRef.current = false; }
+  }, [recipient, company, role, greeting, opening, body, closing, signoff, portfolio, coverId]);
 
-      const json = await res.json();
-      const content = json?.draft?.content;
-      if (!content?.fields) return;
+  const triggerAutoSave = useCallback(() => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => saveCoverDraft(true), 1400);
+  }, [saveCoverDraft]);
 
-      const f = content.fields;
-
-      if (typeof f.recipient === 'string') setRecipient(f.recipient);
-      if (typeof f.company === 'string') setCompany(f.company);
-      if (typeof f.role === 'string') setRole(f.role);
-      if (typeof f.greeting === 'string') setGreeting(f.greeting);
-      if (typeof f.opening === 'string') setOpening(f.opening);
-      if (typeof f.body === 'string') setBody(f.body);
-      if (typeof f.closing === 'string') setClosing(f.closing);
-      if (typeof f.signoff === 'string') setSignoff(f.signoff);
-      if (typeof f.portfolio === 'string') setPortfolio(f.portfolio);
-      if (typeof f.jd === 'string') setJd(f.jd);
-
-      if (content.coverId) setCoverId(content.coverId);
-
-      setLastSavedAt(content.savedAt || nowIso());
-    } catch (err) {
-      console.error('[cover/create] load draft failed', err);
+  // ─── Cover letter field update ────────────────────────────────────────────
+  const handleCoverUpdate = useCallback((field, value) => {
+    switch (field) {
+      case 'recipient': setRecipient(value); break;
+      case 'company': setCompany(value); break;
+      case 'greeting': setGreeting(value); break;
+      case 'opening': setOpening(value); break;
+      case 'body': setBody(value); break;
+      case 'closing': setClosing(value); break;
+      case 'signoff': setSignoff(value); break;
+      case 'portfolio': setPortfolio(value); break;
+      default: break;
     }
-  };
+    triggerAutoSave();
+  }, [triggerAutoSave]);
 
-  useEffect(() => {
-    loadCoverDraftOnce();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftKey]);
-
-  // autosave draft every 30s
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCoverDraft({ isAutosave: true });
-    }, 30000);
-
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftKey, recipient, company, role, greeting, opening, body, closing, signoff, portfolio, jd, coverId]);
-
-  // save draft on blur (capture)
-  useEffect(() => {
-    const onBlurCapture = (e) => {
-      const t = e?.target;
-      if (!t) return;
-
-      const tag = String(t.tagName || '').toLowerCase();
-      if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') return;
-
-      setCoverDraft({ isAutosave: true });
-    };
-
-    document.addEventListener('blur', onBlurCapture, true);
-    return () => document.removeEventListener('blur', onBlurCapture, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftKey, recipient, company, role, greeting, opening, body, closing, signoff, portfolio, jd, coverId]);
-
-  // -----------------------------
-  // PERMANENT SAVE COVER -> /api/cover/save
-  // -----------------------------
-  const saveCoverToDb = async (opts = { isAutosave: false }) => {
-    const payload = {
-      id: coverId,
-      name: buildCoverName(),
-      content: JSON.stringify({
-        ...letterData,
-        fields: { recipient, company, role, greeting, opening, body, closing, signoff, portfolio, jd },
-      }),
-      jobId: jobId || undefined,
-      setPrimary: true,
-    };
-
+  const saveCoverToDb = async () => {
+    setSaveState('saving');
     try {
       const res = await fetch('/api/cover/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          id: coverId, name: coverName,
+          content: JSON.stringify({ ...letterData, fields: { recipient, company, role, greeting, opening, body, closing, signoff, portfolio } }),
+          setPrimary: true,
+        }),
       });
-
       if (!res.ok) throw new Error('Save failed');
       const data = await res.json();
-
       if (data?.cover?.id) setCoverId(data.cover.id);
-
-      const ts = nowIso();
-      setLastSavedAt(ts);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2200);
-    } catch (err) {
-      console.error('[cover/create] save failed', err);
-      alert('Save failed. Try again.');
+      setSaveState('saved');
+      setSaveEventAt(new Date().toISOString());
+      setTimeout(() => setSaveState('idle'), 2000);
+    } catch {
+      setSaveState('error');
+      setTimeout(() => setSaveState('idle'), 3000);
     }
   };
 
-  const handleFile = async (file) => {
-    if (!file) return;
+  // ─── AI Tailor ────────────────────────────────────────────────────────────
+  const runAITailor = useCallback(async () => {
+    if (!jd?.trim()) return;
+    setIsAiLoading(true);
     try {
-      const text = await extractTextFromFile(file);
-      setJd(text);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // Drag/drop for JD
-  useEffect(() => {
-    const el = dropRef.current;
-    if (!el) return;
-
-    const prevent = (e) => e.preventDefault();
-    const onDrop = (e) => {
-      prevent(e);
-      if (e.dataTransfer?.files?.[0]) {
-        handleFile(e.dataTransfer.files[0]);
-      }
-    };
-
-    el.addEventListener('dragover', prevent);
-    el.addEventListener('drop', onDrop);
-
-    return () => {
-      el.removeEventListener('dragover', prevent);
-      el.removeEventListener('drop', onDrop);
-    };
-  }, []);
-
-  // Keep existing toast behavior if ResumeContext emits saveEventAt
-  useEffect(() => {
-    if (!saveEventAt) return;
-    setShowToast(true);
-    const t = setTimeout(() => setShowToast(false), 2200);
-    return () => clearTimeout(t);
-  }, [saveEventAt]);
-
-  const runAITailor = async () => {
-    if (!jd.trim()) return;
-    setIsLoading(true);
-
-    try {
+      // Build honest resume snapshot — only what the resume actually proves
       const expText = (experiences || [])
-        .map(
-          (exp) =>
-            `${exp.jobTitle || exp.title || 'Role'} at ${exp.company || 'Company'}: ${
-              exp.bullets?.join('. ') || ''
-            }`
-        )
-        .filter(Boolean)
-        .join('\n');
+        .map((exp) => {
+          const title = exp.jobTitle || exp.title || 'Role';
+          const co = exp.company || 'Company';
+          const bullets = (exp.bullets || []).filter(Boolean).join('. ');
+          return `${title} at ${co}${bullets ? ': ' + bullets : ''}`;
+        })
+        .filter(Boolean).join('\n');
 
-      const prompt = `
-You are a brutal, direct cover letter AI. Write:
-- 1 opening sentence (12 words max)
-- 3 bullet points (10 words max each)
-- 1 closing sentence (8 words max)
-Use ONLY real candidate achievements with numbers.
-Match job exactly. No fluff.
-JOB:
-${jd}
-CANDIDATE:
-${expText || 'No experience data'}
-OUTPUT FORMAT:
-OPENING: ...
-BULLET1: ...
-BULLET2: ...
-BULLET3: ...
-CLOSING: ...
-      `.trim();
+      const name = formData?.fullName || formData?.name || '';
+      const resumeSummary = summary || '';
 
-      const res = await fetch('/api/ai-tailor', {
+      const res = await fetch('/api/ats-coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({
+          jdText: jd,
+          resumeData: { summary: resumeSummary, skills, workExperiences: experiences, educationList },
+          context: { section: 'overview', keyword: null },
+          missing: {},
+          coverLetterMode: true,
+          coverLetterCompany: company,
+          coverLetterRole: role,
+          coverLetterName: name,
+        }),
       });
 
-      const text = await res.text();
-      const lines = text.split('\n').map((l) => l.trim());
+      // If ats-coach doesn't support coverLetterMode, fall back to a disciplined direct call
+      if (!res.ok) throw new Error('Coach unavailable');
+      const data = await res.json();
 
-      const openingLine =
-        lines
-          .find((l) => l.startsWith('OPENING:'))
-          ?.replace('OPENING:', '')
-          .trim() || '';
+      // Extract cover letter fields from coach response if available
+      if (data?.coverLetter) {
+        if (data.coverLetter.opening) setOpening(data.coverLetter.opening);
+        if (data.coverLetter.body) setBody(data.coverLetter.body);
+        if (data.coverLetter.closing) setClosing(data.coverLetter.closing);
+        triggerAutoSave();
+        return;
+      }
 
-      const bullets = lines
-        .filter((l) => l.match(/^BULLET[1-3]:/))
-        .map((l) => l.replace(/^BULLET\d+:/, '').trim())
-        .filter(Boolean);
+      // Direct OpenAI call with disciplined prompt
+      const openaiRes = await fetch('/api/cover/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jd,
+          resume: { summary: resumeSummary, experiences, skills },
+          company,
+          role,
+          name,
+        }),
+      });
 
-      const closingLine =
-        lines
-          .find((l) => l.startsWith('CLOSING:'))
-          ?.replace('CLOSING:', '')
-          .trim() || '';
-
-      setOpening(openingLine);
-      setBody(bullets.join('\n'));
-      setClosing(closingLine);
+      if (openaiRes.ok) {
+        const generated = await openaiRes.json();
+        if (generated.opening) setOpening(generated.opening);
+        if (generated.body) setBody(generated.body);
+        if (generated.closing) setClosing(generated.closing);
+        if (generated.signoff) setSignoff(generated.signoff);
+        triggerAutoSave();
+      } else {
+        alert('AI Tailor failed. Please try again.');
+      }
     } catch (err) {
       console.error('AI Tailor failed:', err);
-      alert('AI failed. Try again.');
+      alert('AI Tailor failed. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsAiLoading(false);
     }
+  }, [jd, experiences, summary, skills, educationList, formData, company, role, triggerAutoSave]);
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+;
+
+;
+
+  const showBriefToast = (msg) => {
+    setToastMsg(msg); setShowToast(true);
+    setTimeout(() => setShowToast(false), 2400);
   };
 
-  // HEADER
-  const Header = (
-    <section
-      style={{
-        borderRadius: 14,
-        border: '1px solid rgba(255,255,255,0.22)',
-        background: 'rgba(255,255,255,0.58)',
-        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        padding: 18,
-        textAlign: 'center',
-      }}
-      aria-label="Cover Letter Builder header"
-    >
-      <h1 style={{ margin: 0, color: ORANGE, fontSize: 24, fontWeight: 900 }}>Cover Builder</h1>
-      <p
-        style={{
-          margin: '8px auto 0',
-          color: '#263238',
-          maxWidth: 860,
-          fontWeight: 700,
-          fontSize: 14,
-          lineHeight: 1.4,
-        }}
-      >
-        1 letter. 3 bullets. 100% tailored. No generic paragraphs. Only your real wins. Beats
-        3-paragraph letters every time.
-      </p>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
-        <button
-          onClick={() => router.push(withChrome('/resume/create'))}
-          style={{
-            borderRadius: 999,
-            padding: '10px 14px',
-            background: 'rgba(255,255,255,0.75)',
-            color: '#334155',
-            border: '1px solid rgba(0,0,0,0.10)',
-            fontWeight: 900,
-            cursor: 'pointer',
-          }}
-        >
-          1. Resume
-        </button>
-        <span style={{ width: 46, height: 1, background: 'rgba(0,0,0,0.12)' }} />
-        <button
-          onClick={() => router.push(withChrome('/cover/create'))}
-          style={{
-            borderRadius: 999,
-            padding: '10px 14px',
-            background: ORANGE,
-            color: 'white',
-            border: '1px solid rgba(255,112,67,0.55)',
-            fontWeight: 900,
-            cursor: 'pointer',
-          }}
-        >
-          2. Cover Letter
-        </button>
-      </div>
-    </section>
-  );
+  const normalizeSavedResumePayload = (payload) => {
+    if (!payload || typeof payload !== 'object') return null;
 
-  const Footer = (
-    <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
-      *87% of job seekers using ATS-optimized resumes receive at least one interview within 7 days
-      of applying.
-      <em> Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
-    </div>
-  );
+    const row = payload.resume || payload.item || payload.document || payload;
 
+    if (row?.content) {
+      try {
+        const parsed = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
+        if (parsed?.data && typeof parsed.data === 'object') return parsed.data;
+        if (parsed && typeof parsed === 'object') return parsed;
+      } catch {
+        return row;
+      }
+    }
+
+    if (row?.data && typeof row.data === 'object') return row.data;
+
+    return row;
+  };
+
+;
+
+;
+
+  const clearJobFire = () => { setJd(''); setJdStatus(''); };
+
+;
+
+  // ─── Effects ──────────────────────────────────────────────────────────────
+  useEffect(()=>{
+    const prevent=(e)=>{e.preventDefault();e.stopPropagation();};
+    window.addEventListener('dragover',prevent); window.addEventListener('drop',prevent);
+    return ()=>{window.removeEventListener('dragover',prevent);window.removeEventListener('drop',prevent);};
+  },[]);
+
+  useEffect(()=>{ if(saveEventAt) showBriefToast(`Saved at ${new Date(saveEventAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`); },[saveEventAt]);
+
+  // ─── Effects ──────────────────────────────────────────────────────────────
+  useEffect(()=>{
+    const prevent=(e)=>{e.preventDefault();e.stopPropagation();};
+    window.addEventListener('dragover',prevent); window.addEventListener('drop',prevent);
+    return ()=>{window.removeEventListener('dragover',prevent);window.removeEventListener('drop',prevent);};
+  },[]);
+
+  useEffect(()=>{ if(saveEventAt) showBriefToast(`Saved at ${new Date(saveEventAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`); },[saveEventAt]);
+
+  // Load profile identity if missing
+  useEffect(()=>{
+    if(!router.isReady||formData.forgeUrl||formData.ftProfile||formData.fullName) return;
+    fetch('/api/profile/header').then(async(res)=>{
+      if(!res.ok) return; const data=await res.json();
+      const derivedName=data?.name||[data?.firstName,data?.lastName].filter(Boolean).join(' ')||'';
+      const slug=data?.slug;
+      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
+    }).catch(()=>{});
+  },[router.isReady]);
+
+  // Load last saved JD fire
+  useEffect(()=>{
+    if(!router.isReady) return;
+    async function loadLastJd(){
+      try{const res=await fetch('/api/drafts/get?key=ft_last_job_text');if(!res.ok) return;const json=await res.json();const last=json?.draft?.content;if(typeof last==='string'&&last){setJd(last);setJdStatus('Loaded: Last saved job fire');}}catch{}
+    }
+    if(!jd) loadLastJd();
+  },[router.isReady]);
+
+  // ─── File handler ─────────────────────────────────────────────────────────
+  const handleFile = async(file)=>{
+    if(!file) return;
+    setJdLoading(true); setJdStatus('Processing…');
+    try{
+      let raw=await extractTextFromFile(file);
+      if(!raw||!String(raw).trim()) raw=await uploadJD(file);
+      const clean=normalizeJobText(raw);
+      if(!clean||!String(clean).trim()){setJdStatus('Failed: PDF appears scanned/unreadable');return;}
+      setJd(clean); setJdStatus('Loaded: Job fire from file'); triggerAutoSave();
+    }catch(e){setJdStatus(`Failed: ${e?.message||'Unknown error'}`);}
+    finally{if(fileInputRef.current) fileInputRef.current.value=''; setJdLoading(false);}
+  };
+
+
+  // ─── Derived ──────────────────────────────────────────────────────────────
+  
+      const greetingText = getTimeGreeting();
+  const savedTime = saveEventAt ? new Date(saveEventAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+
+  const hasCoverContent = !!(company || role || opening || body);
+  const coverStatus = !hasCoverContent ? 'Draft' : jd ? 'Targeted' : 'In Progress';
+  const coverStatusStyles = coverStatus==='Targeted'
+    ? {color:'#0EA5E9',background:'rgba(14,165,233,0.10)',border:'1px solid rgba(14,165,233,0.30)'}
+    : coverStatus==='In Progress'
+    ? {color:ORANGE,background:'rgba(255,112,67,0.10)',border:`1px solid rgba(255,112,67,0.30)`}
+    : {color:'#94A3B8',background:'rgba(148,163,184,0.10)',border:'1px solid rgba(148,163,184,0.30)'};
+  // ─── Cover save handler ───────────────────────────────────────────────────
+  const handleSaveClick = async () => { await saveCoverToDb(); };
+
+  // ─── Derived ──────────────────────────────────────────────────────────────
+
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <SeekerLayout
-      title="Cover Letter Builder"
-      header={Header}
-      right={null}
-      footer={Footer}
-      activeNav="resume-cover"
-    >
-      <div
-        style={{
-          maxWidth: 1600,
-          margin: '0 auto',
-          padding: '20px 16px',
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 40,
-          alignItems: 'start',
-        }}
-      >
-        {/* LEFT: FORM */}
-        <div
-          style={{
-            display: 'grid',
-            gap: 16,
-            position: 'sticky',
-            top: 20,
-          }}
-        >
-          <Banner>
-            Live preview updates instantly on the right •{' '}
-            <a href={withChrome('/resume/create')} style={{ textDecoration: 'underline' }}>
-              Back to Resume
-            </a>
-          </Banner>
+    <ResumeBuilderLayout title="Cover Letter Builder | ForgeTomorrow">
+      <style jsx global>{`
+        html, body { overflow-x: hidden; }
+        @media (max-width: 1100px) { .ft-rb-main { grid-template-columns: 1fr !important; } }
+      `}</style>
 
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.72)',
-              border: '1px solid rgba(255,255,255,0.22)',
-              borderRadius: 16,
-              padding: 18,
-              fontSize: 14,
-              lineHeight: 1.6,
-              color: '#92400E',
-              boxShadow: '0 18px 45px rgba(0,0,0,0.16)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-            }}
-          >
-            <strong style={{ fontSize: 15, display: 'block', marginBottom: 8 }}>
-              The Forge Cover Letter Philosophy
-            </strong>
-            <strong>Short = Strong.</strong> Recruiters spend <strong>6 seconds</strong> on your
-            letter. We remove fluff, keep metrics, and make every word count.
-            <br />
-            <br />
-            <strong>Bullets = Scan-proof.</strong> Humans don’t read - they <strong>scan</strong>. 3
-            bullets with numbers beat 3 paragraphs every time.
-            <br />
-            <br />
-            <strong>No “excited.” Just impact.</strong> Your resume tells the story. This letter{' '}
-            <strong>lands the punch</strong>.
+      <div style={{width:'100%',boxSizing:'border-box'}} className="overflow-x-hidden">
+
+        {/* TOP: title + command card */}
+        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,alignItems:'start',marginBottom:8,width:'100%'}}>
+          <div style={{minWidth:0,display:'grid',gap:8}}>
+            <SeekerTitleCard
+              greeting={greetingText}
+              title="Cover Letter Builder"
+              subtitle="1 letter. 3 bullets. 100% tailored. No generic paragraphs. Only your real wins. Beats 3-paragraph letters every time."
+            />
+            <div style={{...GLASS_CARD,padding:'14px 18px'}}>
+              {/* Row 1 — step indicator + cover name */}
+              <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:8}}>
+                <button type="button" onClick={()=>router.push(withChrome('/resume/create'))}
+                  style={{borderRadius:999,padding:'5px 14px',fontSize:12,border:'1px solid rgba(0,0,0,0.12)',background:'rgba(255,255,255,0.80)',color:'#334155',fontWeight:800,cursor:'pointer'}}>
+                  ← Resume
+                </button>
+                <span style={{fontSize:11,color:'#94A3B8',fontWeight:700}}>→</span>
+                <span style={{borderRadius:999,padding:'5px 14px',fontSize:12,background:'rgba(255,112,67,0.12)',color:ORANGE,border:`1px solid rgba(255,112,67,0.30)`,fontWeight:900}}>
+                  ✍️ Cover Letter
+                </span>
+                <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
+                <span style={{fontWeight:900,fontSize:13,color:'#111827',whiteSpace:'nowrap'}}>Cover:</span>
+                <span style={{fontSize:13,fontWeight:700,color:'#334155',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{coverName}</span>
+                {savedTime&&<span style={{fontSize:11,color:'#94A3B8',fontWeight:600}}>· Saved {savedTime}</span>}
+              </div>
+              {/* Row 2 — actions */}
+              <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                <button type="button" onClick={handleSaveClick}
+                  style={{background:'#16A34A',color:'white',padding:'5px 11px',borderRadius:999,fontWeight:800,fontSize:12,border:'none',cursor:'pointer'}}>
+                  {saveState==='saving'?'Saving…':saveState==='saved'?'✓ Saved':'Save Cover'}
+                </button>
+                <CoverPDFButton templateId="cover-pdf" data={letterData}>
+                  <div style={{background:ORANGE,color:'white',padding:'5px 11px',borderRadius:999,fontWeight:800,fontSize:12,cursor:'pointer'}}>Designed PDF</div>
+                </CoverPDFButton>
+                <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
+                <button type="button" onClick={()=>setIsEditMode(true)}
+                  style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:isEditMode?`1px solid rgba(255,112,67,0.40)`:'1px solid rgba(0,0,0,0.12)',background:isEditMode?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:isEditMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer'}}>✏️ Edit</button>
+                <button type="button" onClick={()=>setIsEditMode(false)}
+                  style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:!isEditMode?`1px solid rgba(255,112,67,0.40)`:'1px solid rgba(0,0,0,0.12)',background:!isEditMode?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:!isEditMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer'}}>👁 View</button>
+                <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
+                <button type="button" onClick={()=>setIsFocusMode(v=>!v)}
+                  style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:isFocusMode?`2px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.12)',background:isFocusMode?'rgba(255,112,67,0.12)':'rgba(255,255,255,0.80)',color:isFocusMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer',transition:'all 0.2s'}}>
+                  {isFocusMode?'← Exit Focus':'🎯 Focus'}
+                </button>
+              </div>
+            </div>
           </div>
 
-          <Section
-            title="Required"
-            subtitle="Start here - identity + job targets"
-            open={openRequired}
-            onToggle={() => setOpenRequired((v) => !v)}
-            required
-          >
-            <div style={{ display: 'grid', gap: 20 }}>
-              <div>
-                <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Recipient</label>
-                <input
-                  value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
-                  placeholder="Hiring Manager"
-                  style={{
-                    width: '100%',
-                    padding: 12,
-                    border: '1px solid #E5E7EB',
-                    borderRadius: 10,
-                    background: 'rgba(255,255,255,0.9)',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Company</label>
-                  <input
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                    placeholder="Company XYZ"
-                    style={{
-                      width: '100%',
-                      padding: 12,
-                      border: '1px solid #E5E7EB',
-                      borderRadius: 10,
-                      background: 'rgba(255,255,255,0.9)',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Role (Optional)</label>
-                  <input
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    placeholder="Customer Support Tech Ops Manager"
-                    style={{
-                      width: '100%',
-                      padding: 12,
-                      border: '1px solid #E5E7EB',
-                      borderRadius: 10,
-                      background: 'rgba(255,255,255,0.9)',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Greeting</label>
-                <input
-                  value={greeting}
-                  onChange={(e) => setGreeting(e.target.value)}
-                  placeholder="Dear Hiring Manager,"
-                  style={{
-                    width: '100%',
-                    padding: 12,
-                    border: '1px solid #E5E7EB',
-                    borderRadius: 10,
-                    background: 'rgba(255,255,255,0.9)',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>
-                  Portfolio / Website (Optional)
-                </label>
-                <input
-                  type="url"
-                  value={portfolio}
-                  onChange={(e) => setPortfolio(e.target.value)}
-                  placeholder="https://yourwebsite.com"
-                  style={{
-                    width: '100%',
-                    padding: 12,
-                    border: '1px solid #E5E7EB',
-                    borderRadius: 10,
-                    background: 'rgba(255,255,255,0.9)',
-                  }}
-                />
+          {/* AD RAIL */}
+          {!isFocusMode&&(
+            <div style={{width:'220px',height:295,flexShrink:0,overflow:'hidden',borderRadius:14}}>
+              <div style={{width:280,transform:'scale(0.78)',transformOrigin:'top left'}}>
+                <RightRailPlacementManager slot="right_rail_1"/>
               </div>
             </div>
-          </Section>
+          )}
+        </div>
 
-          <Section
-            title="Letter Content"
-            subtitle="Write the punch: opening + 3 bullets + close"
-            open={openContent}
-            onToggle={() => setOpenContent((v) => !v)}
-            tone="muted"
-          >
-            <div style={{ display: 'grid', gap: 20 }}>
-              <div>
-                <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Opening</label>
-                <textarea
-                  value={opening}
-                  onChange={(e) => setOpening(e.target.value)}
-                  placeholder="One strong sentence. No fluff."
-                  style={{
-                    width: '100%',
-                    height: 100,
-                    padding: 12,
-                    border: '1px solid #E5E7EB',
-                    borderRadius: 10,
-                    fontFamily: 'inherit',
-                    background: 'rgba(255,255,255,0.9)',
-                  }}
-                />
-              </div>
+        {/* EDITOR + INTELLIGENCE GRID */}
+        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0,1fr) 340px',gap:8,alignItems:'start'}}>
 
-              <div>
-                <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Body (3 bullets)</label>
-                <textarea
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  placeholder={
-                    'Bullet 1 with a number\nBullet 2 with a number\nBullet 3 with a number'
-                  }
-                  style={{
-                    width: '100%',
-                    height: 150,
-                    padding: 12,
-                    border: '1px solid #E5E7EB',
-                    borderRadius: 10,
-                    fontFamily: 'inherit',
-                    background: 'rgba(255,255,255,0.9)',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Closing</label>
-                  <textarea
-                    value={closing}
-                    onChange={(e) => setClosing(e.target.value)}
-                    placeholder="Let’s talk."
-                    style={{
-                      width: '100%',
-                      height: 80,
-                      padding: 12,
-                      border: '1px solid #E5E7EB',
-                      borderRadius: 10,
-                      fontFamily: 'inherit',
-                      background: 'rgba(255,255,255,0.9)',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Sign-off</label>
-                  <input
-                    value={signoff}
-                    onChange={(e) => setSignoff(e.target.value)}
-                    placeholder="Sincerely,"
-                    style={{
-                      width: '100%',
-                      padding: 12,
-                      border: '1px solid #E5E7EB',
-                      borderRadius: 10,
-                      background: 'rgba(255,255,255,0.9)',
-                    }}
-                  />
-                </div>
-              </div>
+          {/* LEFT: Inline Editable Cover Letter */}
+          <div style={{...GLASS_CARD,overflow:'hidden'}}>
+            <div style={{padding:'10px 16px',background:'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',color:'white',fontWeight:900,fontSize:13,letterSpacing:0.4,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <span>✍️ COVER LETTER EDITOR</span>
+              <span style={{fontSize:11,fontWeight:600,opacity:0.75}}>Click any section to edit</span>
             </div>
-          </Section>
-
-          <Section
-            title="Tailor to Job"
-            subtitle="Add job fire - paste or upload, then run AI tailor"
-            open={openTailor}
-            onToggle={() => setOpenTailor((v) => !v)}
-            tone="muted"
-          >
-            <div style={{ display: 'grid', gap: 16 }}>
-              <div>
-                <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>
-                  Paste Job Description (Primary)
-                </label>
-                <textarea
-                  value={jd}
-                  onChange={(e) => setJd(e.target.value)}
-                  placeholder="Paste the full job description here..."
-                  style={{
-                    width: '100%',
-                    height: 160,
-                    padding: 12,
-                    border: '1px solid #E5E7EB',
-                    borderRadius: 10,
-                    fontFamily: 'inherit',
-                    fontSize: 14,
-                    resize: 'vertical',
-                    background: 'rgba(255,255,255,0.9)',
-                  }}
-                />
-              </div>
-
-              <div style={{ textAlign: 'center', fontSize: 13, color: '#666' }}>
-                or{' '}
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{
-                    color: ORANGE,
-                    background: 'none',
-                    border: 0,
-                    fontWeight: 800,
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                  }}
-                >
-                  upload file
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.docx,.txt"
-                  onChange={(e) => handleFile(e.target.files?.[0])}
-                  style={{ display: 'none' }}
-                />
-              </div>
-
-              {jd && (
-                <div
-                  style={{
-                    padding: '8px 12px',
-                    background: '#F0FDF4',
-                    border: '1px solid #BBF7D0',
-                    borderRadius: 10,
-                    fontSize: 12,
-                    color: '#166534',
-                    fontWeight: 700,
-                  }}
-                >
-                  JD loaded • {jd.split(/\s+/).filter(Boolean).length} words
-                </div>
-              )}
-
-              {jd && (
-                <button
-                  onClick={runAITailor}
-                  disabled={isLoading || !jd.trim()}
-                  style={{
-                    width: '100%',
-                    background: isLoading ? '#9CA3AF' : ORANGE,
-                    color: 'white',
-                    padding: 16,
-                    borderRadius: 14,
-                    fontWeight: 900,
-                    fontSize: 16,
-                    border: 'none',
-                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                    opacity: isLoading ? 0.75 : 1,
-                    boxShadow: '0 14px 30px rgba(0,0,0,0.18)',
-                  }}
-                >
-                  {isLoading ? 'AI Tailoring...' : 'AI TAILOR to 3s'}
-                </button>
-              )}
-
-              <div
-                ref={dropRef}
-                style={{
-                  height: 1,
-                  opacity: 0,
-                  pointerEvents: 'none',
-                }}
+            <div id="cover-pdf" style={{padding:isEditMode?20:32,background:'#fff',minHeight:760,overflowY:'auto'}}>
+              <CoverLetterTemplate
+                data={letterData}
+                isEditMode={isEditMode}
+                onUpdate={handleCoverUpdate}
               />
             </div>
-          </Section>
-        </div>
-
-        {/* RIGHT: LIVE PREVIEW */}
-        <div
-          style={{
-            position: 'sticky',
-            top: 20,
-            background: 'white',
-            borderRadius: 16,
-            boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              padding: '20px 32px',
-              background: '#263238',
-              color: 'white',
-              fontWeight: 800,
-              fontSize: 18,
-              textAlign: 'center',
-            }}
-          >
-            LIVE COVER LETTER
           </div>
-          <div style={{ padding: 60, background: '#fff', minHeight: '100vh' }}>
-            <CoverLetterTemplate data={letterData} />
-          </div>
-        </div>
-      </div>
 
-      <div className="fixed bottom-24 right-6 z-40 flex flex-col items-end gap-2">
-        <button
-          type="button"
-          onClick={() => setToolsOpen((v) => !v)}
-          className="flex items-center gap-2 bg-white shadow-2xl border rounded-full px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          <span>{toolsOpen ? 'Hide tools' : 'Cover tools'}</span>
-          <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-gray-100">
-            <svg
-              className={`w-3 h-3 text-gray-600 transition-transform ${toolsOpen ? 'rotate-90' : '-rotate-90'}`}
-              viewBox="0 0 20 20"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M7 5l6 5-6 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-        </button>
+                    {/* RIGHT: Cover Intelligence Rail — mirrors Forge Hammer */}
+          {!isFocusMode&&(
+            <div style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20,alignSelf:'start'}}>
+              <div style={{...GLASS_CARD,overflow:'hidden'}}>
+                <div style={{padding:'12px 16px',background:'linear-gradient(135deg, rgba(255,112,67,0.15), rgba(255,112,67,0.05))',borderBottom:'1px solid rgba(255,112,67,0.15)'}}>
+                  <div style={{fontWeight:900,fontSize:15,color:ORANGE}}>✍️ Cover Intelligence</div>
+                  <div style={{fontSize:11,color:'#64748B',fontWeight:600,marginTop:2}}>AI tailor + resume steel + job fire</div>
+                </div>
 
-        {toolsOpen && (
-          <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
-            <button
-              onClick={() => saveCoverToDb({ isAutosave: false })}
-              className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700 transition-all"
-            >
-              Save Cover
-            </button>
+                {/* Quick fields — company, role, portfolio */}
+                <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(0,0,0,0.06)',display:'grid',gap:8}}>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                    <div>
+                      <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Company</label>
+                      <input value={company} onChange={e=>setCompany(e.target.value)} placeholder="Company XYZ"
+                        style={{width:'100%',padding:'6px 8px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:7,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',boxSizing:'border-box'}}/>
+                    </div>
+                    <div>
+                      <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Role</label>
+                      <input value={role} onChange={e=>setRole(e.target.value)} placeholder="Job title"
+                        style={{width:'100%',padding:'6px 8px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:7,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',boxSizing:'border-box'}}/>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{display:'block',fontWeight:700,fontSize:11,color:'#64748B',marginBottom:3}}>Portfolio <span style={{fontWeight:500,color:'#94A3B8'}}>(optional)</span></label>
+                    <input type="url" value={portfolio} onChange={e=>setPortfolio(e.target.value)} placeholder="https://yourwebsite.com"
+                      style={{width:'100%',padding:'6px 8px',border:'1px solid rgba(0,0,0,0.10)',borderRadius:7,fontSize:12,color:'#37474F',background:'rgba(255,255,255,0.9)',outline:'none',boxSizing:'border-box'}}/>
+                  </div>
+                </div>
 
-            <CoverPDFButton templateId="cover-pdf" data={letterData}>
-              <div className="bg-orange-500 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-orange-600 transition-all cursor-pointer">
-                Designed PDF
+                {/* JD status */}
+                <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(0,0,0,0.06)'}}>
+                  {jd ? (
+                    <>
+                      <div style={{fontWeight:800,fontSize:13,color:'#0D47A1',marginBottom:4}}>🔥 Job fire loaded</div>
+                      <div style={{fontSize:12,color:'#334155',marginBottom:4}}>{jd.split(/\s+/).filter(Boolean).length} words · ready to tailor</div>
+                      <button type="button" onClick={clearJobFire} style={{background:'transparent',border:'none',color:'#B91C1C',fontWeight:800,fontSize:12,cursor:'pointer',textDecoration:'underline',padding:0}}>Clear loaded job</button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{fontWeight:800,fontSize:13,color:ORANGE,marginBottom:6}}>🔥 Add the fire.</div>
+                      <div style={{fontSize:12,color:'#475569',lineHeight:1.6}}>Paste a job description to unlock AI tailoring.</div>
+                    </>
+                  )}
+                </div>
+
+                {/* JD drop zone */}
+                <div ref={dropRef} onClick={()=>{if(fileInputRef.current) fileInputRef.current.value=''; fileInputRef.current?.click();}}
+                  onDragOver={(e)=>{e.preventDefault();e.stopPropagation();e.currentTarget.style.background='rgba(187,222,251,0.95)';}}
+                  onDragLeave={(e)=>{e.preventDefault();e.stopPropagation();e.currentTarget.style.background='rgba(227,242,253,0.85)';}}
+                  onDrop={(e)=>{e.preventDefault();e.stopPropagation();e.currentTarget.style.background='rgba(227,242,253,0.85)';const f=e.dataTransfer.files?.[0];if(f) handleFile(f);}}
+                  style={{margin:'12px 16px',padding:'14px 16px',border:'2px dashed rgba(144,202,249,0.95)',borderRadius:12,textAlign:'center',background:'rgba(227,242,253,0.85)',cursor:'pointer'}}>
+                  <p style={{margin:0,fontSize:12,fontWeight:800,color:'#334155'}}>
+                    Drop a job description here<br/>or{' '}
+                    <button type="button" onClick={(e)=>{e.preventDefault();e.stopPropagation();if(fileInputRef.current) fileInputRef.current.value='';fileInputRef.current?.click();}}
+                      style={{color:ORANGE,background:'none',border:0,fontWeight:900,textDecoration:'underline',cursor:'pointer',fontSize:12}}>upload file</button>
+                  </p>
+                  <input ref={fileInputRef} type="file" accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
+                    onChange={(e)=>{const f=e.target.files?.[0];if(f) handleFile(f);e.target.value='';}}
+                    style={{display:'none'}}/>
+                  {(jdLoading||jdStatus)&&<div style={{marginTop:8,fontSize:12,fontWeight:800,color:jdStatus?.startsWith?.('Failed')?'#B91C1C':'#0D47A1'}}>{jdLoading?'Processing…':jdStatus}</div>}
+                </div>
+
+                {/* AI Tailor */}
+                {jd&&(
+                  <div style={{padding:'0 16px 12px'}}>
+                    <button type="button" onClick={runAITailor} disabled={isAiLoading}
+                      style={{width:'100%',background:isAiLoading?'#9CA3AF':ORANGE,color:'white',padding:'12px 16px',borderRadius:12,fontWeight:900,fontSize:14,border:'none',cursor:isAiLoading?'not-allowed':'pointer',boxShadow:'0 4px 14px rgba(255,112,67,0.35)'}}>
+                      {isAiLoading?'✍️ Tailoring…':'⚡ AI Tailor to Job'}
+                    </button>
+                    <div style={{marginTop:6,fontSize:11,color:'#64748B',lineHeight:1.5}}>
+                      Uses your resume experience + this JD to write your opening, bullets, and close.
+                    </div>
+                  </div>
+                )}
               </div>
-            </CoverPDFButton>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {showToast && (
-        <div
-          style={{
-            position: 'fixed',
-            right: 28,
-            bottom: 100,
-            background: '#16A34A',
-            color: 'white',
-            padding: '12px 20px',
-            borderRadius: 8,
-            fontWeight: 700,
-            fontSize: 14,
-            boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
-          <span>Saved</span>
-          {savedTime && <span style={{ fontSize: 12, opacity: 0.8 }}>{savedTime}</span>}
-        </div>
-      )}
-    </SeekerLayout>
+          </ResumeBuilderLayout>
   );
 }
