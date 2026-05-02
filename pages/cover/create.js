@@ -69,7 +69,7 @@ export default function CoverLetterPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) => (chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path);
-  const isFreshNav = router.isReady && String(router.query?.fresh || '') === '1';
+  const isFreshNav = String(router.query?.fresh || '') === '1';
 
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
@@ -132,8 +132,17 @@ export default function CoverLetterPage() {
 
   // ─── Cover draft load on mount ────────────────────────────────────────────
   useEffect(() => {
+    if (!router.isReady) return;
     if (didLoadDraftRef.current) return;
     didLoadDraftRef.current = true;
+
+    // Fresh nav from resume builder — clear AI fields, don't restore stale draft
+    if (isFreshNav) {
+      setOpening(''); setBody(''); setClosing('');
+      setSignoff('Looking forward to speaking with you,');
+      return;
+    }
+
     (async () => {
       try {
         const res = await fetch('/api/drafts/get?key=cover%3Adraft');
@@ -145,18 +154,15 @@ export default function CoverLetterPage() {
         if (typeof f.company === 'string') setCompany(f.company);
         if (typeof f.role === 'string') setRole(f.role);
         if (typeof f.greeting === 'string') setGreeting(f.greeting);
-        // Only restore AI-generated content if not navigating fresh from resume builder
-        if (!isFreshNav) {
-          if (typeof f.opening === 'string') setOpening(f.opening);
-          if (typeof f.body === 'string') setBody(f.body);
-          if (typeof f.closing === 'string') setClosing(f.closing);
-          if (typeof f.signoff === 'string') setSignoff(f.signoff);
-        }
+        if (typeof f.opening === 'string') setOpening(f.opening);
+        if (typeof f.body === 'string') setBody(f.body);
+        if (typeof f.closing === 'string') setClosing(f.closing);
+        if (typeof f.signoff === 'string') setSignoff(f.signoff);
         if (typeof f.portfolio === 'string') setPortfolio(f.portfolio);
         if (json?.draft?.content?.coverId) setCoverId(json.draft.content.coverId);
       } catch {}
     })();
-  }, []);
+  }, [router.isReady]);
 
   // ─── Sync portfolio from formData ─────────────────────────────────────────
   useEffect(() => {
@@ -450,6 +456,15 @@ export default function CoverLetterPage() {
                   ✍️ Cover Letter
                 </span>
                 <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
+                <button type="button" onClick={()=>{
+                  setRecipient('Hiring Manager'); setCompany(''); setRole('');
+                  setGreeting('Dear Hiring Manager,'); setOpening(''); setBody('');
+                  setClosing(''); setSignoff('Looking forward to speaking with you,');
+                  setPortfolio(''); setCoverId(null);
+                }} style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:'1px solid rgba(255,112,67,0.28)',color:'#C2410C',background:'rgba(255,112,67,0.08)',fontWeight:800,cursor:'pointer'}}>
+                  New Cover
+                </button>
+                <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
                 <span style={{fontWeight:900,fontSize:13,color:'#111827',whiteSpace:'nowrap'}}>Cover:</span>
                 <span style={{fontSize:13,fontWeight:700,color:'#334155',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{coverName}</span>
                 {savedTime&&<span style={{fontSize:11,color:'#94A3B8',fontWeight:600}}>· Saved {savedTime}</span>}
@@ -494,7 +509,8 @@ export default function CoverLetterPage() {
 
         {/* Philosophy panel */}
         {showPhilosophy&&(
-          <div style={{...GLASS_CARD,padding:'16px 20px',marginBottom:8,borderLeft:`3px solid ${ORANGE}`}}>
+          <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,marginBottom:8}}>
+          <div style={{...GLASS_CARD,padding:'16px 20px',borderLeft:`3px solid ${ORANGE}`}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
               <div style={{fontWeight:900,fontSize:14,color:ORANGE}}>The Forge Cover Letter Philosophy</div>
               <button type="button" onClick={()=>setShowPhilosophy(false)} style={{background:'none',border:'none',color:'#94A3B8',cursor:'pointer',fontWeight:700,fontSize:13}}>✕</button>
@@ -504,6 +520,8 @@ export default function CoverLetterPage() {
               <div><strong style={{color:'#111827'}}>Bullets = Scan-proof.</strong> Humans don't read — they <strong>scan</strong>. 3 bullets with numbers beat 3 paragraphs every time.</div>
               <div><strong style={{color:'#111827'}}>No "excited." Just impact.</strong> Your resume tells the story. This letter <strong>lands the punch</strong>.</div>
             </div>
+          </div>
+          {!isFocusMode&&<div/>}
           </div>
         )}
 
