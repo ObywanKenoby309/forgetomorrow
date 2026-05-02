@@ -80,6 +80,8 @@ export default function CoverLetterPage() {
     formData, setFormData,
     summary,
     experiences,
+    skills,
+    educationList,
     saveEventAt, setSaveEventAt,
   } = useContext(ResumeContext);
 
@@ -233,30 +235,76 @@ export default function CoverLetterPage() {
     if (!jd?.trim()) return;
     setIsAiLoading(true);
     try {
+      // Build honest resume snapshot — only what the resume actually proves
       const expText = (experiences || [])
-        .map((exp) => `${exp.jobTitle || exp.title || 'Role'} at ${exp.company || 'Company'}: ${exp.bullets?.join('. ') || ''}`)
+        .map((exp) => {
+          const title = exp.jobTitle || exp.title || 'Role';
+          const co = exp.company || 'Company';
+          const bullets = (exp.bullets || []).filter(Boolean).join('. ');
+          return `${title} at ${co}${bullets ? ': ' + bullets : ''}`;
+        })
         .filter(Boolean).join('\n');
-      const prompt = [
-        'You are a brutal, direct cover letter AI. Write:',
-        '- 1 opening sentence (12 words max)',
-        '- 3 bullet points (10 words max each)',
-        '- 1 closing sentence (8 words max)',
-        'Use ONLY real candidate achievements with numbers. Match job exactly. No fluff.',
-        'JOB:', jd,
-        'CANDIDATE:', expText || 'No experience data',
-        'OUTPUT FORMAT:', 'OPENING: ...', 'BULLET1: ...', 'BULLET2: ...', 'BULLET3: ...', 'CLOSING: ...',
-      ].join('\n');
-      const res = await fetch('/api/ai-tailor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
-      const text = await res.text();
-      const lines = text.split('\n').map((l) => l.trim());
-      const openingLine = lines.find((l) => l.startsWith('OPENING:'))?.replace('OPENING:', '').trim() || '';
-      const bullets = lines.filter((l) => l.match(/^BULLET[1-3]:/)).map((l) => l.replace(/^BULLET\d+:/, '').trim()).filter(Boolean);
-      const closingLine = lines.find((l) => l.startsWith('CLOSING:'))?.replace('CLOSING:', '').trim() || '';
-      setOpening(openingLine); setBody(bullets.join('\n')); setClosing(closingLine);
-      triggerAutoSave();
-    } catch { alert('AI Tailor failed. Try again.'); }
-    finally { setIsAiLoading(false); }
-  }, [jd, experiences, triggerAutoSave]);
+
+      const name = formData?.fullName || formData?.name || '';
+      const resumeSummary = summary || '';
+
+      const res = await fetch('/api/ats-coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jdText: jd,
+          resumeData: { summary: resumeSummary, skills, workExperiences: experiences, educationList },
+          context: { section: 'overview', keyword: null },
+          missing: {},
+          coverLetterMode: true,
+          coverLetterCompany: company,
+          coverLetterRole: role,
+          coverLetterName: name,
+        }),
+      });
+
+      // If ats-coach doesn't support coverLetterMode, fall back to a disciplined direct call
+      if (!res.ok) throw new Error('Coach unavailable');
+      const data = await res.json();
+
+      // Extract cover letter fields from coach response if available
+      if (data?.coverLetter) {
+        if (data.coverLetter.opening) setOpening(data.coverLetter.opening);
+        if (data.coverLetter.body) setBody(data.coverLetter.body);
+        if (data.coverLetter.closing) setClosing(data.coverLetter.closing);
+        triggerAutoSave();
+        return;
+      }
+
+      // Direct OpenAI call with disciplined prompt
+      const openaiRes = await fetch('/api/cover/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jd,
+          resume: { summary: resumeSummary, experiences, skills },
+          company,
+          role,
+          name,
+        }),
+      });
+
+      if (openaiRes.ok) {
+        const generated = await openaiRes.json();
+        if (generated.opening) setOpening(generated.opening);
+        if (generated.body) setBody(generated.body);
+        if (generated.closing) setClosing(generated.closing);
+        triggerAutoSave();
+      } else {
+        alert('AI Tailor failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('AI Tailor failed:', err);
+      alert('AI Tailor failed. Please try again.');
+    } finally {
+      setIsAiLoading(false);
+    }
+  }, [jd, experiences, summary, skills, educationList, formData, company, role, triggerAutoSave]);
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 ;
@@ -343,7 +391,7 @@ export default function CoverLetterPage() {
       if(!raw||!String(raw).trim()) raw=await uploadJD(file);
       const clean=normalizeJobText(raw);
       if(!clean||!String(clean).trim()){setJdStatus('Failed: PDF appears scanned/unreadable');return;}
-      setJd(clean); await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT,clean); setJdStatus('Loaded: Job fire from file');
+      setJd(clean); setJdStatus('Loaded: Job fire from file'); triggerAutoSave();
     }catch(e){setJdStatus(`Failed: ${e?.message||'Unknown error'}`);}
     finally{if(fileInputRef.current) fileInputRef.current.value=''; setJdLoading(false);}
   };
