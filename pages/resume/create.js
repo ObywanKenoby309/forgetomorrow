@@ -393,7 +393,7 @@ export default function CreateResumePage() {
       if(!res.ok) return; const data=await res.json();
       const derivedName=data?.name||[data?.firstName,data?.lastName].filter(Boolean).join(' ')||'';
       const slug=data?.slug;
-      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://www.forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
+      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
     }).catch(()=>{});
   },[router.isReady]);
 
@@ -737,6 +737,23 @@ export default function CreateResumePage() {
                     onChange={(e)=>{const f=e.target.files?.[0];if(f) handleResumeFile(f);}}
                     style={{display:'none'}}
                   />
+                </div>
+
+                <div style={TOOL_GROUP}>
+                  <span style={GROUP_LABEL}>Next Step</span>
+                  <button
+                    type="button"
+                    onClick={()=>{
+                      const params=new URLSearchParams();
+                      if(chrome) params.set('chrome',chrome);
+                      if(router.query.jobId) params.set('jobId',String(router.query.jobId));
+                      router.push(`/cover/create${params.toString()?`?${params.toString()}`:''}`)
+                    }}
+                    style={{...PILL_BUTTON,background:'rgba(255,112,67,0.10)',color:ORANGE,border:`1px solid rgba(255,112,67,0.30)`,fontWeight:900}}
+                    title="Write a cover letter using this resume"
+                  >
+                    ✍️ Cover Letter →
+                  </button>
                 </div>
               </div>
             </div>
