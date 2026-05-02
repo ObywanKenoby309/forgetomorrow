@@ -294,6 +294,7 @@ export default function CoverLetterPage() {
         if (generated.opening) setOpening(generated.opening);
         if (generated.body) setBody(generated.body);
         if (generated.closing) setClosing(generated.closing);
+        if (generated.signoff) setSignoff(generated.signoff);
         triggerAutoSave();
       } else {
         alert('AI Tailor failed. Please try again.');

@@ -75,11 +75,12 @@ Experience:
 ${safe(expText, 1500)}
 
 Write exactly:
-1. OPENING: One sentence (max 20 words) that leads with the strongest honest match between the candidate's background and this role. No fluff. No "I am excited to apply."
+1. OPENING: One natural, human sentence (max 30 words) that introduces the candidate and bridges into the bullets. End with "including:" so the bullets flow from it. Use the candidate's actual background — years of experience, field, and strongest credential. Do NOT say "I am excited to apply." Sound like a real person introducing themselves.
 2. BULLET1: One bullet (max 15 words) — strongest delivery or ownership proof from resume.
 3. BULLET2: One bullet (max 15 words) — strongest technical or domain proof from resume.
 4. BULLET3: One bullet (max 15 words) — strongest stakeholder, leadership, or impact proof from resume.
-5. CLOSING: One sentence (max 15 words) — confident, specific to this role. No generic phrases.
+5. CLOSING: One warm, forward-looking sentence (max 20 words) — show genuine interest in THIS specific role at THIS specific company. "I'm excited to discuss..." or "I look forward to exploring..." — human, not robotic.
+6. SIGNOFF: A warm professional sign-off. Use "Looking forward to speaking with you," or "Warm regards," — not "Sincerely,"
 
 If the resume lacks proof for a bullet, write what the resume actually shows — do not invent.
 
@@ -87,7 +88,8 @@ Return ONLY valid JSON:
 {
   "opening": "...",
   "body": "bullet1\\nbullet2\\nbullet3",
-  "closing": "..."
+  "closing": "...",
+  "signoff": "..."
 }
 `.trim();
 
