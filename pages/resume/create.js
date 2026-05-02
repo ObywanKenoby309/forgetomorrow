@@ -393,7 +393,7 @@ export default function CreateResumePage() {
       if(!res.ok) return; const data=await res.json();
       const derivedName=data?.name||[data?.firstName,data?.lastName].filter(Boolean).join(' ')||'';
       const slug=data?.slug;
-      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://www.forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
+      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
     }).catch(()=>{});
   },[router.isReady]);
 
@@ -745,6 +745,7 @@ export default function CreateResumePage() {
                     type="button"
                     onClick={()=>{
                       const params=new URLSearchParams();
+                      params.set('fresh','1');
                       if(chrome) params.set('chrome',chrome);
                       if(router.query.jobId) params.set('jobId',String(router.query.jobId));
                       router.push(`/cover/create${params.toString()?`?${params.toString()}`:''}`)

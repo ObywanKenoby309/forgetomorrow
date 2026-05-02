@@ -1,4 +1,4 @@
-// pages/cover/create-update.js
+// pages/cover/create.js
 // Cover Letter Builder — mirrors resume builder layout exactly
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -69,6 +69,7 @@ export default function CoverLetterPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) => (chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path);
+  const isFreshNav = router.isReady && String(router.query?.fresh || '') === '1';
 
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
@@ -96,6 +97,7 @@ export default function CoverLetterPage() {
   const [signoff, setSignoff] = useState('Sincerely,');
   const [portfolio, setPortfolio] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showPhilosophy, setShowPhilosophy] = useState(false);
   const [coverId, setCoverId] = useState(null);
   const draftBusyRef = useRef(false);
   const didLoadDraftRef = useRef(false);
@@ -143,10 +145,13 @@ export default function CoverLetterPage() {
         if (typeof f.company === 'string') setCompany(f.company);
         if (typeof f.role === 'string') setRole(f.role);
         if (typeof f.greeting === 'string') setGreeting(f.greeting);
-        if (typeof f.opening === 'string') setOpening(f.opening);
-        if (typeof f.body === 'string') setBody(f.body);
-        if (typeof f.closing === 'string') setClosing(f.closing);
-        if (typeof f.signoff === 'string') setSignoff(f.signoff);
+        // Only restore AI-generated content if not navigating fresh from resume builder
+        if (!isFreshNav) {
+          if (typeof f.opening === 'string') setOpening(f.opening);
+          if (typeof f.body === 'string') setBody(f.body);
+          if (typeof f.closing === 'string') setClosing(f.closing);
+          if (typeof f.signoff === 'string') setSignoff(f.signoff);
+        }
         if (typeof f.portfolio === 'string') setPortfolio(f.portfolio);
         if (json?.draft?.content?.coverId) setCoverId(json.draft.content.coverId);
       } catch {}
@@ -370,7 +375,7 @@ export default function CoverLetterPage() {
       if(!res.ok) return; const data=await res.json();
       const derivedName=data?.name||[data?.firstName,data?.lastName].filter(Boolean).join(' ')||'';
       const slug=data?.slug;
-      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://www.forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
+      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
     }).catch(()=>{});
   },[router.isReady]);
 
@@ -468,6 +473,11 @@ export default function CoverLetterPage() {
                   style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:isFocusMode?`2px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.12)',background:isFocusMode?'rgba(255,112,67,0.12)':'rgba(255,255,255,0.80)',color:isFocusMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer',transition:'all 0.2s'}}>
                   {isFocusMode?'← Exit Focus':'🎯 Focus'}
                 </button>
+                <button type="button" onClick={()=>setShowPhilosophy(v=>!v)}
+                  style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:'1px solid rgba(0,0,0,0.12)',background:showPhilosophy?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:showPhilosophy?ORANGE:'#334155',fontWeight:800,cursor:'pointer'}}
+                  title="Read The Forge Cover Letter Philosophy">
+                  ℹ️ Philosophy
+                </button>
               </div>
             </div>
           </div>
@@ -481,6 +491,21 @@ export default function CoverLetterPage() {
             </div>
           )}
         </div>
+
+        {/* Philosophy panel */}
+        {showPhilosophy&&(
+          <div style={{...GLASS_CARD,padding:'16px 20px',marginBottom:8,borderLeft:`3px solid ${ORANGE}`}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+              <div style={{fontWeight:900,fontSize:14,color:ORANGE}}>The Forge Cover Letter Philosophy</div>
+              <button type="button" onClick={()=>setShowPhilosophy(false)} style={{background:'none',border:'none',color:'#94A3B8',cursor:'pointer',fontWeight:700,fontSize:13}}>✕</button>
+            </div>
+            <div style={{display:'grid',gap:8,fontSize:13,color:'#334155',lineHeight:1.6}}>
+              <div><strong style={{color:'#111827'}}>Short = Strong.</strong> Recruiters spend <strong>6 seconds</strong> on your letter. We remove fluff, keep metrics, and make every word count.</div>
+              <div><strong style={{color:'#111827'}}>Bullets = Scan-proof.</strong> Humans don't read — they <strong>scan</strong>. 3 bullets with numbers beat 3 paragraphs every time.</div>
+              <div><strong style={{color:'#111827'}}>No "excited." Just impact.</strong> Your resume tells the story. This letter <strong>lands the punch</strong>.</div>
+            </div>
+          </div>
+        )}
 
         {/* EDITOR + INTELLIGENCE GRID */}
         <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0,1fr) 340px',gap:8,alignItems:'start'}}>
