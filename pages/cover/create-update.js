@@ -13,6 +13,8 @@ import { uploadJD } from '@/lib/jd/uploadToApi';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import CoverPDFButton from '@/components/cover-letter/export/CoverPDFButton';
 
+const CoverLetterTemplate = dynamic(() => import('@/components/cover-letter/CoverLetterTemplate'), { ssr: false });
+
 const ORANGE = '#FF7043';
 const MAX_RESUMES = 4;
 
@@ -102,6 +104,7 @@ export default function CoverLetterPage() {
   const [jdLoading, setJdLoading] = useState(false);
   const [jdStatus, setJdStatus] = useState('');
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(true);
   const [saveState, setSaveState] = useState('idle');
 
   // ─── Resume data ──────────────────────────────────────────────────────────
@@ -184,6 +187,22 @@ export default function CoverLetterPage() {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => saveCoverDraft(true), 1400);
   }, [saveCoverDraft]);
+
+  // ─── Cover letter field update ────────────────────────────────────────────
+  const handleCoverUpdate = useCallback((field, value) => {
+    switch (field) {
+      case 'recipient': setRecipient(value); break;
+      case 'company': setCompany(value); break;
+      case 'greeting': setGreeting(value); break;
+      case 'opening': setOpening(value); break;
+      case 'body': setBody(value); break;
+      case 'closing': setClosing(value); break;
+      case 'signoff': setSignoff(value); break;
+      case 'portfolio': setPortfolio(value); break;
+      default: break;
+    }
+    triggerAutoSave();
+  }, [triggerAutoSave]);
 
   const saveCoverToDb = async () => {
     setSaveState('saving');
@@ -391,6 +410,11 @@ export default function CoverLetterPage() {
                   <div style={{background:ORANGE,color:'white',padding:'5px 11px',borderRadius:999,fontWeight:800,fontSize:12,cursor:'pointer'}}>Designed PDF</div>
                 </CoverPDFButton>
                 <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
+                <button type="button" onClick={()=>setIsEditMode(true)}
+                  style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:isEditMode?`1px solid rgba(255,112,67,0.40)`:'1px solid rgba(0,0,0,0.12)',background:isEditMode?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:isEditMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer'}}>✏️ Edit</button>
+                <button type="button" onClick={()=>setIsEditMode(false)}
+                  style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:!isEditMode?`1px solid rgba(255,112,67,0.40)`:'1px solid rgba(0,0,0,0.12)',background:!isEditMode?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:!isEditMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer'}}>👁 View</button>
+                <span style={{width:1,height:20,background:'rgba(0,0,0,0.10)',margin:'0 4px',flexShrink:0}}/>
                 <button type="button" onClick={()=>setIsFocusMode(v=>!v)}
                   style={{borderRadius:999,padding:'5px 11px',fontSize:12,border:isFocusMode?`2px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.12)',background:isFocusMode?'rgba(255,112,67,0.12)':'rgba(255,255,255,0.80)',color:isFocusMode?'#C2410C':'#334155',fontWeight:800,cursor:'pointer',transition:'all 0.2s'}}>
                   {isFocusMode?'← Exit Focus':'🎯 Focus'}
@@ -418,118 +442,16 @@ export default function CoverLetterPage() {
               <span>✍️ COVER LETTER EDITOR</span>
               <span style={{fontSize:11,fontWeight:600,opacity:0.75}}>Click any section to edit</span>
             </div>
-            <div id="cover-pdf" style={{padding:32,background:'#fff',minHeight:760,overflowY:'auto',fontFamily:'Helvetica Neue, sans-serif',fontSize:12,lineHeight:1.7,color:'#1f2937',maxWidth:680,margin:'0 auto'}}>
-
-              {/* Header — identity, read from formData */}
-              <div style={{marginBottom:32}}>
-                <div style={{fontWeight:700,fontSize:14}}>{formData?.fullName||formData?.name||'Your Name'}</div>
-                <div style={{fontSize:10,color:'#6b7280',marginTop:4}}>
-                  {[formData?.email,formData?.phone,formData?.location].filter(Boolean).join(' · ')}
-                  {portfolio&&<span> · <span style={{color:'#1f2937',fontWeight:500}}>{portfolio}</span></span>}
-                </div>
-              </div>
-
-              {/* Recipient + Company */}
-              <div style={{marginBottom:20}}>
-                <div
-                  contentEditable suppressContentEditableWarning
-                  onBlur={e=>{setRecipient(e.currentTarget.textContent||'Hiring Manager');triggerAutoSave();}}
-                  style={{outline:'none',cursor:'text',padding:'2px 4px',borderRadius:4,minHeight:20}}
-                  onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.06)'}
-                  onBlurCapture={e=>e.currentTarget.style.background='transparent'}
-                >
-                  {recipient||'Hiring Manager'}
-                </div>
-                <div
-                  contentEditable suppressContentEditableWarning
-                  onBlur={e=>{setCompany(e.currentTarget.textContent||'');triggerAutoSave();}}
-                  style={{outline:'none',cursor:'text',padding:'2px 4px',borderRadius:4,minHeight:20,color:'#374151'}}
-                  onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.06)'}
-                  onBlurCapture={e=>e.currentTarget.style.background='transparent'}
-                >
-                  {company||<span style={{color:'#9ca3af'}}>Company name</span>}
-                </div>
-              </div>
-
-              {/* Greeting */}
-              <div
-                contentEditable suppressContentEditableWarning
-                onBlur={e=>{setGreeting(e.currentTarget.textContent||'Dear Hiring Manager,');triggerAutoSave();}}
-                style={{outline:'none',cursor:'text',padding:'2px 4px',borderRadius:4,marginBottom:16,fontWeight:500}}
-                onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.06)'}
-                onBlurCapture={e=>e.currentTarget.style.background='transparent'}
-              >
-                {greeting||'Dear Hiring Manager,'}
-              </div>
-
-              {/* Opening */}
-              <div style={{marginBottom:14,position:'relative'}}>
-                {!opening&&<div style={{position:'absolute',top:4,left:4,color:'#9ca3af',pointerEvents:'none',fontSize:11}}>Opening — one strong sentence. Lead with your biggest win.</div>}
-                <div
-                  contentEditable suppressContentEditableWarning
-                  onBlur={e=>{setOpening(e.currentTarget.textContent||'');triggerAutoSave();}}
-                  style={{outline:'none',cursor:'text',padding:'4px',borderRadius:4,minHeight:40,textAlign:'justify'}}
-                  onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.04)'}
-                  onBlurCapture={e=>e.currentTarget.style.background='transparent'}
-                >
-                  {opening}
-                </div>
-              </div>
-
-              {/* Body bullets */}
-              <div style={{margin:'16px 0',position:'relative'}}>
-                {!body&&<div style={{color:'#9ca3af',fontSize:11,padding:'4px'}}>Body — 3 bullets with numbers. One per line.</div>}
-                <div
-                  contentEditable suppressContentEditableWarning
-                  onBlur={e=>{setBody(e.currentTarget.innerText||'');triggerAutoSave();}}
-                  style={{outline:'none',cursor:'text',padding:'4px',borderRadius:4,minHeight:60}}
-                  onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.04)'}
-                  onBlurCapture={e=>e.currentTarget.style.background='transparent'}
-                >
-                  {body ? body.split('\n').filter(Boolean).map((line,i)=>(
-                    <div key={i} style={{display:'flex',gap:8,margin:'6px 0'}}>
-                      <span style={{fontWeight:700,flexShrink:0}}>•</span>
-                      <span>{line.replace(/^[•-]\s*/,'')}</span>
-                    </div>
-                  )) : null}
-                </div>
-              </div>
-
-              {/* Closing */}
-              <div style={{margin:'20px 0 32px',position:'relative'}}>
-                {!closing&&<div style={{color:'#9ca3af',fontSize:11,padding:'4px'}}>Closing — keep it short. "Let's talk." works.</div>}
-                <div
-                  contentEditable suppressContentEditableWarning
-                  onBlur={e=>{setClosing(e.currentTarget.textContent||'');triggerAutoSave();}}
-                  style={{outline:'none',cursor:'text',padding:'4px',borderRadius:4,minHeight:24,textAlign:'justify'}}
-                  onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.04)'}
-                  onBlurCapture={e=>e.currentTarget.style.background='transparent'}
-                >
-                  {closing}
-                </div>
-              </div>
-
-              {/* Signoff */}
-              <div style={{marginTop:40}}>
-                <div
-                  contentEditable suppressContentEditableWarning
-                  onBlur={e=>{setSignoff(e.currentTarget.textContent||'Sincerely,');triggerAutoSave();}}
-                  style={{outline:'none',cursor:'text',padding:'2px 4px',borderRadius:4,fontWeight:500}}
-                  onFocus={e=>e.currentTarget.style.background='rgba(255,112,67,0.06)'}
-                  onBlurCapture={e=>e.currentTarget.style.background='transparent'}
-                >
-                  {signoff||'Sincerely,'}
-                </div>
-                <div style={{fontWeight:700,marginTop:8}}>{formData?.fullName||formData?.name||'Your Name'}</div>
-              </div>
-
-              {/* Role hint */}
-              {role&&<div style={{marginTop:24,fontSize:10,color:'#9ca3af'}}>Re: {role}</div>}
-
+            <div id="cover-pdf" style={{padding:isEditMode?20:32,background:'#fff',minHeight:760,overflowY:'auto'}}>
+              <CoverLetterTemplate
+                data={letterData}
+                isEditMode={isEditMode}
+                onUpdate={handleCoverUpdate}
+              />
             </div>
           </div>
 
-          {/* RIGHT: Cover Intelligence Rail — mirrors Forge Hammer */}
+                    {/* RIGHT: Cover Intelligence Rail — mirrors Forge Hammer */}
           {!isFocusMode&&(
             <div style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20,alignSelf:'start'}}>
               <div style={{...GLASS_CARD,overflow:'hidden'}}>
