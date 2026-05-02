@@ -509,8 +509,8 @@ export default function CoverLetterPage() {
 
         {/* Philosophy panel */}
         {showPhilosophy&&(
-          <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,marginBottom:8}}>
-          <div style={{...GLASS_CARD,padding:'16px 20px',borderLeft:`3px solid ${ORANGE}`}}>
+          <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,marginBottom:8,marginTop:-4}}>
+          <div style={{...GLASS_CARD,padding:'16px 20px',borderLeft:`3px solid ${ORANGE}`,borderTopLeftRadius:0,borderTopRightRadius:0,borderTop:'none'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
               <div style={{fontWeight:900,fontSize:14,color:ORANGE}}>The Forge Cover Letter Philosophy</div>
               <button type="button" onClick={()=>setShowPhilosophy(false)} style={{background:'none',border:'none',color:'#94A3B8',cursor:'pointer',fontWeight:700,fontSize:13}}>✕</button>
