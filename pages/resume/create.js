@@ -393,7 +393,7 @@ export default function CreateResumePage() {
       if(!res.ok) return; const data=await res.json();
       const derivedName=data?.name||[data?.firstName,data?.lastName].filter(Boolean).join(' ')||'';
       const slug=data?.slug;
-      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
+      setFormData((prev)=>({...prev,fullName:prev.fullName||derivedName||prev.name||'',forgeUrl:prev.forgeUrl||(slug?`https://www.forgetomorrow.com/u/${slug}`:''),ftProfile:prev.ftProfile||(slug?`https://forgetomorrow.com/u/${slug}`:'')}));
     }).catch(()=>{});
   },[router.isReady]);
 

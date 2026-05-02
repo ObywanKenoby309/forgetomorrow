@@ -80,7 +80,7 @@ Write exactly:
 3. BULLET2: One bullet (max 15 words) — strongest technical or domain proof from resume.
 4. BULLET3: One bullet (max 15 words) — strongest stakeholder, leadership, or impact proof from resume.
 5. CLOSING: One warm, forward-looking sentence (max 20 words) — show genuine interest in THIS specific role at THIS specific company. "I'm excited to discuss..." or "I look forward to exploring..." — human, not robotic.
-6. SIGNOFF: A warm professional sign-off. Use "Looking forward to speaking with you," or "Warm regards," — not "Sincerely,"
+6. SIGNOFF: MUST be one of these exactly: "Looking forward to speaking with you," OR "I look forward to our conversation," OR "Warm regards," — NEVER use "Sincerely,"
 
 If the resume lacks proof for a bullet, write what the resume actually shows — do not invent.
 
@@ -106,7 +106,7 @@ Return ONLY valid JSON:
           { role: 'user', content: prompt },
         ],
         temperature: 0.2,
-        max_tokens: 400,
+        max_tokens: 500,
       }),
     });
 
