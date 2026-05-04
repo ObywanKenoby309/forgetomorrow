@@ -166,7 +166,7 @@ function Step1({ form, onChange }) {
         <div style={{ fontWeight: 900, fontSize: 12, color: DARK, marginBottom: 4 }}>Tell me about the role</div>
         <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6 }}>Paste the JD or describe what you are targeting</div>
         <textarea name="jobDescription" value={form.jobDescription} onChange={onChange} rows={4}
-          placeholder="e.g. Strategic Advisory Services Manager at Company XYZ — leads consultants, manages engagements, executive stakeholder communication..."
+          placeholder="e.g. Strategic Advisory Services Manager at Company XYZ - leads consultants, manages engagements, executive stakeholder communication..."
           style={{ ...INPUT, resize: 'vertical', lineHeight: 1.55 }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -777,15 +777,21 @@ function ResultCockpit({ plan, form, onReset }) {
   );
 
   return (
-    <div style={{ animation: 'fadeSlideIn 0.3s ease forwards' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, animation: 'fadeSlideIn 0.3s ease forwards' }}>
       <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
-      <ActionBar />
-      <TabBar />
-      {tab === 'decision' && <DecisionTab />}
-      {tab === 'leverage' && <LeverageTab />}
-      {tab === 'market' && <MarketTab />}
-      {tab === 'scripts' && <ScriptsTab />}
-      {tab === 'plan' && <PlanTab />}
+      {/* Action bar + tab bar — sticky, never scroll */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'transparent', paddingBottom: 8 }}>
+        <ActionBar />
+        <TabBar />
+      </div>
+      {/* Tab content — scrolls independently */}
+      <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 260px)', paddingRight: 2 }}>
+        {tab === 'decision' && <DecisionTab />}
+        {tab === 'leverage' && <LeverageTab />}
+        {tab === 'market' && <MarketTab />}
+        {tab === 'scripts' && <ScriptsTab />}
+        {tab === 'plan' && <PlanTab />}
+      </div>
     </div>
   );
 }
@@ -809,11 +815,7 @@ function RightPanel({ step, plan, loading, error, insights, onReset, form }) {
   }
 
   if (plan) {
-    return (
-      <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 120px)', paddingRight: 2 }}>
-        <ResultCockpit plan={plan} form={form} onReset={onReset} />
-      </div>
-    );
+    return <ResultCockpit plan={plan} form={form} onReset={onReset} />;
   }
 
   return (
@@ -958,10 +960,12 @@ export default function OfferEngine() {
         {/* Navigation */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button type="button" onClick={goBack} disabled={step === 1}
-            style={{ padding: '8px 16px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.22)',
-              background: step === 1 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.14)',
-              color: step === 1 ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.85)',
-              fontWeight: 800, fontSize: 12, cursor: step === 1 ? 'not-allowed' : 'pointer', backdropFilter: 'blur(8px)' }}>
+            style={{ padding: '8px 16px', borderRadius: 999,
+              border: step === 1 ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.50)',
+              background: step === 1 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.80)',
+              color: step === 1 ? 'rgba(255,255,255,0.25)' : SLATE,
+              fontWeight: 800, fontSize: 12, cursor: step === 1 ? 'not-allowed' : 'pointer',
+              backdropFilter: 'blur(8px)', boxShadow: step === 1 ? 'none' : '0 2px 8px rgba(0,0,0,0.15)' }}>
             ← Back
           </button>
           <div style={{ display: 'flex', gap: 4 }}>
