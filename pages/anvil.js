@@ -5,7 +5,7 @@ import { useRouter } from "next/router";
 import SeekerLayout from "@/components/layouts/SeekerLayout";
 import SeekerTitleCard from "@/components/seeker/SeekerTitleCard";
 import ProfileDevelopment from "../components/roadmap/ProfileDevelopment";
-import OfferNegotiation from "../components/roadmap/OfferNegotiation";
+import OfferEngine from "../components/offer-negotiation/OfferEngine";
 import OnboardingGrowth from "../components/roadmap/OnboardingGrowth";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import { getTimeGreeting } from "@/lib/dashboardGreeting";
@@ -358,7 +358,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
             <ProfileDevelopment onNext={() => setActiveModule("offer")} setActiveModule={setActiveModule} />
           )}
           {activeModule === "offer" && (
-            <OfferNegotiation onNext={() => setActiveModule("onboarding")} setActiveModule={setActiveModule} />
+            <OfferEngine onBack={() => setActiveModule(null)} />
           )}
           {activeModule === "onboarding" && (
             <OnboardingGrowth onNext={() => setActiveModule(null)} setActiveModule={setActiveModule} />
@@ -535,14 +535,8 @@ export default function AnvilPage() {
             )}
 
             {activeModule === "offer" && (
-              <div style={{ ...GLASS, padding: 24, width: "100%", display: "grid", gap: 16 }}>
-                <button onClick={() => setActiveModule(null)}
-                  style={{ marginBottom: 8, fontSize: "0.875rem", color: "#FF7043",
-                    textDecoration: "underline", background: "none", border: "none",
-                    cursor: "pointer", textAlign: "left", width: "fit-content", fontWeight: 800 }}>
-                  Back to The Anvil
-                </button>
-                <OfferNegotiation onNext={() => setActiveModule("onboarding")} setActiveModule={setActiveModule} />
+              <div style={{ ...GLASS, padding: 20, width: "100%" }}>
+                <OfferEngine onBack={() => setActiveModule(null)} />
               </div>
             )}
 
