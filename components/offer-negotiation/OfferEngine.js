@@ -889,14 +889,15 @@ export default function OfferEngine() {
     setForm(prev => ({ ...prev, [name]: value }));
   }, []);
 
+  // Insights fire only when step changes — not on every keystroke
   useEffect(() => {
     const insight = getMicroInsight(step, form);
     if (!insight) return;
     const timer = setTimeout(() => {
       setInsights(prev => prev.includes(insight) ? prev : [...prev, insight]);
-    }, 500);
+    }, 300);
     return () => clearTimeout(timer);
-  }, [step, form.location, form.jobDescription, form.offerBaseSalary, form.currentSalary, form.hasOffer, form.yearsRelevantExperience, form.competingOffers, form.notableProjectsEvidence, form.confidenceLevel, form.topPriority]);
+  }, [step]);
 
   const goNext = () => {
     if (step < 4) {
