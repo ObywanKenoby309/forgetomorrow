@@ -662,8 +662,14 @@ function Results({ plan, formData, onReset }) {
             </div>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.95)', padding: '16px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', marginBottom: 4, letterSpacing: 0.5 }}>LEVERAGE</div>
+              <div style={{ fontSize: 15, fontWeight: 900, color: plan.decision.leverageBand === 'Strong' ? '#16A34A' : plan.decision.leverageBand === 'Moderate' ? '#D97706' : '#DC2626' }}>
+                {plan.decision.leverageBand}
+                {plan.decision.leverageScore && <span style={{ fontSize: 12, fontWeight: 700, color: '#94A3B8', marginLeft: 6 }}>({plan.decision.leverageScore}/10)</span>}
+              </div>
+            </div>
             {[
-              ['Leverage', plan.decision.leverageBand, plan.decision.leverageBand === 'Strong' ? '#16A34A' : plan.decision.leverageBand === 'Moderate' ? '#D97706' : '#DC2626'],
               ['Risk Level', plan.decision.riskLevel, '#64748B'],
               ['Target Ask', plan.decision.targetAsk, ORANGE],
               ['Fallback Floor', plan.decision.fallbackFloor, '#475569'],
@@ -674,6 +680,18 @@ function Results({ plan, formData, onReset }) {
               </div>
             ))}
           </div>
+          {Array.isArray(plan.decision.leverageDrivers) && plan.decision.leverageDrivers.length > 0 && (
+            <div style={{ background: 'rgba(248,250,252,0.95)', padding: '10px 18px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#64748B', flexShrink: 0, paddingTop: 1 }}>DRIVEN BY:</span>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {plan.decision.leverageDrivers.map((d, i) => (
+                  <span key={i} style={{ fontSize: 12, fontWeight: 600, color: '#475569', background: 'white', padding: '2px 10px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.10)' }}>
+                    {d}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {Array.isArray(plan.decision.doNotTradeAway) && plan.decision.doNotTradeAway.length > 0 && (
             <div style={{ background: 'rgba(254,243,199,0.90)', padding: '10px 18px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}>🔒 DO NOT TRADE AWAY:</span>
@@ -727,13 +745,9 @@ function Results({ plan, formData, onReset }) {
         </Section>
       </div>
 
-      {/* Assumption Check */}
+      {/* Assumption Check — decision risk only */}
       <Section title="🔍 ASSUMPTION CHECK">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 12, color: '#16A34A', marginBottom: 8 }}>✓ What aligns</div>
-            <BulletList items={plan?.assumptionCheck?.whatAligns} />
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 12, color: '#DC2626', marginBottom: 8 }}>⚠ Potential misalignments</div>
             <BulletList items={plan?.assumptionCheck?.potentialMisalignments} />
@@ -758,6 +772,34 @@ function Results({ plan, formData, onReset }) {
           </div>
         </div>
       </Section>
+
+      {/* Negotiation Risk Snapshot */}
+      {plan?.negotiationRiskSnapshot && (
+        <div style={{ marginBottom: 12, borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.22)', boxShadow: '0 10px 24px rgba(0,0,0,0.12)' }}>
+          <div style={{ padding: '10px 16px', background: 'linear-gradient(180deg, rgba(15,23,42,0.92), rgba(30,41,59,0.85))', color: 'white', fontWeight: 900, fontSize: 13, letterSpacing: 0.4 }}>
+            🧠 NEGOTIATION RISK SNAPSHOT
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, background: 'rgba(255,255,255,0.92)' }}>
+            {[
+              { label: 'Biggest Strength', value: plan.negotiationRiskSnapshot.biggestStrength, color: '#16A34A', emoji: '💪' },
+              { label: 'Biggest Weakness', value: plan.negotiationRiskSnapshot.biggestWeakness, color: '#DC2626', emoji: '⚠️' },
+              { label: 'Biggest Opportunity', value: plan.negotiationRiskSnapshot.biggestOpportunity, color: '#0EA5E9', emoji: '🎯' },
+              { label: 'Biggest Risk', value: plan.negotiationRiskSnapshot.biggestRisk, color: '#D97706', emoji: '🔥' },
+            ].map((item, i) => (
+              <div key={item.label} style={{
+                padding: '14px 16px',
+                borderRight: i % 2 === 0 ? '1px solid rgba(0,0,0,0.06)' : 'none',
+                borderBottom: i < 2 ? '1px solid rgba(0,0,0,0.06)' : 'none',
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: item.color, marginBottom: 5, letterSpacing: 0.3 }}>
+                  {item.emoji} {item.label.toUpperCase()}
+                </div>
+                <div style={{ fontSize: 13, color: SLATE, lineHeight: 1.5, fontWeight: 600 }}>{item.value || '—'}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Negotiation Paths */}
       <Section title="🛤 NEGOTIATION PATHS">
