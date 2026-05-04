@@ -1,7 +1,6 @@
 // components/offer-negotiation/OfferEngine.js
 // Premium B — single-page progressive decision engine
 // 4 steps + inline results. Animated transitions. Live micro-insights.
-// remove after update deployment
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 const ORANGE = '#FF7043';
@@ -112,19 +111,17 @@ function getMicroInsight(step, form) {
     return `Limited leverage signals detected. We'll build the most honest path forward from here.`;
   }
   if (step === 4) {
+    const confidence = form.confidenceLevel;
     const priority = form.topPriority;
-    const map = {
-      base_salary: 'base salary',
-      total_comp: 'total compensation',
-      equity: 'equity',
-      sign_on: 'sign-on bonus',
-      remote_flex: 'remote flexibility',
-      growth: 'growth opportunities',
+    const priorityMap = {
+      base_salary: 'base salary', total_comp: 'total compensation',
+      equity: 'equity', sign_on: 'sign-on bonus',
+      remote_flex: 'remote flexibility', growth: 'growth opportunities',
     };
-    if (priority && map[priority]) {
-      return `You're optimizing for ${map[priority]}. We'll build your negotiation paths around that priority.`;
-    }
-    return `Your priorities are set. We're ready to generate your full negotiation strategy.`;
+    if (confidence === 'low') return `You flagged low confidence — we'll build you a conservative anchor and a clear script so you know exactly what to say.`;
+    if (confidence === 'high') return `High confidence noted. We'll optimize for the ambitious path and give you language to hold firm.`;
+    if (priority && priorityMap[priority]) return `Optimizing for ${priorityMap[priority]}. One more step and we'll generate your full strategy.`;
+    return `Decision rules set. Hit Generate Strategy when you're ready.`;
   }
   return null;
 }
@@ -168,81 +165,128 @@ function Field({ label, children, span = 1 }) {
   );
 }
 
-// ─── Step 1: The Target ───────────────────────────────────────────────────────
+// ─── Step 1: Intent + Role ────────────────────────────────────────────────────
 function Step1({ form, onChange }) {
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
-      <Field label="Role or Job Description *">
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div>
+        <div style={{ fontWeight: 900, fontSize: 16, color: DARK, marginBottom: 12 }}>
+          What are we negotiating today?
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {[
+            { value: 'yes', emoji: '🆕', label: 'New Job Offer', sub: 'I received or expect an offer' },
+            { value: 'no', emoji: '📈', label: 'Raise / Promotion', sub: 'I want more in my current role' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange({ target: { name: 'isNewJob', value: opt.value } })}
+              style={{
+                padding: '16px 14px',
+                borderRadius: 12,
+                border: `2px solid ${form.isNewJob === opt.value ? ORANGE : 'rgba(0,0,0,0.10)'}`,
+                background: form.isNewJob === opt.value ? 'rgba(255,112,67,0.07)' : 'rgba(255,255,255,0.80)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.15s',
+              }}
+            >
+              <div style={{ fontSize: 22, marginBottom: 6 }}>{opt.emoji}</div>
+              <div style={{ fontWeight: 900, fontSize: 14, color: form.isNewJob === opt.value ? '#C2410C' : DARK }}>{opt.label}</div>
+              <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 3 }}>{opt.sub}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontWeight: 900, fontSize: 15, color: DARK, marginBottom: 4 }}>
+          Tell me about the role
+        </div>
+        <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>
+          Paste the job description or describe what you're going for
+        </div>
         <textarea
           name="jobDescription"
           value={form.jobDescription}
           onChange={onChange}
-          rows={4}
-          placeholder="Paste the job description or describe the role — e.g. Senior Product Manager at a Series B fintech"
-          style={{ ...INPUT, resize: 'vertical', lineHeight: 1.55 }}
+          rows={5}
+          placeholder={form.isNewJob === 'no'
+            ? 'e.g. Senior Manager at Acme Corp — I want to negotiate a raise from $95k to $110k based on my performance this year...'
+            : 'e.g. Strategic Advisory Services Manager at CrowdStrike — leads a team of consultants, manages engagements, executive stakeholder communication...'}
+          style={{ ...INPUT, resize: 'vertical', lineHeight: 1.6 }}
         />
-      </Field>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="Location *">
-          <input
-            name="location"
-            value={form.location}
-            onChange={onChange}
-            placeholder="City, State or Remote"
-            style={INPUT}
-          />
+        <Field label="Location">
+          <input name="location" value={form.location} onChange={onChange}
+            placeholder="City, State or Remote" style={INPUT} />
         </Field>
         <Field label="Industry">
           <select name="industry" value={form.industry} onChange={onChange} style={INPUT}>
-            <option value="">Select industry</option>
+            <option value="">Select industry (optional)</option>
             {['Technology', 'Healthcare', 'Finance', 'Education', 'Manufacturing', 'Retail', 'Government', 'Nonprofit', 'Other'].map(i => (
               <option key={i} value={i}>{i}</option>
             ))}
           </select>
         </Field>
-        <Field label="Job Type">
-          <select name="jobType" value={form.jobType} onChange={onChange} style={INPUT}>
-            <option value="">Select type</option>
-            {['Full-time', 'Part-time', 'Contract', 'Temporary', 'Internship', 'Other'].map(t => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Preferred Work Mode">
-          <select name="preferredWorkMode" value={form.preferredWorkMode} onChange={onChange} style={INPUT}>
-            <option value="">Select preference</option>
-            <option value="on-site">On-site</option>
-            <option value="hybrid">Hybrid</option>
-            <option value="remote">Remote</option>
-          </select>
-        </Field>
       </div>
-      <Field label="Negotiating for">
-        <Toggle name="isNewJob" value={form.isNewJob} onChange={onChange}
-          options={[{ value: 'yes', label: '🆕 New Job Offer' }, { value: 'no', label: '📈 Current Role / Raise' }]} />
-      </Field>
     </div>
   );
 }
 
-// ─── Step 2: The Offer ────────────────────────────────────────────────────────
+// ─── Step 2: The Situation (branching) ───────────────────────────────────────
 function Step2({ form, onChange }) {
   const hasOffer = form.hasOffer === 'yes';
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
-      <Field label="Do you have an offer in hand?">
-        <Toggle name="hasOffer" value={form.hasOffer} onChange={onChange}
-          options={[{ value: 'yes', label: '✅ Yes, I have an offer' }, { value: 'no', label: '🎯 Not yet' }]} />
-      </Field>
+    <div style={{ display: 'grid', gap: 20 }}>
 
-      {hasOffer ? (
-        <>
+      {/* Branch question — always first */}
+      <div>
+        <div style={{ fontWeight: 900, fontSize: 16, color: DARK, marginBottom: 12 }}>
+          Do you already have an offer?
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {[
+            { value: 'yes', emoji: '📄', label: 'Yes — offer in hand', sub: 'I have written or verbal terms' },
+            { value: 'no', emoji: '🎯', label: 'Not yet', sub: 'Building my strategy in advance' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange({ target: { name: 'hasOffer', value: opt.value } })}
+              style={{
+                padding: '16px 14px',
+                borderRadius: 12,
+                border: `2px solid ${form.hasOffer === opt.value ? ORANGE : 'rgba(0,0,0,0.10)'}`,
+                background: form.hasOffer === opt.value ? 'rgba(255,112,67,0.07)' : 'rgba(255,255,255,0.80)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.15s',
+              }}
+            >
+              <div style={{ fontSize: 22, marginBottom: 6 }}>{opt.emoji}</div>
+              <div style={{ fontWeight: 900, fontSize: 14, color: form.hasOffer === opt.value ? '#C2410C' : DARK }}>{opt.label}</div>
+              <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 3 }}>{opt.sub}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Branch: YES — show offer details */}
+      {hasOffer && (
+        <div style={{ display: 'grid', gap: 12, animation: 'fadeSlideIn 0.25s ease' }}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: SLATE, borderBottom: '1px solid rgba(0,0,0,0.08)', paddingBottom: 8 }}>
+            Tell me what they offered
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Field label="Company">
-              <input name="offerCompany" value={form.offerCompany} onChange={onChange} placeholder="CrowdStrike" style={INPUT} />
+              <input name="offerCompany" value={form.offerCompany} onChange={onChange} placeholder="Company name" style={INPUT} />
             </Field>
             <Field label="Offered Title">
-              <input name="offerRoleTitle" value={form.offerRoleTitle} onChange={onChange} placeholder="Senior Manager" style={INPUT} />
+              <input name="offerRoleTitle" value={form.offerRoleTitle} onChange={onChange} placeholder="e.g. Senior Manager" style={INPUT} />
             </Field>
             <Field label="Base Salary ($)">
               <input name="offerBaseSalary" value={form.offerBaseSalary} onChange={onChange} type="number" min="0" placeholder="120000" style={INPUT} />
@@ -250,11 +294,11 @@ function Step2({ form, onChange }) {
             <Field label="Annual Bonus">
               <input name="offerBonus" value={form.offerBonus} onChange={onChange} placeholder="10% or $12,000" style={INPUT} />
             </Field>
-            <Field label="Sign-on Bonus ($)">
+            <Field label="Sign-on ($) optional">
               <input name="offerSignOn" value={form.offerSignOn} onChange={onChange} type="number" min="0" placeholder="0" style={INPUT} />
             </Field>
-            <Field label="Equity">
-              <input name="offerEquity" value={form.offerEquity} onChange={onChange} placeholder="0.05%, 10k RSUs, etc." style={INPUT} />
+            <Field label="Equity optional">
+              <input name="offerEquity" value={form.offerEquity} onChange={onChange} placeholder="0.05%, 10k RSUs..." style={INPUT} />
             </Field>
             <Field label="Work Mode">
               <select name="offerWorkMode" value={form.offerWorkMode} onChange={onChange} style={INPUT}>
@@ -264,95 +308,137 @@ function Step2({ form, onChange }) {
                 <option value="remote">Remote</option>
               </select>
             </Field>
-            <Field label="Offer Deadline">
-              <input name="offerDeadline" value={form.offerDeadline} onChange={onChange} placeholder="Friday EOD, Jan 15, etc." style={INPUT} />
+            <Field label="Offer Deadline optional">
+              <input name="offerDeadline" value={form.offerDeadline} onChange={onChange} placeholder="Friday EOD, Jan 15..." style={INPUT} />
             </Field>
           </div>
-          <Field label="Benefits Notes">
+          <Field label="Benefits & Other Terms optional">
             <textarea name="offerBenefitsNotes" value={form.offerBenefitsNotes} onChange={onChange}
-              rows={2} placeholder="PTO, health coverage, 401k match, remote stipend, etc."
+              rows={2} placeholder="PTO, health coverage, 401k match, remote stipend, relocation, etc."
               style={{ ...INPUT, resize: 'vertical' }} />
-          </Field>
-          <Field label="Other Compensation">
-            <textarea name="offerOtherComp" value={form.offerOtherComp} onChange={onChange}
-              rows={2} placeholder="Commission, education budget, relocation, severance, etc."
-              style={{ ...INPUT, resize: 'vertical' }} />
-          </Field>
-        </>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Field label="Target Salary — Min ($)">
-            <input name="targetSalaryMin" value={form.targetSalaryMin} onChange={onChange} type="number" min="0" placeholder="100000" style={INPUT} />
-          </Field>
-          <Field label="Target Salary — Max ($)">
-            <input name="targetSalaryMax" value={form.targetSalaryMax} onChange={onChange} type="number" min="0" placeholder="130000" style={INPUT} />
           </Field>
         </div>
       )}
 
-      <Field label="Current Salary ($) *">
+      {/* Branch: NO — show target range */}
+      {!hasOffer && (
+        <div style={{ display: 'grid', gap: 12, animation: 'fadeSlideIn 0.25s ease' }}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: SLATE, borderBottom: '1px solid rgba(0,0,0,0.08)', paddingBottom: 8 }}>
+            What are you targeting?
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Field label="Target Salary — Min ($)">
+              <input name="targetSalaryMin" value={form.targetSalaryMin} onChange={onChange} type="number" min="0" placeholder="100000" style={INPUT} />
+            </Field>
+            <Field label="Target Salary — Max ($)">
+              <input name="targetSalaryMax" value={form.targetSalaryMax} onChange={onChange} type="number" min="0" placeholder="130000" style={INPUT} />
+            </Field>
+          </div>
+        </div>
+      )}
+
+      {/* Always: current salary */}
+      <Field label="Your Current Salary ($)">
         <input name="currentSalary" value={form.currentSalary} onChange={onChange} type="number" min="0" placeholder="95000" style={INPUT} />
       </Field>
     </div>
   );
 }
 
-// ─── Step 3: Your Position ────────────────────────────────────────────────────
+// ─── Step 3: Your Leverage ───────────────────────────────────────────────────
 function Step3({ form, onChange }) {
   const hasCompeting = form.competingOffers === 'yes';
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
+    <div style={{ display: 'grid', gap: 18 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="Current Job Title *">
-          <input name="currentJobTitle" value={form.currentJobTitle} onChange={onChange} placeholder="Director, Advisory Services" style={INPUT} />
+        <Field label="Current Job Title">
+          <input name="currentJobTitle" value={form.currentJobTitle} onChange={onChange}
+            placeholder="e.g. Director, Advisory Services" style={INPUT} />
         </Field>
         <Field label="Years of Relevant Experience">
-          <input name="yearsRelevantExperience" value={form.yearsRelevantExperience} onChange={onChange} type="number" min="0" placeholder="8" style={INPUT} />
+          <input name="yearsRelevantExperience" value={form.yearsRelevantExperience} onChange={onChange}
+            type="number" min="0" placeholder="8" style={INPUT} />
         </Field>
       </div>
-      <Field label="Skills, Certifications & Credentials">
-        <textarea name="skillsCertsExperience" value={form.skillsCertsExperience} onChange={onChange}
-          rows={3} placeholder="e.g. CISSP, PMP, 12 years cybersecurity advisory, CISO experience, top-5 MBA..."
-          style={{ ...INPUT, resize: 'vertical', lineHeight: 1.55 }} />
-      </Field>
-      <Field label="Notable Projects or Proof of Impact">
+
+      <div>
+        <div style={{ fontWeight: 900, fontSize: 15, color: DARK, marginBottom: 4 }}>
+          What have you actually delivered?
+        </div>
+        <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>
+          Your strongest proof of impact — outcomes, scale, transformation. Be specific.
+        </div>
         <textarea name="notableProjectsEvidence" value={form.notableProjectsEvidence} onChange={onChange}
-          rows={3} placeholder="Describe 1-3 wins with outcomes — clients served, revenue impact, teams led, transformations delivered..."
-          style={{ ...INPUT, resize: 'vertical', lineHeight: 1.55 }} />
+          rows={4} placeholder="e.g. Led a team of 50+ agents managing $25M accounts. Built SOP library that cut onboarding time by 40%. Improved SLA compliance from 78% to 94%..."
+          style={{ ...INPUT, resize: 'vertical', lineHeight: 1.6 }} />
+      </div>
+
+      <Field label="Credentials & Certifications (optional)">
+        <input name="skillsCertsExperience" value={form.skillsCertsExperience} onChange={onChange}
+          placeholder="e.g. CISSP, PMP, ITIL V4, MBA, AWS cert..." style={INPUT} />
       </Field>
-      <Field label="Competing Offers?">
-        <Toggle name="competingOffers" value={form.competingOffers} onChange={onChange}
-          options={[{ value: 'yes', label: '⚡ Yes — I have alternatives' }, { value: 'no', label: '🎯 No competing offers' }]} />
-      </Field>
+
+      <div>
+        <div style={{ fontWeight: 900, fontSize: 15, color: DARK, marginBottom: 12 }}>
+          Do you have competing offers?
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {[
+            { value: 'yes', emoji: '⚡', label: 'Yes — I have alternatives', sub: 'This gives you real leverage' },
+            { value: 'no', emoji: '🎯', label: 'No competing offers', sub: 'We'll build leverage from evidence' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange({ target: { name: 'competingOffers', value: opt.value } })}
+              style={{
+                padding: '14px 12px',
+                borderRadius: 12,
+                border: `2px solid ${form.competingOffers === opt.value ? ORANGE : 'rgba(0,0,0,0.10)'}`,
+                background: form.competingOffers === opt.value ? 'rgba(255,112,67,0.07)' : 'rgba(255,255,255,0.80)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.15s',
+              }}
+            >
+              <div style={{ fontSize: 20, marginBottom: 5 }}>{opt.emoji}</div>
+              <div style={{ fontWeight: 900, fontSize: 13, color: form.competingOffers === opt.value ? '#C2410C' : DARK }}>{opt.label}</div>
+              <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>{opt.sub}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {hasCompeting && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Field label="Number of Competing Offers">
-            <input name="competingOffersCount" value={form.competingOffersCount} onChange={onChange} type="number" min="1" placeholder="2" style={INPUT} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, animation: 'fadeSlideIn 0.25s ease' }}>
+          <Field label="How many?">
+            <input name="competingOffersCount" value={form.competingOffersCount} onChange={onChange}
+              type="number" min="1" placeholder="2" style={INPUT} />
           </Field>
-          <Field label="Best Alternative Notes">
+          <Field label="Best alternative">
             <input name="bestAlternativeNotes" value={form.bestAlternativeNotes} onChange={onChange}
-              placeholder="e.g. $130k offer, remote, Series B company" style={INPUT} />
+              placeholder="e.g. $130k, remote, Series B" style={INPUT} />
           </Field>
         </div>
       )}
-      <Field label="Portfolio / Professional Links">
-        <input name="portfolioLinks" value={form.portfolioLinks} onChange={onChange}
-          placeholder="LinkedIn, personal site, GitHub, ForgeTomorrow profile..." style={INPUT} />
-      </Field>
     </div>
   );
 }
 
-// ─── Step 4: What Matters ─────────────────────────────────────────────────────
+// ─── Step 4: Decision Rules ──────────────────────────────────────────────────
 function Step4({ form, onChange }) {
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
+    <div style={{ display: 'grid', gap: 20 }}>
+
       <div>
-        <label style={LABEL}>Your Top 3 Priorities</label>
+        <div style={{ fontWeight: 900, fontSize: 15, color: DARK, marginBottom: 4 }}>
+          What matters most in this decision?
+        </div>
+        <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>Pick your top 3 — in order</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
           {['topPriority', 'secondPriority', 'thirdPriority'].map((name, i) => (
             <div key={name}>
-              <label style={{ ...LABEL, fontSize: 11, color: '#94A3B8', marginBottom: 3 }}>#{i + 1}</label>
+              <label style={{ ...LABEL, fontSize: 11, color: '#94A3B8', marginBottom: 3 }}>#{i + 1} Priority</label>
               <select name={name} value={form[name]} onChange={onChange} style={INPUT}>
                 {priorityOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
@@ -360,30 +446,89 @@ function Step4({ form, onChange }) {
           ))}
         </div>
       </div>
-      <Field label="Must-Haves — your non-negotiables">
+
+      <div>
+        <div style={{ fontWeight: 900, fontSize: 15, color: DARK, marginBottom: 4 }}>
+          What are your non-negotiables?
+        </div>
+        <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>
+          These are your hard floor — you won't move on them
+        </div>
         <textarea name="mustHaves" value={form.mustHaves} onChange={onChange}
-          rows={2} placeholder="e.g. minimum $115k base, remote at least 3 days/week, no on-call requirements..."
+          rows={2} placeholder="e.g. minimum $115k base, remote at least 3 days/week, no on-call..."
           style={{ ...INPUT, resize: 'vertical' }} />
-      </Field>
-      <Field label="Deal-Breakers — what kills the deal">
+      </div>
+
+      <div>
+        <div style={{ fontWeight: 900, fontSize: 15, color: DARK, marginBottom: 4 }}>
+          What would make you walk away?
+        </div>
+        <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>
+          Be honest — these are your deal-breakers
+        </div>
         <textarea name="dealBreakers" value={form.dealBreakers} onChange={onChange}
           rows={2} placeholder="e.g. mandatory relocation, below $95k, no equity, 60+ hour weeks..."
           style={{ ...INPUT, resize: 'vertical' }} />
-      </Field>
+      </div>
+
+      <div>
+        <div style={{ fontWeight: 900, fontSize: 15, color: DARK, marginBottom: 4 }}>
+          What would make this a great offer?
+        </div>
+        <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>
+          Beyond salary — perks, flexibility, growth
+        </div>
+        <input name="desiredBenefits" value={form.desiredBenefits} onChange={onChange}
+          placeholder="e.g. remote stipend, extra PTO, education budget, equity upside..."
+          style={INPUT} />
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="Desired Start Date">
+        <Field label="Willing to relocate?">
+          <Toggle name="willingnessToRelocate" value={form.willingnessToRelocate} onChange={onChange}
+            options={[{ value: 'yes', label: '✈️ Yes' }, { value: 'no', label: '🏠 No' }]} />
+        </Field>
+        <Field label="Desired start date (optional)">
           <input name="desiredStartDate" value={form.desiredStartDate} onChange={onChange}
             placeholder="ASAP, 2 weeks, March 1..." style={INPUT} />
         </Field>
-        <Field label="Desired Benefits / Perks">
-          <input name="desiredBenefits" value={form.desiredBenefits} onChange={onChange}
-            placeholder="Remote stipend, extra PTO, education budget..." style={INPUT} />
-        </Field>
       </div>
-      <Field label="Willing to Relocate?">
-        <Toggle name="willingnessToRelocate" value={form.willingnessToRelocate} onChange={onChange}
-          options={[{ value: 'yes', label: '✈️ Yes' }, { value: 'no', label: '🏠 No' }]} />
-      </Field>
+
+      {/* Confidence checkpoint */}
+      <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: 18 }}>
+        <div style={{ fontWeight: 900, fontSize: 15, color: DARK, marginBottom: 4 }}>
+          How confident are you going into this negotiation?
+        </div>
+        <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>
+          Be honest — this shapes how we frame your strategy
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+          {[
+            { value: 'low', emoji: '😬', label: 'Not confident', sub: 'I need all the help I can get' },
+            { value: 'medium', emoji: '🤔', label: 'Somewhat confident', sub: 'I know my value but feel unsure' },
+            { value: 'high', emoji: '💪', label: 'Very confident', sub: 'I know exactly what I want' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange({ target: { name: 'confidenceLevel', value: opt.value } })}
+              style={{
+                padding: '14px 10px',
+                borderRadius: 12,
+                border: `2px solid ${form.confidenceLevel === opt.value ? ORANGE : 'rgba(0,0,0,0.10)'}`,
+                background: form.confidenceLevel === opt.value ? 'rgba(255,112,67,0.07)' : 'rgba(255,255,255,0.80)',
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.15s',
+              }}
+            >
+              <div style={{ fontSize: 24, marginBottom: 6 }}>{opt.emoji}</div>
+              <div style={{ fontWeight: 900, fontSize: 12, color: form.confidenceLevel === opt.value ? '#C2410C' : DARK, marginBottom: 3 }}>{opt.label}</div>
+              <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4 }}>{opt.sub}</div>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -418,9 +563,9 @@ function MicroInsight({ text, visible }) {
 function ProgressBar({ step, total = 4 }) {
   const steps = [
     { n: 1, label: 'Target' },
-    { n: 2, label: 'Offer' },
-    { n: 3, label: 'Position' },
-    { n: 4, label: 'Priorities' },
+    { n: 2, label: 'Situation' },
+    { n: 3, label: 'Leverage' },
+    { n: 4, label: 'Rules' },
   ];
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
@@ -702,14 +847,14 @@ const INITIAL_FORM = {
   offerWorkMode: '', offerOtherComp: '', competingOffers: 'no',
   competingOffersCount: '', bestAlternativeNotes: '', preferredWorkMode: '',
   willingnessToRelocate: 'no', mustHaves: '', dealBreakers: '',
-  topPriority: '', secondPriority: '', thirdPriority: '', desiredStartDate: '',
+  topPriority: '', secondPriority: '', thirdPriority: '', desiredStartDate: '', confidenceLevel: '',
 };
 
 const STEP_TITLES = [
-  { n: 1, title: '🎯 The Target', sub: 'Where are you aiming?' },
-  { n: 2, title: '💼 The Offer', sub: 'What did they give you?' },
-  { n: 3, title: '⚡ Your Position', sub: 'How strong are you?' },
-  { n: 4, title: '🎖 What Matters', sub: 'Your line in the sand' },
+  { n: 1, title: '🎯 The Target', sub: 'What are we negotiating?' },
+  { n: 2, title: '💼 The Situation', sub: 'What did they offer?' },
+  { n: 3, title: '⚡ Your Leverage', sub: 'How strong are you?' },
+  { n: 4, title: '🎖 Decision Rules', sub: 'Your line in the sand' },
 ];
 
 export default function OfferEngine() {
@@ -766,7 +911,7 @@ export default function OfferEngine() {
       const res = await fetch('/api/offer-negotiation/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formData: form }),
+        body: JSON.stringify({ formData: { ...form, confidenceLevel: form.confidenceLevel || 'medium' } }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Failed to generate plan');

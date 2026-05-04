@@ -1,5 +1,4 @@
 // pages/api/offer-negotiation/generate.js
-// remove after update deployment
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
@@ -109,6 +108,7 @@ export default async function handler(req, res) {
     const thirdPriority = safeString(formData.thirdPriority);
 
     const desiredStartDate = safeString(formData.desiredStartDate);
+    const confidenceLevel = safeString(formData.confidenceLevel); // low / medium / high
 
     const systemPrompt = `
 You are ForgeTomorrow's Offer & Negotiation Intelligence Engine — a decisive compensation advisor, not a passive presenter of options.
@@ -193,6 +193,7 @@ Leverage and preferences:
 - Priorities (top 3): ${[topPriority, secondPriority, thirdPriority].filter(Boolean).join(', ') || 'N/A'}
 - Must-haves: ${mustHaves || 'N/A'}
 - Deal-breakers: ${dealBreakers || 'N/A'}
+- Candidate confidence level: ${confidenceLevel === 'low' ? 'Low — needs clear anchoring and scripted language' : confidenceLevel === 'high' ? 'High — optimize for ambitious path, hold-firm language' : 'Medium — balanced approach'}
 
 Return JSON in this exact structure:
 
