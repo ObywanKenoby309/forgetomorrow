@@ -525,10 +525,11 @@ export default function AnvilPage() {
             {activeModule === "profile" && (
               <div style={{ ...GLASS, padding: 24, width: "100%", display: "grid", gap: 16 }}>
                 <button onClick={() => setActiveModule(null)}
-                  style={{ marginBottom: 8, fontSize: "0.875rem", color: "#FF7043",
-                    textDecoration: "underline", background: "none", border: "none",
-                    cursor: "pointer", textAlign: "left", width: "fit-content", fontWeight: 800 }}>
-                  Back to The Anvil
+                  style={{ marginBottom: 12, display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "7px 16px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
+                    background: "rgba(255,112,67,0.08)", color: "#FF7043",
+                    fontWeight: 800, fontSize: 12, cursor: "pointer", textDecoration: "none" }}>
+                  ← Back to The Anvil
                 </button>
                 <ProfileDevelopment onNext={() => setActiveModule("offer")} setActiveModule={setActiveModule} />
               </div>
@@ -537,10 +538,11 @@ export default function AnvilPage() {
             {activeModule === "offer" && (
               <div style={{ ...GLASS, padding: 24, width: "100%", display: "grid", gap: 16 }}>
                 <button onClick={() => setActiveModule(null)}
-                  style={{ marginBottom: 8, fontSize: "0.875rem", color: "#FF7043",
-                    textDecoration: "underline", background: "none", border: "none",
-                    cursor: "pointer", textAlign: "left", width: "fit-content", fontWeight: 800 }}>
-                  Back to The Anvil
+                  style={{ marginBottom: 12, display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "7px 16px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
+                    background: "rgba(255,112,67,0.08)", color: "#FF7043",
+                    fontWeight: 800, fontSize: 12, cursor: "pointer", textDecoration: "none" }}>
+                  ← Back to The Anvil
                 </button>
                 <OfferEngine />
               </div>
@@ -549,10 +551,11 @@ export default function AnvilPage() {
             {activeModule === "onboarding" && (
               <div style={{ ...GLASS, padding: 24, width: "100%", display: "grid", gap: 16 }}>
                 <button onClick={() => setActiveModule(null)}
-                  style={{ marginBottom: 8, fontSize: "0.875rem", color: "#FF7043",
-                    textDecoration: "underline", background: "none", border: "none",
-                    cursor: "pointer", textAlign: "left", width: "fit-content", fontWeight: 800 }}>
-                  Back to The Anvil
+                  style={{ marginBottom: 12, display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "7px 16px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
+                    background: "rgba(255,112,67,0.08)", color: "#FF7043",
+                    fontWeight: 800, fontSize: 12, cursor: "pointer", textDecoration: "none" }}>
+                  ← Back to The Anvil
                 </button>
                 <OnboardingGrowth onNext={() => setActiveModule(null)} setActiveModule={setActiveModule} />
               </div>

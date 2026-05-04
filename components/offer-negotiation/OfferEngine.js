@@ -166,7 +166,7 @@ function Step1({ form, onChange }) {
         <div style={{ fontWeight: 900, fontSize: 12, color: DARK, marginBottom: 4 }}>Tell me about the role</div>
         <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6 }}>Paste the JD or describe what you are targeting</div>
         <textarea name="jobDescription" value={form.jobDescription} onChange={onChange} rows={4}
-          placeholder="e.g. Strategic Advisory Services Manager at Company XYZ - leads consultants, manages engagements, executive stakeholder communication..."
+          placeholder="e.g. Strategic Advisory Services Manager at CrowdStrike — leads consultants, manages engagements, executive stakeholder communication..."
           style={{ ...INPUT, resize: 'vertical', lineHeight: 1.55 }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -821,9 +821,11 @@ function RightPanel({ step, plan, loading, error, insights, onReset, form }) {
   return (
     <div style={{ display: 'grid', gap: 8 }}>
       {/* Progress */}
-      <div style={{ ...GLASS, padding: '12px 14px', background: 'rgba(30,41,59,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-        <div style={{ marginBottom: 10 }}><ProgressBar step={step} /></div>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 700 }}>Step {step} of 4 — complete all steps to generate your strategy</div>
+      <div style={{ borderRadius: 14, padding: '14px 16px', background: 'rgba(30,41,59,0.88)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 10px 24px rgba(0,0,0,0.18)' }}>
+        <div style={{ marginBottom: 12 }}><ProgressBar step={step} /></div>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.40)', fontWeight: 700, letterSpacing: 0.3 }}>
+          Complete all 4 steps to generate your negotiation strategy
+        </div>
       </div>
 
       {/* Accumulated insights */}
@@ -940,15 +942,15 @@ export default function OfferEngine() {
 
       {/* LEFT: Step form */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {/* Step header */}
-        <div style={{ ...GLASS, padding: '11px 14px', background: 'rgba(30,41,59,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-          <div style={{ fontWeight: 900, fontSize: 15, color: 'white', marginBottom: 1 }}>{icons[step-1]} {meta.title}</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.50)' }}>{meta.sub}</div>
-        </div>
-
         {/* Step content */}
         <div style={{ ...GLASS, overflow: 'hidden', opacity: animating ? 0 : 1, transform: animating ? 'translateX(5px)' : 'translateX(0)', transition: 'opacity 0.18s ease, transform 0.18s ease' }}>
-          <div style={SECTION_HDR}>{icons[step-1]} {meta.title}</div>
+          <div style={{ ...SECTION_HDR, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 13 }}>{icons[step-1]} {meta.title}</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>{meta.sub}</div>
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.40)', fontWeight: 700 }}>Step {step} of 4</div>
+          </div>
           <div style={{ padding: '14px' }}>
             {step === 1 && <Step1 form={form} onChange={handleChange} />}
             {step === 2 && <Step2 form={form} onChange={handleChange} />}
