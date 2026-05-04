@@ -1,6 +1,7 @@
 // components/offer-negotiation/OfferEngine.js
 // Premium B — single-page progressive decision engine
 // 4 steps + inline results. Animated transitions. Live micro-insights.
+// remove after update deployment
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 const ORANGE = '#FF7043';
