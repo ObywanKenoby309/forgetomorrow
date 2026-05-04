@@ -1,8 +1,9 @@
 // components/offer-negotiation/OfferEngine.js
-// Command center — two panels, one state
-// Left: step form | Right: context accumulator + results
-// Designed to inlay inside the Anvil tile system
-import { useState, useCallback, useEffect } from 'react';
+// 10/10 Negotiation Command Center
+// Left: guided step form | Right: cockpit — insights → tabbed results
+// Glass cards sit directly over wallpaper. No backing. No narrow column.
+import { useState, useCallback, useEffect, useRef } from 'react';
+import jsPDF from 'jspdf';
 
 const ORANGE = '#FF7043';
 const SLATE = '#334155';
@@ -25,33 +26,18 @@ const WHITE_CARD = {
 };
 
 const INPUT = {
-  width: '100%',
-  padding: '8px 11px',
-  border: '1px solid rgba(0,0,0,0.12)',
-  borderRadius: 9,
-  fontSize: 12,
-  color: DARK,
-  background: 'rgba(255,255,255,0.90)',
-  outline: 'none',
-  fontFamily: 'inherit',
-  boxSizing: 'border-box',
+  width: '100%', padding: '8px 11px',
+  border: '1px solid rgba(0,0,0,0.12)', borderRadius: 9,
+  fontSize: 12, color: DARK, background: 'rgba(255,255,255,0.90)',
+  outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
 };
 
-const LABEL = {
-  display: 'block',
-  fontWeight: 700,
-  fontSize: 11,
-  color: '#475569',
-  marginBottom: 4,
-};
+const LABEL = { display: 'block', fontWeight: 700, fontSize: 11, color: '#475569', marginBottom: 4 };
 
 const SECTION_HDR = {
   padding: '9px 14px',
   background: 'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',
-  color: 'white',
-  fontWeight: 900,
-  fontSize: 12,
-  letterSpacing: 0.4,
+  color: 'white', fontWeight: 900, fontSize: 12, letterSpacing: 0.4,
   borderRadius: '12px 12px 0 0',
 };
 
@@ -91,9 +77,9 @@ function getMicroInsight(step, form) {
     const loc = (form.location || '').trim();
     if (!role && !loc) return null;
     const parts = [];
-    if (role) parts.push(`targeting a role in ${role.split(' ').slice(0, 4).join(' ')}`);
-    if (loc) parts.push(`based in ${loc}`);
-    return `You're ${parts.join(', ')}. We'll factor market conditions for this context into your strategy.`;
+    if (role) parts.push(`targeting ${role.split(' ').slice(0, 4).join(' ')}`);
+    if (loc) parts.push(`in ${loc}`);
+    return `You're ${parts.join(', ')}. Market conditions for this context will factor into your strategy.`;
   }
   if (step === 2) {
     const base = Number(form.offerBaseSalary || 0);
@@ -102,7 +88,7 @@ function getMicroInsight(step, form) {
       const delta = Math.round(((base - current) / current) * 100);
       if (delta > 15) return `This offer is ${delta}% above your current salary — negotiate from confidence.`;
       if (delta > 0) return `This offer is ${delta}% above your current salary. Room to push — framing matters.`;
-      if (delta === 0) return `The offer matches your current salary. Lateral move — lead with your evidence.`;
+      if (delta === 0) return `Lateral move. Lead hard with your evidence.`;
       return `This offer is ${Math.abs(delta)}% below your current salary. We'll build your pushback.`;
     }
     if (form.hasOffer === 'no') return `No offer yet — building a proactive target based on your position.`;
@@ -113,19 +99,17 @@ function getMicroInsight(step, form) {
     const hasCompeting = form.competingOffers === 'yes';
     const hasImpact = (form.notableProjectsEvidence || '').trim().length > 30;
     let score = 0;
-    if (years >= 8) score += 3;
-    else if (years >= 4) score += 2;
-    else if (years >= 1) score += 1;
+    if (years >= 8) score += 3; else if (years >= 4) score += 2; else if (years >= 1) score += 1;
     if (hasCompeting) score += 3;
     if (hasImpact) score += 2;
     if (score >= 6) return `Strong leverage. Competing offers and proven impact give you real negotiating power.`;
-    if (score >= 3) return `Moderate leverage. Evidence and framing will be your strongest tools going in.`;
-    return `Developing leverage. We'll build the most honest path forward from what you have.`;
+    if (score >= 3) return `Moderate leverage. Evidence and framing will be your strongest tools.`;
+    return `Developing leverage. We'll build the most honest path forward.`;
   }
   if (step === 4) {
     const confidence = form.confidenceLevel;
     if (confidence === 'low') return `Low confidence noted — we'll build a clear anchor and script so you know exactly what to say.`;
-    if (confidence === 'high') return `High confidence. Optimizing your ambitious path with language to hold firm.`;
+    if (confidence === 'high') return `High confidence. Optimizing for your ambitious path with language to hold firm.`;
     if (form.topPriority) {
       const map = { base_salary: 'base salary', total_comp: 'total comp', equity: 'equity', sign_on: 'sign-on', remote_flex: 'remote flexibility', growth: 'growth' };
       if (map[form.topPriority]) return `Optimizing for ${map[form.topPriority]}. Ready to generate your strategy.`;
@@ -137,29 +121,33 @@ function getMicroInsight(step, form) {
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
 function Field({ label, children }) {
-  return (
-    <div>
-      {label && <label style={LABEL}>{label}</label>}
-      {children}
-    </div>
-  );
+  return <div>{label && <label style={LABEL}>{label}</label>}{children}</div>;
 }
 
 function ChoiceCard({ value, current, name, onChange, emoji, label, sub }) {
   const active = current === value;
   return (
-    <button type="button"
-      onClick={() => onChange({ target: { name, value } })}
-      style={{
-        padding: '12px 10px', borderRadius: 10, textAlign: 'left', cursor: 'pointer',
+    <button type="button" onClick={() => onChange({ target: { name, value } })}
+      style={{ padding: '11px 10px', borderRadius: 10, textAlign: 'left', cursor: 'pointer',
         border: `2px solid ${active ? ORANGE : 'rgba(0,0,0,0.10)'}`,
-        background: active ? 'rgba(255,112,67,0.07)' : 'rgba(255,255,255,0.80)',
-        transition: 'all 0.15s',
-      }}>
-      <div style={{ fontSize: 18, marginBottom: 4 }}>{emoji}</div>
+        background: active ? 'rgba(255,112,67,0.07)' : 'rgba(255,255,255,0.80)', transition: 'all 0.15s' }}>
+      <div style={{ fontSize: 16, marginBottom: 3 }}>{emoji}</div>
       <div style={{ fontWeight: 900, fontSize: 12, color: active ? '#C2410C' : DARK }}>{label}</div>
-      {sub && <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2, lineHeight: 1.4 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2, lineHeight: 1.3 }}>{sub}</div>}
     </button>
+  );
+}
+
+function BulletList({ items }) {
+  const arr = Array.isArray(items) ? items.filter(Boolean) : [];
+  return (
+    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 4 }}>
+      {arr.map((x, i) => (
+        <li key={i} style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 11, color: SLATE, lineHeight: 1.45 }}>
+          <span style={{ color: ORANGE, fontWeight: 900, flexShrink: 0 }}>•</span><span>{x}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -178,7 +166,7 @@ function Step1({ form, onChange }) {
         <div style={{ fontWeight: 900, fontSize: 12, color: DARK, marginBottom: 4 }}>Tell me about the role</div>
         <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6 }}>Paste the JD or describe what you are targeting</div>
         <textarea name="jobDescription" value={form.jobDescription} onChange={onChange} rows={4}
-          placeholder="e.g. Strategic Advisory Services Manager at CrowdStrike — leads consultants, manages engagements, executive stakeholder communication..."
+          placeholder="e.g. Strategic Advisory Services Manager at Company XYZ — leads consultants, manages engagements, executive stakeholder communication..."
           style={{ ...INPUT, resize: 'vertical', lineHeight: 1.55 }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -186,7 +174,7 @@ function Step1({ form, onChange }) {
         <Field label="Industry">
           <select name="industry" value={form.industry} onChange={onChange} style={INPUT}>
             <option value="">Industry (optional)</option>
-            {['Technology', 'Healthcare', 'Finance', 'Education', 'Manufacturing', 'Retail', 'Government', 'Nonprofit', 'Other'].map(i => <option key={i} value={i}>{i}</option>)}
+            {['Technology','Healthcare','Finance','Education','Manufacturing','Retail','Government','Nonprofit','Other'].map(i => <option key={i} value={i}>{i}</option>)}
           </select>
         </Field>
       </div>
@@ -207,7 +195,7 @@ function Step2({ form, onChange }) {
       </div>
       {hasOffer && (
         <div style={{ display: 'grid', gap: 8 }}>
-          <div style={{ fontWeight: 700, fontSize: 11, color: SLATE, borderBottom: '1px solid rgba(0,0,0,0.08)', paddingBottom: 6 }}>What did they offer?</div>
+          <div style={{ fontWeight: 700, fontSize: 11, color: SLATE, borderBottom: '1px solid rgba(0,0,0,0.08)', paddingBottom: 5 }}>What did they offer?</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <Field label="Company"><input name="offerCompany" value={form.offerCompany} onChange={onChange} placeholder="Company name" style={INPUT} /></Field>
             <Field label="Offered Title"><input name="offerRoleTitle" value={form.offerRoleTitle} onChange={onChange} placeholder="e.g. Senior Manager" style={INPUT} /></Field>
@@ -233,7 +221,7 @@ function Step2({ form, onChange }) {
       )}
       {!hasOffer && (
         <div style={{ display: 'grid', gap: 8 }}>
-          <div style={{ fontWeight: 700, fontSize: 11, color: SLATE, borderBottom: '1px solid rgba(0,0,0,0.08)', paddingBottom: 6 }}>What are you targeting?</div>
+          <div style={{ fontWeight: 700, fontSize: 11, color: SLATE, borderBottom: '1px solid rgba(0,0,0,0.08)', paddingBottom: 5 }}>What are you targeting?</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <Field label="Target Min ($)"><input name="targetSalaryMin" value={form.targetSalaryMin} onChange={onChange} type="number" min="0" placeholder="100000" style={INPUT} /></Field>
             <Field label="Target Max ($)"><input name="targetSalaryMax" value={form.targetSalaryMax} onChange={onChange} type="number" min="0" placeholder="130000" style={INPUT} /></Field>
@@ -289,9 +277,9 @@ function Step4({ form, onChange }) {
         <div style={{ fontWeight: 900, fontSize: 12, color: DARK, marginBottom: 4 }}>What matters most?</div>
         <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6 }}>Pick your top 3 in order</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
-          {['topPriority', 'secondPriority', 'thirdPriority'].map((name, i) => (
+          {['topPriority','secondPriority','thirdPriority'].map((name, i) => (
             <div key={name}>
-              <label style={{ ...LABEL, fontSize: 10, color: '#94A3B8', marginBottom: 3 }}>#{i + 1}</label>
+              <label style={{ ...LABEL, fontSize: 10, color: '#94A3B8', marginBottom: 3 }}>#{i+1}</label>
               <select name={name} value={form[name]} onChange={onChange} style={{ ...INPUT, fontSize: 11 }}>
                 {priorityOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
@@ -318,7 +306,7 @@ function Step4({ form, onChange }) {
         <div>
           <div style={{ fontWeight: 700, fontSize: 11, color: '#475569', marginBottom: 5 }}>Willing to relocate?</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-            {[{ v: 'yes', l: 'Yes' }, { v: 'no', l: 'No' }].map(o => (
+            {[{v:'yes',l:'Yes'},{v:'no',l:'No'}].map(o => (
               <button key={o.v} type="button" onClick={() => onChange({ target: { name: 'willingnessToRelocate', value: o.v } })}
                 style={{ padding: '7px 4px', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer',
                   border: `1.5px solid ${form.willingnessToRelocate === o.v ? ORANGE : 'rgba(0,0,0,0.10)'}`,
@@ -360,27 +348,27 @@ function Step4({ form, onChange }) {
 
 // ─── Progress bar ─────────────────────────────────────────────────────────────
 function ProgressBar({ step }) {
-  const steps = [{ n: 1, label: 'Target' }, { n: 2, label: 'Situation' }, { n: 3, label: 'Leverage' }, { n: 4, label: 'Rules' }];
+  const steps = [{n:1,label:'Target'},{n:2,label:'Situation'},{n:3,label:'Leverage'},{n:4,label:'Rules'}];
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'center' }}>
       {steps.map((s, i) => (
-        <div key={s.n} style={{ display: 'flex', alignItems: 'center', flex: i < steps.length - 1 ? 1 : 0 }}>
+        <div key={s.n} style={{ display: 'flex', alignItems: 'center', flex: i < steps.length-1 ? 1 : 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-            <div style={{
-              width: 24, height: 24, borderRadius: '50%',
+            <div style={{ width: 24, height: 24, borderRadius: '50%',
               background: step >= s.n ? ORANGE : 'rgba(255,255,255,0.25)',
-              border: `2px solid ${step >= s.n ? ORANGE : 'rgba(255,255,255,0.20)'}`,
+              border: `2px solid ${step >= s.n ? ORANGE : 'rgba(255,255,255,0.18)'}`,
               color: step >= s.n ? 'white' : 'rgba(255,255,255,0.40)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontWeight: 900, fontSize: 10, transition: 'all 0.3s ease',
-              boxShadow: step === s.n ? `0 0 0 3px rgba(255,112,67,0.25)` : 'none',
-            }}>
+              boxShadow: step === s.n ? `0 0 0 3px rgba(255,112,67,0.25)` : 'none' }}>
               {step > s.n ? '✓' : s.n}
             </div>
-            <span style={{ fontSize: 9, fontWeight: 700, color: step >= s.n ? 'rgba(255,255,255,0.90)' : 'rgba(255,255,255,0.35)', whiteSpace: 'nowrap' }}>{s.label}</span>
+            <span style={{ fontSize: 9, fontWeight: 700, whiteSpace: 'nowrap',
+              color: step >= s.n ? 'rgba(255,255,255,0.90)' : 'rgba(255,255,255,0.35)' }}>{s.label}</span>
           </div>
-          {i < steps.length - 1 && (
-            <div style={{ flex: 1, height: 2, margin: '0 3px', marginBottom: 14, background: step > s.n ? ORANGE : 'rgba(255,255,255,0.18)', transition: 'background 0.3s ease' }} />
+          {i < steps.length-1 && (
+            <div style={{ flex: 1, height: 2, margin: '0 3px', marginBottom: 14,
+              background: step > s.n ? ORANGE : 'rgba(255,255,255,0.18)', transition: 'background 0.3s ease' }} />
           )}
         </div>
       ))}
@@ -388,73 +376,221 @@ function ProgressBar({ step }) {
   );
 }
 
-// ─── Results renderer ─────────────────────────────────────────────────────────
-function ResultsPanel({ plan, onReset }) {
+// ─── PDF export ───────────────────────────────────────────────────────────────
+function downloadBrief(plan, form) {
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const margin = 44;
+  const maxW = 524;
+  let y = margin;
+
+  const write = (text, size = 11, bold = false, color = [30, 41, 59]) => {
+    doc.setFontSize(size);
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(String(text || ''), maxW);
+    lines.forEach(line => {
+      if (y > 750) { doc.addPage(); y = margin; }
+      doc.text(line, margin, y);
+      y += size * 1.5;
+    });
+  };
+
+  const gap = (n = 10) => { y += n; };
+
+  write('ForgeTomorrow Negotiation Brief', 18, true, [255, 112, 67]);
+  gap(4);
+  write(`${form.currentJobTitle || 'Candidate'} — ${form.location || ''}`, 12, false, [100, 116, 139]);
+  write(new Date().toLocaleDateString(), 10, false, [148, 163, 184]);
+  gap(16);
+
+  if (plan?.decision) {
+    write('RECOMMENDED MOVE', 10, true, [255, 112, 67]);
+    write(plan.decision.recommendedMove, 16, true);
+    write(plan.decision.oneLineSummary || '', 11);
+    gap(8);
+    write(`Leverage: ${plan.decision.leverageBand || ''}${plan.decision.leverageScore != null ? ` (${plan.decision.leverageScore}/10)` : ''}`, 11, true);
+    write(`Risk Level: ${plan.decision.riskLevel || ''}`, 11);
+    write(`Target Ask: ${plan.decision.targetAsk || ''}`, 11);
+    write(`Fallback Floor: ${plan.decision.fallbackFloor || ''}`, 11);
+    if (plan.decision.doNotTradeAway?.length) write(`Do Not Trade Away: ${plan.decision.doNotTradeAway.join(', ')}`, 11);
+    gap(12);
+  }
+
+  if (plan?.negotiationRiskSnapshot) {
+    write('NEGOTIATION RISK SNAPSHOT', 10, true, [255, 112, 67]);
+    const snap = plan.negotiationRiskSnapshot;
+    [['Biggest Strength', snap.biggestStrength], ['Biggest Weakness', snap.biggestWeakness], ['Biggest Opportunity', snap.biggestOpportunity], ['Biggest Risk', snap.biggestRisk]].forEach(([k, v]) => {
+      if (v) { write(`${k}: ${v}`, 11); gap(2); }
+    });
+    gap(12);
+  }
+
+  if (plan?.marketReality) {
+    write('MARKET REALITY', 10, true, [255, 112, 67]);
+    write(plan.marketReality.directionalRange || '', 11);
+    write(plan.marketReality.marketTension || '', 11);
+    gap(12);
+  }
+
+  if (plan?.negotiationPaths?.length) {
+    write('NEGOTIATION PATHS', 10, true, [255, 112, 67]);
+    plan.negotiationPaths.slice(0, 3).forEach(p => {
+      gap(4);
+      write(p.label, 11, true);
+      write(`Ask: ${p.askFraming || ''}`, 11);
+      write(`Best when: ${p.bestWhen || ''}`, 11);
+    });
+    gap(12);
+  }
+
+  if (plan?.conversationScript) {
+    write('EMAIL SCRIPT', 10, true, [255, 112, 67]);
+    write(plan.conversationScript.emailVersion || '', 11);
+    gap(12);
+    write('LIVE CONVERSATION', 10, true, [255, 112, 67]);
+    write(plan.conversationScript.liveConversationVersion || '', 11);
+    gap(12);
+  }
+
+  if (plan?.nextSteps) {
+    write('NEXT STEPS', 10, true, [255, 112, 67]);
+    (plan.nextSteps.immediate || []).forEach(s => write(`• ${s}`, 11));
+    gap(12);
+  }
+
+  if (plan?.mentorEscalation?.whyItHelps) {
+    write('MENTOR ESCALATION', 10, true, [255, 112, 67]);
+    write(plan.mentorEscalation.whyItHelps, 11);
+  }
+
+  gap(16);
+  write('ForgeTomorrow — Guidance only. Not legal, financial, or tax advice.', 9, false, [148, 163, 184]);
+
+  doc.save('ForgeTomorrow-Negotiation-Brief.pdf');
+}
+
+// ─── Result tabs ──────────────────────────────────────────────────────────────
+const RESULT_TABS = [
+  { id: 'decision', label: 'Decision' },
+  { id: 'leverage', label: 'Leverage' },
+  { id: 'market', label: 'Market' },
+  { id: 'scripts', label: 'Scripts' },
+  { id: 'plan', label: 'Plan' },
+];
+
+function ResultCockpit({ plan, form, onReset }) {
+  const [tab, setTab] = useState('decision');
+  const [scriptTab, setScriptTab] = useState('email');
+  const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+
   function safeArr(v) { return Array.isArray(v) ? v.filter(Boolean) : []; }
-  const BulletList = ({ items }) => (
-    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 4 }}>
-      {safeArr(items).map((x, i) => (
-        <li key={i} style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 11, color: SLATE, lineHeight: 1.45 }}>
-          <span style={{ color: ORANGE, fontWeight: 900, flexShrink: 0 }}>•</span><span>{x}</span>
-        </li>
-      ))}
-    </ul>
-  );
-  const Sec = ({ title, children }) => (
-    <div style={{ ...WHITE_CARD, overflow: 'hidden', marginBottom: 8 }}>
-      <div style={SECTION_HDR}>{title}</div>
-      <div style={{ padding: '10px 12px' }}>{children}</div>
+
+  const copyEmail = () => {
+    const text = plan?.conversationScript?.emailVersion || '';
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const saveStrategy = () => {
+    try {
+      sessionStorage.setItem('ft_negotiation_plan', JSON.stringify({ plan, form, savedAt: new Date().toISOString() }));
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {}
+  };
+
+  const recommendedPath = plan?.decision?.recommendedMove?.toLowerCase().includes('balanced') ? 1
+    : plan?.decision?.recommendedMove?.toLowerCase().includes('ambit') ? 2 : 0;
+
+  // Action bar
+  const ActionBar = () => (
+    <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+      <button type="button" onClick={saveStrategy}
+        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
+          background: saved ? '#16A34A' : 'rgba(255,255,255,0.85)', color: saved ? 'white' : SLATE,
+          border: '1px solid rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
+        {saved ? '✓ Saved' : '💾 Save Strategy'}
+      </button>
+      <button type="button" onClick={() => downloadBrief(plan, form)}
+        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
+          background: ORANGE, color: 'white', border: 'none' }}>
+        📄 Download Brief
+      </button>
+      <button type="button" onClick={copyEmail}
+        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
+          background: copied ? '#16A34A' : 'rgba(255,255,255,0.85)', color: copied ? 'white' : SLATE,
+          border: '1px solid rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
+        {copied ? '✓ Copied' : '📋 Copy Email Script'}
+      </button>
+      <button type="button" onClick={onReset}
+        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+          background: 'transparent', color: '#94A3B8', border: '1px solid rgba(0,0,0,0.08)', marginLeft: 'auto' }}>
+        Start Over
+      </button>
     </div>
   );
 
-  return (
-    <div style={{ display: 'grid', gap: 0 }}>
-      <style>{`@keyframes fadeSlideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }`}</style>
+  // Tab bar
+  const TabBar = () => (
+    <div style={{ display: 'flex', gap: 2, marginBottom: 12, background: 'rgba(0,0,0,0.06)', borderRadius: 10, padding: 3 }}>
+      {RESULT_TABS.map(t => (
+        <button key={t.id} type="button" onClick={() => setTab(t.id)}
+          style={{ flex: 1, padding: '7px 8px', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer',
+            border: 'none', transition: 'all 0.15s',
+            background: tab === t.id ? 'white' : 'transparent',
+            color: tab === t.id ? ORANGE : '#64748B',
+            boxShadow: tab === t.id ? '0 2px 6px rgba(0,0,0,0.10)' : 'none' }}>
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
 
-      {/* Decision card */}
+  // DECISION tab
+  const DecisionTab = () => (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {/* Main decision card */}
       {plan?.decision && (
-        <div style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 6px 20px rgba(255,112,67,0.22)', marginBottom: 8 }}>
-          <div style={{ padding: '12px 14px', background: 'linear-gradient(135deg, rgba(255,112,67,0.95), rgba(234,88,12,0.90))', color: 'white' }}>
-            <div style={{ fontWeight: 900, fontSize: 9, letterSpacing: 0.5, opacity: 0.80, marginBottom: 3 }}>RECOMMENDED MOVE</div>
-            <div style={{ fontWeight: 900, fontSize: 18, letterSpacing: -0.5, marginBottom: 4 }}>{plan.decision.recommendedMove}</div>
-            <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.92, lineHeight: 1.5 }}>{plan.decision.oneLineSummary}</div>
+        <div style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 6px 20px rgba(255,112,67,0.22)' }}>
+          <div style={{ padding: '14px 16px', background: 'linear-gradient(135deg, rgba(255,112,67,0.95), rgba(234,88,12,0.90))', color: 'white' }}>
+            <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: 0.6, opacity: 0.80, marginBottom: 3 }}>RECOMMENDED MOVE</div>
+            <div style={{ fontWeight: 900, fontSize: 22, letterSpacing: -0.5, marginBottom: 5 }}>{plan.decision.recommendedMove}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.92, lineHeight: 1.5 }}>{plan.decision.oneLineSummary}</div>
           </div>
-          <div style={{ background: 'rgba(255,255,255,0.96)', padding: '10px 12px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+          <div style={{ background: 'rgba(255,255,255,0.96)', padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10 }}>
             <div>
               <div style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', marginBottom: 2, letterSpacing: 0.5 }}>LEVERAGE</div>
-              <div style={{ fontSize: 12, fontWeight: 900, color: plan.decision.leverageBand === 'Strong' ? '#16A34A' : plan.decision.leverageBand === 'Moderate' ? '#D97706' : '#DC2626' }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: plan.decision.leverageBand === 'Strong' ? '#16A34A' : plan.decision.leverageBand === 'Moderate' ? '#D97706' : '#DC2626' }}>
                 {plan.decision.leverageBand}
-                {plan.decision.leverageScore != null && <span style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', marginLeft: 3 }}>({plan.decision.leverageScore}/10)</span>}
+                {plan.decision.leverageScore != null && <span style={{ fontSize: 9, color: '#94A3B8', marginLeft: 3 }}>({plan.decision.leverageScore}/10)</span>}
               </div>
             </div>
             {[['RISK', plan.decision.riskLevel, '#64748B'], ['TARGET', plan.decision.targetAsk, ORANGE], ['FLOOR', plan.decision.fallbackFloor, '#475569']].map(([l, v, c]) => (
-              <div key={l}><div style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', marginBottom: 2, letterSpacing: 0.5 }}>{l}</div><div style={{ fontSize: 12, fontWeight: 900, color: c }}>{v || '—'}</div></div>
+              <div key={l}><div style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', marginBottom: 2, letterSpacing: 0.5 }}>{l}</div><div style={{ fontSize: 13, fontWeight: 900, color: c }}>{v || '—'}</div></div>
             ))}
           </div>
           {safeArr(plan.decision.leverageDrivers).length > 0 && (
-            <div style={{ background: 'rgba(248,250,252,0.96)', padding: '7px 12px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
+            <div style={{ background: 'rgba(248,250,252,0.96)', padding: '7px 14px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
               <span style={{ fontSize: 9, fontWeight: 800, color: '#64748B' }}>DRIVEN BY:</span>
               {plan.decision.leverageDrivers.map((d, i) => <span key={i} style={{ fontSize: 10, fontWeight: 600, color: '#475569', background: 'white', padding: '1px 7px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.10)' }}>{d}</span>)}
             </div>
           )}
           {safeArr(plan.decision.doNotTradeAway).length > 0 && (
-            <div style={{ background: 'rgba(254,243,199,0.90)', padding: '7px 12px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
-              <span style={{ fontSize: 9, fontWeight: 800, color: '#92400E' }}>PROTECT:</span>
+            <div style={{ background: 'rgba(254,243,199,0.90)', padding: '7px 14px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
+              <span style={{ fontSize: 9, fontWeight: 800, color: '#92400E' }}>🔒 DO NOT TRADE:</span>
               {plan.decision.doNotTradeAway.map((item, i) => <span key={i} style={{ fontSize: 10, fontWeight: 700, color: '#78350F', background: 'rgba(255,255,255,0.60)', padding: '1px 7px', borderRadius: 999, border: '1px solid rgba(146,64,14,0.20)' }}>{item}</span>)}
             </div>
           )}
         </div>
       )}
 
-      {/* Disclaimer */}
-      <div style={{ ...WHITE_CARD, padding: '7px 11px', marginBottom: 8, borderLeft: `3px solid #F59E0B`, background: 'rgba(254,243,199,0.70)', fontSize: 10, color: '#78350F', lineHeight: 1.5 }}>
-        {plan?.disclaimer?.summary || 'Guidance only — not legal, financial, or tax advice.'}
-      </div>
-
-      {/* Risk Snapshot */}
+      {/* Risk snapshot directly under decision */}
       {plan?.negotiationRiskSnapshot && (
-        <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 8, ...WHITE_CARD }}>
-          <div style={{ ...SECTION_HDR, borderRadius: 0 }}>NEGOTIATION RISK SNAPSHOT</div>
+        <div style={{ borderRadius: 12, overflow: 'hidden', ...WHITE_CARD }}>
+          <div style={{ ...SECTION_HDR, borderRadius: 0 }}>🧠 NEGOTIATION RISK SNAPSHOT</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: 'rgba(255,255,255,0.92)' }}>
             {[
               { label: 'Biggest Strength', value: plan.negotiationRiskSnapshot.biggestStrength, color: '#16A34A', emoji: '💪' },
@@ -462,7 +598,7 @@ function ResultsPanel({ plan, onReset }) {
               { label: 'Biggest Opportunity', value: plan.negotiationRiskSnapshot.biggestOpportunity, color: '#0EA5E9', emoji: '🎯' },
               { label: 'Biggest Risk', value: plan.negotiationRiskSnapshot.biggestRisk, color: '#D97706', emoji: '🔥' },
             ].map((item, i) => (
-              <div key={item.label} style={{ padding: '9px 11px', borderRight: i % 2 === 0 ? '1px solid rgba(0,0,0,0.06)' : 'none', borderBottom: i < 2 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}>
+              <div key={item.label} style={{ padding: '10px 12px', borderRight: i%2===0 ? '1px solid rgba(0,0,0,0.06)' : 'none', borderBottom: i<2 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}>
                 <div style={{ fontSize: 9, fontWeight: 800, color: item.color, marginBottom: 3 }}>{item.emoji} {item.label.toUpperCase()}</div>
                 <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.4, fontWeight: 600 }}>{item.value || '—'}</div>
               </div>
@@ -471,101 +607,201 @@ function ResultsPanel({ plan, onReset }) {
         </div>
       )}
 
-      {/* Role + Market */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-        <Sec title="ROLE CONTEXT">
-          {[['Role', plan?.roleContext?.interpretedRole], ['Seniority', plan?.roleContext?.seniorityBand], ['Context', plan?.roleContext?.workContext]].map(([k, v]) => v && (
-            <div key={k} style={{ marginBottom: 6 }}><div style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', marginBottom: 1 }}>{k.toUpperCase()}</div><div style={{ fontSize: 11, color: SLATE, fontWeight: 600 }}>{v}</div></div>
-          ))}
-        </Sec>
-        <Sec title="MARKET REALITY">
-          {[['Range', plan?.marketReality?.directionalRange], ['Tension', plan?.marketReality?.marketTension], ['Confidence', plan?.marketReality?.confidenceLevel]].map(([k, v]) => v && (
-            <div key={k} style={{ marginBottom: 6 }}><div style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', marginBottom: 1 }}>{k.toUpperCase()}</div><div style={{ fontSize: 11, color: SLATE, fontWeight: 600 }}>{v}</div></div>
-          ))}
-        </Sec>
+      {/* Disclaimer compact */}
+      <div style={{ padding: '7px 11px', borderRadius: 8, borderLeft: `3px solid #F59E0B`, background: 'rgba(254,243,199,0.70)', fontSize: 10, color: '#78350F', lineHeight: 1.5 }}>
+        {plan?.disclaimer?.summary || 'Guidance only — not legal, financial, or tax advice.'}
       </div>
+    </div>
+  );
 
-      {/* Assumption Check */}
-      <Sec title="ASSUMPTION CHECK">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <div><div style={{ fontWeight: 800, fontSize: 10, color: '#DC2626', marginBottom: 5 }}>MISALIGNMENTS</div><BulletList items={plan?.assumptionCheck?.potentialMisalignments} /></div>
-          <div><div style={{ fontWeight: 800, fontSize: 10, color: '#D97706', marginBottom: 5 }}>UNKNOWNS</div><BulletList items={plan?.assumptionCheck?.unknowns} /></div>
+  // LEVERAGE tab
+  const LeverageTab = () => (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {plan?.valueJustification && (
+        <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
+          <div style={SECTION_HDR}>YOUR LEVERAGE</div>
+          <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 10, color: ORANGE, marginBottom: 6 }}>CORE LEVERAGE</div>
+              <BulletList items={plan.valueJustification.coreLeverage} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 10, color: ORANGE, marginBottom: 6 }}>NON-SALARY LEVERS</div>
+              <BulletList items={plan.valueJustification.nonSalaryLevers} />
+            </div>
+          </div>
         </div>
-      </Sec>
-
-      {/* Leverage */}
-      <Sec title="YOUR LEVERAGE">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <div><div style={{ fontWeight: 800, fontSize: 10, color: ORANGE, marginBottom: 5 }}>CORE LEVERAGE</div><BulletList items={plan?.valueJustification?.coreLeverage} /></div>
-          <div><div style={{ fontWeight: 800, fontSize: 10, color: ORANGE, marginBottom: 5 }}>NON-SALARY LEVERS</div><BulletList items={plan?.valueJustification?.nonSalaryLevers} /></div>
+      )}
+      {plan?.assumptionCheck && (
+        <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
+          <div style={SECTION_HDR}>ASSUMPTION CHECK</div>
+          <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 10, color: '#DC2626', marginBottom: 6 }}>MISALIGNMENTS</div>
+              <BulletList items={plan.assumptionCheck.potentialMisalignments} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 10, color: '#D97706', marginBottom: 6 }}>UNKNOWNS</div>
+              <BulletList items={plan.assumptionCheck.unknowns} />
+            </div>
+          </div>
         </div>
-      </Sec>
+      )}
+    </div>
+  );
 
-      {/* Paths */}
-      <Sec title="NEGOTIATION PATHS">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+  // MARKET tab
+  const MarketTab = () => (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {plan?.roleContext && (
+        <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
+          <div style={SECTION_HDR}>ROLE CONTEXT</div>
+          <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            {[['Interpreted Role', plan.roleContext.interpretedRole], ['Seniority Band', plan.roleContext.seniorityBand], ['Work Context', plan.roleContext.workContext]].map(([k, v]) => v && (
+              <div key={k}><div style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', marginBottom: 3, letterSpacing: 0.4 }}>{k.toUpperCase()}</div><div style={{ fontSize: 12, color: SLATE, fontWeight: 600 }}>{v}</div></div>
+            ))}
+          </div>
+        </div>
+      )}
+      {plan?.marketReality && (
+        <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
+          <div style={SECTION_HDR}>MARKET REALITY</div>
+          <div style={{ padding: '12px 14px', display: 'grid', gap: 10 }}>
+            {[['Directional Range', plan.marketReality.directionalRange], ['Market Tension', plan.marketReality.marketTension], ['Confidence Level', plan.marketReality.confidenceLevel]].map(([k, v]) => v && (
+              <div key={k} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8, alignItems: 'start' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', paddingTop: 2, letterSpacing: 0.4 }}>{k.toUpperCase()}</div>
+                <div style={{ fontSize: 12, color: SLATE, fontWeight: 600 }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // SCRIPTS tab — tabbed Email / Live
+  const ScriptsTab = () => (
+    <div style={{ display: 'grid', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 2, background: 'rgba(0,0,0,0.06)', borderRadius: 8, padding: 3 }}>
+        {[{id:'email',label:'📧 Email'},{id:'live',label:'🗣 Live Conversation'}].map(t => (
+          <button key={t.id} type="button" onClick={() => setScriptTab(t.id)}
+            style={{ flex: 1, padding: '7px 10px', borderRadius: 6, fontSize: 12, fontWeight: 800, cursor: 'pointer',
+              border: 'none', background: scriptTab === t.id ? 'white' : 'transparent',
+              color: scriptTab === t.id ? ORANGE : '#64748B',
+              boxShadow: scriptTab === t.id ? '0 2px 6px rgba(0,0,0,0.10)' : 'none',
+              transition: 'all 0.15s' }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {scriptTab === 'email' && plan?.conversationScript?.emailVersion && (
+        <div style={{ ...WHITE_CARD, padding: '14px 16px' }}>
+          <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-line' }}>
+            {plan.conversationScript.emailVersion}
+          </div>
+          <button type="button" onClick={copyEmail}
+            style={{ marginTop: 10, padding: '6px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
+              background: copied ? '#16A34A' : 'rgba(255,112,67,0.10)', color: copied ? 'white' : ORANGE,
+              border: `1px solid ${copied ? '#16A34A' : 'rgba(255,112,67,0.25)'}`, transition: 'all 0.2s' }}>
+            {copied ? '✓ Copied' : '📋 Copy to clipboard'}
+          </button>
+        </div>
+      )}
+      {scriptTab === 'live' && plan?.conversationScript?.liveConversationVersion && (
+        <div style={{ ...WHITE_CARD, padding: '14px 16px' }}>
+          <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-line' }}>
+            {plan.conversationScript.liveConversationVersion}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // PLAN tab — paths + next steps + mentor
+  const PlanTab = () => (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {/* Negotiation paths — horizontal, recommended highlighted */}
+      <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
+        <div style={SECTION_HDR}>NEGOTIATION PATHS</div>
+        <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
           {safeArr(plan?.negotiationPaths).slice(0, 3).map((p, i) => {
             const colors = ['#16A34A', '#0EA5E9', '#DC2626'];
+            const isRec = i === recommendedPath;
             return (
-              <div key={i} style={{ ...WHITE_CARD, padding: 9, borderTop: `2px solid ${colors[i]}` }}>
-                <div style={{ fontWeight: 900, fontSize: 10, color: colors[i], marginBottom: 6 }}>{p?.label}</div>
-                {[['Ask', p?.askFraming], ['When', p?.bestWhen], ['Risk', p?.tradeoffs]].map(([k, v]) => v && (
-                  <div key={k} style={{ marginBottom: 5 }}>
-                    <div style={{ fontSize: 8, fontWeight: 700, color: '#94A3B8', marginBottom: 1 }}>{k.toUpperCase()}</div>
-                    <div style={{ fontSize: 10, color: SLATE, lineHeight: 1.4 }}>{v}</div>
-                  </div>
-                ))}
+              <div key={i} style={{ borderRadius: 10, overflow: 'hidden', border: `2px solid ${isRec ? colors[i] : 'rgba(0,0,0,0.08)'}`, boxShadow: isRec ? `0 4px 12px ${colors[i]}33` : 'none' }}>
+                <div style={{ padding: '8px 10px', background: isRec ? colors[i] : 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontWeight: 900, fontSize: 11, color: isRec ? 'white' : colors[i] }}>{p?.label}</span>
+                  {isRec && <span style={{ fontSize: 9, fontWeight: 800, color: 'white', background: 'rgba(255,255,255,0.25)', padding: '1px 6px', borderRadius: 999 }}>RECOMMENDED</span>}
+                </div>
+                <div style={{ padding: '10px', background: 'rgba(255,255,255,0.92)' }}>
+                  {[['Ask', p?.askFraming], ['Best when', p?.bestWhen], ['Tradeoffs', p?.tradeoffs]].map(([k, v]) => v && (
+                    <div key={k} style={{ marginBottom: 6 }}>
+                      <div style={{ fontSize: 8, fontWeight: 700, color: '#94A3B8', marginBottom: 1, letterSpacing: 0.3 }}>{k.toUpperCase()}</div>
+                      <div style={{ fontSize: 10, color: SLATE, lineHeight: 1.4 }}>{v}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           })}
         </div>
-      </Sec>
+      </div>
 
-      {/* Scripts */}
-      <Sec title="CONVERSATION SCRIPTS">
-        {[['Email', plan?.conversationScript?.emailVersion], ['Live', plan?.conversationScript?.liveConversationVersion]].map(([l, t]) => t && (
-          <div key={l} style={{ ...WHITE_CARD, padding: 9, marginBottom: 7 }}>
-            <div style={{ fontWeight: 800, fontSize: 10, color: SLATE, marginBottom: 5 }}>{l.toUpperCase()}</div>
-            <div style={{ fontSize: 11, color: '#475569', lineHeight: 1.6, whiteSpace: 'pre-line' }}>{t}</div>
+      {/* Next steps — compact 3-column */}
+      {plan?.nextSteps && (
+        <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
+          <div style={SECTION_HDR}>NEXT STEPS</div>
+          <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            {[['Immediate', plan.nextSteps.immediate, '#16A34A'], ['Prepare for Pushback', plan.nextSteps.prepareForPushback, '#D97706'], ['Walk-Away Signals', plan.nextSteps.walkAwaySignals, '#DC2626']].map(([label, items, color]) => (
+              <div key={label}>
+                <div style={{ fontWeight: 800, fontSize: 9, color, marginBottom: 6, letterSpacing: 0.3 }}>{label.toUpperCase()}</div>
+                <BulletList items={items} />
+              </div>
+            ))}
           </div>
-        ))}
-      </Sec>
-
-      {/* Next Steps */}
-      <Sec title="NEXT STEPS">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          {[['Immediate', plan?.nextSteps?.immediate, '#16A34A'], ['Pushback', plan?.nextSteps?.prepareForPushback, '#D97706'], ['Walk Away', plan?.nextSteps?.walkAwaySignals, '#DC2626']].map(([label, items, color]) => (
-            <div key={label}><div style={{ fontWeight: 800, fontSize: 9, color, marginBottom: 5 }}>{label.toUpperCase()}</div><BulletList items={items} /></div>
-          ))}
         </div>
-      </Sec>
+      )}
 
       {/* Mentor CTA */}
-      <div style={{ ...GLASS, padding: '12px 14px', borderLeft: `3px solid ${ORANGE}`, marginBottom: 8 }}>
-        <div style={{ fontWeight: 900, fontSize: 12, color: ORANGE, marginBottom: 5 }}>Bring a Human Mentor In</div>
-        <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.5, marginBottom: 8 }}>{plan?.mentorEscalation?.whyItHelps || 'A coach can spot leverage, sharpen phrasing, and help you hold firm without burning goodwill.'}</div>
-        <a href="/the-hearth?module=mentorship" style={{ display: 'inline-block', padding: '7px 14px', background: ORANGE, color: 'white', borderRadius: 8, fontWeight: 900, fontSize: 11, textDecoration: 'none' }}>
+      <div style={{ ...GLASS, padding: '12px 14px', borderLeft: `3px solid ${ORANGE}` }}>
+        <div style={{ fontWeight: 900, fontSize: 12, color: ORANGE, marginBottom: 5 }}>🤝 Bring a Human Mentor In</div>
+        <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 8 }}>
+          {plan?.mentorEscalation?.whyItHelps || 'A coach can spot leverage, sharpen phrasing, and help you hold firm without burning goodwill.'}
+        </div>
+        <a href="/the-hearth?module=mentorship"
+          style={{ display: 'inline-block', padding: '7px 14px', background: ORANGE, color: 'white', borderRadius: 8, fontWeight: 900, fontSize: 11, textDecoration: 'none' }}>
           {plan?.mentorEscalation?.spotlightCTA || 'Find a Negotiation Coach on The Hearth'}
         </a>
       </div>
+    </div>
+  );
 
-      <button type="button" onClick={onReset} style={{ padding: '7px 14px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.12)', background: 'rgba(255,255,255,0.80)', color: SLATE, fontWeight: 800, fontSize: 11, cursor: 'pointer', width: 'fit-content' }}>
-        Start Over
-      </button>
+  return (
+    <div style={{ animation: 'fadeSlideIn 0.3s ease forwards' }}>
+      <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <ActionBar />
+      <TabBar />
+      {tab === 'decision' && <DecisionTab />}
+      {tab === 'leverage' && <LeverageTab />}
+      {tab === 'market' && <MarketTab />}
+      {tab === 'scripts' && <ScriptsTab />}
+      {tab === 'plan' && <PlanTab />}
     </div>
   );
 }
 
-// ─── Right panel — context accumulator ───────────────────────────────────────
-function ContextPanel({ step, plan, loading, error, insights, onReset }) {
+// ─── Right panel — context accumulator / results cockpit ─────────────────────
+function RightPanel({ step, plan, loading, error, insights, onReset, form }) {
   if (loading) {
     return (
       <div style={{ ...GLASS, padding: '32px 16px', textAlign: 'center' }}>
         <div style={{ fontSize: 28, marginBottom: 10 }}>⚡</div>
         <div style={{ fontWeight: 900, fontSize: 15, color: ORANGE, marginBottom: 5 }}>Building your strategy…</div>
-        <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.6, marginBottom: 18 }}>Pressure-testing assumptions. Mapping leverage. Crafting paths.</div>
+        <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.6, marginBottom: 18 }}>
+          Pressure-testing assumptions. Mapping leverage. Crafting your paths.
+        </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
-          {[0, 1, 2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: ORANGE, animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />)}
+          {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: ORANGE, animation: `pulse 1.2s ease-in-out ${i*0.2}s infinite` }} />)}
         </div>
         <style>{`@keyframes pulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1)}}`}</style>
       </div>
@@ -573,7 +809,11 @@ function ContextPanel({ step, plan, loading, error, insights, onReset }) {
   }
 
   if (plan) {
-    return <div style={{ overflowY: 'auto' }}><ResultsPanel plan={plan} onReset={onReset} /></div>;
+    return (
+      <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 120px)', paddingRight: 2 }}>
+        <ResultCockpit plan={plan} form={form} onReset={onReset} />
+      </div>
+    );
   }
 
   return (
@@ -588,8 +828,8 @@ function ContextPanel({ step, plan, loading, error, insights, onReset }) {
       {insights.length > 0 && (
         <div style={{ display: 'grid', gap: 6 }}>
           {insights.map((insight, i) => (
-            <div key={i} style={{ ...GLASS, padding: '9px 12px', borderLeft: `3px solid ${ORANGE}`, borderRadius: 10, display: 'flex', alignItems: 'flex-start', gap: 7, animation: 'fadeSlideIn 0.3s ease' }}>
-              <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
+            <div key={i} style={{ ...GLASS, padding: '9px 12px', borderLeft: `3px solid ${ORANGE}`, borderRadius: 10, display: 'flex', alignItems: 'flex-start', gap: 7, animation: 'fadeIn 0.3s ease' }}>
+              <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}`}</style>
               <span style={{ fontSize: 12, flexShrink: 0 }}>⚡</span>
               <span style={{ fontSize: 11, color: SLATE, fontWeight: 600, lineHeight: 1.5 }}>{insight}</span>
             </div>
@@ -597,7 +837,7 @@ function ContextPanel({ step, plan, loading, error, insights, onReset }) {
         </div>
       )}
 
-      {/* Placeholder */}
+      {/* Empty state */}
       {insights.length === 0 && (
         <div style={{ ...GLASS, padding: '18px 14px', textAlign: 'center', opacity: 0.75 }}>
           <div style={{ fontSize: 22, marginBottom: 7 }}>🧠</div>
@@ -606,11 +846,11 @@ function ContextPanel({ step, plan, loading, error, insights, onReset }) {
         </div>
       )}
 
-      {/* Preview of what is coming */}
+      {/* Preview */}
       {step < 4 && (
         <div style={{ ...WHITE_CARD, padding: '10px 12px' }}>
-          <div style={{ fontWeight: 800, fontSize: 10, color: SLATE, marginBottom: 7, letterSpacing: 0.3 }}>YOUR STRATEGY WILL INCLUDE</div>
-          {['⚡ Recommended move + target ask', '📊 Leverage score + drivers', '🧠 Risk snapshot (strength, weakness, opportunity)', '🛤 3 negotiation paths', '✍️ Email + live conversation scripts', '🚀 Immediate next steps', '🤝 Mentor escalation if needed'].map((item, i) => (
+          <div style={{ fontWeight: 800, fontSize: 10, color: SLATE, marginBottom: 7, letterSpacing: 0.3 }}>YOUR STRATEGY INCLUDES</div>
+          {['⚡ Recommended move + target ask', '📊 Leverage score + what drives it', '🧠 Risk snapshot — 4 critical signals', '🛤 3 negotiation paths, recommended highlighted', '✍️ Email + live scripts, tabbed', '🚀 Immediate next steps + walk-away signals', '🤝 Mentor escalation if needed'].map((item, i) => (
             <div key={i} style={{ fontSize: 10, color: '#64748B', padding: '3px 0', borderBottom: i < 6 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>{item}</div>
           ))}
         </div>
@@ -623,7 +863,7 @@ function ContextPanel({ step, plan, loading, error, insights, onReset }) {
   );
 }
 
-// ─── Main export — two-panel command center ───────────────────────────────────
+// ─── Main export ──────────────────────────────────────────────────────────────
 const STEP_META = [
   { title: 'The Target', sub: 'What are we negotiating?' },
   { title: 'The Situation', sub: 'What did they offer?' },
@@ -631,7 +871,7 @@ const STEP_META = [
   { title: 'Decision Rules', sub: 'Your line in the sand' },
 ];
 
-export default function OfferEngine({ onBack }) {
+export default function OfferEngine() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(INITIAL_FORM);
   const [plan, setPlan] = useState(null);
@@ -682,7 +922,6 @@ export default function OfferEngine({ onBack }) {
       setPlan(json?.plan || null);
     } catch (e) {
       setError(String(e?.message || 'Something went wrong. Please try again.'));
-      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -691,21 +930,23 @@ export default function OfferEngine({ onBack }) {
   const handleReset = () => { setPlan(null); setForm(INITIAL_FORM); setStep(1); setError(''); setInsights([]); };
 
   const meta = STEP_META[step - 1];
+  const icons = ['🎯', '💼', '⚡', '🎖'];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,380px)', gap: 12, alignItems: 'start', width: '100%' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,400px)', gap: 12, alignItems: 'start', width: '100%' }}>
+      <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
       {/* LEFT: Step form */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* Step header */}
         <div style={{ ...GLASS, padding: '11px 14px', background: 'rgba(30,41,59,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-          <div style={{ fontWeight: 900, fontSize: 15, color: 'white', marginBottom: 1 }}>
-            {['🎯', '💼', '⚡', '🎖'][step - 1]} {meta.title}
-          </div>
+          <div style={{ fontWeight: 900, fontSize: 15, color: 'white', marginBottom: 1 }}>{icons[step-1]} {meta.title}</div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.50)' }}>{meta.sub}</div>
         </div>
 
+        {/* Step content */}
         <div style={{ ...GLASS, overflow: 'hidden', opacity: animating ? 0 : 1, transform: animating ? 'translateX(5px)' : 'translateX(0)', transition: 'opacity 0.18s ease, transform 0.18s ease' }}>
-          <div style={SECTION_HDR}>{['🎯', '💼', '⚡', '🎖'][step - 1]} {meta.title}</div>
+          <div style={SECTION_HDR}>{icons[step-1]} {meta.title}</div>
           <div style={{ padding: '14px' }}>
             {step === 1 && <Step1 form={form} onChange={handleChange} />}
             {step === 2 && <Step2 form={form} onChange={handleChange} />}
@@ -714,26 +955,33 @@ export default function OfferEngine({ onBack }) {
           </div>
         </div>
 
+        {/* Navigation */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button type="button"
-            onClick={step === 1 ? onBack : goBack}
-            disabled={step === 1 && !onBack}
-            style={{ padding: '8px 16px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.22)', background: (step === 1 && !onBack) ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.14)', color: (step === 1 && !onBack) ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.85)', fontWeight: 800, fontSize: 12, cursor: (step === 1 && !onBack) ? 'not-allowed' : 'pointer', backdropFilter: 'blur(8px)' }}>
-            {step === 1 && onBack ? '← Back to Anvil' : '← Back'}
+          <button type="button" onClick={goBack} disabled={step === 1}
+            style={{ padding: '8px 16px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.22)',
+              background: step === 1 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.14)',
+              color: step === 1 ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.85)',
+              fontWeight: 800, fontSize: 12, cursor: step === 1 ? 'not-allowed' : 'pointer', backdropFilter: 'blur(8px)' }}>
+            ← Back
           </button>
           <div style={{ display: 'flex', gap: 4 }}>
-            {[1, 2, 3, 4].map(n => <div key={n} style={{ width: n === step ? 16 : 5, height: 5, borderRadius: 3, background: n <= step ? ORANGE : 'rgba(255,255,255,0.22)', transition: 'all 0.3s ease' }} />)}
+            {[1,2,3,4].map(n => <div key={n} style={{ width: n===step ? 16 : 5, height: 5, borderRadius: 3, background: n<=step ? ORANGE : 'rgba(255,255,255,0.22)', transition: 'all 0.3s ease' }} />)}
           </div>
           <button type="button" onClick={goNext}
-            style={{ padding: '8px 20px', borderRadius: 999, background: step === 4 ? ORANGE : 'rgba(255,255,255,0.90)', color: step === 4 ? 'white' : SLATE, fontWeight: 900, fontSize: 12, border: 'none', cursor: 'pointer', boxShadow: step === 4 ? '0 4px 14px rgba(255,112,67,0.40)' : '0 2px 8px rgba(0,0,0,0.12)', transition: 'all 0.2s ease' }}>
+            style={{ padding: '8px 20px', borderRadius: 999,
+              background: step === 4 ? ORANGE : 'rgba(255,255,255,0.90)',
+              color: step === 4 ? 'white' : SLATE,
+              fontWeight: 900, fontSize: 12, border: 'none', cursor: 'pointer',
+              boxShadow: step === 4 ? '0 4px 14px rgba(255,112,67,0.40)' : '0 2px 8px rgba(0,0,0,0.12)',
+              transition: 'all 0.2s ease' }}>
             {step === 4 ? '⚡ Generate Strategy' : 'Next →'}
           </button>
         </div>
       </div>
 
-      {/* RIGHT: Context + results */}
+      {/* RIGHT: Context accumulator / Results cockpit */}
       <div style={{ position: 'sticky', top: 16, alignSelf: 'start' }}>
-        <ContextPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} />
+        <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} />
       </div>
     </div>
   );

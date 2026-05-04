@@ -358,7 +358,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
             <ProfileDevelopment onNext={() => setActiveModule("offer")} setActiveModule={setActiveModule} />
           )}
           {activeModule === "offer" && (
-            <OfferEngine onBack={() => setActiveModule(null)} />
+            <OfferEngine />
           )}
           {activeModule === "onboarding" && (
             <OnboardingGrowth onNext={() => setActiveModule(null)} setActiveModule={setActiveModule} />
@@ -535,8 +535,14 @@ export default function AnvilPage() {
             )}
 
             {activeModule === "offer" && (
-              <div style={{ ...GLASS, padding: 20, width: "100%" }}>
-                <OfferEngine onBack={() => setActiveModule(null)} />
+              <div style={{ ...GLASS, padding: 24, width: "100%", display: "grid", gap: 16 }}>
+                <button onClick={() => setActiveModule(null)}
+                  style={{ marginBottom: 8, fontSize: "0.875rem", color: "#FF7043",
+                    textDecoration: "underline", background: "none", border: "none",
+                    cursor: "pointer", textAlign: "left", width: "fit-content", fontWeight: 800 }}>
+                  Back to The Anvil
+                </button>
+                <OfferEngine />
               </div>
             )}
 
