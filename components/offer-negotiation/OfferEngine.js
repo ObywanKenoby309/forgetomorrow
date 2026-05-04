@@ -166,7 +166,7 @@ function Step1({ form, onChange }) {
         <div style={{ fontWeight: 900, fontSize: 12, color: DARK, marginBottom: 4 }}>Tell me about the role</div>
         <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6 }}>Paste the JD or describe what you are targeting</div>
         <textarea name="jobDescription" value={form.jobDescription} onChange={onChange} rows={4}
-          placeholder="e.g. Strategic Advisory Services Manager at CrowdStrike — leads consultants, manages engagements, executive stakeholder communication..."
+          placeholder="e.g. Strategic Advisory Services Manager at Company XYZ - leads consultants, manages engagements, executive stakeholder communication..."
           style={{ ...INPUT, resize: 'vertical', lineHeight: 1.55 }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -512,7 +512,7 @@ function ResultCockpit({ plan, form, onReset }) {
         style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
           background: saved ? '#16A34A' : 'rgba(255,255,255,0.85)', color: saved ? 'white' : SLATE,
           border: '1px solid rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
-        {saved ? '✓ Saved' : '💾 Save Strategy'}
+        {saved ? '✓ Saved' : '💾 Save'}
       </button>
       <button type="button" onClick={() => downloadBrief(plan, form)}
         style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
@@ -523,7 +523,7 @@ function ResultCockpit({ plan, form, onReset }) {
         style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
           background: copied ? '#16A34A' : 'rgba(255,255,255,0.85)', color: copied ? 'white' : SLATE,
           border: '1px solid rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
-        {copied ? '✓ Copied' : '📋 Copy Email Script'}
+        {copied ? '✓ Copied' : '📋 Copy Script'}
       </button>
       <button type="button" onClick={onReset}
         style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer',
@@ -703,7 +703,7 @@ function ResultCockpit({ plan, form, onReset }) {
             style={{ marginTop: 10, padding: '6px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
               background: copied ? '#16A34A' : 'rgba(255,112,67,0.10)', color: copied ? 'white' : ORANGE,
               border: `1px solid ${copied ? '#16A34A' : 'rgba(255,112,67,0.25)'}`, transition: 'all 0.2s' }}>
-            {copied ? '✓ Copied' : '📋 Copy to clipboard'}
+            {copied ? '✓ Copied' : '📋 Copy'}
           </button>
         </div>
       )}
@@ -936,13 +936,62 @@ export default function OfferEngine() {
   const meta = STEP_META[step - 1];
   const icons = ['🎯', '💼', '⚡', '🎖'];
 
+  // Input summary for results view left panel
+  const InputSummary = () => (
+    <div style={{ ...GLASS, overflow: 'hidden', height: '100%' }}>
+      <div style={{ ...SECTION_HDR }}>📋 YOUR INPUTS</div>
+      <div style={{ padding: '14px', display: 'grid', gap: 10 }}>
+        {[
+          ['Negotiating', form.isNewJob === 'yes' ? 'New Job Offer' : 'Raise / Promotion'],
+          ['Role / JD', (form.jobDescription || '').slice(0, 80) + ((form.jobDescription || '').length > 80 ? '…' : '')],
+          ['Location', form.location],
+          ['Has Offer', form.hasOffer === 'yes' ? `Yes — ${form.offerCompany || 'Company'} at ${form.offerRoleTitle || 'role'}` : 'No offer yet'],
+          ['Offered Base', form.offerBaseSalary ? `$${Number(form.offerBaseSalary).toLocaleString()}` : form.targetSalaryMin ? `Target $${Number(form.targetSalaryMin).toLocaleString()}–$${Number(form.targetSalaryMax).toLocaleString()}` : '—'],
+          ['Current Salary', form.currentSalary ? `$${Number(form.currentSalary).toLocaleString()}` : '—'],
+          ['Title', form.currentJobTitle],
+          ['Experience', form.yearsRelevantExperience ? `${form.yearsRelevantExperience} years` : '—'],
+          ['Competing Offers', form.competingOffers === 'yes' ? `Yes (${form.competingOffersCount || '?'})` : 'No'],
+          ['Top Priority', form.topPriority?.replace(/_/g, ' ') || '—'],
+          ['Must Include', form.mustHaves],
+          ['Deal-Breakers', form.dealBreakers],
+          ['Confidence', form.confidenceLevel || 'medium'],
+        ].filter(([, v]) => v).map(([k, v]) => (
+          <div key={k} style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 6, borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', paddingTop: 1, letterSpacing: 0.3 }}>{k.toUpperCase()}</div>
+            <div style={{ fontSize: 11, color: SLATE, fontWeight: 600, lineHeight: 1.4 }}>{v}</div>
+          </div>
+        ))}
+        <button type="button" onClick={handleReset}
+          style={{ marginTop: 4, padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
+            background: 'rgba(255,112,67,0.08)', color: ORANGE, border: `1px solid rgba(255,112,67,0.25)` }}>
+          ✏️ Edit Inputs
+        </button>
+      </div>
+    </div>
+  );
+
+  // Results view — full width, input summary left, cockpit right
+  if (plan || loading) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,280px) minmax(0,1fr)', gap: 12, alignItems: 'stretch', width: '100%' }}>
+        <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
+        <div style={{ position: 'sticky', top: 16, alignSelf: 'start' }}>
+          <InputSummary />
+        </div>
+        <div>
+          <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} />
+        </div>
+      </div>
+    );
+  }
+
+  // Step form view
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,400px)', gap: 12, alignItems: 'start', width: '100%' }}>
       <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
       {/* LEFT: Step form */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {/* Step content */}
         <div style={{ ...GLASS, overflow: 'hidden', opacity: animating ? 0 : 1, transform: animating ? 'translateX(5px)' : 'translateX(0)', transition: 'opacity 0.18s ease, transform 0.18s ease' }}>
           <div style={{ ...SECTION_HDR, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
@@ -959,17 +1008,26 @@ export default function OfferEngine() {
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* Navigation — Back | dots | Start Over | Next */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button type="button" onClick={goBack} disabled={step === 1}
-            style={{ padding: '8px 16px', borderRadius: 999,
-              border: step === 1 ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.50)',
-              background: step === 1 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.80)',
-              color: step === 1 ? 'rgba(255,255,255,0.25)' : SLATE,
-              fontWeight: 800, fontSize: 12, cursor: step === 1 ? 'not-allowed' : 'pointer',
-              backdropFilter: 'blur(8px)', boxShadow: step === 1 ? 'none' : '0 2px 8px rgba(0,0,0,0.15)' }}>
-            ← Back
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button type="button" onClick={goBack} disabled={step === 1}
+              style={{ padding: '8px 16px', borderRadius: 999,
+                border: step === 1 ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.50)',
+                background: step === 1 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.80)',
+                color: step === 1 ? 'rgba(255,255,255,0.25)' : SLATE,
+                fontWeight: 800, fontSize: 12, cursor: step === 1 ? 'not-allowed' : 'pointer',
+                backdropFilter: 'blur(8px)', boxShadow: step === 1 ? 'none' : '0 2px 8px rgba(0,0,0,0.15)' }}>
+              ← Back
+            </button>
+            {step > 1 && (
+              <button type="button" onClick={handleReset}
+                style={{ padding: '8px 14px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                  background: 'transparent', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.20)' }}>
+                Start Over
+              </button>
+            )}
+          </div>
           <div style={{ display: 'flex', gap: 4 }}>
             {[1,2,3,4].map(n => <div key={n} style={{ width: n===step ? 16 : 5, height: 5, borderRadius: 3, background: n<=step ? ORANGE : 'rgba(255,255,255,0.22)', transition: 'all 0.3s ease' }} />)}
           </div>
@@ -985,7 +1043,7 @@ export default function OfferEngine() {
         </div>
       </div>
 
-      {/* RIGHT: Context accumulator / Results cockpit */}
+      {/* RIGHT: Context accumulator */}
       <div style={{ position: 'sticky', top: 16, alignSelf: 'start' }}>
         <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} />
       </div>

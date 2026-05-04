@@ -536,14 +536,16 @@ export default function AnvilPage() {
             )}
 
             {activeModule === "offer" && (
-              <div style={{ ...GLASS, padding: 24, width: "100%", display: "grid", gap: 16 }}>
-                <button onClick={() => setActiveModule(null)}
-                  style={{ marginBottom: 12, display: "inline-flex", alignItems: "center", gap: 6,
-                    padding: "7px 16px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
-                    background: "rgba(255,112,67,0.08)", color: "#FF7043",
-                    fontWeight: 800, fontSize: 12, cursor: "pointer", textDecoration: "none" }}>
-                  ← Back to The Anvil
-                </button>
+              <div style={{ ...GLASS, padding: 20, width: "100%", display: "grid", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button onClick={() => setActiveModule(null)}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6,
+                      padding: "6px 14px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
+                      background: "rgba(255,112,67,0.08)", color: "#FF7043",
+                      fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
+                    ← The Anvil
+                  </button>
+                </div>
                 <OfferEngine />
               </div>
             )}
