@@ -385,7 +385,7 @@ function Step3({ form, onChange }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {[
             { value: 'yes', emoji: '⚡', label: 'Yes — I have alternatives', sub: 'This gives you real leverage' },
-            { value: 'no', emoji: '🎯', label: 'No competing offers', sub: 'We'll build leverage from evidence' },
+            { value: 'no', emoji: '🎯', label: 'No competing offers', sub: "We'll build leverage from evidence" },
           ].map(opt => (
             <button
               key={opt.value}
