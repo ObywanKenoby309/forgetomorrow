@@ -166,7 +166,7 @@ function Step1({ form, onChange }) {
         <div style={{ fontWeight: 900, fontSize: 12, color: DARK, marginBottom: 4 }}>Tell me about the role</div>
         <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6 }}>Paste the JD or describe what you are targeting</div>
         <textarea name="jobDescription" value={form.jobDescription} onChange={onChange} rows={4}
-          placeholder="e.g. Strategic Advisory Services Manager at Company XYZ - leads consultants, manages engagements, executive stakeholder communication..."
+          placeholder="e.g. Strategic Advisory Services Manager at CrowdStrike — leads consultants, manages engagements, executive stakeholder communication..."
           style={{ ...INPUT, resize: 'vertical', lineHeight: 1.55 }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -777,15 +777,15 @@ function ResultCockpit({ plan, form, onReset }) {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, animation: 'fadeSlideIn 0.3s ease forwards' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, animation: 'fadeSlideIn 0.3s ease forwards', height: '100%', minHeight: 0 }}>
       <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
       {/* Action bar + tab bar — sticky, never scroll */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'transparent', paddingBottom: 8 }}>
         <ActionBar />
         <TabBar />
       </div>
-      {/* Tab content — scrolls independently */}
-      <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 260px)', paddingRight: 2 }}>
+      {/* Tab content — fills remaining height, scrolls if needed */}
+      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: 2 }}>
         {tab === 'decision' && <DecisionTab />}
         {tab === 'leverage' && <LeverageTab />}
         {tab === 'market' && <MarketTab />}
@@ -815,7 +815,7 @@ function RightPanel({ step, plan, loading, error, insights, onReset, form }) {
   }
 
   if (plan) {
-    return <ResultCockpit plan={plan} form={form} onReset={onReset} />;
+    return <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}><ResultCockpit plan={plan} form={form} onReset={onReset} /></div>;
   }
 
   return (
@@ -974,12 +974,12 @@ export default function OfferEngine() {
   // Results view — full width, input summary left, cockpit right
   if (plan || loading) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,280px) minmax(0,1fr)', gap: 12, alignItems: 'stretch', width: '100%' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,280px) minmax(0,1fr)', gap: 12, alignItems: 'stretch', width: '100%', gridAutoRows: '1fr' }}>
         <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
         <div style={{ position: 'sticky', top: 16, alignSelf: 'start' }}>
           <InputSummary />
         </div>
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} />
         </div>
       </div>
