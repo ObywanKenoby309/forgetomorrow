@@ -449,25 +449,25 @@ function Step4({ form, onChange }) {
 
       <div>
         <div style={{ fontWeight: 900, fontSize: 15, color: DARK, marginBottom: 4 }}>
-          What are your non-negotiables?
+          What must this offer include?
         </div>
         <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>
-          These are your hard floor — you won't move on them
+          Things the offer needs to have — your hard floor
         </div>
         <textarea name="mustHaves" value={form.mustHaves} onChange={onChange}
-          rows={2} placeholder="e.g. minimum $115k base, remote at least 3 days/week, no on-call..."
+          rows={2} placeholder="e.g. minimum $115k base, remote at least 3 days/week, health coverage..."
           style={{ ...INPUT, resize: 'vertical' }} />
       </div>
 
       <div>
         <div style={{ fontWeight: 900, fontSize: 15, color: DARK, marginBottom: 4 }}>
-          What would make you walk away?
+          What would you refuse even if everything else was perfect?
         </div>
         <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>
-          Be honest — these are your deal-breakers
+          Things that kill the deal regardless — be honest
         </div>
         <textarea name="dealBreakers" value={form.dealBreakers} onChange={onChange}
-          rows={2} placeholder="e.g. mandatory relocation, below $95k, no equity, 60+ hour weeks..."
+          rows={2} placeholder="e.g. mandatory relocation, on-call requirements, micromanagement culture..."
           style={{ ...INPUT, resize: 'vertical' }} />
       </div>
 
