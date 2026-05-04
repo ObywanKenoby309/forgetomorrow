@@ -493,21 +493,58 @@ function Results({ plan, formData, onReset }) {
       <style>{`@keyframes fadeSlideIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }`}</style>
 
       {/* Header */}
-      <div style={{ ...GLASS, padding: '16px 20px', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+      <div style={{ ...GLASS, padding: '14px 18px', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <div style={{ fontWeight: 900, fontSize: 18, color: ORANGE }}>⚡ Your Negotiation Strategy</div>
-          <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>Review your position, paths, and scripts before you respond.</div>
+          <div style={{ fontWeight: 900, fontSize: 17, color: ORANGE }}>⚡ Your Negotiation Strategy</div>
+          <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>Here is your move. Review the full breakdown below.</div>
         </div>
         <button type="button" onClick={onReset} style={{ padding: '7px 14px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.12)', background: 'rgba(255,255,255,0.80)', color: SLATE, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
           ← Start Over
         </button>
       </div>
 
+      {/* DECISION CARD — always first, always prominent */}
+      {plan?.decision && (
+        <div style={{ marginBottom: 12, borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(255,112,67,0.20)' }}>
+          <div style={{ padding: '14px 18px', background: 'linear-gradient(135deg, rgba(255,112,67,0.95), rgba(234,88,12,0.90))', color: 'white' }}>
+            <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: 0.5, opacity: 0.85, marginBottom: 6 }}>⚡ RECOMMENDED MOVE</div>
+            <div style={{ fontWeight: 900, fontSize: 26, letterSpacing: -0.5, marginBottom: 6 }}>
+              {plan.decision.recommendedMove}
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 700, opacity: 0.92, lineHeight: 1.5 }}>
+              {plan.decision.oneLineSummary}
+            </div>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.95)', padding: '16px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 }}>
+            {[
+              ['Leverage', plan.decision.leverageBand, plan.decision.leverageBand === 'Strong' ? '#16A34A' : plan.decision.leverageBand === 'Moderate' ? '#D97706' : '#DC2626'],
+              ['Risk Level', plan.decision.riskLevel, '#64748B'],
+              ['Target Ask', plan.decision.targetAsk, ORANGE],
+              ['Fallback Floor', plan.decision.fallbackFloor, '#475569'],
+            ].map(([label, value, color]) => (
+              <div key={label}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', marginBottom: 4, letterSpacing: 0.5 }}>{label.toUpperCase()}</div>
+                <div style={{ fontSize: 15, fontWeight: 900, color }}>{value || '—'}</div>
+              </div>
+            ))}
+          </div>
+          {Array.isArray(plan.decision.doNotTradeAway) && plan.decision.doNotTradeAway.length > 0 && (
+            <div style={{ background: 'rgba(254,243,199,0.90)', padding: '10px 18px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}>🔒 DO NOT TRADE AWAY:</span>
+              {plan.decision.doNotTradeAway.map((item, i) => (
+                <span key={i} style={{ fontSize: 12, fontWeight: 700, color: '#78350F', background: 'rgba(255,255,255,0.60)', padding: '2px 10px', borderRadius: 999, border: '1px solid rgba(146,64,14,0.20)' }}>
+                  {item}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Disclaimer */}
-      <div style={{ ...WHITE_CARD, padding: '12px 16px', marginBottom: 12, borderLeft: `3px solid #F59E0B`, background: 'rgba(254,243,199,0.80)' }}>
-        <div style={{ fontWeight: 800, fontSize: 12, color: '#92400E', marginBottom: 4 }}>⚠️ Guidance Only</div>
+      <div style={{ ...WHITE_CARD, padding: '10px 14px', marginBottom: 10, borderLeft: `3px solid #F59E0B`, background: 'rgba(254,243,199,0.80)' }}>
         <div style={{ fontSize: 12, color: '#78350F', lineHeight: 1.5 }}>
-          {plan?.disclaimer?.summary || 'Not legal, financial, or tax advice. Outcomes are not guaranteed. Use as a starting point.'}
+          ⚠️ {plan?.disclaimer?.summary || 'Guidance only — not legal, financial, or tax advice. Outcomes are not guaranteed.'}
         </div>
       </div>
 
