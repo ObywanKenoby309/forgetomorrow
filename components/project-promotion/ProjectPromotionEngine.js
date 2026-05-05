@@ -62,6 +62,14 @@ const INITIAL_FORM = {
   promotionGoal: "",
 };
 
+const RESULT_TABS = [
+  { id: "decision", label: "Decision" },
+  { id: "moves", label: "Moves" },
+  { id: "execution", label: "Execution" },
+  { id: "review", label: "Review" },
+  { id: "coach", label: "Coach" },
+];
+
 function Field({ label, children }) {
   return (
     <div>
@@ -143,6 +151,75 @@ function StatusPill({ children, tone = "neutral" }) {
       {children}
     </span>
   );
+}
+
+function TabBar({ activeTab, setActiveTab }) {
+  return (
+    <div style={{ display: "flex", gap: 2, marginBottom: 12, background: "rgba(0,0,0,0.06)", borderRadius: 10, padding: 3 }}>
+      {RESULT_TABS.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => setActiveTab(tab.id)}
+          style={{
+            flex: 1,
+            padding: "7px 8px",
+            borderRadius: 8,
+            fontSize: 11,
+            fontWeight: 900,
+            cursor: "pointer",
+            border: "none",
+            background: activeTab === tab.id ? "white" : "transparent",
+            color: activeTab === tab.id ? ORANGE : "#64748B",
+            boxShadow: activeTab === tab.id ? "0 2px 6px rgba(0,0,0,0.10)" : "none",
+            transition: "all 0.15s",
+          }}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SignalBar({ label, level = 2 }) {
+  const safeLevel = Math.max(1, Math.min(4, Number(level) || 2));
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "92px 1fr", gap: 8, alignItems: "center" }}>
+      <div style={{ fontSize: 9, fontWeight: 900, color: "#64748B", letterSpacing: 0.25 }}>{label}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 3 }}>
+        {[1, 2, 3, 4].map((n) => (
+          <div
+            key={n}
+            style={{
+              height: 7,
+              borderRadius: 999,
+              background: n <= safeLevel ? ORANGE : "rgba(0,0,0,0.09)",
+              opacity: n <= safeLevel ? 0.95 : 1,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function getSignalLevels(move = {}) {
+  const text = [
+    move.title,
+    move.whatToDo,
+    move.whyThisWins,
+    move.promotionSignal,
+    move.proofArtifact,
+    ...(Array.isArray(move.successMetrics) ? move.successMetrics : []),
+  ].join(" ").toLowerCase();
+
+  const visibility = /executive|leadership|stakeholder|cross-functional|cross functional|manager|director|decision|visibility/.test(text) ? 4 : 2;
+  const scope = /cross-functional|cross functional|multiple teams|department|enterprise|organization|systemic|workflow/.test(text) ? 4 : 2;
+  const measurable = /metric|kpi|sla|reduce|increase|improve|dashboard|before-and-after|before and after|tracked/.test(text) ? 4 : 2;
+  const leadership = /own|lead|train|framework|initiative|program|accountability|governance/.test(text) ? 4 : 2;
+
+  return { visibility, scope, measurable, leadership };
 }
 
 function MoveCard({ move, recommended }) {
@@ -234,41 +311,380 @@ function MoveCard({ move, recommended }) {
             <strong>Evidence:</strong> {move.evidenceBasis}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 9, fontWeight: 900, color: "#64748B", marginBottom: 5 }}>
-              EXAMPLE PROJECTS
+function MoveSignalMap({ moves, recommendedRank }) {
+  if (!moves.length) return null;
+
+  return (
+    <div style={{ ...WHITE_CARD, overflow: "hidden" }}>
+      <div style={SECTION_HDR}>PROMOTION SIGNAL MAP</div>
+      <div style={{ padding: 12, display: "grid", gap: 10 }}>
+        {moves.map((move) => {
+          const levels = getSignalLevels(move);
+          const recommended = Number(move?.rank) === recommendedRank;
+          return (
+            <div
+              key={`${move?.rank || ""}-${move?.title || ""}-signal`}
+              style={{
+                padding: 10,
+                borderRadius: 10,
+                background: recommended ? "rgba(255,112,67,0.07)" : "rgba(248,250,252,0.92)",
+                border: recommended ? "1px solid rgba(255,112,67,0.22)" : "1px solid rgba(0,0,0,0.06)",
+                display: "grid",
+                gap: 7,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: DARK }}>
+                  #{move?.rank} {move?.title || "Move"}
+                </div>
+                {recommended && <StatusPill tone="orange">Recommended</StatusPill>}
+              </div>
+              <SignalBar label="Visibility" level={levels.visibility} />
+              <SignalBar label="Scope" level={levels.scope} />
+              <SignalBar label="Measurable" level={levels.measurable} />
+              <SignalBar label="Leadership" level={levels.leadership} />
             </div>
-            <BulletList items={move?.exampleProjects} />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <>
+      <div
+        style={{
+          borderRadius: 14,
+          padding: 18,
+          background: "rgba(30,41,59,0.88)",
+          color: "white",
+          boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+          border: "1px solid rgba(255,255,255,0.12)",
+        }}
+      >
+        <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginBottom: 6 }}>
+          🧠 STRATEGIC OPERATOR ADVISOR
+        </div>
+        <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.2, marginBottom: 6 }}>
+          This is for winning where you are now.
+        </div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.78)", lineHeight: 1.55 }}>
+          The system reads your evidence, then identifies the projects and ownership plays most likely to increase visibility, promotion strength, and long-term value.
+        </div>
+      </div>
+
+      <div style={{ ...WHITE_CARD, padding: 14 }}>
+        <div style={{ fontWeight: 900, fontSize: 11, color: DARK, marginBottom: 8 }}>
+          YOUR OUTPUT WILL INCLUDE
+        </div>
+        <BulletList
+          items={[
+            "A direct performance read based on your actual proof",
+            "The leverage gap holding back promotion-level visibility",
+            "Three ranked project moves with success metrics",
+            "A tabbed decision cockpit instead of one long report",
+            "A manager-ready review narrative and future resume bullet",
+            "A Forge Coach bridge for execution support",
+          ]}
+        />
+      </div>
+    </>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div style={{ ...GLASS, padding: "36px 18px", textAlign: "center" }}>
+      <div style={{ fontSize: 28, marginBottom: 10 }}>🔥</div>
+      <div style={{ fontWeight: 900, fontSize: 15, color: ORANGE, marginBottom: 5 }}>
+        Finding your next win...
+      </div>
+      <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6, marginBottom: 18 }}>
+        Reading your resume, profile, portfolio, and current work context.
+      </div>
+      <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: ORANGE,
+              animation: `pulseDot 1.2s ease-in-out ${i * 0.2}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ResultCockpit({ result, plan, moves, recommendedRank }) {
+  const [activeTab, setActiveTab] = useState("decision");
+  const recommendedMove = moves.find((move) => Number(move?.rank) === recommendedRank) || moves[0] || null;
+
+  const DecisionTab = () => (
+    <div style={{ display: "grid", gap: 10 }}>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {result?.resumeConnected && <StatusPill tone="green">Resume connected</StatusPill>}
+        {result?.profileConnected && <StatusPill tone="green">Profile connected</StatusPill>}
+        {result?.evidenceConnected && <StatusPill tone="orange">Evidence engine active</StatusPill>}
+      </div>
+
+      <div style={{ borderRadius: 14, overflow: "hidden", boxShadow: "0 8px 24px rgba(255,112,67,0.20)" }}>
+        <div
+          style={{
+            padding: "18px 20px",
+            background: "linear-gradient(135deg, rgba(255,112,67,0.95), rgba(234,88,12,0.90))",
+            color: "white",
+          }}
+        >
+          <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: 0.6, opacity: 0.85, marginBottom: 5 }}>
+            PERFORMANCE READ
           </div>
-          <div>
-            <div style={{ fontSize: 9, fontWeight: 900, color: "#64748B", marginBottom: 5 }}>
-              SUCCESS METRICS
-            </div>
-            <BulletList items={move?.successMetrics} />
+          <div style={{ fontSize: 14, fontWeight: 850, lineHeight: 1.55 }}>
+            {plan.performanceRead || "No performance read returned."}
           </div>
         </div>
 
-        {(move?.proofArtifact || move?.promotionSignal || move?.riskIfIgnored) && (
-          <div style={{ display: "grid", gap: 6 }}>
-            {move?.proofArtifact && (
-              <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.45 }}>
-                <strong>Proof artifact:</strong> {move.proofArtifact}
+        <div style={{ background: "rgba(255,255,255,0.96)", padding: 14, display: "grid", gap: 9 }}>
+          {plan.leverageGap && (
+            <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
+              <strong>What is holding you back:</strong> {plan.leverageGap}
+            </div>
+          )}
+          {plan.underLeveragingSignal && (
+            <div
+              style={{
+                padding: 10,
+                borderRadius: 10,
+                background: "rgba(254,243,199,0.88)",
+                border: "1px solid rgba(245,158,11,0.25)",
+                color: "#78350F",
+                fontSize: 11,
+                lineHeight: 1.45,
+                fontWeight: 750,
+              }}
+            >
+              {plan.underLeveragingSignal}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {plan.recommendedMove && (
+        <div style={{ ...WHITE_CARD, overflow: "hidden" }}>
+          <div style={SECTION_HDR}>🚀 RECOMMENDED MOVE</div>
+          <div style={{ padding: 13, display: "grid", gap: 8 }}>
+            {plan.recommendedMove.decision && (
+              <div style={{ fontSize: 13, fontWeight: 900, color: DARK, lineHeight: 1.45 }}>
+                {plan.recommendedMove.decision}
               </div>
             )}
-            {move?.promotionSignal && (
-              <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.45 }}>
-                <strong>Promotion signal:</strong> {move.promotionSignal}
-              </div>
-            )}
-            {move?.riskIfIgnored && (
-              <div style={{ fontSize: 11, color: "#92400E", lineHeight: 1.45 }}>
-                <strong>Risk if ignored:</strong> {move.riskIfIgnored}
+            {recommendedMove?.title && (
+              <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
+                <strong>Primary path:</strong> #{recommendedMove.rank} {recommendedMove.title}
               </div>
             )}
           </div>
-        )}
+        </div>
+      )}
+    </div>
+  );
+
+  const MovesTab = () => (
+    <div style={{ display: "grid", gap: 10 }}>
+      <MoveSignalMap moves={moves} recommendedRank={recommendedRank} />
+      <div style={{ fontSize: 11, fontWeight: 900, color: "#64748B", marginTop: 2 }}>
+        TOP 3 WAYS TO WIN NEXT
+      </div>
+      {moves.map((move) => (
+        <MoveCard
+          key={`${move?.rank || ""}-${move?.title || ""}`}
+          move={move}
+          recommended={Number(move?.rank) === recommendedRank}
+        />
+      ))}
+    </div>
+  );
+
+  const ExecutionTab = () => (
+    <div style={{ display: "grid", gap: 10 }}>
+      {plan.recommendedMove && (
+        <div style={{ ...WHITE_CARD, overflow: "hidden" }}>
+          <div style={SECTION_HDR}>EXECUTION PLAN</div>
+          <div style={{ padding: 13, display: "grid", gap: 9 }}>
+            {plan.recommendedMove.firstStepThisWeek && (
+              <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
+                <strong>First step this week:</strong> {plan.recommendedMove.firstStepThisWeek}
+              </div>
+            )}
+            {plan.recommendedMove.whoToAlignWith && (
+              <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
+                <strong>Who to align with:</strong> {plan.recommendedMove.whoToAlignWith}
+              </div>
+            )}
+            {plan.recommendedMove.howToPitchIt && (
+              <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
+                <strong>How to pitch it:</strong> {plan.recommendedMove.howToPitchIt}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {recommendedMove && (
+        <div style={{ ...WHITE_CARD, overflow: "hidden" }}>
+          <div style={SECTION_HDR}>PROOF TARGETS</div>
+          <div style={{ padding: 13, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 900, color: "#64748B", marginBottom: 6 }}>
+                SUCCESS METRICS
+              </div>
+              <BulletList items={recommendedMove.successMetrics} />
+            </div>
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 900, color: "#64748B", marginBottom: 6 }}>
+                EXAMPLE PROJECTS
+              </div>
+              <BulletList items={recommendedMove.exampleProjects} />
+            </div>
+          </div>
+          <div style={{ padding: "0 13px 13px", display: "grid", gap: 7 }}>
+            {recommendedMove.proofArtifact && (
+              <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.45 }}>
+                <strong>Proof artifact:</strong> {recommendedMove.proofArtifact}
+              </div>
+            )}
+            {recommendedMove.promotionSignal && (
+              <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.45 }}>
+                <strong>Promotion signal:</strong> {recommendedMove.promotionSignal}
+              </div>
+            )}
+            {recommendedMove.riskIfIgnored && (
+              <div style={{ fontSize: 11, color: "#92400E", lineHeight: 1.45 }}>
+                <strong>Risk if ignored:</strong> {recommendedMove.riskIfIgnored}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const ReviewTab = () => (
+    <div style={{ display: "grid", gap: 10 }}>
+      {plan.reviewNarrative && (
+        <div style={{ ...WHITE_CARD, overflow: "hidden" }}>
+          <div style={SECTION_HDR}>📌 REVIEW NARRATIVE</div>
+          <div style={{ padding: 13, display: "grid", gap: 9 }}>
+            {plan.reviewNarrative.managerSummary && (
+              <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
+                <strong>Manager summary:</strong> {plan.reviewNarrative.managerSummary}
+              </div>
+            )}
+            {plan.reviewNarrative.promotionCaseAngle && (
+              <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
+                <strong>Promotion case:</strong> {plan.reviewNarrative.promotionCaseAngle}
+              </div>
+            )}
+            {plan.reviewNarrative.resumeFutureBullet && (
+              <div
+                style={{
+                  padding: 10,
+                  borderRadius: 10,
+                  background: "rgba(22,163,74,0.08)",
+                  border: "1px solid rgba(22,163,74,0.20)",
+                  color: "#166534",
+                  fontSize: 11,
+                  lineHeight: 1.45,
+                  fontWeight: 750,
+                }}
+              >
+                <strong>Future resume bullet:</strong> {plan.reviewNarrative.resumeFutureBullet}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {Array.isArray(plan.reasoning) && plan.reasoning.length > 0 && (
+        <div style={{ ...WHITE_CARD, overflow: "hidden" }}>
+          <div style={SECTION_HDR}>WHY THE SYSTEM CHOSE THIS</div>
+          <div style={{ padding: 13 }}>
+            <BulletList items={plan.reasoning} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const CoachTab = () => (
+    <div style={{ display: "grid", gap: 10 }}>
+      {plan.coachBridge && (
+        <div style={{ ...GLASS, padding: 13, borderLeft: `3px solid ${ORANGE}` }}>
+          <div style={{ fontWeight: 900, fontSize: 12, color: ORANGE, marginBottom: 5 }}>
+            🤝 Bring in a Forge Coach
+          </div>
+          <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 8 }}>
+            {plan.coachBridge.whyCoachHelps || "A coach can help you turn this into a project your leadership will understand and value."}
+          </div>
+          {plan.coachBridge.whatToBring && (
+            <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 9 }}>
+              <strong>Bring:</strong> {plan.coachBridge.whatToBring}
+            </div>
+          )}
+          <a
+            href="/the-hearth?module=mentorship"
+            style={{
+              display: "inline-block",
+              padding: "7px 14px",
+              background: ORANGE,
+              color: "white",
+              borderRadius: 8,
+              fontWeight: 900,
+              fontSize: 11,
+              textDecoration: "none",
+            }}
+          >
+            {plan.coachBridge.cta || "Work with a Forge Coach"}
+          </a>
+        </div>
+      )}
+
+      <div style={{ ...WHITE_CARD, padding: 13 }}>
+        <div style={{ fontWeight: 900, fontSize: 11, color: DARK, marginBottom: 8 }}>
+          COACHING SESSION FOCUS
+        </div>
+        <BulletList
+          items={[
+            "Pressure-test the recommended project against real workplace politics",
+            "Build the pitch so leadership sees measurable business value",
+            "Define the proof artifact before the work starts",
+            "Turn the outcome into review, promotion, and resume evidence",
+          ]}
+        />
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: 2 }}>
+        {activeTab === "decision" && <DecisionTab />}
+        {activeTab === "moves" && <MovesTab />}
+        {activeTab === "execution" && <ExecutionTab />}
+        {activeTab === "review" && <ReviewTab />}
+        {activeTab === "coach" && <CoachTab />}
       </div>
     </div>
   );
@@ -339,7 +755,6 @@ export default function ProjectPromotionEngine() {
       `}</style>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 0.92fr) minmax(360px, 1.08fr)", gap: 12 }}>
-        {/* LEFT PANEL */}
         <div style={{ ...WHITE_CARD, overflow: "hidden" }}>
           <div style={SECTION_HDR}>🎯 PROJECT & PROMOTION INTELLIGENCE</div>
 
@@ -466,231 +881,16 @@ export default function ProjectPromotionEngine() {
           </div>
         </div>
 
-        {/* RIGHT PANEL */}
         <div style={{ display: "grid", gap: 10, minHeight: 0 }}>
-          {!loading && !plan && (
-            <>
-              <div
-                style={{
-                  borderRadius: 14,
-                  padding: 18,
-                  background: "rgba(30,41,59,0.88)",
-                  color: "white",
-                  boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginBottom: 6 }}>
-                  🧠 STRATEGIC OPERATOR ADVISOR
-                </div>
-                <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.2, marginBottom: 6 }}>
-                  This is for winning where you are now.
-                </div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.78)", lineHeight: 1.55 }}>
-                  The system reads your evidence, then identifies the projects and ownership plays most likely to increase visibility, promotion strength, and long-term value.
-                </div>
-              </div>
-
-              <div style={{ ...WHITE_CARD, padding: 14 }}>
-                <div style={{ fontWeight: 900, fontSize: 11, color: DARK, marginBottom: 8 }}>
-                  YOUR OUTPUT WILL INCLUDE
-                </div>
-                <BulletList
-                  items={[
-                    "A direct performance read based on your actual proof",
-                    "The leverage gap holding back promotion-level visibility",
-                    "Three ranked project moves with success metrics",
-                    "The recommended move and first step this week",
-                    "A manager-ready review narrative and future resume bullet",
-                    "A Forge Coach bridge for execution support",
-                  ]}
-                />
-              </div>
-            </>
-          )}
-
-          {loading && (
-            <div style={{ ...GLASS, padding: "36px 18px", textAlign: "center" }}>
-              <div style={{ fontSize: 28, marginBottom: 10 }}>🔥</div>
-              <div style={{ fontWeight: 900, fontSize: 15, color: ORANGE, marginBottom: 5 }}>
-                Finding your next win...
-              </div>
-              <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6, marginBottom: 18 }}>
-                Reading your resume, profile, portfolio, and current work context.
-              </div>
-              <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: ORANGE,
-                      animation: `pulseDot 1.2s ease-in-out ${i * 0.2}s infinite`,
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
+          {!loading && !plan && <EmptyState />}
+          {loading && <LoadingState />}
           {!loading && plan && (
-            <div style={{ display: "grid", gap: 10 }}>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {result?.resumeConnected && <StatusPill tone="green">Resume connected</StatusPill>}
-                {result?.profileConnected && <StatusPill tone="green">Profile connected</StatusPill>}
-                {result?.evidenceConnected && <StatusPill tone="orange">Evidence engine active</StatusPill>}
-              </div>
-
-              <div
-                style={{
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  boxShadow: "0 8px 24px rgba(255,112,67,0.20)",
-                }}
-              >
-                <div
-                  style={{
-                    padding: "14px 16px",
-                    background: "linear-gradient(135deg, rgba(255,112,67,0.95), rgba(234,88,12,0.90))",
-                    color: "white",
-                  }}
-                >
-                  <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: 0.6, opacity: 0.85, marginBottom: 3 }}>
-                    PERFORMANCE READ
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 800, lineHeight: 1.55 }}>
-                    {plan.performanceRead || "No performance read returned."}
-                  </div>
-                </div>
-
-                <div style={{ background: "rgba(255,255,255,0.96)", padding: 13, display: "grid", gap: 8 }}>
-                  {plan.leverageGap && (
-                    <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
-                      <strong>What is holding you back:</strong> {plan.leverageGap}
-                    </div>
-                  )}
-                  {plan.underLeveragingSignal && (
-                    <div
-                      style={{
-                        padding: 9,
-                        borderRadius: 10,
-                        background: "rgba(254,243,199,0.88)",
-                        border: "1px solid rgba(245,158,11,0.25)",
-                        color: "#78350F",
-                        fontSize: 11,
-                        lineHeight: 1.45,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {plan.underLeveragingSignal}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {moves.map((move) => (
-                <MoveCard
-                  key={`${move?.rank || ""}-${move?.title || ""}`}
-                  move={move}
-                  recommended={Number(move?.rank) === recommendedRank}
-                />
-              ))}
-
-              {plan.recommendedMove && (
-                <div style={{ ...WHITE_CARD, overflow: "hidden" }}>
-                  <div style={SECTION_HDR}>🚀 RECOMMENDED MOVE</div>
-                  <div style={{ padding: 13, display: "grid", gap: 8 }}>
-                    {plan.recommendedMove.decision && (
-                      <div style={{ fontSize: 13, fontWeight: 900, color: DARK, lineHeight: 1.45 }}>
-                        {plan.recommendedMove.decision}
-                      </div>
-                    )}
-                    {plan.recommendedMove.firstStepThisWeek && (
-                      <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
-                        <strong>First step this week:</strong> {plan.recommendedMove.firstStepThisWeek}
-                      </div>
-                    )}
-                    {plan.recommendedMove.whoToAlignWith && (
-                      <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
-                        <strong>Who to align with:</strong> {plan.recommendedMove.whoToAlignWith}
-                      </div>
-                    )}
-                    {plan.recommendedMove.howToPitchIt && (
-                      <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
-                        <strong>How to pitch it:</strong> {plan.recommendedMove.howToPitchIt}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {plan.reviewNarrative && (
-                <div style={{ ...WHITE_CARD, overflow: "hidden" }}>
-                  <div style={SECTION_HDR}>📌 REVIEW NARRATIVE</div>
-                  <div style={{ padding: 13, display: "grid", gap: 8 }}>
-                    {plan.reviewNarrative.managerSummary && (
-                      <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
-                        <strong>Manager summary:</strong> {plan.reviewNarrative.managerSummary}
-                      </div>
-                    )}
-                    {plan.reviewNarrative.promotionCaseAngle && (
-                      <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.5 }}>
-                        <strong>Promotion case:</strong> {plan.reviewNarrative.promotionCaseAngle}
-                      </div>
-                    )}
-                    {plan.reviewNarrative.resumeFutureBullet && (
-                      <div
-                        style={{
-                          padding: 9,
-                          borderRadius: 10,
-                          background: "rgba(22,163,74,0.08)",
-                          border: "1px solid rgba(22,163,74,0.20)",
-                          color: "#166534",
-                          fontSize: 11,
-                          lineHeight: 1.45,
-                          fontWeight: 700,
-                        }}
-                      >
-                        Future resume bullet: {plan.reviewNarrative.resumeFutureBullet}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {plan.coachBridge && (
-                <div style={{ ...GLASS, padding: 13, borderLeft: `3px solid ${ORANGE}` }}>
-                  <div style={{ fontWeight: 900, fontSize: 12, color: ORANGE, marginBottom: 5 }}>
-                    🤝 Bring in a Forge Coach
-                  </div>
-                  <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 8 }}>
-                    {plan.coachBridge.whyCoachHelps || "A coach can help you turn this into a project your leadership will understand and value."}
-                  </div>
-                  {plan.coachBridge.whatToBring && (
-                    <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 9 }}>
-                      <strong>Bring:</strong> {plan.coachBridge.whatToBring}
-                    </div>
-                  )}
-                  <a
-                    href="/the-hearth?module=mentorship"
-                    style={{
-                      display: "inline-block",
-                      padding: "7px 14px",
-                      background: ORANGE,
-                      color: "white",
-                      borderRadius: 8,
-                      fontWeight: 900,
-                      fontSize: 11,
-                      textDecoration: "none",
-                    }}
-                  >
-                    {plan.coachBridge.cta || "Work with a Forge Coach"}
-                  </a>
-                </div>
-              )}
-            </div>
+            <ResultCockpit
+              result={result}
+              plan={plan}
+              moves={moves}
+              recommendedRank={recommendedRank}
+            />
           )}
         </div>
       </div>
