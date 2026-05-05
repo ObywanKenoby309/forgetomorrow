@@ -1,6 +1,7 @@
 // components/project-promotion/ProjectPromotionEngine.js
 
 import { useMemo, useState } from "react";
+import jsPDF from "jspdf";
 
 const ORANGE = "#FF7043";
 const SLATE = "#334155";
@@ -67,7 +68,7 @@ const RESULT_TABS = [
   { id: "moves", label: "Moves" },
   { id: "execution", label: "Execution" },
   { id: "review", label: "Review" },
-  { id: "coach", label: "Coach" },
+  { id: "coach", label: "Spotlights" },
 ];
 
 function Field({ label, children }) {
@@ -220,6 +221,142 @@ function getSignalLevels(move = {}) {
   const leadership = /own|lead|train|framework|initiative|program|accountability|governance/.test(text) ? 4 : 2;
 
   return { visibility, scope, measurable, leadership };
+}
+
+function buildBriefText(plan, moves, recommendedMove) {
+  if (!plan) return "";
+
+  const lines = [];
+  lines.push("ForgeTomorrow Project & Promotion Intelligence Brief");
+  lines.push("");
+  lines.push("PERFORMANCE READ");
+  lines.push(plan.performanceRead || "N/A");
+  lines.push("");
+  lines.push("WHAT IS HOLDING YOU BACK");
+  lines.push(plan.leverageGap || "N/A");
+  if (plan.underLeveragingSignal) {
+    lines.push("");
+    lines.push("UNDER-LEVERAGING SIGNAL");
+    lines.push(plan.underLeveragingSignal);
+  }
+
+  lines.push("");
+  lines.push("RECOMMENDED MOVE");
+  lines.push(plan.recommendedMove?.decision || "N/A");
+  if (recommendedMove?.title) lines.push(`Primary path: #${recommendedMove.rank} ${recommendedMove.title}`);
+  if (plan.recommendedMove?.firstStepThisWeek) lines.push(`First step this week: ${plan.recommendedMove.firstStepThisWeek}`);
+  if (plan.recommendedMove?.whoToAlignWith) lines.push(`Who to align with: ${plan.recommendedMove.whoToAlignWith}`);
+  if (plan.recommendedMove?.howToPitchIt) lines.push(`How to pitch it: ${plan.recommendedMove.howToPitchIt}`);
+
+  lines.push("");
+  lines.push("TOP 3 WAYS TO WIN NEXT");
+  moves.forEach((move) => {
+    lines.push("");
+    lines.push(`#${move?.rank || ""} ${move?.title || "Untitled move"}`);
+    if (move?.whatToDo) lines.push(`What to do: ${move.whatToDo}`);
+    if (move?.whyThisWins) lines.push(`Why this wins: ${move.whyThisWins}`);
+    if (move?.evidenceBasis) lines.push(`Evidence: ${move.evidenceBasis}`);
+    if (Array.isArray(move?.successMetrics) && move.successMetrics.length) {
+      lines.push("Success metrics:");
+      move.successMetrics.forEach((item) => lines.push(`- ${item}`));
+    }
+    if (move?.proofArtifact) lines.push(`Proof artifact: ${move.proofArtifact}`);
+    if (move?.promotionSignal) lines.push(`Promotion signal: ${move.promotionSignal}`);
+    if (move?.riskIfIgnored) lines.push(`Risk if ignored: ${move.riskIfIgnored}`);
+  });
+
+  if (plan.reviewNarrative) {
+    lines.push("");
+    lines.push("REVIEW NARRATIVE");
+    if (plan.reviewNarrative.managerSummary) lines.push(`Manager summary: ${plan.reviewNarrative.managerSummary}`);
+    if (plan.reviewNarrative.promotionCaseAngle) lines.push(`Promotion case: ${plan.reviewNarrative.promotionCaseAngle}`);
+    if (plan.reviewNarrative.resumeFutureBullet) lines.push(`Future resume bullet: ${plan.reviewNarrative.resumeFutureBullet}`);
+  }
+
+  lines.push("");
+  lines.push("COACH SPOTLIGHTS PREP");
+  lines.push(plan.coachBridge?.whyCoachHelps || "Get another set of eyes before taking this to leadership.");
+  if (plan.coachBridge?.whatToBring) lines.push(`Bring: ${plan.coachBridge.whatToBring}`);
+
+  return lines.join("\n");
+}
+
+function downloadFile(filename, content, type = "text/plain") {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadBriefPdf(plan, moves, recommendedMove) {
+  const doc = new jsPDF({ unit: "pt", format: "letter" });
+  const margin = 44;
+  const maxW = 524;
+  let y = margin;
+
+  const write = (text, size = 10, bold = false, color = [30, 41, 59]) => {
+    doc.setFontSize(size);
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setTextColor(...color);
+    const chunks = doc.splitTextToSize(String(text || ""), maxW);
+    chunks.forEach((line) => {
+      if (y > 750) {
+        doc.addPage();
+        y = margin;
+      }
+      doc.text(line, margin, y);
+      y += size * 1.45;
+    });
+  };
+
+  const gap = (n = 8) => { y += n; };
+
+  write("ForgeTomorrow Project & Promotion Brief", 18, true, [255, 112, 67]);
+  write(new Date().toLocaleDateString(), 9, false, [100, 116, 139]);
+  gap(14);
+
+  write("PERFORMANCE READ", 10, true, [255, 112, 67]);
+  write(plan?.performanceRead || "N/A", 10);
+  gap(8);
+
+  write("WHAT IS HOLDING YOU BACK", 10, true, [255, 112, 67]);
+  write(plan?.leverageGap || "N/A", 10);
+  if (plan?.underLeveragingSignal) write(plan.underLeveragingSignal, 10, true, [120, 53, 15]);
+  gap(8);
+
+  write("RECOMMENDED MOVE", 10, true, [255, 112, 67]);
+  write(plan?.recommendedMove?.decision || "N/A", 12, true);
+  if (recommendedMove?.title) write(`Primary path: #${recommendedMove.rank} ${recommendedMove.title}`, 10);
+  if (plan?.recommendedMove?.firstStepThisWeek) write(`First step this week: ${plan.recommendedMove.firstStepThisWeek}`, 10);
+  if (plan?.recommendedMove?.whoToAlignWith) write(`Who to align with: ${plan.recommendedMove.whoToAlignWith}`, 10);
+  if (plan?.recommendedMove?.howToPitchIt) write(`How to pitch it: ${plan.recommendedMove.howToPitchIt}`, 10);
+  gap(10);
+
+  write("TOP 3 WAYS TO WIN NEXT", 10, true, [255, 112, 67]);
+  moves.forEach((move) => {
+    gap(4);
+    write(`#${move?.rank || ""} ${move?.title || "Untitled move"}`, 11, true);
+    if (move?.whatToDo) write(`What to do: ${move.whatToDo}`, 10);
+    if (move?.whyThisWins) write(`Why this wins: ${move.whyThisWins}`, 10);
+    if (move?.proofArtifact) write(`Proof artifact: ${move.proofArtifact}`, 10);
+  });
+  gap(8);
+
+  if (plan?.reviewNarrative) {
+    write("REVIEW NARRATIVE", 10, true, [255, 112, 67]);
+    if (plan.reviewNarrative.managerSummary) write(`Manager summary: ${plan.reviewNarrative.managerSummary}`, 10);
+    if (plan.reviewNarrative.promotionCaseAngle) write(`Promotion case: ${plan.reviewNarrative.promotionCaseAngle}`, 10);
+    if (plan.reviewNarrative.resumeFutureBullet) write(`Future resume bullet: ${plan.reviewNarrative.resumeFutureBullet}`, 10, true, [22, 101, 52]);
+  }
+
+  gap(12);
+  write("ForgeTomorrow — Strategic guidance only. Validate internally before execution.", 8, false, [148, 163, 184]);
+  doc.save("ForgeTomorrow-Project-Promotion-Brief.pdf");
 }
 
 function MoveCard({ move, recommended }) {
@@ -391,7 +528,7 @@ function EmptyState() {
             "Three ranked project moves with success metrics",
             "A tabbed decision cockpit instead of one long report",
             "A manager-ready review narrative and future resume bullet",
-            "A Forge Coach bridge for execution support",
+            "A Coach Spotlights path for another set of eyes",
           ]}
         />
       </div>
@@ -429,7 +566,35 @@ function LoadingState() {
 
 function ResultCockpit({ result, plan, moves, recommendedRank }) {
   const [activeTab, setActiveTab] = useState("decision");
+  const [copied, setCopied] = useState(false);
   const recommendedMove = moves.find((move) => Number(move?.rank) === recommendedRank) || moves[0] || null;
+
+  const handleCopySummary = async () => {
+    const brief = buildBriefText(plan, moves, recommendedMove);
+    try {
+      await navigator.clipboard.writeText(brief);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (err) {
+      console.error("[ProjectPromotionEngine] copy failed", err);
+    }
+  };
+
+  const handleExportText = () => {
+    downloadFile("ForgeTomorrow-Project-Promotion-Brief.txt", buildBriefText(plan, moves, recommendedMove));
+  };
+
+  const handleSaveSnapshot = () => {
+    downloadFile(
+      "ForgeTomorrow-Project-Promotion-Snapshot.json",
+      JSON.stringify({ savedAt: new Date().toISOString(), result }, null, 2),
+      "application/json"
+    );
+  };
+
+  const handleExportPdf = () => {
+    downloadBriefPdf(plan, moves, recommendedMove);
+  };
 
   const DecisionTab = () => (
     <div style={{ display: "grid", gap: 10 }}>
@@ -629,40 +794,38 @@ function ResultCockpit({ result, plan, moves, recommendedRank }) {
 
   const CoachTab = () => (
     <div style={{ display: "grid", gap: 10 }}>
-      {plan.coachBridge && (
-        <div style={{ ...GLASS, padding: 13, borderLeft: `3px solid ${ORANGE}` }}>
-          <div style={{ fontWeight: 900, fontSize: 12, color: ORANGE, marginBottom: 5 }}>
-            🤝 Bring in a Forge Coach
-          </div>
-          <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 8 }}>
-            {plan.coachBridge.whyCoachHelps || "A coach can help you turn this into a project your leadership will understand and value."}
-          </div>
-          {plan.coachBridge.whatToBring && (
-            <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 9 }}>
-              <strong>Bring:</strong> {plan.coachBridge.whatToBring}
-            </div>
-          )}
-          <a
-            href="/the-hearth?module=mentorship"
-            style={{
-              display: "inline-block",
-              padding: "7px 14px",
-              background: ORANGE,
-              color: "white",
-              borderRadius: 8,
-              fontWeight: 900,
-              fontSize: 11,
-              textDecoration: "none",
-            }}
-          >
-            {plan.coachBridge.cta || "Work with a Forge Coach"}
-          </a>
+      <div style={{ ...GLASS, padding: 13, borderLeft: `3px solid ${ORANGE}` }}>
+        <div style={{ fontWeight: 900, fontSize: 12, color: ORANGE, marginBottom: 5 }}>
+          🔥 Sharpen this before you take it to leadership
         </div>
-      )}
+        <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 8 }}>
+          {plan.coachBridge?.whyCoachHelps || "You have a strong direction. Before you pitch it, get another set of eyes on the approach, stakeholder alignment, and business value."}
+        </div>
+        {plan.coachBridge?.whatToBring && (
+          <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 9 }}>
+            <strong>Bring:</strong> {plan.coachBridge.whatToBring}
+          </div>
+        )}
+        <a
+          href="/the-hearth?module=spotlights"
+          style={{
+            display: "inline-block",
+            padding: "7px 14px",
+            background: ORANGE,
+            color: "white",
+            borderRadius: 8,
+            fontWeight: 900,
+            fontSize: 11,
+            textDecoration: "none",
+          }}
+        >
+          🔥 View Coach Spotlights
+        </a>
+      </div>
 
       <div style={{ ...WHITE_CARD, padding: 13 }}>
         <div style={{ fontWeight: 900, fontSize: 11, color: DARK, marginBottom: 8 }}>
-          COACHING SESSION FOCUS
+          COACH SPOTLIGHTS PREP
         </div>
         <BulletList
           items={[
@@ -678,6 +841,24 @@ function ResultCockpit({ result, plan, moves, recommendedRank }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        <button type="button" onClick={handleSaveSnapshot}
+          style={{ padding: "7px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, cursor: "pointer", background: "rgba(255,255,255,0.86)", color: SLATE, border: "1px solid rgba(0,0,0,0.12)" }}>
+          💾 Save Snapshot
+        </button>
+        <button type="button" onClick={handleExportPdf}
+          style={{ padding: "7px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, cursor: "pointer", background: ORANGE, color: "white", border: "none" }}>
+          📄 Export PDF
+        </button>
+        <button type="button" onClick={handleExportText}
+          style={{ padding: "7px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, cursor: "pointer", background: "rgba(255,255,255,0.86)", color: SLATE, border: "1px solid rgba(0,0,0,0.12)" }}>
+          📝 Export Text
+        </button>
+        <button type="button" onClick={handleCopySummary}
+          style={{ padding: "7px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, cursor: "pointer", background: copied ? "#16A34A" : "rgba(255,255,255,0.86)", color: copied ? "white" : SLATE, border: "1px solid rgba(0,0,0,0.12)", marginLeft: "auto" }}>
+          {copied ? "✓ Copied" : "📋 Copy Summary"}
+        </button>
+      </div>
       <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: 2 }}>
         {activeTab === "decision" && <DecisionTab />}

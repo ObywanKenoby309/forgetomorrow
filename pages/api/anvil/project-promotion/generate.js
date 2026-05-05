@@ -296,10 +296,15 @@ HARD RULES:
 - If evidence is weak, say what proof is not visible yet.
 - Every recommended project must produce a measurable proof artifact.
 - Output ONLY valid JSON. No markdown. No commentary outside JSON.
+- Do NOT imply ForgeTomorrow provides managed mentors or an assigned coach network.
+- Coach guidance must route to Coach Spotlights only: experienced users advertising coach packages in The Hearth.
 
 WHAT GOOD LOOKS LIKE:
 The user should feel:
 "This system sees what I have done, understands what I am becoming, and is telling me exactly how to win next."
+
+COACH SPOTLIGHTS RULE:
+The coachBridge section must NOT say "Forge Coach" or imply ForgeTomorrow assigns a coach. It should say the user can get another set of eyes from experienced professionals through Coach Spotlights. CTA must be "View Coach Spotlights".
 
 Return JSON in this exact shape:
 {
@@ -359,7 +364,7 @@ Return JSON in this exact shape:
   "coachBridge": {
     "whyCoachHelps": "",
     "whatToBring": "",
-    "cta": ""
+    "cta": "View Coach Spotlights"
   },
   "reasoning": []
 }
@@ -396,6 +401,7 @@ Remember:
 - Each move must be tied to actual evidence.
 - Each move must produce a proof artifact.
 - If they are under-leveraging, be honest but constructive.
+- In coachBridge, route to Coach Spotlights only. Do not overpromise coaching availability or managed matching.
 `.trim();
 
     let parsed = null;
