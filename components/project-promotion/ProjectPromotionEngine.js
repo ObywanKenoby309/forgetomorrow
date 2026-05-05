@@ -1,6 +1,6 @@
 // components/project-promotion/ProjectPromotionEngine.js
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
 
 const ORANGE = "#FF7043";
@@ -959,6 +959,15 @@ export default function ProjectPromotionEngine() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileTab, setMobileTab] = useState("decision");
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const plan = result?.plan || null;
 
@@ -1009,155 +1018,220 @@ export default function ProjectPromotionEngine() {
     }
   };
 
-  return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <style>{`
-        @keyframes pulseDot {
-          0%,100% { opacity: .35; transform: scale(.8); }
-          50% { opacity: 1; transform: scale(1); }
-        }
-      `}</style>
-
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 0.92fr) minmax(360px, 1.08fr)", gap: 12 }}>
-        <div style={{ ...WHITE_CARD, overflow: "hidden" }}>
-          <div style={SECTION_HDR}>🎯 PROJECT & PROMOTION INTELLIGENCE</div>
-
-          <div style={{ padding: 14, display: "grid", gap: 13 }}>
-            <div
-              style={{
-                padding: "9px 12px",
-                borderRadius: 10,
-                background: "rgba(22,163,74,0.10)",
-                border: "1px solid rgba(22,163,74,0.25)",
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 8,
-              }}
-            >
-              <span>✅</span>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "#15803D", lineHeight: 1.45 }}>
-                Uses your current resume, profile, and portfolio as the evidence base. Add current-role context below so the system can identify the strongest project to win next.
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <Field label="Current role">
-                <input
-                  name="currentRole"
-                  value={form.currentRole}
-                  onChange={updateForm}
-                  placeholder="e.g. Client Success Manager"
-                  style={INPUT}
-                />
-              </Field>
-
-              <Field label="Current company">
-                <input
-                  name="currentCompany"
-                  value={form.currentCompany}
-                  onChange={updateForm}
-                  placeholder="Company or department"
-                  style={INPUT}
-                />
-              </Field>
-            </div>
-
-            <Field label="Completed projects / recent wins">
-              <textarea
-                name="completedProjects"
-                value={form.completedProjects}
-                onChange={updateForm}
-                rows={4}
-                placeholder="List recent wins, systems built, metrics improved, training created, reporting fixed, risks reduced..."
-                style={{ ...INPUT, resize: "vertical", lineHeight: 1.5 }}
-              />
-            </Field>
-
-            <Field label="Current projects in progress">
-              <textarea
-                name="currentProjects"
-                value={form.currentProjects}
-                onChange={updateForm}
-                rows={3}
-                placeholder="What are you already working on right now?"
-                style={{ ...INPUT, resize: "vertical", lineHeight: 1.5 }}
-              />
-            </Field>
-
-            <Field label="Problems you see at work">
-              <textarea
-                name="problemsObserved"
-                value={form.problemsObserved}
-                onChange={updateForm}
-                rows={3}
-                placeholder="Broken workflows, missed handoffs, slow reporting, quality gaps, customer pain, team friction..."
-                style={{ ...INPUT, resize: "vertical", lineHeight: 1.5 }}
-              />
-            </Field>
-
-            <Field label="Promotion or review goal optional">
-              <input
-                name="promotionGoal"
-                value={form.promotionGoal}
-                onChange={updateForm}
-                placeholder="e.g. promotion, bigger scope, leadership visibility, stronger review"
-                style={INPUT}
-              />
-            </Field>
-
-            <button
-              type="button"
-              onClick={handleRun}
-              disabled={loading}
-              style={{
-                marginTop: 2,
-                padding: "11px 16px",
-                borderRadius: 10,
-                border: "none",
-                background: loading ? "rgba(255,112,67,0.62)" : ORANGE,
-                color: "white",
-                fontSize: 13,
-                fontWeight: 900,
-                cursor: loading ? "not-allowed" : "pointer",
-                width: "fit-content",
-                boxShadow: "0 8px 18px rgba(255,112,67,0.25)",
-              }}
-            >
-              {loading ? "Finding your next win..." : "Find My Next Win"}
-            </button>
-
-            {error && (
-              <div
-                style={{
-                  padding: "9px 12px",
-                  borderRadius: 10,
-                  background: "rgba(220,38,38,0.10)",
-                  border: "1px solid rgba(220,38,38,0.25)",
-                  color: "#B91C1C",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  lineHeight: 1.45,
-                }}
-              >
-                {error}
-              </div>
-            )}
+  // ─── Input form panel ────────────────────────────────────────────────────────
+  const InputForm = () => (
+    <div style={{ ...GLASS, overflow: "hidden" }}>
+      <div style={{ ...SECTION_HDR, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span>🎯 PROJECT & PROMOTION INTELLIGENCE</span>
+      </div>
+      <div style={{ padding: 14, display: "grid", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "9px 12px", borderRadius: 10,
+          background: "rgba(22,163,74,0.10)", border: "1px solid rgba(22,163,74,0.25)" }}>
+          <span>✅</span>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#15803D", lineHeight: 1.45 }}>
+            Uses your current resume, profile, and portfolio as the evidence base. Add current-role context below.
           </div>
         </div>
 
-        <div style={{ display: "grid", gap: 10, minHeight: 0 }}>
-          {!loading && !plan && <EmptyState />}
-          {loading && <LoadingState />}
-          {!loading && plan && (
-            <ResultCockpit
-              result={result}
-              plan={plan}
-              moves={moves}
-              recommendedRank={recommendedRank}
-            />
-          )}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <Field label="Current role">
+            <input name="currentRole" value={form.currentRole} onChange={updateForm}
+              placeholder="e.g. Client Success Manager" style={INPUT} />
+          </Field>
+          <Field label="Current company">
+            <input name="currentCompany" value={form.currentCompany} onChange={updateForm}
+              placeholder="Company or department" style={INPUT} />
+          </Field>
         </div>
+
+        <Field label="Completed projects / recent wins">
+          <textarea name="completedProjects" value={form.completedProjects} onChange={updateForm} rows={3}
+            placeholder="Recent wins, systems built, metrics improved, training created, reporting fixed..."
+            style={{ ...INPUT, resize: "vertical", lineHeight: 1.5 }} />
+        </Field>
+
+        <Field label="Current projects in progress">
+          <textarea name="currentProjects" value={form.currentProjects} onChange={updateForm} rows={2}
+            placeholder="What are you already working on right now?"
+            style={{ ...INPUT, resize: "vertical", lineHeight: 1.5 }} />
+        </Field>
+
+        <Field label="Problems you see at work">
+          <textarea name="problemsObserved" value={form.problemsObserved} onChange={updateForm} rows={2}
+            placeholder="Broken workflows, missed handoffs, slow reporting, quality gaps, customer pain..."
+            style={{ ...INPUT, resize: "vertical", lineHeight: 1.5 }} />
+        </Field>
+
+        <Field label="Promotion or review goal optional">
+          <input name="promotionGoal" value={form.promotionGoal} onChange={updateForm}
+            placeholder="e.g. promotion, bigger scope, leadership visibility, stronger review" style={INPUT} />
+        </Field>
+
+        <button type="button" onClick={handleRun} disabled={loading}
+          style={{ padding: "11px 16px", borderRadius: 10, border: "none",
+            background: loading ? "rgba(255,112,67,0.62)" : ORANGE, color: "white",
+            fontSize: 13, fontWeight: 900, cursor: loading ? "not-allowed" : "pointer",
+            width: "100%", boxShadow: loading ? "none" : "0 4px 14px rgba(255,112,67,0.35)" }}>
+          {loading ? "Finding your next win…" : "Find My Next Win"}
+        </button>
+
+        {error && (
+          <div style={{ padding: "9px 12px", borderRadius: 10, background: "rgba(220,38,38,0.10)",
+            border: "1px solid rgba(220,38,38,0.25)", color: "#B91C1C", fontSize: 11, fontWeight: 800 }}>
+            {error}
+          </div>
+        )}
       </div>
+    </div>
+  );
+
+  // ─── Input summary — shown on left after results generate ─────────────────
+  const InputSummary = () => (
+    <div style={{ ...GLASS, overflow: "hidden", height: "100%" }}>
+      <div style={SECTION_HDR}>📋 YOUR INPUTS</div>
+      <div style={{ padding: "12px 14px", display: "grid", gap: 8 }}>
+        {[
+          ["Role", form.currentRole],
+          ["Company", form.currentCompany],
+          ["Recent wins", form.completedProjects?.slice(0, 80) + (form.completedProjects?.length > 80 ? "…" : "")],
+          ["In progress", form.currentProjects?.slice(0, 60) + (form.currentProjects?.length > 60 ? "…" : "")],
+          ["Problems seen", form.problemsObserved?.slice(0, 60) + (form.problemsObserved?.length > 60 ? "…" : "")],
+          ["Goal", form.promotionGoal],
+        ].filter(([, v]) => v).map(([k, v]) => (
+          <div key={k} style={{ display: "grid", gridTemplateColumns: "90px 1fr", gap: 6,
+            borderBottom: "1px solid rgba(0,0,0,0.05)", paddingBottom: 7 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", paddingTop: 1, letterSpacing: 0.3 }}>
+              {String(k).toUpperCase()}
+            </div>
+            <div style={{ fontSize: 11, color: SLATE, fontWeight: 600, lineHeight: 1.4 }}>{v}</div>
+          </div>
+        ))}
+        <button type="button" onClick={() => setResult(null)}
+          style={{ marginTop: 4, padding: "7px 14px", borderRadius: 999, fontSize: 11, fontWeight: 800,
+            cursor: "pointer", background: "rgba(255,112,67,0.08)", color: ORANGE,
+            border: "1px solid rgba(255,112,67,0.25)" }}>
+          ✏️ Edit Inputs
+        </button>
+      </div>
+    </div>
+  );
+
+  // ─── MOBILE LAYOUT ─────────────────────────────────────────────────────────
+  if (isMobile) {
+    const MOBILE_TABS = [
+      { id: "decision", emoji: "⚡", label: "Decision" },
+      { id: "moves", emoji: "🏆", label: "Moves" },
+      { id: "execution", emoji: "🚀", label: "Execute" },
+      { id: "review", emoji: "📌", label: "Review" },
+      { id: "coach", emoji: "🔥", label: "Coach" },
+    ];
+
+    if (plan) {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", width: "100%", gap: 8 }}>
+          <style>{`@keyframes pulseDot{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}`}</style>
+          <details style={{ marginBottom: 4 }}>
+            <summary style={{ ...GLASS, padding: "10px 14px", borderRadius: 12, cursor: "pointer",
+              listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between",
+              fontWeight: 800, fontSize: 12, color: SLATE }}>
+              <span>📋 View your inputs</span>
+              <span style={{ fontSize: 10, color: "#94A3B8" }}>tap to expand</span>
+            </summary>
+            <div style={{ marginTop: 6 }}><InputSummary /></div>
+          </details>
+          <div style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
+            <ResultCockpit result={result} plan={plan} moves={moves} recommendedRank={recommendedRank}
+              mobileTab={mobileTab} onMobileTabChange={setMobileTab} />
+          </div>
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
+            background: "rgba(255,255,255,0.95)", borderTop: "1px solid rgba(0,0,0,0.10)",
+            backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+            display: "flex", padding: "8px 16px 12px" }}>
+            {MOBILE_TABS.map(t => (
+              <button key={t.id} type="button" onClick={() => setMobileTab(t.id)}
+                style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                  padding: "6px 4px", border: "none", background: "transparent", cursor: "pointer" }}>
+                <span style={{ fontSize: 16 }}>{t.emoji}</span>
+                <span style={{ fontSize: 9, fontWeight: 800, color: mobileTab === t.id ? ORANGE : "#94A3B8" }}>
+                  {t.label}
+                </span>
+                {mobileTab === t.id && <div style={{ width: 16, height: 2, borderRadius: 1, background: ORANGE }} />}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+        <style>{`@keyframes pulseDot{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}`}</style>
+        <InputForm />
+        {loading && <LoadingState />}
+      </div>
+    );
+  }
+
+  // ─── DESKTOP LAYOUT ────────────────────────────────────────────────────────
+  return (
+    <div style={{ width: "100%" }}>
+      <style>{`@keyframes pulseDot{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}`}</style>
+
+      {/* Results view — input summary left, cockpit right */}
+      {(plan || loading) ? (
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,280px) minmax(0,1fr)", gap: 12,
+          alignItems: "stretch", width: "100%", gridAutoRows: "1fr" }}>
+          <div style={{ position: "sticky", top: 16, alignSelf: "start" }}>
+            {loading ? (
+              <div style={{ ...GLASS, padding: "32px 16px", textAlign: "center" }}>
+                <LoadingState />
+              </div>
+            ) : (
+              <InputSummary />
+            )}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
+            {!loading && plan && (
+              <ResultCockpit result={result} plan={plan} moves={moves} recommendedRank={recommendedRank} />
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Input view — form left, preview right */
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,340px)", gap: 12, alignItems: "start" }}>
+          <InputForm />
+          {/* Right preview */}
+          <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ ...GLASS, padding: "16px 14px", background: "rgba(30,41,59,0.88)",
+              backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.12)" }}>
+              <div style={{ fontWeight: 900, fontSize: 14, color: ORANGE, marginBottom: 6 }}>
+                🎯 Project & Promotion Intelligence
+              </div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.60)", lineHeight: 1.6 }}>
+                Powered by Human-Centered Career Intelligence. Your resume and profile evidence drives the plan — not generic advice.
+              </div>
+            </div>
+            <div style={{ ...WHITE_CARD, padding: "10px 12px" }}>
+              <div style={{ fontWeight: 800, fontSize: 10, color: SLATE, marginBottom: 8, letterSpacing: 0.3 }}>
+                YOUR PLAN INCLUDES
+              </div>
+              {[
+                "⚡ Performance read — what leadership actually sees",
+                "🏆 Top 3 high-impact project moves, ranked",
+                "🚀 Execution plan — first step, who to align, how to pitch",
+                "📌 Review narrative — what to say in your performance review",
+                "📄 PDF brief — ready to bring to leadership",
+                "🔥 Coach Spotlights — pressure-test before you pitch",
+              ].map((item, i) => (
+                <div key={i} style={{ fontSize: 10, color: "#64748B", padding: "3px 0",
+                  borderBottom: i < 5 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
