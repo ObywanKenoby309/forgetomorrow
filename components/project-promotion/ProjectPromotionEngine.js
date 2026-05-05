@@ -599,8 +599,10 @@ function LoadingState() {
   );
 }
 
-function ResultCockpit({ result, plan, moves, recommendedRank }) {
-  const [activeTab, setActiveTab] = useState("decision");
+function ResultCockpit({ result, plan, moves, recommendedRank, mobileTab, onMobileTabChange }) {
+  const [_activeTab, _setActiveTab] = useState("decision");
+  const activeTab = mobileTab || _activeTab;
+  const setActiveTab = onMobileTabChange || _setActiveTab;
   const [activeMoveRank, setActiveMoveRank] = useState(recommendedRank || 1);
   const [copied, setCopied] = useState(false);
   const recommendedMove = moves.find((move) => Number(move?.rank) === recommendedRank) || moves[0] || null;
@@ -988,18 +990,50 @@ export default function ProjectPromotionEngine() {
     setResult(null);
 
     try {
+      // ── Fetch unified career context (Stage 3 — enhances, does not replace inputs) ──
+      let careerContext = null;
+      try {
+        const ctxRes = await fetch("/api/intelligence/context");
+        if (ctxRes.ok) {
+          let ctxData = null;
+
+	try {
+	  ctxData = await ctxRes.json();
+	} catch {
+	  ctxData = null;
+	}
+
+	if (ctxData && typeof ctxData === "object" && "context" in ctxData) {
+		  careerContext = ctxData.context;
+		} else {
+		  console.warn("[ProjectPromotionEngine] invalid context payload");
+		  careerContext = null;
+		}
+        } else {
+          console.warn("[ProjectPromotionEngine] context fetch non-OK:", ctxRes.status);
+        }
+      } catch (ctxErr) {
+        console.warn("[ProjectPromotionEngine] context fetch failed — continuing without context:", ctxErr?.message);
+      }
+
+      // ── Build merged payload ──────────────────────────────────────────────────
+      // User inputs always take precedence. Context enriches, never overwrites.
       const res = await fetch("/api/anvil/project-promotion/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          currentRole: form.currentRole,
+          // User-entered fields — unchanged, always sent
+          currentRole:    form.currentRole,
           currentCompany: form.currentCompany,
           additionalContext: [
             form.completedProjects ? `Completed projects:\n${form.completedProjects}` : "",
-            form.currentProjects ? `Current projects:\n${form.currentProjects}` : "",
-            form.problemsObserved ? `Problems observed:\n${form.problemsObserved}` : "",
-            form.promotionGoal ? `Promotion/review goal:\n${form.promotionGoal}` : "",
+            form.currentProjects   ? `Current projects:\n${form.currentProjects}`     : "",
+            form.problemsObserved  ? `Problems observed:\n${form.problemsObserved}`   : "",
+            form.promotionGoal     ? `Promotion/review goal:\n${form.promotionGoal}`  : "",
           ].filter(Boolean).join("\n\n"),
+
+          // Unified career context — enhances intelligence, does not replace inputs
+          context: careerContext,
         }),
       });
 
