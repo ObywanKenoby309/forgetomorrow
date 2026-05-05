@@ -724,15 +724,14 @@ export default function CreateResumePage() {
                 {/* RIGHT — Status + Next Step, stacked, fixed width */}
                 <div style={{display:'grid',gap:6,width:140,flexShrink:0}}>
 
-                  {/* Status */}
-                  <div style={{...TOOL_GROUP,flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 10px',textAlign:'center'}}>
+                  {/* Status — ring only, label on hover */}
+                  <div style={{...TOOL_GROUP,flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'8px 10px',textAlign:'center'}}>
                     <span style={GROUP_LABEL}>Status</span>
-                    <span style={{fontSize:11,fontWeight:900,borderRadius:999,padding:'3px 10px',...statusStyles,whiteSpace:'nowrap'}}>{statusLabel}</span>
-                    <div style={{position:'relative',width:34,height:34}}>
-                      <svg width="34" height="34" viewBox="0 0 34 34">
-                        <circle cx="17" cy="17" r="13" fill="none" stroke="#E5E7EB" strokeWidth="3"/>
-                        <circle cx="17" cy="17" r="13" fill="none" stroke="#10B981" strokeWidth="3"
-                          strokeDasharray={`${(progress/100)*81.7} 81.7`} strokeLinecap="round"
+                    <div title={statusLabel} style={{position:'relative',width:38,height:38,cursor:'default'}}>
+                      <svg width="38" height="38" viewBox="0 0 38 38">
+                        <circle cx="19" cy="19" r="15" fill="none" stroke="#E5E7EB" strokeWidth="3"/>
+                        <circle cx="19" cy="19" r="15" fill="none" stroke={statusLabel==='Ready to Send'?'#10B981':statusLabel==='Targeted'?'#0EA5E9':statusLabel==='Usable'?ORANGE:'#CBD5E1'} strokeWidth="3"
+                          strokeDasharray={`${(progress/100)*94.2} 94.2`} strokeLinecap="round"
                           style={{transition:'stroke-dasharray 0.5s ease',transformOrigin:'center',transform:'rotate(-90deg)'}}/>
                       </svg>
                       <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:900,color:'#374151'}}>{progress}%</span>
