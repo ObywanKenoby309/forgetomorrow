@@ -448,6 +448,41 @@ function MoveCard({ move, recommended }) {
             <strong>Evidence:</strong> {move.evidenceBasis}
           </div>
         )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 9, fontWeight: 900, color: "#64748B", marginBottom: 5 }}>
+              SUCCESS METRICS
+            </div>
+            <BulletList items={move?.successMetrics} />
+          </div>
+          <div>
+            <div style={{ fontSize: 9, fontWeight: 900, color: "#64748B", marginBottom: 5 }}>
+              EXAMPLE PROJECTS
+            </div>
+            <BulletList items={move?.exampleProjects} />
+          </div>
+        </div>
+
+        {(move?.proofArtifact || move?.promotionSignal || move?.riskIfIgnored) && (
+          <div style={{ display: "grid", gap: 6 }}>
+            {move?.proofArtifact && (
+              <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.45 }}>
+                <strong>Proof artifact:</strong> {move.proofArtifact}
+              </div>
+            )}
+            {move?.promotionSignal && (
+              <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.45 }}>
+                <strong>Promotion signal:</strong> {move.promotionSignal}
+              </div>
+            )}
+            {move?.riskIfIgnored && (
+              <div style={{ fontSize: 11, color: "#92400E", lineHeight: 1.45 }}>
+                <strong>Risk if ignored:</strong> {move.riskIfIgnored}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -566,8 +601,14 @@ function LoadingState() {
 
 function ResultCockpit({ result, plan, moves, recommendedRank }) {
   const [activeTab, setActiveTab] = useState("decision");
+  const [activeMoveRank, setActiveMoveRank] = useState(recommendedRank || 1);
   const [copied, setCopied] = useState(false);
   const recommendedMove = moves.find((move) => Number(move?.rank) === recommendedRank) || moves[0] || null;
+  const selectedMove =
+    moves.find((move) => Number(move?.rank) === Number(activeMoveRank)) ||
+    recommendedMove ||
+    moves[0] ||
+    null;
 
   const handleCopySummary = async () => {
     const brief = buildBriefText(plan, moves, recommendedMove);
@@ -668,16 +709,58 @@ function ResultCockpit({ result, plan, moves, recommendedRank }) {
   const MovesTab = () => (
     <div style={{ display: "grid", gap: 10 }}>
       <MoveSignalMap moves={moves} recommendedRank={recommendedRank} />
-      <div style={{ fontSize: 11, fontWeight: 900, color: "#64748B", marginTop: 2 }}>
-        TOP 3 WAYS TO WIN NEXT
+
+      <div style={{ ...WHITE_CARD, padding: 10, display: "grid", gap: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 900, color: "#64748B" }}>
+          TOP 3 WAYS TO WIN NEXT
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6 }}>
+          {moves.map((move) => {
+            const isSelected = Number(move?.rank) === Number(activeMoveRank);
+            const isRecommended = Number(move?.rank) === Number(recommendedRank);
+
+            return (
+              <button
+                key={`${move?.rank || ""}-${move?.title || ""}-selector`}
+                type="button"
+                onClick={() => setActiveMoveRank(Number(move?.rank) || 1)}
+                style={{
+                  padding: "8px 9px",
+                  borderRadius: 10,
+                  border: isSelected ? `2px solid ${ORANGE}` : "1px solid rgba(0,0,0,0.10)",
+                  background: isSelected ? "rgba(255,112,67,0.10)" : "rgba(255,255,255,0.86)",
+                  color: isSelected ? ORANGE : DARK,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  display: "grid",
+                  gap: 3,
+                  minHeight: 76,
+                }}
+              >
+                <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: 0.4 }}>
+                  MOVE #{move?.rank || ""}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 900, lineHeight: 1.25 }}>
+                  {move?.title || "Untitled move"}
+                </span>
+                {isRecommended && (
+                  <span style={{ fontSize: 9, fontWeight: 900, color: ORANGE }}>
+                    Recommended
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
-      {moves.map((move) => (
+
+      {selectedMove && (
         <MoveCard
-          key={`${move?.rank || ""}-${move?.title || ""}`}
-          move={move}
-          recommended={Number(move?.rank) === recommendedRank}
+          key={`${selectedMove?.rank || ""}-${selectedMove?.title || ""}`}
+          move={selectedMove}
+          recommended={Number(selectedMove?.rank) === recommendedRank}
         />
-      ))}
+      )}
     </div>
   );
 
@@ -841,22 +924,22 @@ function ResultCockpit({ result, plan, moves, recommendedRank }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 6, marginBottom: 10 }}>
         <button type="button" onClick={handleSaveSnapshot}
-          style={{ padding: "7px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, cursor: "pointer", background: "rgba(255,255,255,0.86)", color: SLATE, border: "1px solid rgba(0,0,0,0.12)" }}>
-          💾 Save Snapshot
+          style={{ padding: "7px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900, cursor: "pointer", background: "rgba(255,255,255,0.86)", color: SLATE, border: "1px solid rgba(0,0,0,0.12)", whiteSpace: "nowrap" }}>
+          💾 Save
         </button>
         <button type="button" onClick={handleExportPdf}
-          style={{ padding: "7px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, cursor: "pointer", background: ORANGE, color: "white", border: "none" }}>
-          📄 Export PDF
+          style={{ padding: "7px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900, cursor: "pointer", background: ORANGE, color: "white", border: "none", whiteSpace: "nowrap" }}>
+          📄 PDF
         </button>
         <button type="button" onClick={handleExportText}
-          style={{ padding: "7px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, cursor: "pointer", background: "rgba(255,255,255,0.86)", color: SLATE, border: "1px solid rgba(0,0,0,0.12)" }}>
-          📝 Export Text
+          style={{ padding: "7px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900, cursor: "pointer", background: "rgba(255,255,255,0.86)", color: SLATE, border: "1px solid rgba(0,0,0,0.12)", whiteSpace: "nowrap" }}>
+          📝 Text
         </button>
         <button type="button" onClick={handleCopySummary}
-          style={{ padding: "7px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, cursor: "pointer", background: copied ? "#16A34A" : "rgba(255,255,255,0.86)", color: copied ? "white" : SLATE, border: "1px solid rgba(0,0,0,0.12)", marginLeft: "auto" }}>
-          {copied ? "✓ Copied" : "📋 Copy Summary"}
+          style={{ padding: "7px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900, cursor: "pointer", background: copied ? "#16A34A" : "rgba(255,255,255,0.86)", color: copied ? "white" : SLATE, border: "1px solid rgba(0,0,0,0.12)", whiteSpace: "nowrap" }}>
+          {copied ? "✓ Copied" : "📋 Copy"}
         </button>
       </div>
       <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
