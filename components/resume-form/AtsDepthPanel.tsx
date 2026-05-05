@@ -119,11 +119,20 @@ const LANGUAGE_PATTERNS = [
   'bilingual','multilingual','fluent','native speaker','proficient',
 ];
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function matchPatterns(jd: string, patterns: string[]): string[] {
   const normalized = jd.toLowerCase();
   return patterns.filter(p => {
-    const regex = new RegExp(p.replace('.', '\s*'), 'i');
-    return regex.test(normalized);
+    try {
+      const escaped = escapeRegex(p).replace(/\\\./, '\\s*');
+      const regex = new RegExp(escaped, 'i');
+      return regex.test(normalized);
+    } catch {
+      return normalized.includes(p.toLowerCase());
+    }
   });
 }
 
