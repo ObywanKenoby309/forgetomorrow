@@ -30,7 +30,7 @@ type CoachRequestBody = {
 };
 
 export type ImprovementAction = {
-  section: 'summary' | 'skills' | 'experience' | 'education';
+  section: 'summary' | 'skills' | 'experience' | 'education' | 'certifications' | 'languages';
   requiredSignal: string;
   resumeEvidence: string;
   decisionQuestion: string;
@@ -100,6 +100,8 @@ function safe(v: any): string {
 function normalizeSection(value: any) {
   const s = safe(value).toLowerCase();
   if (s === 'summary' || s === 'skills' || s === 'experience' || s === 'education') return s;
+  if (s === 'certifications' || s === 'certification') return 'certifications';
+  if (s === 'languages' || s === 'language') return 'languages';
   return '';
 }
 
@@ -473,6 +475,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const missing = body.missing || {};
     const jobMeta = body.jobMeta || null;
     const requestedSection = String(context?.section || 'overview').toLowerCase().trim();
+    // Map certifications/languages to their parent section for prompt building
+    // but preserve the specific intent so the AI knows what was requested
+    const promptSection = requestedSection === 'certifications' ? 'education'
+      : requestedSection === 'languages' ? 'skills'
+      : requestedSection;
+    const sectionIntent = requestedSection === 'certifications'
+      ? 'The seeker specifically clicked "Certifications" — focus coaching on certifications, licenses, and credentials that this JD requires or would strengthen the application. Do not give generic education coaching.'
+      : requestedSection === 'languages'
+      ? 'The seeker specifically clicked "Languages" — focus coaching on language skills, multilingual capabilities, and how to present them on the resume for this role.'
+      : '';
     const attemptCount = Number(body.attemptCount || 1);
 
     // ── Build prompt via strategyBrain ────────────────────────────────────
@@ -480,16 +492,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const brainPrompt = buildSectionCoachPrompt({
       jdText,
       resume: resumeData,
-      context,
+      context: { ...context, section: promptSection },
       missing,
       jobMeta: jobMeta as any,
     });
+
+    // Inject specific intent for certifications/languages so AI doesn't give generic coaching
+    const intentPrefix = sectionIntent
+      ? `SECTION COACHING INTENT: ${sectionIntent}
+
+`
+      : '';
 
     // For overview calls, append a hard section-forcing instruction.
     // The brain's JSON template has section:"" which causes the 8B model
     // to collapse all actions to one section. This override prevents that.
     const prompt = requestedSection === 'overview'
-      ? `${brainPrompt}
+      ? `${intentPrefix}${brainPrompt}
 
 CRITICAL OUTPUT REQUIREMENT — MANDATORY:
 You MUST return at least 3 improvementActions.
@@ -498,8 +517,10 @@ You MUST return exactly one action with "section": "skills".
 You MUST return exactly one action with "section": "experience".
 Do NOT assign the same section value to more than one action.
 Do NOT return all actions tagged as "summary".
-The "section" field must be one of: "summary", "skills", "experience", "education".
-Include "education" if the JD explicitly requires a degree, certification, license, clearance, or if the resume contains relevant education, certifications, or technical training that strengthens recruiter confidence.`
+The "section" field must be one of: "summary", "skills", "experience", "education", "certifications", "languages".
+Include "education" if the JD explicitly requires a degree, clearance, or if the resume contains relevant education that strengthens recruiter confidence.
+Include "certifications" if the JD explicitly requires or mentions certifications, licenses, or credentials.
+Include "languages" if the JD mentions language requirements or multilingual preferences.`
       : brainPrompt;
 
     // ── Call Groq ─────────────────────────────────────────────────────────

@@ -40,7 +40,7 @@ type Props = {
 };
 
 type CoachContext = {
-  section: 'overview' | 'summary' | 'skills' | 'experience' | 'education';
+  section: 'overview' | 'summary' | 'skills' | 'experience' | 'education' | 'certifications' | 'languages';
   keyword?: string | null;
 };
 
@@ -556,8 +556,8 @@ export default function AtsDepthPanel({
                   { label: 'Skills', section: 'skills' as const },
                   { label: 'Experience bullets', section: 'experience' as const },
                   { label: 'Education', section: 'education' as const },
-                  { label: 'Certifications', section: 'education' as const },
-                  { label: 'Languages', section: 'skills' as const },
+                  { label: 'Certifications', section: 'certifications' as const },
+                  { label: 'Languages', section: 'languages' as const },
                 ].map((item) => (
                   <button
                     key={item.section}
