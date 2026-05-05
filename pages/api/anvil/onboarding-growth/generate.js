@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
+import { evaluateSignals } from '@/lib/forge/evidenceEngine';
+import { classifyRisk } from '@/lib/forge/riskEngine';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -307,6 +309,53 @@ export default async function handler(req, res) {
 
     if (!resume) return res.status(404).json({ error: 'Resume not found' });
 
+    // ── Run resume through ForgeTomorrow evidence engine ─────────────────────
+    // Same backbone as Forge Hammer. Classifies what the resume actually proves.
+    const GROWTH_SIGNALS = [
+      'ownership and accountability',
+      'delivery and execution',
+      'people leadership and team management',
+      'advisory and client service delivery',
+      'stakeholder and executive engagement',
+      'process and methodology development',
+      'domain knowledge and qualification',
+    ];
+
+    let evidenceSummary = '';
+    let provenSignals = [];
+    let missingSignals = [];
+
+    try {
+      // Parse resume content for evidence engine
+      let resumeData = {};
+      try {
+        const parsed = JSON.parse(resume.content || '{}');
+        // Handle both nested {data: {...}} and flat structure
+        resumeData = parsed?.data || parsed;
+      } catch {
+        resumeData = { summary: String(resume.content || '') };
+      }
+
+      const signalResults = evaluateSignals(GROWTH_SIGNALS, resumeData);
+      provenSignals = signalResults.filter(s => s.status === 'direct' || s.status === 'adjacent_technical').map(s => s.signal);
+      missingSignals = signalResults.filter(s => s.status === 'missing').map(s => s.signal);
+      const adjacentSignals = signalResults.filter(s => s.status === 'adjacent').map(s => s.signal);
+
+      const risks = signalResults.map(s => classifyRisk({ signal: s.signal, status: s.status, required: true }));
+      const survivableGaps = risks.filter(r => r.level === 'survivable').map(r => r.reason);
+
+      const lines = [];
+      if (provenSignals.length) lines.push(`PROVEN SIGNALS: ${provenSignals.join(', ')}`);
+      if (adjacentSignals.length) lines.push(`ADJACENT EVIDENCE: ${adjacentSignals.join(', ')}`);
+      if (missingSignals.length) lines.push(`GAPS TO CLOSE: ${missingSignals.join(', ')}`);
+      if (survivableGaps.length) lines.push(`SURVIVABLE GAPS: ${survivableGaps.slice(0, 3).join(' ')}`);
+
+      evidenceSummary = lines.join('\n');
+    } catch (e) {
+      console.error('[anvil/onboarding-growth/generate] Evidence engine error:', e?.message);
+      // Non-fatal — continue without evidence analysis
+    }
+
     const candidateName =
       user.name ||
       [user.firstName, user.lastName].filter(Boolean).join(' ') ||
@@ -315,10 +364,13 @@ export default async function handler(req, res) {
       'Candidate';
 
     const systemPrompt = `
-You are a practical career operator and hiring manager advisor.
+You are ForgeTomorrow's Growth & Pivot Intelligence Engine — part of a unified career intelligence platform.
+
+UNIFIED INTELLIGENCE SYSTEM:
+You receive resume evidence pre-analyzed by ForgeTomorrow's evidence engine — the same backbone powering the Forge Hammer resume alignment tool, Offer & Negotiation system, and Coaching Strategy system. When evidence analysis is present, it represents what the resume ACTUALLY proves. Use it to build a 30/60/90 day plan that closes real identified gaps — not generic advice.
 
 Goal:
-Generate a 30/60/90 day plan based on the resume content.
+Generate a 30/60/90 day plan grounded in the candidate's actual resume evidence.
 This tool supports three modes:
 - grow: staying the course (increase market value)
 - pivot: pivoting into a specific target role (user provides the target)
@@ -401,6 +453,17 @@ Candidate: ${candidateName}
 Candidate headline: ${user.headline || 'N/A'}
 Candidate location: ${user.location || 'N/A'}
 Resume name: ${resume.name}
+
+FORGETOMORROW EVIDENCE ENGINE ANALYSIS:
+${evidenceSummary
+  ? `Resume analyzed through unified intelligence backbone:
+${evidenceSummary}
+
+The 30/60/90 plan MUST close the identified gaps above. Each phase should build toward proven signal strength.
+${direction === 'pivot' ? `For pivot to "${pivotTarget}": missing signals above are the exact gaps to close. Build the plan around closing them with real proof artifacts.` : ''}
+${direction === 'grow' ? `For growth: proven signals are the foundation. Build on them to reach next-level scope and visibility.` : ''}
+${direction === 'compare' ? `For compare: use proven signals to assess stay-the-course competitiveness. Use missing signals to assess pivot readiness and gap cost.` : ''}`
+  : 'Evidence engine analysis unavailable — working from raw resume content.'}
 
 Direction selected: ${directionLabel(direction)}
 ${direction === 'pivot' ? `Pivot target (user-selected): ${pivotTarget}` : ''}

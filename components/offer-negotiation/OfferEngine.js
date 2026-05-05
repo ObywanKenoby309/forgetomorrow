@@ -2,7 +2,8 @@
 // 10/10 Negotiation Command Center
 // Left: guided step form | Right: cockpit — insights → tabbed results
 // Glass cards sit directly over wallpaper. No backing. No narrow column.
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useContext } from 'react';
+import { ResumeContext } from '@/context/ResumeContext';
 import jsPDF from 'jspdf';
 
 const ORANGE = '#FF7043';
@@ -152,9 +153,32 @@ function BulletList({ items }) {
 }
 
 // ─── Steps ────────────────────────────────────────────────────────────────────
-function Step1({ form, onChange }) {
+function Step1({ form, onChange, hasResume }) {
   return (
     <div style={{ display: 'grid', gap: 14 }}>
+      {/* Resume connection status — always visible, never silent */}
+      {hasResume ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', borderRadius: 10,
+          background: 'rgba(22,163,74,0.10)', border: '1px solid rgba(22,163,74,0.25)' }}>
+          <span style={{ fontSize: 13, flexShrink: 0 }}>✅</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#15803D', lineHeight: 1.4 }}>
+            Leverage based on verified experience and impact evidence.
+          </span>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 13px', borderRadius: 10,
+          background: 'rgba(234,179,8,0.10)', border: '1px solid rgba(234,179,8,0.30)' }}>
+          <span style={{ fontSize: 13, flexShrink: 0 }}>⚠️</span>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#92400E', lineHeight: 1.4 }}>
+              Using self-reported inputs only. Connect your resume to strengthen negotiation accuracy.
+            </div>
+            <a href="/resume/create" style={{ fontSize: 10, color: '#FF7043', fontWeight: 800, textDecoration: 'underline' }}>
+              Open Resume Builder →
+            </a>
+          </div>
+        </div>
+      )}
       <div>
         <div style={{ fontWeight: 900, fontSize: 13, color: DARK, marginBottom: 8 }}>What are we negotiating?</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -478,8 +502,10 @@ const RESULT_TABS = [
   { id: 'plan', label: 'Plan' },
 ];
 
-function ResultCockpit({ plan, form, onReset }) {
-  const [tab, setTab] = useState('decision');
+function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange }) {
+  const [_tab, _setTab] = useState('decision');
+  const tab = mobileActiveTab || _tab;
+  const setTab = onMobileTabChange || _setTab;
   const [scriptTab, setScriptTab] = useState('email');
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -607,6 +633,20 @@ function ResultCockpit({ plan, form, onReset }) {
         </div>
       )}
 
+      {/* Resume connection status in results */}
+      {form && (form.summary || form.experiences?.length || form.skills?.length || form.formData?.fullName) ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 11px', borderRadius: 8,
+          background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.20)', marginBottom: 6 }}>
+          <span style={{ fontSize: 11 }}>✅</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#15803D' }}>Leverage based on verified experience and impact evidence.</span>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 11px', borderRadius: 8,
+          background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)', marginBottom: 6 }}>
+          <span style={{ fontSize: 11 }}>⚠️</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#92400E' }}>Using self-reported inputs only. Connect your resume to strengthen negotiation accuracy.</span>
+        </div>
+      )}
       {/* Disclaimer compact */}
       <div style={{ padding: '7px 11px', borderRadius: 8, borderLeft: `3px solid #F59E0B`, background: 'rgba(254,243,199,0.70)', fontSize: 10, color: '#78350F', lineHeight: 1.5 }}>
         {plan?.disclaimer?.summary || 'Guidance only — not legal, financial, or tax advice.'}
@@ -797,7 +837,7 @@ function ResultCockpit({ plan, form, onReset }) {
 }
 
 // ─── Right panel — context accumulator / results cockpit ─────────────────────
-function RightPanel({ step, plan, loading, error, insights, onReset, form }) {
+function RightPanel({ step, plan, loading, error, insights, onReset, form, mobileActiveTab, onMobileTabChange }) {
   if (loading) {
     return (
       <div style={{ ...GLASS, padding: '32px 16px', textAlign: 'center' }}>
@@ -815,7 +855,7 @@ function RightPanel({ step, plan, loading, error, insights, onReset, form }) {
   }
 
   if (plan) {
-    return <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}><ResultCockpit plan={plan} form={form} onReset={onReset} /></div>;
+    return <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}><ResultCockpit plan={plan} form={form} onReset={onReset} mobileActiveTab={mobileActiveTab} onMobileTabChange={onMobileTabChange} /></div>;
   }
 
   return (
@@ -876,6 +916,24 @@ const STEP_META = [
 ];
 
 export default function OfferEngine() {
+  // Pull live resume data from context — same source as Forge Hammer
+  const {
+    formData = {},
+    summary = '',
+    experiences = [],
+    skills = [],
+    educationList = [],
+  } = useContext(ResumeContext) || {};
+
+  // Resume is considered connected if there's any meaningful content
+  const hasResume = !!(
+    summary?.trim() ||
+    experiences?.length > 0 ||
+    skills?.length > 0 ||
+    formData?.fullName ||
+    formData?.name
+  );
+
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(INITIAL_FORM);
   const [plan, setPlan] = useState(null);
@@ -883,10 +941,45 @@ export default function OfferEngine() {
   const [error, setError] = useState('');
   const [animating, setAnimating] = useState(false);
   const [insights, setInsights] = useState([]);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileTab, setMobileTab] = useState('form'); // 'form' | 'insights' during steps; tab name during results
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
+  }, []);
+
+  // Pre-fill Step 3 leverage fields from resume context on mount
+  useEffect(() => {
+    if (!formData) return;
+    const prefill = {};
+    if (!form.currentJobTitle && formData.targetedRole) prefill.currentJobTitle = formData.targetedRole;
+    if (!form.yearsRelevantExperience && experiences?.length) {
+      // Estimate years from experience count as a floor
+      prefill.yearsRelevantExperience = String(experiences.length > 3 ? experiences.length + 2 : experiences.length);
+    }
+    if (!form.skillsCertsExperience && skills?.length) {
+      prefill.skillsCertsExperience = skills.slice(0, 10).join(', ');
+    }
+    if (!form.notableProjectsEvidence && experiences?.length) {
+      const bullets = experiences
+        .slice(0, 2)
+        .flatMap(e => (e.bullets || []).slice(0, 2))
+        .filter(Boolean)
+        .join('. ');
+      if (bullets) prefill.notableProjectsEvidence = bullets;
+    }
+    if (Object.keys(prefill).length) {
+      setForm(prev => ({ ...prev, ...prefill }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Insights fire only when step changes — not on every keystroke
@@ -920,7 +1013,17 @@ export default function OfferEngine() {
       const res = await fetch('/api/offer-negotiation/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formData: { ...form, confidenceLevel: form.confidenceLevel || 'medium' } }),
+        body: JSON.stringify({
+          formData: { ...form, confidenceLevel: form.confidenceLevel || 'medium' },
+          // Send live resume data so the API can run evidence engine
+          resumeData: {
+            summary,
+            skills,
+            workExperiences: experiences,
+            educationList,
+            personalInfo: formData,
+          },
+        }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Failed to generate plan');
@@ -937,10 +1040,207 @@ export default function OfferEngine() {
   const meta = STEP_META[step - 1];
   const icons = ['🎯', '💼', '⚡', '🎖'];
 
+  // ─── Input summary (shared — left panel on desktop, collapsible on mobile) ──
+  const InputSummary = ({ compact = false }) => (
+    <div style={{ ...GLASS, overflow: 'hidden', height: compact ? 'auto' : '100%' }}>
+      <div style={SECTION_HDR}>📋 YOUR INPUTS</div>
+      <div style={{ padding: compact ? '10px 12px' : '14px', display: 'grid', gap: compact ? 6 : 10 }}>
+        {[
+          ['Negotiating', form.isNewJob === 'yes' ? 'New Job Offer' : 'Raise / Promotion'],
+          ['Role / JD', (form.jobDescription || '').slice(0, 80) + ((form.jobDescription || '').length > 80 ? '…' : '')],
+          ['Location', form.location],
+          ['Has Offer', form.hasOffer === 'yes' ? `Yes — ${form.offerCompany || 'Company'} at ${form.offerRoleTitle || 'role'}` : 'No offer yet'],
+          ['Offered Base', form.offerBaseSalary ? `$${Number(form.offerBaseSalary).toLocaleString()}` : form.targetSalaryMin ? `Target $${Number(form.targetSalaryMin).toLocaleString()}–$${Number(form.targetSalaryMax).toLocaleString()}` : '—'],
+          ['Current Salary', form.currentSalary ? `$${Number(form.currentSalary).toLocaleString()}` : '—'],
+          ['Title', form.currentJobTitle],
+          ['Experience', form.yearsRelevantExperience ? `${form.yearsRelevantExperience} years` : '—'],
+          ['Competing Offers', form.competingOffers === 'yes' ? `Yes (${form.competingOffersCount || '?'})` : 'No'],
+          ['Top Priority', form.topPriority?.replace(/_/g, ' ') || '—'],
+          ['Must Include', form.mustHaves],
+          ['Deal-Breakers', form.dealBreakers],
+          ['Confidence', form.confidenceLevel || 'medium'],
+        ].filter(([, v]) => v).map(([k, v]) => (
+          <div key={k} style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: 6, borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: compact ? 5 : 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', paddingTop: 1, letterSpacing: 0.3 }}>{k.toUpperCase()}</div>
+            <div style={{ fontSize: 11, color: SLATE, fontWeight: 600, lineHeight: 1.4 }}>{v}</div>
+          </div>
+        ))}
+        <button type="button" onClick={handleReset}
+          style={{ marginTop: 4, padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
+            background: 'rgba(255,112,67,0.08)', color: ORANGE, border: `1px solid rgba(255,112,67,0.25)` }}>
+          ✏️ Edit Inputs
+        </button>
+      </div>
+    </div>
+  );
+
+  // ─── MOBILE LAYOUT ────────────────────────────────────────────────────────────
+  if (isMobile) {
+    const RESULT_TABS_MOBILE = [
+      { id: 'decision', label: '⚡' },
+      { id: 'leverage', label: '💪' },
+      { id: 'market', label: '📊' },
+      { id: 'scripts', label: '✍️' },
+      { id: 'plan', label: '🛤' },
+    ];
+
+    // Mobile: results view
+    if (plan || loading) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', minHeight: 0 }}>
+          <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
+
+          {/* Compact input summary — collapsible pill */}
+          <details style={{ marginBottom: 8 }}>
+            <summary style={{ ...GLASS, padding: '10px 14px', borderRadius: 12, cursor: 'pointer', listStyle: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              fontWeight: 800, fontSize: 12, color: SLATE }}>
+              <span>📋 View your inputs</span>
+              <span style={{ fontSize: 10, color: '#94A3B8' }}>tap to expand</span>
+            </summary>
+            <div style={{ marginTop: 6 }}><InputSummary compact /></div>
+          </details>
+
+          {/* Action row */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+            <button type="button" onClick={() => { try { sessionStorage.setItem('ft_negotiation_plan', JSON.stringify({ plan, form, savedAt: new Date().toISOString() })); } catch {} }}
+              style={{ flex: 1, padding: '9px 8px', borderRadius: 10, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(255,255,255,0.85)', color: SLATE, border: '1px solid rgba(0,0,0,0.12)' }}>
+              💾 Save
+            </button>
+            <button type="button" onClick={() => downloadBrief(plan, form)}
+              style={{ flex: 1, padding: '9px 8px', borderRadius: 10, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: ORANGE, color: 'white', border: 'none' }}>
+              📄 Download
+            </button>
+            <button type="button" onClick={() => navigator.clipboard?.writeText(plan?.conversationScript?.emailVersion || '')}
+              style={{ flex: 1, padding: '9px 8px', borderRadius: 10, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(255,255,255,0.85)', color: SLATE, border: '1px solid rgba(0,0,0,0.12)' }}>
+              📋 Copy Script
+            </button>
+          </div>
+
+          {/* Tab content — full width */}
+          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 80 }}>
+            {loading ? (
+              <div style={{ ...GLASS, padding: '40px 20px', textAlign: 'center' }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>⚡</div>
+                <div style={{ fontWeight: 900, fontSize: 16, color: ORANGE, marginBottom: 6 }}>Building your strategy…</div>
+                <div style={{ fontSize: 13, color: '#64748B', lineHeight: 1.6 }}>Pressure-testing assumptions. Mapping leverage.</div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 20 }}>
+                  {[0,1,2].map(i => <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: ORANGE, animation: `pulse 1.2s ease-in-out ${i*0.2}s infinite` }} />)}
+                </div>
+                <style>{`@keyframes pulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1)}}`}</style>
+              </div>
+            ) : (
+              <RightPanel step={step} plan={plan} loading={false} error={error} insights={insights} onReset={handleReset} form={form} mobileActiveTab={mobileTab} onMobileTabChange={setMobileTab} />
+            )}
+          </div>
+
+          {/* Sticky bottom tab bar */}
+          {plan && (
+            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
+              background: 'rgba(255,255,255,0.95)', borderTop: '1px solid rgba(0,0,0,0.10)',
+              backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+              display: 'flex', padding: '8px 16px 12px' }}>
+              {[
+                { id: 'decision', label: 'Decision', emoji: '⚡' },
+                { id: 'leverage', label: 'Leverage', emoji: '💪' },
+                { id: 'market', label: 'Market', emoji: '📊' },
+                { id: 'scripts', label: 'Scripts', emoji: '✍️' },
+                { id: 'plan', label: 'Plan', emoji: '🛤' },
+              ].map(t => (
+                <button key={t.id} type="button" onClick={() => setMobileTab(t.id)}
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                    padding: '6px 4px', border: 'none', background: 'transparent', cursor: 'pointer' }}>
+                  <span style={{ fontSize: 18 }}>{t.emoji}</span>
+                  <span style={{ fontSize: 9, fontWeight: 800,
+                    color: mobileTab === t.id ? ORANGE : '#94A3B8' }}>{t.label}</span>
+                  {mobileTab === t.id && <div style={{ width: 16, height: 2, borderRadius: 1, background: ORANGE }} />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Mobile: step form view
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 10 }}>
+        <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
+
+        {/* Progress bar */}
+        <div style={{ borderRadius: 12, padding: '12px 14px', background: 'rgba(30,41,59,0.88)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)' }}>
+          <div style={{ marginBottom: 10 }}><ProgressBar step={step} /></div>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.40)', fontWeight: 700 }}>Step {step} of 4 — complete all steps to generate your strategy</div>
+        </div>
+
+        {/* Insight if any */}
+        {insights.length > 0 && (
+          <div style={{ ...GLASS, padding: '10px 12px', borderLeft: `3px solid ${ORANGE}`, borderRadius: 10, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <span style={{ fontSize: 14, flexShrink: 0 }}>⚡</span>
+            <span style={{ fontSize: 12, color: SLATE, fontWeight: 600, lineHeight: 1.5 }}>{insights[insights.length - 1]}</span>
+          </div>
+        )}
+
+        {/* Step card */}
+        <div style={{ ...GLASS, overflow: 'hidden', opacity: animating ? 0 : 1, transform: animating ? 'translateX(5px)' : 'translateX(0)', transition: 'opacity 0.18s ease, transform 0.18s ease' }}>
+          <div style={{ ...SECTION_HDR, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 13 }}>{icons[step-1]} {meta.title}</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>{meta.sub}</div>
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.40)', fontWeight: 700 }}>Step {step} of 4</div>
+          </div>
+          <div style={{ padding: '14px' }}>
+            {step === 1 && <Step1 form={form} onChange={handleChange} hasResume={hasResume} />}
+            {step === 2 && <Step2 form={form} onChange={handleChange} />}
+            {step === 3 && <Step3 form={form} onChange={handleChange} />}
+            {step === 4 && <Step4 form={form} onChange={handleChange} />}
+          </div>
+        </div>
+
+        {/* Sticky bottom nav */}
+        <div style={{ position: 'sticky', bottom: 0, background: 'transparent', paddingBottom: 8, paddingTop: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button type="button" onClick={goBack} disabled={step === 1}
+                style={{ padding: '10px 18px', borderRadius: 999,
+                  border: step === 1 ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.50)',
+                  background: step === 1 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.85)',
+                  color: step === 1 ? 'rgba(255,255,255,0.25)' : SLATE,
+                  fontWeight: 800, fontSize: 13, cursor: step === 1 ? 'not-allowed' : 'pointer' }}>
+                ← Back
+              </button>
+              {step > 1 && (
+                <button type="button" onClick={handleReset}
+                  style={{ padding: '10px 14px', borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    background: 'transparent', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.20)' }}>
+                  Start Over
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[1,2,3,4].map(n => <div key={n} style={{ width: n===step ? 16 : 5, height: 5, borderRadius: 3, background: n<=step ? ORANGE : 'rgba(255,255,255,0.22)', transition: 'all 0.3s ease' }} />)}
+            </div>
+            <button type="button" onClick={goNext}
+              style={{ padding: '10px 22px', borderRadius: 999,
+                background: step === 4 ? ORANGE : 'rgba(255,255,255,0.90)',
+                color: step === 4 ? 'white' : SLATE,
+                fontWeight: 900, fontSize: 13, border: 'none', cursor: 'pointer',
+                boxShadow: step === 4 ? '0 4px 14px rgba(255,112,67,0.40)' : '0 2px 8px rgba(0,0,0,0.12)' }}>
+              {step === 4 ? '⚡ Generate' : 'Next →'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── DESKTOP LAYOUT ───────────────────────────────────────────────────────────
+
   // Input summary for results view left panel
-  const InputSummary = () => (
+  const InputSummaryDesktop = () => (
     <div style={{ ...GLASS, overflow: 'hidden', height: '100%' }}>
-      <div style={{ ...SECTION_HDR }}>📋 YOUR INPUTS</div>
+      <div style={SECTION_HDR}>📋 YOUR INPUTS</div>
       <div style={{ padding: '14px', display: 'grid', gap: 10 }}>
         {[
           ['Negotiating', form.isNewJob === 'yes' ? 'New Job Offer' : 'Raise / Promotion'],
@@ -957,7 +1257,7 @@ export default function OfferEngine() {
           ['Deal-Breakers', form.dealBreakers],
           ['Confidence', form.confidenceLevel || 'medium'],
         ].filter(([, v]) => v).map(([k, v]) => (
-          <div key={k} style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 6, borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: 8 }}>
+          <div key={k} style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: 6, borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', paddingTop: 1, letterSpacing: 0.3 }}>{k.toUpperCase()}</div>
             <div style={{ fontSize: 11, color: SLATE, fontWeight: 600, lineHeight: 1.4 }}>{v}</div>
           </div>
@@ -971,13 +1271,13 @@ export default function OfferEngine() {
     </div>
   );
 
-  // Results view — full width, input summary left, cockpit right
+  // Results view — full width two-column
   if (plan || loading) {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,280px) minmax(0,1fr)', gap: 12, alignItems: 'stretch', width: '100%', gridAutoRows: '1fr' }}>
         <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
         <div style={{ position: 'sticky', top: 16, alignSelf: 'start' }}>
-          <InputSummary />
+          <InputSummaryDesktop />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} />
@@ -986,7 +1286,7 @@ export default function OfferEngine() {
     );
   }
 
-  // Step form view
+  // Step form view — desktop
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,400px)', gap: 12, alignItems: 'start', width: '100%' }}>
       <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
@@ -1002,14 +1302,14 @@ export default function OfferEngine() {
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.40)', fontWeight: 700 }}>Step {step} of 4</div>
           </div>
           <div style={{ padding: '14px' }}>
-            {step === 1 && <Step1 form={form} onChange={handleChange} />}
+            {step === 1 && <Step1 form={form} onChange={handleChange} hasResume={hasResume} />}
             {step === 2 && <Step2 form={form} onChange={handleChange} />}
             {step === 3 && <Step3 form={form} onChange={handleChange} />}
             {step === 4 && <Step4 form={form} onChange={handleChange} />}
           </div>
         </div>
 
-        {/* Navigation — Back | dots | Start Over | Next */}
+        {/* Navigation */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button type="button" onClick={goBack} disabled={step === 1}

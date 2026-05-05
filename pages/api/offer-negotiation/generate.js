@@ -1,44 +1,68 @@
 // pages/api/offer-negotiation/generate.js
+// UNIFIED — runs resume through ForgeTomorrow evidence engine before GPT
+// Same intelligence backbone as Forge Hammer and Coaching Strategy
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import OpenAI from 'openai';
+import { evaluateSignals } from '@/lib/forge/evidenceEngine';
+import { classifyRisk } from '@/lib/forge/riskEngine';
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-function safeString(v) {
-  return typeof v === 'string' ? v.trim() : '';
-}
+function safeString(v) { return typeof v === 'string' ? v.trim() : ''; }
+function safeNum(v) { return String(v ?? '').trim(); }
+function safeJsonParse(text) { try { return JSON.parse(text); } catch { return null; } }
+function extractChat(resp) { return String(resp?.choices?.[0]?.message?.content || ''); }
 
-function safeNumberString(v) {
-  const s = String(v ?? '').trim();
-  return s;
-}
+// Seven universal negotiation leverage signals — same categories as Forge Hammer
+const NEGOTIATION_SIGNALS = [
+  'ownership and accountability',
+  'delivery and execution',
+  'people leadership and team management',
+  'advisory and client service delivery',
+  'stakeholder and executive engagement',
+  'process and methodology development',
+  'domain knowledge and qualification',
+];
 
-function safeJsonParse(text) {
+function runEvidenceEngine(resumeData) {
+  if (!resumeData) return { summary: '', leverageBand: '', score: 0 };
+
+  const hasData = resumeData.summary ||
+    resumeData.workExperiences?.length ||
+    resumeData.skills?.length;
+
+  if (!hasData) return { summary: '', leverageBand: '', score: 0 };
+
   try {
-    return JSON.parse(text);
-  } catch {
-    return null;
+    const signalResults = evaluateSignals(NEGOTIATION_SIGNALS, resumeData);
+
+    const direct = signalResults.filter(s => s.status === 'direct').map(s => s.signal);
+    const adjacentTech = signalResults.filter(s => s.status === 'adjacent_technical').map(s => s.signal);
+    const adjacent = signalResults.filter(s => s.status === 'adjacent').map(s => s.signal);
+    const missing = signalResults.filter(s => s.status === 'missing').map(s => s.signal);
+
+    const risks = signalResults.map(s => classifyRisk({ signal: s.signal, status: s.status, required: true }));
+    const fatalRisks = risks.filter(r => r.level === 'fatal').map(r => r.reason);
+    const survivableRisks = risks.filter(r => r.level === 'survivable').map(r => r.reason);
+
+    const lines = [];
+    if (direct.length) lines.push(`DIRECTLY PROVEN: ${direct.join(', ')}`);
+    if (adjacentTech.length) lines.push(`STRONG ADJACENT EVIDENCE: ${adjacentTech.join(', ')}`);
+    if (adjacent.length) lines.push(`ADJACENT EVIDENCE: ${adjacent.join(', ')}`);
+    if (missing.length) lines.push(`NOT VISIBLE IN RESUME: ${missing.join(', ')}`);
+    if (fatalRisks.length) lines.push(`FATAL GAPS: ${fatalRisks.join(' ')}`);
+    if (survivableRisks.length) lines.push(`SURVIVABLE GAPS: ${survivableRisks.slice(0, 2).join(' ')}`);
+
+    const score = (direct.length * 3) + (adjacentTech.length * 2) + (adjacent.length * 1);
+    const leverageBand = score >= 14 ? 'Strong' : score >= 7 ? 'Moderate' : score >= 3 ? 'Developing' : 'Weak';
+
+    return { summary: lines.join('\n'), leverageBand, score };
+  } catch (e) {
+    console.error('[offer-negotiation/generate] Evidence engine error:', e?.message);
+    return { summary: '', leverageBand: '', score: 0 };
   }
-}
-
-function extractTextFromResponsesApi(resp) {
-  if (resp?.output_text && typeof resp.output_text === 'string') return resp.output_text;
-
-  const t =
-    resp?.output?.[0]?.content?.find((c) => c?.type === 'output_text')?.text ||
-    resp?.output?.[0]?.content?.[0]?.text ||
-    resp?.output?.[0]?.content?.[0]?.value ||
-    '';
-  return typeof t === 'string' ? t : '';
-}
-
-function extractTextFromChatCompletions(resp) {
-  const t = resp?.choices?.[0]?.message?.content || '';
-  return typeof t === 'string' ? t : '';
 }
 
 export default async function handler(req, res) {
@@ -48,167 +72,140 @@ export default async function handler(req, res) {
   }
 
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ error: 'Server missing OPENAI_API_KEY' });
-    }
+    if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'Server missing OPENAI_API_KEY' });
 
     const session = await getServerSession(req, res, authOptions);
-    if (!session?.user?.id) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
+    if (!session?.user?.id) return res.status(401).json({ error: 'Not authenticated' });
 
-    const { formData } = req.body || {};
-    if (!formData) {
-      return res.status(400).json({ error: 'Missing formData' });
-    }
+    const { formData, resumeData } = req.body || {};
+    if (!formData) return res.status(400).json({ error: 'Missing formData' });
 
-    // Core
+    // ── Run resume through ForgeTomorrow evidence engine ─────────────────────
+    const evidence = runEvidenceEngine(resumeData);
+
+    // ── Extract form fields ───────────────────────────────────────────────────
     const jobDescription = safeString(formData.jobDescription);
     const currentJobTitle = safeString(formData.currentJobTitle);
-    const currentSalary = safeNumberString(formData.currentSalary);
+    const currentSalary = safeNum(formData.currentSalary);
     const isNewJob = safeString(formData.isNewJob);
     const location = safeString(formData.location);
-    const targetSalaryMin = safeNumberString(formData.targetSalaryMin);
-    const targetSalaryMax = safeNumberString(formData.targetSalaryMax);
+    const targetSalaryMin = safeNum(formData.targetSalaryMin);
+    const targetSalaryMax = safeNum(formData.targetSalaryMax);
     const desiredBenefits = safeString(formData.desiredBenefits);
-    const jobType = safeString(formData.jobType);
     const industry = safeString(formData.industry);
-
-    // Evidence
     const skillsCertsExperience = safeString(formData.skillsCertsExperience);
-    const yearsRelevantExperience = safeNumberString(formData.yearsRelevantExperience);
-    const portfolioLinks = safeString(formData.portfolioLinks);
+    const yearsRelevantExperience = safeNum(formData.yearsRelevantExperience);
     const notableProjectsEvidence = safeString(formData.notableProjectsEvidence);
-
-    // Offer snapshot
     const hasOffer = safeString(formData.hasOffer);
     const offerCompany = safeString(formData.offerCompany);
     const offerRoleTitle = safeString(formData.offerRoleTitle);
-    const offerBaseSalary = safeNumberString(formData.offerBaseSalary);
+    const offerBaseSalary = safeNum(formData.offerBaseSalary);
     const offerBonus = safeString(formData.offerBonus);
-    const offerSignOn = safeNumberString(formData.offerSignOn);
+    const offerSignOn = safeNum(formData.offerSignOn);
     const offerEquity = safeString(formData.offerEquity);
     const offerBenefitsNotes = safeString(formData.offerBenefitsNotes);
     const offerDeadline = safeString(formData.offerDeadline);
     const offerWorkMode = safeString(formData.offerWorkMode);
     const offerOtherComp = safeString(formData.offerOtherComp);
-
-    // Leverage + preferences
     const competingOffers = safeString(formData.competingOffers);
-    const competingOffersCount = safeNumberString(formData.competingOffersCount);
+    const competingOffersCount = safeNum(formData.competingOffersCount);
     const bestAlternativeNotes = safeString(formData.bestAlternativeNotes);
-
-    const preferredWorkMode = safeString(formData.preferredWorkMode);
     const willingnessToRelocate = safeString(formData.willingnessToRelocate);
     const mustHaves = safeString(formData.mustHaves);
     const dealBreakers = safeString(formData.dealBreakers);
-
     const topPriority = safeString(formData.topPriority);
     const secondPriority = safeString(formData.secondPriority);
     const thirdPriority = safeString(formData.thirdPriority);
-
     const desiredStartDate = safeString(formData.desiredStartDate);
-    const confidenceLevel = safeString(formData.confidenceLevel); // low / medium / high
+    const confidenceLevel = safeString(formData.confidenceLevel);
 
     const systemPrompt = `
-You are ForgeTomorrow's Offer & Negotiation Intelligence Engine — a decisive compensation advisor who makes calls, not suggestions.
+You are ForgeTomorrow's Offer & Negotiation Intelligence Engine — part of a unified career intelligence platform.
+
+UNIFIED INTELLIGENCE SYSTEM:
+You receive resume evidence pre-analyzed by ForgeTomorrow's evidence engine — the same backbone powering the Forge Hammer resume alignment tool and Coaching Strategy system. When evidence analysis is present, it represents what the resume ACTUALLY proves through pattern matching and signal classification — not what the candidate claims. Ground every leverage assessment, negotiation path, and script in this evidence. Do not contradict the evidence engine findings.
 
 CORE PHILOSOPHY:
-The candidate needs a move, not a menu. Every word you write must serve the decision. Cut anything that doesn't.
-Think: senior advisor who has seen 500 negotiations. You tell people what to do.
+The candidate needs a move, not a menu. Every word must serve the decision. You are a senior advisor who has seen 500 negotiations. You tell people what to do.
 
 HARD RULES:
 - NEVER fabricate salary numbers or market statistics.
-- Market ranges: directional only (low / mid / high tier) with clear reasoning. Never invented figures.
+- Market ranges: directional only (low/mid/high tier) with clear reasoning. Never invented figures.
 - Call out misaligned expectations directly — with respect, without softening.
-- Factor ALL evidence into leverage score: years, certs, projects, impact, competing offers.
+- The evidence engine output is authoritative. Trust it over self-reported fields when they conflict.
 - Disclaimers required: guidance only — not legal, financial, or tax advice.
 
-DECISION CARD — COMMAND LANGUAGE REQUIRED:
-oneLineSummary must read like a command, not guidance. Examples:
-- "Push for $65K with remote locked in — do not accept below $58K."
-- "Hold for 48 hours, get the terms in writing, then counter at $72K."
-- "Strong position — open at $90K, walk if they can't hit $80K."
-NOT: "You may want to consider negotiating..." — never hedge.
+DECISION CARD — COMMAND LANGUAGE:
+oneLineSummary must read like a command. "Push for $65K with remote locked in — do not accept below $58K." Never hedge.
 
-LEVERAGE SCORE — EXPLAINABLE, NOT ABSTRACT:
-leverageScore: integer 1-10 based on evidence
-leverageDrivers: array of exactly 3 strings — what is DRIVING the score (positive and negative)
-Example drivers: "Quantified operational impact (SLA +16%)", "No competing offers reduces employer urgency", "11 years relevant experience"
+LEVERAGE SCORE — EVIDENCE-GROUNDED:
+leverageScore: integer 1-10. Must be consistent with evidence engine analysis.
+leverageDrivers: exactly 3 strings — what is DRIVING the score based on actual resume proof.
 
-MARKET REALITY — AUTHORITATIVE, NOT SOFT:
+MARKET REALITY — AUTHORITATIVE:
 Format: "[City/Region] – [Role Type]: $X – $Y typical. $Z+ requires [specific justification]."
-No filler. No "generally ranges from." State it clean.
 
-ASSUMPTION CHECK — TRIM TO DECISION RISK ONLY:
-Only include misalignments and unknowns that affect the negotiation outcome.
-Cut "what aligns" unless it directly strengthens a path. Keep it to 2-3 items max per category.
+NEGOTIATION RISK SNAPSHOT — REQUIRED:
+biggestStrength: from actual resume evidence
+biggestWeakness: from actual gaps identified by evidence engine
+biggestOpportunity: the one move that unlocks the most value
+biggestRisk: the most likely way they lose value or the deal
 
-NEGOTIATION RISK SNAPSHOT — REQUIRED NEW SECTION:
-This is the "oh shit" moment. Four lines. No fluff.
-- biggestStrength: The single most powerful thing they have going into this
-- biggestWeakness: The single most dangerous gap
-- biggestOpportunity: The one move that could unlock the most value
-- biggestRisk: The most likely way they lose value or the deal
-
-SCRIPTS — CONFIDENT, NOT SAFE:
-Scripts should sound slightly stronger than what the average candidate would say on their own.
-Professional but controlled. Specific to this person's actual proof points.
-Email: specific ask in sentence 1 or 2. No "I am reaching out to discuss."
-Live: natural, direct. Leads with evidence, then the number, then opens dialogue.
-
-TONE: Direct. Precise. Confident. Like a mentor who respects the candidate enough to be completely honest.
+SCRIPTS — EVIDENCE-GROUNDED:
+Reference the candidate's actual proven signals. Never invent achievements. If the resume has no metrics, the script has no metrics.
 
 Output MUST be valid JSON matching the schema exactly. No extra keys. No commentary outside JSON.
 `.trim();
 
     const userPrompt = `
-User inputs:
+FORGETOMORROW EVIDENCE ENGINE ANALYSIS:
+${evidence.summary
+  ? `Resume analyzed through unified intelligence backbone:
+${evidence.summary}
+Evidence-based leverage band: ${evidence.leverageBand} (score: ${evidence.score}/21)
 
-Core:
-- What they are negotiating (role/JD): ${jobDescription || 'N/A'}
-- Current job title: ${currentJobTitle || 'N/A'}
-- Current salary: ${currentSalary || 'N/A'}
-- New job? ${isNewJob === 'yes' ? 'Yes' : isNewJob === 'no' ? 'No (current role)' : isNewJob || 'N/A'}
+This analysis reflects what is ACTUALLY PROVEN in the resume. Use it to ground the leverage assessment.`
+  : 'No resume connected — relying on self-reported inputs only.'}
+
+NEGOTIATION CONTEXT:
+- Negotiating for: ${isNewJob === 'yes' ? 'New Job Offer' : 'Raise / Promotion'}
+- Role / JD: ${jobDescription || 'N/A'}
 - Location: ${location || 'N/A'}
-- Target salary range: ${targetSalaryMin || 'N/A'} to ${targetSalaryMax || 'N/A'}
-- Desired benefits/perks: ${desiredBenefits || 'N/A'}
-- Job type: ${jobType || 'N/A'}
 - Industry: ${industry || 'N/A'}
+- Current title: ${currentJobTitle || 'N/A'}
+- Current salary: ${currentSalary || 'N/A'}
+- Target range: ${targetSalaryMin || 'N/A'} to ${targetSalaryMax || 'N/A'}
 
-Evidence (important):
-- Years of relevant experience: ${yearsRelevantExperience || 'N/A'}
-- Skills/certs/experience: ${skillsCertsExperience || 'N/A'}
-- Portfolio links: ${portfolioLinks || 'N/A'}
-- Notable projects / proof of impact: ${notableProjectsEvidence || 'N/A'}
-
-Offer snapshot:
-- Has offer? ${hasOffer || 'N/A'}
+OFFER DETAILS:
+- Has offer: ${hasOffer || 'N/A'}
 - Company: ${offerCompany || 'N/A'}
-- Offered role title: ${offerRoleTitle || 'N/A'}
-- Offer base salary: ${offerBaseSalary || 'N/A'}
-- Offer annual bonus: ${offerBonus || 'N/A'}
-- Offer sign-on: ${offerSignOn || 'N/A'}
-- Offer equity: ${offerEquity || 'N/A'}
-- Offer benefits notes: ${offerBenefitsNotes || 'N/A'}
-- Offer work mode: ${offerWorkMode || 'N/A'}
-- Offer deadline: ${offerDeadline || 'N/A'}
-- Other comp notes: ${offerOtherComp || 'N/A'}
+- Offered title: ${offerRoleTitle || 'N/A'}
+- Offered base: ${offerBaseSalary || 'N/A'}
+- Bonus: ${offerBonus || 'N/A'}
+- Sign-on: ${offerSignOn || 'N/A'}
+- Equity: ${offerEquity || 'N/A'}
+- Work mode: ${offerWorkMode || 'N/A'}
+- Deadline: ${offerDeadline || 'N/A'}
+- Benefits: ${offerBenefitsNotes || 'N/A'}
+- Other comp: ${offerOtherComp || 'N/A'}
 
-Leverage and preferences:
-- Competing offers? ${competingOffers || 'N/A'}
-- Number of competing offers: ${competingOffersCount || 'N/A'}
-- Best alternative notes: ${bestAlternativeNotes || 'N/A'}
-- Preferred work mode: ${preferredWorkMode || 'N/A'}
-- Willing to relocate? ${willingnessToRelocate || 'N/A'}
-- Desired start date: ${desiredStartDate || 'N/A'}
-- Priorities (top 3): ${[topPriority, secondPriority, thirdPriority].filter(Boolean).join(', ') || 'N/A'}
+SELF-REPORTED EVIDENCE (supplement evidence engine above):
+- Years experience: ${yearsRelevantExperience || 'N/A'}
+- Skills / certs: ${skillsCertsExperience || 'N/A'}
+- Proof of impact: ${notableProjectsEvidence || 'N/A'}
+
+LEVERAGE CONTEXT:
+- Competing offers: ${competingOffers || 'N/A'} ${competingOffersCount ? `(${competingOffersCount})` : ''}
+- Best alternative: ${bestAlternativeNotes || 'N/A'}
+- Willing to relocate: ${willingnessToRelocate || 'N/A'}
+- Priorities: ${[topPriority, secondPriority, thirdPriority].filter(Boolean).join(', ') || 'N/A'}
 - Must-haves: ${mustHaves || 'N/A'}
 - Deal-breakers: ${dealBreakers || 'N/A'}
-- Candidate confidence level: ${confidenceLevel === 'low' ? 'Low — needs clear anchoring and scripted language' : confidenceLevel === 'high' ? 'High — optimize for ambitious path, hold-firm language' : 'Medium — balanced approach'}
+- Desired benefits: ${desiredBenefits || 'N/A'}
+- Start date: ${desiredStartDate || 'N/A'}
+- Confidence: ${confidenceLevel === 'low' ? 'Low — needs clear anchoring and scripted language' : confidenceLevel === 'high' ? 'High — optimize for ambitious path, hold-firm language' : 'Medium — balanced approach'}
 
-Return JSON in this exact structure:
-
+Return JSON:
 {
   "decision": {
     "recommendedMove": "Negotiate | Accept | Hold | Walk Away",
@@ -221,121 +218,51 @@ Return JSON in this exact structure:
     "doNotTradeAway": [],
     "oneLineSummary": ""
   },
-  "disclaimer": {
-    "summary": "",
-    "mentorNote": ""
-  },
-  "roleContext": {
-    "interpretedRole": "",
-    "seniorityBand": "",
-    "workContext": ""
-  },
-  "marketReality": {
-    "directionalRange": "",
-    "marketTension": "",
-    "confidenceLevel": ""
-  },
-  "assumptionCheck": {
-    "potentialMisalignments": [],
-    "unknowns": []
-  },
-  "valueJustification": {
-    "coreLeverage": [],
-    "nonSalaryLevers": []
-  },
+  "disclaimer": { "summary": "", "mentorNote": "" },
+  "roleContext": { "interpretedRole": "", "seniorityBand": "", "workContext": "" },
+  "marketReality": { "directionalRange": "", "marketTension": "", "confidenceLevel": "" },
+  "assumptionCheck": { "potentialMisalignments": [], "unknowns": [] },
+  "valueJustification": { "coreLeverage": [], "nonSalaryLevers": [] },
   "negotiationRiskSnapshot": {
-    "biggestStrength": "",
-    "biggestWeakness": "",
-    "biggestOpportunity": "",
-    "biggestRisk": ""
+    "biggestStrength": "", "biggestWeakness": "", "biggestOpportunity": "", "biggestRisk": ""
   },
   "negotiationPaths": [
-    {
-      "label": "Conservative",
-      "askFraming": "",
-      "bestWhen": "",
-      "tradeoffs": ""
-    },
-    {
-      "label": "Balanced",
-      "askFraming": "",
-      "bestWhen": "",
-      "tradeoffs": ""
-    },
-    {
-      "label": "Ambitious",
-      "askFraming": "",
-      "bestWhen": "",
-      "tradeoffs": ""
-    }
+    { "label": "Conservative", "askFraming": "", "bestWhen": "", "tradeoffs": "" },
+    { "label": "Balanced", "askFraming": "", "bestWhen": "", "tradeoffs": "" },
+    { "label": "Ambitious", "askFraming": "", "bestWhen": "", "tradeoffs": "" }
   ],
-  "conversationScript": {
-    "emailVersion": "",
-    "liveConversationVersion": ""
-  },
-  "nextSteps": {
-    "immediate": [],
-    "prepareForPushback": [],
-    "walkAwaySignals": []
-  },
-  "mentorEscalation": {
-    "whyItHelps": "",
-    "whatToBring": "",
-    "spotlightCTA": ""
-  }
+  "conversationScript": { "emailVersion": "", "liveConversationVersion": "" },
+  "nextSteps": { "immediate": [], "prepareForPushback": [], "walkAwaySignals": [] },
+  "mentorEscalation": { "whyItHelps": "", "whatToBring": "", "spotlightCTA": "" }
 }
 `.trim();
 
-    let rawText = '';
     let parsed = null;
-
-    // 1) Prefer Responses API if available
     try {
-      if (client?.responses?.create) {
-        const resp = await client.responses.create({
-          model: 'gpt-4.1-mini',
-          input: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.3,
-        });
-
-        rawText = extractTextFromResponsesApi(resp);
-        parsed = safeJsonParse(rawText);
-      }
+      const resp = await client.chat.completions.create({
+        model: process.env.OPENAI_COACH_MODEL || 'gpt-4.1-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+      });
+      parsed = safeJsonParse(extractChat(resp));
     } catch (e) {
-      console.error('[offer-negotiation/generate] Responses API failed:', e?.message || e);
-    }
-
-    // 2) Fallback to Chat Completions if needed
-    if (!parsed) {
-      try {
-        const resp = await client.chat.completions.create({
-          model: 'gpt-4.1-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.3,
-        });
-
-        rawText = extractTextFromChatCompletions(resp);
-        parsed = safeJsonParse(rawText);
-      } catch (e) {
-        console.error('[offer-negotiation/generate] Chat Completions failed:', e?.message || e);
-        return res.status(500).json({ error: 'Failed to generate negotiation plan' });
-      }
-    }
-
-    if (!parsed || typeof parsed !== 'object') {
-      console.error('[offer-negotiation/generate] Could not parse JSON. Raw:', rawText);
+      console.error('[offer-negotiation/generate] OpenAI error:', e?.message || e);
       return res.status(500).json({ error: 'Failed to generate negotiation plan' });
     }
 
-    return res.status(200).json({ plan: parsed });
+    if (!parsed || typeof parsed !== 'object') {
+      return res.status(500).json({ error: 'Failed to parse AI response' });
+    }
+
+    return res.status(200).json({
+      plan: parsed,
+      resumeConnected: !!(evidence.summary),
+      evidenceBand: evidence.leverageBand || null,
+    });
   } catch (err) {
     console.error('[offer-negotiation/generate] Unhandled error', err);
     return res.status(500).json({ error: 'Failed to generate negotiation plan' });
