@@ -664,7 +664,7 @@ export default function AtsDepthPanel({
                 const missing = classified.filter(s => s.status === 'missing');
 
                 const score = direct.length;
-                const verdict = score >= 6 ? 'Strong' : score >= 4 ? 'Competitive' : score >= 2 ? 'Developing' : 'Needs Work';
+                const verdict = score >= 6 ? 'Low Hiring Risk' : score >= 4 ? 'Moderate Hiring Risk' : score >= 2 ? 'Elevated Hiring Risk' : 'High Hiring Risk';
                 const verdictColor = score >= 6 ? '#16A34A' : score >= 4 ? '#0EA5E9' : score >= 2 ? '#D97706' : '#DC2626';
 
                 return { classified, direct, adjacent, missing, verdict, verdictColor, score };
@@ -673,11 +673,11 @@ export default function AtsDepthPanel({
               }
             })();
 
-            const statusConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-              direct: { label: 'Direct', color: '#15803D', bg: 'rgba(22,163,74,0.10)', icon: '✓' },
-              adjacent_technical: { label: 'Strong Adjacent', color: '#0369A1', bg: 'rgba(14,165,233,0.10)', icon: '~' },
-              adjacent: { label: 'Adjacent', color: '#D97706', bg: 'rgba(234,179,8,0.10)', icon: '~' },
-              missing: { label: 'Missing', color: '#DC2626', bg: 'rgba(220,38,38,0.08)', icon: '✗' },
+            const statusConfig: Record<string, { label: string; riskLabel: string; color: string; bg: string; icon: string }> = {
+              direct:            { label: 'Proven',          riskLabel: 'Low Risk',    color: '#15803D', bg: 'rgba(22,163,74,0.10)',  icon: '✓' },
+              adjacent_technical:{ label: 'Strong Evidence', riskLabel: 'Low-Med Risk',color: '#0369A1', bg: 'rgba(14,165,233,0.10)', icon: '~' },
+              adjacent:          { label: 'Partial Proof',   riskLabel: 'Medium Risk', color: '#D97706', bg: 'rgba(234,179,8,0.10)',  icon: '~' },
+              missing:           { label: 'No Proof',        riskLabel: 'High Risk',   color: '#DC2626', bg: 'rgba(220,38,38,0.08)', icon: '✗' },
             };
 
             const sectionForSignal = (signal: string) => {
@@ -690,10 +690,10 @@ export default function AtsDepthPanel({
             };
 
             const riskForStatus = (status: string) => {
-              if (status === 'direct') return { label: 'Strong proof', color: '#15803D' };
-              if (status === 'adjacent_technical') return { label: 'Solid evidence', color: '#0369A1' };
-              if (status === 'adjacent') return { label: 'Needs stronger framing', color: '#D97706' };
-              return { label: 'Gap — coach recommended', color: '#DC2626' };
+              if (status === 'direct') return { label: 'Low hiring risk — recruiter sees clear proof', color: '#15803D' };
+              if (status === 'adjacent_technical') return { label: 'Low-Medium risk — strong evidence, framing helps', color: '#0369A1' };
+              if (status === 'adjacent') return { label: 'Medium hiring risk — partial proof, needs positioning', color: '#D97706' };
+              return { label: 'High hiring risk — no visible proof, coach recommended', color: '#DC2626' };
             };
 
             return (
@@ -719,7 +719,7 @@ export default function AtsDepthPanel({
                           {analysis.verdict} Position
                         </div>
                         <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
-                          {analysis.direct.length} proven · {analysis.adjacent.length} partial · {analysis.missing.length} missing
+                          {analysis.direct.length} low risk · {analysis.adjacent.length} medium risk · {analysis.missing.length} high risk
                         </div>
                       </div>
                       <div style={{ fontSize: 22, fontWeight: 900, color: analysis.verdictColor }}>
@@ -745,11 +745,19 @@ export default function AtsDepthPanel({
                                   {sig.signal.replace(/\w/g, (c: string) => c.toUpperCase())}
                                 </span>
                               </div>
-                              <span style={{ fontSize: 9, fontWeight: 800, color: cfg.color,
-                                background: 'rgba(255,255,255,0.70)', padding: '2px 7px', borderRadius: 999,
-                                whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                {cfg.label}
-                              </span>
+                              <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                                <span style={{ fontSize: 9, fontWeight: 800, color: cfg.color,
+                                  background: 'rgba(255,255,255,0.70)', padding: '2px 7px', borderRadius: 999,
+                                  whiteSpace: 'nowrap' }}>
+                                  {cfg.label}
+                                </span>
+                                <span style={{ fontSize: 9, fontWeight: 900,
+                                  color: cfg.color === '#15803D' ? '#15803D' : cfg.color === '#0369A1' ? '#0369A1' : cfg.color === '#D97706' ? '#D97706' : '#DC2626',
+                                  background: cfg.bg, padding: '2px 7px', borderRadius: 999,
+                                  whiteSpace: 'nowrap', border: `1px solid ${cfg.color}33` }}>
+                                  {cfg.riskLabel}
+                                </span>
+                              </div>
                             </div>
                             <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
                               <span style={{ fontSize: 10, color: risk.color, fontWeight: 700 }}>
@@ -775,9 +783,9 @@ export default function AtsDepthPanel({
                     <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: '#F8FAFC',
                       border: '1px solid #E2E8F0', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       {[
-                        { icon: '✓', label: 'Direct — proven in resume', color: '#15803D' },
-                        { icon: '~', label: 'Adjacent — needs framing', color: '#D97706' },
-                        { icon: '✗', label: 'Missing — real gap', color: '#DC2626' },
+                        { icon: '✓', label: 'Proven — low hiring risk', color: '#15803D' },
+                        { icon: '~', label: 'Partial — medium risk, needs framing', color: '#D97706' },
+                        { icon: '✗', label: 'Missing — high risk, act now', color: '#DC2626' },
                       ].map(l => (
                         <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <span style={{ fontSize: 10, fontWeight: 900, color: l.color }}>{l.icon}</span>
@@ -787,12 +795,14 @@ export default function AtsDepthPanel({
                     </div>
 
                     {/* CTA if gaps exist */}
-                    {analysis.missing.length > 0 && (
+                    {(analysis.missing.length > 0 || analysis.adjacent.length > 0) && (
                       <button type="button" onClick={() => setActivePanel('coach')}
                         style={{ marginTop: 10, width: '100%', padding: '9px 14px', borderRadius: 999,
                           border: 'none', background: ORANGE, color: 'white', fontWeight: 950,
                           fontSize: 12, cursor: 'pointer' }}>
-                        Open Coach to close {analysis.missing.length} gap{analysis.missing.length > 1 ? 's' : ''} →
+                        {analysis.missing.length > 0
+                          ? `Reduce ${analysis.missing.length} high-risk gap${analysis.missing.length > 1 ? 's' : ''} with the Coach →`
+                          : `Strengthen ${analysis.adjacent.length} medium-risk signal${analysis.adjacent.length > 1 ? 's' : ''} with the Coach →`}
                       </button>
                     )}
                   </>

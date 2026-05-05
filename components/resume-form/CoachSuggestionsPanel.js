@@ -64,18 +64,22 @@ const signalCardStyle = {
 };
 
 const sectionColors = {
-  summary:    { bg: '#E8EAF6', border: '#C5CAE9', text: '#283593', label: 'Summary' },
-  skills:     { bg: '#E0F2F1', border: '#B2DFDB', text: '#00695C', label: 'Skills' },
-  experience: { bg: '#FFF3E0', border: '#FFE0B2', text: '#E65100', label: 'Experience' },
-  education:  { bg: '#F3E5F5', border: '#E1BEE7', text: '#6A1B9A', label: 'Education' },
+  summary:        { bg: '#E8EAF6', border: '#C5CAE9', text: '#283593', label: 'Summary' },
+  skills:         { bg: '#E0F2F1', border: '#B2DFDB', text: '#00695C', label: 'Skills' },
+  experience:     { bg: '#FFF3E0', border: '#FFE0B2', text: '#E65100', label: 'Experience' },
+  education:      { bg: '#F3E5F5', border: '#E1BEE7', text: '#6A1B9A', label: 'Education' },
+  certifications: { bg: '#FFF8E1', border: '#FFE082', text: '#F57F17', label: 'Certifications' },
+  languages:      { bg: '#E3F2FD', border: '#90CAF9', text: '#1565C0', label: 'Languages' },
 };
 
 const sectionLabelMap = {
-  overview:   'overall alignment',
-  summary:    'summary section',
-  skills:     'skills section',
-  experience: 'experience bullets',
-  education:  'education section',
+  overview:        'overall alignment',
+  summary:         'summary section',
+  skills:          'skills section',
+  experience:      'experience bullets',
+  education:       'education section',
+  certifications:  'certifications',
+  languages:       'listed languages vs. requirements',
 };
 
 function buildOneCallKey(jdText, resumeData, missing) {
