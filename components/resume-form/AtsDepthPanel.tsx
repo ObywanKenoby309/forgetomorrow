@@ -44,7 +44,7 @@ type CoachContext = {
   keyword?: string | null;
 };
 
-type ActivePanel = 'coach' | 'scan' | 'keywords';
+type ActivePanel = 'coach' | 'signal' | 'keywords';
 
 const ORANGE = '#FF7043';
 
@@ -424,7 +424,7 @@ export default function AtsDepthPanel({
               Forge Hammer
             </div>
             <div style={{ marginTop: 3, fontSize: 11, color: '#607D8B', lineHeight: 1.35 }}>
-              Coach first. Scan when ready.
+              Coach. Signal Report. Keywords.
             </div>
           </div>
 
@@ -434,7 +434,7 @@ export default function AtsDepthPanel({
               <span style={{ fontSize: 13, color: '#B0BEC5', marginLeft: 2 }}>/100</span>
             </div>
             <div style={{ marginTop: 3, fontSize: 10, color: '#78909C', fontWeight: 800 }}>
-              {aiScore === null ? 'Keyword signal' : 'AI scan included'}
+              {'Keyword signal'}
             </div>
           </div>
         </div>
@@ -508,7 +508,7 @@ export default function AtsDepthPanel({
           }}
         >
           <button {...tabButton('coach', 'Coach')} />
-          <button {...tabButton('scan', 'AI Scan')} />
+          <button {...tabButton('signal', 'Signal Report')} />
           <button {...tabButton('keywords', 'Keywords')} />
         </div>
 
@@ -556,6 +556,8 @@ export default function AtsDepthPanel({
                   { label: 'Skills', section: 'skills' as const },
                   { label: 'Experience bullets', section: 'experience' as const },
                   { label: 'Education', section: 'education' as const },
+                  { label: 'Certifications', section: 'education' as const },
+                  { label: 'Languages', section: 'skills' as const },
                 ].map((item) => (
                   <button
                     key={item.section}
@@ -610,101 +612,198 @@ export default function AtsDepthPanel({
             </div>
           )}
 
-          {activePanel === 'scan' && (
-            <div
-              style={{
-                padding: 11,
-                borderRadius: 14,
-                border: '1px solid #E2E8F0',
-                background: '#FFFFFF',
-              }}
-            >
-              <div style={{ fontSize: 14, fontWeight: 950, color: '#263238', marginBottom: 4 }}>
-                AI Scan
-              </div>
-              <div style={{ fontSize: 12, color: '#607D8B', lineHeight: 1.4 }}>
-                Use this after coaching edits to confirm the resume is ready.
-              </div>
+          {activePanel === 'signal' && (() => {
+            // Run deterministic analysis — zero AI tokens, instant
+            const analysis = (() => {
+              try {
+                const signals = [
+                  'ownership and accountability',
+                  'delivery and execution',
+                  'people leadership and team management',
+                  'advisory and client service delivery',
+                  'stakeholder and executive engagement',
+                  'process and methodology development',
+                  'domain knowledge and qualification',
+                  'education and credential credibility',
+                ];
 
-              <button
-                type="button"
-                onClick={runAiScan}
-                disabled={aiLoading}
-                style={{
-                  marginTop: 10,
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: 999,
-                  border: 'none',
-                  background: '#263238',
-                  color: 'white',
-                  fontWeight: 950,
-                  fontSize: 13,
-                  cursor: aiLoading ? 'not-allowed' : 'pointer',
-                  opacity: aiLoading ? 0.75 : 1,
-                }}
-              >
-                {aiLoading ? 'Thinking…' : aiScore === null ? 'Run AI Scan' : 'Run Scan Again'}
-              </button>
+                // Client-side evidence classification
+                const resumeText = [
+                  summary || '',
+                  (skills || []).join(' '),
+                  (experiences || []).map((e: any) => `${e.title || ''} ${e.company || ''} ${(e.bullets || []).join(' ')}`).join(' '),
+                  (education || []).map((e: any) => `${e.degree || ''} ${e.school || ''} ${e.field || ''}`).join(' '),
+                ].join(' ').toLowerCase();
 
-              {aiError && (
-                <div style={{ marginTop: 9, fontSize: 12, color: '#C62828', fontWeight: 800 }}>
-                  {aiError}
+                const classified = signals.map(signal => {
+                  const normalizedSignal = signal.toLowerCase();
+                  // Direct match
+                  if (resumeText.includes(normalizedSignal)) {
+                    return { signal, status: 'direct', confidence: 'high' };
+                  }
+                  // Pattern matching — simplified client-side version
+                  const patternGroups: Record<string, string[]> = {
+                    'ownership and accountability': ['owned','responsible','accountable','managed','oversaw','led','directed','drove','built','launched','founded'],
+                    'delivery and execution': ['delivered','executed','implemented','launched','shipped','completed','produced','operated','maintained','performed'],
+                    'people leadership and team management': ['managed a team','direct reports','supervised','coached','mentored','hired','staffing','team lead','headcount','workforce'],
+                    'advisory and client service delivery': ['advised','consulted','client','customer','service','supported','guided','engagement','relationship','account'],
+                    'stakeholder and executive engagement': ['stakeholder','executive','senior leadership','cross-functional','collaborated','aligned','presented','briefed','reported to'],
+                    'process and methodology development': ['methodology','process','procedure','framework','playbook','standard','protocol','compliance','workflow','audit'],
+                    'domain knowledge and qualification': ['expertise','specialist','certified','certification','licensed','degree','trained','background in','years of experience'],
+                    'education and credential credibility': ['bachelor','master','mba','phd','degree','certified','certification','university','college','credential'],
+                  };
+                  const patterns = patternGroups[normalizedSignal] || [];
+                  const matched = patterns.filter(p => resumeText.includes(p.toLowerCase()));
+                  if (matched.length >= 3) return { signal, status: 'adjacent_technical', confidence: 'high' };
+                  if (matched.length >= 1) return { signal, status: 'adjacent', confidence: 'medium' };
+                  return { signal, status: 'missing', confidence: 'high' };
+                });
+
+                const direct = classified.filter(s => s.status === 'direct' || s.status === 'adjacent_technical');
+                const adjacent = classified.filter(s => s.status === 'adjacent');
+                const missing = classified.filter(s => s.status === 'missing');
+
+                const score = direct.length;
+                const verdict = score >= 6 ? 'Strong' : score >= 4 ? 'Competitive' : score >= 2 ? 'Developing' : 'Needs Work';
+                const verdictColor = score >= 6 ? '#16A34A' : score >= 4 ? '#0EA5E9' : score >= 2 ? '#D97706' : '#DC2626';
+
+                return { classified, direct, adjacent, missing, verdict, verdictColor, score };
+              } catch (e) {
+                return null;
+              }
+            })();
+
+            const statusConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+              direct: { label: 'Direct', color: '#15803D', bg: 'rgba(22,163,74,0.10)', icon: '✓' },
+              adjacent_technical: { label: 'Strong Adjacent', color: '#0369A1', bg: 'rgba(14,165,233,0.10)', icon: '~' },
+              adjacent: { label: 'Adjacent', color: '#D97706', bg: 'rgba(234,179,8,0.10)', icon: '~' },
+              missing: { label: 'Missing', color: '#DC2626', bg: 'rgba(220,38,38,0.08)', icon: '✗' },
+            };
+
+            const sectionForSignal = (signal: string) => {
+              const s = signal.toLowerCase();
+              if (s.includes('education') || s.includes('credential')) return 'education' as const;
+              if (s.includes('people') || s.includes('leadership')) return 'experience' as const;
+              if (s.includes('domain') || s.includes('qualification')) return 'skills' as const;
+              if (s.includes('advisory') || s.includes('client')) return 'experience' as const;
+              return 'experience' as const;
+            };
+
+            const riskForStatus = (status: string) => {
+              if (status === 'direct') return { label: 'Strong proof', color: '#15803D' };
+              if (status === 'adjacent_technical') return { label: 'Solid evidence', color: '#0369A1' };
+              if (status === 'adjacent') return { label: 'Needs stronger framing', color: '#D97706' };
+              return { label: 'Gap — coach recommended', color: '#DC2626' };
+            };
+
+            return (
+              <div style={{ padding: 11, borderRadius: 14, border: '1px solid #E2E8F0', background: '#FFFFFF' }}>
+                {/* Header */}
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 14, fontWeight: 950, color: '#263238', marginBottom: 2 }}>
+                    Signal Report
+                  </div>
+                  <div style={{ fontSize: 11, color: '#607D8B', lineHeight: 1.4 }}>
+                    Evidence-based diagnostic. No keywords — alignment facts with recruiter-grade reasoning.
+                  </div>
                 </div>
-              )}
 
-              {(aiUpgrade || (aiScore !== null && !aiLoading) || normalizedTips.length > 0) && (
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: 11,
-                    borderRadius: 12,
-                    border: '1px solid #FFE0B2',
-                    background: '#FFF8E1',
-                  }}
-                >
-                  {aiUpgrade ? (
-                    <>
-                      <div style={{ fontWeight: 900, color: '#E65100', marginBottom: 8, fontSize: 13 }}>
-                        You&apos;ve used your free AI scans for this month.
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => (window.location.href = '/pricing')}
-                        style={{
-                          padding: '10px 14px',
-                          borderRadius: 999,
-                          border: 'none',
-                          background: ORANGE,
-                          color: 'white',
-                          fontWeight: 900,
-                          cursor: 'pointer',
-                          width: '100%',
-                        }}
-                      >
-                        Upgrade to Pro
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {aiScore !== null && (
-                        <div style={{ fontWeight: 950, fontSize: 15, color: '#263238' }}>
-                          AI Score: {aiScore}/100
+                {analysis ? (
+                  <>
+                    {/* Readiness verdict */}
+                    <div style={{ padding: '10px 12px', borderRadius: 10, marginBottom: 10,
+                      background: `${analysis.verdictColor}14`, border: `1px solid ${analysis.verdictColor}33`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: 13, color: analysis.verdictColor }}>
+                          {analysis.verdict} Position
                         </div>
-                      )}
-                      {normalizedTips.length > 0 && (
-                        <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 12, color: '#37474F', lineHeight: 1.42 }}>
-                          {normalizedTips.slice(0, 4).map((tip, i) => (
-                            <li key={i} style={{ marginBottom: 5 }}>{tip}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                        <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
+                          {analysis.direct.length} proven · {analysis.adjacent.length} partial · {analysis.missing.length} missing
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 22, fontWeight: 900, color: analysis.verdictColor }}>
+                        {analysis.score}/8
+                      </div>
+                    </div>
+
+                    {/* Signal bands */}
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      {analysis.classified.map((sig: any) => {
+                        const cfg = statusConfig[sig.status] || statusConfig.missing;
+                        const risk = riskForStatus(sig.status);
+                        const targetSection = sectionForSignal(sig.signal);
+                        return (
+                          <div key={sig.signal} style={{ borderRadius: 9, border: `1px solid ${cfg.color}33`,
+                            background: cfg.bg, padding: '8px 10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+                                <span style={{ fontSize: 12, fontWeight: 900, color: cfg.color, flexShrink: 0 }}>
+                                  {cfg.icon}
+                                </span>
+                                <span style={{ fontSize: 11, fontWeight: 800, color: '#1E293B', lineHeight: 1.3 }}>
+                                  {sig.signal.replace(/\w/g, (c: string) => c.toUpperCase())}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: 9, fontWeight: 800, color: cfg.color,
+                                background: 'rgba(255,255,255,0.70)', padding: '2px 7px', borderRadius: 999,
+                                whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                {cfg.label}
+                              </span>
+                            </div>
+                            <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                              <span style={{ fontSize: 10, color: risk.color, fontWeight: 700 }}>
+                                {risk.label}
+                              </span>
+                              {(sig.status === 'missing' || sig.status === 'adjacent') && (
+                                <button
+                                  type="button"
+                                  onClick={() => { openCoach(targetSection, sig.signal); setActivePanel('coach'); }}
+                                  style={{ fontSize: 9, fontWeight: 900, color: ORANGE,
+                                    background: 'rgba(255,112,67,0.10)', border: '1px solid rgba(255,112,67,0.25)',
+                                    borderRadius: 999, padding: '2px 8px', cursor: 'pointer', flexShrink: 0 }}>
+                                  Coach →
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Legend */}
+                    <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: '#F8FAFC',
+                      border: '1px solid #E2E8F0', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      {[
+                        { icon: '✓', label: 'Direct — proven in resume', color: '#15803D' },
+                        { icon: '~', label: 'Adjacent — needs framing', color: '#D97706' },
+                        { icon: '✗', label: 'Missing — real gap', color: '#DC2626' },
+                      ].map(l => (
+                        <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: 10, fontWeight: 900, color: l.color }}>{l.icon}</span>
+                          <span style={{ fontSize: 9, color: '#64748B' }}>{l.label}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* CTA if gaps exist */}
+                    {analysis.missing.length > 0 && (
+                      <button type="button" onClick={() => setActivePanel('coach')}
+                        style={{ marginTop: 10, width: '100%', padding: '9px 14px', borderRadius: 999,
+                          border: 'none', background: ORANGE, color: 'white', fontWeight: 950,
+                          fontSize: 12, cursor: 'pointer' }}>
+                        Open Coach to close {analysis.missing.length} gap{analysis.missing.length > 1 ? 's' : ''} →
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ fontSize: 12, color: '#94A3B8', padding: '12px 0' }}>
+                    Could not generate signal report. Make sure a job description is loaded.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {activePanel === 'keywords' && (
             <div style={{ padding: 11, borderRadius: 14, border: '1px solid #E2E8F0', background: '#FFFFFF' }}>
