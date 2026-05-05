@@ -7,6 +7,7 @@ import SeekerTitleCard from "@/components/seeker/SeekerTitleCard";
 import ProfileDevelopment from "../components/roadmap/ProfileDevelopment";
 import OfferEngine from "../components/offer-negotiation/OfferEngine";
 import GrowthEngine from "../components/roadmap/GrowthEngine";
+import ProjectPromotionEngine from "../components/project-promotion/ProjectPromotionEngine";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import { getTimeGreeting } from "@/lib/dashboardGreeting";
 
@@ -67,7 +68,7 @@ function AnvilIcon({ src, alt, size = 64 }) {
   );
 }
 
-// ─── The 4 Anvil tiles ───────────────────────────────────────────────────────
+// ─── The 5 Anvil tiles ───────────────────────────────────────────────────────
 const TILES = [
   {
     id: "resume",
@@ -95,6 +96,12 @@ const TILES = [
     desc: "Plan realistic pivots and growth paths based on your goals and current market conditions.",
     img: null,
   },
+  {
+	id: "project-promotion",
+	title: "Project & Promotion",
+	desc: "Find the next high-impact project to increase your value, visibility, and promotion potential where you are now.",
+	img: null,
+},
 ];
 
 // ─── Mobile carousel card ────────────────────────────────────────────────────
@@ -360,6 +367,9 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
           {activeModule === "offer" && (
             <OfferEngine />
           )}
+		  {activeModule === "project-promotion" && (
+			<ProjectPromotionEngine />
+		  )}
           {activeModule === "onboarding" && (
             <GrowthEngine />
           )}
@@ -549,6 +559,21 @@ export default function AnvilPage() {
                 <OfferEngine />
               </div>
             )}
+
+{activeModule === "project-promotion" && (
+  <div style={{ ...GLASS, padding: 20, width: "100%", display: "grid", gap: 12 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <button onClick={() => setActiveModule(null)}
+        style={{ display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "6px 14px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
+          background: "rgba(255,112,67,0.08)", color: "#FF7043",
+          fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
+        ← The Anvil
+      </button>
+    </div>
+    <ProjectPromotionEngine />
+  </div>
+)}
 
             {activeModule === "onboarding" && (
               <div style={{ ...GLASS, padding: 20, width: "100%", display: "grid", gap: 12 }}>

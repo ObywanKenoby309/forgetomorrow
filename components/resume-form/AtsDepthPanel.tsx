@@ -52,18 +52,111 @@ const STOP_WORDS = new Set([
   'the','and','for','with','that','this','from','your','you','our','are','was','were',
   'will','shall','would','could','should','into','about','over','under','in','on','of',
   'to','a','an','as','by','or','at','be','is','it','we','they','them','their','there',
+  'have','has','had','not','but','can','all','any','one','may','must','than','then',
+  'when','also','both','each','such','more','most','other','some','these','those',
+  'work','role','team','company','position','candidate','including','required',
+  'experience','years','ability','strong','knowledge','using','within','across',
 ]);
+
+// ─── Hard skill / tech term signals ──────────────────────────────────────────
+const HARD_SKILL_PATTERNS = [
+  // Programming & data
+  'python','javascript','typescript','java','sql','r','scala','golang','rust','c++','c#',
+  'react','angular','vue','node','django','flask','spring','kubernetes','docker',
+  'aws','azure','gcp','terraform','ansible','linux','bash','git','api','rest','graphql',
+  // Business / ops
+  'salesforce','tableau','powerbi','power bi','excel','sap','oracle','servicenow',
+  'jira','confluence','figma','sketch','zendesk','hubspot','marketo','gainsight',
+  // Frameworks / methodologies
+  'agile','scrum','kanban','lean','six sigma','pmp','itil','devops','ci/cd',
+  'machine learning','deep learning','nlp','llm','ai','ml','data analysis',
+  'data science','business intelligence','erp','crm','etl',
+  // Finance / legal / compliance
+  'gaap','ifrs','sox','gdpr','hipaa','ccpa','aml','kyc','finra','sec',
+  // Healthcare / science
+  'clinical','ehr','emr','fda','irb','gcp','gmp','cdisc','sas','spss','r studio',
+  // Cybersecurity
+  'cissp','cism','cisa','soc','siem','endpoint','zero trust','pentest','vulnerability',
+  'nist','iso 27001','firewalls','ids','ips',
+];
+
+// ─── Tool / platform signals ──────────────────────────────────────────────────
+const TOOL_PATTERNS = [
+  'microsoft','google','apple','amazon','meta','slack','zoom','teams','outlook',
+  'sharepoint','onedrive','dropbox','box','notion','asana','monday','trello',
+  'github','gitlab','bitbucket','jenkins','circleci','datadog','splunk','new relic',
+  'snowflake','databricks','hadoop','spark','airflow','kafka','elasticsearch',
+  'wordpress','shopify','stripe','twilio','sendgrid','intercom','pendo','amplitude',
+  'mixpanel','segment','looker','dbt','fivetran','stitch','redshift','bigquery',
+];
+
+// ─── Certification signals ────────────────────────────────────────────────────
+const CERT_PATTERNS = [
+  'pmp','cissp','cism','cisa','aws certified','azure certified','gcp certified',
+  'google certified','cpa','cfa','cfp','frm','caia','series 7','series 63','series 65',
+  'mba','phd','md','jd','rn','np','pa','do','cpa','cfe','cma','cia',
+  'itil','togaf','safe','csm','csp','pmi','six sigma','lean','black belt',
+  'comptia','security+','network+','a+','ccna','ccnp','ccie','mcse','rhce',
+  'shrm','sphr','phr','chrp','cdp',
+  'certification','certified','certificate','licensure','licensed','credential',
+];
+
+// ─── Soft skill signals ───────────────────────────────────────────────────────
+const SOFT_SKILL_PATTERNS = [
+  'leadership','communication','collaboration','problem.solving','critical.thinking',
+  'analytical','strategic','creative','innovative','adaptable','flexible',
+  'detail.oriented','organized','proactive','self.motivated','entrepreneurial',
+  'mentoring','coaching','presenting','negotiating','influencing','persuasion',
+  'relationship.building','stakeholder','cross.functional','interpersonal',
+  'time.management','prioritization','decision.making','conflict.resolution',
+  'emotional.intelligence','empathy','listening','written','verbal',
+];
+
+// ─── Language signals ─────────────────────────────────────────────────────────
+const LANGUAGE_PATTERNS = [
+  'spanish','french','german','mandarin','chinese','japanese','korean','portuguese',
+  'arabic','russian','italian','dutch','hindi','swedish','polish','turkish',
+  'bilingual','multilingual','fluent','native speaker','proficient',
+];
+
+function matchPatterns(jd: string, patterns: string[]): string[] {
+  const normalized = jd.toLowerCase();
+  return patterns.filter(p => {
+    const regex = new RegExp(p.replace('.', '\s*'), 'i');
+    return regex.test(normalized);
+  });
+}
 
 function extractKeyTerms(text: string, max = 8): string[] {
   if (!text) return [];
   const cleaned = text.toLowerCase().replace(/[^a-z0-9+\s]/g, ' ');
-  const tokens = cleaned.split(/\s+/).filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+  const tokens = cleaned.split(/\s+/).filter((w) => w.length > 3 && !STOP_WORDS.has(w));
   const counts = new Map<string, number>();
   for (const t of tokens) counts.set(t, (counts.get(t) || 0) + 1);
   return Array.from(counts.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, max)
     .map(([w]) => w);
+}
+
+// Extract education requirements from JD
+function extractEduRequirements(jd: string): string[] {
+  const found: string[] = [];
+  const normalized = jd.toLowerCase();
+  const eduTerms = [
+    ["bachelor's degree", "bachelor's"],
+    ["master's degree", "master's"],
+    ['mba', 'mba'],
+    ['phd', 'phd'],
+    ['doctorate', 'doctorate'],
+    ["associate's degree", "associate's"],
+    ['high school diploma', 'high school'],
+    ['bootcamp', 'bootcamp'],
+  ];
+  for (const [pattern, label] of eduTerms) {
+    if (normalized.includes(pattern)) found.push(label);
+  }
+  return found;
 }
 
 function countWords(text: string) {
@@ -131,37 +224,85 @@ export default function AtsDepthPanel({
     return `${summary || ''} ${(skills || []).join(' ')} ${expBits} ${eduBits}`.toLowerCase();
   }, [summary, skills, experiences, education]);
 
-  const titleKeywords = useMemo(() => extractKeyTerms(jdText, 8), [jdText]);
+  const titleKeywords = useMemo(() => extractKeyTerms(jdText, 12), [jdText]);
 
   const matchedTitleKeywords = useMemo(
     () => titleKeywords.filter((k) => resumeText.includes(k.toLowerCase())),
     [titleKeywords, resumeText]
   );
 
-  const keywordCoverage =
-    titleKeywords.length > 0
-      ? Math.round((matchedTitleKeywords.length / titleKeywords.length) * 100)
-      : 0;
+  // ─── Categorized keyword extraction ────────────────────────────────────────
+  const jdHardSkills = useMemo(() => matchPatterns(jdText, HARD_SKILL_PATTERNS), [jdText]);
+  const jdTools      = useMemo(() => matchPatterns(jdText, TOOL_PATTERNS), [jdText]);
+  const jdCerts      = useMemo(() => matchPatterns(jdText, CERT_PATTERNS), [jdText]);
+  const jdSoftSkills = useMemo(() => matchPatterns(jdText, SOFT_SKILL_PATTERNS), [jdText]);
+  const jdLanguages  = useMemo(() => matchPatterns(jdText, LANGUAGE_PATTERNS), [jdText]);
+  const jdEduReqs    = useMemo(() => extractEduRequirements(jdText), [jdText]);
+
+  const matchedHardSkills = useMemo(() => jdHardSkills.filter(k => resumeText.includes(k.toLowerCase().replace('.', ' '))), [jdHardSkills, resumeText]);
+  const matchedTools      = useMemo(() => jdTools.filter(k => resumeText.includes(k.toLowerCase())), [jdTools, resumeText]);
+  const matchedCerts      = useMemo(() => jdCerts.filter(k => resumeText.includes(k.toLowerCase().replace('.', ' '))), [jdCerts, resumeText]);
+  const matchedSoftSkills = useMemo(() => jdSoftSkills.filter(k => resumeText.includes(k.toLowerCase().replace('.', ' '))), [jdSoftSkills, resumeText]);
+  const matchedLanguages  = useMemo(() => jdLanguages.filter(k => resumeText.includes(k.toLowerCase())), [jdLanguages, resumeText]);
+  const matchedEduReqs    = useMemo(() => jdEduReqs.filter(k => resumeText.includes(k.toLowerCase())), [jdEduReqs, resumeText]);
+
+  // ─── Missing terms per category ─────────────────────────────────────────────
+  const missingTitleKeywords = titleKeywords.filter(k => !matchedTitleKeywords.includes(k));
+  const missingHardSkills    = jdHardSkills.filter(k => !matchedHardSkills.includes(k));
+  const missingTools         = jdTools.filter(k => !matchedTools.includes(k));
+  const missingCerts         = jdCerts.filter(k => !matchedCerts.includes(k));
+  const missingSoftSkills    = jdSoftSkills.filter(k => !matchedSoftSkills.includes(k));
+  const missingLanguages     = jdLanguages.filter(k => !matchedLanguages.includes(k));
+
+  // ─── Coverage scores per category ───────────────────────────────────────────
+  const pct = (matched: number, total: number) =>
+    total > 0 ? Math.round((matched / total) * 100) : null;
+
+  const titleCov    = pct(matchedTitleKeywords.length, titleKeywords.length);
+  const hardCov     = pct(matchedHardSkills.length, jdHardSkills.length);
+  const toolsCov    = pct(matchedTools.length, jdTools.length);
+  const certsCov    = pct(matchedCerts.length, jdCerts.length);
+  const softCov     = pct(matchedSoftSkills.length, jdSoftSkills.length);
+  const langCov     = pct(matchedLanguages.length, jdLanguages.length);
+  const eduCov      = pct(matchedEduReqs.length, jdEduReqs.length);
+
+  // ─── Composite keyword score ─────────────────────────────────────────────────
+  // Weighted: hard skills 30%, title/role 25%, tools 20%, certs 15%, soft 10%
+  // Only include categories that exist in the JD
+  const keywordCoverage = useMemo(() => {
+    const weights: Array<[number | null, number]> = [
+      [titleCov, 25],
+      [hardCov, 30],
+      [toolsCov, 20],
+      [certsCov, 15],
+      [softCov, 10],
+    ];
+    const active = weights.filter(([score]) => score !== null);
+    if (!active.length) return 0;
+    const totalWeight = active.reduce((sum, [, w]) => sum + w, 0);
+    const weighted = active.reduce((sum, [score, w]) => sum + (score! * w), 0);
+    return Math.round(weighted / totalWeight);
+  }, [titleCov, hardCov, toolsCov, certsCov, softCov]);
 
   const primaryScore = aiScore !== null ? aiScore : keywordCoverage;
 
   let statusText = '';
   let barColor = '#C62828';
+  if (primaryScore >= 85) { statusText = 'Excellent — ready to apply.'; barColor = '#2E7D32'; }
+  else if (primaryScore >= 70) { statusText = 'Good — tighten keywords & metrics to push higher.'; barColor = '#F59E0B'; }
+  else if (primaryScore >= 50) { statusText = 'Fair — add more high-impact terms before applying.'; barColor = '#EF6C00'; }
+  else { statusText = 'Low — add more high-impact terms (aim ≥85).'; barColor = '#C62828'; }
 
-  if (primaryScore >= 85) { statusText = 'Excellent - ready to apply.'; barColor = '#2E7D32'; }
-  else if (primaryScore >= 70) { statusText = 'Good - tighten keywords & metrics to push higher.'; barColor = '#F59E0B'; }
-  else if (primaryScore >= 50) { statusText = 'Fair - add more high-impact terms before applying.'; barColor = '#EF6C00'; }
-  else { statusText = 'Low - add more high-impact terms (aim ≥85).'; barColor = '#C62828'; }
-
+  // ─── Buckets for the Keywords tab ───────────────────────────────────────────
   const buckets = [
-    { key: 'title', label: 'Title/Role', matched: matchedTitleKeywords.length, total: titleKeywords.length, points: keywordCoverage },
-    { key: 'hard', label: 'Hard skills', matched: 0, total: 0, points: 0 },
-    { key: 'tools', label: 'Tools', matched: 0, total: 0, points: 0 },
-    { key: 'edu', label: 'Education', matched: 0, total: 0, points: 0 },
-    { key: 'soft', label: 'Soft skills', matched: 0, total: 0, points: 0 },
-  ];
-
-  const missingTitleKeywords = titleKeywords.filter((k) => !matchedTitleKeywords.includes(k));
+    { key: 'title', label: 'Title / Role', matched: matchedTitleKeywords.length, total: titleKeywords.length, points: titleCov, missing: missingTitleKeywords, section: 'skills' as const },
+    { key: 'hard', label: 'Hard Skills', matched: matchedHardSkills.length, total: jdHardSkills.length, points: hardCov, missing: missingHardSkills, section: 'skills' as const },
+    { key: 'tools', label: 'Tools & Platforms', matched: matchedTools.length, total: jdTools.length, points: toolsCov, missing: missingTools, section: 'skills' as const },
+    { key: 'certs', label: 'Certifications', matched: matchedCerts.length, total: jdCerts.length, points: certsCov, missing: missingCerts, section: 'education' as const },
+    { key: 'soft', label: 'Soft Skills', matched: matchedSoftSkills.length, total: jdSoftSkills.length, points: softCov, missing: missingSoftSkills, section: 'summary' as const },
+    { key: 'lang', label: 'Languages', matched: matchedLanguages.length, total: jdLanguages.length, points: langCov, missing: missingLanguages, section: 'skills' as const },
+    { key: 'edu', label: 'Education', matched: matchedEduReqs.length, total: jdEduReqs.length, points: eduCov, missing: [], section: 'education' as const },
+  ].filter(b => b.total > 0); // only show buckets that exist in the JD
 
   const resumeData = useMemo(
     () => ({ summary, skills, workExperiences: experiences, educationList: education }),
@@ -444,10 +585,11 @@ export default function AtsDepthPanel({
                     jdText={jdText}
                     resumeData={resumeData}
                     missing={{
-                      high: missingTitleKeywords,
-                      tools: [],
-                      edu: [],
-                      soft: [],
+                      high: [...missingTitleKeywords, ...missingHardSkills],
+                      tools: missingTools,
+                      edu: missingCerts,
+                      soft: missingSoftSkills,
+                      lang: missingLanguages,
                     }}
                     onAddSkill={onAddSkill}
                     onAddSummary={onAddSummary}
@@ -556,110 +698,74 @@ export default function AtsDepthPanel({
           )}
 
           {activePanel === 'keywords' && (
-            <div
-              style={{
-                padding: 11,
-                borderRadius: 14,
-                border: '1px solid #E2E8F0',
-                background: '#FFFFFF',
-              }}
-            >
+            <div style={{ padding: 11, borderRadius: 14, border: '1px solid #E2E8F0', background: '#FFFFFF' }}>
               <div style={{ fontSize: 14, fontWeight: 950, color: '#263238', marginBottom: 4 }}>
                 Keyword Breakdown
               </div>
-              <div style={{ fontSize: 12, color: '#607D8B', lineHeight: 1.4 }}>
-                Use this as a checklist. Let the coach handle wording.
+              <div style={{ fontSize: 12, color: '#607D8B', lineHeight: 1.4, marginBottom: 10 }}>
+                Real terms from this JD — matched against your resume. Click any missing term to get coaching.
               </div>
 
-              <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
-                {buckets.map((b) => {
-                  const percent = Math.max(0, Math.min(100, b.points));
-                  return (
-                    <div key={b.key}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          gap: 8,
-                          fontSize: 12,
-                          fontWeight: 900,
-                          color: '#37474F',
-                          marginBottom: 3,
-                        }}
-                      >
-                        <span>{b.label}</span>
-                        <span style={{ color: percent > 0 ? ORANGE : '#90A4AE' }}>{percent}%</span>
-                      </div>
-                      <div style={{ height: 8, borderRadius: 999, background: '#ECEFF1', overflow: 'hidden' }}>
-                        <div
-                          style={{
-                            width: `${percent}%`,
-                            height: '100%',
-                            background: percent > 0 ? ORANGE : '#CFD8DC',
-                            transition: 'width 0.3s ease',
-                          }}
-                        />
-                      </div>
-                      <div style={{ marginTop: 3, fontSize: 11, color: '#607D8B' }}>
-                        {b.total > 0 ? `${b.matched}/${b.total} matched` : '0/0 matched'}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <details style={{ marginTop: 10 }}>
-                <summary
-                  style={{
-                    cursor: 'pointer',
-                    fontSize: 12,
-                    fontWeight: 900,
-                    color: '#37474F',
-                    listStyle: 'none',
-                    padding: '8px 9px',
-                    borderRadius: 10,
-                    border: '1px solid #E2E8F0',
-                    background: '#F8FAFC',
-                  }}
-                >
-                  View missing role terms
-                </summary>
-
-                <div style={{ marginTop: 8, padding: 10, borderRadius: 10, border: '1px solid #ECEFF1', background: '#FFFFFF' }}>
-                  {titleKeywords.length === 0 ? (
-                    <p style={{ margin: 0, fontSize: 12, color: '#388E3C' }}>No missing keywords here. Nice.</p>
-                  ) : missingTitleKeywords.length === 0 ? (
-                    <p style={{ margin: 0, fontSize: 12, color: '#388E3C' }}>No missing title/role keywords. Strong alignment.</p>
-                  ) : (
-                    <>
-                      <p style={{ margin: 0, fontSize: 12, color: '#546E7A', lineHeight: 1.4 }}>
-                        Consider weaving these into your summary, skills, or experience section.
-                      </p>
-                      <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                        {missingTitleKeywords.map((kw) => (
-                          <button
-                            key={kw}
-                            type="button"
-                            onClick={() => openCoach('skills', kw)}
-                            style={{
-                              border: '1px solid rgba(255,112,67,0.28)',
-                              background: 'rgba(255,112,67,0.08)',
-                              color: '#C2410C',
-                              cursor: 'pointer',
-                              padding: '5px 8px',
-                              borderRadius: 999,
-                              fontSize: 11,
-                              fontWeight: 900,
-                            }}
-                          >
-                            {kw}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
+              {buckets.length === 0 ? (
+                <div style={{ fontSize: 12, color: '#388E3C', padding: '10px 0' }}>
+                  No keyword categories detected in this JD. Try a more detailed job description.
                 </div>
-              </details>
+              ) : (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {buckets.map((b) => {
+                    const percent = b.points ?? 0;
+                    const barCol = percent >= 80 ? '#2E7D32' : percent >= 50 ? '#F59E0B' : '#C62828';
+                    return (
+                      <div key={b.key} style={{ borderRadius: 10, border: '1px solid #ECEFF1', background: '#FAFAFA', padding: '9px 10px' }}>
+                        {/* Row header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                          <span style={{ fontSize: 12, fontWeight: 900, color: '#37474F' }}>{b.label}</span>
+                          <span style={{ fontSize: 12, fontWeight: 900, color: barCol }}>
+                            {b.matched}/{b.total}
+                            <span style={{ fontSize: 10, color: '#90A4AE', marginLeft: 4 }}>({percent}%)</span>
+                          </span>
+                        </div>
+                        {/* Bar */}
+                        <div style={{ height: 6, borderRadius: 999, background: '#ECEFF1', overflow: 'hidden', marginBottom: 6 }}>
+                          <div style={{ width: `${percent}%`, height: '100%', background: barCol, transition: 'width 0.3s ease' }} />
+                        </div>
+                        {/* Missing chips — clickable, fire coach */}
+                        {b.missing && b.missing.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 4 }}>
+                            {b.missing.slice(0, 8).map((kw) => (
+                              <button
+                                key={kw}
+                                type="button"
+                                onClick={() => openCoach(b.section, kw)}
+                                style={{
+                                  border: '1px solid rgba(255,112,67,0.28)',
+                                  background: 'rgba(255,112,67,0.08)',
+                                  color: '#C2410C',
+                                  cursor: 'pointer',
+                                  padding: '3px 8px',
+                                  borderRadius: 999,
+                                  fontSize: 10,
+                                  fontWeight: 900,
+                                }}
+                              >
+                                + {kw}
+                              </button>
+                            ))}
+                            {b.missing.length > 8 && (
+                              <span style={{ fontSize: 10, color: '#90A4AE', alignSelf: 'center' }}>
+                                +{b.missing.length - 8} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {b.missing && b.missing.length === 0 && b.total > 0 && (
+                          <div style={{ fontSize: 10, color: '#388E3C', fontWeight: 700 }}>✓ All matched</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>

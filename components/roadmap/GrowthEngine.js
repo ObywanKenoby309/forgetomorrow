@@ -611,7 +611,7 @@ export default function GrowthEngine() {
         <div style={{ ...GLASS, padding: '16px 14px', background: 'rgba(30,41,59,0.88)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)' }}>
           <div style={{ fontWeight: 900, fontSize: 14, color: ORANGE, marginBottom: 6 }}>🧠 Growth & Pivot Engine</div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.60)', lineHeight: 1.6 }}>
-            Powered by the same intelligence backbone as the Forge Hammer. Your resume evidence drives the plan — not generic advice.
+            Powered by Human-Centered Career Intelligence focused on your success. Your resume evidence drives the plan — not generic keyword advice.
           </div>
         </div>
         <div style={{ ...WHITE_CARD, padding: '12px 14px' }}>
