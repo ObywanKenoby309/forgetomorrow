@@ -274,7 +274,7 @@ function buildBriefText(plan, moves, recommendedMove) {
   }
 
   lines.push("");
-  lines.push("COACH SPOTLIGHTS PREP");
+  lines.push("SHARPEN THIS BEFORE YOU TAKE IT TO LEADERSHIP");
   lines.push(plan.coachBridge?.whyCoachHelps || "Get another set of eyes before taking this to leadership.");
   if (plan.coachBridge?.whatToBring) lines.push(`Bring: ${plan.coachBridge.whatToBring}`);
 
@@ -799,11 +799,11 @@ function ResultCockpit({ result, plan, moves, recommendedRank }) {
           🔥 Sharpen this before you take it to leadership
         </div>
         <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 8 }}>
-          {plan.coachBridge?.whyCoachHelps || "You have a strong direction. Before you pitch it, get another set of eyes on the approach, stakeholder alignment, and business value."}
+          {"You have a strong direction. Before you pitch it, use Coach Spotlights to find professionals who may be able to pressure-test the approach, stakeholder alignment, and business value."}
         </div>
         {plan.coachBridge?.whatToBring && (
           <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 9 }}>
-            <strong>Bring:</strong> {plan.coachBridge.whatToBring}
+            <strong>Bring:</strong> Your selected move, current operational data, and a rough pitch or plan.
           </div>
         )}
         <a
@@ -825,7 +825,7 @@ function ResultCockpit({ result, plan, moves, recommendedRank }) {
 
       <div style={{ ...WHITE_CARD, padding: 13 }}>
         <div style={{ fontWeight: 900, fontSize: 11, color: DARK, marginBottom: 8 }}>
-          COACH SPOTLIGHTS PREP
+          SHARPEN THIS BEFORE YOU TAKE IT TO LEADERSHIP
         </div>
         <BulletList
           items={[
@@ -953,7 +953,7 @@ export default function ProjectPromotionEngine() {
             >
               <span>✅</span>
               <div style={{ fontSize: 11, fontWeight: 800, color: "#15803D", lineHeight: 1.45 }}>
-                Uses your current resume, profile, and portfolio as the evidence base. Add current-role context below so the system can identify what wins next.
+                Uses your current resume, profile, and portfolio as the evidence base. Add current-role context below so the system can identify the strongest project to win next.
               </div>
             </div>
 

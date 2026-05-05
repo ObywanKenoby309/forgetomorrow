@@ -165,30 +165,50 @@ async function resolveUser(session) {
   const sessionUserId = safeString(session?.user?.id);
   const sessionEmail = safeString(session?.user?.email).toLowerCase();
 
-  const select = {
-    id: true,
-    email: true,
-    name: true,
-    firstName: true,
-    lastName: true,
-    headline: true,
-    location: true,
-    aboutMe: true,
-    skillsJson: true,
-    educationJson: true,
-    certificationsJson: true,
-    customSectionJson: true,
-    projectsJson: true,
-    workPreferences: true,
-    plan: true,
-  };
-
   if (sessionUserId) {
-    return prisma.user.findUnique({ where: { id: sessionUserId }, select });
+    return prisma.user.findUnique({
+      where: { id: sessionUserId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        firstName: true,
+        lastName: true,
+        headline: true,
+        location: true,
+        aboutMe: true,
+        skillsJson: true,
+        educationJson: true,
+        certificationsJson: true,
+        customSectionJson: true,
+        projectsJson: true,
+        workPreferences: true,
+        plan: true,
+      },
+    });
   }
 
   if (sessionEmail) {
-    return prisma.user.findUnique({ where: { email: sessionEmail }, select });
+    return prisma.user.findUnique({
+      where: { email: sessionEmail },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        firstName: true,
+        lastName: true,
+        headline: true,
+        location: true,
+        aboutMe: true,
+        skillsJson: true,
+        educationJson: true,
+        certificationsJson: true,
+        customSectionJson: true,
+        projectsJson: true,
+        workPreferences: true,
+        plan: true,
+      },
+    });
   }
 
   return null;
@@ -256,35 +276,24 @@ ForgeTomorrow exists because corporate systems often fail to focus on individual
 Do not write safe corporate advice.
 Write what wins.
 
-CONTEXT PRIORITY RULE:
-User-supplied context about current work, completed projects, observed problems, and promotion goals is HIGH PRIORITY.
-Do NOT ignore it.
-If the user says "None" for current projects, treat that as an opportunity gap, not proof that they are inactive or incapable.
-If the user names a workplace problem, at least one ranked move should directly address that problem unless it is unsafe, illegal, or unrelated to work.
-
-EVIDENCE INTERPRETATION RULE:
-If experience is likely but not explicitly proven, label it "not visible yet".
-Do NOT call it absent, missing, or nonexistent unless the resume/profile/user context clearly proves it is not there.
-Never contradict actual user-provided wins.
-
 TONE:
 Direct. Strategic. Evidence-backed. Human.
 No fluff. No motivational filler. No HR-safe language.
+Write like a strategic operator advisor, not HR and not a performance review template.
 If the user is under-leveraging their capabilities, say it clearly and then show the path forward.
 
-TONE ENFORCEMENT:
-Do NOT use phrases like:
-- demonstrates strong leadership
-- has experience in
-- is responsible for
-- strong candidate
-- proven track record
-
-Prefer:
-- You have already proven X
-- You are not yet doing Y
-- This is the gap
-- This wins because X
+VOICE RULES:
+- Do NOT write: "You have demonstrated strong operational leadership."
+- Prefer: "You have already proven you can improve operations at scale."
+- Do NOT write: "shows capability in."
+- Prefer: "proves you can."
+- Do NOT write: "has experience in" when stronger evidence exists.
+- Prefer: "you have already done."
+- Do NOT over-soften the gap.
+- Say: "You are seeing the problems, but you are not owning them yet" when user has clear workplace problems and no active project.
+- Keep performanceRead to 2-3 direct sentences.
+- Keep leverageGap to 2-3 direct sentences.
+- Keep underLeveragingSignal to 1 blunt, constructive sentence.
 
 HARD RULES:
 - Do NOT suggest applying to jobs.
@@ -293,18 +302,15 @@ HARD RULES:
 - Do NOT say "seek opportunities", "develop leadership skills", "network more", or "take initiative" unless tied to a concrete project.
 - Do NOT invent achievements, metrics, tools, companies, projects, titles, or authority.
 - Ground the read in resume evidence, profile/portfolio signals, and user-supplied current-role context.
-- If evidence is weak, say what proof is not visible yet.
+- User-supplied context is HIGH PRIORITY. If the user gives current problems, recommend projects that directly address those problems.
+- If user says "None currently" for current projects, do not treat them as inactive. Treat it as an ownership gap: they are operating, but not yet leading a named initiative.
+- If evidence is weak, say what proof is not visible yet. Do not say a capability is absent unless the data proves it is absent.
 - Every recommended project must produce a measurable proof artifact.
 - Output ONLY valid JSON. No markdown. No commentary outside JSON.
-- Do NOT imply ForgeTomorrow provides managed mentors or an assigned coach network.
-- Coach guidance must route to Coach Spotlights only: experienced users advertising coach packages in The Hearth.
 
 WHAT GOOD LOOKS LIKE:
 The user should feel:
 "This system sees what I have done, understands what I am becoming, and is telling me exactly how to win next."
-
-COACH SPOTLIGHTS RULE:
-The coachBridge section must NOT say "Forge Coach" or imply ForgeTomorrow assigns a coach. It should say the user can get another set of eyes from experienced professionals through Coach Spotlights. CTA must be "View Coach Spotlights".
 
 Return JSON in this exact shape:
 {
@@ -362,8 +368,8 @@ Return JSON in this exact shape:
     "resumeFutureBullet": ""
   },
   "coachBridge": {
-    "whyCoachHelps": "",
-    "whatToBring": "",
+    "whyCoachHelps": "Use careful language. Do not imply ForgeTomorrow has assigned coaches or a managed mentor network. Say Coach Spotlights can help the user find professionals who may be able to pressure-test the project before leadership conversations.",
+    "whatToBring": "Your selected move, current operational data, and a rough pitch or plan.",
     "cta": "View Coach Spotlights"
   },
   "reasoning": []
@@ -374,8 +380,7 @@ Return JSON in this exact shape:
 USER CONTEXT:
 Current role supplied by user: ${safeString(currentRole) || 'N/A'}
 Current company supplied by user: ${safeString(currentCompany) || 'N/A'}
-Additional context supplied by user:
-${safeString(additionalContext) || 'N/A'}
+Additional context supplied by user: ${safeString(additionalContext) || 'N/A'}
 
 PROFILE / PORTFOLIO DATA:
 ${profileText}
@@ -386,14 +391,13 @@ Resume content:
 ${safeString(resume.content).slice(0, 8000)}
 
 FORGETOMORROW EVIDENCE ENGINE ANALYSIS:
-${evidence.summary || 'Evidence engine unavailable. Use resume/profile/user context directly and be conservative.'}
+${evidence.summary || 'Evidence engine unavailable. Use resume/profile content directly and be conservative.'}
 
 TASK:
 Return the 3 ranked projects or internal moves this professional should pursue next to increase value, visibility, promotion potential, and future leverage.
 
 Remember:
 - This is for winning inside the current role/company.
-- User-supplied problems and goals are high-priority signals.
 - Do not recommend job searching.
 - Do not recommend a pivot.
 - Do not write a 30/60/90 plan.
@@ -401,7 +405,9 @@ Remember:
 - Each move must be tied to actual evidence.
 - Each move must produce a proof artifact.
 - If they are under-leveraging, be honest but constructive.
-- In coachBridge, route to Coach Spotlights only. Do not overpromise coaching availability or managed matching.
+- Avoid corporate performance review language.
+- The Decision tab should sound like: "You have already proven X. Right now, Y is the gap. The next win is Z."
+- Spotlights language must be accurate: Coach Spotlights are users advertising coach packages, not a managed ForgeTomorrow coaching team.
 `.trim();
 
     let parsed = null;
