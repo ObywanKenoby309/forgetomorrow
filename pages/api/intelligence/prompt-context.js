@@ -29,7 +29,8 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const promptContext = await buildPromptContext({ userId });
+  const mode = req.query?.mode || undefined;
+  const promptContext = await buildPromptContext({ userId, mode });
 
   if (!promptContext) {
     return res.status(404).json({ error: 'Prompt context not found' });
