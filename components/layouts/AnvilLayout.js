@@ -470,7 +470,7 @@ export default function AnvilLayout({
                 padding: useLightRightRail ? 0 : 16,
               }}
             >
-              <div style={{ transform: 'scale(0.70)', transformOrigin: 'top right', width: '143%' }}>
+              <div style={{ transform: 'scale(0.70)', transformOrigin: 'top left' }}>
               {right}
               </div>
             </aside>

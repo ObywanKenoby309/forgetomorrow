@@ -473,7 +473,11 @@ function DesktopTile({ tile, onOpen, withChrome }) {
 
 // ─── Main page ───────────────────────────────────────────────────────────────
 export default function AnvilPage() {
-  const [activeModule, setActiveModule] = useState(null);
+  const [activeModule, setActiveModuleRaw] = useState(null);
+  const setActiveModule = (mod) => {
+    setActiveModuleRaw(mod);
+    setSiderailsCollapsed(Boolean(mod)); // collapse when tool active, expand on home
+  };
   const router = useRouter();
 
   const chrome =
@@ -493,7 +497,7 @@ export default function AnvilPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const [siderailsCollapsed, setSiderailsCollapsed] = useState(true);
+  const [siderailsCollapsed, setSiderailsCollapsed] = useState(false);
 
   const greeting = getTimeGreeting();
 
