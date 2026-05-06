@@ -5,8 +5,58 @@ import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
 import { evaluateSignals } from '@/lib/forge/evidenceEngine';
 import { classifyRisk } from '@/lib/forge/riskEngine';
+import buildPromptContext from '@/lib/intelligence/buildPromptContext';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+function buildIntelligenceBlock(intelligence) {
+  if (!intelligence || typeof intelligence !== 'object') return '';
+
+  const lines = [];
+  lines.push('CAREER INTELLIGENCE CONTEXT (ForgeTomorrow Unified Intelligence — growth mode):');
+
+  if (intelligence.positioning) {
+    lines.push('');
+    lines.push('POSITIONING:');
+    if (intelligence.positioning.currentHeadline)   lines.push(`- Current headline: ${intelligence.positioning.currentHeadline}`);
+    if (intelligence.positioning.currentRoleSignal) lines.push(`- Current role signal: ${intelligence.positioning.currentRoleSignal}`);
+    if (intelligence.positioning.workStatus)        lines.push(`- Work status: ${intelligence.positioning.workStatus}`);
+    if (intelligence.positioning.targetRole)        lines.push(`- Target direction: ${intelligence.positioning.targetRole}`);
+    if (intelligence.positioning.summary)           lines.push(`- Summary: ${intelligence.positioning.summary}`);
+  }
+
+  if (Array.isArray(intelligence.proofSignals) && intelligence.proofSignals.length) {
+    lines.push('');
+    lines.push('PROVEN SIGNALS:');
+    intelligence.proofSignals.slice(0, 8).forEach((item) => lines.push(`- ${item}`));
+  }
+
+  if (Array.isArray(intelligence.relevantWins) && intelligence.relevantWins.length) {
+    lines.push('');
+    lines.push('RELEVANT WINS / ASSETS:');
+    intelligence.relevantWins.slice(0, 8).forEach((item) => lines.push(`- ${item}`));
+  }
+
+  if (Array.isArray(intelligence.knownGaps) && intelligence.knownGaps.length) {
+    lines.push('');
+    lines.push('KNOWN GAPS / RISKS:');
+    intelligence.knownGaps.slice(0, 8).forEach((item) => lines.push(`- ${item}`));
+  }
+
+  if (Array.isArray(intelligence.recentToolInsights) && intelligence.recentToolInsights.length) {
+    lines.push('');
+    lines.push('RECENT TOOL INSIGHTS:');
+    intelligence.recentToolInsights.slice(0, 6).forEach((item) => lines.push(`- ${item}`));
+  }
+
+  if (Array.isArray(intelligence.cautionFlags) && intelligence.cautionFlags.length) {
+    lines.push('');
+    lines.push('CAUTION FLAGS:');
+    intelligence.cautionFlags.slice(0, 4).forEach((item) => lines.push(`- ${item}`));
+  }
+
+  return lines.join('\n');
+}
 
 function safeJsonParse(text) {
   try {
@@ -363,7 +413,18 @@ export default async function handler(req, res) {
       sessionEmail ||
       'Candidate';
 
-    const systemPrompt = `
+    // ── Unified Career Intelligence — growth mode ────────────────────────────
+    // Non-fatal: if unavailable, intelligenceBlock is empty and prompt is unchanged
+    let intelligence = null;
+    try {
+      intelligence = await buildPromptContext({ userId: user.id, mode: 'growth' });
+    } catch (err) {
+      console.warn('[anvil/onboarding-growth/generate] buildPromptContext failed — continuing without intelligence:', err?.message);
+    }
+
+    const intelligenceBlock = buildIntelligenceBlock(intelligence);
+
+    const systemPrompt = `${intelligenceBlock ? intelligenceBlock + '\n\n' : ''}
 You are ForgeTomorrow's Growth & Pivot Intelligence Engine — part of a unified career intelligence platform.
 
 UNIFIED INTELLIGENCE SYSTEM:
