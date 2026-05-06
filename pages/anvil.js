@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 
-import SeekerLayout from "@/components/layouts/SeekerLayout";
+import AnvilLayout from "@/components/layouts/AnvilLayout";
 import SeekerTitleCard from "@/components/seeker/SeekerTitleCard";
 import ProfileDevelopment from "../components/roadmap/ProfileDevelopment";
 import OfferEngine from "../components/offer-negotiation/OfferEngine";
@@ -493,6 +493,8 @@ export default function AnvilPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  const [siderailsCollapsed, setSiderailsCollapsed] = useState(true);
+
   const greeting = getTimeGreeting();
 
   const RightColumn = (
@@ -500,11 +502,13 @@ export default function AnvilPage() {
   );
 
   return (
-    <SeekerLayout
+    <AnvilLayout
       title="The Anvil | ForgeTomorrow"
       right={RightColumn}
       rightVariant="light"
       activeNav={activeNav}
+      collapseSiderails={siderailsCollapsed}
+      onToggleSiderails={() => setSiderailsCollapsed(s => !s)}
     >
       <SeekerTitleCard
         greeting={greeting}
@@ -604,6 +608,6 @@ export default function AnvilPage() {
         )}
 
       </div>
-    </SeekerLayout>
+    </AnvilLayout>
   );
 }
