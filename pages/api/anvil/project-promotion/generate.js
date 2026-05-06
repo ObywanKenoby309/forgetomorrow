@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
 import { evaluateSignals } from '@/lib/forge/evidenceEngine';
 import { classifyRisk } from '@/lib/forge/riskEngine';
+import buildPromptContext from '@/lib/intelligence/buildPromptContext';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -161,86 +162,47 @@ function runEvidenceEngine(resumeData) {
   }
 }
 
-function buildUnifiedContextSection(ctx) {
-  // Production-safe: never throws on malformed or partial context
-  try {
-    if (!ctx || typeof ctx !== 'object') return '';
+function buildIntelligenceBlock(intelligence) {
+  if (!intelligence || typeof intelligence !== 'object') return '';
 
-    const lines = ['UNIFIED CAREER CONTEXT (from ForgeTomorrow intelligence layer):'];
+  const lines = [];
 
-    // User identity
-    if (ctx.user?.name) lines.push('Candidate name: ' + ctx.user.name);
-    if (ctx.user?.headline) lines.push('Headline: ' + ctx.user.headline);
-    if (ctx.user?.location) lines.push('Location: ' + ctx.user.location);
-    if (ctx.user?.plan) lines.push('Plan tier: ' + ctx.user.plan);
+  lines.push('CAREER INTELLIGENCE CONTEXT (ForgeTomorrow Unified Intelligence — execution mode):');
 
-    // Profile signals
-    const profile = ctx.profile || {};
-    if (Array.isArray(profile.skills) && profile.skills.length) {
-      const skillList = profile.skills
-        .slice(0, 20)
-        .map(s => (typeof s === 'string' ? s : (s?.name || '')))
-        .filter(Boolean)
-        .join(', ');
-      if (skillList) lines.push('Profile skills: ' + skillList);
-    }
-    if (Array.isArray(profile.certifications) && profile.certifications.length) {
-      const certList = profile.certifications
-        .slice(0, 10)
-        .map(c => (typeof c === 'string' ? c : (c?.name || '')))
-        .filter(Boolean)
-        .join(', ');
-      if (certList) lines.push('Certifications: ' + certList);
-    }
-    if (Array.isArray(profile.education) && profile.education.length) {
-      const edu = profile.education
-        .slice(0, 5)
-        .map(e => {
-          if (!e) return '';
-          if (typeof e === 'string') return e;
-          return [e.degree, e.field, e.school || e.institution].filter(Boolean).join(' | ');
-        })
-        .filter(Boolean);
-      if (edu.length) lines.push('Education: ' + edu.join('; '));
-    }
-    if (profile.aboutMe) lines.push('About: ' + String(profile.aboutMe).slice(0, 500));
-
-    // History signals
-    const history = ctx.history || {};
-
-    if (Array.isArray(history.roadmaps) && history.roadmaps.length) {
-      const mostRecent = history.roadmaps[0];
-      const dateStr = mostRecent?.generatedAt
-        ? new Date(mostRecent.generatedAt).toLocaleDateString()
-        : 'unknown';
-      lines.push('Growth roadmaps run: ' + history.roadmaps.length + ' (most recent: ' + dateStr + ')');
-    }
-
-    if (Array.isArray(history.negotiations) && history.negotiations.length) {
-      lines.push('Negotiation strategies run: ' + history.negotiations.length);
-      const latestNeg = history.negotiations[0];
-      if (latestNeg?.input && typeof latestNeg.input === 'object') {
-        const inp = latestNeg.input;
-        if (inp.currentJobTitle) lines.push('Last negotiation role: ' + inp.currentJobTitle);
-        const min = inp.targetSalaryMin;
-        const max = inp.targetSalaryMax;
-        if (min || max) lines.push('Last negotiation target: $' + (min || '?') + ' – $' + (max || '?'));
-      }
-    }
-
-    if (Array.isArray(history.profileSnapshots) && history.profileSnapshots.length) {
-      const snap = history.profileSnapshots[0];
-      if (snap?.headline) lines.push('Most recent profile headline snapshot: ' + snap.headline);
-    }
-
-    // Only header line — nothing useful to inject
-    if (lines.length <= 1) return '';
-
-    return lines.join('\n');
-  } catch (err) {
-    console.error('[buildUnifiedContextSection] error — returning empty:', err?.message || err);
-    return '';
+  if (intelligence.positioning) {
+    lines.push('');
+    lines.push('POSITIONING:');
+    if (intelligence.positioning.currentHeadline) lines.push(`- Current headline: ${intelligence.positioning.currentHeadline}`);
+    if (intelligence.positioning.currentRoleSignal) lines.push(`- Current role signal: ${intelligence.positioning.currentRoleSignal}`);
+    if (intelligence.positioning.workStatus) lines.push(`- Work status: ${intelligence.positioning.workStatus}`);
+    if (intelligence.positioning.targetRole) lines.push(`- Target direction: ${intelligence.positioning.targetRole}`);
   }
+
+  if (Array.isArray(intelligence.proofSignals) && intelligence.proofSignals.length) {
+    lines.push('');
+    lines.push('PROVEN SIGNALS:');
+    intelligence.proofSignals.slice(0, 8).forEach((item) => lines.push(`- ${item}`));
+  }
+
+  if (Array.isArray(intelligence.relevantWins) && intelligence.relevantWins.length) {
+    lines.push('');
+    lines.push('RELEVANT WINS / ASSETS:');
+    intelligence.relevantWins.slice(0, 8).forEach((item) => lines.push(`- ${item}`));
+  }
+
+  if (Array.isArray(intelligence.knownGaps) && intelligence.knownGaps.length) {
+    lines.push('');
+    lines.push('KNOWN GAPS / RISKS:');
+    intelligence.knownGaps.slice(0, 8).forEach((item) => lines.push(`- ${item}`));
+  }
+
+  if (Array.isArray(intelligence.recentToolInsights) && intelligence.recentToolInsights.length) {
+    lines.push('');
+    lines.push('RECENT TOOL INSIGHTS:');
+    intelligence.recentToolInsights.slice(0, 6).forEach((item) => lines.push(`- ${item}`));
+  }
+
+  return lines.join('\n');
 }
 
 async function resolveUser(session) {
@@ -338,17 +300,23 @@ export default async function handler(req, res) {
       });
     }
 
-    const {
-      currentRole = '',
-      currentCompany = '',
-      additionalContext = '',
-      context: unifiedContext = null,
-    } = req.body || {};
+    const { currentRole = '', currentCompany = '', additionalContext = '' } = req.body || {};
 
     const { resumeData, profileText } = buildUserContext(user, resume);
     const evidence = runEvidenceEngine(resumeData);
 
-    const systemPrompt = `
+    // ── Unified Career Intelligence — execution mode ──────────────────────────
+    // Non-fatal: if context unavailable, intelligence is null and block is empty
+    let intelligence = null;
+    try {
+      intelligence = await buildPromptContext({ userId: user.id, mode: 'execution' });
+    } catch (err) {
+      console.warn('[project-promotion/generate] buildPromptContext failed — continuing without intelligence:', err?.message);
+    }
+
+    const intelligenceBlock = buildIntelligenceBlock(intelligence);
+
+    const systemPrompt = `${intelligenceBlock ? intelligenceBlock + '\n\n' : ''}
 You are ForgeTomorrow's Project & Promotion Intelligence Engine.
 
 This is NOT a career roadmap tool.
@@ -463,18 +431,12 @@ Return JSON in this exact shape:
 }
 `.trim();
 
-    const unifiedContextSection = buildUnifiedContextSection(unifiedContext);
-
     const userPrompt = `
 USER CONTEXT:
 Current role supplied by user: ${safeString(currentRole) || 'N/A'}
 Current company supplied by user: ${safeString(currentCompany) || 'N/A'}
 Additional context supplied by user: ${safeString(additionalContext) || 'N/A'}
 
-${unifiedContextSection ? `${unifiedContextSection}
-
-IMPORTANT: The unified context above reflects the seeker's complete platform history and verified profile signals. Use it to deepen the intelligence of the performance read and project recommendations. It enhances — it does not replace — the resume and profile data below.
-` : ''}
 PROFILE / PORTFOLIO DATA:
 ${profileText}
 
