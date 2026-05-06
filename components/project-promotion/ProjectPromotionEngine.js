@@ -956,104 +956,9 @@ function ResultCockpit({ result, plan, moves, recommendedRank, mobileTab, onMobi
   );
 }
 
-export default function ProjectPromotionEngine() {
-  const [form, setForm] = useState(INITIAL_FORM);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState("");
-  const [isMobile, setIsMobile] = useState(false);
-  const [mobileTab, setMobileTab] = useState("decision");
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
-  const plan = result?.plan || null;
-
-  const moves = useMemo(() => {
-    return Array.isArray(plan?.rankedMoves) ? plan.rankedMoves : [];
-  }, [plan]);
-
-  const recommendedRank = Number(plan?.recommendedMove?.rank || 1);
-
-  const updateForm = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleRun = async () => {
-    setLoading(true);
-    setError("");
-    setResult(null);
-
-    try {
-      // ── Fetch unified career context (Stage 3 — enhances, does not replace inputs) ──
-      let careerContext = null;
-      try {
-        const ctxRes = await fetch("/api/intelligence/context");
-        if (ctxRes.ok) {
-          let ctxData = null;
-
-	try {
-	  ctxData = await ctxRes.json();
-	} catch {
-	  ctxData = null;
-	}
-
-	if (ctxData && typeof ctxData === "object" && "context" in ctxData) {
-		  careerContext = ctxData.context;
-		} else {
-		  console.warn("[ProjectPromotionEngine] invalid context payload");
-		  careerContext = null;
-		}
-        } else {
-          console.warn("[ProjectPromotionEngine] context fetch non-OK:", ctxRes.status);
-        }
-      } catch (ctxErr) {
-        console.warn("[ProjectPromotionEngine] context fetch failed — continuing without context:", ctxErr?.message);
-      }
-
-      // ── Build merged payload ──────────────────────────────────────────────────
-      // User inputs always take precedence. Context enriches, never overwrites.
-      const res = await fetch("/api/anvil/project-promotion/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          // User-entered fields — unchanged, always sent
-          currentRole:    form.currentRole,
-          currentCompany: form.currentCompany,
-          additionalContext: [
-            form.completedProjects ? `Completed projects:\n${form.completedProjects}` : "",
-            form.currentProjects   ? `Current projects:\n${form.currentProjects}`     : "",
-            form.problemsObserved  ? `Problems observed:\n${form.problemsObserved}`   : "",
-            form.promotionGoal     ? `Promotion/review goal:\n${form.promotionGoal}`  : "",
-          ].filter(Boolean).join("\n\n"),
-
-          // Unified career context — enhances intelligence, does not replace inputs
-          context: careerContext,
-        }),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        throw new Error(data?.error || `Project analysis failed (${res.status})`);
-      }
-
-      setResult(data);
-    } catch (err) {
-      console.error("[ProjectPromotionEngine] error", err);
-      setError(err?.message || "Project & Promotion Intelligence could not run.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ─── Input form panel ────────────────────────────────────────────────────────
-  const InputForm = () => (
+// ─── Input form — lifted outside default export to prevent cursor/focus reset ──
+function InputForm({ form, updateForm, handleRun, loading, error }) {
+  return (
     <div style={{ ...GLASS, overflow: "hidden" }}>
       <div style={{ ...SECTION_HDR, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span>🎯 PROJECT & PROMOTION INTELLIGENCE</span>
@@ -1118,9 +1023,11 @@ export default function ProjectPromotionEngine() {
       </div>
     </div>
   );
+}
 
-  // ─── Input summary — shown on left after results generate ─────────────────
-  const InputSummary = () => (
+// ─── Input summary — lifted outside default export to prevent cursor/focus reset ─
+function InputSummary({ form, onEdit }) {
+  return (
     <div style={{ ...GLASS, overflow: "hidden", height: "100%" }}>
       <div style={SECTION_HDR}>📋 YOUR INPUTS</div>
       <div style={{ padding: "12px 14px", display: "grid", gap: 8 }}>
@@ -1140,7 +1047,7 @@ export default function ProjectPromotionEngine() {
             <div style={{ fontSize: 11, color: SLATE, fontWeight: 600, lineHeight: 1.4 }}>{v}</div>
           </div>
         ))}
-        <button type="button" onClick={() => setResult(null)}
+        <button type="button" onClick={onEdit}
           style={{ marginTop: 4, padding: "7px 14px", borderRadius: 999, fontSize: 11, fontWeight: 800,
             cursor: "pointer", background: "rgba(255,112,67,0.08)", color: ORANGE,
             border: "1px solid rgba(255,112,67,0.25)" }}>
@@ -1149,6 +1056,93 @@ export default function ProjectPromotionEngine() {
       </div>
     </div>
   );
+}
+
+export default function ProjectPromotionEngine() {
+  const [form, setForm] = useState(INITIAL_FORM);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileTab, setMobileTab] = useState("decision");
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  const plan = result?.plan || null;
+
+  const moves = useMemo(() => {
+    return Array.isArray(plan?.rankedMoves) ? plan.rankedMoves : [];
+  }, [plan]);
+
+  const recommendedRank = Number(plan?.recommendedMove?.rank || 1);
+
+  const updateForm = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleRun = async () => {
+    setLoading(true);
+    setError("");
+    setResult(null);
+
+    try {
+      // ── Fetch unified career context (Stage 3 — enhances, does not replace inputs) ──
+      let careerContext = null;
+      try {
+        const ctxRes = await fetch("/api/intelligence/context");
+        if (ctxRes.ok) {
+          const ctxData = await ctxRes.json().catch(() => null);
+          careerContext = ctxData?.context ?? null;
+        } else {
+          console.warn("[ProjectPromotionEngine] context fetch non-OK:", ctxRes.status);
+        }
+      } catch (ctxErr) {
+        console.warn("[ProjectPromotionEngine] context fetch failed — continuing without context:", ctxErr?.message);
+      }
+
+      // ── Build merged payload ──────────────────────────────────────────────────
+      // User inputs always take precedence. Context enriches, never overwrites.
+      const res = await fetch("/api/anvil/project-promotion/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // User-entered fields — unchanged, always sent
+          currentRole:    form.currentRole,
+          currentCompany: form.currentCompany,
+          additionalContext: [
+            form.completedProjects ? `Completed projects:\n${form.completedProjects}` : "",
+            form.currentProjects   ? `Current projects:\n${form.currentProjects}`     : "",
+            form.problemsObserved  ? `Problems observed:\n${form.problemsObserved}`   : "",
+            form.promotionGoal     ? `Promotion/review goal:\n${form.promotionGoal}`  : "",
+          ].filter(Boolean).join("\n\n"),
+
+          // Unified career context — enhances intelligence, does not replace inputs
+          context: careerContext,
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error || `Project analysis failed (${res.status})`);
+      }
+
+      setResult(data);
+    } catch (err) {
+      console.error("[ProjectPromotionEngine] error", err);
+      setError(err?.message || "Project & Promotion Intelligence could not run.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
   // ─── MOBILE LAYOUT ─────────────────────────────────────────────────────────
   if (isMobile) {
@@ -1171,7 +1165,7 @@ export default function ProjectPromotionEngine() {
               <span>📋 View your inputs</span>
               <span style={{ fontSize: 10, color: "#94A3B8" }}>tap to expand</span>
             </summary>
-            <div style={{ marginTop: 6 }}><InputSummary /></div>
+            <div style={{ marginTop: 6 }}><InputSummary form={form} onEdit={() => setResult(null)} /></div>
           </details>
           <div style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
             <ResultCockpit result={result} plan={plan} moves={moves} recommendedRank={recommendedRank}
@@ -1199,7 +1193,7 @@ export default function ProjectPromotionEngine() {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
         <style>{`@keyframes pulseDot{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}`}</style>
-        <InputForm />
+        <InputForm form={form} updateForm={updateForm} handleRun={handleRun} loading={loading} error={error} />
         {loading && <LoadingState />}
       </div>
     );
@@ -1220,7 +1214,7 @@ export default function ProjectPromotionEngine() {
                 <LoadingState />
               </div>
             ) : (
-              <InputSummary />
+              <InputSummary form={form} onEdit={() => setResult(null)} />
             )}
           </div>
           <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -1232,7 +1226,7 @@ export default function ProjectPromotionEngine() {
       ) : (
         /* Input view — form left, preview right */
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,340px)", gap: 12, alignItems: "start" }}>
-          <InputForm />
+          <InputForm form={form} updateForm={updateForm} handleRun={handleRun} loading={loading} error={error} />
           {/* Right preview */}
           <div style={{ display: "grid", gap: 10 }}>
             <div style={{ ...GLASS, padding: "16px 14px", background: "rgba(30,41,59,0.88)",
