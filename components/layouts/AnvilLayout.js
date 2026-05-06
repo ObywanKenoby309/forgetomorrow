@@ -182,6 +182,7 @@ export default function AnvilLayout({
 
   collapseSiderails = false,
   onToggleSiderails = null,
+  showToggle = true,
 }) {
   const router = useRouter();
   const counts = useSidebarCounts();
@@ -470,9 +471,7 @@ export default function AnvilLayout({
                 padding: useLightRightRail ? 0 : 16,
               }}
             >
-              <div style={{ transform: 'scale(0.70)', transformOrigin: 'top left' }}>
               {right}
-              </div>
             </aside>
           ) : null}
 
@@ -487,7 +486,7 @@ export default function AnvilLayout({
 
         <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
 
-        {onToggleSiderails && !isMobile && (
+        {onToggleSiderails && !isMobile && showToggle && (
           <SiderailToggle
             collapsed={collapseSiderails}
             onToggle={onToggleSiderails}

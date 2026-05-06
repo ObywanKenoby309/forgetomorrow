@@ -513,6 +513,7 @@ export default function AnvilPage() {
       activeNav={activeNav}
       collapseSiderails={siderailsCollapsed}
       onToggleSiderails={() => setSiderailsCollapsed(s => !s)}
+      showToggle={Boolean(activeModule)}
     >
       <SeekerTitleCard
         greeting={greeting}
