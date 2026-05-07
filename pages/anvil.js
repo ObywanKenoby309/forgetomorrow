@@ -1,7 +1,9 @@
 // pages/anvil.js
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "./api/auth/[...nextauth]";
+import { prisma } from "@/lib/prisma";
 import AnvilLayout from "@/components/layouts/AnvilLayout";
 import SeekerTitleCard from "@/components/seeker/SeekerTitleCard";
 import ProfileDevelopment from "../components/roadmap/ProfileDevelopment";
@@ -392,8 +394,8 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
 }
 
 // ─── Desktop tile ────────────────────────────────────────────────────────────
-function DesktopTile({ tile, onOpen, withChrome }) {
-  const isLink = tile.id === "resume";
+function DesktopTile({ tile, onOpen, withChrome, profileSlug }) {
+    const isLink = tile.id === "resume" || tile.id === "profile";
 
   const tileStyle = {
     ...GLASS,
@@ -443,10 +445,15 @@ function DesktopTile({ tile, onOpen, withChrome }) {
     </>
   );
 
-  if (isLink) {
+    if (isLink) {
+    const href =
+      tile.id === "profile"
+        ? withChrome(`/profile/${profileSlug}?edit=1`)
+        : withChrome("/resume-cover");
+
     return (
       <a
-        href={withChrome("/resume-cover")}
+        href={href}
         style={tileStyle}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -471,8 +478,30 @@ function DesktopTile({ tile, onOpen, withChrome }) {
   );
 }
 
+export async function getServerSideProps(context) {
+  const session = await getServerSession(context.req, context.res, authOptions);
+  const email = session?.user?.email ? String(session.user.email).toLowerCase() : "";
+
+  let profileSlug = "";
+
+  if (email) {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { slug: true },
+    });
+
+    profileSlug = user?.slug || "";
+  }
+
+  return {
+    props: {
+      profileSlug,
+    },
+  };
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
-export default function AnvilPage() {
+export default function AnvilPage({ profileSlug = "" }) {
   const [activeModule, setActiveModuleRaw] = useState(null);
   const setActiveModule = (mod) => {
     setActiveModuleRaw(mod);
@@ -547,7 +576,13 @@ export default function AnvilPage() {
             {!activeModule && (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
                 {TILES.map((tile) => (
-                  <DesktopTile key={tile.id} tile={tile} onOpen={setActiveModule} withChrome={withChrome} />
+                  <DesktopTile
+  key={tile.id}
+  tile={tile}
+  onOpen={setActiveModule}
+  withChrome={withChrome}
+  profileSlug={profileSlug}
+/>
                 ))}
               </div>
             )}

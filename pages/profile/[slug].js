@@ -11,6 +11,7 @@
 
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
@@ -218,6 +219,7 @@ export async function getServerSideProps(context) {
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function PortfolioViewPage({ user, primaryResume, effectiveVisibility, viewer, isOwner, publicView = false }) {
+  const router = useRouter();
   const [editMode,           setEditMode]           = useState(false);
   const [mobileTab,          setMobileTab]          = useState('about');
   const [mobileSkillsReady,  setMobileSkillsReady]  = useState(false);
@@ -557,6 +559,13 @@ flushPendingSaveRef.current = flushPendingSave;
   }, []);
 
   useEffect(() => { if (!editMode) { setShowPrefsEdit(false); } }, [editMode]);
+  
+    useEffect(() => {
+    if (!isOwner) return;
+    if (router.query?.edit === '1') {
+      setEditMode(true);
+    }
+  }, [isOwner, router.query?.edit]);
 
   // Build signals for the signals bar
     const signals = [
