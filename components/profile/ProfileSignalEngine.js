@@ -283,12 +283,17 @@ function AssistPanel({ signal, profileData, careerContext, onApply, onClose }) {
         body: JSON.stringify({
           field: signal.field,
           profile: {
-            headline: profileData.headline || '',
-            aboutMe: profileData.aboutMe || '',
-            skills: safeArr(profileData.skills).map(s => typeof s === 'string' ? s : s?.name || '').filter(Boolean),
-            languages: safeArr(profileData.languages).map(l => typeof l === 'string' ? l : l?.name || '').filter(Boolean),
-            location: profileData.location || '',
-          },
+  headline: profileData.headline || '',
+  aboutMe: profileData.aboutMe || '',
+  skills: safeArr(profileData.skills).map(s => typeof s === 'string' ? s : s?.name || '').filter(Boolean),
+  languages: safeArr(profileData.languages).map(l => typeof l === 'string' ? l : l?.name || '').filter(Boolean),
+  education: safeArr(profileData.education),
+  certifications: safeArr(profileData.certifications),
+  projects: safeArr(profileData.projects),
+  workPreferences: profileData.workPreferences || {},
+  profileVisibility: profileData.profileVisibility || '',
+  location: profileData.location || '',
+},
           careerContext: careerContext || null,
           signalContext: {
             signal: signal.key,

@@ -161,13 +161,18 @@ function buildUserPrompt(body: ReqBody) {
         }
       : null,
     profile: {
-      name: profile.name || '',
-      headline: profile.headline || '',
-      aboutMe: profile.aboutMe || '',
-      skills: (profile.skills || []).slice(0, 40),
-      languages: (profile.languages || []).slice(0, 15),
-      location: profile.location || '',
-    },
+  name: profile.name || '',
+  headline: profile.headline || '',
+  aboutMe: profile.aboutMe || '',
+  skills: (profile.skills || []).slice(0, 40),
+  languages: (profile.languages || []).slice(0, 15),
+  education: Array.isArray((profile as any).education) ? (profile as any).education.slice(0, 10) : [],
+  certifications: Array.isArray((profile as any).certifications) ? (profile as any).certifications.slice(0, 10) : [],
+  projects: Array.isArray((profile as any).projects) ? (profile as any).projects.slice(0, 10) : [],
+  workPreferences: (profile as any).workPreferences || {},
+  profileVisibility: (profile as any).profileVisibility || '',
+  location: profile.location || '',
+},
     careerContext: careerContext
       ? {
           user: careerContext.user || null,
