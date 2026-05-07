@@ -507,11 +507,14 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
   const tab = mobileActiveTab || _tab;
   const setTab = onMobileTabChange || _setTab;
   const [scriptTab, setScriptTab] = useState('email');
+
+  const recommendedPath = plan?.decision?.recommendedMove?.toLowerCase().includes('balanced') ? 1
+	: plan?.decision?.recommendedMove?.toLowerCase().includes('ambit') ? 2 : 0;
+
   const [selectedPath, setSelectedPath] = useState(recommendedPath);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
-
-  function safeArr(v) { return Array.isArray(v) ? v.filter(Boolean) : []; }
+	function safeArr(v) { return Array.isArray(v) ? v.filter(Boolean) : []; }
 
   const copyEmail = () => {
     const text = plan?.conversationScript?.emailVersion || '';
@@ -528,9 +531,6 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
       setTimeout(() => setSaved(false), 2000);
     } catch {}
   };
-
-  const recommendedPath = plan?.decision?.recommendedMove?.toLowerCase().includes('balanced') ? 1
-    : plan?.decision?.recommendedMove?.toLowerCase().includes('ambit') ? 2 : 0;
 
   // Action bar
   const ActionBar = () => (
