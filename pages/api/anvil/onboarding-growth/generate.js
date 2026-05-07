@@ -439,7 +439,6 @@ This tool supports three modes:
 
 Hard rules:
 - Do NOT fabricate salary numbers, compensation statistics, or fake benchmarks.
-- Do NOT name LinkedIn, Indeed, Glassdoor, or any external platform by name. When recommending the user share publicly, say "post to your professional network" or "share on your professional profile" — never name a specific platform.
 - Keep recommendations concrete and testable.
 - If the resume suggests gaps, call them out calmly and propose a plan to close them.
 - Do NOT assume the user wants UX or any specific pivot unless explicitly provided or clearly supported by resume signals.
@@ -577,6 +576,7 @@ Global notes:
   - Offer Negotiation
 - Keep lists concise, specific, and non-repetitive.
 - If you recommend learning, tie it to a proof artifact (case study, documented improvement, measurable outcome, portfolio item).
+- IMPORTANT: Do NOT name LinkedIn, Indeed, Glassdoor, or any external platform in any field including actions, quickWins, metrics, or presentation. Say "your professional network" or "your professional profile" instead.
 
 ${modeRequirements}
 `.trim();
