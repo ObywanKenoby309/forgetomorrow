@@ -15,6 +15,8 @@
 // import ProfileSignalEngine from '@/components/profile/ProfileSignalEngine';
 // right={editMode ? <ProfileSignalEngine profileData={liveProfileData} onApply={handleApplyField} /> : <RightRailPlacementManager />}
 
+import { useEffect, useRef } from 'react';
+
 const ORANGE = '#FF7043';
 const SLATE = '#334155';
 const DARK = '#1E293B';
