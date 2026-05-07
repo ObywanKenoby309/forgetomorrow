@@ -2,7 +2,7 @@
 // 10/10 Negotiation Command Center
 // Left: guided step form | Right: cockpit — insights → tabbed results
 // Glass cards sit directly over wallpaper. No backing. No narrow column.
-import { useState, useCallback, useEffect, useRef, useContext } from 'react';
+import { useState, useCallback, useEffect, useContext } from 'react';
 import { ResumeContext } from '@/context/ResumeContext';
 import jsPDF from 'jspdf';
 
@@ -511,9 +511,14 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
   const recommendedPath = plan?.decision?.recommendedMove?.toLowerCase().includes('balanced') ? 1
 	: plan?.decision?.recommendedMove?.toLowerCase().includes('ambit') ? 2 : 0;
 
-  const [selectedPath, setSelectedPath] = useState(recommendedPath);
+  const [selectedPath, setSelectedPath] = useState(0); 
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+  
+  useEffect(() => {
+	setSelectedPath(recommendedPath);
+  }, [recommendedPath]);
+
 	function safeArr(v) { return Array.isArray(v) ? v.filter(Boolean) : []; }
 
   const copyEmail = () => {
@@ -1097,13 +1102,6 @@ export default function OfferEngine() {
 
   // ─── MOBILE LAYOUT ────────────────────────────────────────────────────────────
   if (isMobile) {
-    const RESULT_TABS_MOBILE = [
-      { id: 'decision', label: '⚡' },
-      { id: 'leverage', label: '💪' },
-      { id: 'market', label: '📊' },
-      { id: 'scripts', label: '✍️' },
-      { id: 'plan', label: '🛤' },
-    ];
 
     // Mobile: results view
     if (plan || loading) {
