@@ -80,15 +80,20 @@ function buildSystem(field: ReqBody['field']) {
   }
 
   if (field === 'projects') {
-  return [
-    ...shared,
-    'Output exactly 3 project improvement suggestions.',
-    'Each suggestion should be a concise rewritten project entry or project-strengthening note.',
-    'Focus on measurable outcomes, scope, business impact, artifacts, and recruiter validation.',
-    'Do not output skills lists.',
-    'Do not invent results. If metrics are missing, suggest placeholders like "reduced X by Y%" only as a fill-in template.',
-  ].join(' ');
-}
+	return [
+	  ...shared,
+      'Output exactly 3 project improvement suggestions.',
+      'Each suggestion should be a project-strengthening note, not a finished rewritten project entry.',
+	  'Do not write final project copy unless all facts and metrics are explicitly provided.',
+      'Focus on measurable outcomes, scope, business impact, artifacts, and recruiter validation.',
+      'Do not output skills lists.',
+      'Do not invent results and do not use fake placeholder metrics like X%, Y weeks, or Z users.',
+	  'Never invent percentages, KPIs, engagement increases, satisfaction scores, hiring metrics, or timelines.',
+	  'Only reference measurable outcomes if explicitly provided in the profile/project data.',
+	  'If metrics are missing, recommend the TYPE of metric to add instead of fabricating one.',
+	  'Use phrasing like "consider adding measurable outcomes such as adoption, engagement, operational efficiency, recruiter usage, or workflow impact if real data exists."',
+	].join(' ');
+  }
 
 if (field === 'education') {
   return [

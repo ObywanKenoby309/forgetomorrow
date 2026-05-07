@@ -139,37 +139,55 @@ const PROFILE_SIGNALS = [
     field: 'workPreferences',
     fieldLabel: 'Work Preferences',
     check: (p) => {
-      const wp = p.workPreferences || {};
-      const filled = [wp.workStatus, wp.workType, wp.schedule].filter(Boolean).length;
-      if (filled >= 3) return 'direct';
-      if (filled >= 1) return 'adjacent';
-      return 'missing';
-    },
-    gap: (p) => {
-      const wp = p.workPreferences || {};
-      const filled = [wp.workStatus, wp.workType, wp.schedule].filter(Boolean).length;
-      if (!filled) return 'No work preferences set — recruiters cannot determine your availability';
-      return 'Add more work preference details to improve recruiter matching';
-    },
+  const wp = p.workPreferences || {};
+  const filled = [
+    wp.workStatus,
+    wp.workType,
+    wp.schedule,
+    wp.willingToRelocate,
+    wp.startDate,
+    wp.scheduleAvailability,
+    ...(Array.isArray(wp.locations) ? wp.locations : []),
+  ].filter(Boolean).length;
+
+  if (filled >= 4) return 'direct';
+  if (filled >= 1) return 'adjacent';
+  return 'missing';
+},
+gap: (p) => {
+  const wp = p.workPreferences || {};
+  const filled = [
+    wp.workStatus,
+    wp.workType,
+    wp.schedule,
+    wp.willingToRelocate,
+    wp.startDate,
+    wp.scheduleAvailability,
+    ...(Array.isArray(wp.locations) ? wp.locations : []),
+  ].filter(Boolean).length;
+
+  if (!filled) return 'No work preferences set — recruiters cannot determine your availability';
+  if (filled >= 4) return 'Work preference signal is recruiter-usable';
+  return 'Add more work preference details to improve recruiter matching';
+},
   },
   {
-    key: 'language',
-    label: 'Language Signal',
-    description: 'Languages expand eligibility for global and bilingual roles',
-    field: 'languages',
-    fieldLabel: 'Languages',
-    check: (p) => {
-      const l = safeArr(p.languages);
-      if (l.length >= 2) return 'direct';
-      if (l.length >= 1) return 'adjacent';
-      return 'missing';
-    },
-    gap: (p) => {
-      const l = safeArr(p.languages);
-      if (!l.length) return 'No languages listed — missing eligibility signal for multilingual roles';
-      return 'List additional languages if you speak them';
-    },
+  key: 'language',
+  label: 'Language Signal',
+  description: 'Languages clarify communication reach without penalizing single-language professionals',
+  field: 'languages',
+  fieldLabel: 'Languages',
+  check: (p) => {
+    const l = safeArr(p.languages);
+    if (l.length >= 1) return 'direct';
+    return 'adjacent';
   },
+  gap: (p) => {
+    const l = safeArr(p.languages);
+    if (!l.length) return 'No languages listed — add your primary professional language if you want this signal complete';
+    return 'Language signal is sufficient unless you speak additional languages';
+  },
+},
   {
     key: 'visibility',
     label: 'Visibility Signal',
