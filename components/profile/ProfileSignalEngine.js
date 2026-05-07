@@ -456,17 +456,83 @@ useEffect(() => {
       </div>
 
       {/* Verdict card */}
-      {verdict && (
-        <div style={{ padding: '10px 12px', borderRadius: 10, background: `${verdict.color}14`, border: `1px solid ${verdict.color}33`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 12, color: verdict.color }}>{verdict.label}</div>
-            <div style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
-              Recruiter-grade signal analysis powered by your live ForgeTomorrow identity
-            </div>
-          </div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: verdict.color }}>{verdict.score}/8</div>
+{verdict && (
+  <div
+    style={{
+      padding: '14px 14px',
+      borderRadius: 14,
+      background: 'rgba(15,23,42,0.92)',
+      border: `1px solid ${verdict.color}55`,
+      boxShadow: `0 10px 24px rgba(0,0,0,0.16), 0 0 0 1px ${verdict.color}22`,
+      display: 'grid',
+      gap: 10,
+    }}
+  >
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+      <div>
+        <div
+          style={{
+            fontSize: 9,
+            fontWeight: 900,
+            color: '#CBD5E1',
+            letterSpacing: '0.10em',
+            textTransform: 'uppercase',
+            marginBottom: 4,
+          }}
+        >
+          Live Profile Signal
         </div>
-      )}
+
+        <div style={{ fontWeight: 950, fontSize: 14, color: 'white', lineHeight: 1.15 }}>
+          {verdict.label}
+        </div>
+
+        <div style={{ fontSize: 10, color: '#CBD5E1', marginTop: 5, lineHeight: 1.35, fontWeight: 600 }}>
+          Recruiter visibility is being measured from your live ForgeTomorrow identity.
+        </div>
+      </div>
+
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <div style={{ fontSize: 26, fontWeight: 950, color: verdict.color, lineHeight: 1 }}>
+          {verdict.score}/8
+        </div>
+        <div style={{ fontSize: 9, color: '#CBD5E1', fontWeight: 800, marginTop: 3 }}>
+          signals
+        </div>
+      </div>
+    </div>
+
+    <div
+      style={{
+        height: 7,
+        borderRadius: 999,
+        background: 'rgba(255,255,255,0.14)',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          width: `${Math.min(100, Math.max(0, (verdict.score / 8) * 100))}%`,
+          height: '100%',
+          borderRadius: 999,
+          background: verdict.color,
+        }}
+      />
+    </div>
+
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <span style={{ fontSize: 9, fontWeight: 900, color: '#BBF7D0' }}>
+        {proven} proven
+      </span>
+      <span style={{ fontSize: 9, fontWeight: 900, color: '#FDE68A' }}>
+        {partial} partial
+      </span>
+      <span style={{ fontSize: 9, fontWeight: 900, color: '#FECACA' }}>
+        {missing} missing
+      </span>
+    </div>
+  </div>
+)}
 
 {verdict?.priority && (
   <div
@@ -689,18 +755,18 @@ useEffect(() => {
                 {sig.description}
               </div>
 
-              {sig.status !== 'direct' && (
-                <div
-                  style={{
-                    fontSize: 10,
-                    color: '#475569',
-                    lineHeight: 1.45,
-                    fontWeight: 600,
-                  }}
-                >
-                  {sig.gapReason}
-                </div>
-              )}
+            {sig.status !== 'direct' && (
+			  <div
+				style={{
+				  fontSize: 10,
+				  color: '#475569',
+				  lineHeight: 1.45,
+				  fontWeight: 600,
+				}}
+			  >
+				<strong>Recruiter interpretation:</strong> this signal is not fully carrying its weight yet. Strengthen this area to make your profile easier to validate, search, and trust.
+			  </div>
+			)}
 
               {sig.field && sig.status !== 'direct' && (
                 <button
