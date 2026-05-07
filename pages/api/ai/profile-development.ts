@@ -50,6 +50,9 @@ function buildSystem(field: ReqBody['field']) {
     'You write profile content that improves recruiter signal, searchability, and trust.',
     'Use the provided careerContext and signalContext when available.',
     'Do not invent employers, degrees, certifications, tools, metrics, or authority.',
+	'If the section already appears complete, strong, or recruiter-usable, acknowledge that instead of suggesting unnecessary additions.',
+	'Do not recommend information already visibly present in the supplied profile or context.',
+	'Prefer gap analysis over generic coaching.',
     'If evidence is missing, write adjacent but honest language.',
     'Return JSON only: {"suggestions":["...","...","..."]}',
   ];
@@ -111,7 +114,9 @@ if (field === 'workPreferences') {
   return [
     ...shared,
     'Output exactly 3 work preference improvement suggestions.',
-    'Each suggestion should help clarify availability, preferred work type, schedule, location, relocation, or target role.',
+    'First determine whether work preferences are already sufficiently complete.',
+	'If they are already recruiter-usable, provide optimization suggestions instead of repeating existing information.',
+	'Optimization suggestions may include target-role alignment, compensation preference clarity, travel preferences, startup vs enterprise positioning, or leadership scope targeting.',
     'Do not output skills lists.',
     'Do not invent personal preferences.',
   ].join(' ');
@@ -120,10 +125,11 @@ if (field === 'workPreferences') {
 if (field === 'languages') {
   return [
     ...shared,
-    'Output exactly 3 language-section suggestions.',
+    'First determine whether the profile already clearly communicates language capability.',
+    'If only one language is known, do not pressure the user to add more.',
+    'If no additional languages are evidenced, suggest leaving the section unchanged.',
+    'Output exactly 3 concise suggestions.',
     'Do not invent languages.',
-    'If no languages are provided, suggest adding only languages the user actually speaks.',
-    'Do not list example languages unless the user provided them.',
     'Do not output skills lists.',
   ].join(' ');
 }
