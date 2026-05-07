@@ -77,8 +77,6 @@ function BulletList({ items, color }) {
 // ─── Phase section card ────────────────────────────────────────────────────────
 function PhaseCard({ data, direction }) {
   const [selectedActionIdx, setSelectedActionIdx] = useState(0);
-  const [showRisks, setShowRisks] = useState(false);
-  const [showQuickWins, setShowQuickWins] = useState(true);
 
   if (!data) return <div style={{ fontSize: 12, color: '#94A3B8', padding: 12 }}>No data for this phase.</div>;
 
@@ -181,35 +179,23 @@ function PhaseCard({ data, direction }) {
         </div>
       </div>
 
-      {/* Row 3: Metrics + Quick Wins side by side */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      {/* Row 3: Metrics + Quick Wins + Risks — three columns */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' + (data.risks?.length > 0 ? ' 1fr' : ''), gap: 10 }}>
         <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
           <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10, background: 'rgba(14,165,233,0.85)' }}>📊 METRICS</div>
           <div style={{ padding: '10px 12px' }}><BulletList items={data.metrics} color='#0EA5E9' /></div>
         </div>
         <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
-          <button type="button" onClick={() => setShowQuickWins(v => !v)} style={{ width: '100%', border: 'none', cursor: 'pointer', background: 'transparent', padding: 0 }}>
-            <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10, background: 'rgba(22,163,74,0.85)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>🏆 QUICK WINS</span>
-              <span style={{ fontSize: 10, opacity: 0.8 }}>{showQuickWins ? '▲' : '▼'}</span>
-            </div>
-          </button>
-          {showQuickWins && <div style={{ padding: '10px 12px' }}><BulletList items={data.quickWins} color='#16A34A' /></div>}
+          <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10, background: 'rgba(22,163,74,0.85)' }}>🏆 QUICK WINS</div>
+          <div style={{ padding: '10px 12px' }}><BulletList items={data.quickWins} color='#16A34A' /></div>
         </div>
+        {data.risks?.length > 0 && (
+          <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
+            <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10, background: 'rgba(220,38,38,0.80)' }}>⚠️ RISKS</div>
+            <div style={{ padding: '10px 12px' }}><BulletList items={data.risks} color='#DC2626' /></div>
+          </div>
+        )}
       </div>
-
-      {/* Risks — collapsible */}
-      {data.risks?.length > 0 && (
-        <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
-          <button type="button" onClick={() => setShowRisks(v => !v)} style={{ width: '100%', border: 'none', cursor: 'pointer', background: 'transparent', padding: 0 }}>
-            <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10, background: 'rgba(220,38,38,0.80)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>⚠️ RISKS</span>
-              <span style={{ fontSize: 10, opacity: 0.8 }}>{showRisks ? '▲' : '▼'}</span>
-            </div>
-          </button>
-          {showRisks && <div style={{ padding: '10px 12px' }}><BulletList items={data.risks} color='#DC2626' /></div>}
-        </div>
-      )}
 
       {/* Presentation note */}
       {data.presentation && (
@@ -218,6 +204,22 @@ function PhaseCard({ data, direction }) {
           {data.presentation}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Mentor CTA — shown once in Growth tab only ──────────────────────────────
+function MentorCTA({ router }) {
+  return (
+    <div style={{ ...GLASS, padding: '12px 14px', borderLeft: `3px solid ${ORANGE}`, marginTop: 10 }}>
+      <div style={{ fontWeight: 900, fontSize: 12, color: ORANGE, marginBottom: 5 }}>🤝 Bring a Human Mentor In</div>
+      <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 8 }}>
+        A coach can pressure-test your plan, sharpen your positioning, and keep you accountable to the timeline.
+      </div>
+      <button type="button" onClick={() => router.push('/the-hearth?module=mentorship')}
+        style={{ padding: '7px 14px', background: ORANGE, color: 'white', borderRadius: 8, fontWeight: 900, fontSize: 11, border: 'none', cursor: 'pointer' }}>
+        Find a Growth Coach on The Hearth →
+      </button>
     </div>
   );
 }
@@ -350,9 +352,12 @@ function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMob
         {activeTab === 'day60' && <PhaseCard data={plan?.day60} direction={direction} />}
         {activeTab === 'day90' && <PhaseCard data={plan?.day90} direction={direction} />}
         {activeTab === 'growth' && (
-          <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
-            <div style={SECTION_HDR}>📈 GROWTH RECOMMENDATIONS</div>
-            <div style={{ padding: '12px 14px' }}><BulletList items={plan?.growthRecommendations} /></div>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
+              <div style={SECTION_HDR}>📈 GROWTH RECOMMENDATIONS</div>
+              <div style={{ padding: '12px 14px' }}><BulletList items={plan?.growthRecommendations} /></div>
+            </div>
+            <MentorCTA router={router} />
           </div>
         )}
         {activeTab === 'skills' && (
@@ -362,17 +367,7 @@ function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMob
           </div>
         )}
 
-        {/* Mentor CTA */}
-        <div style={{ ...GLASS, padding: '12px 14px', borderLeft: `3px solid ${ORANGE}`, marginTop: 10 }}>
-          <div style={{ fontWeight: 900, fontSize: 12, color: ORANGE, marginBottom: 5 }}>🤝 Bring a Human Mentor In</div>
-          <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.55, marginBottom: 8 }}>
-            A coach can pressure-test your plan, sharpen your positioning, and keep you accountable to the timeline.
-          </div>
-          <button type="button" onClick={() => router.push('/the-hearth?module=mentorship')}
-            style={{ padding: '7px 14px', background: ORANGE, color: 'white', borderRadius: 8, fontWeight: 900, fontSize: 11, border: 'none', cursor: 'pointer' }}>
-            Find a Growth Coach on The Hearth →
-          </button>
-        </div>
+
       </div>
     </div>
   );
