@@ -12,7 +12,15 @@ const OPENAI_MODEL = process.env.OPENAI_PROFILE_MODEL || 'gpt-4o-mini';
 const GROQ_MODEL = process.env.GROQ_PROFILE_MODEL || 'llama-3.1-70b-versatile';
 
 type ReqBody = {
-  field: 'headline' | 'aboutMe' | 'skills';
+  field:
+    | 'headline'
+    | 'aboutMe'
+    | 'skills'
+    | 'projects'
+    | 'education'
+    | 'certifications'
+    | 'workPreferences'
+    | 'languages';
   profile?: {
     name?: string | null;
     headline?: string | null;
@@ -232,7 +240,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const body = (req.body || {}) as ReqBody;
   const field = body.field;
 
-  if (!field || !['headline', 'aboutMe', 'skills'].includes(field)) {
+  if (
+  !field ||
+  ![
+    'headline',
+    'aboutMe',
+    'skills',
+    'projects',
+    'education',
+    'certifications',
+    'workPreferences',
+    'languages',
+  ].includes(field)
+) {
     return res.status(400).json({ error: 'Invalid field' });
   }
 
