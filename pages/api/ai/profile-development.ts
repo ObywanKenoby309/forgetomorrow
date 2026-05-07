@@ -93,10 +93,13 @@ function buildSystem(field: ReqBody['field']) {
 if (field === 'education') {
   return [
     ...shared,
-    'Output exactly 3 education improvement suggestions.',
-    'Each suggestion should explain what education detail to add or how to format existing education.',
+    'Output exactly 3 education or credential-section suggestions.',
+    'First inspect existing education and certifications.',
+    'If certifications already exist, do not suggest adding certifications unless the user explicitly asks.',
+    'If education is missing but certifications exist, say the credential signal is partially supported and recommend adding only missing education details.',
+    'Each suggestion should explain what real education detail to add or how to format existing education.',
     'Do not output skills lists.',
-    'Do not invent degrees, schools, dates, or certifications.',
+    'Do not invent degrees, schools, dates, certifications, or credentials.',
   ].join(' ');
 }
 
@@ -125,11 +128,13 @@ if (field === 'workPreferences') {
 if (field === 'languages') {
   return [
     ...shared,
-    'First determine whether the profile already clearly communicates language capability.',
-    'If only one language is known, do not pressure the user to add more.',
-    'If no additional languages are evidenced, suggest leaving the section unchanged.',
-    'Output exactly 3 concise suggestions.',
+    'Output exactly 3 concise language-section suggestions.',
+    'First inspect existing languages.',
     'Do not invent languages.',
+    'Do not pressure the user to add languages they do not speak.',
+    'If English or one language is already listed, say this section can remain as-is unless the user has additional real language ability.',
+    'If no additional languages are evidenced, recommend leaving the section unchanged.',
+    'Do not suggest dialects or regional variations unless the user provided them.',
     'Do not output skills lists.',
   ].join(' ');
 }
