@@ -3,11 +3,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
 
-// Provider keys (already in your env)
+// Provider keys
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-// Models (safe defaults; adjust later if you want)
+// Models
 const OPENAI_MODEL = process.env.OPENAI_PROFILE_MODEL || 'gpt-4o-mini';
 const GROQ_MODEL = process.env.GROQ_PROFILE_MODEL || 'llama-3.1-70b-versatile';
 
@@ -22,6 +22,12 @@ type ReqBody = {
     location?: string | null;
   };
   resume?: { name?: string; content?: string } | null;
+  careerContext?: any | null;
+  signalContext?: {
+    signal?: string;
+    gapReason?: string;
+    currentStatus?: string;
+  } | null;
   notes?: string | null;
 };
 
@@ -31,44 +37,63 @@ function clamp(s: string, max: number) {
 }
 
 function buildSystem(field: ReqBody['field']) {
+  const shared = [
+    'You are ForgeTomorrow profile intelligence.',
+    'You write profile content that improves recruiter signal, searchability, and trust.',
+    'Use the provided careerContext and signalContext when available.',
+    'Do not invent employers, degrees, certifications, tools, metrics, or authority.',
+    'If evidence is missing, write adjacent but honest language.',
+    'Return JSON only: {"suggestions":["...","...","..."]}',
+  ];
+
   if (field === 'headline') {
     return [
-      'You help job seekers write recruiter-friendly profile headlines.',
+      ...shared,
       'Output exactly 3 headline options.',
-      'Each option must be concise (max 110 characters), human, specific, and NOT cheesy.',
-      'Avoid buzzword soup. Prefer role + domain + credibility signal.',
-      'Return JSON only: {"suggestions":["...","...","..."]}',
+      'Each option must be concise, human, specific, and not cheesy.',
+      'Maximum 110 characters per headline.',
+      'Prefer role + domain + credibility signal.',
+      'Avoid buzzword soup.',
     ].join(' ');
   }
 
   if (field === 'aboutMe') {
     return [
-      'You help job seekers write a strong professional summary for a profile.',
+      ...shared,
       'Output exactly 3 summary options.',
-      'Each summary must be 2–4 short paragraphs, human, confident, and specific.',
-      'Do not invent employers, degrees, or certifications. If missing, keep it general.',
-      'Avoid fluff. Focus on outcomes, strengths, and what roles they fit.',
-      'Return JSON only: {"suggestions":["...","...","..."]}',
+      'Each summary must be 2 to 4 short paragraphs.',
+      'Write with confidence, clarity, and human voice.',
+      'Focus on outcomes, strengths, direction, and what roles or opportunities they fit.',
+      'Avoid fluff and generic career-coach language.',
     ].join(' ');
   }
 
-  // skills
   return [
-    'You help job seekers build a recruiter-relevant skills list.',
+    ...shared,
     'Output exactly 3 skills lists.',
-    'Each list should be comma-separated skills (12–20 skills).',
-    'Skills must be realistic and align to the provided resume/profile context. No fake tools.',
-    'Return JSON only: {"suggestions":["...","...","..."]}',
+    'Each list should be comma-separated skills.',
+    'Each list should contain 12 to 20 skills.',
+    'Skills must be realistic and grounded in the profile, resume, and career context.',
+    'No fake tools. No fake credentials.',
   ].join(' ');
 }
 
 function buildUserPrompt(body: ReqBody) {
   const profile = body.profile || {};
   const resume = body.resume || null;
+  const careerContext = body.careerContext || null;
+  const signalContext = body.signalContext || null;
 
   const payload = {
     field: body.field,
     notes: body.notes || '',
+    signalContext: signalContext
+      ? {
+          signal: signalContext.signal || '',
+          gapReason: signalContext.gapReason || '',
+          currentStatus: signalContext.currentStatus || '',
+        }
+      : null,
     profile: {
       name: profile.name || '',
       headline: profile.headline || '',
@@ -77,10 +102,31 @@ function buildUserPrompt(body: ReqBody) {
       languages: (profile.languages || []).slice(0, 15),
       location: profile.location || '',
     },
+    careerContext: careerContext
+      ? {
+          user: careerContext.user || null,
+          positioning: careerContext.positioning || null,
+          proofSignals: Array.isArray(careerContext.proofSignals)
+            ? careerContext.proofSignals.slice(0, 12)
+            : [],
+          relevantWins: Array.isArray(careerContext.relevantWins)
+            ? careerContext.relevantWins.slice(0, 8)
+            : [],
+          knownGaps: Array.isArray(careerContext.knownGaps)
+            ? careerContext.knownGaps.slice(0, 8)
+            : [],
+          recentToolInsights: Array.isArray(careerContext.recentToolInsights)
+            ? careerContext.recentToolInsights.slice(0, 6)
+            : [],
+          cautionFlags: Array.isArray(careerContext.cautionFlags)
+            ? careerContext.cautionFlags.slice(0, 6)
+            : [],
+          sourceStatus: careerContext.sourceStatus || null,
+        }
+      : null,
     resume: resume
       ? {
           name: resume.name || '',
-          // keep it bounded so we don't send a novel
           content: clamp(resume.content || '', 8000),
         }
       : null,
@@ -100,7 +146,7 @@ async function callOpenAI(system: string, user: string) {
     },
     body: JSON.stringify({
       model: OPENAI_MODEL,
-      temperature: 0.6,
+      temperature: 0.45,
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: user },
@@ -129,7 +175,7 @@ async function callGroq(system: string, user: string) {
     },
     body: JSON.stringify({
       model: GROQ_MODEL,
-      temperature: 0.6,
+      temperature: 0.45,
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: user },
@@ -148,13 +194,11 @@ async function callGroq(system: string, user: string) {
 }
 
 function parseJsonSuggestions(raw: string) {
-  // Try strict JSON parse first
   try {
     const parsed = JSON.parse(raw);
     const suggestions = Array.isArray(parsed?.suggestions) ? parsed.suggestions : [];
     return suggestions.map((s: any) => String(s || '').trim()).filter(Boolean).slice(0, 3);
   } catch {
-    // Fallback: try to extract a JSON blob
     const start = raw.indexOf('{');
     const end = raw.lastIndexOf('}');
     if (start >= 0 && end > start) {
@@ -196,12 +240,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const user = buildUserPrompt(body);
 
   try {
-    // 1) OpenAI first
     let out = '';
+
     try {
       out = await callOpenAI(system, user);
-    } catch (e) {
-      // 2) fallback to Groq if OpenAI fails
+    } catch {
       out = await callGroq(system, user);
     }
 
