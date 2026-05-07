@@ -87,18 +87,34 @@ function PhaseCard({ data, direction }) {
   const isPivotMode = direction === 'pivot' || rawActions.some(a => /possible pivot|pivot \d/i.test(String(a)));
 
   // Group pivot actions into cards
+  // Title = everything before "Why it fits" / "Missing signals" / "Fast proof"
+  // Detail = remaining content split into sub-items
   const pivotGroups = [];
   if (isPivotMode) {
     let current = null;
     rawActions.forEach(item => {
       const s = String(item);
-      if (/possible pivot|pivot \d/i.test(s)) {
+      if (/^possible pivot \d|^pivot \d/i.test(s.trim())) {
         if (current) pivotGroups.push(current);
-        current = { title: s, items: [] };
+        // Extract clean title — everything before the first detail separator
+        const cleanTitle = s
+          .replace(/possible pivot \d+:?\s*/i, '')
+          .replace(/pivot \d+:?\s*/i, '')
+          .split(/\s*Why it fits:|\s*Missing signals:|\s*Fast proof:|\s*Cost\/tradeoff:/i)[0]
+          .trim();
+        // Remaining parts after the separator become detail items
+        const remainder = s
+          .replace(/possible pivot \d+:?\s*/i, '')
+          .replace(/pivot \d+:?\s*/i, '')
+          .replace(cleanTitle, '')
+          .trim();
+        const detailItems = remainder
+          ? remainder.split(/(?=Why it fits:|Missing signals:|Fast proof:|Cost\/tradeoff:)/i).map(d => d.trim()).filter(Boolean)
+          : [];
+        current = { title: cleanTitle, items: detailItems };
       } else if (current) {
         current.items.push(s);
       } else {
-        // Pre-pivot content — add to a general group
         if (!pivotGroups.length) pivotGroups.push({ title: 'Actions', items: [] });
         pivotGroups[0].items.push(s);
       }
@@ -143,7 +159,7 @@ function PhaseCard({ data, direction }) {
                         PATH {pivotNum}
                       </div>
                       <div style={{ fontSize: 10, fontWeight: 800, color: isActive ? '#C2410C' : DARK, lineHeight: 1.3 }}>
-                        {group.title.replace(/possible pivot \d+:?\s*/i, '').slice(0, 60) || `Option ${pivotNum}`}
+                        {group.title.slice(0, 55) || `Option ${pivotNum}`}
                       </div>
                     </button>
                   );
@@ -152,7 +168,10 @@ function PhaseCard({ data, direction }) {
               {/* Selected pivot detail */}
               {pivotGroups[safeIdx] && (
                 <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(255,112,67,0.04)', border: '1px solid rgba(255,112,67,0.14)' }}>
-                  <BulletList items={pivotGroups[safeIdx].items} />
+                  {pivotGroups[safeIdx].items.length > 0
+                    ? <BulletList items={pivotGroups[safeIdx].items} />
+                    : <div style={{ fontSize: 11, color: '#94A3B8', fontStyle: 'italic' }}>Select this path to see details — or scroll up to review the full output.</div>
+                  }
                 </div>
               )}
             </>
