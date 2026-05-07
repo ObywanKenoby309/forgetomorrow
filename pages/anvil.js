@@ -107,8 +107,8 @@ const TILES = [
 ];
 
 // ─── Mobile carousel card ────────────────────────────────────────────────────
-function MobileCard({ tile, isActive, onSelect, withChrome }) {
-  const isLink = tile.id === "resume";
+function MobileCard({ tile, isActive, onSelect, withChrome, profileSlug }) {
+  const isLink = tile.id === "resume" || tile.id === "profile";
 
   const cardStyle = {
     display: "block",
@@ -167,9 +167,18 @@ function MobileCard({ tile, isActive, onSelect, withChrome }) {
     </>
   );
 
-  if (isLink) {
-    return <a href={withChrome("/resume-cover")} style={cardStyle}>{inner}</a>;
-  }
+if (isLink) {
+  const href =
+    tile.id === "profile"
+      ? withChrome(`/profile/${profileSlug}?edit=1`)
+      : withChrome("/resume-cover");
+
+  return (
+    <a href={href} style={cardStyle}>
+      {inner}
+    </a>
+  );
+}
 
   return (
     <button onClick={onSelect} style={{ ...cardStyle, border: cardStyle.border }}>
@@ -179,7 +188,7 @@ function MobileCard({ tile, isActive, onSelect, withChrome }) {
 }
 
 // ─── Mobile layout: dropdown + carousel + inline content ────────────────────
-function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
+function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome, profileSlug }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const trackRef = useRef(null);
@@ -312,11 +321,12 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
             padding: "0 16px", boxSizing: "border-box",
           }}>
             <MobileCard
-              tile={tile}
-              isActive={activeModule === tile.id}
-              onSelect={() => handleCardSelect(tile)}
-              withChrome={withChrome}
-            />
+  tile={tile}
+  isActive={activeModule === tile.id}
+  onSelect={() => handleCardSelect(tile)}
+  withChrome={withChrome}
+  profileSlug={profileSlug}
+/>
           </div>
         ))}
       </div>
@@ -563,11 +573,12 @@ export default function AnvilPage({ profileSlug = "" }) {
         {/* ── MOBILE ── */}
         {isMobile && (
           <MobileAnvil
-            tiles={TILES}
-            activeModule={activeModule}
-            setActiveModule={setActiveModule}
-            withChrome={withChrome}
-          />
+  tiles={TILES}
+  activeModule={activeModule}
+  setActiveModule={setActiveModule}
+  withChrome={withChrome}
+  profileSlug={profileSlug}
+/>
         )}
 
         {/* ── DESKTOP ── */}
