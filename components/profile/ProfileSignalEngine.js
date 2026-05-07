@@ -15,8 +15,6 @@
 // import ProfileSignalEngine from '@/components/profile/ProfileSignalEngine';
 // right={editMode ? <ProfileSignalEngine profileData={liveProfileData} onApply={handleApplyField} /> : <RightRailPlacementManager />}
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-
 const ORANGE = '#FF7043';
 const SLATE = '#334155';
 const DARK = '#1E293B';
@@ -177,14 +175,14 @@ const PROFILE_SIGNALS = [
     field: null,
     fieldLabel: null,
     check: (p) => {
-      const hasResume = Boolean(p.primaryResume);
+      const hasResume = Boolean(p.primaryResume || p.hasResume);
       const isPublic = p.profileVisibility === 'PUBLIC' || p.profileVisibility === 'RECRUITERS_ONLY';
       if (hasResume && isPublic) return 'direct';
       if (hasResume || isPublic) return 'adjacent';
       return 'missing';
     },
     gap: (p) => {
-      const hasResume = Boolean(p.primaryResume);
+      const hasResume = Boolean(p.primaryResume || p.hasResume);
       const isPublic = p.profileVisibility === 'PUBLIC' || p.profileVisibility === 'RECRUITERS_ONLY';
       if (!hasResume && !isPublic) return 'Profile is private and no resume attached — invisible to recruiters';
       if (!hasResume) return 'No primary resume attached — recruiters cannot download your CV';
@@ -371,16 +369,40 @@ export default function ProfileSignalEngine({ profileData = {}, onApply }) {
       .catch(() => {});
   }, []);
 
-  // Re-classify signals whenever profileData changes (debounced)
-  useEffect(() => {
+  // Re-classify signals whenever profileData or careerContext changes (debounced)
+useEffect(() => {
+  if (debounceRef.current) clearTimeout(debounceRef.current);
+
+  debounceRef.current = setTimeout(() => {
+    const mergedProfileData = {
+      ...profileData,
+
+      // Resume fallback from unified intelligence context
+      primaryResume:
+        profileData?.primaryResume ||
+        careerContext?.resume ||
+        careerContext?.primaryResume ||
+        null,
+
+      hasResume:
+        Boolean(
+          profileData?.primaryResume ||
+          careerContext?.resume ||
+          careerContext?.primaryResume ||
+          careerContext?.maps?.sourceStatus?.hasResume
+        ),
+    };
+
+    const classified = classifySignals(mergedProfileData);
+
+    setSignals(classified);
+    setVerdict(overallVerdict(classified));
+  }, 300);
+
+  return () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      const classified = classifySignals(profileData);
-      setSignals(classified);
-      setVerdict(overallVerdict(classified));
-    }, 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [profileData]);
+  };
+}, [profileData, careerContext]);
 
   const proven  = signals.filter(s => s.status === 'direct').length;
   const partial = signals.filter(s => s.status === 'adjacent').length;
