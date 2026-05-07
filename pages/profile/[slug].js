@@ -17,6 +17,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../api/auth/[...nextauth]';
 import InternalLayout from '@/components/layouts/InternalLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import ProfileSignalEngine      from '@/components/profile/ProfileSignalEngine';
 import MemberAvatarActions from '@/components/member/MemberAvatarActions';
 import ProfileResumeAttach    from '@/components/profile/ProfileResumeAttach';
 import ProfileCertifications  from '@/components/profile/ProfileCertifications';
@@ -581,6 +582,55 @@ flushPendingSaveRef.current = flushPendingSave;
 
   const summaryShouldExtendRight = !showRightColumn;
   const useTallSummaryCard = editMode || hasInterestsContent || showBottomRow;
+
+  // ─── Live profile snapshot for ProfileSignalEngine ───────────────────────
+  const liveProfileData = useMemo(() => ({
+    headline,
+    aboutMe,
+    skills,
+    languages,
+    education,
+    certifications,
+    projects,
+    workPreferences: {
+      workStatus:           prefWorkStatus,
+      workType:             prefWorkType,
+      schedule:             prefSchedule,
+      willingToRelocate:    prefWillingToRelocate,
+      startDate:            prefStartDate,
+      scheduleAvailability: prefScheduleAvailability,
+      locations:            prefLocations,
+    },
+    profileVisibility,
+  }), [
+    headline, aboutMe, skills, languages, education, certifications, projects,
+    prefWorkStatus, prefWorkType, prefSchedule, prefWillingToRelocate,
+    prefStartDate, prefScheduleAvailability, prefLocations, profileVisibility,
+  ]);
+
+  // Called by ProfileSignalEngine when user applies an AI suggestion
+  const handleApplyField = useCallback((field, value) => {
+    switch (field) {
+      case 'headline':         setHeadline(value);   break;
+      case 'aboutMe':          setAboutMe(value);    break;
+      case 'skills': {
+        // value may come in as comma-separated string or array
+        const arr = Array.isArray(value)
+          ? value
+          : String(value).split(',').map(s => s.trim()).filter(Boolean);
+        setSkills(arr);
+        break;
+      }
+      case 'languages': {
+        const arr = Array.isArray(value)
+          ? value
+          : String(value).split(',').map(s => s.trim()).filter(Boolean);
+        setLanguages(arr);
+        break;
+      }
+      default: break;
+    }
+  }, []);
 
   // ─────────────────────────────────────────────────────────────────────────
   const pageContent = (
@@ -1729,7 +1779,10 @@ flushPendingSaveRef.current = flushPendingSave;
   return (
     <InternalLayout
       title={`${fullName} — ForgeTomorrow`} activeNav="profile" header={null}
-      right={editMode ? <ProfileStrengthRail /> : <RightRailPlacementManager />}
+      right={editMode
+        ? <ProfileSignalEngine profileData={liveProfileData} onApply={handleApplyField} />
+        : <RightRailPlacementManager />
+      }
       rightVariant="dark"
       backgroundOverrideUrl={effectiveWallpaper}
       collapseSiderails={siderailsCollapsed}
@@ -1737,94 +1790,6 @@ flushPendingSaveRef.current = flushPendingSave;
     >
       {pageContent}
     </InternalLayout>
-  );
-}
-
-// ─── ProfileStrengthRail — condensed dark-glass version of ProfileDevelopment ──
-// Shows in the right rail during edit mode. Same logic, native dark skin.
-function ProfileStrengthRail() {
-  const [data,    setData]    = useState(null);
-  const [loading, setLoading] = useState(true);
-  const ORANGE = '#FF7043';
-
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/profile/details').then(r => r.json()).catch(() => ({})),
-      fetch('/api/profile/primaries').then(r => r.json()).catch(() => ({})),
-    ]).then(([dJson, pJson]) => {
-      const details      = dJson?.details || dJson || {};
-      const primaryResume = pJson?.primaryResume || null;
-      const headline     = String(details?.headline || '').trim();
-      const aboutMe      = String(details?.aboutMe  || '').trim();
-      const skills       = (Array.isArray(details?.skillsJson) ? details.skillsJson : []).filter(Boolean);
-      const languages    = (Array.isArray(details?.languagesJson) ? details.languagesJson : []).filter(Boolean);
-
-      const items = [
-        { key: 'headline',  label: 'Headline',        done: headline.length >= 8   },
-        { key: 'aboutMe',   label: 'Summary',         done: aboutMe.length >= 120  },
-        { key: 'skills',    label: 'Skills (8+)',      done: skills.length >= 8     },
-        { key: 'languages', label: 'Languages',        done: languages.length >= 1  },
-        { key: 'resume',    label: 'Primary resume',   done: Boolean(primaryResume) },
-      ];
-
-      const completed = items.filter(i => i.done).length;
-      setData({ items, completed, total: items.length });
-    }).finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return (
-    <div style={{ padding: '16px', color: 'rgba(255,255,255,0.35)', fontSize: 12, fontWeight: 600 }}>
-      Checking profile strength…
-    </div>
-  );
-
-  if (!data) return null;
-
-  const pct = Math.round((data.completed / data.total) * 100);
-
-  return (
-    <div className="ft-ai-rail" style={{ padding: '0 2px' }}>
-      <div className="ft-ai-rail-head">Profile Strength</div>
-
-      {/* Progress */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>
-            {data.completed} of {data.total} complete
-          </span>
-          <span style={{ fontSize: 11, color: ORANGE, fontWeight: 800 }}>{pct}%</span>
-        </div>
-        <div className="ft-ai-progress-bar">
-          <div className="ft-ai-progress-fill" style={{ width: `${pct}%` }} />
-        </div>
-      </div>
-
-      {/* Checklist items */}
-      {data.items.map(item => (
-        <div key={item.key} className={`ft-ai-item${item.done ? ' complete' : ''}`}>
-          <div className="ft-ai-item-top">
-            <span className="ft-ai-item-title">{item.label}</span>
-            <span className={`ft-ai-item-status ${item.done ? 'ok' : 'gap'}`}>
-              {item.done ? '✓ Done' : 'Gap'}
-            </span>
-          </div>
-          {!item.done && (
-            <a href="/profile/edit" style={{ textDecoration: 'none' }}>
-              <button type="button" className="ft-ai-assist-btn">
-                <svg width="11" height="11" fill="none" viewBox="0 0 12 12">
-                  <path d="M6 1l1.2 3.6H11L8.4 6.8l1 3.2L6 8l-3.4 2 1-3.2L1 4.6h3.8L6 1z" fill="currentColor"/>
-                </svg>
-                AI Assist
-              </button>
-            </a>
-          )}
-        </div>
-      ))}
-
-      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', lineHeight: 1.55, paddingTop: 4 }}>
-        AI suggestions are based on your stored profile and primary resume. For deeper strategy, work with a coach in Spotlight.
-      </div>
-    </div>
   );
 }
 
