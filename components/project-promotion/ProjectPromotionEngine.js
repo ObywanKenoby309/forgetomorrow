@@ -488,30 +488,36 @@ function MoveCard({ move, recommended }) {
   );
 }
 
-function MoveSignalMap({ moves, recommendedRank }) {
+function MoveSignalMap({ moves, recommendedRank, activeMoveRank, onSelect }) {
   if (!moves.length) return null;
 
   return (
     <div style={{ ...WHITE_CARD, overflow: "hidden" }}>
-      <div style={SECTION_HDR}>PROMOTION SIGNAL MAP</div>
-      <div style={{ padding: 12, display: "grid", gap: 10 }}>
+      <div style={SECTION_HDR}>PROMOTION SIGNAL MAP — select a move to explore</div>
+      <div style={{ padding: 12, display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 8 }}>
         {moves.map((move) => {
           const levels = getSignalLevels(move);
           const recommended = Number(move?.rank) === recommendedRank;
+          const isActive = Number(move?.rank) === Number(activeMoveRank);
           return (
-            <div
+            <button
               key={`${move?.rank || ""}-${move?.title || ""}-signal`}
+              type="button"
+              onClick={() => onSelect && onSelect(Number(move?.rank))}
               style={{
                 padding: 10,
                 borderRadius: 10,
-                background: recommended ? "rgba(255,112,67,0.07)" : "rgba(248,250,252,0.92)",
-                border: recommended ? "1px solid rgba(255,112,67,0.22)" : "1px solid rgba(0,0,0,0.06)",
+                background: isActive ? "rgba(255,112,67,0.10)" : recommended ? "rgba(255,112,67,0.04)" : "rgba(248,250,252,0.92)",
+                border: isActive ? `2px solid ${ORANGE}` : recommended ? "1px solid rgba(255,112,67,0.22)" : "1px solid rgba(0,0,0,0.06)",
                 display: "grid",
                 gap: 7,
+                cursor: "pointer",
+                textAlign: "left",
+                transition: "all 0.15s ease",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 900, color: DARK }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 10, fontWeight: 900, color: isActive ? ORANGE : DARK, lineHeight: 1.3 }}>
                   #{move?.rank} {move?.title || "Move"}
                 </div>
                 {recommended && <StatusPill tone="orange">Recommended</StatusPill>}
@@ -520,7 +526,7 @@ function MoveSignalMap({ moves, recommendedRank }) {
               <SignalBar label="Scope" level={levels.scope} />
               <SignalBar label="Measurable" level={levels.measurable} />
               <SignalBar label="Leadership" level={levels.leadership} />
-            </div>
+            </button>
           );
         })}
       </div>
@@ -710,52 +716,15 @@ function ResultCockpit({ result, plan, moves, recommendedRank, mobileTab, onMobi
 
   const MovesTab = () => (
     <div style={{ display: "grid", gap: 10 }}>
-      <MoveSignalMap moves={moves} recommendedRank={recommendedRank} />
+      {/* Signal map IS the selector — click a card to select a move */}
+      <MoveSignalMap
+        moves={moves}
+        recommendedRank={recommendedRank}
+        activeMoveRank={activeMoveRank}
+        onSelect={setActiveMoveRank}
+      />
 
-      <div style={{ ...WHITE_CARD, padding: 10, display: "grid", gap: 8 }}>
-        <div style={{ fontSize: 11, fontWeight: 900, color: "#64748B" }}>
-          TOP 3 WAYS TO WIN NEXT
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6 }}>
-          {moves.map((move) => {
-            const isSelected = Number(move?.rank) === Number(activeMoveRank);
-            const isRecommended = Number(move?.rank) === Number(recommendedRank);
-
-            return (
-              <button
-                key={`${move?.rank || ""}-${move?.title || ""}-selector`}
-                type="button"
-                onClick={() => setActiveMoveRank(Number(move?.rank) || 1)}
-                style={{
-                  padding: "8px 9px",
-                  borderRadius: 10,
-                  border: isSelected ? `2px solid ${ORANGE}` : "1px solid rgba(0,0,0,0.10)",
-                  background: isSelected ? "rgba(255,112,67,0.10)" : "rgba(255,255,255,0.86)",
-                  color: isSelected ? ORANGE : DARK,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  display: "grid",
-                  gap: 3,
-                  minHeight: 76,
-                }}
-              >
-                <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: 0.4 }}>
-                  MOVE #{move?.rank || ""}
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 900, lineHeight: 1.25 }}>
-                  {move?.title || "Untitled move"}
-                </span>
-                {isRecommended && (
-                  <span style={{ fontSize: 9, fontWeight: 900, color: ORANGE }}>
-                    Recommended
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
+      {/* Selected move detail — recommended pre-selected, updates on map click */}
       {selectedMove && (
         <MoveCard
           key={`${selectedMove?.rank || ""}-${selectedMove?.title || ""}`}
