@@ -507,6 +507,7 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
   const tab = mobileActiveTab || _tab;
   const setTab = onMobileTabChange || _setTab;
   const [scriptTab, setScriptTab] = useState('email');
+  const [selectedPath, setSelectedPath] = useState(recommendedPath);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -760,30 +761,50 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
   // PLAN tab — paths + next steps + mentor
   const PlanTab = () => (
     <div style={{ display: 'grid', gap: 8 }}>
-      {/* Negotiation paths — horizontal, recommended highlighted */}
+      {/* Negotiation paths — clickable selector cards + detail below */}
       <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
-        <div style={SECTION_HDR}>NEGOTIATION PATHS</div>
-        <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          {safeArr(plan?.negotiationPaths).slice(0, 3).map((p, i) => {
+        <div style={SECTION_HDR}>NEGOTIATION PATHS — select to explore</div>
+        <div style={{ padding: '12px 14px', display: 'grid', gap: 10 }}>
+          {/* Selector cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+            {safeArr(plan?.negotiationPaths).slice(0, 3).map((p, i) => {
+              const colors = ['#16A34A', '#0EA5E9', '#DC2626'];
+              const isRec = i === recommendedPath;
+              const isActive = i === selectedPath;
+              return (
+                <button key={i} type="button" onClick={() => setSelectedPath(i)}
+                  style={{
+                    borderRadius: 10, overflow: 'hidden', cursor: 'pointer', textAlign: 'left',
+                    border: isActive ? `2px solid ${colors[i]}` : '1px solid rgba(0,0,0,0.08)',
+                    boxShadow: isActive ? `0 4px 12px ${colors[i]}33` : 'none',
+                    background: isActive ? `${colors[i]}0d` : 'rgba(255,255,255,0.86)',
+                    padding: '10px 11px', transition: 'all 0.15s',
+                  }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginBottom: 4 }}>
+                    <span style={{ fontWeight: 900, fontSize: 11, color: isActive ? colors[i] : DARK }}>{p?.label}</span>
+                    {isRec && <span style={{ fontSize: 8, fontWeight: 800, color: colors[i], background: `${colors[i]}18`, padding: '1px 6px', borderRadius: 999, border: `1px solid ${colors[i]}44` }}>RECOMMENDED</span>}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#64748B', lineHeight: 1.35 }}>{p?.askFraming?.slice(0, 60)}{p?.askFraming?.length > 60 ? '…' : ''}</div>
+                </button>
+              );
+            })}
+          </div>
+          {/* Selected path detail */}
+          {safeArr(plan?.negotiationPaths)[selectedPath] && (() => {
+            const p = safeArr(plan.negotiationPaths)[selectedPath];
             const colors = ['#16A34A', '#0EA5E9', '#DC2626'];
-            const isRec = i === recommendedPath;
+            const c = colors[selectedPath] || ORANGE;
             return (
-              <div key={i} style={{ borderRadius: 10, overflow: 'hidden', border: `2px solid ${isRec ? colors[i] : 'rgba(0,0,0,0.08)'}`, boxShadow: isRec ? `0 4px 12px ${colors[i]}33` : 'none' }}>
-                <div style={{ padding: '8px 10px', background: isRec ? colors[i] : 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 900, fontSize: 11, color: isRec ? 'white' : colors[i] }}>{p?.label}</span>
-                  {isRec && <span style={{ fontSize: 9, fontWeight: 800, color: 'white', background: 'rgba(255,255,255,0.25)', padding: '1px 6px', borderRadius: 999 }}>RECOMMENDED</span>}
-                </div>
-                <div style={{ padding: '10px', background: 'rgba(255,255,255,0.92)' }}>
-                  {[['Ask', p?.askFraming], ['Best when', p?.bestWhen], ['Tradeoffs', p?.tradeoffs]].map(([k, v]) => v && (
-                    <div key={k} style={{ marginBottom: 6 }}>
-                      <div style={{ fontSize: 8, fontWeight: 700, color: '#94A3B8', marginBottom: 1, letterSpacing: 0.3 }}>{k.toUpperCase()}</div>
-                      <div style={{ fontSize: 10, color: SLATE, lineHeight: 1.4 }}>{v}</div>
-                    </div>
-                  ))}
-                </div>
+              <div style={{ borderRadius: 10, padding: '12px 14px', background: `${c}08`, border: `1px solid ${c}28`, display: 'grid', gap: 8 }}>
+                {[['Ask', p?.askFraming], ['Best when', p?.bestWhen], ['Tradeoffs', p?.tradeoffs]].map(([k, v]) => v && (
+                  <div key={k}>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: c, marginBottom: 3, letterSpacing: 0.3 }}>{k.toUpperCase()}</div>
+                    <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.5 }}>{v}</div>
+                  </div>
+                ))}
               </div>
             );
-          })}
+          })()}
         </div>
       </div>
 
