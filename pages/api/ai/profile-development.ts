@@ -76,14 +76,66 @@ function buildSystem(field: ReqBody['field']) {
     ].join(' ');
   }
 
+  if (field === 'projects') {
   return [
     ...shared,
-    'Output exactly 3 skills lists.',
-    'Each list should be comma-separated skills.',
-    'Each list should contain 12 to 20 skills.',
-    'Skills must be realistic and grounded in the profile, resume, and career context.',
-    'No fake tools. No fake credentials.',
+    'Output exactly 3 project improvement suggestions.',
+    'Each suggestion should be a concise rewritten project entry or project-strengthening note.',
+    'Focus on measurable outcomes, scope, business impact, artifacts, and recruiter validation.',
+    'Do not output skills lists.',
+    'Do not invent results. If metrics are missing, suggest placeholders like "reduced X by Y%" only as a fill-in template.',
   ].join(' ');
+}
+
+if (field === 'education') {
+  return [
+    ...shared,
+    'Output exactly 3 education improvement suggestions.',
+    'Each suggestion should explain what education detail to add or how to format existing education.',
+    'Do not output skills lists.',
+    'Do not invent degrees, schools, dates, or certifications.',
+  ].join(' ');
+}
+
+if (field === 'certifications') {
+  return [
+    ...shared,
+    'Output exactly 3 certification improvement suggestions.',
+    'Each suggestion should explain what real certification details to add or how to present existing credentials.',
+    'Do not output skills lists.',
+    'Do not invent certifications.',
+  ].join(' ');
+}
+
+if (field === 'workPreferences') {
+  return [
+    ...shared,
+    'Output exactly 3 work preference improvement suggestions.',
+    'Each suggestion should help clarify availability, preferred work type, schedule, location, relocation, or target role.',
+    'Do not output skills lists.',
+    'Do not invent personal preferences.',
+  ].join(' ');
+}
+
+if (field === 'languages') {
+  return [
+    ...shared,
+    'Output exactly 3 language-section suggestions.',
+    'Do not invent languages.',
+    'If no languages are provided, suggest adding only languages the user actually speaks.',
+    'Do not list example languages unless the user provided them.',
+    'Do not output skills lists.',
+  ].join(' ');
+}
+
+return [
+  ...shared,
+  'Output exactly 3 skills lists.',
+  'Each list should be comma-separated skills.',
+  'Each list should contain 12 to 20 skills.',
+  'Skills must be realistic and grounded in the profile, resume, and career context.',
+  'No fake tools. No fake credentials.',
+].join(' ');
 }
 
 function buildUserPrompt(body: ReqBody) {
