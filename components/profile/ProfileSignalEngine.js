@@ -221,10 +221,47 @@ function overallVerdict(signals) {
   const proven  = signals.filter(s => s.status === 'direct').length;
   const partial = signals.filter(s => s.status === 'adjacent').length;
   const missing = signals.filter(s => s.status === 'missing').length;
-  if (proven >= 6)  return { label: 'Strong Profile',     color: '#15803D', score: proven };
-  if (proven >= 4)  return { label: 'Competitive Profile', color: '#0EA5E9', score: proven };
-  if (proven >= 2)  return { label: 'Developing Profile',  color: '#D97706', score: proven };
-  return                   { label: 'Needs Work',          color: '#DC2626', score: proven };
+
+  let verdict;
+
+  if (proven >= 6) {
+    verdict = {
+      label: 'Strong Profile',
+      color: '#15803D',
+      score: proven,
+    };
+  } else if (proven >= 4) {
+    verdict = {
+      label: 'Competitive Profile',
+      color: '#0EA5E9',
+      score: proven,
+    };
+  } else if (proven >= 2) {
+    verdict = {
+      label: 'Developing Profile',
+      color: '#D97706',
+      score: proven,
+    };
+  } else {
+    verdict = {
+      label: 'Needs Work',
+      color: '#DC2626',
+      score: proven,
+    };
+  }
+
+  const priority =
+    signals.find(s => s.status === 'missing') ||
+    signals.find(s => s.status === 'adjacent') ||
+    null;
+
+  return {
+    ...verdict,
+    proven,
+    partial,
+    missing,
+    priority,
+  };
 }
 
 // ─── AI Assist panel ──────────────────────────────────────────────────────────
@@ -275,7 +312,7 @@ function AssistPanel({ signal, profileData, careerContext, onApply, onClose }) {
   };
 
   return (
-    <div style={{ display: 'grid', gap: 10 }}>
+    <div style={{ display: 'grid', gap: 8 }}>
       {/* Context note */}
       <div style={{ padding: '8px 10px', borderRadius: 8, background: 'rgba(255,112,67,0.08)', border: '1px solid rgba(255,112,67,0.20)', fontSize: 11, color: '#9A3412', lineHeight: 1.4, fontWeight: 700 }}>
         {signal.gapReason}
@@ -360,6 +397,7 @@ export default function ProfileSignalEngine({ profileData = {}, onApply }) {
   const [signals, setSignals]           = useState([]);
   const [verdict, setVerdict]           = useState(null);
   const [activeAssist, setActiveAssist] = useState(null); // signal key
+  const [expandedSignal, setExpandedSignal] = useState(null);
   const [careerContext, setCareerContext] = useState(null);
   const debounceRef = useRef(null);
 
@@ -423,81 +461,295 @@ useEffect(() => {
           <div>
             <div style={{ fontWeight: 900, fontSize: 12, color: verdict.color }}>{verdict.label}</div>
             <div style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
-              {proven} proven · {partial} partial · {missing} missing
+              Recruiter-grade signal analysis powered by your live ForgeTomorrow identity
             </div>
           </div>
           <div style={{ fontSize: 20, fontWeight: 900, color: verdict.color }}>{verdict.score}/8</div>
         </div>
       )}
 
+{verdict?.priority && (
+  <div
+    style={{
+      borderRadius: 12,
+      border: '1px solid rgba(255,112,67,0.22)',
+      background: 'rgba(255,255,255,0.88)',
+      padding: '12px 14px',
+      display: 'grid',
+      gap: 6,
+      boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
+    }}
+  >
+    <div
+      style={{
+        fontSize: 10,
+        fontWeight: 900,
+        color: ORANGE,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+      }}
+    >
+      Highest Leverage Improvement
+    </div>
+
+    <div
+      style={{
+        fontSize: 12,
+        fontWeight: 800,
+        color: DARK,
+        lineHeight: 1.4,
+      }}
+    >
+      {verdict.priority.label}
+    </div>
+
+    <div
+      style={{
+        fontSize: 11,
+        color: '#475569',
+        lineHeight: 1.45,
+        fontWeight: 600,
+      }}
+    >
+      {verdict.priority.gapReason}
+    </div>
+
+    {verdict.priority.field && (
+      <button
+        type="button"
+        onClick={() => {
+          setExpandedSignal(verdict.priority.key);
+          setActiveAssist(verdict.priority.key);
+        }}
+        style={{
+          marginTop: 2,
+          width: 'fit-content',
+          padding: '7px 12px',
+          borderRadius: 999,
+          border: 'none',
+          background: ORANGE,
+          color: 'white',
+          fontSize: 11,
+          fontWeight: 900,
+          cursor: 'pointer',
+        }}
+      >
+        ⚡ Improve This Signal
+      </button>
+    )}
+  </div>
+)}
+
       {/* Signal bands */}
-      <div style={{ display: 'grid', gap: 6 }}>
-        {signals.map(sig => {
-          const cfg = statusConfig(sig.status);
-          const isOpen = activeAssist === sig.key;
-          return (
-            <div key={sig.key} style={{ borderRadius: 10, border: `1px solid ${cfg.color}33`, background: cfg.bg, overflow: 'hidden' }}>
-              {/* Signal row */}
-              <div style={{ padding: '8px 10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
-                    <span style={{ fontSize: 11, fontWeight: 900, color: cfg.color, flexShrink: 0 }}>{cfg.icon}</span>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 11, fontWeight: 800, color: DARK, lineHeight: 1.2 }}>{sig.label}</div>
-                      <div style={{ fontSize: 9, color: cfg.color, fontWeight: 700, marginTop: 1 }}>{cfg.riskLabel}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, color: cfg.color, background: 'rgba(255,255,255,0.70)', padding: '2px 7px', borderRadius: 999, border: `1px solid ${cfg.color}44`, whiteSpace: 'nowrap' }}>
-                      {cfg.label}
-                    </span>
-                    {sig.field && sig.status !== 'direct' && (
-                      <button type="button"
-                        onClick={() => setActiveAssist(isOpen ? null : sig.key)}
-                        style={{ fontSize: 9, fontWeight: 900, color: isOpen ? '#64748B' : ORANGE, background: isOpen ? 'rgba(0,0,0,0.06)' : 'rgba(255,112,67,0.10)', border: `1px solid ${isOpen ? 'rgba(0,0,0,0.10)' : 'rgba(255,112,67,0.25)'}`, borderRadius: 999, padding: '2px 8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        {isOpen ? 'Close' : 'AI Assist'}
-                      </button>
-                    )}
-                  </div>
+<div style={{ display: 'grid', gap: 6 }}>
+  {signals.map(sig => {
+    const cfg = statusConfig(sig.status);
+    const isOpen = activeAssist === sig.key;
+    const isExpanded = expandedSignal === sig.key;
+
+    return (
+      <div
+        key={sig.key}
+        style={{
+          borderRadius: 10,
+          border: `1px solid ${cfg.color}33`,
+          background: cfg.bg,
+          overflow: 'hidden',
+          transition: 'all 0.15s ease',
+        }}
+      >
+        {/* Compact signal row */}
+        <div
+          onClick={() =>
+            setExpandedSignal(isExpanded ? null : sig.key)
+          }
+          style={{
+            padding: '9px 10px',
+            cursor: 'pointer',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+            }}
+          >
+            {/* LEFT */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 7,
+                minWidth: 0,
+                flex: 1,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 900,
+                  color: cfg.color,
+                  flexShrink: 0,
+                }}
+              >
+                {cfg.icon}
+              </span>
+
+              <div
+                style={{
+                  minWidth: 0,
+                  display: 'grid',
+                  gap: 1,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: DARK,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {sig.label}
                 </div>
-                {/* Gap reason — only when not open */}
-                {!isOpen && sig.status !== 'direct' && (
-                  <div style={{ fontSize: 10, color: cfg.color, fontWeight: 600, marginTop: 5, lineHeight: 1.35 }}>
-                    {sig.gapReason}
-                  </div>
-                )}
+
+                <div
+                  style={{
+                    fontSize: 9,
+                    color: '#64748B',
+                    lineHeight: 1.2,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: 170,
+                  }}
+                >
+                  {sig.status === 'direct'
+                    ? 'Recruiters can clearly validate this signal'
+                    : sig.gapReason}
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 800,
+                  color: cfg.color,
+                  background: 'rgba(255,255,255,0.70)',
+                  padding: '2px 7px',
+                  borderRadius: 999,
+                  border: `1px solid ${cfg.color}44`,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {cfg.label}
+              </span>
+
+              <span
+                style={{
+                  fontSize: 10,
+                  color: '#64748B',
+                  fontWeight: 900,
+                }}
+              >
+                {isExpanded ? '−' : '+'}
+              </span>
+            </div>
+          </div>
+
+          {/* Expanded content */}
+          {isExpanded && (
+            <div
+              style={{
+                marginTop: 10,
+                display: 'grid',
+                gap: 10,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 10,
+                  color: cfg.color,
+                  fontWeight: 700,
+                  lineHeight: 1.45,
+                }}
+              >
+                {sig.description}
               </div>
 
-              {/* Inline AI Assist panel */}
-              {isOpen && (
-                <div style={{ borderTop: `1px solid ${cfg.color}22`, padding: '10px 10px', background: 'rgba(255,255,255,0.82)' }}>
-                  <AssistPanel
-                    signal={sig}
-                    profileData={profileData}
-                    careerContext={careerContext}
-                    onApply={onApply}
-                    onClose={() => setActiveAssist(null)}
-                  />
+              {sig.status !== 'direct' && (
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: '#475569',
+                    lineHeight: 1.45,
+                    fontWeight: 600,
+                  }}
+                >
+                  {sig.gapReason}
                 </div>
               )}
-            </div>
-          );
-        })}
-      </div>
 
-      {/* Legend */}
-      <div style={{ padding: '7px 10px', borderRadius: 8, background: 'rgba(248,250,252,0.80)', border: '1px solid rgba(0,0,0,0.06)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        {[
-          { icon: '✓', label: 'Proven — low risk',     color: '#15803D' },
-          { icon: '~', label: 'Partial — medium risk', color: '#D97706' },
-          { icon: '✗', label: 'Missing — high risk',   color: '#DC2626' },
-        ].map(l => (
-          <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 10, fontWeight: 900, color: l.color }}>{l.icon}</span>
-            <span style={{ fontSize: 9, color: '#64748B' }}>{l.label}</span>
+              {sig.field && sig.status !== 'direct' && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveAssist(isOpen ? null : sig.key);
+                  }}
+                  style={{
+                    width: 'fit-content',
+                    fontSize: 10,
+                    fontWeight: 900,
+                    color: ORANGE,
+                    background: 'rgba(255,112,67,0.10)',
+                    border: '1px solid rgba(255,112,67,0.25)',
+                    borderRadius: 999,
+                    padding: '5px 10px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {isOpen ? 'Close AI Assist' : '⚡ AI Assist'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Inline AI Assist panel */}
+        {isOpen && (
+          <div
+            style={{
+              borderTop: `1px solid ${cfg.color}22`,
+              padding: '10px 10px',
+              background: 'rgba(255,255,255,0.82)',
+            }}
+          >
+            <AssistPanel
+              signal={sig}
+              profileData={profileData}
+              careerContext={careerContext}
+              onApply={onApply}
+              onClose={() => setActiveAssist(null)}
+            />
           </div>
-        ))}
+        )}
       </div>
+    );
+  })}
+</div>
 
       {/* Intelligence note */}
       {careerContext && (
