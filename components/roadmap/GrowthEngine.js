@@ -75,40 +75,123 @@ function BulletList({ items, color }) {
 }
 
 // ─── Phase section card ────────────────────────────────────────────────────────
-function PhaseCard({ data }) {
+function PhaseCard({ data, direction }) {
+  const [selectedActionIdx, setSelectedActionIdx] = useState(0);
+  const [showRisks, setShowRisks] = useState(false);
+  const [showQuickWins, setShowQuickWins] = useState(true);
+
   if (!data) return <div style={{ fontSize: 12, color: '#94A3B8', padding: 12 }}>No data for this phase.</div>;
+
+  // Parse actions — detect pivot structure (starts with "Possible pivot") or plain bullets
+  const rawActions = Array.isArray(data.actions) ? data.actions.filter(Boolean) : [];
+  const isPivotMode = direction === 'pivot' || rawActions.some(a => /possible pivot|pivot \d/i.test(String(a)));
+
+  // Group pivot actions into cards
+  const pivotGroups = [];
+  if (isPivotMode) {
+    let current = null;
+    rawActions.forEach(item => {
+      const s = String(item);
+      if (/possible pivot|pivot \d/i.test(s)) {
+        if (current) pivotGroups.push(current);
+        current = { title: s, items: [] };
+      } else if (current) {
+        current.items.push(s);
+      } else {
+        // Pre-pivot content — add to a general group
+        if (!pivotGroups.length) pivotGroups.push({ title: 'Actions', items: [] });
+        pivotGroups[0].items.push(s);
+      }
+    });
+    if (current) pivotGroups.push(current);
+  }
+
+  const hasPivots = pivotGroups.length > 1;
+  const safeIdx = Math.min(selectedActionIdx, Math.max(0, (hasPivots ? pivotGroups : rawActions).length - 1));
 
   return (
     <div style={{ display: 'grid', gap: 10 }}>
-      {/* Top row: Objectives + Actions */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
-          <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10, background: 'rgba(255,112,67,0.90)' }}>🎯 OBJECTIVES</div>
-          <div style={{ padding: '10px 12px' }}><BulletList items={data.objectives} color={ORANGE} /></div>
+
+      {/* Row 1: Objectives (full width, compact) */}
+      <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
+        <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10, background: 'rgba(255,112,67,0.90)' }}>🎯 OBJECTIVES</div>
+        <div style={{ padding: '10px 12px' }}><BulletList items={data.objectives} color={ORANGE} /></div>
+      </div>
+
+      {/* Row 2: Actions — pivot selector cards + detail, or plain list */}
+      <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
+        <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10 }}>
+          ⚡ ACTIONS {hasPivots ? '— select a path to explore' : ''}
         </div>
-        <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
-          <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10 }}>⚡ ACTIONS</div>
-          <div style={{ padding: '10px 12px' }}><BulletList items={data.actions} /></div>
+        <div style={{ padding: '10px 12px', display: 'grid', gap: 8 }}>
+          {hasPivots ? (
+            <>
+              {/* Pivot selector cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${pivotGroups.length}, minmax(0,1fr))`, gap: 6 }}>
+                {pivotGroups.map((group, idx) => {
+                  const isActive = idx === safeIdx;
+                  const pivotNum = idx + 1;
+                  return (
+                    <button key={idx} type="button" onClick={() => setSelectedActionIdx(idx)}
+                      style={{
+                        padding: '9px 10px', borderRadius: 10, textAlign: 'left', cursor: 'pointer',
+                        border: isActive ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.08)',
+                        background: isActive ? 'rgba(255,112,67,0.08)' : 'rgba(248,250,252,0.92)',
+                        transition: 'all 0.15s',
+                      }}>
+                      <div style={{ fontSize: 9, fontWeight: 900, color: isActive ? ORANGE : '#94A3B8', letterSpacing: 0.4, marginBottom: 3 }}>
+                        PATH {pivotNum}
+                      </div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: isActive ? '#C2410C' : DARK, lineHeight: 1.3 }}>
+                        {group.title.replace(/possible pivot \d+:?\s*/i, '').slice(0, 60) || `Option ${pivotNum}`}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Selected pivot detail */}
+              {pivotGroups[safeIdx] && (
+                <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(255,112,67,0.04)', border: '1px solid rgba(255,112,67,0.14)' }}>
+                  <BulletList items={pivotGroups[safeIdx].items} />
+                </div>
+              )}
+            </>
+          ) : (
+            <BulletList items={rawActions} />
+          )}
         </div>
       </div>
-      {/* Second row: Metrics + Quick Wins */}
+
+      {/* Row 3: Metrics + Quick Wins side by side */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
           <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10, background: 'rgba(14,165,233,0.85)' }}>📊 METRICS</div>
           <div style={{ padding: '10px 12px' }}><BulletList items={data.metrics} color='#0EA5E9' /></div>
         </div>
         <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
-          <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10, background: 'rgba(22,163,74,0.85)' }}>🏆 QUICK WINS</div>
-          <div style={{ padding: '10px 12px' }}><BulletList items={data.quickWins} color='#16A34A' /></div>
+          <button type="button" onClick={() => setShowQuickWins(v => !v)} style={{ width: '100%', border: 'none', cursor: 'pointer', background: 'transparent', padding: 0 }}>
+            <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10, background: 'rgba(22,163,74,0.85)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>🏆 QUICK WINS</span>
+              <span style={{ fontSize: 10, opacity: 0.8 }}>{showQuickWins ? '▲' : '▼'}</span>
+            </div>
+          </button>
+          {showQuickWins && <div style={{ padding: '10px 12px' }}><BulletList items={data.quickWins} color='#16A34A' /></div>}
         </div>
       </div>
-      {/* Risks */}
+
+      {/* Risks — collapsible */}
       {data.risks?.length > 0 && (
         <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
-          <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10, background: 'rgba(220,38,38,0.80)' }}>⚠️ RISKS</div>
-          <div style={{ padding: '10px 12px' }}><BulletList items={data.risks} color='#DC2626' /></div>
+          <button type="button" onClick={() => setShowRisks(v => !v)} style={{ width: '100%', border: 'none', cursor: 'pointer', background: 'transparent', padding: 0 }}>
+            <div style={{ ...SECTION_HDR, borderRadius: 0, borderTopLeftRadius: 12, borderTopRightRadius: 12, fontSize: 10, background: 'rgba(220,38,38,0.80)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>⚠️ RISKS</span>
+              <span style={{ fontSize: 10, opacity: 0.8 }}>{showRisks ? '▲' : '▼'}</span>
+            </div>
+          </button>
+          {showRisks && <div style={{ padding: '10px 12px' }}><BulletList items={data.risks} color='#DC2626' /></div>}
         </div>
       )}
+
       {/* Presentation note */}
       {data.presentation && (
         <div style={{ ...GLASS, padding: '10px 13px', borderLeft: `3px solid ${ORANGE}`, fontSize: 11, color: SLATE, lineHeight: 1.55 }}>
@@ -183,16 +266,12 @@ function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMob
     setTimeout(() => { try { w.focus(); w.print(); } catch {} }, 250);
   };
 
-  // Action bar
+  // Action bar — coach CTA removed, lives at bottom only
   const ActionBar = () => (
     <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
       <button type="button" onClick={handlePrint}
         style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: ORANGE, color: 'white', border: 'none' }}>
         📄 Print Brief
-      </button>
-      <button type="button" onClick={() => router.push('/the-hearth?module=mentorship')}
-        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(255,255,255,0.85)', color: SLATE, border: '1px solid rgba(0,0,0,0.12)' }}>
-        🤝 Find a Coach
       </button>
       <button type="button" onClick={() => router.push('/calendar')}
         style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(255,255,255,0.85)', color: SLATE, border: '1px solid rgba(0,0,0,0.12)' }}>
@@ -248,9 +327,9 @@ function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMob
 
       {/* Tab content */}
       <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: 2, paddingBottom: isMobile ? 80 : 0 }}>
-        {activeTab === 'day30' && <PhaseCard data={plan?.day30} />}
-        {activeTab === 'day60' && <PhaseCard data={plan?.day60} />}
-        {activeTab === 'day90' && <PhaseCard data={plan?.day90} />}
+        {activeTab === 'day30' && <PhaseCard data={plan?.day30} direction={direction} />}
+        {activeTab === 'day60' && <PhaseCard data={plan?.day60} direction={direction} />}
+        {activeTab === 'day90' && <PhaseCard data={plan?.day90} direction={direction} />}
         {activeTab === 'growth' && (
           <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
             <div style={SECTION_HDR}>📈 GROWTH RECOMMENDATIONS</div>

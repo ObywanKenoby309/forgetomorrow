@@ -186,8 +186,8 @@ function TabBar({ activeTab, setActiveTab }) {
 function SignalBar({ label, level = 2 }) {
   const safeLevel = Math.max(1, Math.min(4, Number(level) || 2));
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "92px 1fr", gap: 8, alignItems: "center" }}>
-      <div style={{ fontSize: 9, fontWeight: 900, color: "#64748B", letterSpacing: 0.25 }}>{label}</div>
+    <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 6, alignItems: "center" }}>
+      <div style={{ fontSize: 9, fontWeight: 900, color: "#64748B", letterSpacing: 0.25, whiteSpace: "nowrap" }}>{label}</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 3 }}>
         {[1, 2, 3, 4].map((n) => (
           <div
@@ -200,6 +200,9 @@ function SignalBar({ label, level = 2 }) {
             }}
           />
         ))}
+      </div>
+      <div style={{ fontSize: 9, fontWeight: 900, color: safeLevel >= 3 ? ORANGE : "#94A3B8", minWidth: 16, textAlign: "right" }}>
+        {safeLevel}/4
       </div>
     </div>
   );
