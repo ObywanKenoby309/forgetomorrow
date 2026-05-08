@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import { buildSectionCoachPrompt } from '@/lib/forge/strategyBrain';
+import buildPromptContext from '@/lib/intelligence/buildPromptContext';
 
 type CoachRequestBody = {
   jdText?: string;
@@ -487,6 +488,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       : '';
     const attemptCount = Number(body.attemptCount || 1);
 
+    // ── Unified Career Intelligence — alignment mode ─────────────────────
+    // Non-fatal: if unavailable, intelligenceBlock is empty string
+    let intelligenceBlock = '';
+    try {
+      const intelligence = await buildPromptContext({ userId, mode: 'alignment' });
+      if (intelligence) {
+        const lines: string[] = [
+          'CAREER INTELLIGENCE CONTEXT (ForgeTomorrow Unified Intelligence — alignment mode):',
+        ];
+
+        // Profile signals not in the current resume — this is the "you have it elsewhere" bridge
+        if (Array.isArray(intelligence.proofSignals) && intelligence.proofSignals.length) {
+          lines.push('');
+          lines.push('PROVEN SIGNALS ACROSS FULL PROFILE (may not be in current resume):');
+          intelligence.proofSignals.slice(0, 8).forEach(s => lines.push(`- ${s}`));
+        }
+
+        // Credentials from profile + resume history — degrees, certs, licenses
+        const creds = (intelligence as any).credentials;
+        if (creds?.combined?.length) {
+          lines.push('');
+          lines.push('CREDENTIALS ON FILE (profile + resume history):');
+          creds.combined.slice(0, 8).forEach((c: string) => lines.push(`- ${c}`));
+        }
+
+        // Known gaps — what the brain already knows is missing
+        if (Array.isArray(intelligence.knownGaps) && intelligence.knownGaps.length) {
+          lines.push('');
+          lines.push('KNOWN GAPS (from career intelligence):');
+          intelligence.knownGaps.slice(0, 5).forEach(g => lines.push(`- ${g}`));
+        }
+
+        // Caution flags
+        if (Array.isArray(intelligence.cautionFlags) && intelligence.cautionFlags.length) {
+          lines.push('');
+          lines.push('CAUTION FLAGS:');
+          intelligence.cautionFlags.slice(0, 3).forEach(f => lines.push(`- ${f}`));
+        }
+
+        if (lines.length > 1) {
+          intelligenceBlock = lines.join('\n') + '\n\n'
+            + 'IMPORTANT: If any gap identified in the JD alignment below can be closed by a signal '
+            + 'already present in the PROVEN SIGNALS or CREDENTIALS sections above, '
+            + 'tell the seeker explicitly: "You already have this in your ForgeTomorrow profile — add it to your resume if it is accurate for this application." '
+            + 'Do NOT tell them to acquire something they already have.\n\n';
+        }
+      }
+    } catch (err) {
+      console.warn('[ats-coach] buildPromptContext failed — continuing without intelligence:', (err as any)?.message);
+    }
+
     // ── Build prompt via strategyBrain ────────────────────────────────────
     // This restores the live-safe single Groq call flow.
     const brainPrompt = buildSectionCoachPrompt({
@@ -508,7 +560,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     // The brain's JSON template has section:"" which causes the 8B model
     // to collapse all actions to one section. This override prevents that.
     const prompt = requestedSection === 'overview'
-      ? `${intentPrefix}${brainPrompt}
+      ? `${intelligenceBlock}${intentPrefix}${brainPrompt}
 
 CRITICAL OUTPUT REQUIREMENT — MANDATORY:
 You MUST return at least 3 improvementActions.
@@ -521,7 +573,7 @@ The "section" field must be one of: "summary", "skills", "experience", "educatio
 Include "education" if the JD explicitly requires a degree, clearance, or if the resume contains relevant education that strengthens recruiter confidence.
 Include "certifications" if the JD explicitly requires or mentions certifications, licenses, or credentials.
 Include "languages" if the JD mentions language requirements or multilingual preferences.`
-      : brainPrompt;
+      : `${intelligenceBlock}${intentPrefix}${brainPrompt}`.trim();
 
     // ── Call Groq ─────────────────────────────────────────────────────────
     const openAIRes = await callOpenAI(apiKey, model, prompt);

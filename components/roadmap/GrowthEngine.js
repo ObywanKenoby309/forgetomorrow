@@ -4,7 +4,6 @@
 // Left: resume + direction input | Right: tabbed 30/60/90 roadmap cockpit
 import { useState, useCallback, useEffect, useContext } from 'react';
 import { useRouter } from 'next/router';
-import { ResumeContext } from '@/context/ResumeContext';
 
 const ORANGE = '#FF7043';
 const SLATE = '#334155';
@@ -379,16 +378,8 @@ export default function GrowthEngine() {
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) => chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // Pull from ResumeContext — same as Forge Hammer
-  const {
-    formData = {},
-    summary = '',
-    experiences = [],
-    skills = [],
-    educationList = [],
-  } = useContext(ResumeContext) || {};
-
-  const hasResume = !!(summary?.trim() || experiences?.length > 0 || skills?.length > 0 || formData?.fullName || formData?.name);
+  // hasResume: derived from plan response (server-confirmed) or from selected resume
+  // We do NOT use ResumeContext for intelligence judgments — only server confirms resume presence
 
   // Resume list for selector
   const [resumes, setResumes] = useState([]);
@@ -601,7 +592,7 @@ export default function GrowthEngine() {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           <ResultCockpit plan={plan} direction={direction} pivotTarget={pivotTarget}
-            onReset={handleReset} hasResume={hasResume}
+            onReset={handleReset} hasResume={Boolean(selectedResumeId)}
             isMobile={true} mobileTab={mobileTab} onMobileTabChange={setMobileTab} />
           {/* Sticky bottom tab nav */}
           <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
@@ -668,7 +659,7 @@ export default function GrowthEngine() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <ResultCockpit plan={plan} direction={direction} pivotTarget={pivotTarget}
-            onReset={handleReset} hasResume={hasResume} isMobile={false} />
+            onReset={handleReset} hasResume={Boolean(selectedResumeId)} isMobile={false} />
         </div>
       </div>
     );

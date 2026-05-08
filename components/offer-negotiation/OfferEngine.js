@@ -2,7 +2,7 @@
 // 10/10 Negotiation Command Center
 // Left: guided step form | Right: cockpit — insights → tabbed results
 // Glass cards sit directly over wallpaper. No backing. No narrow column.
-import { useState, useCallback, useEffect, useContext } from 'react';
+import { useState, useCallback, useEffect, useRef, useContext } from 'react';
 import { ResumeContext } from '@/context/ResumeContext';
 import jsPDF from 'jspdf';
 
@@ -190,7 +190,7 @@ function Step1({ form, onChange, hasResume }) {
         <div style={{ fontWeight: 900, fontSize: 12, color: DARK, marginBottom: 4 }}>Tell me about the role</div>
         <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6 }}>Paste the JD or describe what you are targeting</div>
         <textarea name="jobDescription" value={form.jobDescription} onChange={onChange} rows={4}
-          placeholder="e.g. Strategic Advisory Services Manager at Company XYZ — leads consultants, manages engagements, executive stakeholder communication..."
+          placeholder="e.g. Strategic Advisory Services Manager at CrowdStrike — leads consultants, manages engagements, executive stakeholder communication..."
           style={{ ...INPUT, resize: 'vertical', lineHeight: 1.55 }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -507,19 +507,11 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
   const tab = mobileActiveTab || _tab;
   const setTab = onMobileTabChange || _setTab;
   const [scriptTab, setScriptTab] = useState('email');
-
-  const recommendedPath = plan?.decision?.recommendedMove?.toLowerCase().includes('balanced') ? 1
-	: plan?.decision?.recommendedMove?.toLowerCase().includes('ambit') ? 2 : 0;
-
-  const [selectedPath, setSelectedPath] = useState(0); 
+  const [selectedPath, setSelectedPath] = useState(recommendedPath);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
-  
-  useEffect(() => {
-	setSelectedPath(recommendedPath);
-  }, [recommendedPath]);
 
-	function safeArr(v) { return Array.isArray(v) ? v.filter(Boolean) : []; }
+  function safeArr(v) { return Array.isArray(v) ? v.filter(Boolean) : []; }
 
   const copyEmail = () => {
     const text = plan?.conversationScript?.emailVersion || '';
@@ -536,6 +528,9 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
       setTimeout(() => setSaved(false), 2000);
     } catch {}
   };
+
+  const recommendedPath = plan?.decision?.recommendedMove?.toLowerCase().includes('balanced') ? 1
+    : plan?.decision?.recommendedMove?.toLowerCase().includes('ambit') ? 2 : 0;
 
   // Action bar
   const ActionBar = () => (
@@ -948,17 +943,11 @@ export default function OfferEngine() {
     summary = '',
     experiences = [],
     skills = [],
-    educationList = [],
   } = useContext(ResumeContext) || {};
 
-  // Resume is considered connected if there's any meaningful content
-  const hasResume = !!(
-    summary?.trim() ||
-    experiences?.length > 0 ||
-    skills?.length > 0 ||
-    formData?.fullName ||
-    formData?.name
-  );
+  // Resume is connected if DB-resolved primary resume exists
+  // ResumeContext fields kept as fallback for submit payload only — not UI judgment
+  const hasResume = Boolean(primaryResume);
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(INITIAL_FORM);
@@ -969,6 +958,7 @@ export default function OfferEngine() {
   const [insights, setInsights] = useState([]);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileTab, setMobileTab] = useState('form'); // 'form' | 'insights' during steps; tab name during results
+  const [intelligence, setIntelligence] = useState(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -977,23 +967,31 @@ export default function OfferEngine() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  // Fetch unified career intelligence on mount — non-fatal
+  useEffect(() => {
+    fetch('/api/intelligence/context')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.context) setIntelligence(d.context); })
+      .catch(() => {});
+  }, []);
+
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   }, []);
 
-  // Pre-fill Step 3 leverage fields from resume context on mount
+  // Pre-fill Step 3 — fires when intelligence loads (not just on mount)
+  // Credentials use intelligence.credentials.combined — canonical brain source.
+  // Never prefills from raw skills array. Only degrees, certs, licenses, formal training.
   useEffect(() => {
-    if (!formData) return;
     const prefill = {};
-    if (!form.currentJobTitle && formData.targetedRole) prefill.currentJobTitle = formData.targetedRole;
-    if (!form.yearsRelevantExperience && experiences?.length) {
-      // Estimate years from experience count as a floor
+    if (!form.currentJobTitle && formData?.targetedRole)
+      prefill.currentJobTitle = formData.targetedRole;
+    if (!form.yearsRelevantExperience && experiences?.length)
       prefill.yearsRelevantExperience = String(experiences.length > 3 ? experiences.length + 2 : experiences.length);
-    }
-    if (!form.skillsCertsExperience && skills?.length) {
-      prefill.skillsCertsExperience = skills.slice(0, 10).join(', ');
-    }
+    // Brain-wired: use intelligence.credentials.combined instead of raw skills
+    if (!form.skillsCertsExperience && intelligence?.credentials?.combined?.length)
+      prefill.skillsCertsExperience = intelligence.credentials.combined.join(', ');
     if (!form.notableProjectsEvidence && experiences?.length) {
       const bullets = experiences
         .slice(0, 2)
@@ -1002,11 +1000,10 @@ export default function OfferEngine() {
         .join('. ');
       if (bullets) prefill.notableProjectsEvidence = bullets;
     }
-    if (Object.keys(prefill).length) {
+    if (Object.keys(prefill).length)
       setForm(prev => ({ ...prev, ...prefill }));
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [intelligence]);  // re-runs when intelligence loads — ensures credentials are available
 
   // Insights fire only when step changes — not on every keystroke
   useEffect(() => {
@@ -1102,6 +1099,13 @@ export default function OfferEngine() {
 
   // ─── MOBILE LAYOUT ────────────────────────────────────────────────────────────
   if (isMobile) {
+    const RESULT_TABS_MOBILE = [
+      { id: 'decision', label: '⚡' },
+      { id: 'leverage', label: '💪' },
+      { id: 'market', label: '📊' },
+      { id: 'scripts', label: '✍️' },
+      { id: 'plan', label: '🛤' },
+    ];
 
     // Mobile: results view
     if (plan || loading) {
