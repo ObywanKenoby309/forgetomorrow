@@ -502,7 +502,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         if (Array.isArray(intelligence.proofSignals) && intelligence.proofSignals.length) {
           lines.push('');
           lines.push('PROVEN SIGNALS ACROSS FULL PROFILE (may not be in current resume):');
-          intelligence.proofSignals.slice(0, 8).forEach(s => lines.push(`- ${s}`));
+          intelligence.proofSignals.slice(0, 8).forEach((s: string) => lines.push(`- ${s}`));
         }
 
         // Credentials from profile + resume history — degrees, certs, licenses
@@ -517,21 +517,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         if (Array.isArray(intelligence.knownGaps) && intelligence.knownGaps.length) {
           lines.push('');
           lines.push('KNOWN GAPS (from career intelligence):');
-          intelligence.knownGaps.slice(0, 5).forEach(g => lines.push(`- ${g}`));
+          intelligence.knownGaps.slice(0, 5).forEach((g: string) => lines.push(`- ${g}`));
         }
 
         // Caution flags
         if (Array.isArray(intelligence.cautionFlags) && intelligence.cautionFlags.length) {
           lines.push('');
           lines.push('CAUTION FLAGS:');
-          intelligence.cautionFlags.slice(0, 3).forEach(f => lines.push(`- ${f}`));
+          intelligence.cautionFlags.slice(0, 3).forEach((f: string) => lines.push(`- ${f}`));
         }
 
         if (lines.length > 1) {
           intelligenceBlock = lines.join('\n') + '\n\n'
             + 'IMPORTANT: If any gap identified in the JD alignment below can be closed by a signal '
             + 'already present in the PROVEN SIGNALS or CREDENTIALS sections above, '
-            + 'tell the seeker explicitly: "You already have this in your ForgeTomorrow profile — add it to your resume if it is accurate for this application." '
+            + 'tell the seeker explicitly: "You already have this on your profile — add it to your resume." '
             + 'Do NOT tell them to acquire something they already have.\n\n';
         }
       }
