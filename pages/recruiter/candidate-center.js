@@ -1,6 +1,6 @@
 // pages/recruiter/candidate-center.js
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import RecruiterLayout from "@/components/layouts/CandidateCenterLayout";
+import CandidateCenterLayout from "@/components/layouts/CandidateCenterLayout";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import { usePlan } from "@/context/PlanContext";
 import { getTimeGreeting } from "@/lib/dashboardGreeting";
