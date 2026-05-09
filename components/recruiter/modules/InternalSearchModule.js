@@ -1468,6 +1468,12 @@ export default function InternalSearchModule() {
     let isMounted = true;
 
     async function fetchCandidates() {
+      if (!hasActiveSearch) {
+        setCandidates([]);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         setLoadError(null);
@@ -1499,7 +1505,22 @@ export default function InternalSearchModule() {
     return () => {
       isMounted = false;
     };
-  }, [buildCandidateParams, nameQuery, locQuery, boolQuery]);
+  }, [
+    buildCandidateParams,
+    nameQuery,
+    locQuery,
+    boolQuery,
+    summaryKeywords,
+    jobTitle,
+    workStatus,
+    preferredWorkType,
+    willingToRelocate,
+    locationFilter,
+    skills,
+    languages,
+    education,
+    hasActiveSearch,
+  ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1741,6 +1762,37 @@ export default function InternalSearchModule() {
     }
   };
 
+
+  const hasActiveSearch = useMemo(() => {
+    return Boolean(
+      nameQuery ||
+      locQuery ||
+      boolQuery ||
+      summaryKeywords ||
+      jobTitle ||
+      workStatus ||
+      preferredWorkType ||
+      willingToRelocate ||
+      locationFilter ||
+      skills ||
+      languages ||
+      education
+    );
+  }, [
+    nameQuery,
+    locQuery,
+    boolQuery,
+    summaryKeywords,
+    jobTitle,
+    workStatus,
+    preferredWorkType,
+    willingToRelocate,
+    locationFilter,
+    skills,
+    languages,
+    education,
+  ]);
+
   const splitForColumns = (list) => {
     const src = Array.isArray(list) ? list : [];
     const left = [];
@@ -1875,30 +1927,45 @@ export default function InternalSearchModule() {
         </GlassPanel>
       ) : candidates.length === 0 ? (
         <GlassPanel className="px-5 py-10 sm:px-6">
-          <div className="text-sm font-semibold text-slate-900">No candidates found</div>
-          <div className="mt-1 text-xs text-slate-600 max-w-2xl">
-            Try a broader query, remove a filter, or open Targeting to adjust your criteria.
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              onClick={clearAll}
-              className="text-xs px-3 py-1.5 rounded-full border border-white/40 bg-white/60 text-slate-700 hover:bg-white/80"
-            >
-              Clear all filters
-            </button>
-            <button
-              onClick={runManualCandidateSearch}
-              className="text-xs px-3 py-1.5 rounded-full border border-[#FF7043]/25 bg-[#FFEDE6]/70 text-[#FF7043] hover:bg-[#FFEDE6]/90"
-            >
-              Run search
-            </button>
-            <button
-              onClick={() => setTargetingOpen(true)}
-              className="text-xs px-3 py-1.5 rounded-full border border-[#FF7043]/25 bg-[#FFEDE6]/70 text-[#FF7043] hover:bg-[#FFEDE6]/90"
-            >
-              Open Targeting
-            </button>
-          </div>
+          {!hasActiveSearch ? (
+            <>
+              <div className="text-sm font-semibold text-slate-900">
+                Build a targeted candidate search
+              </div>
+              <div className="mt-1 text-xs text-slate-600 max-w-2xl">
+                Recruiters should only see candidates after a search, targeting rule, or automation has been configured.
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setTargetingOpen(true)}
+                  className="text-xs px-3 py-1.5 rounded-full border border-[#FF7043]/25 bg-[#FFEDE6]/70 text-[#FF7043] hover:bg-[#FFEDE6]/90"
+                >
+                  Open Targeting
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-sm font-semibold text-slate-900">No candidates found</div>
+              <div className="mt-1 text-xs text-slate-600 max-w-2xl">
+                Try a broader query, remove a filter, or open Targeting to adjust your criteria.
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  onClick={clearAll}
+                  className="text-xs px-3 py-1.5 rounded-full border border-white/40 bg-white/60 text-slate-700 hover:bg-white/80"
+                >
+                  Clear all filters
+                </button>
+                <button
+                  onClick={runManualCandidateSearch}
+                  className="text-xs px-3 py-1.5 rounded-full border border-[#FF7043]/25 bg-[#FFEDE6]/70 text-[#FF7043] hover:bg-[#FFEDE6]/90"
+                >
+                  Run search
+                </button>
+              </div>
+            </>
+          )}
         </GlassPanel>
       ) : (
         <div style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden" }}>

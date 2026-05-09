@@ -174,14 +174,14 @@ function CandidateCard({
     : "text-slate-500";
 
   return (
-    <div className="group relative w-full max-w-full min-w-0 rounded-xl border border-slate-200/80 bg-white shadow-sm transition-shadow duration-150 hover:shadow-md" style={{ overflow: "visible", position: "relative", zIndex: 1 }}>
+    <div className="group relative flex h-full min-h-[252px] w-full max-w-full min-w-0 flex-col rounded-xl border border-slate-200/80 bg-white shadow-sm transition-shadow duration-150 hover:shadow-md" style={{ overflow: "visible", position: "relative", zIndex: 1 }}>
       {/* Left accent bar */}
       <div
         className="absolute left-0 top-0 bottom-0 w-[3px]"
         style={{ background: `linear-gradient(180deg, ${avatarFrom}, ${avatarTo})` }}
       />
 
-      <div className="min-w-0 max-w-full overflow-hidden pl-4 pr-4 py-3">
+      <div className="flex min-h-[252px] flex-1 flex-col min-w-0 max-w-full overflow-hidden pl-4 pr-4 py-3">
         {/* Top row: avatar + name/title + match score */}
         <div className="flex min-w-0 max-w-full items-start gap-3 overflow-hidden">
           {/* Avatar */}
@@ -217,7 +217,7 @@ function CandidateCard({
 
         {/* Meta chips row */}
         {(displayLocation || workTypeLabel || statusObj || relocateLabel) && (
-          <div className="mt-2.5 flex min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
+          <div className="mt-auto pt-2.5 flex min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
             {displayLocation && (
               <span className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] leading-none text-slate-600">
                 <svg className="h-3 w-3 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -251,7 +251,8 @@ function CandidateCard({
         )}
 
         {/* Skills preview */}
-        {skillsList.length > 0 && (
+        <div className="mt-2 min-h-[30px]">
+          {skillsList.length > 0 && (
           <div className="mt-2 flex min-w-0 max-w-full flex-wrap gap-1.5 overflow-hidden">
             {skillsList.map((skill, i) => (
               <span
@@ -268,12 +269,13 @@ function CandidateCard({
             )}
           </div>
         )}
+        </div>
 
         {/* Divider */}
         <div className="mt-3 border-t border-slate-100" />
 
         {/* Action buttons */}
-        <div className="mt-2.5 flex min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
+        <div className="mt-auto pt-2.5 flex min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
           {typeof onMessage === "function" && (
             <button
               type="button"
