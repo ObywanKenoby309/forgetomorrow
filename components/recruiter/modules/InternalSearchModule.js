@@ -48,6 +48,135 @@ const GlassPanel = ({ className = "", children, style = {} }) => (
   </section>
 );
 
+function DesktopTargetingPanel({
+  open,
+  onClose,
+  filters,
+  setFilters,
+  automation,
+  onFindCandidates,
+  onClearTargeting,
+  manualSearching,
+  isLoading,
+  activeFilterCount,
+}) {
+  if (!open) return null;
+
+  return (
+    <GlassPanel
+      className="mb-4 overflow-hidden"
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        background: "rgba(255,255,255,0.82)",
+        border: "1px solid rgba(255,112,67,0.18)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          padding: "14px 16px",
+          borderBottom: "1px solid rgba(0,0,0,0.06)",
+          background: "rgba(255,255,255,0.72)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              background: "linear-gradient(135deg,#FF7043,#FF8A65)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              boxShadow: "0 8px 18px rgba(255,112,67,0.22)",
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="6.5" stroke="white" strokeWidth="1.5" />
+              <circle cx="8" cy="8" r="3.5" stroke="white" strokeWidth="1.5" />
+              <circle cx="8" cy="8" r="1" fill="white" />
+              <line x1="8" y1="1" x2="8" y2="3.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="8" y1="12.5" x2="8" y2="15" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="1" y1="8" x2="3.5" y2="8" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="12.5" y1="8" x2="15" y2="8" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontWeight: 800, fontSize: 14, color: "#0f172a" }}>
+                Targeting & Automation
+              </span>
+              {activeFilterCount > 0 && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    background: "rgba(255,112,67,0.10)",
+                    color: "#FF7043",
+                    border: "1px solid rgba(255,112,67,0.22)",
+                  }}
+                >
+                  {activeFilterCount} active
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 1 }}>
+              Refine this search without shrinking the candidate cards.
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={onClose}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "7px 11px",
+            borderRadius: 999,
+            border: "1px solid rgba(0,0,0,0.08)",
+            background: "rgba(255,255,255,0.70)",
+            cursor: "pointer",
+            color: "#64748b",
+            fontSize: 12,
+            fontWeight: 700,
+            flexShrink: 0,
+          }}
+          aria-label="Close targeting panel"
+        >
+          Close
+          <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+            <path d="M11 3L3 11M3 3l8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+
+      <div style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden" }}>
+        <CandidateTargetingPanel
+          filters={filters}
+          setFilters={setFilters}
+          automation={automation}
+          onFindCandidates={onFindCandidates}
+          onClearTargeting={onClearTargeting}
+          manualSearching={manualSearching}
+          isLoading={isLoading}
+          defaultExpanded={true}
+        />
+      </div>
+    </GlassPanel>
+  );
+}
+
 function TargetingDrawer({
   open,
   onClose,
@@ -498,6 +627,7 @@ function CommandBar({
   manualSearching,
   activeChips,
   onOpenTargeting,
+  targetingOpen,
   activeFilterCount,
   onClearAll,
   onRemoveChip,
@@ -514,15 +644,15 @@ function CommandBar({
         gap: 7,
         padding: isMobile ? "9px 14px" : "8px 14px",
         borderRadius: 10,
-        border: activeFilterCount > 0 ? "1px solid rgba(255,112,67,0.35)" : "1px solid rgba(0,0,0,0.10)",
+        border: activeFilterCount > 0 || targetingOpen ? "1px solid rgba(255,112,67,0.35)" : "1px solid rgba(0,0,0,0.10)",
         background:
-          activeFilterCount > 0
+          activeFilterCount > 0 || targetingOpen
             ? "linear-gradient(135deg,rgba(255,112,67,0.10),rgba(255,138,101,0.06))"
             : "rgba(255,255,255,0.60)",
         cursor: "pointer",
         fontSize: 13,
         fontWeight: 600,
-        color: activeFilterCount > 0 ? "#FF7043" : "#475569",
+        color: activeFilterCount > 0 || targetingOpen ? "#FF7043" : "#475569",
         whiteSpace: "nowrap",
         flexShrink: 0,
         maxWidth: "100%",
@@ -534,7 +664,7 @@ function CommandBar({
         <circle cx="8" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5" />
         <circle cx="8" cy="8" r="1" fill="currentColor" />
       </svg>
-      {isMobile ? "Filters" : "Targeting"}
+      {isMobile ? "Filters" : targetingOpen ? "Hide Targeting" : "Targeting"}
       {activeFilterCount > 0 && (
         <span
           style={{
@@ -1630,6 +1760,40 @@ export default function InternalSearchModule() {
     );
   }
 
+  const targetingFilters = {
+    summaryKeywords,
+    jobTitle,
+    workStatus,
+    preferredWorkType,
+    willingToRelocate,
+    locationFilter,
+    skills,
+    languages,
+    education,
+  };
+
+  const targetingSetters = {
+    setSummaryKeywords,
+    setJobTitle,
+    setWorkStatus,
+    setPreferredWorkType,
+    setWillingToRelocate,
+    setLocationFilter,
+    setSkills,
+    setLanguages,
+    setEducation,
+  };
+
+  const automationConfig = {
+    enabled: automationEnabled,
+    setEnabled: setAutomationEnabled,
+    name: automationName,
+    setName: setAutomationName,
+    saving: automationSaving,
+    message: automationMessage,
+    onSave: saveAutomationConfig,
+  };
+
   return (
     <div
       style={{
@@ -1664,47 +1828,35 @@ export default function InternalSearchModule() {
         compareSelectedIds={compareSelectedIds}
         manualSearching={manualSearching}
         activeChips={activeChips}
-        onOpenTargeting={() => setTargetingOpen(true)}
+        onOpenTargeting={() => setTargetingOpen((v) => (isMobile ? true : !v))}
+        targetingOpen={targetingOpen}
         activeFilterCount={activeFilterCount}
         onClearAll={clearAll}
         onRemoveChip={removeChipByKey}
         isMobile={isMobile}
       />
 
+      {!isMobile && (
+        <DesktopTargetingPanel
+          open={targetingOpen}
+          onClose={() => setTargetingOpen(false)}
+          filters={targetingFilters}
+          setFilters={targetingSetters}
+          automation={automationConfig}
+          onFindCandidates={runManualCandidateSearch}
+          onClearTargeting={clearTargeting}
+          manualSearching={manualSearching}
+          isLoading={isLoading}
+          activeFilterCount={activeFilterCount}
+        />
+      )}
+
       <TargetingDrawer
-        open={targetingOpen}
+        open={isMobile && targetingOpen}
         onClose={() => setTargetingOpen(false)}
-        filters={{
-          summaryKeywords,
-          jobTitle,
-          workStatus,
-          preferredWorkType,
-          willingToRelocate,
-          locationFilter,
-          skills,
-          languages,
-          education,
-        }}
-        setFilters={{
-          setSummaryKeywords,
-          setJobTitle,
-          setWorkStatus,
-          setPreferredWorkType,
-          setWillingToRelocate,
-          setLocationFilter,
-          setSkills,
-          setLanguages,
-          setEducation,
-        }}
-        automation={{
-          enabled: automationEnabled,
-          setEnabled: setAutomationEnabled,
-          name: automationName,
-          setName: setAutomationName,
-          saving: automationSaving,
-          message: automationMessage,
-          onSave: saveAutomationConfig,
-        }}
+        filters={targetingFilters}
+        setFilters={targetingSetters}
+        automation={automationConfig}
         onFindCandidates={runManualCandidateSearch}
         onClearTargeting={clearTargeting}
         manualSearching={manualSearching}
