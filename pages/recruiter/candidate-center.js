@@ -1,14 +1,14 @@
-// pages/recruiter/candidate-center.js
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter } from "next/router";
-import Link from "next/link";
+// pages/recruiter/candidate-center-update.js
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import { usePlan } from "@/context/PlanContext";
 import { getTimeGreeting } from "@/lib/dashboardGreeting";
 import RecruiterTitleCard from "@/components/recruiter/RecruiterTitleCard";
+import ExternalCompareModule from "@/components/recruiter/candidate-center/ExternalCompareModule";
+import InternalSearchModule from "@/components/recruiter/modules/InternalSearchModule";
+import TalentPoolsModule from "@/components/recruiter/modules/TalentPoolsModule";
 
-// ─── Shared styles ────────────────────────────────────────────────────────────
 const GLASS = {
   borderRadius: 18,
   border: "1px solid rgba(255,255,255,0.22)",
@@ -18,35 +18,24 @@ const GLASS = {
   WebkitBackdropFilter: "blur(12px)",
 };
 
-const GLASS_OVERLAY = {
+const WHITE_CARD = {
+  background: "rgba(255,255,255,0.92)",
+  border: "1px solid rgba(0,0,0,0.08)",
+  borderRadius: 16,
+  boxShadow: "0 6px 18px rgba(15,23,42,0.10)",
+  boxSizing: "border-box",
   position: "relative",
   overflow: "hidden",
 };
 
-const WHITE_CARD = {
-  background: "rgba(255,255,255,0.72)", // lighter glass feel
-  border: "1px solid rgba(255,255,255,0.35)",
-  borderRadius: 16,
-  boxShadow: "0 6px 18px rgba(15,23,42,0.10)", // softer, less heavy
-  backdropFilter: "blur(8px)",
-  WebkitBackdropFilter: "blur(8px)",
-  boxSizing: "border-box",
-  position: "relative",
-  zIndex: 1,
-};
-
 const ORANGE = "#FF7043";
-const MUTED = "#64748B";
 const GAP = 16;
 
 const ORANGE_HEADING_LIFT = {
   textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
   fontWeight: 900,
-  position: "relative",
-  zIndex: 1,
 };
 
-// ─── SSR-safe mobile hook ─────────────────────────────────────────────────────
 function useIsMobile(breakpoint = 1024) {
   const [isMobile, setIsMobile] = useState(null);
 
@@ -60,7 +49,6 @@ function useIsMobile(breakpoint = 1024) {
   return isMobile;
 }
 
-// ─── Icon placeholder — swap src when ChatGPT icons are ready ────────────────
 function CandidateIcon({ src, alt, size = 64 }) {
   if (!src) {
     return (
@@ -123,48 +111,133 @@ function CandidateIcon({ src, alt, size = 64 }) {
   );
 }
 
-// ─── Tiles config ─────────────────────────────────────────────────────────────
-const buildTiles = (isEnterprise) => [
-  {
-    id: "search",
-    title: "Internal Search",
-    desc: "Search and automate discovery of candidates already on ForgeTomorrow.",
-    href: "/recruiter/candidates",
-    img: null,
-  },
-  {
-    id: "compare",
-    title: "External Compare",
-    desc: "Paste any resume and job description to generate an evidence-backed comparison - even outside ForgeTomorrow.",
-    href: "/recruiter/explain",
-    img: null,
-  },
-  {
-    id: "pools",
-    title: "Talent Pools",
-    desc: "Organize strong candidates into pools you can revisit and reuse across roles.",
-    href: "/recruiter/pools",
-    note: isEnterprise ? "" : "Available tonight",
-    img: null,
-  },
-];
+function buildTiles(isEnterprise) {
+  return [
+    {
+      id: "search",
+      title: "Internal Candidate Search",
+      desc: "Search and automate discovery of candidates already on ForgeTomorrow.",
+      subtitle: "Internal candidate search, targeting, WHY, compare, and recruiter workflow tools.",
+      src: "/recruiter/candidates?chrome=recruiter-ent",
+      img: null,
+    },
+    {
+      id: "compare",
+      title: "External Compare",
+      desc: "Paste any resume and job description to generate an evidence-backed comparison, even outside ForgeTomorrow.",
+      subtitle: "External resume and job comparison with explainable matching support.",
+      src: "/recruiter/explain?chrome=recruiter-ent",
+      img: null,
+    },
+    {
+      id: "pools",
+      title: "Talent Pools",
+      desc: "Organize strong candidates into pools you can revisit and reuse across roles.",
+      subtitle: "Saved candidate pools for review, follow-up, and future hiring needs.",
+      src: "/recruiter/pools?chrome=recruiter-ent",
+      note: isEnterprise ? "" : "Available tonight",
+      img: null,
+    },
+  ];
+}
 
-// ─── Mobile carousel card ─────────────────────────────────────────────────────
-function MobileCard({ tile }) {
+function WorkspaceModuleShell({ title, subtitle, onBack, children }) {
   return (
-    <Link
-      href={tile.href}
+    <section
+      style={{
+        ...GLASS,
+        padding: 24,
+        display: "grid",
+        gap: 16,
+        width: "100%",
+      }}
+    >
+      <button
+        type="button"
+        onClick={onBack}
+        style={{
+          marginBottom: 4,
+          fontSize: "0.875rem",
+          color: ORANGE,
+          textDecoration: "underline",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          textAlign: "left",
+          width: "fit-content",
+          fontWeight: 800,
+          padding: 0,
+        }}
+      >
+        ← Return to Main
+      </button>
+
+      <div style={{ display: "grid", gap: 8 }}>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 22,
+            color: ORANGE,
+            lineHeight: 1.2,
+            letterSpacing: "-0.01em",
+            ...ORANGE_HEADING_LIFT,
+          }}
+        >
+          {title}
+        </h2>
+        <p style={{ margin: 0, color: "#546E7A", fontSize: 15, lineHeight: 1.6 }}>
+          {subtitle}
+        </p>
+      </div>
+
+      {children}
+    </section>
+  );
+}
+
+function ToolFrame({ src, height }) {
+  return (
+    <div
+      style={{
+        background: "rgba(255,255,255,0.72)",
+        border: "1px solid rgba(0,0,0,0.08)",
+        borderRadius: 16,
+        overflow: "hidden",
+        boxShadow: "0 6px 18px rgba(15,23,42,0.10)",
+      }}
+    >
+      <iframe
+        src={src}
+        title="Candidate Center Tool"
+        style={{
+          width: "100%",
+          height,
+          border: "none",
+          display: "block",
+          background: "white",
+        }}
+      />
+    </div>
+  );
+}
+
+function MobileCard({ tile, isActive, onSelect }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
       style={{
         ...WHITE_CARD,
         display: "block",
         padding: "22px 20px 20px",
-        textDecoration: "none",
-        position: "relative",
-        overflow: "hidden",
         minHeight: 210,
         width: "100%",
         textAlign: "left",
-        color: "inherit",
+        cursor: "pointer",
+        border: `1.5px solid ${isActive ? "rgba(255,112,67,0.40)" : "rgba(255,112,67,0.15)"}`,
+        boxShadow: isActive
+          ? "0 12px 28px rgba(0,0,0,0.12), 0 0 0 3px rgba(255,112,67,0.12)"
+          : "0 12px 28px rgba(0,0,0,0.10)",
       }}
     >
       <div
@@ -208,7 +281,6 @@ function MobileCard({ tile }) {
             margin: "0 0 14px",
             fontWeight: 800,
             fontStyle: "italic",
-            ...ORANGE_HEADING_LIFT,
           }}
         >
           {tile.note}
@@ -224,10 +296,9 @@ function MobileCard({ tile }) {
             display: "flex",
             alignItems: "center",
             gap: 4,
-            ...ORANGE_HEADING_LIFT,
           }}
         >
-          Open
+          {isActive ? "Selected" : "Open"}
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path
               d="M3 8H13M13 8L9 4M13 8L9 12"
@@ -239,12 +310,11 @@ function MobileCard({ tile }) {
           </svg>
         </span>
       </div>
-    </Link>
+    </button>
   );
 }
 
-// ─── Mobile layout: dropdown + carousel ──────────────────────────────────────
-function MobileCandidateCenter({ tiles }) {
+function MobileCandidateCenter({ tiles, activeModule, setActiveModule }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const trackRef = useRef(null);
@@ -278,6 +348,8 @@ function MobileCandidateCenter({ tiles }) {
   }, [handleScroll]);
 
   const active = tiles[activeIndex];
+
+  if (activeModule) return null;
 
   return (
     <div style={{ position: "relative" }}>
@@ -367,7 +439,7 @@ function MobileCandidateCenter({ tiles }) {
                   >
                     {tile.title}
                   </div>
-                  <div style={{ fontSize: 12, color: "#78909C", marginTop: 2 }}>Opens page</div>
+                  <div style={{ fontSize: 12, color: "#78909C", marginTop: 2 }}>Load below</div>
                 </div>
                 {i === activeIndex ? (
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0 }}>
@@ -408,7 +480,11 @@ function MobileCandidateCenter({ tiles }) {
               boxSizing: "border-box",
             }}
           >
-            <MobileCard tile={tile} />
+            <MobileCard
+              tile={tile}
+              isActive={activeModule === tile.id}
+              onSelect={() => setActiveModule(tile.id)}
+            />
           </div>
         ))}
       </div>
@@ -436,193 +512,205 @@ function MobileCandidateCenter({ tiles }) {
   );
 }
 
-// ─── Desktop hub card ─────────────────────────────────────────────────────────
-function DesktopCard({ tile }) {
+function DesktopCard({ tile, onOpen }) {
   return (
-    <Link
-      href={tile.href}
+    <button
+      type="button"
+      onClick={() => onOpen(tile.id)}
       style={{
-        padding: 0,
+        ...WHITE_CARD,
+        padding: 18,
+        minHeight: 140,
         display: "grid",
-        gap: 10,
-        minHeight: 150,
-        textDecoration: "none",
-        color: "inherit",
+        gap: 8,
+        width: "100%",
+        textAlign: "left",
+        cursor: "pointer",
       }}
     >
-      <div style={{ ...WHITE_CARD, padding: 18, minHeight: 120, display: "grid", gap: 8 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-          <div
-  style={{
-    fontWeight: 800,
-    color: ORANGE,
-    fontSize: 18,
-    lineHeight: 1.2,
-    letterSpacing: "-0.01em",
-    textShadow: "0 1px 2px rgba(15,23,42,0.28)",
-  }}
->
-  {tile.title}
-</div>
-          {tile.note ? (
-            <div
-  style={{
-    fontSize: 12,
-    fontWeight: 700,
-    color: ORANGE,
-    textShadow: "0 1px 2px rgba(15,23,42,0.22)",
-  }}
->
-  {tile.note}
-</div>
-          ) : null}
-        </div>
-
-        <div style={{ color: "#546E7A", fontSize: 13, lineHeight: 1.55 }}>{tile.desc}</div>
-
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <div
-  style={{
-    marginTop: "auto",
-    color: ORANGE,
-    fontWeight: 700,
-    fontSize: 13,
-    lineHeight: 1.2,
-    textShadow: "0 1px 2px rgba(15,23,42,0.22)",
-  }}
->
-  Open →
-</div>
+          style={{
+            fontWeight: 800,
+            color: ORANGE,
+            fontSize: 18,
+            lineHeight: 1.2,
+            letterSpacing: "-0.01em",
+            textShadow: "0 1px 2px rgba(15,23,42,0.28)",
+          }}
+        >
+          {tile.title}
+        </div>
+        {tile.note ? (
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: ORANGE,
+              textShadow: "0 1px 2px rgba(15,23,42,0.22)",
+            }}
+          >
+            {tile.note}
+          </div>
+        ) : null}
       </div>
-    </Link>
+
+      <div style={{ color: "#546E7A", fontSize: 13, lineHeight: 1.55 }}>{tile.desc}</div>
+
+      <div
+        style={{
+          marginTop: "auto",
+          color: ORANGE,
+          fontWeight: 700,
+          fontSize: 13,
+          lineHeight: 1.2,
+          textShadow: "0 1px 2px rgba(15,23,42,0.22)",
+        }}
+      >
+        Open →
+      </div>
+    </button>
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
-export default function CandidateCenter() {
-  const router = useRouter();
+export default function CandidateCenterUpdate() {
   const { plan, isEnterprise: planIsEnterprise } = usePlan();
   const dbPlan = String(plan || "").toLowerCase();
   const isEnterprise = planIsEnterprise || dbPlan === "enterprise";
 
   const isMobile = useIsMobile(1024);
-  const tiles = buildTiles(isEnterprise);
   const greeting = getTimeGreeting();
+  const tiles = useMemo(() => buildTiles(isEnterprise), [isEnterprise]);
+  const [activeModule, setActiveModule] = useState(null);
 
   const HeaderBox = (
     <RecruiterTitleCard
       greeting={greeting}
       title="Candidate Center"
-      subtitle="Internal search, external comparisons, and talent pools - all in one place."
+      subtitle="Choose the recruiter tool you want to open. Each workspace stays separate and loads inside Candidate Center."
       compact
     />
   );
 
   const RightColumn = <RightRailPlacementManager slot="right_rail_1" />;
+  const activeTile = tiles.find((tile) => tile.id === activeModule) || null;
 
   if (isMobile === null) {
     return (
       <RecruiterLayout
-		title="ForgeTomorrow - Candidate Center"
-		header={HeaderBox}
-		headerCard={false}
-		right={RightColumn}
-		rightBare
-		activeNav="candidate-center"
-	  />
-    );
-  }
-
-  if (isMobile) {
-    return (
-      <RecruiterLayout
-        title="ForgeTomorrow - Candidate Center"
+        title="ForgeTomorrow - Candidate Center Update"
         header={HeaderBox}
         headerCard={false}
-        right={null}
+        right={RightColumn}
+        rightBare
         activeNav="candidate-center"
-      >
-        <div
-          style={{
-            ...GLASS,
-            ...GLASS_OVERLAY,
-            paddingTop: 24,
-            paddingBottom: 24,
-            paddingLeft: 0,
-            paddingRight: 0,
-            width: "100%",
-            overflow: "hidden",
-          }}
-        >
-          <MobileCandidateCenter tiles={tiles} />
-        </div>
-      </RecruiterLayout>
+      />
     );
   }
 
   return (
     <RecruiterLayout
-		title="ForgeTomorrow - Candidate Center"
-		header={HeaderBox}
-		headerCard={false}
-		right={RightColumn}
-		rightBare
-		activeNav="candidate-center"
-	   >
-      <section style={{ padding: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 12,
-            gap: 12,
-          }}
-        >
-          <h2
-            style={{
-              fontSize: 18,
-              fontWeight: 900,
-              color: ORANGE,
-              lineHeight: 1.25,
-              letterSpacing: "-0.01em",
-              margin: 0,
-              ...ORANGE_HEADING_LIFT,
-            }}
-          >
-            Candidate Tools
-          </h2>
-          <Link
-            href="/recruiter/dashboard"
-            style={{
-              color: ORANGE,
-              fontWeight: 800,
-              fontSize: 13,
-              lineHeight: 1.2,
-              textDecoration: "none",
-              ...ORANGE_HEADING_LIFT,
-            }}
-          >
-            Back to dashboard →
-          </Link>
-        </div>
+      title="ForgeTomorrow - Candidate Center Update"
+      header={HeaderBox}
+      headerCard={false}
+      right={isMobile ? null : RightColumn}
+      rightBare
+      activeNav="candidate-center"
+    >
+      <section style={{ padding: 0, display: "grid", gap: 12 }}>
+        {!activeModule ? (
+          <>
+            {!isMobile ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 4,
+                  gap: 12,
+                }}
+              >
+                <h2
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 900,
+                    color: ORANGE,
+                    lineHeight: 1.25,
+                    letterSpacing: "-0.01em",
+                    margin: 0,
+                    ...ORANGE_HEADING_LIFT,
+                  }}
+                >
+                  Candidate Tools
+                </h2>
+              </div>
+            ) : null}
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: GAP,
-          }}
-        >
-          {tiles.map((tile) => (
-            <DesktopCard key={tile.id} tile={tile} />
-          ))}
-        </div>
+            <div
+              style={{
+                ...GLASS,
+                paddingTop: 24,
+                paddingBottom: 24,
+                paddingLeft: isMobile ? 0 : 16,
+                paddingRight: isMobile ? 0 : 16,
+                width: "100%",
+                overflow: isMobile ? "hidden" : "visible",
+              }}
+            >
+              {isMobile ? (
+                <MobileCandidateCenter
+                  tiles={tiles}
+                  activeModule={activeModule}
+                  setActiveModule={setActiveModule}
+                />
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                    gap: GAP,
+                  }}
+                >
+                  {tiles.map((tile) => (
+                    <DesktopCard key={tile.id} tile={tile} onOpen={setActiveModule} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <WorkspaceModuleShell
+            title={activeTile?.title || "Candidate Tool"}
+            subtitle={activeTile?.subtitle || ""}
+            onBack={() => setActiveModule(null)}
+          >
+            {(() => {
+              switch (activeModule) {
+                case "search":
+                  return <InternalSearchModule />;
+
+                case "compare":
+                  return <ExternalCompareModule />;
+
+                case "pools":
+                  return <TalentPoolsModule />;
+
+                default:
+                  return (
+                    <ToolFrame
+                      src={activeTile?.src || "/recruiter/candidate-center"}
+                      height={isMobile ? "calc(100vh - 320px)" : "calc(100vh - 280px)"}
+                    />
+                  );
+              }
+            })()}
+          </WorkspaceModuleShell>
+        )}
       </section>
     </RecruiterLayout>
   );
 }
 
-// Prevents static prerendering — required for pages using client-side state
 export async function getServerSideProps() {
   return { props: {} };
 }
