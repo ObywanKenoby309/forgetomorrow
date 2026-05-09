@@ -507,6 +507,10 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
   const tab = mobileActiveTab || _tab;
   const setTab = onMobileTabChange || _setTab;
   const [scriptTab, setScriptTab] = useState('email');
+
+  const recommendedPath = plan?.decision?.recommendedMove?.toLowerCase().includes('balanced') ? 1
+    : plan?.decision?.recommendedMove?.toLowerCase().includes('ambit') ? 2 : 0;
+
   const [selectedPath, setSelectedPath] = useState(recommendedPath);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -528,9 +532,6 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
       setTimeout(() => setSaved(false), 2000);
     } catch {}
   };
-
-  const recommendedPath = plan?.decision?.recommendedMove?.toLowerCase().includes('balanced') ? 1
-    : plan?.decision?.recommendedMove?.toLowerCase().includes('ambit') ? 2 : 0;
 
   // Action bar
   const ActionBar = () => (
@@ -943,6 +944,8 @@ export default function OfferEngine() {
     summary = '',
     experiences = [],
     skills = [],
+    educationList = [],
+    primaryResume = null,
   } = useContext(ResumeContext) || {};
 
   // Resume is connected if DB-resolved primary resume exists

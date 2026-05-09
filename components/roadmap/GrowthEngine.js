@@ -406,6 +406,8 @@ export default function GrowthEngine() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  const hasResume = Boolean(selectedResumeId);
+
   // Load resume list
   useEffect(() => {
     let active = true;
