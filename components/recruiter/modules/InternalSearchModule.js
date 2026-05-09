@@ -1851,18 +1851,20 @@ export default function InternalSearchModule() {
         />
       )}
 
-      <TargetingDrawer
-        open={isMobile && targetingOpen}
-        onClose={() => setTargetingOpen(false)}
-        filters={targetingFilters}
-        setFilters={targetingSetters}
-        automation={automationConfig}
-        onFindCandidates={runManualCandidateSearch}
-        onClearTargeting={clearTargeting}
-        manualSearching={manualSearching}
-        isLoading={isLoading}
-        activeFilterCount={activeFilterCount}
-      />
+      {isMobile && (
+        <TargetingDrawer
+          open={targetingOpen}
+          onClose={() => setTargetingOpen(false)}
+          filters={targetingFilters}
+          setFilters={targetingSetters}
+          automation={automationConfig}
+          onFindCandidates={runManualCandidateSearch}
+          onClearTargeting={clearTargeting}
+          manualSearching={manualSearching}
+          isLoading={isLoading}
+          activeFilterCount={activeFilterCount}
+        />
+      )}
 
       {isLoading ? (
         <GlassPanel className="px-5 py-8 sm:px-6">
