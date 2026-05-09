@@ -610,13 +610,13 @@ export default function CandidateCenterUpdate() {
 
   return (
     <RecruiterLayout
-      title="ForgeTomorrow - Candidate Center Update"
-      header={HeaderBox}
-      headerCard={false}
-      right={isMobile ? null : RightColumn}
-      rightBare
-      activeNav="candidate-center"
-    >
+	  title="ForgeTomorrow - Candidate Center Update"
+	  header={HeaderBox}
+	  headerCard={false}
+	  right={RightColumn}
+	  rightBare
+	  activeNav="candidate-center"
+	>
       <section style={{ padding: 0, display: "grid", gap: 12 }}>
         {!activeModule ? (
           <>
