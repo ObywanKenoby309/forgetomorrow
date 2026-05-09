@@ -1132,6 +1132,37 @@ export default function InternalSearchModule() {
     return chips;
   }, [nameQuery, locQuery, boolQuery, summaryKeywords, jobTitle, workStatus, preferredWorkType, willingToRelocate, locationFilter, skills, languages, education]);
 
+
+  const hasActiveSearch = useMemo(() => {
+    return Boolean(
+      nameQuery ||
+      locQuery ||
+      boolQuery ||
+      summaryKeywords ||
+      jobTitle ||
+      workStatus ||
+      preferredWorkType ||
+      willingToRelocate ||
+      locationFilter ||
+      skills ||
+      languages ||
+      education
+    );
+  }, [
+    nameQuery,
+    locQuery,
+    boolQuery,
+    summaryKeywords,
+    jobTitle,
+    workStatus,
+    preferredWorkType,
+    willingToRelocate,
+    locationFilter,
+    skills,
+    languages,
+    education,
+  ]);
+
   const clearSearchFilters = () => {
     setNameQuery("");
     setLocQuery("");
@@ -1761,37 +1792,6 @@ export default function InternalSearchModule() {
       setAutomationSaving(false);
     }
   };
-
-
-  const hasActiveSearch = useMemo(() => {
-    return Boolean(
-      nameQuery ||
-      locQuery ||
-      boolQuery ||
-      summaryKeywords ||
-      jobTitle ||
-      workStatus ||
-      preferredWorkType ||
-      willingToRelocate ||
-      locationFilter ||
-      skills ||
-      languages ||
-      education
-    );
-  }, [
-    nameQuery,
-    locQuery,
-    boolQuery,
-    summaryKeywords,
-    jobTitle,
-    workStatus,
-    preferredWorkType,
-    willingToRelocate,
-    locationFilter,
-    skills,
-    languages,
-    education,
-  ]);
 
   const splitForColumns = (list) => {
     const src = Array.isArray(list) ? list : [];
