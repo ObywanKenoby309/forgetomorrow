@@ -1801,7 +1801,9 @@ export default function InternalSearchModule() {
         maxWidth: "100%",
         minWidth: 0,
         overflowX: "hidden",
+        overflow: "hidden",
         boxSizing: "border-box",
+        position: "relative",
       }}
     >
       {loadError && (

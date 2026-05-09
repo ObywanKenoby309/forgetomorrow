@@ -606,7 +606,7 @@ export default function CandidateCenter() {
       <CandidateCenterLayout
         title="ForgeTomorrow - Candidate Center"
         header={HeaderBox}
-        right={RightColumn}
+        right={isMobile ? null : RightColumn}
         rightVariant="light"
         activeNav="candidate-center"
         collapseSiderails={false}
@@ -619,7 +619,7 @@ export default function CandidateCenter() {
     <CandidateCenterLayout
       title="ForgeTomorrow - Candidate Center"
       header={HeaderBox}
-      right={isMobile || activeModule ? null : RightColumn}
+      right={isMobile ? null : RightColumn}
       rightVariant="light"
       activeNav="candidate-center"
       collapseSiderails={siderailsCollapsed}
