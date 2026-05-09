@@ -1,6 +1,6 @@
-// pages/recruiter/candidate-center-update.js
+// pages/recruiter/candidate-center.js
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import RecruiterLayout from "@/components/layouts/RecruiterLayout";
+import RecruiterLayout from "@/components/layouts/CandidateCenterLayout";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import { usePlan } from "@/context/PlanContext";
 import { getTimeGreeting } from "@/lib/dashboardGreeting";
@@ -573,7 +573,7 @@ function DesktopCard({ tile, onOpen }) {
   );
 }
 
-export default function CandidateCenterUpdate() {
+export default function CandidateCenter() {
   const { plan, isEnterprise: planIsEnterprise } = usePlan();
   const dbPlan = String(plan || "").toLowerCase();
   const isEnterprise = planIsEnterprise || dbPlan === "enterprise";
@@ -581,7 +581,13 @@ export default function CandidateCenterUpdate() {
   const isMobile = useIsMobile(1024);
   const greeting = getTimeGreeting();
   const tiles = useMemo(() => buildTiles(isEnterprise), [isEnterprise]);
-  const [activeModule, setActiveModule] = useState(null);
+  const [activeModuleRaw, setActiveModuleRaw] = useState(null);
+  const [siderailsCollapsed, setSiderailsCollapsed] = useState(false);
+  const setActiveModule = useCallback((mod) => {
+    setActiveModuleRaw(mod);
+    setSiderailsCollapsed(Boolean(mod));
+  }, []);
+  const activeModule = activeModuleRaw;
 
   const HeaderBox = (
     <RecruiterTitleCard
@@ -597,25 +603,28 @@ export default function CandidateCenterUpdate() {
 
   if (isMobile === null) {
     return (
-      <RecruiterLayout
-        title="ForgeTomorrow - Candidate Center Update"
+      <CandidateCenterLayout
+        title="ForgeTomorrow - Candidate Center"
         header={HeaderBox}
-        headerCard={false}
         right={RightColumn}
-        rightBare
+        rightVariant="light"
         activeNav="candidate-center"
+        collapseSiderails={false}
+        showToggle={false}
       />
     );
   }
 
   return (
-    <RecruiterLayout
-      title="ForgeTomorrow - Candidate Center Update"
+    <CandidateCenterLayout
+      title="ForgeTomorrow - Candidate Center"
       header={HeaderBox}
-      headerCard={false}
       right={isMobile ? null : RightColumn}
-      rightBare
+      rightVariant="light"
       activeNav="candidate-center"
+      collapseSiderails={siderailsCollapsed}
+      onToggleSiderails={() => setSiderailsCollapsed(s => !s)}
+      showToggle={Boolean(activeModule)}
     >
       <section style={{ padding: 0, display: "grid", gap: 12 }}>
         {!activeModule ? (
@@ -707,7 +716,7 @@ export default function CandidateCenterUpdate() {
           </WorkspaceModuleShell>
         )}
       </section>
-    </RecruiterLayout>
+    </CandidateCenterLayout>
   );
 }
 
