@@ -1925,8 +1925,8 @@ export default function InternalSearchModule() {
           <div className="text-sm text-slate-700 font-medium">Loading candidates...</div>
           <div className="mt-2 text-xs text-slate-600">Pulling your latest pipeline and signals.</div>
         </GlassPanel>
-      ) : candidates.length === 0 ? (
-        <GlassPanel className="px-5 py-10 sm:px-6">
+      ) : candidates.length === 0 && !targetingOpen ? (
+		<GlassPanel className="px-5 py-10 sm:px-6">
           {!hasActiveSearch ? (
             <>
               <div className="text-sm font-semibold text-slate-900">
