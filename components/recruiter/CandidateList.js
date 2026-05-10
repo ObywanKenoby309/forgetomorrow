@@ -183,7 +183,7 @@ function CandidateCard({
       />
 
       <div className="min-w-0 max-w-full overflow-hidden pl-4 pr-4 py-3">
-        <div className="h-[108px] overflow-hidden">
+        <div className="h-[156px] overflow-hidden">
         {/* Top row: avatar + name/title + match score */}
         <div className="flex min-w-0 max-w-full items-start gap-3 overflow-hidden">
           {/* Avatar */}
