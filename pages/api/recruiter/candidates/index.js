@@ -8,6 +8,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
+import { rankCandidates } from "@/lib/intelligence/forgeSearchEngine";
 import { expandStateQuery } from "@/lib/stateNormalize";
 import jwt from "jsonwebtoken";
 
@@ -821,22 +822,36 @@ export default async function handler(req, res) {
       })
     );
 
-    // Preserve Render ranking when possible, otherwise keep local order
-    candidates.sort((a, b) => {
-      const aIdx = renderIdOrder.indexOf(String(a.id));
-      const bIdx = renderIdOrder.indexOf(String(b.id));
+    const searchFilters = {
+  q: nameRoleQuery,
+  location: locationQuery,
+  bool: booleanQuery,
+  summaryKeywords: summaryKeywordsQuery,
+  jobTitle: jobTitleQuery,
+  workStatus: workStatusQuery,
+  preferredWorkType: preferredWorkTypeQuery,
+  willingToRelocate: relocateQuery,
+  skills: skillsQuery,
+  languages: languagesQuery,
+  education: educationQuery,
+};
 
-      const aHasRender = aIdx !== -1;
-      const bHasRender = bIdx !== -1;
-
-      if (aHasRender && bHasRender) return aIdx - bIdx;
-      if (aHasRender && !bHasRender) return -1;
-      if (!aHasRender && bHasRender) return 1;
-
-      const aDate = a?.lastSeen ? new Date(a.lastSeen).getTime() : 0;
-      const bDate = b?.lastSeen ? new Date(b.lastSeen).getTime() : 0;
-      return bDate - aDate;
-    });
+candidates = rankCandidates(candidates, searchFilters, {
+  minScore:
+    nameRoleQuery ||
+    locationQuery ||
+    booleanQuery ||
+    summaryKeywordsQuery ||
+    jobTitleQuery ||
+    workStatusQuery ||
+    preferredWorkTypeQuery ||
+    relocateQuery ||
+    skillsQuery ||
+    languagesQuery ||
+    educationQuery
+      ? 1
+      : 0,
+});
 
     return res.status(200).json({ candidates });
   } catch (err) {
