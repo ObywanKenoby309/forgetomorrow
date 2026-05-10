@@ -183,6 +183,7 @@ function CandidateCard({
       />
 
       <div className="min-w-0 max-w-full overflow-hidden pl-4 pr-4 py-3">
+        <div className="h-[108px] overflow-hidden">
         {/* Top row: avatar + name/title + match score */}
         <div className="flex min-w-0 max-w-full items-start gap-3 overflow-hidden">
           {/* Avatar */}
@@ -222,7 +223,7 @@ function CandidateCard({
 
         {/* Meta chips row */}
         {(displayLocation || workTypeLabel || statusObj || relocateLabel) && (
-          <div className="mt-2.5 flex min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
+          <div className="mt-2.5 flex min-h-[32px] min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
             {displayLocation && (
               <span className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] leading-none text-slate-600">
                 <svg className="h-3 w-3 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -275,8 +276,10 @@ function CandidateCard({
         )}
 
 
+        </div>
+
         {/* Divider */}
-        <div className="mt-3 border-t border-slate-100" />
+        <div className="mt-2 border-t border-slate-100" />
 
         {/* Action buttons */}
         <div className="mt-2.5 flex min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
