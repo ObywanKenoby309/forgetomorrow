@@ -8,7 +8,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
-import { rankCandidates } from "@/lib/intelligence/forgeSearchEngine";
+import { orderCandidatesBySignalRelevance } from "@/lib/intelligence/forgeSearchEngine";
 import { expandStateQuery } from "@/lib/stateNormalize";
 import jwt from "jsonwebtoken";
 
@@ -582,60 +582,6 @@ export default async function handler(req, res) {
       }
     }
 
-    if (nameRoleQuery) {
-      andClauses.push({
-        OR: [
-          { name: { contains: nameRoleQuery, mode: "insensitive" } },
-          { headline: { contains: nameRoleQuery, mode: "insensitive" } },
-          { aboutMe: { contains: nameRoleQuery, mode: "insensitive" } },
-        ],
-      });
-    }
-
-    if (summaryKeywordsQuery) {
-      andClauses.push({
-        aboutMe: { contains: summaryKeywordsQuery, mode: "insensitive" },
-      });
-    }
-
-    if (jobTitleQuery) {
-      andClauses.push({
-        headline: { contains: jobTitleQuery, mode: "insensitive" },
-      });
-    }
-
-    if (skillsQuery) {
-      const terms = skillsQuery
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      for (const term of terms) {
-        andClauses.push({
-          skillsJson: { array_contains: [term] },
-        });
-      }
-    }
-
-    if (languagesQuery) {
-      const terms = languagesQuery
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      for (const term of terms) {
-        andClauses.push({
-          languagesJson: { array_contains: [term] },
-        });
-      }
-    }
-
-    if (booleanQuery) {
-      andClauses.push({
-        aboutMe: { contains: booleanQuery, mode: "insensitive" },
-      });
-    }
-
     const where = { AND: andClauses };
 
     const users = await prisma.user.findMany({
@@ -727,7 +673,6 @@ export default async function handler(req, res) {
     const renderById = new Map(
       renderCandidates.map((c) => [String(c.id), c])
     );
-    const renderIdOrder = renderCandidates.map((c) => String(c.id));
 
     let candidates = users.map((u) => {
       const meta = metaByCandidateId.get(u.id) || null;
@@ -823,35 +768,35 @@ export default async function handler(req, res) {
     );
 
     const searchFilters = {
-  q: nameRoleQuery,
-  location: locationQuery,
-  bool: booleanQuery,
-  summaryKeywords: summaryKeywordsQuery,
-  jobTitle: jobTitleQuery,
-  workStatus: workStatusQuery,
-  preferredWorkType: preferredWorkTypeQuery,
-  willingToRelocate: relocateQuery,
-  skills: skillsQuery,
-  languages: languagesQuery,
-  education: educationQuery,
-};
+      q: nameRoleQuery,
+      location: locationQuery,
+      bool: booleanQuery,
+      summaryKeywords: summaryKeywordsQuery,
+      jobTitle: jobTitleQuery,
+      workStatus: workStatusQuery,
+      preferredWorkType: preferredWorkTypeQuery,
+      willingToRelocate: relocateQuery,
+      skills: skillsQuery,
+      languages: languagesQuery,
+      education: educationQuery,
+    };
 
-candidates = rankCandidates(candidates, searchFilters, {
-  minScore:
-    nameRoleQuery ||
-    locationQuery ||
-    booleanQuery ||
-    summaryKeywordsQuery ||
-    jobTitleQuery ||
-    workStatusQuery ||
-    preferredWorkTypeQuery ||
-    relocateQuery ||
-    skillsQuery ||
-    languagesQuery ||
-    educationQuery
-      ? 1
-      : 0,
-});
+    candidates = orderCandidatesBySignalRelevance(candidates, searchFilters, {
+      minScore:
+        nameRoleQuery ||
+        locationQuery ||
+        booleanQuery ||
+        summaryKeywordsQuery ||
+        jobTitleQuery ||
+        workStatusQuery ||
+        preferredWorkTypeQuery ||
+        relocateQuery ||
+        skillsQuery ||
+        languagesQuery ||
+        educationQuery
+          ? 1
+          : 0,
+    });
 
     return res.status(200).json({ candidates });
   } catch (err) {
