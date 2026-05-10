@@ -161,7 +161,8 @@ function CandidateCard({
   const statusObj = formatWorkStatus(workStatus);
   const relocateLabel = formatRelocate(willingToRelocate);
 
-  const skillsList = toSafeArray(skills).slice(0, 4);
+  const allSkills = toSafeArray(skills);
+  const skillsList = allSkills.slice(0, 5);
 
   const initials = getInitials(name);
   const [avatarFrom, avatarTo] = getAvatarColor(name || "");
@@ -174,14 +175,15 @@ function CandidateCard({
     : "text-slate-500";
 
   return (
-    <div className="group relative w-full max-w-full min-w-0 rounded-xl border border-slate-200/80 bg-white shadow-sm transition-shadow duration-150 hover:shadow-md" style={{ overflow: "visible", position: "relative", zIndex: 1 }}>
+    <div className="group relative flex h-full min-h-[154px] w-full max-w-full min-w-0 flex-col rounded-xl border border-slate-200/80 bg-white shadow-sm transition-shadow duration-150 hover:shadow-md" style={{ overflow: "visible", position: "relative", zIndex: 1 }}>
       {/* Left accent bar */}
       <div
         className="absolute left-0 top-0 bottom-0 w-[3px]"
         style={{ background: `linear-gradient(180deg, ${avatarFrom}, ${avatarTo})` }}
       />
 
-      <div className="min-w-0 max-w-full overflow-hidden pl-4 pr-4 py-3">
+      <div className="flex min-h-[154px] flex-1 flex-col min-w-0 max-w-full overflow-hidden pl-4 pr-4 py-3">
+        <div className="min-h-[88px]">
         {/* Top row: avatar + name/title + match score */}
         <div className="flex min-w-0 max-w-full items-start gap-3 overflow-hidden">
           {/* Avatar */}
@@ -207,17 +209,25 @@ function CandidateCard({
               )}
             </div>
 
-            {displayTitle && (
+            {displayTitle ? (
               <p className="mt-0.5 truncate text-xs leading-tight text-slate-500">
                 {displayTitle}
+              </p>
+            ) : (
+              <p className="mt-0.5 truncate text-xs leading-tight text-slate-400">
+                Title not provided
               </p>
             )}
           </div>
         </div>
 
         {/* Meta chips row */}
-        {(displayLocation || workTypeLabel || statusObj || relocateLabel) && (
-          <div className="mt-2.5 flex min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
+          <div className="mt-2.5 flex min-h-[24px] min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
+            {!(displayLocation || workTypeLabel || statusObj || relocateLabel) && (
+              <span className="inline-flex max-w-full min-w-0 items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] leading-none text-slate-400">
+                Preferences pending
+              </span>
+            )}
             {displayLocation && (
               <span className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] leading-none text-slate-600">
                 <svg className="h-3 w-3 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -248,11 +258,14 @@ function CandidateCard({
               </span>
             )}
           </div>
-        )}
 
         {/* Skills preview */}
-        {skillsList.length > 0 && (
-          <div className="mt-2 max-h-[28px] min-h-[24px] flex min-w-0 max-w-full flex-wrap gap-1.5 overflow-hidden">
+          <div className="mt-2 min-h-[24px] flex min-w-0 max-w-full flex-wrap gap-1.5 overflow-hidden">
+            {skillsList.length === 0 && (
+              <span className="inline-flex max-w-full min-w-0 items-center rounded border border-slate-200/70 bg-slate-50 px-2 py-0.5 text-[10px] font-medium leading-none text-slate-400">
+                Skills pending
+              </span>
+            )}
             {skillsList.map((skill, i) => (
               <span
                 key={`${skill}-${i}`}
@@ -261,16 +274,17 @@ function CandidateCard({
                 <span className="truncate">{skill}</span>
               </span>
             ))}
-            {toSafeArray(skills).length > 4 && (
+            {allSkills.length > 5 && (
               <span className="inline-flex max-w-full items-center px-1 py-0.5 text-[10px] leading-none text-slate-400">
-                +{toSafeArray(skills).length - 4} more
+                +{allSkills.length - 5} more
               </span>
             )}
           </div>
-        )}
+
+        </div>
 
         {/* Divider */}
-        <div className="mt-3 border-t border-slate-100" />
+        <div className="mt-2 border-t border-slate-100" />
 
         {/* Action buttons */}
         <div className="mt-2.5 flex min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
