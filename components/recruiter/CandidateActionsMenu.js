@@ -453,7 +453,7 @@ export default function CandidateActionsMenu({
             position: "fixed",
             top: menuPos.top,
             left: menuPos.left,
-            width: 220,
+            width: 390,
             zIndex: 9998,
             background: "rgba(255,255,255,0.98)",
             borderRadius: 12,
@@ -464,44 +464,97 @@ export default function CandidateActionsMenu({
           }}
         >
           {/* Archive section */}
-          <div style={{ padding: "6px 0 4px" }}>
-            <div style={{ padding: "2px 14px 6px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "#94A3B8" }}>
-              Archive
-            </div>
-            <MenuItem
-              label="Remove from my view"
-              sublabel="Only affects your inbox"
-              onClick={() => { setOpen(false); setModal("archive-mine-confirm"); }}
-            />
-            <MenuItem
-              label="Remove from org view"
-              sublabel="Affects all team members — reason required"
-              onClick={() => { setOpen(false); setModal("archive-org"); }}
-            />
-          </div>
+          <div
+  style={{
+  position: "relative",
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 0,
+}}
+>
+  {/* LEFT COLUMN */}
+  <div style={{ padding: "6px 0" }}>
+    <div
+      style={{
+        padding: "2px 14px 6px",
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "0.07em",
+        textTransform: "uppercase",
+        color: "#94A3B8",
+      }}
+    >
+      Archive
+    </div>
 
-          <div style={{ height: 1, background: "rgba(15,23,42,0.07)", margin: "0 12px" }} />
+    <MenuItem
+      label="Remove from my view"
+      sublabel="Only affects your inbox"
+      onClick={() => {
+        setOpen(false);
+        setModal("archive-mine-confirm");
+      }}
+    />
 
-          {/* Safety section */}
-          <div style={{ padding: "4px 0 6px" }}>
-            <div style={{ padding: "4px 14px 6px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "#94A3B8" }}>
-              Safety
-            </div>
-            <MenuItem
-              label="Report"
-              sublabel="Flag for ForgeTomorrow review"
-              onClick={() => { setOpen(false); setModal("report"); }}
-            />
-            <MenuItem
-              label="Block"
-              sublabel="Block + report — reason required"
-              danger
-              onClick={() => { setOpen(false); setModal("block"); }}
-            />
-          </div>
-        </div>,
-        document.body
-      )}
+    <MenuItem
+      label="Remove from org view"
+      sublabel="Affects all team members — reason required"
+      onClick={() => {
+        setOpen(false);
+        setModal("archive-org");
+      }}
+    />
+  </div>
+
+  {/* Divider */}
+  <div
+    style={{
+      position: "absolute",
+      top: 0,
+      bottom: 0,
+      left: "50%",
+      width: 1,
+      background: "rgba(15,23,42,0.07)",
+    }}
+  />
+
+  {/* RIGHT COLUMN */}
+  <div style={{ padding: "6px 0" }}>
+    <div
+      style={{
+        padding: "2px 14px 6px",
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "0.07em",
+        textTransform: "uppercase",
+        color: "#94A3B8",
+      }}
+    >
+      Safety
+    </div>
+
+    <MenuItem
+      label="Report"
+      sublabel="Flag for ForgeTomorrow review"
+      onClick={() => {
+        setOpen(false);
+        setModal("report");
+      }}
+    />
+
+    <MenuItem
+      label="Block"
+      sublabel="Block + report — reason required"
+      danger
+      onClick={() => {
+        setOpen(false);
+        setModal("block");
+      }}
+    />
+  </div>
+</div>,
+document.body
+)}
 
       {/* Modals */}
       {modal === "archive-mine-confirm" && (
