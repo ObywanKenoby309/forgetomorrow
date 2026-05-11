@@ -590,7 +590,6 @@ export default async function handler(req, res) {
       take: 100,
       select: {
         id: true,
-        slug: true,
         name: true,
         email: true,
         headline: true,
@@ -633,7 +632,7 @@ export default async function handler(req, res) {
     const resumes = candidateUserIds.length
       ? await prisma.resume.findMany({
           where: { userId: { in: candidateUserIds } },
-          select: { id: true, userId: true, name: true, content: true, updatedAt: true, isPrimary: true },
+          select: { id: true, userId: true, content: true, updatedAt: true, isPrimary: true },
           orderBy: { updatedAt: "desc" },
         })
       : [];
@@ -709,7 +708,6 @@ export default async function handler(req, res) {
       return {
         id: u.id,
         userId: u.id,
-        slug: u.slug || renderCandidate?.slug || "",
         name: u.name || renderCandidate?.name || "Unnamed",
         email: u.email || renderCandidate?.email || null,
         title: u.headline || renderCandidate?.headline || "",
@@ -749,13 +747,6 @@ export default async function handler(req, res) {
         lastSeen: meta?.lastSeen || null,
 
         resumeId: bestResume?.id || null,
-        primaryResume: bestResume
-          ? {
-              id: bestResume.id,
-              name: bestResume.name || "Primary Resume",
-              updatedAt: bestResume.updatedAt || null,
-            }
-          : null,
 
         rendermatch:
           typeof renderCandidate?.match === "number"

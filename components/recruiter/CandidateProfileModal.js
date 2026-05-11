@@ -56,7 +56,8 @@ function PrefRow({ label, value }) {
     <div className="flex items-start justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
       <span className="text-xs text-slate-500 shrink-0">{label}</span>
       <span className="text-xs text-slate-800 font-medium text-right">{value}</span>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -192,14 +193,7 @@ export default function CandidateProfileModal({
   const hasSkills = toSafeArray(skillsLocal).length > 0;
   const hasNotes = notes.trim().length > 0;
 
-  const primaryResume = candidate?.primaryResume || null;
-  const resumeId = primaryResume?.id || candidate?.resumeId || null;
-  const candidateSlug = candidate?.slug || "";
-  const hasResume = Boolean(resumeId);
-  const resumeDownloadHref =
-    resumeId && candidateSlug
-      ? `/api/resume/public-download?resumeId=${encodeURIComponent(resumeId)}&slug=${encodeURIComponent(candidateSlug)}`
-      : "";
+  const hasResume = Boolean(candidate?.resumeId);
 
   // ── Work preferences ────────────────────────────────────────────────────────
   const preferredLocationList = toSafeArray(candidate?.preferredLocations);
@@ -248,17 +242,6 @@ export default function CandidateProfileModal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {resumeDownloadHref && (
-              <a
-                href={resumeDownloadHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
-                title={primaryResume?.name ? `Download ${primaryResume.name}` : "Download primary resume"}
-              >
-                Download resume
-              </a>
-            )}
             {typeof onViewResume === "function" && (
               <button
                 type="button"
@@ -644,7 +627,6 @@ export default function CandidateProfileModal({
           </div>
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }
