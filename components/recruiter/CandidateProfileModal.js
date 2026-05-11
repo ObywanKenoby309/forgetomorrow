@@ -192,6 +192,11 @@ export default function CandidateProfileModal({
 
   const hasResume = Boolean(candidate?.resumeId);
 
+const resumeDownloadHref =
+  candidate?.resumeId && candidate?.slug
+    ? `/api/resume/public-download?resumeId=${encodeURIComponent(candidate.resumeId)}&slug=${encodeURIComponent(candidate.slug)}`
+    : "";
+
   // ── Work preferences ────────────────────────────────────────────────────────
   const preferredLocationList = toSafeArray(candidate?.preferredLocations);
   const workStatusFmt = formatWorkStatus(candidate?.workStatus);
@@ -239,7 +244,19 @@ export default function CandidateProfileModal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {typeof onViewResume === "function" && (
+
+  {resumeDownloadHref && (
+    <a
+      href={resumeDownloadHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+    >
+      Download resume
+    </a>
+  )}
+
+  {typeof onViewResume === "function" && (
               <button
                 type="button"
                 onClick={() => onViewResume(candidate)}
