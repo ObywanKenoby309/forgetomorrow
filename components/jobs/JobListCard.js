@@ -67,6 +67,8 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
     : null;
 
   const showSnippet = internal;
+  const matchScore = typeof job.jobMatch === 'number' ? Math.round(job.jobMatch) : null;
+  const matchLabel = job.jobMatchTier || 'Signal match';
 
   return (
     <article
@@ -124,14 +126,30 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
           </div>
         </div>
 
-        {/* Right: date */}
+        {/* Right: match/date */}
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontSize: 10, color: subtleColor, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Posted
-          </div>
-          <div style={{ fontSize: 12, color: isDarkCard ? '#FFFFFF' : '#546E7A', fontWeight: 600 }}>
-            {postedLabel}
-          </div>
+          {matchScore !== null ? (
+            <>
+              <div style={{ fontSize: 10, color: subtleColor, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Match
+              </div>
+              <div style={{ fontSize: 15, color: isDarkCard ? '#FFFFFF' : '#FF7043', fontWeight: 900, lineHeight: 1.1 }}>
+                {matchScore}%
+              </div>
+              <div style={{ fontSize: 10, color: subtleColor, fontWeight: 600, marginTop: 2 }}>
+                {matchLabel}
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 10, color: subtleColor, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Posted
+              </div>
+              <div style={{ fontSize: 12, color: isDarkCard ? '#FFFFFF' : '#546E7A', fontWeight: 600 }}>
+                {postedLabel}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -150,6 +168,16 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
             color: isDarkCard ? '#ECEFF1' : '#546E7A', fontWeight: 600,
           }}>
             {locationType}
+          </span>
+        )}
+        {matchScore !== null && (
+          <span style={{
+            fontSize: 11, padding: '2px 7px', borderRadius: 999,
+            border: '1px solid rgba(255,112,67,0.35)',
+            background: isDarkCard ? 'rgba(255,112,67,0.18)' : 'rgba(255,112,67,0.08)',
+            color: isDarkCard ? '#FFCC80' : '#C2410C', fontWeight: 800,
+          }}>
+            {matchScore}% signal
           </span>
         )}
         {displaySource && (

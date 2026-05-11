@@ -15,6 +15,7 @@ import JobPagination      from '../components/jobs/JobPagination';
 import JobDetailPanel     from '../components/jobs/JobDetailPanel';
 import MobileJobDetail    from '../components/jobs/MobileJobDetail';
 import JobsBottomRow      from '../components/jobs/JobsBottomRow';
+import { rankJobsBySignalRelevance, normalizeLocationQuery } from '../lib/intelligence/forgeJobMatchEngine';
 
 // ── SSR-safe mobile hook ──────────────────────────────────────
 function useIsMobile(bp = 768) {
@@ -217,13 +218,13 @@ function JobsUI() {
 
   const normalizedKeyword  = keyword.trim().toLowerCase();
   const normalizedCompany  = companyFilter.trim().toLowerCase();
-  const normalizedLocation = locationFilter.trim().toLowerCase();
+  const normalizedLocation = normalizeLocationQuery(locationFilter).toLowerCase();
   const parsedDays         = parseInt(daysFilter, 10);
   const hasDaysFilter      = !Number.isNaN(parsedDays) && parsedDays > 0;
   const now                = new Date();
   const cutoffTime         = hasDaysFilter ? now.getTime() - parsedDays * 24 * 60 * 60 * 1000 : null;
 
-  const filteredJobs = jobs.filter(job => {
+  const rawFilteredJobs = jobs.filter(job => {
     const status = getJobStatus(job);
     if (status === 'Draft') return false;
     if (status === 'Closed') {
@@ -238,7 +239,6 @@ function JobsUI() {
     const tags        = (job.tags || '').toString().toLowerCase();
     if (normalizedKeyword && !`${title} ${company} ${location} ${description} ${tags}`.includes(normalizedKeyword)) return false;
     if (normalizedCompany  && !company.includes(normalizedCompany))   return false;
-    if (normalizedLocation && !location.includes(normalizedLocation)) return false;
     if (locationTypeFilter && inferLocationType(job.location || '') !== locationTypeFilter) return false;
     if (sourceFilter) {
       const internal = isInternalJob(job);
@@ -252,6 +252,14 @@ function JobsUI() {
     }
     return true;
   });
+
+const filteredJobs = rankJobsBySignalRelevance(rawFilteredJobs, {
+  keyword,
+  company: companyFilter,
+  location: locationFilter,
+  locationType: locationTypeFilter,
+  source: sourceFilter,
+});
 
   useEffect(() => {
     const total = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
