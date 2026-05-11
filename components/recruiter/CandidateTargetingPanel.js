@@ -67,8 +67,8 @@ export default function CandidateTargetingPanel({
   const formContent = (
     <div className={defaultExpanded ? "" : "mt-3"}>
       <GlassPanel className={defaultExpanded ? "p-4 rounded-none border-0 shadow-none bg-transparent" : "p-4"}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="md:col-span-6">
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Summary keywords
             </label>
@@ -81,7 +81,7 @@ export default function CandidateTargetingPanel({
             />
           </div>
 
-          <div>
+          <div className="md:col-span-6">
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Job title
             </label>
@@ -94,7 +94,7 @@ export default function CandidateTargetingPanel({
             />
           </div>
 
-          <div>
+          <div className="md:col-span-3">
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Current work status
             </label>
@@ -110,7 +110,7 @@ export default function CandidateTargetingPanel({
             </select>
           </div>
 
-          <div>
+          <div className="md:col-span-3">
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Preferred work type
             </label>
@@ -127,7 +127,7 @@ export default function CandidateTargetingPanel({
             </select>
           </div>
 
-          <div>
+          <div className="md:col-span-3">
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Willing to relocate
             </label>
@@ -143,7 +143,7 @@ export default function CandidateTargetingPanel({
             </select>
           </div>
 
-          <div>
+          <div className="md:col-span-3">
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Preferred location
             </label>
@@ -156,7 +156,7 @@ export default function CandidateTargetingPanel({
             />
           </div>
 
-          <div>
+          <div className="md:col-span-4">
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Skills (comma-separated)
             </label>
@@ -169,7 +169,7 @@ export default function CandidateTargetingPanel({
             />
           </div>
 
-          <div>
+          <div className="md:col-span-4">
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Education (comma-separated)
             </label>
@@ -182,7 +182,7 @@ export default function CandidateTargetingPanel({
             />
           </div>
 
-          <div>
+          <div className="md:col-span-4">
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Languages (comma-separated)
             </label>
@@ -196,9 +196,9 @@ export default function CandidateTargetingPanel({
           </div>
         </div>
 
-        <div className="mt-4 border-t border-white/40 pt-3 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-start gap-2">
+        <div className="mt-3 border-t border-white/40 pt-3 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:flex-wrap">
+            <div className="flex items-center gap-2 md:pb-2">
               <input
                 id="automationEnabled"
                 type="checkbox"
@@ -211,7 +211,7 @@ export default function CandidateTargetingPanel({
               </label>
             </div>
 
-            <div>
+            <div className="min-w-[220px] md:max-w-[280px]">
               <label className="block text-[11px] font-medium text-slate-600 mb-1">
                 Automation name (optional)
               </label>
@@ -223,13 +223,9 @@ export default function CandidateTargetingPanel({
                 className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
               />
             </div>
-
-            <div className="text-[11px] text-slate-500">
-              Find Candidates runs these targeting settings on demand.
-            </div>
           </div>
 
-          <div className="flex items-center gap-2 md:justify-end">
+          <div className="flex items-center gap-2 md:justify-end md:pb-1">
             <button
               type="button"
               onClick={onFindCandidates}
@@ -273,7 +269,7 @@ export default function CandidateTargetingPanel({
 
   // ── When defaultExpanded: render form directly, no toggle wrapper ──────────
   if (defaultExpanded) {
-    return <div className="pt-6 px-4 pb-4">{formContent}</div>;
+    return <div className="pt-4 px-4 pb-3">{formContent}</div>;
   }
 
   // ── Normal inline mode: collapsible panel (legacy pages) ──────────────────

@@ -1066,8 +1066,13 @@ export default function InternalSearchModule() {
     if (effectiveLocation) params.set("location", effectiveLocation);
 
     if (boolQuery) params.set("bool", boolQuery);
+    const roleFallbackFromAdvancedQuery =
+      !jobTitle && isPlainRoleLikeQuery(boolQuery) ? boolQuery : "";
+
     if (summaryKeywords) params.set("summaryKeywords", summaryKeywords);
-    if (jobTitle) params.set("jobTitle", jobTitle);
+    if (jobTitle || roleFallbackFromAdvancedQuery) {
+      params.set("jobTitle", jobTitle || roleFallbackFromAdvancedQuery);
+    }
     if (workStatus) params.set("workStatus", workStatus);
     if (preferredWorkType) params.set("preferredWorkType", preferredWorkType);
     if (willingToRelocate) params.set("willingToRelocate", willingToRelocate);
@@ -1209,6 +1214,14 @@ export default function InternalSearchModule() {
     if (Array.isArray(val)) return val.filter(Boolean).map(String);
     if (typeof val === "string") return val.split(/[,|]/g).map((s) => s.trim()).filter(Boolean);
     return [];
+  };
+
+  const isPlainRoleLikeQuery = (value) => {
+    const q = String(value || "").trim();
+    if (!q) return false;
+    if (/[()"]/g.test(q)) return false;
+    if (/\b(AND|OR|NOT)\b/i.test(q)) return false;
+    return true;
   };
 
   const uniq = (arr) => Array.from(new Set((arr || []).filter(Boolean)));
@@ -1654,7 +1667,7 @@ export default function InternalSearchModule() {
           location: (locQuery || locationFilter) || null,
           bool: boolQuery || null,
           summaryKeywords: summaryKeywords || null,
-          jobTitle: jobTitle || null,
+          jobTitle: jobTitle || (!jobTitle && isPlainRoleLikeQuery(boolQuery) ? boolQuery : null),
           workStatus: workStatus || null,
           preferredWorkType: preferredWorkType || null,
           relocate: willingToRelocate || null,
@@ -1769,7 +1782,7 @@ export default function InternalSearchModule() {
           location: (locQuery || locationFilter) || null,
           bool: boolQuery || null,
           summaryKeywords: summaryKeywords || null,
-          jobTitle: jobTitle || null,
+          jobTitle: jobTitle || (!jobTitle && isPlainRoleLikeQuery(boolQuery) ? boolQuery : null),
           workStatus: workStatus || null,
           preferredWorkType: preferredWorkType || null,
           relocate: willingToRelocate || null,
