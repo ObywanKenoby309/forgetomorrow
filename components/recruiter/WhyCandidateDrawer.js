@@ -1,5 +1,6 @@
 // components/recruiter/WhyCandidateDrawer.js
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/Buttons";
 import WhyInfo from "@/components/recruiter/WhyInfo";
 
@@ -769,9 +770,9 @@ export default function WhyCandidateDrawer({
   mode = "lite",
   onViewCandidate,
 }) {
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div aria-live="polite">
       {/* Overlay */}
       <div
@@ -780,7 +781,7 @@ export default function WhyCandidateDrawer({
           position: "fixed",
           inset: 0,
           background: "rgba(0,0,0,0.35)",
-          zIndex: 60,
+          zIndex: 9990,
         }}
       />
 
@@ -797,7 +798,7 @@ export default function WhyCandidateDrawer({
           background: "#fff",
           borderLeft: "1px solid #e5e7eb",
           boxShadow: "-8px 0 24px rgba(0,0,0,0.12)",
-          zIndex: 61,
+          zIndex: 9991,
           display: "flex",
           flexDirection: "column",
         }}
@@ -810,7 +811,8 @@ export default function WhyCandidateDrawer({
           onViewCandidate={onViewCandidate}
         />
       </aside>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -831,12 +833,12 @@ export function WhyCandidateCompareDrawer({
   onViewLeft,
   onViewRight,
 }) {
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   const leftName = left?.candidate?.name || "Candidate A";
   const rightName = right?.candidate?.name || "Candidate B";
 
-  return (
+  return createPortal(
     <div aria-live="polite">
       {/* Overlay */}
       <div
@@ -845,7 +847,7 @@ export function WhyCandidateCompareDrawer({
           position: "fixed",
           inset: 0,
           background: "rgba(0,0,0,0.35)",
-          zIndex: 70,
+          zIndex: 9992,
         }}
       />
 
@@ -859,7 +861,7 @@ export function WhyCandidateCompareDrawer({
           right: 0,
           height: "calc(100vh - 56px)",
           width: "min(1120px, 100%)",
-          zIndex: 71,
+          zIndex: 9993,
           display: "grid",
           gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
           minHeight: 0,
@@ -916,6 +918,7 @@ export function WhyCandidateCompareDrawer({
         {/* Mobile: show a single combined title using right panel already */}
         <div className="lg:hidden hidden" />
       </aside>
-    </div>
+    </div>,
+    document.body
   );
 }
