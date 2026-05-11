@@ -554,7 +554,7 @@ export default function CandidateActionsMenu({
   </div>
 </div>,
 document.body
-)}
+))}
 
       {/* Modals */}
       {modal === "archive-mine-confirm" && (
