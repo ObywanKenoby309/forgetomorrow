@@ -1,6 +1,5 @@
 // components/recruiter/CandidateProfileModal.js
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 
 function toSafeArray(value) {
@@ -117,7 +116,6 @@ export default function CandidateProfileModal({
   };
 
   if (!open || !candidate) return null;
-  if (typeof document === "undefined") return null;
 
   const saveNotes = () => onSaveNotes?.(candidate.id, notes);
 
@@ -218,9 +216,9 @@ export default function CandidateProfileModal({
   const languageList = toSafeArray(candidate?.languages);
   const hasLanguages = languageList.length > 0;
 
-  return createPortal(
+  return (
     <div
-      className="fixed inset-0 z-[10020] flex items-start justify-center px-4 pt-10 pb-6 sm:px-6 sm:pt-14"
+      className="fixed inset-0 z-[200] flex items-start justify-center px-4 pt-10 pb-6 sm:px-6 sm:pt-14"
     >
       <div
         className="absolute inset-0 bg-[rgba(2,6,23,0.55)] backdrop-blur-[3px]"
