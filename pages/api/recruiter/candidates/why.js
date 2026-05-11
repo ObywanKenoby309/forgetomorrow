@@ -1,10 +1,12 @@
 // pages/api/recruiter/candidates/why.js
-// ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
-// NOTE: This endpoint only reads candidate/job; impersonation matters for consistent "who is asking" logging/behavior.
+// Forge WHY endpoint
+// Uses the same Forge intelligence engine as Internal Candidate Search.
+// Pulls candidate profile + saved primary resume, falling back to most recently updated saved resume.
 
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
+import { explainCandidate, orderCandidatesBySignalRelevance } from "@/lib/intelligence/forgeSearchEngine";
 import jwt from "jsonwebtoken";
 
 function readCookie(req, name) {
@@ -28,13 +30,18 @@ async function resolveEffectiveRecruiterId(req, session) {
   if (!imp) return null;
 
   try {
-    const decoded = jwt.verify(imp, process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production");
+    const decoded = jwt.verify(
+      imp,
+      process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production"
+    );
+
     if (decoded && typeof decoded === "object" && decoded.targetUserId) {
       return String(decoded.targetUserId);
     }
   } catch {
-    // ignore
+    // ignore invalid/expired cookie
   }
+
   return null;
 }
 
@@ -49,171 +56,383 @@ function splitCsv(v) {
     .filter(Boolean);
 }
 
-function lc(s) {
-  return String(s || "").toLowerCase();
+function safeJsonParse(str) {
+  try {
+    return JSON.parse(str);
+  } catch {
+    return null;
+  }
 }
 
-function includesCI(hay, needle) {
-  const h = lc(hay);
-  const n = lc(needle);
-  if (!h || !n) return false;
-  return h.includes(n);
+function toArrayJson(v) {
+  if (Array.isArray(v)) return v.map((x) => String(x || "").trim()).filter(Boolean);
+  return [];
 }
 
-function uniq(arr) {
-  return Array.from(new Set((arr || []).filter(Boolean)));
+function dedupeCaseInsensitive(arr) {
+  const out = [];
+  const seen = new Set();
+
+  for (const raw of Array.isArray(arr) ? arr : []) {
+    const t = String(raw || "").trim();
+    if (!t) continue;
+
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    out.push(t);
+  }
+
+  return out;
 }
 
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n));
+function toEducationObjects(v) {
+  if (Array.isArray(v)) {
+    return v
+      .map((x) => {
+        if (!x || typeof x !== "object") return null;
+
+        return {
+          id: x.id ? String(x.id) : null,
+          school: x.school ? String(x.school) : "",
+          degree: x.degree ? String(x.degree) : "",
+          field: x.field ? String(x.field) : "",
+          startYear: x.startYear ? String(x.startYear) : "",
+          endYear: x.endYear ? String(x.endYear) : "",
+        };
+      })
+      .filter(Boolean);
+  }
+
+  if (typeof v === "string") {
+    const parsed = safeJsonParse(v);
+    if (Array.isArray(parsed)) return toEducationObjects(parsed);
+  }
+
+  return [];
 }
 
-function buildExplain({ candidate, job, filters }) {
-  const headline = normStr(candidate.headline);
-  const aboutMe = normStr(candidate.aboutMe);
-  const location = normStr(candidate.location);
-  const candSkills = Array.isArray(candidate.skillsJson) ? candidate.skillsJson : [];
-  const candLang = Array.isArray(candidate.languagesJson) ? candidate.languagesJson : [];
+function getWorkPreferencesObject(v) {
+  if (v && typeof v === "object" && !Array.isArray(v)) return v;
+  return {};
+}
 
+function getPreferredLocationsFromWorkPreferences(workPreferences) {
+  const prefs = getWorkPreferencesObject(workPreferences);
+
+  const raw =
+    prefs.preferredLocations ??
+    prefs.locations ??
+    prefs.locationPreferences ??
+    prefs.preferredLocation ??
+    prefs.location ??
+    [];
+
+  if (Array.isArray(raw)) {
+    return dedupeCaseInsensitive(
+      raw.map((x) => {
+        if (typeof x === "string") return x;
+        if (x && typeof x === "object") {
+          return x.label || x.name || x.value || x.location || "";
+        }
+        return "";
+      })
+    );
+  }
+
+  if (typeof raw === "string") {
+    return dedupeCaseInsensitive(
+      raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    );
+  }
+
+  return [];
+}
+
+function getWorkStatusFromWorkPreferences(workPreferences) {
+  const prefs = getWorkPreferencesObject(workPreferences);
+  return prefs.workStatus || prefs.currentWorkStatus || prefs.status || "";
+}
+
+function getPreferredWorkTypeFromWorkPreferences(workPreferences) {
+  const prefs = getWorkPreferencesObject(workPreferences);
+  return prefs.preferredWorkType || prefs.workType || prefs.employmentType || "";
+}
+
+function getRelocateFromWorkPreferences(workPreferences) {
+  const prefs = getWorkPreferencesObject(workPreferences);
+  return prefs.willingToRelocate ?? prefs.relocate ?? prefs.relocation ?? "";
+}
+
+function extractRootFromResumeContent(contentStr) {
+  const parsed = typeof contentStr === "string" ? safeJsonParse(contentStr) : null;
+  if (!parsed || typeof parsed !== "object") return null;
+  return parsed?.data && typeof parsed.data === "object" ? parsed.data : parsed;
+}
+
+function extractExperienceFromResumeContent(contentStr) {
+  const root = extractRootFromResumeContent(contentStr);
+  if (!root || typeof root !== "object") return [];
+
+  const list =
+    (Array.isArray(root.workExperiences) && root.workExperiences) ||
+    (Array.isArray(root.experiences) && root.experiences) ||
+    (Array.isArray(root.experience) && root.experience) ||
+    [];
+
+  if (!Array.isArray(list)) return [];
+
+  return list
+    .map((exp) => {
+      const title = exp?.title || exp?.jobTitle || exp?.role || "";
+      const company = exp?.company || "";
+      const start = exp?.startDate || exp?.start || "";
+      const end = exp?.endDate || exp?.end || "";
+      const range = [start, end].filter(Boolean).join(" - ") || exp?.range || "";
+
+      const highlightsRaw =
+        exp?.highlights ||
+        exp?.bullets ||
+        exp?.description ||
+        exp?.details ||
+        [];
+
+      let highlights = [];
+
+      if (Array.isArray(highlightsRaw)) {
+        highlights = highlightsRaw.map((x) => String(x || "").trim()).filter(Boolean);
+      } else if (typeof highlightsRaw === "string") {
+        highlights = highlightsRaw
+          .split(/\r?\n/g)
+          .map((x) => String(x || "").trim())
+          .filter(Boolean);
+      }
+
+      return {
+        title: String(title || "").trim(),
+        company: String(company || "").trim(),
+        range: String(range || "").trim(),
+        from: String(start || "").trim(),
+        to: String(end || "").trim(),
+        highlights,
+      };
+    })
+    .filter((e) => e.title || e.company || e.range || (e.highlights && e.highlights.length));
+}
+
+function extractSkillsFromResumeContent(contentStr) {
+  const root = extractRootFromResumeContent(contentStr);
+  if (!root || typeof root !== "object") return [];
+
+  const skills =
+    (Array.isArray(root.skills) && root.skills) ||
+    (Array.isArray(root.skillList) && root.skillList) ||
+    [];
+
+  return dedupeCaseInsensitive(skills.map((s) => String(s || "").trim()).filter(Boolean));
+}
+
+function extractEducationFromResumeContent(contentStr) {
+  const root = extractRootFromResumeContent(contentStr);
+  if (!root || typeof root !== "object") return [];
+
+  const list =
+    (Array.isArray(root.educationList) && root.educationList) ||
+    (Array.isArray(root.education) && root.education) ||
+    [];
+
+  if (!Array.isArray(list)) return [];
+
+  return list
+    .map((edu) => {
+      if (typeof edu === "string") return edu;
+      if (!edu || typeof edu !== "object") return null;
+
+      return {
+        school: edu.school || edu.institution || "",
+        degree: edu.degree || "",
+        field: edu.field || edu.fieldOfStudy || "",
+        startYear: edu.startYear || "",
+        endYear: edu.endYear || "",
+      };
+    })
+    .filter(Boolean);
+}
+
+function chooseBestResume(resumes) {
+  const list = Array.isArray(resumes) ? resumes : [];
+  if (!list.length) return null;
+
+  const primary = list.find((r) => r?.isPrimary);
+  if (primary) return primary;
+
+  return list[0] || null;
+}
+
+function buildFiltersTriggered(filters, job) {
   const f = filters && typeof filters === "object" ? filters : {};
-  const fQ = normStr(f.q);
-  const fLoc = normStr(f.location);
-  const fBool = normStr(f.bool);
-  const fSummaryKeywords = normStr(f.summaryKeywords);
-  const fJobTitle = normStr(f.jobTitle);
-  const fSkills = splitCsv(f.skills);
-  const fLanguages = splitCsv(f.languages);
-
-  const jobTitle = job ? normStr(job.title) : "";
-  const jobDesc = job ? normStr(job.description) : "";
 
   const triggered = [];
-  if (fQ) triggered.push(`Name/role: ${fQ}`);
-  if (fLoc) triggered.push(`Location: ${fLoc}`);
-  if (fBool) triggered.push(`Boolean: ${fBool}`);
-  if (fSummaryKeywords) triggered.push(`Summary keywords: ${fSummaryKeywords}`);
-  if (fJobTitle) triggered.push(`Job title: ${fJobTitle}`);
-  if (fSkills.length) triggered.push(`Skills: ${fSkills.join(", ")}`);
-  if (fLanguages.length) triggered.push(`Languages: ${fLanguages.join(", ")}`);
-  if (job) triggered.push(`Job context: ${jobTitle || "Selected job"}`);
 
-  const reasons = [];
-
-  const titleNeedle = fJobTitle || jobTitle || fQ;
-  if (titleNeedle && (includesCI(headline, titleNeedle) || includesCI(aboutMe, titleNeedle))) {
-    reasons.push({
-      requirement: `Title/role alignment: ${titleNeedle}`,
-      evidence: [
-        headline ? { text: `Headline: ${headline}`, source: "Profile" } : null,
-        includesCI(aboutMe, titleNeedle)
-          ? { text: `About: contains "${titleNeedle}"`, source: "Profile" }
-          : null,
-      ].filter(Boolean),
-    });
+  if (normStr(f.q)) triggered.push(`Name/role: ${normStr(f.q)}`);
+  if (normStr(f.location)) triggered.push(`Location: ${normStr(f.location)}`);
+  if (normStr(f.bool)) triggered.push(`Boolean: ${normStr(f.bool)}`);
+  if (normStr(f.summaryKeywords)) triggered.push(`Summary keywords: ${normStr(f.summaryKeywords)}`);
+  if (normStr(f.jobTitle)) triggered.push(`Job title: ${normStr(f.jobTitle)}`);
+  if (normStr(f.workStatus)) triggered.push(`Work status: ${normStr(f.workStatus)}`);
+  if (normStr(f.preferredWorkType)) triggered.push(`Work type: ${normStr(f.preferredWorkType)}`);
+  if (normStr(f.relocate || f.willingToRelocate)) {
+    triggered.push(`Relocate: ${normStr(f.relocate || f.willingToRelocate)}`);
   }
 
-  if (fLoc && includesCI(location, fLoc)) {
-    reasons.push({
-      requirement: `Location match: ${fLoc}`,
-      evidence: [{ text: `Location: ${location}`, source: "Profile" }],
-    });
-  }
+  const skills = splitCsv(f.skills);
+  const languages = splitCsv(f.languages);
+  const education = splitCsv(f.education);
 
-  if (fSummaryKeywords && includesCI(aboutMe, fSummaryKeywords)) {
-    reasons.push({
-      requirement: `Keyword match: ${fSummaryKeywords}`,
-      evidence: [{ text: `About: contains "${fSummaryKeywords}"`, source: "Profile" }],
-    });
-  }
+  if (skills.length) triggered.push(`Skills: ${skills.join(", ")}`);
+  if (languages.length) triggered.push(`Languages: ${languages.join(", ")}`);
+  if (education.length) triggered.push(`Education: ${education.join(", ")}`);
 
-  if (fBool && includesCI(aboutMe, fBool)) {
-    reasons.push({
-      requirement: `Boolean intent found: ${fBool}`,
-      evidence: [{ text: `About: contains "${fBool}"`, source: "Profile" }],
-    });
-  }
+  if (job) triggered.push(`Job context: ${job.title || "Selected job"}`);
 
-  let matchedSkills = [];
-  let gapSkills = [];
+  return triggered;
+}
 
-  if (fSkills.length) {
-    const candSkillsLC = candSkills.map(lc);
-    matchedSkills = fSkills.filter((s) => candSkillsLC.includes(lc(s)));
-    gapSkills = fSkills.filter((s) => !candSkillsLC.includes(lc(s)));
+function buildForgeCandidate({ candidate, bestResume }) {
+  const workPreferencesObj = getWorkPreferencesObject(candidate.workPreferences);
 
-    reasons.push({
-      requirement: `Skills matched (${matchedSkills.length}/${fSkills.length})`,
-      evidence: [
-        matchedSkills.length
-          ? { text: `Matched: ${matchedSkills.join(", ")}`, source: "Skills" }
-          : { text: `Requested: ${fSkills.join(", ")}`, source: "Skills" },
-      ],
-    });
-  } else if (job && jobDesc && candSkills.length) {
-    const hits = candSkills.filter((s) => includesCI(jobDesc, s));
-    if (hits.length) {
-      matchedSkills = uniq(hits).slice(0, 12);
-      reasons.push({
-        requirement: `Skills aligned with job description`,
-        evidence: [{ text: `Job mentions: ${matchedSkills.join(", ")}`, source: "Job + Skills" }],
-      });
-    }
-  } else if (candSkills.length) {
-    matchedSkills = candSkills.slice(0, 8);
-    reasons.push({
-      requirement: `Skills present in profile`,
-      evidence: [{ text: `Listed: ${matchedSkills.join(", ")}`, source: "Skills" }],
-    });
-  }
+  const profileSkillsArr = dedupeCaseInsensitive(toArrayJson(candidate.skillsJson));
+  const resumeSkillsArr = bestResume?.content
+    ? extractSkillsFromResumeContent(bestResume.content)
+    : [];
 
-  if (fLanguages.length) {
-    const candLangLC = candLang.map(lc);
-    const matchedLang = fLanguages.filter((s) => candLangLC.includes(lc(s)));
-    if (matchedLang.length) {
-      reasons.push({
-        requirement: `Language match`,
-        evidence: [{ text: `Matched: ${matchedLang.join(", ")}`, source: "Profile" }],
-      });
-    }
-  }
+  const experience = bestResume?.content
+    ? extractExperienceFromResumeContent(bestResume.content)
+    : [];
 
-  const checks = [];
-  if (fLoc) checks.push(includesCI(location, fLoc) ? 1 : 0);
-  if (fSummaryKeywords) checks.push(includesCI(aboutMe, fSummaryKeywords) ? 1 : 0);
-  if (fBool) checks.push(includesCI(aboutMe, fBool) ? 1 : 0);
-  if (fJobTitle) checks.push(includesCI(headline, fJobTitle) || includesCI(aboutMe, fJobTitle) ? 1 : 0);
-  if (fQ) checks.push(includesCI(candidate.name, fQ) || includesCI(headline, fQ) || includesCI(aboutMe, fQ) ? 1 : 0);
+  const profileEducation = toEducationObjects(candidate.educationJson);
+  const resumeEducation = bestResume?.content
+    ? extractEducationFromResumeContent(bestResume.content)
+    : [];
 
-  let skillScore = null;
-  if (fSkills.length) {
-    skillScore = matchedSkills.length / fSkills.length;
-  }
-
-  const base = checks.length ? checks.reduce((a, b) => a + b, 0) / checks.length : 0;
-  const weighted = skillScore == null ? base : base * 0.4 + skillScore * 0.6;
-
-  const score = clamp(Math.round(weighted * 100), 0, 100);
-
-  const firstName = normStr(candidate.name).split(" ")[0] || "Candidate";
-  const summaryBits = [];
-  if (fSkills.length) summaryBits.push(`${matchedSkills.length}/${fSkills.length} requested skills`);
-  if (fLoc) summaryBits.push(includesCI(location, fLoc) ? "location matches" : "location differs");
-  if (fJobTitle || jobTitle) summaryBits.push("role/title signal present");
-  if (!summaryBits.length && candSkills.length) summaryBits.push("profile signals present");
-
-  const summary = `${firstName} aligns based on ${summaryBits.join(", ")}.`;
+  const preferredLocations = getPreferredLocationsFromWorkPreferences(workPreferencesObj);
+  const resolvedWorkStatus = getWorkStatusFromWorkPreferences(workPreferencesObj);
+  const resolvedPreferredWorkType = getPreferredWorkTypeFromWorkPreferences(workPreferencesObj);
+  const resolvedRelocate = getRelocateFromWorkPreferences(workPreferencesObj);
 
   return {
-    score,
+    id: candidate.id,
+    userId: candidate.id,
+    name: candidate.name || "Unnamed",
+    email: candidate.email || null,
+
+    title: candidate.headline || "",
+    currentTitle: candidate.headline || "",
+    role: candidate.headline || "",
+    headline: candidate.headline || "",
+    summary: candidate.aboutMe || "",
+
+    location: candidate.location || "",
+
+    workPreferences: workPreferencesObj,
+    preferredLocations,
+    workStatus: resolvedWorkStatus,
+    preferredWorkType: resolvedPreferredWorkType,
+    willingToRelocate: resolvedRelocate,
+
+    skills: profileSkillsArr.length > 0 ? profileSkillsArr : resumeSkillsArr,
+    skillsProfile: profileSkillsArr,
+    skillsResume: resumeSkillsArr,
+    skillsSource:
+      profileSkillsArr.length > 0 && resumeSkillsArr.length > 0
+        ? "profile+primary_resume"
+        : profileSkillsArr.length > 0
+        ? "profile"
+        : resumeSkillsArr.length > 0
+        ? "primary_resume"
+        : "none",
+
+    education: resumeEducation.length > 0 ? resumeEducation : profileEducation,
+    languages: toArrayJson(candidate.languagesJson),
+    experience,
+
+    resumeId: bestResume?.id || null,
+    resumeSource: bestResume?.isPrimary ? "primary" : bestResume?.id ? "latest_saved" : "none",
+    resumeUpdatedAt: bestResume?.updatedAt || null,
+  };
+}
+
+function toWhyResponse({ forgeCandidate, filters, job }) {
+  const ranked = orderCandidatesBySignalRelevance([forgeCandidate], filters || {}, {
+    minScore: 0,
+  });
+
+  const scored = ranked?.[0] || forgeCandidate;
+  const explained = explainCandidate(scored, filters || {});
+
+  const matchedEvidence = Array.isArray(scored.matchEvidence) ? scored.matchEvidence : [];
+  const matchedReasons = Array.isArray(scored.matchReasons) ? scored.matchReasons : [];
+  const matchedGaps = Array.isArray(scored.matchGaps) ? scored.matchGaps : [];
+
+  const firstName = normStr(scored.name).split(" ")[0] || "Candidate";
+  const summary =
+    explained?.summary && explained.summary !== "No strong signal was detected for the current recruiter search."
+      ? `${firstName}: ${explained.summary}`
+      : `${firstName} aligns based on visible profile and saved primary resume signals.`;
+
+  const reasons = matchedEvidence.length
+    ? matchedEvidence.map((item) => ({
+        requirement: item.label || item.type || "Signal",
+        evidence: [
+          {
+            text: item.text || "Signal found.",
+            source: item.type || "Forge Brain",
+          },
+        ],
+        points: item.points,
+      }))
+    : Array.isArray(explained?.reasons)
+    ? explained.reasons
+    : [];
+
+  const trajectory = Array.isArray(scored.experience)
+    ? scored.experience
+        .slice(0, 8)
+        .map((exp) => ({
+          title: exp.title || "",
+          company: exp.company || "",
+          from: exp.from || exp.start || "",
+          to: exp.to || exp.end || "",
+        }))
+        .filter((t) => t.title || t.company)
+    : [];
+
+  return {
+    score: typeof scored.match === "number" ? scored.match : explained?.score ?? null,
     summary,
-    reasons: reasons.slice(0, 10),
+    reasons: reasons.slice(0, 12),
+
     skills: {
-      matched: matchedSkills.slice(0, 24),
-      gaps: gapSkills.slice(0, 24),
+      matched: Array.isArray(scored.skills) ? scored.skills.slice(0, 24) : [],
+      gaps: matchedGaps.slice(0, 24),
       transferable: [],
     },
-    trajectory: [],
-    filters_triggered: triggered,
+
+    trajectory,
+    filters_triggered: buildFiltersTriggered(filters, job),
+
+    matchTier: scored.matchTier || explained?.tier || null,
+    matchReasons: matchedReasons,
+    matchEvidence: matchedEvidence,
+    matchGaps: matchedGaps,
+
+    resumeId: scored.resumeId || null,
+    resumeSource: scored.resumeSource || "none",
+    resumeUpdatedAt: scored.resumeUpdatedAt || null,
   };
 }
 
@@ -223,14 +442,13 @@ export default async function handler(req, res) {
   }
 
   const session = await getServerSession(req, res, authOptions);
+
   if (!session?.user?.email) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  // Resolve impersonated recruiter id if applicable (not strictly required for output,
-  // but keeps this endpoint aligned with the rest of recruiter tooling)
   const impersonatedRecruiterId = await resolveEffectiveRecruiterId(req, session);
-  void impersonatedRecruiterId; // intentionally unused (alignment only)
+  void impersonatedRecruiterId;
 
   try {
     const { candidateId, jobId = null, filters = null } = req.body || {};
@@ -244,11 +462,14 @@ export default async function handler(req, res) {
       select: {
         id: true,
         name: true,
+        email: true,
         headline: true,
         aboutMe: true,
         location: true,
+        workPreferences: true,
         skillsJson: true,
         languagesJson: true,
+        educationJson: true,
       },
     });
 
@@ -256,7 +477,22 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "Candidate not found" });
     }
 
+    const resumes = await prisma.resume.findMany({
+      where: { userId: candidateId },
+      select: {
+        id: true,
+        userId: true,
+        content: true,
+        updatedAt: true,
+        isPrimary: true,
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    const bestResume = chooseBestResume(resumes);
+
     let job = null;
+
     if (jobId) {
       job = await prisma.job.findUnique({
         where: { id: jobId },
@@ -268,7 +504,20 @@ export default async function handler(req, res) {
       }
     }
 
-    const explain = buildExplain({ candidate, job, filters });
+    const effectiveFilters =
+      filters && typeof filters === "object"
+        ? {
+            ...filters,
+            jobTitle: normStr(filters.jobTitle) || normStr(job?.title) || "",
+            summaryKeywords: normStr(filters.summaryKeywords),
+          }
+        : {
+            jobTitle: normStr(job?.title),
+          };
+
+    const forgeCandidate = buildForgeCandidate({ candidate, bestResume });
+    const explain = toWhyResponse({ forgeCandidate, filters: effectiveFilters, job });
+
     return res.status(200).json(explain);
   } catch (err) {
     console.error("[WHY] error:", err);
