@@ -41,6 +41,7 @@ export default function HybridResumeTemplate({ data, isEditMode = false, onUpdat
   const updatePI = (key, value) => update('personalInfo', { ...personalInfo, [key]: value });
 
   const contactLine = [personalInfo.email, personalInfo.phone, personalInfo.location].filter(Boolean).join(' | ');
+  const getCertificationDate = (cert) => cert?.dateEarned || cert?.date || cert?.issued || cert?.obtained || cert?.earned || '';
 
   return (
     <div style={{ width:'100%',padding:0,margin:0,fontFamily:'Helvetica, Arial, sans-serif',fontSize:'11pt',lineHeight:'1.4',color:'#1f2937' }}>
@@ -270,7 +271,7 @@ export default function HybridResumeTemplate({ data, isEditMode = false, onUpdat
                   <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:6 }}>
                     <EditableText isEditMode value={cert.name||cert.title} onChange={(v)=>{ const u=[...certifications]; u[i]={...cert,name:v}; update('certifications',u); }} placeholder="Certification Name" />
                     <EditableText isEditMode value={cert.issuer||cert.organization} onChange={(v)=>{ const u=[...certifications]; u[i]={...cert,issuer:v}; update('certifications',u); }} placeholder="Issuer" />
-                    <EditableText isEditMode value={cert.date} onChange={(v)=>{ const u=[...certifications]; u[i]={...cert,date:v}; update('certifications',u); }} placeholder="Date Earned" />
+                    <EditableText isEditMode value={getCertificationDate(cert)} onChange={(v)=>{ const u=[...certifications]; u[i]={...cert,date:v,dateEarned:v}; update('certifications',u); }} placeholder="Date Earned" />
                     <button type="button" onClick={()=>update('certifications',certifications.filter((_,x)=>x!==i))} style={{ fontSize:11,color:'#EF4444',background:'none',border:'none',cursor:'pointer',fontWeight:700,textAlign:'left' }}>Remove</button>
                   </div>
                 ) : (
@@ -278,7 +279,7 @@ export default function HybridResumeTemplate({ data, isEditMode = false, onUpdat
                     {typeof cert==='string' ? <div style={{ marginBottom:'6pt',fontSize:'11pt' }}>{cert}</div> : (
                       <>
                         <div style={{ fontWeight:'bold',fontSize:'11pt' }}>{cert.name||cert.title}</div>
-                        {(cert.organization||cert.issuer)&&<div style={{ fontSize:'10pt',color:'#444' }}>{cert.organization||cert.issuer}</div>}
+                        {((cert.organization||cert.issuer)||getCertificationDate(cert))&&<div style={{ fontSize:'10pt',color:'#444' }}>{[cert.organization||cert.issuer,getCertificationDate(cert)].filter(Boolean).join(' • ')}</div>}
                       </>
                     )}
                   </>

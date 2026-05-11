@@ -156,6 +156,9 @@ export default function HybridResumeTemplatePDF({ data }) {
     .filter(Boolean)
     .join(' | ');
 
+  const getCertificationDate = (cert) =>
+    cert?.dateEarned || cert?.date || cert?.issued || cert?.obtained || cert?.earned || '';
+
   return (
     <Document>
       <Page size="LETTER" style={styles.page}>
@@ -332,9 +335,9 @@ export default function HybridResumeTemplatePDF({ data }) {
                 <Text style={styles.certTitle}>
                   {cert.name || cert.title}
                 </Text>
-                {(cert.organization || cert.issuer) && (
+                {((cert.organization || cert.issuer) || getCertificationDate(cert)) && (
                   <Text style={styles.certOrg}>
-                    {cert.organization || cert.issuer}
+                    {[cert.organization || cert.issuer, getCertificationDate(cert)].filter(Boolean).join(' • ')}
                   </Text>
                 )}
               </View>
