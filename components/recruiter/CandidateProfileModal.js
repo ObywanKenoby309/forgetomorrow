@@ -1,5 +1,6 @@
 // components/recruiter/CandidateProfileModal.js
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 
 function toSafeArray(value) {
@@ -74,6 +75,11 @@ export default function CandidateProfileModal({
   const [skillsLocal, setSkillsLocal] = useState([]);
   const [tagsLocal, setTagsLocal] = useState([]);
   const [savingSkills, setSavingSkills] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -115,7 +121,8 @@ export default function CandidateProfileModal({
     return list.filter((s) => inferType(s?.action) === journeyFilter);
   };
 
-  if (!open || !candidate) return null;
+  if (!mounted || !open || !candidate) return null;
+  if (typeof document === "undefined") return null;
 
   const saveNotes = () => onSaveNotes?.(candidate.id, notes);
 
@@ -192,10 +199,10 @@ export default function CandidateProfileModal({
 
   const hasResume = Boolean(candidate?.resumeId);
 
-const resumeDownloadHref =
-  candidate?.resumeId && candidate?.slug
-    ? `/api/resume/public-download?resumeId=${encodeURIComponent(candidate.resumeId)}&slug=${encodeURIComponent(candidate.slug)}`
-    : "";
+  const resumeDownloadHref =
+    candidate?.resumeId && candidate?.slug
+      ? `/api/resume/public-download?resumeId=${encodeURIComponent(candidate.resumeId)}&slug=${encodeURIComponent(candidate.slug)}`
+      : "";
 
   // ── Work preferences ────────────────────────────────────────────────────────
   const preferredLocationList = toSafeArray(candidate?.preferredLocations);
@@ -221,9 +228,9 @@ const resumeDownloadHref =
   const languageList = toSafeArray(candidate?.languages);
   const hasLanguages = languageList.length > 0;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-start justify-center px-4 pt-10 pb-6 sm:px-6 sm:pt-14"
+      className="fixed inset-0 z-[10020] flex items-start justify-center px-4 pt-10 pb-6 sm:px-6 sm:pt-14"
     >
       <div
         className="absolute inset-0 bg-[rgba(2,6,23,0.55)] backdrop-blur-[3px]"
@@ -244,19 +251,17 @@ const resumeDownloadHref =
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-
-  {resumeDownloadHref && (
-    <a
-      href={resumeDownloadHref}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
-    >
-      Download resume
-    </a>
-  )}
-
-  {typeof onViewResume === "function" && (
+            {resumeDownloadHref && (
+              <a
+                href={resumeDownloadHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-white transition"
+              >
+                Download resume
+              </a>
+            )}
+            {typeof onViewResume === "function" && (
               <button
                 type="button"
                 onClick={() => onViewResume(candidate)}
@@ -641,6 +646,7 @@ const resumeDownloadHref =
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
