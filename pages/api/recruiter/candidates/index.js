@@ -584,25 +584,64 @@ export default async function handler(req, res) {
 
     const where = { AND: andClauses };
 
-    const users = await prisma.user.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 100,
+// Minimum discoverability threshold
+andClauses.push({
+  OR: [
+    // Has meaningful summary
+    {
+      aboutMe: {
+        not: null,
+      },
+    },
+
+    // Has skills
+    {
+      skillsJson: {
+        not: Prisma.JsonNull,
+      },
+    },
+
+    // Has education
+    {
+      educationJson: {
+        not: Prisma.JsonNull,
+      },
+    },
+
+    // Has resume
+    {
+      resumes: {
+        some: {},
+      },
+    },
+  ],
+});
+
+const users = await prisma.user.findMany({
+  where,
+  orderBy: { createdAt: "desc" },
+  take: 100,
+  select: {
+    id: true,
+    name: true,
+    email: true,
+    headline: true,
+    aboutMe: true,
+    location: true,
+    workPreferences: true,
+    skillsJson: true,
+    languagesJson: true,
+    educationJson: true,
+    slug: true,
+    createdAt: true,
+    resumes: {
       select: {
         id: true,
-        name: true,
-        email: true,
-        headline: true,
-        aboutMe: true,
-        location: true,
-        workPreferences: true,
-        skillsJson: true,
-        languagesJson: true,
-        educationJson: true,
-		slug: true,
-        createdAt: true,
       },
-    });
+      take: 1,
+    },
+  },
+});
 
     const candidateUserIds = users.map((u) => u.id);
 
