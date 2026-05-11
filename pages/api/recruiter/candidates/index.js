@@ -458,7 +458,15 @@ function candidateMatchesPostFilters(candidate, filters) {
     // Expand state names so "Tennessee" matches "Nashville, TN" etc.
     // expandStateQuery("Tennessee") → ["Tennessee", "TN"]
     // expandStateQuery("Nashville") → ["Nashville"]  (passthrough)
-    const locationVariants = expandStateQuery(locationQuery);
+    const cleanedLocationQuery = String(locationQuery || "")
+  .replace(/\bgreater\b/gi, "")
+  .replace(/\barea\b/gi, "")
+  .replace(/\bmetro\b/gi, "")
+  .replace(/\bregion\b/gi, "")
+  .replace(/\s+/g, " ")
+  .trim();
+
+const locationVariants = expandStateQuery(cleanedLocationQuery || locationQuery);
 
     const locationsToCheck = [
       candidate?.location || "",
