@@ -748,7 +748,7 @@ export default async function handler(req, res) {
 
         resumeId: bestResume?.id || null,
 
-        match:
+        rendermatch:
           typeof renderCandidate?.match === "number"
             ? renderCandidate.match
             : null,
