@@ -56,8 +56,7 @@ function PrefRow({ label, value }) {
     <div className="flex items-start justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
       <span className="text-xs text-slate-500 shrink-0">{label}</span>
       <span className="text-xs text-slate-800 font-medium text-right">{value}</span>
-    </div>,
-    document.body
+    </div>
   );
 }
 
