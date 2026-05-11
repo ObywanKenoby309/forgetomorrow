@@ -599,6 +599,7 @@ export default async function handler(req, res) {
         skillsJson: true,
         languagesJson: true,
         educationJson: true,
+		slug: true,
         createdAt: true,
       },
     });
@@ -708,6 +709,7 @@ export default async function handler(req, res) {
       return {
         id: u.id,
         userId: u.id,
+		slug: u.slug || "",
         name: u.name || renderCandidate?.name || "Unnamed",
         email: u.email || renderCandidate?.email || null,
         title: u.headline || renderCandidate?.headline || "",
