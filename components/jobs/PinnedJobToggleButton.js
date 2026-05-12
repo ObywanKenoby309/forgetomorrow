@@ -52,19 +52,36 @@ export default function PinnedJobToggleButton({ jobId, initiallyPinned }) {
   return (
     <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
       <button
-        type="button"
-        onClick={handleClick}
-        disabled={busy}
-        title={isPinned ? 'Unpin this job' : 'Pin this job'}
-        style={{
-          border: 'none',
-          background: 'transparent',
-          cursor: busy ? 'default' : 'pointer',
-          fontSize: 20,
-        }}
-      >
-        {isPinned ? '⭐' : '☆'}
-      </button>
+  type="button"
+  onClick={handleClick}
+  disabled={busy}
+  title={isPinned ? 'Remove saved job' : 'Save this job'}
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 14px',
+    borderRadius: 999,
+    border: `1px solid ${isPinned ? '#FF7043' : 'rgba(15,23,42,0.12)'}`,
+    background: isPinned ? 'rgba(255,112,67,0.10)' : 'white',
+    color: isPinned ? '#FF7043' : '#455A64',
+    fontWeight: 700,
+    fontSize: 13,
+    cursor: busy ? 'default' : 'pointer',
+    transition: 'all 150ms ease',
+    boxShadow: isPinned
+      ? '0 4px 12px rgba(255,112,67,0.12)'
+      : '0 2px 8px rgba(15,23,42,0.05)',
+  }}
+>
+  <span style={{ fontSize: 14 }}>
+    {isPinned ? '★' : '☆'}
+  </span>
+
+  <span>
+    {isPinned ? 'Saved' : 'Save Job'}
+  </span>
+</button>
       {error && (
         <div style={{ color: '#e53e3e', fontSize: 11, marginTop: 2 }}>
           {error}
