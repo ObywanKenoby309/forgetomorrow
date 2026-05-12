@@ -8,19 +8,8 @@ function toArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function formatEvidenceItem(item) {
-  if (!item) return '';
-
-  if (typeof item === 'string') {
-    return item.trim();
-  }
-
-  const label = item.label || item.type || 'Evidence';
-  const text = item.text || item.value || '';
-
-  if (!text) return label;
-
-  return `${label}: ${text}`;
+function lower(value) {
+  return String(value || '').trim().toLowerCase();
 }
 
 export default function CheckMyFit({ job, onImproveResume }) {
@@ -38,11 +27,12 @@ export default function CheckMyFit({ job, onImproveResume }) {
     setState('loading');
 
     try {
-      const score = typeof job.match === 'number' ? Math.round(job.match) : null;
+      const score =
+        typeof job.match === 'number'
+          ? Math.round(job.match)
+          : null;
 
-      const evidence = toArray(job.alignmentEvidence)
-        .map(formatEvidenceItem)
-        .filter(Boolean);
+      const evidence = toArray(job.alignmentEvidence);
 
       const reasons = toArray(job.alignmentReasons)
         .map((x) => String(x || '').trim())
@@ -52,18 +42,44 @@ export default function CheckMyFit({ job, onImproveResume }) {
         .map((x) => String(x || '').trim())
         .filter(Boolean);
 
-      const explanationItems = [
-        ...reasons.map((reason) => `Why this aligns: ${reason}`),
-        ...evidence,
-        ...gaps.map((gap) => `Gap to review: ${gap}`),
-      ].slice(0, 6);
+      const skillEvidence = evidence.find(
+        (item) =>
+          lower(item?.label || '').includes('skill')
+      );
+
+      const ecosystemEvidence = evidence.find(
+        (item) =>
+          lower(item?.label || '').includes('ecosystem')
+      );
+
+      const strongestSignals = [];
+
+      if (skillEvidence?.text) {
+        strongestSignals.push(
+          `Matched skills: ${skillEvidence.text}`
+        );
+      }
+
+      if (ecosystemEvidence?.text) {
+        strongestSignals.push(
+          `Shared capability signals: ${ecosystemEvidence.text}`
+        );
+      }
+
+      const digestibleSummary =
+        score >= 80
+          ? 'Your background strongly aligns with this role based on your profile and primary resume.'
+          : score >= 60
+          ? 'You show meaningful alignment, but some experience areas could be strengthened.'
+          : score > 0
+          ? 'You have some overlapping signals, but there are noticeable gaps between your current profile and this role.'
+          : 'ForgeTomorrow could not detect strong alignment signals for this opportunity yet.';
 
       setResult({
         score,
-        summary:
-          reasons[0] ||
-          'ForgeTomorrow analyzed your profile, portfolio, preferences, and primary resume against this opportunity.',
-        evidence: explanationItems,
+        summary: digestibleSummary,
+        strongestSignals,
+        reasons,
         gaps,
       });
 
@@ -240,23 +256,28 @@ export default function CheckMyFit({ job, onImproveResume }) {
           </p>
         )}
 
-        {result.evidence?.length > 0 && (
-          <div>
+        {result.strongestSignals?.length > 0 && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
+          >
             <div
               style={{
                 fontSize: 12,
                 fontWeight: 800,
                 color: '#112033',
-                marginBottom: 6,
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
               }}
             >
-              Alignment evidence
+              Strongest Signals
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {result.evidence.map((item, i) => (
+              {result.strongestSignals.map((item, i) => (
                 <div
                   key={i}
                   style={{
@@ -270,22 +291,14 @@ export default function CheckMyFit({ job, onImproveResume }) {
                 >
                   <span
                     style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 999,
-                      flexShrink: 0,
-                      background: '#FF7043',
-                      color: 'white',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 10,
-                      fontWeight: 800,
+                      color: '#43A047',
+                      fontWeight: 900,
                       marginTop: 1,
                     }}
                   >
-                    {i + 1}
+                    ✓
                   </span>
+
                   <span>{item}</span>
                 </div>
               ))}
