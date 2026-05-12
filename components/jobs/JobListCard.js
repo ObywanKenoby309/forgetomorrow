@@ -204,8 +204,8 @@ export default function JobListCard({
           justifyContent: 'flex-end',
           gap: 8,
           flexWrap: 'wrap',
-          minHeight: 30,
-          marginTop: 2,
+          minHeight: 24,
+          marginTop: -2,
         }}
       >
         <span
