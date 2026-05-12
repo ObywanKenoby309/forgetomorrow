@@ -16,6 +16,7 @@ import JobDetailPanel     from '../components/jobs/JobDetailPanel';
 import MobileJobDetail    from '../components/jobs/MobileJobDetail';
 import JobsBottomRow      from '../components/jobs/JobsBottomRow';
 import { rankJobsBySignalRelevance, normalizeLocationQuery } from '../lib/intelligence/forgeJobMatchEngine';
+import { rankJobsBySearchRelevance } from '../lib/intelligence/forgeSearchEngine';
 
 // ── SSR-safe mobile hook ──────────────────────────────────────
 function useIsMobile(bp = 768) {
@@ -255,7 +256,6 @@ setJobs(loadedJobs);
     const location    = (job.location || '').toLowerCase();
     const description = (job.description || '').toLowerCase();
     const tags        = (job.tags || '').toString().toLowerCase();
-    if (normalizedKeyword && !`${title} ${company} ${location} ${description} ${tags}`.includes(normalizedKeyword)) return false;
     if (normalizedCompany  && !company.includes(normalizedCompany))   return false;
     if (locationTypeFilter && inferLocationType(job.location || '') !== locationTypeFilter) return false;
     if (sourceFilter) {
@@ -271,7 +271,7 @@ setJobs(loadedJobs);
     return true;
   });
 
-const filteredJobs = rankJobsBySignalRelevance(rawFilteredJobs, {
+const filteredJobs = rankJobsBySearchRelevance(rawFilteredJobs, {
   keyword,
   company: companyFilter,
   location: locationFilter,
