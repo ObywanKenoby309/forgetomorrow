@@ -83,7 +83,7 @@ export default function CheckMyFit({ job, onImproveResume }) {
   const scoreLabel = (score) => {
     if (score >= 80) return 'Strong alignment';
     if (score >= 60) return 'Moderate alignment';
-    if (score > 0) return 'Needs work';
+    if (score > 0) return 'Low alignment';
     return 'No clear alignment yet';
   };
 
@@ -311,7 +311,7 @@ export default function CheckMyFit({ job, onImproveResume }) {
               boxShadow: '0 4px 14px rgba(26,75,143,0.25)',
             }}
           >
-            Improve Alignment →
+            Improve Resume Alignment →
           </button>
         )}
 

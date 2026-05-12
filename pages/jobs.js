@@ -325,6 +325,118 @@ const filteredJobs = rankJobsBySignalRelevance(rawFilteredJobs, {
           isMobile={true}
         />
 
+{/* Forge Alignment explainer */}
+<div
+  style={{
+    ...GLASS,
+    padding: '14px 18px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    background: 'rgba(255,255,255,0.72)',
+  }}
+>
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      flexWrap: 'wrap',
+    }}
+  >
+    <div
+      style={{
+        width: 28,
+        height: 28,
+        borderRadius: 999,
+        background: 'rgba(255,112,67,0.14)',
+        color: '#FF7043',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 15,
+        fontWeight: 900,
+        flexShrink: 0,
+      }}
+    >
+      ⚡
+    </div>
+
+    <div
+      style={{
+        fontSize: 15,
+        fontWeight: 800,
+        color: '#112033',
+      }}
+    >
+      Forge Alignment
+    </div>
+  </div>
+
+  <div
+    style={{
+      fontSize: 13,
+      lineHeight: 1.6,
+      color: '#455A64',
+    }}
+  >
+    Search using keywords and filters. ForgeTomorrow then evaluates your
+    primary resume, profile, portfolio, and preferences to determine how
+    strongly you align with each opportunity.
+  </div>
+
+  <div
+    style={{
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 2,
+    }}
+  >
+    <div
+      style={{
+        padding: '5px 10px',
+        borderRadius: 999,
+        background: 'rgba(255,112,67,0.10)',
+        border: '1px solid rgba(255,112,67,0.20)',
+        fontSize: 11,
+        fontWeight: 700,
+        color: '#FF7043',
+      }}
+    >
+      Alignment scores visible to all users
+    </div>
+
+    <div
+      style={{
+        padding: '5px 10px',
+        borderRadius: 999,
+        background: 'rgba(26,75,143,0.08)',
+        border: '1px solid rgba(26,75,143,0.18)',
+        fontSize: 11,
+        fontWeight: 700,
+        color: '#1A4B8F',
+      }}
+    >
+      Free users: 3 detailed explanations monthly
+    </div>
+
+    <div
+      style={{
+        padding: '5px 10px',
+        borderRadius: 999,
+        background: 'rgba(67,160,71,0.08)',
+        border: '1px solid rgba(67,160,71,0.18)',
+        fontSize: 11,
+        fontWeight: 700,
+        color: '#2E7D32',
+      }}
+    >
+      Pro users: unlimited explanations
+    </div>
+  </div>
+</div>
+
         {/* Collapsible filter card */}
         <div style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 14, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 2px 10px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           <button type="button" onClick={() => setFilterOpen(o => !o)}
@@ -411,6 +523,118 @@ const filteredJobs = rankJobsBySignalRelevance(rawFilteredJobs, {
         title="Job Listings"
         subtitle="Explore openings, review full details, and apply with confidence."
       />
+
+{/* Forge Alignment explainer */}
+<div
+  style={{
+    ...GLASS,
+    padding: '14px 18px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    background: 'rgba(255,255,255,0.72)',
+  }}
+>
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      flexWrap: 'wrap',
+    }}
+  >
+    <div
+      style={{
+        width: 28,
+        height: 28,
+        borderRadius: 999,
+        background: 'rgba(255,112,67,0.14)',
+        color: '#FF7043',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 15,
+        fontWeight: 900,
+        flexShrink: 0,
+      }}
+    >
+      ⚡
+    </div>
+
+    <div
+      style={{
+        fontSize: 15,
+        fontWeight: 800,
+        color: '#112033',
+      }}
+    >
+      Forge Alignment
+    </div>
+  </div>
+
+  <div
+    style={{
+      fontSize: 13,
+      lineHeight: 1.6,
+      color: '#455A64',
+    }}
+  >
+    Search using keywords and filters. ForgeTomorrow then evaluates your
+    primary resume, profile, portfolio, and preferences to determine how
+    strongly you align with each opportunity.
+  </div>
+
+  <div
+    style={{
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 2,
+    }}
+  >
+    <div
+      style={{
+        padding: '5px 10px',
+        borderRadius: 999,
+        background: 'rgba(255,112,67,0.10)',
+        border: '1px solid rgba(255,112,67,0.20)',
+        fontSize: 11,
+        fontWeight: 700,
+        color: '#FF7043',
+      }}
+    >
+      Alignment scores visible to all users
+    </div>
+
+    <div
+      style={{
+        padding: '5px 10px',
+        borderRadius: 999,
+        background: 'rgba(26,75,143,0.08)',
+        border: '1px solid rgba(26,75,143,0.18)',
+        fontSize: 11,
+        fontWeight: 700,
+        color: '#1A4B8F',
+      }}
+    >
+      Free users: 3 detailed explanations monthly
+    </div>
+
+    <div
+      style={{
+        padding: '5px 10px',
+        borderRadius: 999,
+        background: 'rgba(67,160,71,0.08)',
+        border: '1px solid rgba(67,160,71,0.18)',
+        fontSize: 11,
+        fontWeight: 700,
+        color: '#2E7D32',
+      }}
+    >
+      Pro users: unlimited explanations
+    </div>
+  </div>
+</div>
 
       {/* Collapsible filter card — solid white, no backdrop over wallpaper */}
       <div style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 14, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 2px 10px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
