@@ -75,10 +75,17 @@ export default function CheckMyFit({ job, onImproveResume }) {
           ? 'You have some overlapping signals, but there are noticeable gaps between your current profile and this role.'
           : 'ForgeTomorrow could not detect strong alignment signals for this opportunity yet.';
 
+      const primaryGap =
+        gaps[0] ||
+        (score < 60
+          ? 'Your current profile does not yet demonstrate enough direct evidence for this role.'
+          : '');
+
       setResult({
         score,
         summary: digestibleSummary,
         strongestSignals,
+        primaryGap,
         reasons,
         gaps,
       });
@@ -302,6 +309,42 @@ export default function CheckMyFit({ job, onImproveResume }) {
                   <span>{item}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {result.primaryGap && (
+          <div
+            style={{
+              borderRadius: 10,
+              border: '1px solid rgba(211,47,47,0.16)',
+              background: 'rgba(211,47,47,0.05)',
+              padding: '10px 12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                color: '#D32F2F',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              Primary Gap
+            </div>
+
+            <div
+              style={{
+                fontSize: 12,
+                color: '#455A64',
+                lineHeight: 1.5,
+              }}
+            >
+              {result.primaryGap}
             </div>
           </div>
         )}
