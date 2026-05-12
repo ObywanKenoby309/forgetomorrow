@@ -14,38 +14,45 @@ export default function CheckMyFit({ job, onImproveResume }) {
 
   if (!job) return null;
 
-  const run = async () => {
-    setState('loading');
-    setResult(null);
-    try {
-      const res = await fetch('/api/seeker/ats-align', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId: job.id }),
-      });
-      if (!res.ok) throw new Error(`API error ${res.status}`);
-      const payload = await res.json();
-      setResult({
-        score: typeof payload.score === 'number' ? payload.score : null,
-        summary: payload.summary || '',
-        recommendations: Array.isArray(payload.recommendations) ? payload.recommendations : [],
-      });
-      setState('done');
-    } catch (err) {
-      console.error('[CheckMyFit] error', err);
-      // Graceful demo fallback
-      setResult({
-        score: 78,
-        summary: 'You appear to be a strong match on core skills and background for this role.',
-        recommendations: [
-          'Add one or two bullets with clear metrics (%, $, time saved) for your most recent role.',
-          "Mirror 2–3 of the job's exact keywords in your resume summary.",
-          'Highlight any direct experience with similar tools mentioned in the posting.',
-        ],
-      });
-      setState('done');
-    }
-  };
+ const run = async () => {
+  setState('loading');
+
+  try {
+    const score =
+      typeof job.match === 'number'
+        ? Math.round(job.match)
+        : null;
+
+    const evidence = Array.isArray(job.alignmentEvidence)
+      ? job.alignmentEvidence
+      : [];
+
+    const reasons = Array.isArray(job.alignmentReasons)
+      ? job.alignmentReasons
+      : [];
+
+    const gaps = Array.isArray(job.alignmentGaps)
+      ? job.alignmentGaps
+      : [];
+
+    setResult({
+      score,
+      summary:
+        reasons[0] ||
+        'ForgeTomorrow analyzed your profile, portfolio, and primary resume against this opportunity.',
+
+      recommendations: [
+        ...evidence.map((e) => e.text),
+        ...gaps,
+      ].slice(0, 5),
+    });
+
+    setState('done');
+  } catch (err) {
+    console.error('[CheckMyFit] alignment explanation error', err);
+    setState('error');
+  }
+};
 
   const scoreColor = (score) => {
     if (score >= 80) return '#43A047';
