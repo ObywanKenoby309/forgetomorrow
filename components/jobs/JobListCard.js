@@ -51,10 +51,6 @@ const alignmentScore = hasMeaningfulAlignment
   ? Math.round(job.match)
   : null;
 
-const alignmentScore = hasMeaningfulMatch
-  ? Math.round(job.match)
-  : null;
-
   return (
     <article
       onClick={onClick}
