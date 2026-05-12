@@ -2,11 +2,15 @@
 // On-demand ATS alignment — shown only on the detail panel/screen.
 // User taps "Check My Fit", we run the API, show inline result.
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function CheckMyFit({ job, onImproveResume }) {
   const [state, setState] = useState('idle'); // 'idle' | 'loading' | 'done' | 'error'
   const [result, setResult] = useState(null);
+  useEffect(() => {
+  setState('idle');
+  setResult(null);
+}, [job?.id]);
 
   if (!job) return null;
 
