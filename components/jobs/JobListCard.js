@@ -56,8 +56,8 @@ export default function JobListCard({
         background: '#FFFFFF',
         borderRadius: 18,
         padding: '16px 16px 14px',
-        minHeight: 170,
-        height: 170,
+        minHeight: 150,
+        height: 150,
         boxSizing: 'border-box',
         boxShadow: isSelected
           ? '0 6px 18px rgba(255,112,67,0.18)'
@@ -160,8 +160,8 @@ export default function JobListCard({
           flexDirection: 'column',
           gap: 6,
           marginTop: 6,
-          minHeight: 52,
-          maxHeight: 52,
+          minHeight: 42,
+          maxHeight: 42,
           overflow: 'hidden',
         }}
       >
@@ -205,7 +205,7 @@ export default function JobListCard({
           gap: 8,
           flexWrap: 'wrap',
           minHeight: 30,
-          marginTop: 10,
+          marginTop: 2,
         }}
       >
         <span
