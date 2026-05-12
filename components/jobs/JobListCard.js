@@ -30,6 +30,16 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
     }
   }
 
+  const matchScore =
+    typeof job.match === 'number'
+      ? Math.round(job.match)
+      : typeof job.jobMatch === 'number'
+      ? Math.round(job.jobMatch)
+      : null;
+
+  const matchTier = job.matchTier || job.signalTier || '';
+  const hasMatchScore = typeof matchScore === 'number';
+
   const tier        = getJobTier(job);
   const isFtOfficial = tier === 'ft-official';
   const isPartner    = tier === 'partner';
@@ -67,29 +77,26 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
     : null;
 
   const showSnippet = internal;
-  const matchScore = typeof job.jobMatch === 'number' ? Math.round(job.jobMatch) : null;
-  const matchLabel = job.jobMatchTier || 'Signal match';
 
   return (
     <article
       aria-label={`${job.title} at ${job.company || 'Unknown company'}`}
       onClick={onClick}
       style={{
-  cursor: 'pointer',
-  border: cardBorder,
-  background: cardBackground,
-  boxShadow: cardShadow,
-  borderRadius: 14,
-  padding: '14px 16px',
-  position: 'relative',
-  overflow: 'hidden',
-  transition: 'box-shadow 150ms ease, border-color 150ms ease',
-  minHeight: 100,
-  maxWidth: '100%',
-  boxSizing: 'border-box',
-}}
+        cursor: 'pointer',
+        border: cardBorder,
+        background: cardBackground,
+        boxShadow: cardShadow,
+        borderRadius: 14,
+        padding: '14px 16px',
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'box-shadow 150ms ease, border-color 150ms ease',
+        minHeight: 100,
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+      }}
     >
-      {/* Selected indicator bar */}
       {isSelected && !isDarkCard && (
         <div style={{
           position: 'absolute', left: 0, top: 0, bottom: 0,
@@ -98,7 +105,6 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-        {/* Left: logo + title */}
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
           {logoUrl && (
             <div style={{
@@ -126,9 +132,8 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
           </div>
         </div>
 
-        {/* Right: match/date */}
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          {matchScore !== null ? (
+          {hasMatchScore ? (
             <>
               <div style={{ fontSize: 10, color: subtleColor, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Match
@@ -136,9 +141,11 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
               <div style={{ fontSize: 15, color: isDarkCard ? '#FFFFFF' : '#FF7043', fontWeight: 900, lineHeight: 1.1 }}>
                 {matchScore}%
               </div>
-              <div style={{ fontSize: 10, color: subtleColor, fontWeight: 600, marginTop: 2 }}>
-                {matchLabel}
-              </div>
+              {matchTier && (
+                <div style={{ fontSize: 10, color: subtleColor, fontWeight: 700, lineHeight: 1.2 }}>
+                  {matchTier}
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -153,7 +160,6 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
         </div>
       </div>
 
-      {/* Tags row */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8, alignItems: 'center' }}>
         {location && (
           <span style={{ fontSize: 11, color: subtleColor }}>
@@ -170,16 +176,6 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
             {locationType}
           </span>
         )}
-        {matchScore !== null && (
-          <span style={{
-            fontSize: 11, padding: '2px 7px', borderRadius: 999,
-            border: '1px solid rgba(255,112,67,0.35)',
-            background: isDarkCard ? 'rgba(255,112,67,0.18)' : 'rgba(255,112,67,0.08)',
-            color: isDarkCard ? '#FFCC80' : '#C2410C', fontWeight: 800,
-          }}>
-            {matchScore}% signal
-          </span>
-        )}
         {displaySource && (
           <span style={{
             fontSize: 11, padding: '2px 7px', borderRadius: 999,
@@ -188,6 +184,15 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
             color: isDarkCard ? '#ECEFF1' : '#546E7A', fontWeight: 600,
           }}>
             {displaySource}
+          </span>
+        )}
+        {postedLabel && hasMatchScore && (
+          <span style={{
+            fontSize: 11,
+            color: subtleColor,
+            fontWeight: 600,
+          }}>
+            Posted {postedLabel}
           </span>
         )}
         {status && status !== 'Open' && (
@@ -203,7 +208,6 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
         )}
       </div>
 
-      {/* Chip badge (internal/official) */}
       {chipLabel && (
         <div style={{
           marginTop: 8,
@@ -218,7 +222,6 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
         </div>
       )}
 
-      {/* Snippet (internal jobs only) */}
       {showSnippet && snippet && (
         <p style={{
           margin: '8px 0 0', color: textColor,
