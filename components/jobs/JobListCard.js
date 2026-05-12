@@ -64,7 +64,7 @@ export default function JobListCard({
           : '0 2px 8px rgba(0,0,0,0.06)',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
         position: 'relative',
         overflow: 'hidden',
       }}
