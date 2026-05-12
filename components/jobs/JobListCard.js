@@ -38,12 +38,22 @@ export default function JobListCard({
     }
   }
 
-  const matchScore =
-    typeof job.match === 'number'
-      ? Math.round(job.match)
-      : typeof job.jobMatch === 'number'
-      ? Math.round(job.jobMatch)
-      : null;
+  const hasMeaningfulAlignment =
+  typeof job.match === 'number' &&
+  job.match > 0 &&
+  (
+    job.matchSource === 'profile' ||
+    job.matchSource === 'resume' ||
+    job.matchSource === 'preferences'
+  );
+
+const alignmentScore = hasMeaningfulAlignment
+  ? Math.round(job.match)
+  : null;
+
+const alignmentScore = hasMeaningfulMatch
+  ? Math.round(job.match)
+  : null;
 
   return (
     <article
@@ -125,17 +135,19 @@ export default function JobListCard({
             flexShrink: 0,
           }}
         >
-          <div
-            style={{
-              fontSize: 10,
-              textTransform: 'uppercase',
-              color: '#78909C',
-              fontWeight: 700,
-              letterSpacing: '0.05em',
-            }}
-          >
-            Match
-          </div>
+          {typeof alignmentScore === 'number' && (
+  <div
+    style={{
+      fontSize: 10,
+      textTransform: 'uppercase',
+      color: '#78909C',
+      fontWeight: 700,
+      letterSpacing: '0.05em',
+    }}
+  >
+    Alignment
+  </div>
+)}
 
           <div
             style={{
@@ -146,9 +158,9 @@ export default function JobListCard({
               color: '#FF7043',
             }}
           >
-            {typeof matchScore === 'number'
-              ? `${matchScore}%`
-              : '—'}
+            {typeof alignmentScore === 'number'
+			? `${alignmentScore}%`
+			: ''}
           </div>
         </div>
       </div>

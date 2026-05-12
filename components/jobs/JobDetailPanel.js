@@ -157,7 +157,7 @@ export default function JobDetailPanel({
           )}
         </div>
 
-        {/* Check My Fit — only when open */}
+        {/* Alignment intelligence */}
         {status === 'Open' && isPaidUser && (
           <CheckMyFit job={job} onImproveResume={onImproveResume} />
         )}

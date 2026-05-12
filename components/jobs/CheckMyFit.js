@@ -75,7 +75,7 @@ export default function CheckMyFit({ job, onImproveResume }) {
         }}
       >
         <span style={{ fontSize: 16 }}>⚡</span>
-        Check My Fit
+        Explain My Alignment
       </button>
     );
   }
@@ -129,7 +129,7 @@ export default function CheckMyFit({ job, onImproveResume }) {
                 {scoreLabel(sc)}
               </div>
               <div style={{ fontSize: 12, color: '#607D8B', marginTop: 1 }}>
-                Resume–role match score
+                Profile and resume alignment score
               </div>
             </div>
             <button
@@ -193,7 +193,7 @@ export default function CheckMyFit({ job, onImproveResume }) {
               boxShadow: '0 4px 14px rgba(26,75,143,0.25)',
             }}
           >
-            Improve my resume for this role →
+            Improve Alignment →
           </button>
         )}
 
