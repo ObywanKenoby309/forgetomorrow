@@ -158,10 +158,10 @@ export default function JobListCard({
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 6,
-          marginTop: 6,
-          minHeight: 42,
-          maxHeight: 42,
+          gap: 2,
+          marginTop: 2,
+          minHeight: 34,
+          maxHeight: 34,
           overflow: 'hidden',
         }}
       >
