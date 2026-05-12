@@ -271,13 +271,24 @@ setJobs(loadedJobs);
     return true;
   });
 
-const filteredJobs = rankJobsBySearchRelevance(rawFilteredJobs, {
+const rankedJobs = rankJobsBySearchRelevance(rawFilteredJobs, {
   keyword,
   company: companyFilter,
   location: locationFilter,
   locationType: locationTypeFilter,
   source: sourceFilter,
 });
+
+const hasSearchIntent =
+  keyword.trim() ||
+  companyFilter.trim() ||
+  locationFilter.trim() ||
+  locationTypeFilter ||
+  sourceFilter;
+
+const filteredJobs = hasSearchIntent
+  ? rankedJobs.filter((job) => (job.searchScore || 0) > 0)
+  : rankedJobs;
 
   useEffect(() => {
     const total = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
