@@ -1,58 +1,78 @@
 // components/jobs/CheckMyFit.js
-// On-demand ATS alignment — shown only on the detail panel/screen.
-// User taps "Check My Fit", we run the API, show inline result.
+// On-demand alignment explanation shown only on the job detail panel.
+// Uses the existing card alignment score and evidence. Hammer handles resume-only JD alignment.
 
 import React, { useEffect, useState } from 'react';
+
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function formatEvidenceItem(item) {
+  if (!item) return '';
+
+  if (typeof item === 'string') {
+    return item.trim();
+  }
+
+  const label = item.label || item.type || 'Evidence';
+  const text = item.text || item.value || '';
+
+  if (!text) return label;
+
+  return `${label}: ${text}`;
+}
 
 export default function CheckMyFit({ job, onImproveResume }) {
   const [state, setState] = useState('idle'); // 'idle' | 'loading' | 'done' | 'error'
   const [result, setResult] = useState(null);
+
   useEffect(() => {
-  setState('idle');
-  setResult(null);
-}, [job?.id]);
+    setState('idle');
+    setResult(null);
+  }, [job?.id]);
 
   if (!job) return null;
 
- const run = async () => {
-  setState('loading');
+  const run = async () => {
+    setState('loading');
 
-  try {
-    const score =
-      typeof job.match === 'number'
-        ? Math.round(job.match)
-        : null;
+    try {
+      const score = typeof job.match === 'number' ? Math.round(job.match) : null;
 
-    const evidence = Array.isArray(job.alignmentEvidence)
-      ? job.alignmentEvidence
-      : [];
+      const evidence = toArray(job.alignmentEvidence)
+        .map(formatEvidenceItem)
+        .filter(Boolean);
 
-    const reasons = Array.isArray(job.alignmentReasons)
-      ? job.alignmentReasons
-      : [];
+      const reasons = toArray(job.alignmentReasons)
+        .map((x) => String(x || '').trim())
+        .filter(Boolean);
 
-    const gaps = Array.isArray(job.alignmentGaps)
-      ? job.alignmentGaps
-      : [];
+      const gaps = toArray(job.alignmentGaps)
+        .map((x) => String(x || '').trim())
+        .filter(Boolean);
 
-    setResult({
-      score,
-      summary:
-        reasons[0] ||
-        'ForgeTomorrow analyzed your profile, portfolio, and primary resume against this opportunity.',
+      const explanationItems = [
+        ...reasons.map((reason) => `Why this aligns: ${reason}`),
+        ...evidence,
+        ...gaps.map((gap) => `Gap to review: ${gap}`),
+      ].slice(0, 6);
 
-      recommendations: [
-        ...evidence.map((e) => e.text),
-        ...gaps,
-      ].slice(0, 5),
-    });
+      setResult({
+        score,
+        summary:
+          reasons[0] ||
+          'ForgeTomorrow analyzed your profile, portfolio, preferences, and primary resume against this opportunity.',
+        evidence: explanationItems,
+        gaps,
+      });
 
-    setState('done');
-  } catch (err) {
-    console.error('[CheckMyFit] alignment explanation error', err);
-    setState('error');
-  }
-};
+      setState('done');
+    } catch (err) {
+      console.error('[CheckMyFit] alignment explanation error', err);
+      setState('error');
+    }
+  };
 
   const scoreColor = (score) => {
     if (score >= 80) return '#43A047';
@@ -61,12 +81,12 @@ export default function CheckMyFit({ job, onImproveResume }) {
   };
 
   const scoreLabel = (score) => {
-    if (score >= 80) return 'Strong fit';
-    if (score >= 60) return 'Moderate fit';
-    return 'Needs work';
+    if (score >= 80) return 'Strong alignment';
+    if (score >= 60) return 'Moderate alignment';
+    if (score > 0) return 'Needs work';
+    return 'No clear alignment yet';
   };
 
-  /* ── idle ── */
   if (state === 'idle') {
     return (
       <button
@@ -74,13 +94,17 @@ export default function CheckMyFit({ job, onImproveResume }) {
         onClick={run}
         style={{
           width: '100%',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
           padding: '11px 16px',
           borderRadius: 12,
           border: '1.5px solid rgba(255,112,67,0.35)',
           background: 'rgba(255,112,67,0.06)',
           color: '#FF7043',
-          fontWeight: 800, fontSize: 13,
+          fontWeight: 800,
+          fontSize: 13,
           cursor: 'pointer',
           transition: 'all 150ms ease',
         }}
@@ -91,64 +115,117 @@ export default function CheckMyFit({ job, onImproveResume }) {
     );
   }
 
-  /* ── loading ── */
   if (state === 'loading') {
     return (
-      <div style={{
-        width: '100%', padding: '14px 16px', borderRadius: 12,
-        border: '1px solid #E0E0E0', background: '#FAFAFA',
-        display: 'flex', alignItems: 'center', gap: 10,
-        color: '#90A4AE', fontSize: 13, fontWeight: 600,
-      }}>
-        <span style={{
-          display: 'inline-block', width: 16, height: 16, borderRadius: 999,
-          border: '2px solid #FF7043', borderTopColor: 'transparent',
-          animation: 'spin 0.7s linear infinite',
-        }} />
-        Analysing your profile against this role…
+      <div
+        style={{
+          width: '100%',
+          padding: '14px 16px',
+          borderRadius: 12,
+          border: '1px solid #E0E0E0',
+          background: '#FAFAFA',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          color: '#90A4AE',
+          fontSize: 13,
+          fontWeight: 600,
+        }}
+      >
+        <span
+          style={{
+            display: 'inline-block',
+            width: 16,
+            height: 16,
+            borderRadius: 999,
+            border: '2px solid #FF7043',
+            borderTopColor: 'transparent',
+            animation: 'spin 0.7s linear infinite',
+          }}
+        />
+        Explaining your alignment for this role...
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
-  /* ── done ── */
+  if (state === 'error') {
+    return (
+      <div
+        style={{
+          borderRadius: 12,
+          border: '1px solid rgba(211,47,47,0.20)',
+          background: 'rgba(211,47,47,0.06)',
+          padding: '12px 14px',
+          color: '#D32F2F',
+          fontSize: 13,
+          fontWeight: 700,
+        }}
+      >
+        Could not explain alignment for this role. Please try again.
+      </div>
+    );
+  }
+
   if (state === 'done' && result) {
     const sc = result.score;
     const color = sc !== null ? scoreColor(sc) : '#607D8B';
 
     return (
-      <div style={{
-        borderRadius: 14, border: `1.5px solid ${color}22`,
-        background: `${color}08`, padding: '14px 16px',
-        display: 'flex', flexDirection: 'column', gap: 10,
-      }}>
-        {/* Score row */}
+      <div
+        style={{
+          borderRadius: 14,
+          border: `1.5px solid ${color}22`,
+          background: `${color}08`,
+          padding: '14px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+        }}
+      >
         {sc !== null && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: 999, flexShrink: 0,
-              background: `${color}18`,
-              border: `2px solid ${color}`,
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-            }}>
+            <div
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 999,
+                flexShrink: 0,
+                background: `${color}18`,
+                border: `2px solid ${color}`,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               <span style={{ fontWeight: 900, fontSize: 18, color, lineHeight: 1 }}>{sc}</span>
               <span style={{ fontSize: 9, color, fontWeight: 700, letterSpacing: '0.04em' }}>%</span>
             </div>
+
             <div>
               <div style={{ fontWeight: 800, fontSize: 15, color: '#112033' }}>
                 {scoreLabel(sc)}
               </div>
               <div style={{ fontSize: 12, color: '#607D8B', marginTop: 1 }}>
-                Profile and resume alignment score
+                Profile, portfolio, preferences, and primary resume alignment
               </div>
             </div>
+
             <button
               type="button"
-              onClick={() => { setState('idle'); setResult(null); }}
+              onClick={() => {
+                setState('idle');
+                setResult(null);
+              }}
               style={{
-                marginLeft: 'auto', background: 'none', border: 'none',
-                color: '#90A4AE', fontSize: 18, cursor: 'pointer', lineHeight: 1,
+                marginLeft: 'auto',
+                background: 'none',
+                border: 'none',
+                color: '#90A4AE',
+                fontSize: 18,
+                cursor: 'pointer',
+                lineHeight: 1,
               }}
               aria-label="Dismiss"
             >
@@ -157,50 +234,80 @@ export default function CheckMyFit({ job, onImproveResume }) {
           </div>
         )}
 
-        {/* Summary */}
         {result.summary && (
           <p style={{ margin: 0, fontSize: 13, color: '#37474F', lineHeight: 1.5 }}>
             {result.summary}
           </p>
         )}
 
-        {/* Recommendations */}
-        {result.recommendations?.length > 0 && (
+        {result.evidence?.length > 0 && (
           <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: '#112033', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Resume tweaks
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color: '#112033',
+                marginBottom: 6,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              Alignment evidence
             </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {result.recommendations.map((rec, i) => (
-                <div key={i} style={{
-                  display: 'flex', gap: 8, alignItems: 'flex-start',
-                  fontSize: 12, color: '#455A64', lineHeight: 1.5,
-                }}>
-                  <span style={{
-                    width: 18, height: 18, borderRadius: 999, flexShrink: 0,
-                    background: '#FF7043', color: 'white',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 10, fontWeight: 800, marginTop: 1,
-                  }}>
+              {result.evidence.map((item, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    alignItems: 'flex-start',
+                    fontSize: 12,
+                    color: '#455A64',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 999,
+                      flexShrink: 0,
+                      background: '#FF7043',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      fontWeight: 800,
+                      marginTop: 1,
+                    }}
+                  >
                     {i + 1}
                   </span>
-                  {rec}
+                  <span>{item}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* CTA */}
         {typeof onImproveResume === 'function' && (
           <button
             type="button"
             onClick={() => onImproveResume(job, result)}
             style={{
-              marginTop: 4, width: '100%',
-              background: '#1A4B8F', color: 'white',
-              padding: '10px 16px', borderRadius: 10, border: 'none',
-              fontWeight: 700, fontSize: 13, cursor: 'pointer',
+              marginTop: 4,
+              width: '100%',
+              background: '#1A4B8F',
+              color: 'white',
+              padding: '10px 16px',
+              borderRadius: 10,
+              border: 'none',
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer',
               boxShadow: '0 4px 14px rgba(26,75,143,0.25)',
             }}
           >
@@ -209,7 +316,7 @@ export default function CheckMyFit({ job, onImproveResume }) {
         )}
 
         <p style={{ margin: 0, fontSize: 10, color: '#90A4AE' }}>
-          AI-assisted guidance. You control what gets added before you apply.
+          This explains the card alignment score. Hammer reviews resume-only alignment for this JD.
         </p>
       </div>
     );
