@@ -12,14 +12,14 @@ function inferLocationType(location) {
 export default function JobListCard({ job, isSelected, onClick, getJobStatus, isInternalJob, getJobTier }) {
   if (!job) return null;
 
-  const rawDesc   = job.description || '';
+  const rawDesc = job.description || '';
   const cleanDesc = rawDesc.replace(/<[^>]*>/g, '');
-  const snippet   = cleanDesc.length > 140 ? `${cleanDesc.slice(0, 140)}…` : cleanDesc;
+  const snippet = cleanDesc.length > 140 ? `${cleanDesc.slice(0, 140)}…` : cleanDesc;
 
-  const location      = job.location || '';
-  const locationType  = inferLocationType(location);
-  const status        = getJobStatus(job);
-  const internal      = isInternalJob(job);
+  const location = job.location || '';
+  const locationType = inferLocationType(location);
+  const status = getJobStatus(job);
+  const internal = isInternalJob(job);
   const displaySource = internal ? 'Forge recruiter' : 'External';
 
   let postedLabel = 'Date not provided';
@@ -40,35 +40,35 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
   const matchTier = job.matchTier || job.signalTier || '';
   const hasMatchScore = typeof matchScore === 'number';
 
-  const tier          = getJobTier(job);
-  const isFtOfficial  = tier === 'ft-official';
-  const isPartner     = tier === 'partner';
-  const isDarkCard    = isFtOfficial || isPartner;
+  const tier = getJobTier(job);
+  const isFtOfficial = tier === 'ft-official';
+  const isPartner = tier === 'partner';
+  const isDarkCard = isFtOfficial || isPartner;
 
   const logoUrl = job.logoUrl || (isFtOfficial ? '/images/logo-color.png' : null);
 
   let cardBackground, cardBorder, cardShadow;
   if (isFtOfficial) {
     cardBackground = 'linear-gradient(135deg, #FF7043, #FF8A65)';
-    cardBorder     = isSelected ? '2px solid #FFFFFF' : '1px solid #FFCC80';
-    cardShadow     = '0 4px 20px rgba(255,112,67,0.40)';
+    cardBorder = isSelected ? '2px solid #FFFFFF' : '1px solid #FFCC80';
+    cardShadow = '0 4px 20px rgba(255,112,67,0.40)';
   } else if (isPartner) {
     cardBackground = 'linear-gradient(135deg, #0B1724, #112033)';
-    cardBorder     = isSelected ? '2px solid #FF7043' : '1px solid rgba(255,112,67,0.55)';
-    cardShadow     = '0 4px 18px rgba(0,0,0,0.40)';
+    cardBorder = isSelected ? '2px solid #FF7043' : '1px solid rgba(255,112,67,0.55)';
+    cardShadow = '0 4px 18px rgba(0,0,0,0.40)';
   } else {
     cardBackground = isSelected
       ? 'linear-gradient(135deg,#FFFFFF,#FFF3EE)'
       : '#FFFFFF';
-    cardBorder     = isSelected ? '2px solid #FF7043' : '1px solid #E8EAEC';
-    cardShadow     = isSelected
+    cardBorder = isSelected ? '2px solid #FF7043' : '1px solid #E8EAEC';
+    cardShadow = isSelected
       ? '0 4px 16px rgba(255,112,67,0.18)'
       : '0 1px 4px rgba(0,0,0,0.06)';
   }
 
-  const titleColor  = isDarkCard ? '#FFFFFF' : '#112033';
+  const titleColor = isDarkCard ? '#FFFFFF' : '#112033';
   const subtleColor = isDarkCard ? '#CFD8DC' : '#607D8B';
-  const textColor   = isDarkCard ? '#ECEFF1' : '#455A64';
+  const textColor = isDarkCard ? '#ECEFF1' : '#455A64';
 
   const chipLabel = isFtOfficial
     ? 'ForgeTomorrow official posting'
@@ -92,12 +92,12 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
         position: 'relative',
         overflow: 'hidden',
         transition: 'box-shadow 150ms ease, border-color 150ms ease',
-        minHeight: 132,
+        height: 136,
         maxWidth: '100%',
         boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
+        display: 'grid',
+        gridTemplateRows: '52px 28px 28px',
+        gap: 8,
       }}
     >
       {isSelected && !isDarkCard && (
@@ -114,112 +114,114 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
         />
       )}
 
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
-            {logoUrl && (
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                  backgroundColor: isDarkCard ? 'rgba(0,0,0,0.30)' : 'rgba(0,0,0,0.06)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <img
-                  src={logoUrl}
-                  alt={`${job.company || 'Company'} logo`}
-                  style={{ maxWidth: '70%', maxHeight: '70%', objectFit: 'contain' }}
-                />
-              </div>
-            )}
-
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div
-                style={{
-                  fontWeight: 800,
-                  fontSize: 14,
-                  color: titleColor,
-                  lineHeight: 1.3,
-                  marginBottom: 2,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitBoxOrient: 'vertical',
-                  WebkitLineClamp: 2,
-                }}
-              >
-                {job.title}
-              </div>
-              <div style={{ fontSize: 12, color: subtleColor, fontWeight: 500 }}>
-                {job.company}
-              </div>
+      {/* Top zone: fixed title/company area + fixed match area */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 58px', gap: 10, minWidth: 0 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', minWidth: 0 }}>
+          {logoUrl && (
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                overflow: 'hidden',
+                flexShrink: 0,
+                backgroundColor: isDarkCard ? 'rgba(0,0,0,0.30)' : 'rgba(0,0,0,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <img
+                src={logoUrl}
+                alt={`${job.company || 'Company'} logo`}
+                style={{ maxWidth: '70%', maxHeight: '70%', objectFit: 'contain' }}
+              />
             </div>
-          </div>
+          )}
 
-          <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 58 }}>
-            {hasMatchScore ? (
-              <>
-                <div
-                  style={{
-                    fontSize: 10,
-                    color: subtleColor,
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                  }}
-                >
-                  Match
-                </div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    color: isDarkCard ? '#FFFFFF' : '#FF7043',
-                    fontWeight: 900,
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {matchScore}%
-                </div>
-                {matchTier && (
-                  <div style={{ fontSize: 10, color: subtleColor, fontWeight: 700, lineHeight: 1.2 }}>
-                    {matchTier}
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                <div
-                  style={{
-                    fontSize: 10,
-                    color: subtleColor,
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                  }}
-                >
-                  Match
-                </div>
-                <div style={{ fontSize: 12, color: subtleColor, fontWeight: 700 }}>
-                  —
-                </div>
-              </>
-            )}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                fontWeight: 800,
+                fontSize: 14,
+                color: titleColor,
+                lineHeight: 1.25,
+                height: 35,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: 2,
+              }}
+            >
+              {job.title}
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: subtleColor,
+                fontWeight: 500,
+                marginTop: 3,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {job.company}
+            </div>
           </div>
         </div>
 
-        {showSnippet && snippet && (
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div
+            style={{
+              fontSize: 10,
+              color: subtleColor,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              lineHeight: 1.1,
+            }}
+          >
+            Match
+          </div>
+          <div
+            style={{
+              fontSize: 15,
+              color: hasMatchScore ? (isDarkCard ? '#FFFFFF' : '#FF7043') : subtleColor,
+              fontWeight: 900,
+              lineHeight: 1.1,
+            }}
+          >
+            {hasMatchScore ? `${matchScore}%` : '—'}
+          </div>
+          {matchTier && (
+            <div
+              style={{
+                fontSize: 10,
+                color: subtleColor,
+                fontWeight: 700,
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {matchTier}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Middle zone: optional snippet or partner chip without changing card height */}
+      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+        {showSnippet && snippet ? (
           <p
             style={{
-              margin: '8px 0 0',
+              margin: 0,
               color: textColor,
               fontSize: 12,
-              lineHeight: 1.5,
+              lineHeight: 1.35,
               display: '-webkit-box',
               WebkitBoxOrient: 'vertical',
               WebkitLineClamp: 2,
@@ -228,15 +230,13 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
           >
             {snippet}
           </p>
-        )}
-
-        {chipLabel && (
+        ) : chipLabel ? (
           <div
             style={{
-              marginTop: 8,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 5,
+              maxWidth: '100%',
               padding: '3px 9px',
               borderRadius: 999,
               border: isFtOfficial ? '1px solid rgba(255,255,255,0.35)' : '1px solid rgba(255,255,255,0.15)',
@@ -244,21 +244,52 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
               fontSize: 11,
               color: '#FFCC80',
               fontWeight: 700,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
             <span style={{ width: 5, height: 5, borderRadius: 999, background: '#FF7043', flexShrink: 0 }} />
-            {chipLabel}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{chipLabel}</span>
           </div>
-        )}
+        ) : null}
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: subtleColor, fontWeight: 700 }}>
+      {/* Bottom zone: consistent metadata row */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          minWidth: 0,
+          overflow: 'hidden',
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            color: subtleColor,
+            fontWeight: 700,
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+          }}
+        >
           Posted {postedLabel}
         </span>
 
         {location && (
-          <span style={{ fontSize: 11, color: subtleColor }}>
+          <span
+            title={location}
+            style={{
+              fontSize: 11,
+              color: subtleColor,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flex: '1 1 auto',
+            }}
+          >
             {location}
           </span>
         )}
@@ -273,6 +304,8 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
               background: isDarkCard ? 'rgba(38,50,56,0.70)' : 'rgba(0,0,0,0.04)',
               color: isDarkCard ? '#ECEFF1' : '#546E7A',
               fontWeight: 600,
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}
           >
             {locationType}
@@ -289,6 +322,8 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
               background: isDarkCard ? 'rgba(38,50,56,0.70)' : 'rgba(0,0,0,0.04)',
               color: isDarkCard ? '#ECEFF1' : '#546E7A',
               fontWeight: 600,
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}
           >
             {displaySource}
@@ -305,6 +340,8 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
               background: status === 'Reviewing' ? '#FFF3E0' : '#ECEFF1',
               color: status === 'Reviewing' ? '#E65100' : '#607D8B',
               fontWeight: 700,
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}
           >
             {status === 'Reviewing' ? 'Reviewing applicants' : status}
