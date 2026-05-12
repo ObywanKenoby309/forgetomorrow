@@ -17,6 +17,12 @@ export default function JobListCard({
   isInternalJob,
 }) {
   if (!job) return null;
+  console.log('[JobListCard]', job.title, {
+  match: job.match,
+  matchSource: job.matchSource,
+  jobMatch: job.jobMatch,
+  alignmentEvidence: job.alignmentEvidence,
+});
 
   const location = job.location || '';
   const locationType = inferLocationType(location);
