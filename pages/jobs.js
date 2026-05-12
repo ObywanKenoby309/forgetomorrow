@@ -136,9 +136,27 @@ function JobsUI() {
   useEffect(() => {
     async function fetchJobs() {
       try {
-        const res  = await fetch('/api/jobs');
-        const data = await res.json();
-        setJobs((data && data.jobs) || []);
+        const res = await fetch('/api/jobs');
+const data = await res.json();
+const loadedJobs = (data && data.jobs) || [];
+
+try {
+  const alignRes = await fetch('/api/jobs/alignment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jobs: loadedJobs }),
+  });
+
+  if (alignRes.ok) {
+    const alignData = await alignRes.json();
+    setJobs((alignData && alignData.jobs) || loadedJobs);
+    return;
+  }
+} catch (alignErr) {
+  console.error('[Jobs] alignment load failed', alignErr);
+}
+
+setJobs(loadedJobs);
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     }
