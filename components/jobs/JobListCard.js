@@ -92,11 +92,11 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
         position: 'relative',
         overflow: 'hidden',
         transition: 'box-shadow 150ms ease, border-color 150ms ease',
-        height: 136,
+        minHeight: 136,
         maxWidth: '100%',
         boxSizing: 'border-box',
         display: 'grid',
-        gridTemplateRows: '52px 28px 28px',
+        gridTemplateRows: 'auto auto auto',
         gap: 8,
       }}
     >
@@ -146,7 +146,7 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
                 fontSize: 14,
                 color: titleColor,
                 lineHeight: 1.25,
-                height: 35,
+                minHeight: 35,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 display: '-webkit-box',
