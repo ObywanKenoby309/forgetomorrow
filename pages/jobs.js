@@ -287,7 +287,7 @@ const hasSearchIntent =
   sourceFilter;
 
 const filteredJobs = hasSearchIntent
-  ? rankedJobs.filter((job) => (job.searchScore || 0) > 18)
+  ? rankedJobs.filter((job) => (job.searchScore || 0) > 24)
   : rankedJobs;
 
   useEffect(() => {
