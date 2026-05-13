@@ -2,6 +2,26 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
+function getAlignmentScore(job) {
+  if (typeof job?.match === 'number' && job.match > 0) {
+    return Math.round(job.match);
+  }
+
+  if (typeof job?.searchScore === 'number' && job.searchScore > 0) {
+    return Math.round(job.searchScore);
+  }
+
+  return null;
+}
+
+function getAlignmentLabel(score) {
+  if (score >= 80) return 'Strong';
+  if (score >= 60) return 'Good';
+  if (score >= 40) return 'Adjacent';
+  if (score > 0) return 'Signal';
+  return '';
+}
+
 export default function RecommendedJobsPreview() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +56,7 @@ export default function RecommendedJobsPreview() {
   }
 
   if (error || jobs.length === 0) {
-    return null; // silently hide if no jobs or error — keeps dashboard clean
+    return null;
   }
 
   return (
@@ -52,25 +72,57 @@ export default function RecommendedJobsPreview() {
           See more jobs →
         </Link>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {jobs.map((job) => (
-          <Link
-            key={job.id}
-            href={`/jobs/${job.id}`}
-            className="block p-4 border border-gray-100 rounded-lg hover:border-orange-300 hover:shadow transition"
-          >
-            <h3 className="font-semibold text-gray-900">{job.title}</h3>
-            <p className="text-sm text-gray-600 mt-1">{job.company}</p>
-            <p className="text-xs text-gray-500 mt-2">
-              {job.location} • {job.worksite || job.type || 'Full-time'}
-            </p>
-            {job.compensation && (
-              <p className="text-xs text-orange-600 font-medium mt-2">
-                {job.compensation}
+        {jobs.map((job) => {
+          const alignmentScore = getAlignmentScore(job);
+          const alignmentLabel = getAlignmentLabel(alignmentScore);
+
+          return (
+            <Link
+              key={job.id}
+              href={`/jobs/${job.id}`}
+              className="block p-4 border border-gray-100 rounded-lg hover:border-orange-300 hover:shadow transition"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-gray-900 line-clamp-2">
+                    {job.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1 truncate">
+                    {job.company}
+                  </p>
+                </div>
+
+                {typeof alignmentScore === 'number' && (
+                  <div className="shrink-0 text-right">
+                    <div className="text-[10px] uppercase tracking-wide text-gray-500 font-bold">
+                      Alignment
+                    </div>
+                    <div className="text-orange-600 font-black text-base leading-tight">
+                      {alignmentScore}%
+                    </div>
+                    {alignmentLabel && (
+                      <div className="text-[10px] text-gray-500 font-semibold">
+                        {alignmentLabel}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-500 mt-2">
+                {job.location} • {job.worksite || job.type || 'Full-time'}
               </p>
-            )}
-          </Link>
-        ))}
+
+              {job.compensation && (
+                <p className="text-xs text-orange-600 font-medium mt-2">
+                  {job.compensation}
+                </p>
+              )}
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
