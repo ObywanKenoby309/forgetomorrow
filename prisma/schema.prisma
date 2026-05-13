@@ -902,6 +902,7 @@ model User {
   savedPosts                   SavedPost[]
   scanLogs                     ScanLog[]
   seekerCalendarItems          SeekerCalendarItem[]           @relation("UserSeekerCalendarItems")
+  seekerJobPreference          SeekerJobPreference?
   seekerJobRecommendations     SeekerJobRecommendation[]
   talentPoolEntriesAsCandidate TalentPoolEntry[]              @relation("TalentPoolEntryCandidate")
   createdTalentPools           TalentPool[]                   @relation("UserCreatedTalentPools")
@@ -1234,6 +1235,23 @@ model SeekerCalendarItem {
   @@index([date])
   @@index([source])
   @@map("seeker_calendar_items")
+}
+
+model SeekerJobPreference {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  keyword      String?
+  company      String?
+  location     String?
+  locationType String?
+  source       String?
+  days         Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([updatedAt])
+  @@map("seeker_job_preferences")
 }
 
 model Notification {
