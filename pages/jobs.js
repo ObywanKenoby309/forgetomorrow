@@ -243,6 +243,36 @@ function JobsUI() {
 
     fetchJobs();
   }, []);
+  
+    useEffect(() => {
+      if (!router.isReady) return;
+      if (!jobs.length) return;
+
+      const selectedJobId = router.query.selectedJobId;
+
+      if (!selectedJobId) return;
+
+      const matchedJob = jobs.find(
+        (job) => String(job.id) === String(selectedJobId)
+      );
+
+      if (!matchedJob) return;
+
+      setSelectedJob(matchedJob);
+      setUserHasSelected(true);
+
+      addViewedJob(matchedJob);
+
+      if (isMobile) {
+        setMobileDetailOpen(true);
+      }
+    }, [
+      router.isReady,
+      router.query.selectedJobId,
+      jobs,
+      isMobile,
+      addViewedJob,
+    ]);
 
   useEffect(() => {
     let cancelled = false;

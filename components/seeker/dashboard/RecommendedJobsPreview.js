@@ -77,7 +77,7 @@ export default function RecommendedJobsPreview() {
           return (
             <Link
               key={job.id}
-              href={`/jobs/${job.id}`}
+              href={`/jobs?selectedJobId=${encodeURIComponent(job.id)}`}
               className="block p-4 border border-gray-100 rounded-lg hover:border-orange-300 hover:shadow transition"
             >
               <div className="flex items-start justify-between gap-3">
