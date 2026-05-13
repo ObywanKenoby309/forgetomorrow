@@ -1,8 +1,68 @@
 // pages/api/seeker/recommended-jobs.js
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
-import { prisma } from "@/lib/prisma";
-import { rankJobsBySearchRelevance } from "@/lib/intelligence/forgeSearchEngine";
+import prisma from "@/lib/prisma";
+
+import {
+  rankJobsBySearchRelevance,
+} from "@/lib/intelligence/forgeSearchEngine";
+
+import {
+  rankJobsBySeekerAlignment,
+} from "@/lib/intelligence/forgeJobMatchEngine";
+
+function safeJsonParse(value) {
+  try {
+    if (!value || typeof value !== "string") return null;
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function toArray(value) {
+  if (Array.isArray(value)) return value;
+
+  if (typeof value === "string") {
+    return value
+      .split(/[,|]/g)
+      .map((x) => String(x || "").trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function extractResumeContext(resume) {
+  const parsed = safeJsonParse(resume?.content);
+
+  const root =
+    parsed?.data && typeof parsed.data === "object"
+      ? parsed.data
+      : parsed || {};
+
+  return {
+    resumeId: resume?.id || null,
+    summary: root.summary || root.professionalSummary || "",
+    skills: toArray(root.skills),
+
+    experience: Array.isArray(root.experiences)
+      ? root.experiences
+      : Array.isArray(root.workExperiences)
+      ? root.workExperiences
+      : Array.isArray(root.experience)
+      ? root.experience
+      : [],
+
+    projects: Array.isArray(root.projects)
+      ? root.projects
+      : [],
+
+    certifications: Array.isArray(root.certifications)
+      ? root.certifications
+      : [],
+  };
+}
 
 function inferLocationType(location) {
   const text = String(location || "").toLowerCase();
@@ -37,7 +97,7 @@ function buildPreferenceFilters(preference) {
   };
 }
 
-function formatRecommendedJob(job, searchScore = null) {
+function formatRecommendedJob(job) {
   return {
     id: job.id,
     title: job.title,
@@ -47,79 +107,140 @@ function formatRecommendedJob(job, searchScore = null) {
     compensation: job.compensation,
     type: job.type,
     createdAt: job.createdAt,
-    searchScore,
+
+    match: job.match || 0,
+    matchTier: job.matchTier || "",
+    matchSource: job.matchSource || "",
   };
 }
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", ["GET"]);
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({
+      error: "Method not allowed",
+    });
   }
 
   try {
-    const session = await getServerSession(req, res, authOptions);
+    const session = await getServerSession(
+      req,
+      res,
+      authOptions
+    );
 
     if (!session?.user?.email) {
-      return res.status(401).json({ error: "Not authenticated" });
+      return res.status(401).json({
+        error: "Not authenticated",
+      });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
+      where: {
+        email: session.user.email,
+      },
+
+      select: {
+        id: true,
+        name: true,
+        headline: true,
+        aboutMe: true,
+        location: true,
+        workPreferences: true,
+        skillsJson: true,
+        languagesJson: true,
+        educationJson: true,
+      },
     });
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({
+        error: "User not found",
+      });
     }
 
-    const userId = user.id;
+    const primaryResume =
+      (await prisma.resume.findFirst({
+        where: {
+          userId: user.id,
+          isPrimary: true,
+        },
 
-    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 4;
-    const safeLimit = Number.isNaN(limit) || limit < 1 ? 4 : Math.min(limit, 20);
+        select: {
+          id: true,
+          content: true,
+          updatedAt: true,
+        },
 
-    const preference = await prisma.seekerJobPreference.findUnique({
-      where: { userId },
-    });
+        orderBy: {
+          updatedAt: "desc",
+        },
+      })) ||
+      (await prisma.resume.findFirst({
+        where: {
+          userId: user.id,
+        },
 
-    const preferenceActive = isSearchPreferenceActive(preference);
+        select: {
+          id: true,
+          content: true,
+          updatedAt: true,
+        },
 
-    if (preferenceActive) {
-      const cachedRecommendations = await prisma.seekerJobRecommendation.findMany({
-        where: { userId },
-        orderBy: [{ rank: "asc" }, { score: "desc" }, { updatedAt: "desc" }],
-        take: safeLimit,
-        include: {
-          job: {
-            select: {
-              id: true,
-              title: true,
-              company: true,
-              location: true,
-              worksite: true,
-              compensation: true,
-              type: true,
-              createdAt: true,
-            },
-          },
+        orderBy: {
+          updatedAt: "desc",
+        },
+      }));
+
+    const seekerContext = {
+      userId: user.id,
+      name: user.name || "",
+      headline: user.headline || "",
+      summary: user.aboutMe || "",
+      location: user.location || "",
+
+      workPreferences:
+        user.workPreferences &&
+        typeof user.workPreferences === "object"
+          ? user.workPreferences
+          : {},
+
+      skills: toArray(user.skillsJson),
+      languages: toArray(user.languagesJson),
+      education: toArray(user.educationJson),
+
+      resume: extractResumeContext(primaryResume),
+    };
+
+    const limit = req.query.limit
+      ? parseInt(req.query.limit, 10)
+      : 4;
+
+    const safeLimit =
+      Number.isNaN(limit) || limit < 1
+        ? 4
+        : Math.min(limit, 20);
+
+    const preference =
+      await prisma.seekerJobPreference.findUnique({
+        where: {
+          userId: user.id,
         },
       });
 
-      if (cachedRecommendations.length > 0) {
-        return res.status(200).json({
-          jobs: cachedRecommendations.map((item) =>
-            formatRecommendedJob(item.job, item.score || null)
-          ),
-          preferenceApplied: true,
-          source: "cache",
-        });
-      }
-    }
+    const preferenceActive =
+      isSearchPreferenceActive(preference);
 
-    const appliedJobIds = await prisma.application.findMany({
-      where: { userId },
-      select: { jobId: true },
-    });
+    const appliedJobIds =
+      await prisma.application.findMany({
+        where: {
+          userId: user.id,
+        },
+
+        select: {
+          jobId: true,
+        },
+      });
 
     const appliedIds = appliedJobIds
       .map((application) => application.jobId)
@@ -132,7 +253,9 @@ export default async function handler(req, res) {
     };
 
     if (appliedIds.length > 0) {
-      whereClause.id = { notIn: appliedIds };
+      whereClause.id = {
+        notIn: appliedIds,
+      };
     }
 
     if (preference?.company) {
@@ -144,7 +267,10 @@ export default async function handler(req, res) {
 
     if (preference?.days) {
       const since = new Date();
-      since.setDate(since.getDate() - preference.days);
+
+      since.setDate(
+        since.getDate() - preference.days
+      );
 
       whereClause.createdAt = {
         gte: since,
@@ -153,6 +279,7 @@ export default async function handler(req, res) {
 
     const jobs = await prisma.job.findMany({
       where: whereClause,
+
       select: {
         id: true,
         title: true,
@@ -171,47 +298,103 @@ export default async function handler(req, res) {
         publishedat: true,
         url: true,
       },
-      orderBy: { createdAt: "desc" },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+
       take: preferenceActive ? 100 : safeLimit,
     });
 
-    let finalJobs = jobs;
+    let filteredJobs = jobs;
 
     if (preferenceActive) {
-      const filters = buildPreferenceFilters(preference);
+      const filters =
+        buildPreferenceFilters(preference);
 
-      finalJobs = rankJobsBySearchRelevance(jobs, filters).filter((job) => {
-        if ((job.searchScore || 0) <= 24) return false;
+      filteredJobs =
+        rankJobsBySearchRelevance(
+          jobs,
+          filters
+        ).filter((job) => {
+          if ((job.searchScore || 0) <= 24) {
+            return false;
+          }
 
-        if (preference.location) {
-          const location = String(job.location || "").toLowerCase();
-          if (!location.includes(String(preference.location).toLowerCase())) return false;
-        }
+          if (preference.location) {
+            const location = String(
+              job.location || ""
+            ).toLowerCase();
 
-        if (preference.locationType) {
-          if (inferLocationType(job.location) !== preference.locationType) return false;
-        }
+            if (
+              !location.includes(
+                String(
+                  preference.location
+                ).toLowerCase()
+              )
+            ) {
+              return false;
+            }
+          }
 
-        if (preference.source) {
-          const source = String(job.source || "").toLowerCase();
-          const target = String(preference.source || "").toLowerCase();
+          if (preference.locationType) {
+            if (
+              inferLocationType(job.location) !==
+              preference.locationType
+            ) {
+              return false;
+            }
+          }
 
-          if (target && !source.includes(target)) return false;
-        }
+          if (preference.source) {
+            const source = String(
+              job.source || ""
+            ).toLowerCase();
 
-        return true;
-      });
+            const target = String(
+              preference.source || ""
+            ).toLowerCase();
+
+            if (
+              target &&
+              !source.includes(target)
+            ) {
+              return false;
+            }
+          }
+
+          return true;
+        });
     }
 
+    const alignedJobs =
+      rankJobsBySeekerAlignment(
+        filteredJobs,
+        seekerContext
+      );
+
     return res.status(200).json({
-      jobs: finalJobs
+      jobs: alignedJobs
         .slice(0, safeLimit)
-        .map((job) => formatRecommendedJob(job, job.searchScore || null)),
+        .map((job) =>
+          formatRecommendedJob(job)
+        ),
+
       preferenceApplied: preferenceActive,
-      source: preferenceActive ? "live-fallback" : "latest",
+
+      source: preferenceActive
+        ? "aligned-recommendations"
+        : "latest-aligned",
     });
   } catch (err) {
-    console.error("[api/seeker/recommended-jobs] error:", err);
-    return res.status(500).json({ error: "Failed to load recommended jobs" });
+    console.error(
+      "[api/seeker/recommended-jobs] error:",
+      err
+    );
+
+    return res.status(500).json({
+      error:
+        "Failed to load recommended jobs",
+    });
   }
 }

@@ -7,18 +7,14 @@ function getAlignmentScore(job) {
     return Math.round(job.match);
   }
 
-  if (typeof job?.searchScore === 'number' && job.searchScore > 0) {
-    return Math.round(job.searchScore);
-  }
-
   return null;
 }
 
 function getAlignmentLabel(score) {
-  if (score >= 80) return 'Strong';
-  if (score >= 60) return 'Good';
-  if (score >= 40) return 'Adjacent';
-  if (score > 0) return 'Signal';
+  if (score >= 80) return 'Strong Match';
+  if (score >= 60) return 'Good Match';
+  if (score >= 40) return 'Adjacent Match';
+  if (score > 0) return 'Weak Match';
   return '';
 }
 
