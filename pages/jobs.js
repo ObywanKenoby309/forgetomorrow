@@ -243,46 +243,6 @@ function JobsUI() {
 
     fetchJobs();
   }, []);
-  
-      useEffect(() => {
-    if (!router.isReady) return;
-    if (!jobs.length) return;
-
-    const selectedJobId = router.query.selectedJobId;
-
-    if (!selectedJobId) return;
-
-    const matchedJob = jobs.find(
-      (job) => String(job.id) === String(selectedJobId)
-    );
-
-    if (!matchedJob) return;
-
-    const filteredIndex = filteredJobs.findIndex(
-      (job) => String(job.id) === String(selectedJobId)
-    );
-
-    if (filteredIndex >= 0) {
-      const targetPage = Math.floor(filteredIndex / pageSize) + 1;
-      setCurrentPage(targetPage);
-    }
-
-    setSelectedJob(matchedJob);
-    setUserHasSelected(true);
-    addViewedJob(matchedJob);
-
-    if (isMobile) {
-      setMobileDetailOpen(true);
-    }
-  }, [
-    router.isReady,
-    router.query.selectedJobId,
-    jobs,
-    filteredJobs,
-    pageSize,
-    isMobile,
-    addViewedJob,
-  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -494,6 +454,45 @@ function JobsUI() {
   const filteredJobs = hasSearchIntent
     ? rankedJobs.filter((job) => (job.searchScore || 0) > 24)
     : rankedJobs;
+	
+	  useEffect(() => {
+    if (!router.isReady) return;
+    if (!jobs.length) return;
+
+    const selectedJobId = router.query.selectedJobId;
+    if (!selectedJobId) return;
+
+    const matchedJob = jobs.find(
+      (job) => String(job.id) === String(selectedJobId)
+    );
+
+    if (!matchedJob) return;
+
+    const filteredIndex = filteredJobs.findIndex(
+      (job) => String(job.id) === String(selectedJobId)
+    );
+
+    if (filteredIndex >= 0) {
+      const targetPage = Math.floor(filteredIndex / pageSize) + 1;
+      setCurrentPage(targetPage);
+    }
+
+    setSelectedJob(matchedJob);
+    setUserHasSelected(true);
+    addViewedJob(matchedJob);
+
+    if (isMobile) {
+      setMobileDetailOpen(true);
+    }
+  }, [
+    router.isReady,
+    router.query.selectedJobId,
+    jobs,
+    filteredJobs,
+    pageSize,
+    isMobile,
+    addViewedJob,
+  ]);
 
   useEffect(() => {
     const total = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
