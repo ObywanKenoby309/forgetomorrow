@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 const CRON_USER_ID = 'cmiwa2op6000cbvz0f2s8eafb';
 const IMPORT_STATUS = 'Published';
-const SOURCES = ['himalayas', 'themuse', 'usajobs', 'adzuna', 'jooble', 'greenhouse'];
+const SOURCES = ['himalayas', 'themuse', 'usajobs', 'adzuna', 'jooble', 'greenhouse', 'lever'];
 const RETENTION_DAYS = 7;
 const WRITE_BATCH_SIZE = 40;
 
@@ -53,6 +53,36 @@ const GREENHOUSE_BOARDS = [
   'komodohealth',
   'samsara',
   'hashicorp',
+];
+
+const LEVER_URL = 'https://api.lever.co/v0/postings';
+const LEVER_COMPANIES = [
+  'netflix',
+  'coinbase',
+  'openai',
+  'scaleai',
+  'mongodb',
+  'asana',
+  'brex',
+  'yelp',
+  'eventbrite',
+  'zapier',
+  'cruise',
+  'niantic',
+  'flexport',
+  'impossiblefoods',
+  'headspace',
+  'talkiatry',
+  'noom',
+  'masterclass',
+  'wealthfront',
+  'udemy',
+  'applyboard',
+  'brightwheel',
+  'collectivehealth',
+  'caredx',
+  'carbonhealth',
+  'himsandhers',
 ];
 
 const USAJOBS_URL = 'https://data.usajobs.gov/api/search';
@@ -233,6 +263,15 @@ if (source === 'jooble') {
     return `greenhouse_${boardToken}_${job?.title || ''}|${job?.location?.name || ''}`;
   }
 
+  if (source === 'lever') {
+    const company = job?.companyToken ? String(job.companyToken).trim() : 'unknown';
+    const id = job?.id ? String(job.id).trim() : '';
+
+    if (id) return `lever_${company}_${id}`;
+
+    return `lever_${company}_${job?.text || ''}|${job?.categories?.location || ''}`;
+  }
+
   return null;
 }
 
@@ -391,6 +430,42 @@ function parseGreenhouse(job, boardToken) {
     userId: CRON_USER_ID,
     publishedAt: toDateOrNull(job?.updated_at || null),
     publishedat: toDateOrNull(job?.updated_at || null),
+  };
+}
+
+function parseLever(job, companyToken) {
+  const location = job?.categories?.location || 'United States';
+
+  const tags = [
+    job?.categories?.team,
+    job?.categories?.department,
+    job?.categories?.commitment,
+  ]
+    .filter(Boolean)
+    .join(', ') || null;
+
+  return {
+    externalId: buildExternalId('lever', { ...job, companyToken }),
+    title: String(job?.text || 'Untitled Role').trim(),
+    company: String(companyToken || 'Lever').trim(),
+    location,
+    worksite: inferWorksite(location, null),
+    type: normalizeJobType(job?.categories?.commitment),
+    compensation: null,
+    salary: null,
+    description:
+      htmlToCleanText(job?.descriptionPlain || job?.description || '').substring(0, 3000) ||
+      'No description provided.',
+    url: job?.hostedUrl || null,
+    tags,
+    source: 'lever',
+    status: IMPORT_STATUS,
+    urgent: false,
+    isTemplate: false,
+    accountKey: null,
+    userId: CRON_USER_ID,
+    publishedAt: toDateOrNull(job?.createdAt || null),
+    publishedat: toDateOrNull(job?.createdAt || null),
   };
 }
 
@@ -694,6 +769,37 @@ async function fetchGreenhouseJobs() {
   return all;
 }
 
+async function fetchLeverJobs() {
+  const all = [];
+
+  for (const companyToken of LEVER_COMPANIES) {
+    const url = `${LEVER_URL}/${encodeURIComponent(companyToken)}?mode=json`;
+
+    let jobs = [];
+
+    try {
+      jobs = await safeFetchJson(url);
+    } catch (err) {
+      console.error(`[Lever] Fetch failed for "${companyToken}": ${err.message}`);
+      continue;
+    }
+
+    if (!Array.isArray(jobs) || !jobs.length) continue;
+
+    for (const job of jobs) {
+      try {
+        all.push(parseLever(job, companyToken));
+      } catch (err) {
+        console.error(
+          `[Lever] Parse failed for "${companyToken}" / "${job?.text || 'Unknown'}": ${err.message}`
+        );
+      }
+    }
+  }
+
+  return all;
+}
+
 async function fetchUSAJobs() {
   const userAgent = process.env.USAJOBS_USER_AGENT;
   const authorizationKey = process.env.USAJOBS_AUTHORIZATION_KEY;
@@ -919,23 +1025,25 @@ async function fetchAdzunaJobs() {
 async function main() {
   console.log('[Cron] Starting jobs import...');
 
-  const [himalayasJobs, museJobs, usaJobs, adzunaJobs, joobleJobs, greenhouseJobs] = await Promise.all([
+  const [himalayasJobs, museJobs, usaJobs, adzunaJobs, joobleJobs, greenhouseJobs, leverJobs] = await Promise.all([
     fetchHimalayasJobs(),
     fetchMuseJobs(),
     fetchUSAJobs(),
     fetchAdzunaJobs(),
     fetchJoobleJobs(),
     fetchGreenhouseJobs(),
+    fetchLeverJobs(),
   ]);
 
   console.log(`[Fetch] Himalayas parsed: ${himalayasJobs.length}`);
   console.log(`[Fetch] The Muse parsed: ${museJobs.length}`);
   console.log(`[Fetch] Jooble parsed: ${joobleJobs.length}`);
   console.log(`[Fetch] Greenhouse parsed: ${greenhouseJobs.length}`);
+  console.log(`[Fetch] Lever parsed: ${leverJobs.length}`);
   console.log(`[Fetch] USAJOBS parsed: ${usaJobs.length}`);
   console.log(`[Fetch] Adzuna parsed: ${adzunaJobs.length}`);
 
-  const parsed = [...himalayasJobs, ...museJobs, ...usaJobs, ...adzunaJobs, ...joobleJobs, ...greenhouseJobs];
+  const parsed = [...himalayasJobs, ...museJobs, ...usaJobs, ...adzunaJobs, ...joobleJobs, ...greenhouseJobs, ...leverJobs];
   const deduped = dedupeJobs(parsed);
 
   console.log(`[Parser] Total parsed: ${parsed.length}`);
