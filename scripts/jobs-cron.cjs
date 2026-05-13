@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 const CRON_USER_ID = 'cmiwa2op6000cbvz0f2s8eafb';
 const IMPORT_STATUS = 'Published';
-const SOURCES = ['himalayas', 'themuse'];
+const SOURCES = ['himalayas', 'themuse', 'usajobs'];
 const RETENTION_DAYS = 7;
 const WRITE_BATCH_SIZE = 40;
 
@@ -16,6 +16,32 @@ const HIMALAYAS_MAX_PAGES = 10;
 
 const MUSE_URL = 'https://www.themuse.com/api/public/jobs';
 const MUSE_MAX_PAGES = 10;
+
+const USAJOBS_URL = 'https://data.usajobs.gov/api/search';
+const USAJOBS_RESULTS_PER_PAGE = 25;
+const USAJOBS_MAX_PAGES_PER_KEYWORD = 2;
+const USAJOBS_KEYWORDS = [
+  'customer service',
+  'administrative assistant',
+  'human resources',
+  'project manager',
+  'program analyst',
+  'management analyst',
+  'contract specialist',
+  'education',
+  'teacher',
+  'training specialist',
+  'medical',
+  'nurse',
+  'laboratory',
+  'biologist',
+  'chemist',
+  'maintenance',
+  'mechanic',
+  'electrician',
+  'logistics',
+  'warehouse',
+];
 
 function htmlToCleanText(html) {
   if (!html) return '';
@@ -114,6 +140,17 @@ function buildExternalId(source, job) {
     if (id) return `themuse_${id}`;
 
     return `themuse_${job.short_name || job.name || 'unknown'}`;
+  }
+
+  if (source === 'usajobs') {
+    const descriptor = job?.MatchedObjectDescriptor || job || {};
+    const id = descriptor.PositionID ? String(descriptor.PositionID).trim() : '';
+    if (id) return `usajobs_${id}`;
+
+    const uri = descriptor.PositionURI ? String(descriptor.PositionURI).trim() : '';
+    if (uri) return `usajobs_${uri}`;
+
+    return `usajobs_${descriptor.PositionTitle || ''}|${descriptor.OrganizationName || ''}|${descriptor.PublicationStartDate || ''}`;
   }
 
   return null;
@@ -216,12 +253,110 @@ function parseMuse(job) {
   };
 }
 
-async function safeFetchJson(url) {
+function buildUSAJobsSalary(remuneration) {
+  if (!Array.isArray(remuneration) || remuneration.length === 0) return null;
+
+  const item = remuneration[0] || {};
+  const min = item.MinimumRange;
+  const max = item.MaximumRange;
+  const interval = item.RateIntervalCode ? String(item.RateIntervalCode).trim() : '';
+
+  const fmt = (value) => {
+    const n = Number(value);
+    if (Number.isNaN(n)) return null;
+
+    return `$${n.toLocaleString('en-US', {
+      maximumFractionDigits: 0,
+    })}`;
+  };
+
+  const minText = fmt(min);
+  const maxText = fmt(max);
+
+  if (minText && maxText) return `${minText} - ${maxText}${interval ? ` / ${interval}` : ''}`;
+  if (minText) return `${minText}+${interval ? ` / ${interval}` : ''}`;
+  if (maxText) return `Up to ${maxText}${interval ? ` / ${interval}` : ''}`;
+
+  return null;
+}
+
+function parseUSAJobs(item) {
+  const job = item?.MatchedObjectDescriptor || item || {};
+  const userAreaDetails = job?.UserArea?.Details || {};
+
+  const locations = Array.isArray(job.PositionLocation)
+    ? job.PositionLocation.map((location) => location?.LocationName).filter(Boolean)
+    : [];
+
+  const location =
+    job.PositionLocationDisplay ||
+    (locations.length > 0 ? locations.join(', ') : 'United States');
+
+  const worksite = inferWorksite(location, null);
+
+  const schedule =
+    Array.isArray(job.PositionSchedule) && job.PositionSchedule.length > 0
+      ? job.PositionSchedule[0]?.Name || null
+      : null;
+
+  const type = normalizeJobType(schedule);
+
+  const salary = buildUSAJobsSalary(job.PositionRemuneration);
+
+  const description = htmlToCleanText(
+    [
+      userAreaDetails.JobSummary,
+      job.QualificationSummary,
+      userAreaDetails.MajorDuties,
+      userAreaDetails.Education,
+      userAreaDetails.Requirements,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+  );
+
+  const categoryTags = Array.isArray(job.JobCategory)
+    ? job.JobCategory.map((category) => category?.Name).filter(Boolean)
+    : [];
+
+  const offeringTags = Array.isArray(job.PositionOfferingType)
+    ? job.PositionOfferingType.map((offering) => offering?.Name).filter(Boolean)
+    : [];
+
+  const tags = [...categoryTags, ...offeringTags].filter(Boolean).join(', ') || null;
+
+  const publishedAt = toIsoOrNull(job.PublicationStartDate);
+
+  return {
+    externalId: buildExternalId('usajobs', item),
+    title: String(job.PositionTitle || 'Untitled Federal Role').trim(),
+    company: String(job.OrganizationName || job.DepartmentName || 'USAJOBS').trim(),
+    location,
+    worksite,
+    type,
+    compensation: salary,
+    salary,
+    description: description.substring(0, 3000) || 'No description provided. View the full announcement on USAJOBS.',
+    url: job.PositionURI || null,
+    tags,
+    source: 'usajobs',
+    status: IMPORT_STATUS,
+    urgent: false,
+    isTemplate: false,
+    accountKey: null,
+    userId: CRON_USER_ID,
+    publishedAt: toDateOrNull(publishedAt),
+    publishedat: toDateOrNull(publishedAt),
+  };
+}
+
+async function safeFetchJson(url, extraHeaders = {}) {
   const res = await fetch(url, {
     method: 'GET',
     headers: {
       Accept: 'application/json',
       'User-Agent': 'ForgeTomorrow Jobs Cron',
+      ...extraHeaders,
     },
   });
 
@@ -277,6 +412,63 @@ async function fetchMuseJobs() {
     }
 
     if (page >= pageCount) break;
+  }
+
+  return all;
+}
+
+async function fetchUSAJobs() {
+  const userAgent = process.env.USAJOBS_USER_AGENT;
+  const authorizationKey = process.env.USAJOBS_AUTHORIZATION_KEY;
+
+  if (!userAgent || !authorizationKey) {
+    console.warn('[USAJOBS] Missing USAJOBS_USER_AGENT or USAJOBS_AUTHORIZATION_KEY. Skipping USAJOBS import.');
+    return [];
+  }
+
+  const all = [];
+  const headers = {
+    Host: 'data.usajobs.gov',
+    'User-Agent': userAgent,
+    'Authorization-Key': authorizationKey,
+  };
+
+  for (const keyword of USAJOBS_KEYWORDS) {
+    for (let page = 1; page <= USAJOBS_MAX_PAGES_PER_KEYWORD; page += 1) {
+      const params = new URLSearchParams({
+        Keyword: keyword,
+        Page: String(page),
+        ResultsPerPage: String(USAJOBS_RESULTS_PER_PAGE),
+      });
+
+      const url = `${USAJOBS_URL}?${params.toString()}`;
+
+      let data;
+      try {
+        data = await safeFetchJson(url, headers);
+      } catch (err) {
+        console.error(`[USAJOBS] Fetch failed for keyword "${keyword}" page ${page}: ${err.message}`);
+        break;
+      }
+
+      const items = Array.isArray(data?.SearchResult?.SearchResultItems)
+        ? data.SearchResult.SearchResultItems
+        : [];
+
+      if (items.length === 0) break;
+
+      for (const item of items) {
+        const title = item?.MatchedObjectDescriptor?.PositionTitle || 'Unknown';
+
+        try {
+          all.push(parseUSAJobs(item));
+        } catch (err) {
+          console.error(`[USAJOBS] Parse failed for "${title}": ${err.message}`);
+        }
+      }
+
+      if (items.length < USAJOBS_RESULTS_PER_PAGE) break;
+    }
   }
 
   return all;
@@ -397,15 +589,17 @@ async function saveJobs(jobs) {
 async function main() {
   console.log('[Cron] Starting jobs import...');
 
-  const [himalayasJobs, museJobs] = await Promise.all([
+  const [himalayasJobs, museJobs, usaJobs] = await Promise.all([
     fetchHimalayasJobs(),
     fetchMuseJobs(),
+    fetchUSAJobs(),
   ]);
 
   console.log(`[Fetch] Himalayas parsed: ${himalayasJobs.length}`);
   console.log(`[Fetch] The Muse parsed: ${museJobs.length}`);
+  console.log(`[Fetch] USAJOBS parsed: ${usaJobs.length}`);
 
-  const parsed = [...himalayasJobs, ...museJobs];
+  const parsed = [...himalayasJobs, ...museJobs, ...usaJobs];
   const deduped = dedupeJobs(parsed);
 
   console.log(`[Parser] Total parsed: ${parsed.length}`);
