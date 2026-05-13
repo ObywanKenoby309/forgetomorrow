@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 const CRON_USER_ID = 'cmiwa2op6000cbvz0f2s8eafb';
 const IMPORT_STATUS = 'Published';
-const SOURCES = ['himalayas', 'themuse', 'usajobs', 'adzuna'];
+const SOURCES = ['himalayas', 'themuse', 'usajobs', 'adzuna', 'jooble'];
 const RETENTION_DAYS = 7;
 const WRITE_BATCH_SIZE = 40;
 
@@ -16,6 +16,10 @@ const HIMALAYAS_MAX_PAGES = 10;
 
 const MUSE_URL = 'https://www.themuse.com/api/public/jobs';
 const MUSE_MAX_PAGES = 10;
+
+const JOOBLE_URL = 'https://jooble.org/api/';
+const JOOBLE_API_KEY = process.env.JOOBLE_API_KEY;
+const JOOBLE_PAGE_LIMIT = 5;
 
 const USAJOBS_URL = 'https://data.usajobs.gov/api/search';
 const USAJOBS_RESULTS_PER_PAGE = 25;
@@ -178,6 +182,14 @@ function buildExternalId(source, job) {
     return `adzuna_${job?.title || ''}|${job?.company?.display_name || ''}|${job?.created || ''}`;
   }
 
+if (source === 'jooble') {
+    const id = job.id ? String(job.id).trim() : '';
+
+    if (id) return `jooble_${id}`;
+
+    return `jooble_${job.title || ''}|${job.company || ''}|${job.location || ''}`;
+  }
+
   return null;
 }
 
@@ -275,6 +287,32 @@ function parseMuse(job) {
     userId: CRON_USER_ID,
     publishedAt: toDateOrNull(publishedAt),
     publishedat: toDateOrNull(publishedAt),
+  };
+}
+
+function parseJooble(job) {
+  const location = job.location || 'Unknown';
+
+  return {
+    externalId: buildExternalId('jooble', job),
+    title: job.title || 'Untitled Role',
+    company: job.company || 'Unknown Company',
+    location,
+    worksite: inferWorksite(location, job.type),
+    type: normalizeJobType(job.type),
+    compensation: null,
+    salary: null,
+    description: htmlToCleanText(job.snippet || '').substring(0, 3000) || 'No description provided.',
+    url: job.link || null,
+    tags: null,
+    source: 'jooble',
+    status: IMPORT_STATUS,
+    urgent: false,
+    isTemplate: false,
+    accountKey: null,
+    userId: CRON_USER_ID,
+    publishedAt: toDateOrNull(job.updated || job.created || null),
+    publishedat: toDateOrNull(job.updated || job.created || null),
   };
 }
 
@@ -493,6 +531,58 @@ async function fetchMuseJobs() {
   return all;
 }
 
+async function fetchJoobleJobs() {
+  if (!JOOBLE_API_KEY) {
+    console.log('[Jooble] Missing JOOBLE_API_KEY. Skipping.');
+    return [];
+  }
+
+  const all = [];
+
+  for (let page = 1; page <= JOOBLE_PAGE_LIMIT; page += 1) {
+    try {
+      const response = await fetch(`${JOOBLE_URL}${JOOBLE_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          keywords: '',
+          location: 'USA',
+          page,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(`[Jooble] Request failed: ${response.status}`);
+        break;
+      }
+
+      const data = await response.json();
+
+      const jobs = Array.isArray(data?.jobs)
+        ? data.jobs
+        : [];
+
+      if (!jobs.length) break;
+
+      for (const job of jobs) {
+        try {
+          all.push(parseJooble(job));
+        } catch (err) {
+          console.error(
+            `[Jooble] Parse failed for "${job?.title || 'Unknown'}": ${err.message}`
+          );
+        }
+      }
+    } catch (err) {
+      console.error('[Jooble] Fetch failed:', err.message);
+    }
+  }
+
+  return all;
+}
+
 async function fetchUSAJobs() {
   const userAgent = process.env.USAJOBS_USER_AGENT;
   const authorizationKey = process.env.USAJOBS_AUTHORIZATION_KEY;
@@ -662,49 +752,6 @@ async function saveJobs(jobs) {
   console.log(`[Save] Created ${created}, updated ${updated}.`);
 }
 
-async function main() {
-  console.log('[Cron] Starting jobs import...');
-
-  const [himalayasJobs, museJobs, usaJobs, adzunaJobs] = await Promise.all([
-    fetchHimalayasJobs(),
-    fetchMuseJobs(),
-    fetchUSAJobs(),
-    fetchAdzunaJobs(),
-  ]);
-
-  console.log(`[Fetch] Himalayas parsed: ${himalayasJobs.length}`);
-  console.log(`[Fetch] The Muse parsed: ${museJobs.length}`);
-  console.log(`[Fetch] USAJOBS parsed: ${usaJobs.length}`);
-  console.log(`[Fetch] Adzuna parsed: ${adzunaJobs.length}`);
-
-  const parsed = [...himalayasJobs, ...museJobs, ...usaJobs, ...adzunaJobs];
-  const deduped = dedupeJobs(parsed);
-
-  console.log(`[Parser] Total parsed: ${parsed.length}`);
-  console.log(`[Parser] Total deduped: ${deduped.length}`);
-
-  await saveJobs(deduped);
-  await expireOldImportedJobs();
-
-  const finalCount = await prisma.job.count({
-    where: {
-      userId: CRON_USER_ID,
-      source: { in: SOURCES },
-      status: IMPORT_STATUS,
-    },
-  });
-
-  console.log(`[Done] Imported job count currently in DB: ${finalCount}`);
-}
-
-main()
-  .catch((err) => {
-    console.error('[Fatal]', err);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  })
 async function fetchAdzunaJobs() {
   const appId = process.env.ADZUNA_APP_ID;
   const appKey = process.env.ADZUNA_APP_KEY;
@@ -758,4 +805,48 @@ async function fetchAdzunaJobs() {
   return all;
 }
 
-;
+async function main() {
+  console.log('[Cron] Starting jobs import...');
+
+  const [himalayasJobs, museJobs, usaJobs, adzunaJobs, joobleJobs] = await Promise.all([
+    fetchHimalayasJobs(),
+    fetchMuseJobs(),
+    fetchUSAJobs(),
+    fetchAdzunaJobs(),
+	fetchJoobleJobs(),
+  ]);
+
+  console.log(`[Fetch] Himalayas parsed: ${himalayasJobs.length}`);
+  console.log(`[Fetch] The Muse parsed: ${museJobs.length}`);
+  console.log(`[Fetch] Jooble parsed: ${joobleJobs.length}`);
+  console.log(`[Fetch] USAJOBS parsed: ${usaJobs.length}`);
+  console.log(`[Fetch] Adzuna parsed: ${adzunaJobs.length}`);
+
+  const parsed = [...himalayasJobs, ...museJobs, ...usaJobs, ...adzunaJobs, ...joobleJobs,];
+  const deduped = dedupeJobs(parsed);
+
+  console.log(`[Parser] Total parsed: ${parsed.length}`);
+  console.log(`[Parser] Total deduped: ${deduped.length}`);
+
+  await saveJobs(deduped);
+  await expireOldImportedJobs();
+
+  const finalCount = await prisma.job.count({
+    where: {
+      userId: CRON_USER_ID,
+      source: { in: SOURCES },
+      status: IMPORT_STATUS,
+    },
+  });
+
+  console.log(`[Done] Imported job count currently in DB: ${finalCount}`);
+}
+
+main()
+  .catch((err) => {
+    console.error('[Fatal]', err);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
