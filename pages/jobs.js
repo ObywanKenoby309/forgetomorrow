@@ -244,35 +244,45 @@ function JobsUI() {
     fetchJobs();
   }, []);
   
-    useEffect(() => {
-      if (!router.isReady) return;
-      if (!jobs.length) return;
+      useEffect(() => {
+    if (!router.isReady) return;
+    if (!jobs.length) return;
 
-      const selectedJobId = router.query.selectedJobId;
+    const selectedJobId = router.query.selectedJobId;
 
-      if (!selectedJobId) return;
+    if (!selectedJobId) return;
 
-      const matchedJob = jobs.find(
-        (job) => String(job.id) === String(selectedJobId)
-      );
+    const matchedJob = jobs.find(
+      (job) => String(job.id) === String(selectedJobId)
+    );
 
-      if (!matchedJob) return;
+    if (!matchedJob) return;
 
-      setSelectedJob(matchedJob);
-      setUserHasSelected(true);
+    const filteredIndex = filteredJobs.findIndex(
+      (job) => String(job.id) === String(selectedJobId)
+    );
 
-      addViewedJob(matchedJob);
+    if (filteredIndex >= 0) {
+      const targetPage = Math.floor(filteredIndex / pageSize) + 1;
+      setCurrentPage(targetPage);
+    }
 
-      if (isMobile) {
-        setMobileDetailOpen(true);
-      }
-    }, [
-      router.isReady,
-      router.query.selectedJobId,
-      jobs,
-      isMobile,
-      addViewedJob,
-    ]);
+    setSelectedJob(matchedJob);
+    setUserHasSelected(true);
+    addViewedJob(matchedJob);
+
+    if (isMobile) {
+      setMobileDetailOpen(true);
+    }
+  }, [
+    router.isReady,
+    router.query.selectedJobId,
+    jobs,
+    filteredJobs,
+    pageSize,
+    isMobile,
+    addViewedJob,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
