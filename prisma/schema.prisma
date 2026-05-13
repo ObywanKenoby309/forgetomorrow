@@ -762,6 +762,25 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+
+model SeekerJobPreference {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  keyword      String?
+  company      String?
+  location     String?
+  locationType String?
+  source       String?
+  days         Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([updatedAt])
+  @@map("seeker_job_preferences")
+}
+
+
 model User {
   id                           String                         @id @default(cuid())
   email                        String                         @unique
@@ -879,6 +898,7 @@ model User {
   savedPosts                   SavedPost[]
   scanLogs                     ScanLog[]
   seekerCalendarItems          SeekerCalendarItem[]           @relation("UserSeekerCalendarItems")
+  seekerJobPreference          SeekerJobPreference?
   talentPoolEntriesAsCandidate TalentPoolEntry[]              @relation("TalentPoolEntryCandidate")
   createdTalentPools           TalentPool[]                   @relation("UserCreatedTalentPools")
   hireQualityRecords           HireQuality[]                  @relation("RecruiterHireQuality")

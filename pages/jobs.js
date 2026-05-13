@@ -191,6 +191,8 @@ function JobsUI() {
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [savingPreferences, setSavingPreferences] = useState(false);
+  const [preferenceSaveStatus, setPreferenceSaveStatus] = useState('');
 
   const isPaidUser = true;
 
@@ -353,6 +355,36 @@ function JobsUI() {
     }
   };
 
+
+  const handleSaveDashboardPreferences = async () => {
+    setSavingPreferences(true);
+    setPreferenceSaveStatus('');
+
+    try {
+      const res = await fetch('/api/seeker/job-preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keyword,
+          company: companyFilter,
+          location: locationFilter,
+          locationType: locationTypeFilter,
+          source: sourceFilter,
+          days: daysFilter,
+        }),
+      });
+
+      if (!res.ok) throw new Error(`Save failed: ${res.status}`);
+
+      setPreferenceSaveStatus('saved');
+    } catch (err) {
+      console.error('[Jobs] failed to save dashboard job preferences', err);
+      setPreferenceSaveStatus('error');
+    } finally {
+      setSavingPreferences(false);
+    }
+  };
+
   const handleSelectJob = (job) => {
     setUserHasSelected(true);
     setSelectedJob(job);
@@ -481,6 +513,9 @@ function JobsUI() {
     filterOpen,
     setFilterOpen,
     activeFilterCount,
+    onSavePreferences: handleSaveDashboardPreferences,
+    savingPreferences,
+    preferenceSaveStatus,
   };
 
   if (isMobile === null || loading) {

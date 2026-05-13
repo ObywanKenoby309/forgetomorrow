@@ -26,6 +26,9 @@ export default function JobSearchFilters({
   setCurrentPage,
   filteredCount = 0,
   startIndex = 0,
+  onSavePreferences,
+  savingPreferences = false,
+  preferenceSaveStatus = '',
 }) {
   const clearFilters = () => {
     setKeyword('');
@@ -88,12 +91,23 @@ export default function JobSearchFilters({
                     Clear
                   </button>
                 )}
+                {typeof onSavePreferences === 'function' && (
+                  <button type="button" onClick={onSavePreferences} disabled={savingPreferences}
+                    style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(26,75,143,0.25)', background: savingPreferences ? 'rgba(26,75,143,0.08)' : 'white', color: '#1A4B8F', fontSize: 13, cursor: savingPreferences ? 'default' : 'pointer', fontWeight: 700 }}>
+                    {savingPreferences ? 'Saving...' : 'Save for dashboard'}
+                  </button>
+                )}
                 <button type="button" onClick={() => setFilterOpen(false)}
                   style={{ padding: '8px 18px', borderRadius: 8, background: '#FF7043', color: 'white', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                   Apply Filters
                 </button>
               </div>
             </div>
+            {preferenceSaveStatus && (
+              <div style={{ fontSize: 11, fontWeight: 700, color: preferenceSaveStatus === 'saved' ? '#2E7D32' : '#D32F2F' }}>
+                {preferenceSaveStatus === 'saved' ? 'Dashboard preferences saved.' : 'Could not save dashboard preferences.'}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -169,12 +183,23 @@ export default function JobSearchFilters({
                   Clear
                 </button>
               )}
+              {typeof onSavePreferences === 'function' && (
+                <button type="button" onClick={onSavePreferences} disabled={savingPreferences}
+                  style={{ padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(26,75,143,0.25)', background: savingPreferences ? 'rgba(26,75,143,0.08)' : 'white', color: '#1A4B8F', fontSize: 12, cursor: savingPreferences ? 'default' : 'pointer', fontWeight: 700 }}>
+                  {savingPreferences ? 'Saving...' : 'Save for dashboard'}
+                </button>
+              )}
               <button type="button" onClick={() => setFilterOpen(false)}
                 style={{ padding: '5px 18px', borderRadius: 8, background: '#FF7043', color: 'white', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                 Apply Filters
               </button>
             </div>
           </div>
+          {preferenceSaveStatus && (
+            <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: preferenceSaveStatus === 'saved' ? '#2E7D32' : '#D32F2F' }}>
+              {preferenceSaveStatus === 'saved' ? 'Dashboard preferences saved.' : 'Could not save dashboard preferences.'}
+            </div>
+          )}
         </div>
       )}
     </div>
