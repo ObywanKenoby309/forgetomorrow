@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 const CRON_USER_ID = 'cmiwa2op6000cbvz0f2s8eafb';
 const IMPORT_STATUS = 'Published';
-const SOURCES = ['himalayas', 'themuse', 'usajobs', 'adzuna', 'jooble'];
+const SOURCES = ['himalayas', 'themuse', 'usajobs', 'adzuna', 'jooble', 'greenhouse'];
 const RETENTION_DAYS = 7;
 const WRITE_BATCH_SIZE = 40;
 
@@ -20,6 +20,40 @@ const MUSE_MAX_PAGES = 10;
 const JOOBLE_URL = 'https://jooble.org/api/';
 const JOOBLE_API_KEY = process.env.JOOBLE_API_KEY;
 const JOOBLE_PAGE_LIMIT = 5;
+
+const GREENHOUSE_URL = 'https://boards-api.greenhouse.io/v1/boards';
+const GREENHOUSE_BOARDS = [
+  'stripe',
+  'airbnb',
+  'figma',
+  'databricks',
+  'notion',
+  'doordash',
+  'instacart',
+  'robinhood',
+  'discord',
+  'reddit',
+  'lyft',
+  'affirm',
+  'ramp',
+  'rippling',
+  'gusto',
+  'benchling',
+  'flatironhealth',
+  'color',
+  'formationbio',
+  'modernhealth',
+  'peloton',
+  'thriveglobal',
+  'quizlet',
+  'duolingo',
+  'udacity',
+  'coursera',
+  'handshake',
+  'komodohealth',
+  'samsara',
+  'hashicorp',
+];
 
 const USAJOBS_URL = 'https://data.usajobs.gov/api/search';
 const USAJOBS_RESULTS_PER_PAGE = 25;
@@ -190,6 +224,15 @@ if (source === 'jooble') {
     return `jooble_${job.title || ''}|${job.company || ''}|${job.location || ''}`;
   }
 
+  if (source === 'greenhouse') {
+    const boardToken = job?.boardToken ? String(job.boardToken).trim() : 'unknown';
+    const id = job?.id ? String(job.id).trim() : '';
+
+    if (id) return `greenhouse_${boardToken}_${id}`;
+
+    return `greenhouse_${boardToken}_${job?.title || ''}|${job?.location?.name || ''}`;
+  }
+
   return null;
 }
 
@@ -313,6 +356,41 @@ function parseJooble(job) {
     userId: CRON_USER_ID,
     publishedAt: toDateOrNull(job.updated || job.created || null),
     publishedat: toDateOrNull(job.updated || job.created || null),
+  };
+}
+
+function parseGreenhouse(job, boardToken) {
+  const location = job?.location?.name || 'United States';
+  const metadata = Array.isArray(job?.metadata) ? job.metadata : [];
+
+  const tags =
+    metadata
+      .map((item) => item?.value || item?.name)
+      .filter(Boolean)
+      .join(', ') || null;
+
+  return {
+    externalId: buildExternalId('greenhouse', { ...job, boardToken }),
+    title: String(job?.title || 'Untitled Role').trim(),
+    company: String(boardToken || 'Greenhouse').trim(),
+    location,
+    worksite: inferWorksite(location, null),
+    type: null,
+    compensation: null,
+    salary: null,
+    description:
+      htmlToCleanText(job?.content || '').substring(0, 3000) ||
+      'No description provided. View the full posting on the company careers page.',
+    url: job?.absolute_url || null,
+    tags,
+    source: 'greenhouse',
+    status: IMPORT_STATUS,
+    urgent: false,
+    isTemplate: false,
+    accountKey: null,
+    userId: CRON_USER_ID,
+    publishedAt: toDateOrNull(job?.updated_at || null),
+    publishedat: toDateOrNull(job?.updated_at || null),
   };
 }
 
@@ -583,6 +661,39 @@ async function fetchJoobleJobs() {
   return all;
 }
 
+async function fetchGreenhouseJobs() {
+  const all = [];
+
+  for (const boardToken of GREENHOUSE_BOARDS) {
+    const url = `${GREENHOUSE_URL}/${encodeURIComponent(boardToken)}/jobs?content=true`;
+
+    let data;
+
+    try {
+      data = await safeFetchJson(url);
+    } catch (err) {
+      console.error(`[Greenhouse] Fetch failed for "${boardToken}": ${err.message}`);
+      continue;
+    }
+
+    const jobs = Array.isArray(data?.jobs) ? data.jobs : [];
+
+    if (!jobs.length) continue;
+
+    for (const job of jobs) {
+      try {
+        all.push(parseGreenhouse(job, boardToken));
+      } catch (err) {
+        console.error(
+          `[Greenhouse] Parse failed for "${boardToken}" / "${job?.title || 'Unknown'}": ${err.message}`
+        );
+      }
+    }
+  }
+
+  return all;
+}
+
 async function fetchUSAJobs() {
   const userAgent = process.env.USAJOBS_USER_AGENT;
   const authorizationKey = process.env.USAJOBS_AUTHORIZATION_KEY;
@@ -808,21 +919,23 @@ async function fetchAdzunaJobs() {
 async function main() {
   console.log('[Cron] Starting jobs import...');
 
-  const [himalayasJobs, museJobs, usaJobs, adzunaJobs, joobleJobs] = await Promise.all([
+  const [himalayasJobs, museJobs, usaJobs, adzunaJobs, joobleJobs, greenhouseJobs] = await Promise.all([
     fetchHimalayasJobs(),
     fetchMuseJobs(),
     fetchUSAJobs(),
     fetchAdzunaJobs(),
-	fetchJoobleJobs(),
+    fetchJoobleJobs(),
+    fetchGreenhouseJobs(),
   ]);
 
   console.log(`[Fetch] Himalayas parsed: ${himalayasJobs.length}`);
   console.log(`[Fetch] The Muse parsed: ${museJobs.length}`);
   console.log(`[Fetch] Jooble parsed: ${joobleJobs.length}`);
+  console.log(`[Fetch] Greenhouse parsed: ${greenhouseJobs.length}`);
   console.log(`[Fetch] USAJOBS parsed: ${usaJobs.length}`);
   console.log(`[Fetch] Adzuna parsed: ${adzunaJobs.length}`);
 
-  const parsed = [...himalayasJobs, ...museJobs, ...usaJobs, ...adzunaJobs, ...joobleJobs,];
+  const parsed = [...himalayasJobs, ...museJobs, ...usaJobs, ...adzunaJobs, ...joobleJobs, ...greenhouseJobs];
   const deduped = dedupeJobs(parsed);
 
   console.log(`[Parser] Total parsed: ${parsed.length}`);
