@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 const CRON_USER_ID = 'cmiwa2op6000cbvz0f2s8eafb';
 const IMPORT_STATUS = 'Published';
-const SOURCES = ['himalayas', 'themuse', 'usajobs'];
+const SOURCES = ['himalayas', 'themuse', 'usajobs', 'adzuna'];
 const RETENTION_DAYS = 7;
 const WRITE_BATCH_SIZE = 40;
 
@@ -41,6 +41,24 @@ const USAJOBS_KEYWORDS = [
   'electrician',
   'logistics',
   'warehouse',
+];
+
+const ADZUNA_URL = 'https://api.adzuna.com/v1/api/jobs/us/search';
+const ADZUNA_RESULTS_PER_PAGE = 25;
+const ADZUNA_MAX_PAGES = 4;
+const ADZUNA_KEYWORDS = [
+  'warehouse',
+  'forklift',
+  'CDL',
+  'electrician',
+  'HVAC',
+  'maintenance technician',
+  'construction',
+  'manufacturing',
+  'field service technician',
+  'customer service',
+  'administrative assistant',
+  'project manager',
 ];
 
 function htmlToCleanText(html) {
@@ -151,6 +169,13 @@ function buildExternalId(source, job) {
     if (uri) return `usajobs_${uri}`;
 
     return `usajobs_${descriptor.PositionTitle || ''}|${descriptor.OrganizationName || ''}|${descriptor.PublicationStartDate || ''}`;
+  }
+
+  if (source === 'adzuna') {
+    const id = job?.id ? String(job.id).trim() : '';
+    if (id) return `adzuna_${id}`;
+
+    return `adzuna_${job?.title || ''}|${job?.company?.display_name || ''}|${job?.created || ''}`;
   }
 
   return null;
@@ -340,6 +365,57 @@ function parseUSAJobs(item) {
     url: job.PositionURI || null,
     tags,
     source: 'usajobs',
+    status: IMPORT_STATUS,
+    urgent: false,
+    isTemplate: false,
+    accountKey: null,
+    userId: CRON_USER_ID,
+    publishedAt: toDateOrNull(publishedAt),
+    publishedat: toDateOrNull(publishedAt),
+  };
+}
+
+
+function parseAdzuna(job) {
+  const location =
+    job?.location?.display_name ||
+    job?.location?.area?.join(', ') ||
+    'United States';
+
+  const worksite = inferWorksite(location, null);
+
+  const company =
+    job?.company?.display_name ||
+    'Unknown Company';
+
+  const salaryMin = Number(job?.salary_min || 0);
+  const salaryMax = Number(job?.salary_max || 0);
+
+  let salary = null;
+
+  if (salaryMin > 0 && salaryMax > 0) {
+    salary = `$${salaryMin.toLocaleString()} - $${salaryMax.toLocaleString()}`;
+  }
+
+  const tags = Array.isArray(job?.category?.tag)
+    ? job.category.tag.join(', ')
+    : job?.category?.label || null;
+
+  const publishedAt = toIsoOrNull(job.created);
+
+  return {
+    externalId: buildExternalId('adzuna', job),
+    title: String(job.title || 'Untitled Role').trim(),
+    company: String(company).trim(),
+    location,
+    worksite,
+    type: normalizeJobType(job.contract_type),
+    compensation: salary,
+    salary,
+    description: htmlToCleanText(job.description || '').substring(0, 3000),
+    url: job.redirect_url || null,
+    tags,
+    source: 'adzuna',
     status: IMPORT_STATUS,
     urgent: false,
     isTemplate: false,
@@ -589,17 +665,19 @@ async function saveJobs(jobs) {
 async function main() {
   console.log('[Cron] Starting jobs import...');
 
-  const [himalayasJobs, museJobs, usaJobs] = await Promise.all([
+  const [himalayasJobs, museJobs, usaJobs, adzunaJobs] = await Promise.all([
     fetchHimalayasJobs(),
     fetchMuseJobs(),
     fetchUSAJobs(),
+    fetchAdzunaJobs(),
   ]);
 
   console.log(`[Fetch] Himalayas parsed: ${himalayasJobs.length}`);
   console.log(`[Fetch] The Muse parsed: ${museJobs.length}`);
   console.log(`[Fetch] USAJOBS parsed: ${usaJobs.length}`);
+  console.log(`[Fetch] Adzuna parsed: ${adzunaJobs.length}`);
 
-  const parsed = [...himalayasJobs, ...museJobs, ...usaJobs];
+  const parsed = [...himalayasJobs, ...museJobs, ...usaJobs, ...adzunaJobs];
   const deduped = dedupeJobs(parsed);
 
   console.log(`[Parser] Total parsed: ${parsed.length}`);
@@ -626,4 +704,58 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
-  });
+  })
+async function fetchAdzunaJobs() {
+  const appId = process.env.ADZUNA_APP_ID;
+  const appKey = process.env.ADZUNA_APP_KEY;
+
+  if (!appId || !appKey) {
+    console.warn('[Adzuna] Missing ADZUNA_APP_ID or ADZUNA_APP_KEY. Skipping Adzuna import.');
+    return [];
+  }
+
+  const all = [];
+
+  for (const keyword of ADZUNA_KEYWORDS) {
+    for (let page = 1; page <= ADZUNA_MAX_PAGES; page += 1) {
+      const params = new URLSearchParams({
+        app_id: appId,
+        app_key: appKey,
+        results_per_page: String(ADZUNA_RESULTS_PER_PAGE),
+        what: keyword,
+        content-type: 'application/json',
+      });
+
+      const url = `${ADZUNA_URL}/${page}?${params.toString()}`;
+
+      let data;
+
+      try {
+        data = await safeFetchJson(url);
+      } catch (err) {
+        console.error(`[Adzuna] Fetch failed for keyword "${keyword}" page ${page}: ${err.message}`);
+        break;
+      }
+
+      const jobs = Array.isArray(data?.results)
+        ? data.results
+        : [];
+
+      if (jobs.length === 0) break;
+
+      for (const job of jobs) {
+        try {
+          all.push(parseAdzuna(job));
+        } catch (err) {
+          console.error(`[Adzuna] Parse failed for "${job?.title || 'Unknown'}": ${err.message}`);
+        }
+      }
+
+      if (jobs.length < ADZUNA_RESULTS_PER_PAGE) break;
+    }
+  }
+
+  return all;
+}
+
+;
