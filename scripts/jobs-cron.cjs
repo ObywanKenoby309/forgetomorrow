@@ -987,7 +987,7 @@ async function fetchAdzunaJobs() {
         app_key: appKey,
         results_per_page: String(ADZUNA_RESULTS_PER_PAGE),
         what: keyword,
-        content-type: 'application/json',
+        'content-type: 'application/json',
       });
 
       const url = `${ADZUNA_URL}/${page}?${params.toString()}`;
