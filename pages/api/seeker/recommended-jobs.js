@@ -37,6 +37,20 @@ function buildPreferenceFilters(preference) {
   };
 }
 
+function formatRecommendedJob(job, searchScore = null) {
+  return {
+    id: job.id,
+    title: job.title,
+    company: job.company,
+    location: job.location,
+    worksite: job.worksite,
+    compensation: job.compensation,
+    type: job.type,
+    createdAt: job.createdAt,
+    searchScore,
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", ["GET"]);
@@ -67,6 +81,40 @@ export default async function handler(req, res) {
     const preference = await prisma.seekerJobPreference.findUnique({
       where: { userId },
     });
+
+    const preferenceActive = isSearchPreferenceActive(preference);
+
+    if (preferenceActive) {
+      const cachedRecommendations = await prisma.seekerJobRecommendation.findMany({
+        where: { userId },
+        orderBy: [{ rank: "asc" }, { score: "desc" }, { updatedAt: "desc" }],
+        take: safeLimit,
+        include: {
+          job: {
+            select: {
+              id: true,
+              title: true,
+              company: true,
+              location: true,
+              worksite: true,
+              compensation: true,
+              type: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+
+      if (cachedRecommendations.length > 0) {
+        return res.status(200).json({
+          jobs: cachedRecommendations.map((item) =>
+            formatRecommendedJob(item.job, item.score || null)
+          ),
+          preferenceApplied: true,
+          source: "cache",
+        });
+      }
+    }
 
     const appliedJobIds = await prisma.application.findMany({
       where: { userId },
@@ -124,12 +172,12 @@ export default async function handler(req, res) {
         url: true,
       },
       orderBy: { createdAt: "desc" },
-      take: isSearchPreferenceActive(preference) ? 100 : safeLimit,
+      take: preferenceActive ? 100 : safeLimit,
     });
 
     let finalJobs = jobs;
 
-    if (isSearchPreferenceActive(preference)) {
+    if (preferenceActive) {
       const filters = buildPreferenceFilters(preference);
 
       finalJobs = rankJobsBySearchRelevance(jobs, filters).filter((job) => {
@@ -156,18 +204,11 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({
-      jobs: finalJobs.slice(0, safeLimit).map((job) => ({
-        id: job.id,
-        title: job.title,
-        company: job.company,
-        location: job.location,
-        worksite: job.worksite,
-        compensation: job.compensation,
-        type: job.type,
-        createdAt: job.createdAt,
-        searchScore: job.searchScore || null,
-      })),
-      preferenceApplied: isSearchPreferenceActive(preference),
+      jobs: finalJobs
+        .slice(0, safeLimit)
+        .map((job) => formatRecommendedJob(job, job.searchScore || null)),
+      preferenceApplied: preferenceActive,
+      source: preferenceActive ? "live-fallback" : "latest",
     });
   } catch (err) {
     console.error("[api/seeker/recommended-jobs] error:", err);

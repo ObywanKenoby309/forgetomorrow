@@ -1,4 +1,4 @@
-// scripts/jobs-cron.js
+// scripts/jobs-cron.cjs
 /* eslint-disable no-console */
 const { PrismaClient } = require('@prisma/client');
 
