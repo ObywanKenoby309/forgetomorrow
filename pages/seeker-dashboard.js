@@ -80,7 +80,7 @@ const RIGHT_COL_WIDTH = 280;
 function JobCarousel({ withChrome }) {
   const SLIDES = ['recommended', 'pinned'];
   const LABELS = { recommended: 'New Matches', pinned: 'Your Next Yes' };
-  const LINKS  = { recommended: withChrome('/seeker/jobs'), pinned: withChrome('/seeker/pinned-jobs') };
+  const LINKS  = { recommended: withChrome('/jobs'), pinned: withChrome('/seeker/pinned-jobs') };
 
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -584,7 +584,7 @@ export default function SeekerDashboard() {
                 <div style={{ display: 'flex', alignItems: 'center',
                   justifyContent: 'space-between', marginBottom: 10 }}>
                   <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Next Steps</span>
-                  <Link href={withChrome('/seeker/jobs')}
+                  <Link href={withChrome('/jobs')}
                     style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
                     Jobs →
                   </Link>
@@ -781,7 +781,7 @@ export default function SeekerDashboard() {
                     New Matches
                   </h2>
                   <Link
-                    href={withChrome('/seeker/jobs')}
+                    href={withChrome('/jobs')}
                     style={{
                       color: '#FF7043',
                       fontWeight: 800,
