@@ -1,5 +1,5 @@
 // pages/jobs.js
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { JobPipelineProvider, useJobPipeline } from '../context/JobPipelineContext';
 import JobsLayout from '../components/layouts/JobsLayout';
@@ -174,6 +174,7 @@ function JobsUI() {
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
   const { viewedJobs, appliedJobs, addViewedJob, addAppliedJob } = useJobPipeline();
+  const selectedJobCardRef = useRef(null);
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -503,6 +504,16 @@ function JobsUI() {
   const startIndex = (currentPage - 1) * pageSize;
   const pagedJobs = filteredJobs.slice(startIndex, startIndex + pageSize);
 
+useEffect(() => {
+  if (!selectedJob?.id) return;
+  if (!selectedJobCardRef.current) return;
+
+  selectedJobCardRef.current.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center',
+  });
+}, [selectedJob?.id, currentPage]);
+
   useEffect(() => {
     if (userHasSelected) return;
 
@@ -588,15 +599,16 @@ function JobsUI() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {pagedJobs.map((job) => (
-            <JobListCard
-              key={job.id}
-              job={job}
-              isSelected={selectedJob?.id === job.id}
-              onClick={() => handleSelectJob(job)}
-              getJobStatus={getJobStatus}
-              isInternalJob={isInternalJob}
-              getJobTier={getJobTier}
-            />
+            <div key={job.id} ref={selectedJob?.id === job.id ? selectedJobCardRef : null}>
+  <JobListCard
+    job={job}
+    isSelected={selectedJob?.id === job.id}
+    onClick={() => handleSelectJob(job)}
+    getJobStatus={getJobStatus}
+    isInternalJob={isInternalJob}
+    getJobTier={getJobTier}
+  />
+</div>
           ))}
 
           {pagedJobs.length === 0 && (
@@ -677,15 +689,16 @@ function JobsUI() {
             }}
           >
             {pagedJobs.map((job) => (
-              <JobListCard
-                key={job.id}
-                job={job}
-                isSelected={selectedJob?.id === job.id}
-                onClick={() => handleSelectJob(job)}
-                getJobStatus={getJobStatus}
-                isInternalJob={isInternalJob}
-                getJobTier={getJobTier}
-              />
+              <div key={job.id} ref={selectedJob?.id === job.id ? selectedJobCardRef : null}>
+  <JobListCard
+    job={job}
+    isSelected={selectedJob?.id === job.id}
+    onClick={() => handleSelectJob(job)}
+    getJobStatus={getJobStatus}
+    isInternalJob={isInternalJob}
+    getJobTier={getJobTier}
+  />
+</div>
             ))}
 
             {pagedJobs.length === 0 && (
