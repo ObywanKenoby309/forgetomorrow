@@ -38,6 +38,14 @@ const GLASS = {
   WebkitBackdropFilter: 'blur(10px)',
 };
 
+function inferLocationType(location) {
+  if (!location) return '';
+  const l = location.toLowerCase();
+  if (l.includes('remote')) return 'Remote';
+  if (l.includes('hybrid')) return 'Hybrid';
+  return 'On-site';
+}
+
 function getApplyLink(job) {
   if (!job) return '';
   return job.url || job.externalUrl || job.link || job.applyUrl || '';
@@ -188,6 +196,7 @@ function JobsUI() {
     source: '',
     days: '',
   });
+
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -222,12 +231,29 @@ function JobsUI() {
           pageSize: String(pageSize),
         });
 
-        if (appliedFilters.keyword.trim()) params.set('keyword', appliedFilters.keyword.trim());
-        if (appliedFilters.company.trim()) params.set('company', appliedFilters.company.trim());
-        if (appliedFilters.location.trim()) params.set('location', appliedFilters.location.trim());
-        if (appliedFilters.locationType) params.set('locationType', appliedFilters.locationType);
-        if (appliedFilters.source) params.set('source', appliedFilters.source);
-        if (appliedFilters.days) params.set('days', appliedFilters.days);
+        if (appliedFilters.keyword.trim()) {
+          params.set('keyword', appliedFilters.keyword.trim());
+        }
+
+        if (appliedFilters.company.trim()) {
+          params.set('company', appliedFilters.company.trim());
+        }
+
+        if (appliedFilters.location.trim()) {
+          params.set('location', appliedFilters.location.trim());
+        }
+
+        if (appliedFilters.locationType) {
+          params.set('locationType', appliedFilters.locationType);
+        }
+
+        if (appliedFilters.source) {
+          params.set('source', appliedFilters.source);
+        }
+
+        if (appliedFilters.days) {
+          params.set('days', appliedFilters.days);
+        }
 
         const res = await fetch(`/api/jobs?${params.toString()}`);
         const data = await res.json();
@@ -235,12 +261,15 @@ function JobsUI() {
         if (cancelled) return;
 
         const loadedJobs = Array.isArray(data?.jobs) ? data.jobs : [];
+
         setJobs(loadedJobs);
         setTotalJobCount(Number(data?.totalCount || loadedJobs.length || 0));
       } catch (err) {
         console.error(err);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
@@ -362,16 +391,18 @@ function JobsUI() {
     }
   };
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = (nextFilters) => {
     setCurrentPage(1);
-    setAppliedFilters({
-      keyword,
-      company: companyFilter,
-      location: locationFilter,
-      locationType: locationTypeFilter,
-      source: sourceFilter,
-      days: daysFilter,
-    });
+    setAppliedFilters(
+      nextFilters || {
+        keyword,
+        company: companyFilter,
+        location: locationFilter,
+        locationType: locationTypeFilter,
+        source: sourceFilter,
+        days: daysFilter,
+      }
+    );
   };
 
   const handleSaveDashboardPreferences = async () => {
@@ -419,13 +450,19 @@ function JobsUI() {
     const selectedJobId = router.query.selectedJobId;
     if (!selectedJobId) return;
 
-    const matchedJob = jobs.find((job) => String(job.id) === String(selectedJobId));
+    const matchedJob = jobs.find(
+      (job) => String(job.id) === String(selectedJobId)
+    );
 
     if (matchedJob) {
       setSelectedJob(matchedJob);
       setUserHasSelected(true);
       addViewedJob(matchedJob);
-      if (isMobile) setMobileDetailOpen(true);
+
+      if (isMobile) {
+        setMobileDetailOpen(true);
+      }
+
       return;
     }
 
@@ -438,12 +475,16 @@ function JobsUI() {
 
         const data = await res.json();
         const job = data?.job;
+
         if (cancelled || !job) return;
 
         setSelectedJob(job);
         setUserHasSelected(true);
         addViewedJob(job);
-        if (isMobile) setMobileDetailOpen(true);
+
+        if (isMobile) {
+          setMobileDetailOpen(true);
+        }
       } catch (err) {
         console.error('[Jobs] failed to fetch selected job', err);
       }
@@ -454,7 +495,13 @@ function JobsUI() {
     return () => {
       cancelled = true;
     };
-  }, [router.isReady, router.query.selectedJobId, jobs, isMobile, addViewedJob]);
+  }, [
+    router.isReady,
+    router.query.selectedJobId,
+    jobs,
+    isMobile,
+    addViewedJob,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(totalJobCount / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
@@ -477,9 +524,12 @@ function JobsUI() {
 
         const alignData = await alignRes.json();
         const alignedJobs = Array.isArray(alignData?.jobs) ? alignData.jobs : [];
+
         if (cancelled || !alignedJobs.length) return;
 
-        const alignedMap = new Map(alignedJobs.map((job) => [String(job.id), job]));
+        const alignedMap = new Map(
+          alignedJobs.map((job) => [String(job.id), job])
+        );
 
         setJobs((prevJobs) =>
           prevJobs.map((job) => {

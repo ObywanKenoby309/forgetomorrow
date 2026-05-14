@@ -26,11 +26,33 @@ export default function JobSearchFilters({
   setCurrentPage,
   filteredCount = 0,
   startIndex = 0,
+  onApplyFilters,
+  onApply,
+  onSearch,
   onSavePreferences,
   savingPreferences = false,
   preferenceSaveStatus = '',
 }) {
+  const applyFilters = () => {
+    const handler = onApplyFilters || onApply || onSearch;
+
+    if (typeof handler === 'function') {
+      handler();
+    }
+
+    setFilterOpen(false);
+  };
+
   const clearFilters = () => {
+    const clearedFilters = {
+      keyword: '',
+      company: '',
+      location: '',
+      locationType: '',
+      source: '',
+      days: '',
+    };
+
     setKeyword('');
     setCompanyFilter('');
     setLocationFilter('');
@@ -38,6 +60,12 @@ export default function JobSearchFilters({
     setSourceFilter('');
     setDaysFilter('');
     setCurrentPage(1);
+
+    const handler = onApplyFilters || onApply || onSearch;
+
+    if (typeof handler === 'function') {
+      handler(clearedFilters);
+    }
   };
 
   if (isMobile) {
@@ -53,28 +81,28 @@ export default function JobSearchFilters({
         </button>
         {filterOpen && (
           <div style={{ padding: '0 16px 16px', display: 'grid', gap: 10 }}>
-            <input type="text" value={keyword} onChange={e => { setKeyword(e.target.value); setCurrentPage(1); }} placeholder="Keywords — title, skills, tags..."
+            <input type="text" value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Keywords — title, skills, tags..."
               style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
-            <input type="text" value={companyFilter} onChange={e => { setCompanyFilter(e.target.value); setCurrentPage(1); }} placeholder="Company name..."
+            <input type="text" value={companyFilter} onChange={e => setCompanyFilter(e.target.value)} placeholder="Company name..."
               style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
-            <input type="text" value={locationFilter} onChange={e => { setLocationFilter(e.target.value); setCurrentPage(1); }} placeholder="City, region, country..."
+            <input type="text" value={locationFilter} onChange={e => setLocationFilter(e.target.value)} placeholder="City, region, country..."
               style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <select value={locationTypeFilter} onChange={e => { setLocationTypeFilter(e.target.value); setCurrentPage(1); }}
+              <select value={locationTypeFilter} onChange={e => setLocationTypeFilter(e.target.value)}
                 style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', background: 'white' }}>
                 <option value="">All types</option>
                 <option value="Remote">Remote</option>
                 <option value="Hybrid">Hybrid</option>
                 <option value="On-site">On-site</option>
               </select>
-              <select value={sourceFilter} onChange={e => { setSourceFilter(e.target.value); setCurrentPage(1); }}
+              <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}
                 style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', background: 'white' }}>
                 <option value="">All sources</option>
                 <option value="external">External</option>
                 <option value="internal">Forge recruiters</option>
               </select>
             </div>
-            <input type="number" min="1" value={daysFilter} onChange={e => { setDaysFilter(e.target.value); setCurrentPage(1); }} placeholder="Posted within (days) e.g. 7"
+            <input type="number" min="1" value={daysFilter} onChange={e => setDaysFilter(e.target.value)} placeholder="Posted within (days) e.g. 7"
               style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -97,7 +125,7 @@ export default function JobSearchFilters({
                     {savingPreferences ? 'Saving...' : 'Save for dashboard'}
                   </button>
                 )}
-                <button type="button" onClick={() => setFilterOpen(false)}
+                <button type="button" onClick={applyFilters}
                   style={{ padding: '8px 18px', borderRadius: 8, background: '#FF7043', color: 'white', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                   Apply Filters
                 </button>
@@ -129,22 +157,22 @@ export default function JobSearchFilters({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Keywords</label>
-              <input type="text" value={keyword} onChange={e => { setKeyword(e.target.value); setCurrentPage(1); }} placeholder="Title, skills, tags..."
+              <input type="text" value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Title, skills, tags..."
                 style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Company</label>
-              <input type="text" value={companyFilter} onChange={e => { setCompanyFilter(e.target.value); setCurrentPage(1); }} placeholder="Company name..."
+              <input type="text" value={companyFilter} onChange={e => setCompanyFilter(e.target.value)} placeholder="Company name..."
                 style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Location</label>
-              <input type="text" value={locationFilter} onChange={e => { setLocationFilter(e.target.value); setCurrentPage(1); }} placeholder="City, region, country..."
+              <input type="text" value={locationFilter} onChange={e => setLocationFilter(e.target.value)} placeholder="City, region, country..."
                 style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Location Type</label>
-              <select value={locationTypeFilter} onChange={e => { setLocationTypeFilter(e.target.value); setCurrentPage(1); }}
+              <select value={locationTypeFilter} onChange={e => setLocationTypeFilter(e.target.value)}
                 style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', background: 'white' }}>
                 <option value="">All</option>
                 <option value="Remote">Remote</option>
@@ -154,7 +182,7 @@ export default function JobSearchFilters({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Source</label>
-              <select value={sourceFilter} onChange={e => { setSourceFilter(e.target.value); setCurrentPage(1); }}
+              <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}
                 style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', background: 'white' }}>
                 <option value="">All sources</option>
                 <option value="external">External only</option>
@@ -163,7 +191,7 @@ export default function JobSearchFilters({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Posted within (days)</label>
-              <input type="number" min="1" value={daysFilter} onChange={e => { setDaysFilter(e.target.value); setCurrentPage(1); }} placeholder="e.g. 7"
+              <input type="number" min="1" value={daysFilter} onChange={e => setDaysFilter(e.target.value)} placeholder="e.g. 7"
                 style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none' }} />
             </div>
           </div>
@@ -189,7 +217,7 @@ export default function JobSearchFilters({
                   {savingPreferences ? 'Saving...' : 'Save for dashboard'}
                 </button>
               )}
-              <button type="button" onClick={() => setFilterOpen(false)}
+              <button type="button" onClick={applyFilters}
                 style={{ padding: '5px 18px', borderRadius: 8, background: '#FF7043', color: 'white', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                 Apply Filters
               </button>
