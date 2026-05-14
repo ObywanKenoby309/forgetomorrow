@@ -511,7 +511,7 @@ function JobsUI() {
     let cancelled = false;
 
     async function alignVisibleJobs() {
-      if (!pagedJobs.length) return;
+      if (!pagedJobs.length || loading) return;
 
       try {
         const alignRes = await fetch('/api/jobs/alignment', {
@@ -547,7 +547,12 @@ function JobsUI() {
     return () => {
       cancelled = true;
     };
-  }, [currentPage, pageSize, filteredJobs.length]);
+  }, [
+  currentPage,
+  pageSize,
+  appliedFilters,
+  pagedJobs.map((job) => job.id).join('|'),
+]);
 
   useEffect(() => {
     if (!selectedJob?.id) return;
