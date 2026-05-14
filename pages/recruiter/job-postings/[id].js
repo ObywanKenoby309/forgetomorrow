@@ -720,16 +720,12 @@ const [whyShowDetails, setWhyShowDetails] = useState(autoOpenWhyDetails || false
                 {whyShowDetails && whyData ? (
                   <div className="mt-3 space-y-3">
 					<WhyCandidateInline explain={whyData} mode="full" title="Why this candidate" onViewCandidate={() => {
-  console.log("VIEW CANDIDATE CLICKED", candidate);
+    if (!candidate?.id) return;
 
-  alert(
-    `Candidate route test:\n/recruiter/candidates/${candidate?.id || "NO-ID"}`
-  );
-
-  if (!candidate?.id) return;
-
-  window.location.href = `/recruiter/candidates/${candidate.id}`;
-}}
+    window.location.href = `/recruiter/candidates?candidateId=${encodeURIComponent(
+      candidate.id
+    )}`;
+  }}
 />
                     <details className="rounded border p-3">
                       <summary className="text-xs font-semibold text-slate-700 cursor-pointer">
