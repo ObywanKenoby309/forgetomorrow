@@ -183,7 +183,7 @@ export default async function handler(req, res) {
           ORDER BY
             COALESCE("publishedat", "publishedAt", "createdAt") DESC NULLS LAST,
             id DESC
-          LIMIT 500;
+          LIMIT 2000;
           `
         );
 
