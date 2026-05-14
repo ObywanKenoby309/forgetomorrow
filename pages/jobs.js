@@ -616,13 +616,13 @@ function JobsUI() {
     preferenceSaveStatus,
   };
 
-  if (isMobile === null || loading) {
-    return (
-      <div style={{ padding: 40, textAlign: 'center', color: '#78909C' }} aria-busy="true">
-        Loading jobs…
-      </div>
-    );
-  }
+  if (isMobile === null) {
+  return (
+    <div style={{ padding: 40, textAlign: 'center', color: '#78909C' }} aria-busy="true">
+      Loading jobs…
+    </div>
+  );
+}
 
   const greeting = getTimeGreeting();
 
