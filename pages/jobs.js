@@ -552,7 +552,20 @@ function JobsUI() {
   pageSize,
   appliedFilters,
   pagedJobs.map((job) => job.id).join('|'),
+  loading,
 ]);
+
+useEffect(() => {
+  if (!selectedJob?.id) return;
+
+  const refreshedSelectedJob = jobs.find(
+    (job) => String(job.id) === String(selectedJob.id)
+  );
+
+  if (!refreshedSelectedJob) return;
+
+  setSelectedJob(refreshedSelectedJob);
+}, [jobs, selectedJob?.id]);
 
   useEffect(() => {
     if (!selectedJob?.id) return;
