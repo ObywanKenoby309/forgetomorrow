@@ -719,7 +719,12 @@ const [whyShowDetails, setWhyShowDetails] = useState(autoOpenWhyDetails || false
 
                 {whyShowDetails && whyData ? (
                   <div className="mt-3 space-y-3">
-                    <WhyCandidateInline explain={whyData} mode="full" title="Why this candidate" />
+					<WhyCandidateInline explain={whyData} mode="full" title="Why this candidate" onViewCandidate={() => {
+    if (!candidate?.id) return;
+
+    router.push(`/recruiter/candidates/${candidate.id}`);
+  }}
+/>
                     <details className="rounded border p-3">
                       <summary className="text-xs font-semibold text-slate-700 cursor-pointer">
                         Raw JSON (debug)
