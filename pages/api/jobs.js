@@ -1,19 +1,17 @@
-// pages/api/jobs.js — combine external Supabase jobs + internal recruiter jobs (Prisma)
-// with SSL override for Supabase
+// pages/api/jobs.js
 import { Pool } from 'pg';
 import { prisma } from '@/lib/prisma';
 
-// Force Node to stop rejecting the Supabase cert
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-// Use your main DATABASE_URL (Supabase)
 const connectionString = process.env.DATABASE_URL || '';
+const CRON_USER_ID = 'cmiwa2op6000cbvz0f2s8eafb';
 
-// Lazily-initialized connection pool (Postgres)
 let pool = null;
 
 function getPool() {
   if (!connectionString) return null;
+
   if (!pool) {
     pool = new Pool({
       connectionString,
@@ -22,6 +20,7 @@ function getPool() {
       },
     });
   }
+
   return pool;
 }
 
@@ -33,45 +32,18 @@ function toPublishedIso(v) {
   }
 }
 
-function mapInternalJob(job) {
-  const published = job.publishedat || job.publishedAt || job.createdAt || null;
+function mapJob(row) {
+  const published =
+    row.publishedat ||
+    row.publishedAt ||
+    row.createdAt ||
+    row.createdat ||
+    row.created_at ||
+    null;
+
   const publishedIso = toPublishedIso(published);
-
-  const companyName = (job.company || '').trim();
+  const companyName = (row.company || '').trim();
   const isFtOfficial = companyName.toLowerCase() === 'forgetomorrow';
-
-  const tier = isFtOfficial ? 'ft-official' : 'partner';
-  const logoUrl = isFtOfficial ? '/images/logo-color.png' : null;
-
-  return {
-    id: job.id,
-    title: job.title,
-    company: job.company,
-    location: job.location,
-    description: job.description,
-    url: job.url || null,
-    salary: job.compensation || null,
-    tags: job.tags || null,
-
-    // Pass through the real classification fields so jobSource.js can do its job
-    source: job.source || 'internal',
-    userId: job.userId || null,
-    accountKey: job.accountKey || null,
-    externalId: job.externalId || null,
-
-    origin: 'internal',
-    status: job.status || 'Open',
-    publishedat: publishedIso,
-    updatedAt: job.updatedAt || null,
-
-    tier,
-    logoUrl,
-  };
-}
-
-function mapExternalRow(row) {
-  const created = row.publishedat || row.publishedAt || row.createdAt || row.createdat || row.created_at || null;
-  const publishedIso = toPublishedIso(created);
 
   return {
     id: row.id,
@@ -80,22 +52,27 @@ function mapExternalRow(row) {
     location: row.location,
     description: row.description,
     url: row.url || null,
-    salary: row.salary || null,
+    salary: row.compensation || row.salary || null,
     tags: row.tags || null,
 
-    // Pass through the real classification fields so jobSource.js can do its job
     source: row.source || null,
     userId: row.userId || row.userid || null,
     accountKey: row.accountKey || row.accountkey || null,
     externalId: row.externalId || row.externalid || null,
 
-    origin: 'external',
+    origin: row.userId === CRON_USER_ID || row.userid === CRON_USER_ID ? 'external' : 'internal',
     status: row.status || 'Open',
     publishedat: publishedIso,
+    updatedAt: row.updatedAt || row.updatedat || null,
 
-    tier: null,
-    logoUrl: null,
+    tier: isFtOfficial ? 'ft-official' : row.externalId || row.externalid ? null : 'partner',
+    logoUrl: isFtOfficial ? '/images/logo-color.png' : null,
   };
+}
+
+function parsePositiveInt(value, fallback) {
+  const parsed = parseInt(Array.isArray(value) ? value[0] : value, 10);
+  return Number.isNaN(parsed) || parsed < 1 ? fallback : parsed;
 }
 
 export default async function handler(req, res) {
@@ -105,37 +82,40 @@ export default async function handler(req, res) {
 
   const dbPool = getPool();
 
-  // ──────────────────────────────────────────────────────────────
-  // Single-job fetch for resume builder: /api/jobs?jobId=...
-  // ──────────────────────────────────────────────────────────────
   const jobIdParam = req.query?.jobId;
   const jobId = Array.isArray(jobIdParam) ? jobIdParam[0] : jobIdParam;
 
   if (jobId && String(jobId).trim()) {
     const id = String(jobId).trim();
 
-    // 1) Try internal (Prisma)
     try {
-      const internal = await prisma.job.findUnique({ where: { id } });
-      if (internal && String(internal.status || '').toLowerCase() !== 'draft') {
-        return res.status(200).json({ job: mapInternalJob(internal) });
+      const numericId = Number(id);
+
+      if (!Number.isNaN(numericId)) {
+        const internal = await prisma.job.findUnique({
+          where: { id: numericId },
+        });
+
+        if (internal && String(internal.status || '').toLowerCase() !== 'draft') {
+          return res.status(200).json({ job: mapJob(internal) });
+        }
       }
     } catch (e) {
-      console.error('[jobs] findUnique internal job error:', e);
+      console.error('[jobs] findUnique job error:', e);
     }
 
-    // 2) Try external (Supabase jobs table)
     if (dbPool) {
       try {
         const client = await dbPool.connect();
+
         try {
           const result = await client.query(
             `
             SELECT
               id, title, company, location, description,
-              url, salary, tags, source, status,
+              url, salary, compensation, tags, source, status,
               "userId", "accountKey", "externalId",
-              "publishedAt", "publishedat", "createdAt"
+              "publishedAt", "publishedat", "createdAt", "updatedAt"
             FROM jobs
             WHERE id::text = $1
             LIMIT 1;
@@ -144,87 +124,91 @@ export default async function handler(req, res) {
           );
 
           const row = result.rows?.[0];
+
           if (row) {
-            return res.status(200).json({ job: mapExternalRow(row) });
+            return res.status(200).json({ job: mapJob(row) });
           }
         } finally {
           client.release();
         }
       } catch (error) {
-        console.error('[jobs] Postgres external job lookup error:', error);
+        console.error('[jobs] Postgres job lookup error:', error);
       }
     }
 
     return res.status(404).json({ error: 'Job not found' });
   }
 
-  // ──────────────────────────────────────────────────────────────
-  // List behavior: GET /api/jobs (merged feed)
-  // ──────────────────────────────────────────────────────────────
-  let externalJobs = [];
-  let internalJobs = [];
+  const page = parsePositiveInt(req.query.page, 1);
+  const requestedPageSize = parsePositiveInt(req.query.pageSize, 20);
+  const pageSize = Math.min(requestedPageSize, 100);
+  const offset = (page - 1) * pageSize;
 
-  // 1) External jobs from Supabase — now selecting all classification fields
   if (!dbPool) {
-    console.warn('[jobs] DATABASE_URL not set; skipping external jobs');
-  } else {
-    try {
-      const client = await dbPool.connect();
-      try {
-        const result = await client.query(
-          `
-          SELECT
-            id, title, company, location, description,
-            url, salary, tags, source, status,
-            "userId", "accountKey", "externalId",
-            "publishedAt", "publishedat", "createdAt"
-          FROM jobs
-          WHERE status != 'expired'
-          ORDER BY
-            COALESCE("publishedat", "publishedAt", "createdAt") DESC NULLS LAST,
-            id DESC
-          LIMIT 2000;
-          `
-        );
-
-        externalJobs = (result.rows || []).map(mapExternalRow);
-      } finally {
-        client.release();
-      }
-    } catch (error) {
-      console.error('[jobs] Postgres external jobs error:', error);
-    }
-  }
-
-  // 2) Internal recruiter jobs from Prisma (exclude cron user — those are scraped jobs handled above)
-  const CRON_USER_ID = 'cmiwa2op6000cbvz0f2s8eafb';
-  try {
-    const prismaJobs = await prisma.job.findMany({
-      where: {
-        status: { not: 'Draft' },
-        userId: { not: CRON_USER_ID },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+    return res.status(200).json({
+      jobs: [],
+      page,
+      pageSize,
+      totalCount: 0,
+      totalPages: 1,
+      debugTotal: 0,
+      debugExternalCount: 0,
+      debugInternalCount: 0,
     });
-
-    internalJobs = prismaJobs.map(mapInternalJob);
-  } catch (error) {
-    console.error('[jobs] Prisma internal jobs error:', error);
   }
 
-  // 3) Merge and sort by published date (newest first)
-  const allJobs = [...internalJobs, ...externalJobs].sort((a, b) => {
-    const da = a.publishedat ? new Date(a.publishedat).getTime() : 0;
-    const db = b.publishedat ? new Date(b.publishedat).getTime() : 0;
-    return db - da;
-  });
+  try {
+    const client = await dbPool.connect();
 
-  return res.status(200).json({
-    jobs: allJobs,
-    debugTotal: allJobs.length,
-    debugExternalCount: externalJobs.length,
-    debugInternalCount: internalJobs.length,
-  });
+    try {
+      const countResult = await client.query(
+        `
+        SELECT COUNT(*)::int AS count
+        FROM jobs
+        WHERE LOWER(COALESCE(status, '')) NOT IN ('draft', 'expired');
+        `
+      );
+
+      const totalCount = Number(countResult.rows?.[0]?.count || 0);
+      const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+      const result = await client.query(
+        `
+        SELECT
+          id, title, company, location, description,
+          url, salary, compensation, tags, source, status,
+          "userId", "accountKey", "externalId",
+          "publishedAt", "publishedat", "createdAt", "updatedAt"
+        FROM jobs
+        WHERE LOWER(COALESCE(status, '')) NOT IN ('draft', 'expired')
+        ORDER BY
+          COALESCE("publishedat", "publishedAt", "createdAt") DESC NULLS LAST,
+          id DESC
+        LIMIT $1 OFFSET $2;
+        `,
+        [pageSize, offset]
+      );
+
+      const jobs = (result.rows || []).map(mapJob);
+
+      return res.status(200).json({
+        jobs,
+        page,
+        pageSize,
+        totalCount,
+        totalPages,
+        debugTotal: jobs.length,
+        debugExternalCount: jobs.filter((job) => job.origin === 'external').length,
+        debugInternalCount: jobs.filter((job) => job.origin === 'internal').length,
+      });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('[jobs] paginated jobs error:', error);
+
+    return res.status(500).json({
+      error: 'Failed to load jobs',
+    });
+  }
 }
