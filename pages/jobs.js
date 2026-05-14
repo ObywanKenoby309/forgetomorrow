@@ -178,6 +178,7 @@ function JobsUI() {
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [totalJobCount, setTotalJobCount] = useState(0);
   const [pinnedIds, setPinnedIds] = useState(new Set());
   const [selectedJob, setSelectedJob] = useState(null);
   const [userHasSelected, setUserHasSelected] = useState(false);
@@ -211,23 +212,75 @@ function JobsUI() {
     }
   };
 
-  useEffect(() => {
-    async function fetchJobs() {
-      try {
-        const res = await fetch('/api/jobs');
-        const data = await res.json();
-        const loadedJobs = (data && data.jobs) || [];
+useEffect(() => {
+  let cancelled = false;
 
-        setJobs(loadedJobs);
-      } catch (err) {
-        console.error(err);
-      } finally {
+  async function fetchJobs() {
+    setLoading(true);
+
+    try {
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        pageSize: String(pageSize),
+      });
+
+      if (keyword.trim()) {
+        params.set('keyword', keyword.trim());
+      }
+
+      if (companyFilter.trim()) {
+        params.set('company', companyFilter.trim());
+      }
+
+      if (locationFilter.trim()) {
+        params.set('location', locationFilter.trim());
+      }
+
+      if (locationTypeFilter) {
+        params.set('locationType', locationTypeFilter);
+      }
+
+      if (sourceFilter) {
+        params.set('source', sourceFilter);
+      }
+
+      if (daysFilter) {
+        params.set('days', daysFilter);
+      }
+
+      const res = await fetch(`/api/jobs?${params.toString()}`);
+      const data = await res.json();
+
+      if (cancelled) return;
+
+      const loadedJobs = Array.isArray(data?.jobs) ? data.jobs : [];
+
+setJobs(loadedJobs);
+setTotalJobCount(Number(data?.totalCount || loadedJobs.length || 0));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (!cancelled) {
         setLoading(false);
       }
     }
+  }
 
-    fetchJobs();
-  }, []);
+  fetchJobs();
+
+  return () => {
+    cancelled = true;
+  };
+}, [
+  currentPage,
+  pageSize,
+  keyword,
+  companyFilter,
+  locationFilter,
+  locationTypeFilter,
+  sourceFilter,
+  daysFilter,
+]);
 
   useEffect(() => {
     let cancelled = false;
@@ -384,61 +437,7 @@ function JobsUI() {
   const now = new Date();
   const cutoffTime = hasDaysFilter ? now.getTime() - parsedDays * 24 * 60 * 60 * 1000 : null;
 
-  const rawFilteredJobs = jobs.filter((job) => {
-    const status = getJobStatus(job);
-
-    if (status === 'Draft') return false;
-
-    if (status === 'Closed') {
-      const threeDaysAgo = now.getTime() - 3 * 24 * 60 * 60 * 1000;
-      const updated = job.updatedAt || job.updatedat || job.updated_at || job.publishedat || null;
-
-      if (updated) {
-        const d = new Date(updated);
-        if (!Number.isNaN(d.getTime()) && d.getTime() < threeDaysAgo) return false;
-      }
-    }
-
-    const company = (job.company || '').toLowerCase();
-
-    if (normalizedCompany && !company.includes(normalizedCompany)) return false;
-    if (locationTypeFilter && inferLocationType(job.location || '') !== locationTypeFilter) return false;
-
-    if (sourceFilter) {
-      const internal = isInternalJob(job);
-
-      if (sourceFilter === 'external' && internal) return false;
-      if (sourceFilter === 'internal' && !internal) return false;
-    }
-
-    if (hasDaysFilter) {
-      if (!job.publishedat) return false;
-
-      const d = new Date(job.publishedat);
-      if (Number.isNaN(d.getTime()) || d.getTime() < cutoffTime) return false;
-    }
-
-    return true;
-  });
-
-  const rankedJobs = rankJobsBySearchRelevance(rawFilteredJobs, {
-    keyword,
-    company: companyFilter,
-    location: normalizeLocationQuery(locationFilter),
-    locationType: locationTypeFilter,
-    source: sourceFilter,
-  });
-
-  const hasSearchIntent =
-    keyword.trim() ||
-    companyFilter.trim() ||
-    locationFilter.trim() ||
-    locationTypeFilter ||
-    sourceFilter;
-
-  const filteredJobs = hasSearchIntent
-    ? rankedJobs.filter((job) => (job.searchScore || 0) > 24)
-    : rankedJobs;
+  const filteredJobs = jobs;
 	
 	  useEffect(() => {
     if (!router.isReady) return;
@@ -479,14 +478,9 @@ function JobsUI() {
     addViewedJob,
   ]);
 
-  useEffect(() => {
-    const total = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
-    if (currentPage > total) setCurrentPage(1);
-  }, [filteredJobs.length, pageSize, currentPage]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(totalJobCount / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
-  const pagedJobs = filteredJobs.slice(startIndex, startIndex + pageSize);
+  const pagedJobs = filteredJobs;
   
   useEffect(() => {
   let cancelled = false;
@@ -620,7 +614,7 @@ useEffect(() => {
 
         <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600, paddingLeft: 2 }}>
           Showing {filteredJobs.length === 0 ? 0 : startIndex + 1}–
-          {Math.min(startIndex + pageSize, filteredJobs.length)} of {filteredJobs.length} jobs
+          {Math.min(startIndex + pageSize, totalJobCount)} of {totalJobCount} jobs
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -701,7 +695,7 @@ useEffect(() => {
           <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600, padding: '0 2px' }}>
             {filteredJobs.length === 0
               ? 'No jobs found'
-              : `${startIndex + 1}–${Math.min(startIndex + pageSize, filteredJobs.length)} of ${filteredJobs.length}`}
+              : `${startIndex + 1}–${Math.min(startIndex + pageSize, totalJobCount)} of ${totalJobCount}`}
           </div>
 
           <div
