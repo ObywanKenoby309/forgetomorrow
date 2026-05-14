@@ -140,8 +140,8 @@ export default async function handler(req, res) {
   }
 
   const page = parsePositiveInt(req.query.page, 1);
-  const requestedPageSize = parsePositiveInt(req.query.pageSize, 20);
-  const pageSize = Math.min(requestedPageSize, 100);
+  const requestedPageSize = parsePositiveInt(req.query.pageSize, 500);
+  const pageSize = Math.min(requestedPageSize, 500);
   const offset = (page - 1) * pageSize;
 
   if (!dbPool) {
