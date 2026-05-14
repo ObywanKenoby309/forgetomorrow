@@ -172,7 +172,8 @@ function AdditionalInfoPDF({
   additionalQuestions,
   consent,
   forgeAssessment,
-}) {
+}) { 
+
   const std = Array.isArray(standardQuestions) ? standardQuestions : [];
   const addl = Array.isArray(additionalQuestions) ? additionalQuestions : [];
 
@@ -291,6 +292,212 @@ function AdditionalInfoPDF({
   );
 }
 
+function FullCandidateIntelligencePDF({
+  candidateName,
+  candidateEmail,
+  profile,
+  job,
+  forgeAssessment,
+}) {
+  const skills =
+    Array.isArray(profile?.skills)
+      ? profile.skills
+      : safeJsonParse(profile?.skills) || [];
+
+  const projects =
+    Array.isArray(profile?.projects)
+      ? profile.projects
+      : safeJsonParse(profile?.projects) || [];
+
+  const education =
+    Array.isArray(profile?.education)
+      ? profile.education
+      : safeJsonParse(profile?.education) || [];
+
+  const certifications =
+    Array.isArray(profile?.certifications)
+      ? profile.certifications
+      : safeJsonParse(profile?.certifications) || [];
+
+  const languages =
+    Array.isArray(profile?.languages)
+      ? profile.languages
+      : safeJsonParse(profile?.languages) || [];
+
+  return (
+    <Document>
+      <Page size="LETTER" style={aiStyles.page}>
+        <Text style={aiStyles.title}>
+          Full Candidate Intelligence Report
+        </Text>
+
+        <Text style={aiStyles.subtitle}>
+          {candidateName}
+          {candidateEmail ? ` • ${candidateEmail}` : ""}
+          {job?.title ? ` • ${job.title}` : ""}
+        </Text>
+
+        <View style={aiStyles.divider} />
+
+        <Text style={aiStyles.sectionTitle}>
+          Recruiter Summary
+        </Text>
+
+        <Text style={aiStyles.qValue}>
+          This report combines submitted application materials,
+          recruiter-visible profile intelligence, portfolio data,
+          work preferences, and ForgeTomorrow signal analysis
+          against the selected job opportunity.
+        </Text>
+
+        <Text style={aiStyles.sectionTitle}>
+          Headline
+        </Text>
+
+        <Text style={aiStyles.qValue}>
+          {safeString(profile?.headline) || "Not provided"}
+        </Text>
+
+        <Text style={aiStyles.sectionTitle}>
+          Professional Summary
+        </Text>
+
+        <Text style={aiStyles.qValue}>
+          {safeString(profile?.aboutMe) || "Not provided"}
+        </Text>
+
+        <Text style={aiStyles.sectionTitle}>
+          Skills
+        </Text>
+
+        <Text style={aiStyles.qValue}>
+          {skills.length
+            ? skills.map((s) => typeof s === "string" ? s : s?.name).filter(Boolean).join(", ")
+            : "No skills listed"}
+        </Text>
+
+        <Text style={aiStyles.sectionTitle}>
+          Projects & Portfolio Signal
+        </Text>
+
+        {projects.length ? (
+          projects.slice(0, 10).map((p, i) => (
+            <View key={i} style={aiStyles.row}>
+              <Text style={aiStyles.qLabel}>
+                {typeof p === "string"
+                  ? `Project ${i + 1}`
+                  : safeString(p?.title || `Project ${i + 1}`)}
+              </Text>
+
+              <Text style={aiStyles.qValue}>
+                {typeof p === "string"
+                  ? p
+                  : safeString(
+                      p?.description ||
+                      p?.outcome ||
+                      ""
+                    )}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <Text style={[aiStyles.qValue, aiStyles.muted]}>
+            No projects listed.
+          </Text>
+        )}
+
+        <Text style={aiStyles.sectionTitle}>
+          Education
+        </Text>
+
+        {education.length ? (
+          education.map((e, i) => (
+            <View key={i} style={aiStyles.row}>
+              <Text style={aiStyles.qValue}>
+                {[
+                  e?.degree,
+                  e?.field,
+                  e?.school,
+                ].filter(Boolean).join(" • ")}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <Text style={[aiStyles.qValue, aiStyles.muted]}>
+            No education listed.
+          </Text>
+        )}
+
+        <Text style={aiStyles.sectionTitle}>
+          Certifications
+        </Text>
+
+        <Text style={aiStyles.qValue}>
+          {certifications.length
+            ? certifications.map((c) =>
+                typeof c === "string" ? c : c?.name
+              ).filter(Boolean).join(", ")
+            : "None listed"}
+        </Text>
+
+        <Text style={aiStyles.sectionTitle}>
+          Languages
+        </Text>
+
+        <Text style={aiStyles.qValue}>
+          {languages.length
+            ? languages.map((l) =>
+                typeof l === "string" ? l : l?.name
+              ).filter(Boolean).join(", ")
+            : "None listed"}
+        </Text>
+
+        <Text style={aiStyles.sectionTitle}>
+          Work Preferences
+        </Text>
+
+        <Text style={aiStyles.qValue}>
+          {profile?.workPreferences
+            ? JSON.stringify(profile.workPreferences, null, 2)
+            : "No work preferences configured"}
+        </Text>
+
+        <Text style={aiStyles.sectionTitle}>
+          ForgeTomorrow Alignment Intelligence
+        </Text>
+
+        {forgeAssessment ? (
+          <>
+            <View style={aiStyles.row}>
+              <Text style={aiStyles.qLabel}>Assessment Score</Text>
+              <Text style={aiStyles.qValue}>
+                {forgeAssessment.score ?? "Not available"}
+              </Text>
+            </View>
+
+            <View style={aiStyles.row}>
+              <Text style={aiStyles.qLabel}>Assessment Analysis</Text>
+              <Text style={aiStyles.pre}>
+                {JSON.stringify(forgeAssessment.result, null, 2)}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <Text style={[aiStyles.qValue, aiStyles.muted]}>
+            No ForgeTomorrow assessment generated yet.
+          </Text>
+        )}
+
+        <View style={aiStyles.divider} />
+
+        <Text style={[aiStyles.qValue, aiStyles.muted]}>
+          Self-identification answers are not included in recruiter exports.
+        </Text>
+      </Page>
+    </Document>
+  );
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "GET") {
@@ -339,23 +546,38 @@ export default async function handler(req, res) {
       where: { id: applicationId },
       include: {
         job: {
-          select: {
-            id: true,
-            title: true,
-            company: true,
-            accountKey: true,
-            additionalQuestions: true,
-          },
-        },
+  select: {
+    id: true,
+    title: true,
+    company: true,
+    accountKey: true,
+    additionalQuestions: true,
+    description: true,
+  },
+},
         user: {
-          select: {
-            id: true,
-            name: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
+  select: {
+    id: true,
+    name: true,
+    firstName: true,
+    lastName: true,
+    email: true,
+    profile: {
+      select: {
+        headline: true,
+        aboutMe: true,
+        skills: true,
+        languages: true,
+        education: true,
+        certifications: true,
+        projects: true,
+        workPreferences: true,
+        profileVisibility: true,
+        location: true,
+      },
+    },
+  },
+},
         resume: { select: { id: true, name: true, content: true } },
         cover: { select: { id: true, name: true, content: true } },
         consent: {
@@ -505,6 +727,28 @@ export default async function handler(req, res) {
 
       const addInfoBuf = await pdf(addInfoDoc).toBuffer();
       zip.file(`04_Candidate_Additional_Info_${base}.pdf`, addInfoBuf);
+    }
+
+    // 5) Full Candidate Intelligence Report
+    {
+      const profile = app.user?.profile || {};
+
+      const intelligenceDoc = (
+        <FullCandidateIntelligencePDF
+          candidateName={candidateName}
+          candidateEmail={candidateEmail}
+          profile={profile}
+          job={app.job}
+          forgeAssessment={forgeAssessment}
+        />
+      );
+
+      const intelligenceBuf = await pdf(intelligenceDoc).toBuffer();
+
+      zip.file(
+        `05_Full_Candidate_Intelligence_${base}.pdf`,
+        intelligenceBuf
+      );
     }
 
     // Finalize ZIP
