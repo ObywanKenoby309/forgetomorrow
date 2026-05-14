@@ -218,22 +218,6 @@ function JobsUI() {
         const data = await res.json();
         const loadedJobs = (data && data.jobs) || [];
 
-        try {
-          const alignRes = await fetch('/api/jobs/alignment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jobs: loadedJobs }),
-          });
-
-          if (alignRes.ok) {
-            const alignData = await alignRes.json();
-            setJobs((alignData && alignData.jobs) || loadedJobs);
-            return;
-          }
-        } catch (alignErr) {
-          console.error('[Jobs] alignment load failed', alignErr);
-        }
-
         setJobs(loadedJobs);
       } catch (err) {
         console.error(err);
@@ -503,6 +487,48 @@ function JobsUI() {
   const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const pagedJobs = filteredJobs.slice(startIndex, startIndex + pageSize);
+  
+  useEffect(() => {
+  let cancelled = false;
+
+  async function alignVisibleJobs() {
+    if (!pagedJobs.length) return;
+
+    try {
+      const alignRes = await fetch('/api/jobs/alignment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobs: pagedJobs }),
+      });
+
+      if (!alignRes.ok) return;
+
+      const alignData = await alignRes.json();
+      const alignedJobs = Array.isArray(alignData?.jobs) ? alignData.jobs : [];
+
+      if (cancelled || !alignedJobs.length) return;
+
+      const alignedMap = new Map(
+        alignedJobs.map((job) => [String(job.id), job])
+      );
+
+      setJobs((prevJobs) =>
+        prevJobs.map((job) => {
+          const aligned = alignedMap.get(String(job.id));
+          return aligned ? { ...job, ...aligned } : job;
+        })
+      );
+    } catch (alignErr) {
+      console.error('[Jobs] visible alignment load failed', alignErr);
+    }
+  }
+
+  alignVisibleJobs();
+
+  return () => {
+    cancelled = true;
+  };
+}, [currentPage, pageSize, filteredJobs.length]);
 
 useEffect(() => {
   if (!selectedJob?.id) return;
