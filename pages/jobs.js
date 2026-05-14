@@ -212,22 +212,34 @@ function JobsUI() {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchJobs() {
+      setLoading(true);
+
       try {
-        const res = await fetch('/api/jobs');
+        const res = await fetch(`/api/jobs?page=${currentPage}&pageSize=${pageSize}`);
         const data = await res.json();
         const loadedJobs = (data && data.jobs) || [];
 
-        setJobs(loadedJobs);
+        if (!cancelled) {
+          setJobs(loadedJobs);
+        }
       } catch (err) {
         console.error(err);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     fetchJobs();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPage, pageSize]);
 
   useEffect(() => {
     let cancelled = false;
@@ -485,8 +497,8 @@ function JobsUI() {
   }, [filteredJobs.length, pageSize, currentPage]);
 
   const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
-  const startIndex = (currentPage - 1) * pageSize;
-  const pagedJobs = filteredJobs.slice(startIndex, startIndex + pageSize);
+  const startIndex = 0;
+  const pagedJobs = filteredJobs;
   
   useEffect(() => {
   let cancelled = false;
