@@ -544,17 +544,10 @@ function AlignmentModal({ open, onClose, state, onViewFullWhy }) {
   );
 }
 
-function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetails }) {
+function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetails, whyState }) {
   const [loading, setLoading] = useState(false);
   const [packet, setPacket] = useState(null);
   const [error, setError] = useState(null);
-
-  const [whyLoading, setWhyLoading] = useState(false);
-  const [whyError, setWhyError] = useState(null);
-  const [whyData, setWhyData] = useState(null);
-  const [whyShowDetails, setWhyShowDetails] = useState(false);
-
-  const whyHasRunRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -584,74 +577,15 @@ function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetai
 
   const resumeValue = packet?.resume?.content !== undefined ? packet.resume.content : null;
   const jobDescription = job?.description || job?.jobDescription || "";
+  
+const whyData = whyState?.explain || null;
+const whyLoading = whyState?.status === "loading";
+const whyError = whyState?.status === "error"
+  ? { message: whyState?.errorMessage }
+  : null;
 
-  useEffect(() => {
-    let alive = true;
+const [whyShowDetails, setWhyShowDetails] = useState(autoOpenWhyDetails || false);
 
-    async function runWhy() {
-      if (!applicationId) return;
-      if (whyHasRunRef.current) return;
-
-      const resumeText =
-        typeof resumeValue === "string"
-          ? resumeValue
-          : resumeValue
-          ? JSON.stringify(resumeValue)
-          : "";
-
-      const jdText = String(jobDescription || "").trim();
-
-      if (!jdText) return;
-      if (!String(resumeText || "").trim()) return;
-
-      whyHasRunRef.current = true;
-
-      try {
-        setWhyLoading(true);
-        setWhyError(null);
-        setWhyData(null);
-
-        const res = await fetch("/api/recruiter/explain", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            resumeText,
-            jobDescription: jdText,
-            jobId: job?.id ?? null,
-            applicationId,
-            candidateUserId: candidate?.id ?? null,
-            externalName: null,
-            externalEmail: null,
-          }),
-        });
-
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-
-        if (!alive) return;
-        setWhyData(json);
-
-        if (autoOpenWhyDetails) {
-          setWhyShowDetails(true);
-        } else {
-          setWhyShowDetails(false);
-        }
-      } catch (e) {
-        if (!alive) return;
-        setWhyError(e);
-        whyHasRunRef.current = false;
-      } finally {
-        if (!alive) return;
-        setWhyLoading(false);
-      }
-    }
-
-    if (packet) runWhy();
-
-    return () => {
-      alive = false;
-    };
-  }, [packet, applicationId, resumeValue, jobDescription, job?.id, candidate?.id, job, autoOpenWhyDetails]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
@@ -767,24 +701,7 @@ function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetai
                           {whyShowDetails ? "Hide details" : "View details"}
                         </button>
                       </>
-                    ) : (
-                      <button
-                        type="button"
-                        className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
-                        onClick={() => {
-                          whyHasRunRef.current = false;
-                          setPacket((p) => (p ? { ...p } : p));
-                        }}
-                        disabled={whyLoading}
-                        title={
-                          whyError
-                            ? `Assessment failed: ${String(whyError?.message || "")}`
-                            : "Run assessment"
-                        }
-                      >
-                        {whyError ? "Retry" : "Run"}
-                      </button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
@@ -2219,6 +2136,7 @@ export default function RecruiterJobApplicantsPage() {
             applicationId={openPacketAppId}
             job={job}
             candidate={openPacketCandidate}
+			whyState={whyByAppId?.[openPacketAppId]}
             autoOpenWhyDetails={openPacketAutoWhy}
             onClose={() => {
               setOpenPacketAppId(null);

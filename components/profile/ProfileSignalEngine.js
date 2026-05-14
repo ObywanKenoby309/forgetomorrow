@@ -416,13 +416,14 @@ function AssistPanel({ signal, profileData, careerContext, onApply, onClose }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ProfileSignalEngine({ profileData = {}, onApply }) {
+export default function ProfileSignalEngine({ profileData = {}, onApply, mode = 'seeker', readOnly = false, title = 'Profile Signal Engine' }) {
   const [signals, setSignals]           = useState([]);
   const [verdict, setVerdict]           = useState(null);
   const [activeAssist, setActiveAssist] = useState(null); // signal key
   const [expandedSignal, setExpandedSignal] = useState(null);
   const [careerContext, setCareerContext] = useState(null);
   const debounceRef = useRef(null);
+  const isReadOnly = readOnly || mode === 'recruiter';
 
   // Fetch unified career context once on mount
   useEffect(() => {
@@ -475,7 +476,7 @@ useEffect(() => {
     <div style={{ display: 'grid', gap: 10 }}>
       {/* Header */}
       <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-        Profile Signal Engine
+        {title}
       </div>
 
       {/* Verdict card */}
@@ -511,7 +512,9 @@ useEffect(() => {
         </div>
 
         <div style={{ fontSize: 10, color: '#CBD5E1', marginTop: 5, lineHeight: 1.35, fontWeight: 600 }}>
-          Recruiter visibility is being measured from your live ForgeTomorrow identity.
+          {isReadOnly
+            ? 'Recruiter-visible signal is measured from this candidate profile and available portfolio data.'
+            : 'Recruiter visibility is being measured from your live ForgeTomorrow identity.'}
         </div>
       </div>
 
@@ -603,7 +606,7 @@ useEffect(() => {
       {verdict.priority.gapReason}
     </div>
 
-    {verdict.priority.field && (
+    {!isReadOnly && verdict.priority.field && (
       <button
         type="button"
         onClick={() => {
@@ -791,7 +794,7 @@ useEffect(() => {
 			  </div>
 			)}
 
-              {sig.field && sig.status !== 'direct' && (
+              {!isReadOnly && sig.field && sig.status !== 'direct' && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -841,11 +844,15 @@ useEffect(() => {
 </div>
 
       {/* Intelligence note */}
-      {careerContext && (
+      {isReadOnly ? (
+        <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, lineHeight: 1.4, paddingTop: 2 }}>
+          View only for recruiters. This does not modify the candidate profile.
+        </div>
+      ) : careerContext ? (
         <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, lineHeight: 1.4, paddingTop: 2 }}>
           ⚡ Powered by your ForgeTomorrow career intelligence — suggestions are calibrated to your full profile history, not generic advice.
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

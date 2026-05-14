@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import ProfileSignalEngine from "@/components/profile/ProfileSignalEngine";
 
 function toSafeArray(value) {
   if (Array.isArray(value)) return value;
@@ -58,6 +59,46 @@ function PrefRow({ label, value }) {
       <span className="text-xs text-slate-800 font-medium text-right">{value}</span>
     </div>
   );
+}
+
+
+function buildCandidateSignalProfileData(candidate, skillsLocal, languageList, educationList, hasResume) {
+  const workPreferences = candidate?.workPreferences || {};
+
+  return {
+    headline:
+      candidate?.headline ||
+      candidate?.role ||
+      candidate?.title ||
+      candidate?.currentTitle ||
+      "",
+    aboutMe:
+      candidate?.summary ||
+      candidate?.aboutMe ||
+      candidate?.bio ||
+      candidate?.profileSummary ||
+      "",
+    skills: toSafeArray(skillsLocal),
+    languages: toSafeArray(languageList),
+    education: toSafeArray(educationList),
+    certifications: toSafeArray(candidate?.certifications || candidate?.certificationsJson),
+    projects: toSafeArray(candidate?.projects || candidate?.portfolioProjects || candidate?.projectHighlights),
+    workPreferences: {
+      ...workPreferences,
+      workStatus: candidate?.workStatus || workPreferences.workStatus,
+      workType: candidate?.preferredWorkType || workPreferences.workType,
+      willingToRelocate: candidate?.willingToRelocate || workPreferences.willingToRelocate,
+      locations: candidate?.preferredLocations || workPreferences.locations,
+      startDate: candidate?.earliestStartDate || workPreferences.earliestStartDate || workPreferences.startDate,
+    },
+    profileVisibility:
+      candidate?.profileVisibility ||
+      candidate?.visibility ||
+      (candidate?.slug ? "PUBLIC" : ""),
+    location: candidate?.location || "",
+    primaryResume: candidate?.primaryResume || candidate?.resume || null,
+    hasResume,
+  };
 }
 
 export default function CandidateProfileModal({
@@ -227,6 +268,22 @@ export default function CandidateProfileModal({
 
   const languageList = toSafeArray(candidate?.languages);
   const hasLanguages = languageList.length > 0;
+
+  const isForgeCandidate = Boolean(
+    candidate?.isForgeUser ||
+      candidate?.userId ||
+      candidate?.slug ||
+      candidate?.profileUrl ||
+      candidate?.ftProfileUrl
+  );
+
+  const signalProfileData = buildCandidateSignalProfileData(
+    candidate,
+    skillsLocal,
+    languageList,
+    educationList,
+    hasResume
+  );
 
   return createPortal(
     <div
@@ -481,6 +538,22 @@ export default function CandidateProfileModal({
 
           {/* Right column — recruiter tools + candidate preferences */}
           <div className="space-y-5">
+
+            {/* Candidate Signal */}
+            <section className={sectionClasses(false)}>
+              <ProfileSignalEngine
+                profileData={signalProfileData}
+                mode="recruiter"
+                readOnly={true}
+                title="Recruiter Signal View"
+              />
+
+              {!isForgeCandidate && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                  Portfolio unavailable. This appears to be an external candidate, so ForgeTomorrow profile signal is limited to the resume and recruiter-entered data available here.
+                </div>
+              )}
+            </section>
 
             {/* Work Preferences */}
             <section className={sectionClasses(!hasWorkPrefs)}>
