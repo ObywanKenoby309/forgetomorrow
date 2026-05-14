@@ -222,11 +222,67 @@ function safeArr(v) {
 }
 
 function classifySignals(profileData) {
-  return PROFILE_SIGNALS.map(sig => ({
+  const baseSignals = PROFILE_SIGNALS.map(sig => ({
     ...sig,
     status: sig.check(profileData),
     gapReason: sig.gap(profileData),
   }));
+
+  if (!jobContext) return baseSignals;
+
+  const jdText = String(
+    jobContext?.jobDescription ||
+    jobContext?.description ||
+    ""
+  ).toLowerCase();
+
+  const jobTitle = String(
+    jobContext?.title ||
+    jobContext?.jobTitle ||
+    ""
+  ).toLowerCase();
+
+  if (!jdText && !jobTitle) return baseSignals;
+
+  const profileText = [
+    profileData?.headline,
+    profileData?.aboutMe,
+    safeArr(profileData?.skills).join(" "),
+    safeArr(profileData?.projects).map((p) =>
+      typeof p === "string" ? p : `${p?.title || ""} ${p?.description || ""} ${p?.outcome || ""}`
+    ).join(" "),
+    safeArr(profileData?.certifications).join(" "),
+    safeArr(profileData?.education).map((e) =>
+      typeof e === "string" ? e : `${e?.degree || ""} ${e?.field || ""} ${e?.school || ""}`
+    ).join(" "),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return baseSignals.map((sig) => {
+    if (!profileText) return sig;
+
+    if (sig.status === "missing") return sig;
+
+    const labelWords = String(sig.label || "")
+      .toLowerCase()
+      .replace("signal", "")
+      .split(/\s+/)
+      .filter((w) => w.length >= 4);
+
+    const hasJobOverlap = labelWords.some((w) => jdText.includes(w) || jobTitle.includes(w));
+
+    if (!hasJobOverlap) return sig;
+
+    return {
+      ...sig,
+      gapReason:
+        sig.status === "direct"
+          ? `${sig.label} is present and relevant to this job context.`
+          : `${sig.label} is partially present, but should be strengthened for this job context.`,
+    };
+  });
 }
 
 function statusConfig(status) {
@@ -416,7 +472,7 @@ function AssistPanel({ signal, profileData, careerContext, onApply, onClose }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ProfileSignalEngine({ profileData = {}, onApply, mode = 'seeker', readOnly = false, title = 'Profile Signal Engine' }) {
+export default function ProfileSignalEngine({ profileData = {}, onApply, mode = 'seeker', readOnly = false, title = 'Profile Signal Engine', jobContext = null, }) {
   const [signals, setSignals]           = useState([]);
   const [verdict, setVerdict]           = useState(null);
   const [activeAssist, setActiveAssist] = useState(null); // signal key
@@ -424,6 +480,21 @@ export default function ProfileSignalEngine({ profileData = {}, onApply, mode = 
   const [careerContext, setCareerContext] = useState(null);
   const debounceRef = useRef(null);
   const isReadOnly = readOnly || mode === 'recruiter';
+    const hasJobContext = Boolean(
+    jobContext?.jobDescription ||
+    jobContext?.description ||
+    jobContext?.title ||
+    jobContext?.jobTitle
+  );
+
+  const signalModeLabel = hasJobContext
+    ? 'Candidate Signal vs This Job'
+    : 'General Candidate Signal';
+
+  const jobLabel =
+    jobContext?.title ||
+    jobContext?.jobTitle ||
+    'Selected Job';
 
   // Fetch unified career context once on mount
   useEffect(() => {
@@ -475,9 +546,15 @@ useEffect(() => {
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       {/* Header */}
-      <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-        {title}
-      </div>
+      <div style={{ display: 'grid', gap: 3 }}>
+  <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+    {title}
+  </div>
+
+  <div style={{ fontSize: 11, fontWeight: 800, color: DARK, lineHeight: 1.35 }}>
+    {hasJobContext ? `${signalModeLabel}: ${jobLabel}` : signalModeLabel}
+  </div>
+</div>
 
       {/* Verdict card */}
 {verdict && (

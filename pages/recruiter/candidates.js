@@ -1018,6 +1018,12 @@ function Body() {
       ? router.query.id
       : null;
 
+  const jobIdFromQuery = router.query?.jobId
+    ? Number(router.query.jobId)
+    : null;
+
+  const [jobContext, setJobContext] = useState(null);
+
   const [didAutoOpenFromQuery, setDidAutoOpenFromQuery] = useState(false);
 
   const [nameQuery, setNameQuery] = useState("");
@@ -1505,6 +1511,41 @@ function Body() {
       isMounted = false;
     };
   }, [buildCandidateParams, nameQuery, locQuery, boolQuery]);
+  
+  useEffect(() => {
+  let alive = true;
+
+  async function loadJobContext() {
+    if (!jobIdFromQuery || Number.isNaN(jobIdFromQuery)) {
+      setJobContext(null);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/recruiter/job-postings/${jobIdFromQuery}`);
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(json?.error || `HTTP ${res.status}`);
+      }
+
+      if (!alive) return;
+
+      setJobContext(json?.job || null);
+    } catch (err) {
+      console.error("[candidates] failed to load job context", err);
+
+      if (!alive) return;
+      setJobContext(null);
+    }
+  }
+
+  loadJobContext();
+
+  return () => {
+    alive = false;
+  };
+}, [jobIdFromQuery]);
 
   useEffect(() => {
     if (!candidateIdFromQuery || didAutoOpenFromQuery || isLoading || !candidates.length) return;
@@ -1966,12 +2007,13 @@ function Body() {
       )}
 
       <CandidateProfileModal
-        open={open}
-        onClose={() => setOpen(false)}
-        candidate={selected}
-        onSaveNotes={saveNotes}
-        onToggleTag={toggleTag}
-      />
+  open={open}
+  onClose={() => setOpen(false)}
+  candidate={selected}
+  onSaveNotes={saveNotes}
+  onToggleTag={toggleTag}
+  jobContext={jobContext}
+/>
 
       <WhyCandidateDrawer
         open={whyOpen}

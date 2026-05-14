@@ -542,11 +542,11 @@ export default function CandidateProfileModal({
             {/* Candidate Signal */}
             <section className={sectionClasses(false)}>
               <ProfileSignalEngine
-                profileData={signalProfileData}
-                mode="recruiter"
-                readOnly={true}
-                title="Recruiter Signal View"
-              />
+  profileData={signalProfileData}
+  mode="recruiter"
+  readOnly={true}
+  title="Recruiter Signal View"
+/>
 
               {!isForgeCandidate && (
                 <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">

@@ -722,9 +722,13 @@ const [whyShowDetails, setWhyShowDetails] = useState(autoOpenWhyDetails || false
 					<WhyCandidateInline explain={whyData} mode="full" title="Why this candidate" onViewCandidate={() => {
     if (!candidate?.id) return;
 
-    window.location.href = `/recruiter/candidates?candidateId=${encodeURIComponent(
-      candidate.id
-    )}`;
+    const params = new URLSearchParams({
+      candidateId: String(candidate.id),
+    });
+
+    if (job?.id) params.set("jobId", String(job.id));
+
+    window.location.href = `/recruiter/candidates?${params.toString()}`;
   }}
 />
                     <details className="rounded border p-3">
