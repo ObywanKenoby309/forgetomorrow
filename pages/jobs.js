@@ -13,8 +13,6 @@ import JobDetailPanel from '../components/jobs/JobDetailPanel';
 import MobileJobDetail from '../components/jobs/MobileJobDetail';
 import JobsBottomRow from '../components/jobs/JobsBottomRow';
 import JobSearchFilters from '../components/jobs/JobSearchFilters';
-import { normalizeLocationQuery } from '../lib/intelligence/forgeJobMatchEngine';
-import { rankJobsBySearchRelevance } from '../lib/intelligence/forgeSearchEngine';
 
 // ── SSR-safe mobile hook ──────────────────────────────────────
 function useIsMobile(bp = 768) {
@@ -39,14 +37,6 @@ const GLASS = {
   backdropFilter: 'blur(10px)',
   WebkitBackdropFilter: 'blur(10px)',
 };
-
-function inferLocationType(location) {
-  if (!location) return '';
-  const l = location.toLowerCase();
-  if (l.includes('remote')) return 'Remote';
-  if (l.includes('hybrid')) return 'Hybrid';
-  return 'On-site';
-}
 
 function getApplyLink(job) {
   if (!job) return '';
@@ -190,6 +180,14 @@ function JobsUI() {
   const [locationTypeFilter, setLocationTypeFilter] = useState('');
   const [daysFilter, setDaysFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState({
+    keyword: '',
+    company: '',
+    location: '',
+    locationType: '',
+    source: '',
+    days: '',
+  });
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -212,75 +210,46 @@ function JobsUI() {
     }
   };
 
-useEffect(() => {
-  let cancelled = false;
+  useEffect(() => {
+    let cancelled = false;
 
-  async function fetchJobs() {
-    setLoading(true);
+    async function fetchJobs() {
+      setLoading(true);
 
-    try {
-      const params = new URLSearchParams({
-        page: String(currentPage),
-        pageSize: String(pageSize),
-      });
+      try {
+        const params = new URLSearchParams({
+          page: String(currentPage),
+          pageSize: String(pageSize),
+        });
 
-      if (keyword.trim()) {
-        params.set('keyword', keyword.trim());
-      }
+        if (appliedFilters.keyword.trim()) params.set('keyword', appliedFilters.keyword.trim());
+        if (appliedFilters.company.trim()) params.set('company', appliedFilters.company.trim());
+        if (appliedFilters.location.trim()) params.set('location', appliedFilters.location.trim());
+        if (appliedFilters.locationType) params.set('locationType', appliedFilters.locationType);
+        if (appliedFilters.source) params.set('source', appliedFilters.source);
+        if (appliedFilters.days) params.set('days', appliedFilters.days);
 
-      if (companyFilter.trim()) {
-        params.set('company', companyFilter.trim());
-      }
+        const res = await fetch(`/api/jobs?${params.toString()}`);
+        const data = await res.json();
 
-      if (locationFilter.trim()) {
-        params.set('location', locationFilter.trim());
-      }
+        if (cancelled) return;
 
-      if (locationTypeFilter) {
-        params.set('locationType', locationTypeFilter);
-      }
-
-      if (sourceFilter) {
-        params.set('source', sourceFilter);
-      }
-
-      if (daysFilter) {
-        params.set('days', daysFilter);
-      }
-
-      const res = await fetch(`/api/jobs?${params.toString()}`);
-      const data = await res.json();
-
-      if (cancelled) return;
-
-      const loadedJobs = Array.isArray(data?.jobs) ? data.jobs : [];
-
-setJobs(loadedJobs);
-setTotalJobCount(Number(data?.totalCount || loadedJobs.length || 0));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      if (!cancelled) {
-        setLoading(false);
+        const loadedJobs = Array.isArray(data?.jobs) ? data.jobs : [];
+        setJobs(loadedJobs);
+        setTotalJobCount(Number(data?.totalCount || loadedJobs.length || 0));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
-  }
 
-  fetchJobs();
+    fetchJobs();
 
-  return () => {
-    cancelled = true;
-  };
-}, [
-  currentPage,
-  pageSize,
-  keyword,
-  companyFilter,
-  locationFilter,
-  locationTypeFilter,
-  sourceFilter,
-  daysFilter,
-]);
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPage, pageSize, appliedFilters]);
 
   useEffect(() => {
     let cancelled = false;
@@ -393,6 +362,17 @@ setTotalJobCount(Number(data?.totalCount || loadedJobs.length || 0));
     }
   };
 
+  const handleApplyFilters = () => {
+    setCurrentPage(1);
+    setAppliedFilters({
+      keyword,
+      company: companyFilter,
+      location: locationFilter,
+      locationType: locationTypeFilter,
+      source: sourceFilter,
+      days: daysFilter,
+    });
+  };
 
   const handleSaveDashboardPreferences = async () => {
     setSavingPreferences(true);
@@ -431,108 +411,103 @@ setTotalJobCount(Number(data?.totalCount || loadedJobs.length || 0));
     if (isMobile) setMobileDetailOpen(true);
   };
 
-  const normalizedCompany = companyFilter.trim().toLowerCase();
-  const parsedDays = parseInt(daysFilter, 10);
-  const hasDaysFilter = !Number.isNaN(parsedDays) && parsedDays > 0;
-  const now = new Date();
-  const cutoffTime = hasDaysFilter ? now.getTime() - parsedDays * 24 * 60 * 60 * 1000 : null;
-
   const filteredJobs = jobs;
-	
-	  useEffect(() => {
+
+  useEffect(() => {
     if (!router.isReady) return;
-    if (!jobs.length) return;
 
     const selectedJobId = router.query.selectedJobId;
     if (!selectedJobId) return;
 
-    const matchedJob = jobs.find(
-      (job) => String(job.id) === String(selectedJobId)
-    );
+    const matchedJob = jobs.find((job) => String(job.id) === String(selectedJobId));
 
-    if (!matchedJob) return;
-
-    const filteredIndex = filteredJobs.findIndex(
-      (job) => String(job.id) === String(selectedJobId)
-    );
-
-    if (filteredIndex >= 0) {
-      const targetPage = Math.floor(filteredIndex / pageSize) + 1;
-      setCurrentPage(targetPage);
+    if (matchedJob) {
+      setSelectedJob(matchedJob);
+      setUserHasSelected(true);
+      addViewedJob(matchedJob);
+      if (isMobile) setMobileDetailOpen(true);
+      return;
     }
 
-    setSelectedJob(matchedJob);
-    setUserHasSelected(true);
-    addViewedJob(matchedJob);
+    let cancelled = false;
 
-    if (isMobile) {
-      setMobileDetailOpen(true);
+    async function fetchSelectedJob() {
+      try {
+        const res = await fetch(`/api/jobs?jobId=${encodeURIComponent(selectedJobId)}`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const job = data?.job;
+        if (cancelled || !job) return;
+
+        setSelectedJob(job);
+        setUserHasSelected(true);
+        addViewedJob(job);
+        if (isMobile) setMobileDetailOpen(true);
+      } catch (err) {
+        console.error('[Jobs] failed to fetch selected job', err);
+      }
     }
-  }, [
-    router.isReady,
-    router.query.selectedJobId,
-    jobs,
-    filteredJobs,
-    pageSize,
-    isMobile,
-    addViewedJob,
-  ]);
+
+    fetchSelectedJob();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, router.query.selectedJobId, jobs, isMobile, addViewedJob]);
 
   const totalPages = Math.max(1, Math.ceil(totalJobCount / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const pagedJobs = filteredJobs;
-  
+
   useEffect(() => {
-  let cancelled = false;
+    let cancelled = false;
 
-  async function alignVisibleJobs() {
-    if (!pagedJobs.length) return;
+    async function alignVisibleJobs() {
+      if (!pagedJobs.length) return;
 
-    try {
-      const alignRes = await fetch('/api/jobs/alignment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobs: pagedJobs }),
-      });
+      try {
+        const alignRes = await fetch('/api/jobs/alignment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobs: pagedJobs }),
+        });
 
-      if (!alignRes.ok) return;
+        if (!alignRes.ok) return;
 
-      const alignData = await alignRes.json();
-      const alignedJobs = Array.isArray(alignData?.jobs) ? alignData.jobs : [];
+        const alignData = await alignRes.json();
+        const alignedJobs = Array.isArray(alignData?.jobs) ? alignData.jobs : [];
+        if (cancelled || !alignedJobs.length) return;
 
-      if (cancelled || !alignedJobs.length) return;
+        const alignedMap = new Map(alignedJobs.map((job) => [String(job.id), job]));
 
-      const alignedMap = new Map(
-        alignedJobs.map((job) => [String(job.id), job])
-      );
-
-      setJobs((prevJobs) =>
-        prevJobs.map((job) => {
-          const aligned = alignedMap.get(String(job.id));
-          return aligned ? { ...job, ...aligned } : job;
-        })
-      );
-    } catch (alignErr) {
-      console.error('[Jobs] visible alignment load failed', alignErr);
+        setJobs((prevJobs) =>
+          prevJobs.map((job) => {
+            const aligned = alignedMap.get(String(job.id));
+            return aligned ? { ...job, ...aligned } : job;
+          })
+        );
+      } catch (alignErr) {
+        console.error('[Jobs] visible alignment load failed', alignErr);
+      }
     }
-  }
 
-  alignVisibleJobs();
+    alignVisibleJobs();
 
-  return () => {
-    cancelled = true;
-  };
-}, [currentPage, pageSize, filteredJobs.length]);
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPage, pageSize, filteredJobs.length]);
 
-useEffect(() => {
-  if (!selectedJob?.id) return;
-  if (!selectedJobCardRef.current) return;
+  useEffect(() => {
+    if (!selectedJob?.id) return;
+    if (!selectedJobCardRef.current) return;
 
-  selectedJobCardRef.current.scrollIntoView({
-    behavior: 'smooth',
-    block: 'center',
-  });
-}, [selectedJob?.id, currentPage]);
+    selectedJobCardRef.current.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+  }, [selectedJob?.id, currentPage]);
 
   useEffect(() => {
     if (userHasSelected) return;
@@ -573,8 +548,8 @@ useEffect(() => {
     setSourceFilter,
     daysFilter,
     setDaysFilter,
-    filteredCount: filteredJobs.length,
-    totalCount: jobs.length,
+    filteredCount: totalJobCount,
+    totalCount: totalJobCount,
     pageSize,
     setPageSize,
     currentPage,
@@ -583,6 +558,9 @@ useEffect(() => {
     filterOpen,
     setFilterOpen,
     activeFilterCount,
+    onApplyFilters: handleApplyFilters,
+    onApply: handleApplyFilters,
+    onSearch: handleApplyFilters,
     onSavePreferences: handleSaveDashboardPreferences,
     savingPreferences,
     preferenceSaveStatus,
@@ -613,22 +591,22 @@ useEffect(() => {
         <JobSearchFilters isMobile={true} {...filterProps} />
 
         <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600, paddingLeft: 2 }}>
-          Showing {filteredJobs.length === 0 ? 0 : startIndex + 1}–
+          Showing {totalJobCount === 0 ? 0 : startIndex + 1}–
           {Math.min(startIndex + pageSize, totalJobCount)} of {totalJobCount} jobs
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {pagedJobs.map((job) => (
             <div key={job.id} ref={selectedJob?.id === job.id ? selectedJobCardRef : null}>
-  <JobListCard
-    job={job}
-    isSelected={selectedJob?.id === job.id}
-    onClick={() => handleSelectJob(job)}
-    getJobStatus={getJobStatus}
-    isInternalJob={isInternalJob}
-    getJobTier={getJobTier}
-  />
-</div>
+              <JobListCard
+                job={job}
+                isSelected={selectedJob?.id === job.id}
+                onClick={() => handleSelectJob(job)}
+                getJobStatus={getJobStatus}
+                isInternalJob={isInternalJob}
+                getJobTier={getJobTier}
+              />
+            </div>
           ))}
 
           {pagedJobs.length === 0 && (
@@ -693,7 +671,7 @@ useEffect(() => {
       >
         <section aria-label="Job results" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600, padding: '0 2px' }}>
-            {filteredJobs.length === 0
+            {totalJobCount === 0
               ? 'No jobs found'
               : `${startIndex + 1}–${Math.min(startIndex + pageSize, totalJobCount)} of ${totalJobCount}`}
           </div>
@@ -710,15 +688,15 @@ useEffect(() => {
           >
             {pagedJobs.map((job) => (
               <div key={job.id} ref={selectedJob?.id === job.id ? selectedJobCardRef : null}>
-  <JobListCard
-    job={job}
-    isSelected={selectedJob?.id === job.id}
-    onClick={() => handleSelectJob(job)}
-    getJobStatus={getJobStatus}
-    isInternalJob={isInternalJob}
-    getJobTier={getJobTier}
-  />
-</div>
+                <JobListCard
+                  job={job}
+                  isSelected={selectedJob?.id === job.id}
+                  onClick={() => handleSelectJob(job)}
+                  getJobStatus={getJobStatus}
+                  isInternalJob={isInternalJob}
+                  getJobTier={getJobTier}
+                />
+              </div>
             ))}
 
             {pagedJobs.length === 0 && (
