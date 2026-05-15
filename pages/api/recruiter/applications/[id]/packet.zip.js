@@ -570,6 +570,57 @@ const overallSignalScore =
           </View>
         ) : null}
 
+<View
+  style={{
+    backgroundColor: "#F9FAFB",
+    borderRadius: 6,
+    padding: "16 20",
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: "#2563EB",
+  }}
+>
+  <Text
+    style={{
+      fontSize: 10,
+      fontWeight: "bold",
+      color: "#0D1B2A",
+      marginBottom: 10,
+      letterSpacing: 0.5,
+    }}
+  >
+    OVERALL CANDIDATE SIGNAL
+  </Text>
+
+  <Text
+    style={{
+      fontSize: 10,
+      color: "#374151",
+      lineHeight: 1.7,
+      marginBottom: 10,
+    }}
+  >
+    This score reflects the candidate’s combined resume intelligence,
+    transferable capability signal, profile depth, portfolio evidence,
+    recruiter-response readiness, and overall alignment potential for
+    this role.
+  </Text>
+
+  <Text
+    style={{
+      fontSize: 10,
+      color: "#374151",
+      lineHeight: 1.7,
+    }}
+  >
+    ForgeTomorrow evaluates more than keyword overlap. This review
+    considers whether the candidate demonstrates evidence of likely
+    success through adjacent experience, leadership signal,
+    demonstrated execution, project credibility, communication strength,
+    and role-aligned professional positioning.
+  </Text>
+</View>
+
         {whyReasons.length > 0 ? (
           <View style={{ marginBottom: 16 }}>
             <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>SIGNAL BREAKDOWN</Text>
