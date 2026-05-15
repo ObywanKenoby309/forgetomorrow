@@ -582,30 +582,66 @@ const overallSignalScore =
   }}
 >
   <Text
+  style={{
+    fontSize: 10,
+    fontWeight: "bold",
+    color: "#0D1B2A",
+    marginBottom: 10,
+    letterSpacing: 0.5,
+  }}
+>
+  EXECUTIVE SIGNAL INTERPRETATION
+</Text>
+
+<View
+  style={{
+    backgroundColor: "#FFF7ED",
+    borderRadius: 6,
+    padding: "14 16",
+    borderLeftWidth: 4,
+    borderLeftColor: "#FF7043",
+    marginBottom: 14,
+  }}
+>
+  <Text
     style={{
       fontSize: 10,
+      color: "#7C2D12",
+      lineHeight: 1.8,
       fontWeight: "bold",
-      color: "#0D1B2A",
-      marginBottom: 10,
-      letterSpacing: 0.5,
+      marginBottom: 8,
     }}
   >
-    OVERALL CANDIDATE SIGNAL
+    Resume alignment alone may undersell this candidate’s broader operational capability.
   </Text>
 
   <Text
     style={{
-      fontSize: 10,
+      fontSize: 9,
       color: "#374151",
       lineHeight: 1.7,
-      marginBottom: 10,
     }}
   >
-    This score reflects the candidate’s combined resume intelligence,
-    transferable capability signal, profile depth, portfolio evidence,
-    recruiter-response readiness, and overall alignment potential for
-    this role.
+    ForgeTomorrow evaluates candidate viability using both direct alignment evidence and adjacent execution signal.
+    This review incorporates transferable leadership capability, demonstrated operational ownership, communication
+    strength, recruiter-readiness, portfolio credibility, and role-adjacent experience that traditional ATS systems
+    often fail to interpret accurately.
   </Text>
+</View>
+
+<View style={{ marginBottom: 8 }}>
+  <Text style={{ fontSize: 9, color: "#374151", lineHeight: 1.7 }}>
+    • Resume intelligence reflects direct role-alignment evidence and transferable execution signal.
+  </Text>
+
+  <Text style={{ fontSize: 9, color: "#374151", lineHeight: 1.7 }}>
+    • Profile & portfolio signal reflects project credibility, positioning strength, recruiter confidence, and overall professional depth.
+  </Text>
+
+  <Text style={{ fontSize: 9, color: "#374151", lineHeight: 1.7 }}>
+    • Overall candidate signal represents the combined likelihood that the candidate can perform successfully within the target role environment.
+  </Text>
+</View>
 
   <Text
     style={{
