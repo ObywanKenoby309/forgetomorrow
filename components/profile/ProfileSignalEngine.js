@@ -221,29 +221,24 @@ function safeArr(v) {
   return [];
 }
 
-  const classified = classifySignals(mergedProfileData, jobContext);
+  function classifySignals(profileData, jobContext = null) {
   const baseSignals = PROFILE_SIGNALS.map(sig => ({
     ...sig,
     status: sig.check(profileData),
     gapReason: sig.gap(profileData),
   }));
-
   if (!jobContext) return baseSignals;
-
   const jdText = String(
     jobContext?.jobDescription ||
     jobContext?.description ||
     ""
   ).toLowerCase();
-
   const jobTitle = String(
     jobContext?.title ||
     jobContext?.jobTitle ||
     ""
   ).toLowerCase();
-
   if (!jdText && !jobTitle) return baseSignals;
-
   const profileText = [
     profileData?.headline,
     profileData?.aboutMe,
@@ -259,22 +254,16 @@ function safeArr(v) {
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
-
   return baseSignals.map((sig) => {
     if (!profileText) return sig;
-
     if (sig.status === "missing") return sig;
-
     const labelWords = String(sig.label || "")
       .toLowerCase()
       .replace("signal", "")
       .split(/\s+/)
       .filter((w) => w.length >= 4);
-
     const hasJobOverlap = labelWords.some((w) => jdText.includes(w) || jobTitle.includes(w));
-
     if (!hasJobOverlap) return sig;
-
     return {
       ...sig,
       gapReason:
@@ -528,7 +517,7 @@ useEffect(() => {
         ),
     };
 
-    const classified = classifySignals(mergedProfileData);
+    const classified = classifySignals(mergedProfileData, jobContext);
 
     setSignals(classified);
     setVerdict(overallVerdict(classified));
