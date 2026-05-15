@@ -479,8 +479,16 @@ function JobsUI() {
         if (cancelled || !job) return;
 
         setSelectedJob(job);
-        setUserHasSelected(true);
-        addViewedJob(job);
+
+setJobs((prevJobs) => {
+  const exists = prevJobs.some((j) => String(j.id) === String(job.id));
+  if (exists) return prevJobs;
+
+  return [job, ...prevJobs];
+});
+
+setUserHasSelected(true);
+addViewedJob(job);
 
         if (isMobile) {
           setMobileDetailOpen(true);
@@ -567,15 +575,20 @@ useEffect(() => {
   setSelectedJob(refreshedSelectedJob);
 }, [jobs, selectedJob?.id]);
 
-  useEffect(() => {
-    if (!selectedJob?.id) return;
-    if (!selectedJobCardRef.current) return;
+useEffect(() => {
+  if (!selectedJob?.id) return;
 
-    selectedJobCardRef.current.scrollIntoView({
+  const node = selectedJobCardRef.current;
+
+  if (!node || typeof node.scrollIntoView !== 'function') return;
+
+  requestAnimationFrame(() => {
+    node.scrollIntoView({
       behavior: 'smooth',
       block: 'center',
     });
-  }, [selectedJob?.id, currentPage]);
+  });
+}, [selectedJob?.id, currentPage]);
 
   useEffect(() => {
     if (userHasSelected) return;
