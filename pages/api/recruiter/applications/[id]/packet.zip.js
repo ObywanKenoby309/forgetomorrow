@@ -72,6 +72,55 @@ function normalizeResumeTemplateData(raw) {
   return parsed;
 }
 
+function asArray(v) {
+  if (Array.isArray(v)) return v.filter(Boolean);
+  const parsed = safeJsonParse(v);
+  return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+}
+
+function calculateProfileSignalScore({ profile, additionalQuestions = [] }) {
+  let score = 0;
+
+  if (safeString(profile?.headline).trim()) score += 10;
+  if (safeString(profile?.aboutMe).trim().length >= 120) score += 15;
+  if (asArray(profile?.skills).length >= 5) score += 15;
+  if (asArray(profile?.projects).length >= 1) score += 15;
+  if (asArray(profile?.certifications).length >= 1) score += 8;
+  if (asArray(profile?.education).length >= 1) score += 7;
+  if (asArray(profile?.languages).length >= 1) score += 5;
+
+  const prefs = profile?.workPreferences || {};
+  const prefCount = [
+    prefs.workStatus,
+    prefs.workType || prefs.preferredWorkType,
+    prefs.schedule,
+    prefs.willingToRelocate,
+    prefs.startDate || prefs.earliestStartDate,
+    ...(Array.isArray(prefs.locations) ? prefs.locations : []),
+  ].filter(Boolean).length;
+
+  if (prefCount >= 3) score += 10;
+  else if (prefCount >= 1) score += 5;
+
+  if (additionalQuestions.length >= 1) score += 10;
+  if (additionalQuestions.length >= 2) score += 5;
+
+  return Math.min(100, Math.max(0, score));
+}
+
+function calculateOverallForgeScore({ resumeScore, profileSignalScore }) {
+  const hasResume = typeof resumeScore === "number" && Number.isFinite(resumeScore);
+  const hasProfile = typeof profileSignalScore === "number" && Number.isFinite(profileSignalScore);
+
+  if (hasResume && hasProfile) {
+    return Math.round((resumeScore * 0.55) + (profileSignalScore * 0.45));
+  }
+
+  if (hasResume) return Math.round(resumeScore);
+  if (hasProfile) return Math.round(profileSignalScore);
+  return null;
+}
+
 function pickName(user) {
   if (!user) return "";
   return (
@@ -325,7 +374,28 @@ function FullCandidateIntelligencePDF({
   const languages = Array.isArray(profile?.languages) ? profile.languages : safeJsonParse(profile?.languages) || [];
 
   const why = whyResult || forgeAssessment?.result || null;
-  const whyScore = whyResult?.score ?? forgeAssessment?.score ?? null;
+  const resumeIntelligenceScore =
+  whyResult?.resumeScore ??
+  whyResult?.score ??
+  forgeAssessment?.resumeScore ??
+  forgeAssessment?.score ??
+  null;
+
+const profileSignalScore =
+  whyResult?.profileScore ??
+  forgeAssessment?.profileScore ??
+  calculateProfileSignalScore({
+    profile,
+    additionalQuestions: profile?.additionalQuestions || [],
+  });
+
+const overallSignalScore =
+  whyResult?.overallScore ??
+  forgeAssessment?.overallScore ??
+  calculateOverallForgeScore({
+    resumeScore: resumeIntelligenceScore,
+    profileSignalScore,
+  });
   const whySummary = whyResult?.summary || why?.summary || null;
   const whyStrengths = Array.isArray(why?.strengths) ? why.strengths : [];
   const whyGaps = Array.isArray(why?.gaps) ? why.gaps : [];
@@ -334,7 +404,14 @@ function FullCandidateIntelligencePDF({
   const whyInterview = why?.interviewQuestions || null;
   const workPrefs = profile?.workPreferences || {};
 
-  const scoreColor = whyScore === null ? "#6B7280" : whyScore >= 75 ? "#16A34A" : whyScore >= 50 ? "#D97706" : "#DC2626";
+  const scoreColor =
+  overallSignalScore === null
+    ? "#6B7280"
+    : overallSignalScore >= 75
+    ? "#16A34A"
+    : overallSignalScore >= 50
+    ? "#D97706"
+    : "#DC2626";
 
   return (
     <Document>
@@ -351,13 +428,13 @@ function FullCandidateIntelligencePDF({
           <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.40)", marginBottom: 6, letterSpacing: 0.5 }}>ROLE APPLIED FOR</Text>
           <Text style={{ fontSize: 16, color: "#FF7043", fontWeight: "bold", marginBottom: 4 }}>{job?.title || "Position"}</Text>
           {job?.company ? <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.50)", marginBottom: 32 }}>{job.company}</Text> : null}
-          {whyScore !== null ? (
+          {overallSignalScore !== null ? (
             <View style={{ marginTop: 16 }}>
-              <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.40)", marginBottom: 8, letterSpacing: 0.5 }}>FORGETOMORROW ALIGNMENT SCORE</Text>
+              <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.40)", marginBottom: 8, letterSpacing: 0.5 }}>FORGETOMORROW INTELLIGENCE SCORE</Text>
               <View style={{ flexDirection: "row", alignItems: "baseline", gap: 12 }}>
-                <Text style={{ fontSize: 52, fontWeight: "bold", color: scoreColor, lineHeight: 1 }}>{whyScore}%</Text>
+                <Text style={{ fontSize: 52, fontWeight: "bold", color: scoreColor, lineHeight: 1 }}>{overallSignalScore}%</Text>
                 <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.50)" }}>
-                  {whyScore >= 75 ? "Strong Match" : whyScore >= 50 ? "Moderate Match" : "Emerging Match"}
+                  {overallSignalScore >= 75 ? "Strong Match" : overallSignalScore >= 50 ? "Moderate Match" : "Emerging Match"}
                 </Text>
               </View>
             </View>
@@ -371,20 +448,20 @@ function FullCandidateIntelligencePDF({
         </View>
       </Page>
 
-      {/* PAGE 2: ALIGNMENT INTELLIGENCE */}
+      {/* PAGE 2: Forge Intelligence Review */}
       <Page size="LETTER" style={aiStyles.page}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: "#FF7043" }}>
-          <Text style={{ fontSize: 14, fontWeight: "bold", color: "#0D1B2A" }}>Alignment Intelligence</Text>
+          <Text style={{ fontSize: 14, fontWeight: "bold", color: "#0D1B2A" }}>Forge Intelligence Review</Text>
           <Text style={{ fontSize: 9, color: "#9CA3AF" }}>{candidateName} • ForgeTomorrow</Text>
         </View>
 
-        {whyScore !== null ? (
+        {overallSignalScore !== null ? (
           <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "16 20", marginBottom: 20, borderLeftWidth: 4, borderLeftColor: scoreColor }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 8 }}>
-              <Text style={{ fontSize: 40, fontWeight: "bold", color: scoreColor, lineHeight: 1 }}>{whyScore}%</Text>
+              <Text style={{ fontSize: 40, fontWeight: "bold", color: scoreColor, lineHeight: 1 }}>{overallSignalScore}%</Text>
               <View>
                 <Text style={{ fontSize: 13, fontWeight: "bold", color: "#0D1B2A" }}>
-                  {whyScore >= 75 ? "Strong Match" : whyScore >= 50 ? "Moderate Match" : "Emerging Match"}
+                  {overallSignalScore >= 75 ? "Strong Match" : overallSignalScore >= 50 ? "Moderate Match" : "Emerging Match"}
                 </Text>
                 <Text style={{ fontSize: 9, color: "#6B7280" }}>ForgeTomorrow Alignment Score</Text>
               </View>
@@ -396,6 +473,28 @@ function FullCandidateIntelligencePDF({
             <Text style={{ fontSize: 10, color: "#6B7280" }}>Run the alignment score from the applicant pipeline to populate this section.</Text>
           </View>
         )}
+
+<View style={{ flexDirection: "row", gap: 16, marginBottom: 20 }}>
+  <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 6, padding: "14 16", borderLeftWidth: 4, borderLeftColor: "#FF7043" }}>
+    <Text style={{ fontSize: 8, color: "#6B7280", marginBottom: 4 }}>RESUME INTELLIGENCE SCORE</Text>
+    <Text style={{ fontSize: 28, fontWeight: "bold", color: "#0D1B2A" }}>
+      {resumeIntelligenceScore ?? "--"}%
+    </Text>
+    <Text style={{ fontSize: 8, color: "#6B7280" }}>
+      Resume evidence, alignment, gaps, and transferable skill signal.
+    </Text>
+  </View>
+
+  <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 6, padding: "14 16", borderLeftWidth: 4, borderLeftColor: "#16A34A" }}>
+    <Text style={{ fontSize: 8, color: "#6B7280", marginBottom: 4 }}>PROFILE & PORTFOLIO SIGNAL</Text>
+    <Text style={{ fontSize: 28, fontWeight: "bold", color: "#0D1B2A" }}>
+      {profileSignalScore ?? "--"}%
+    </Text>
+    <Text style={{ fontSize: 8, color: "#6B7280" }}>
+      Profile depth, projects, preferences, credentials, and recruiter response signal.
+    </Text>
+  </View>
+</View>
 
         {(whyStrengths.length > 0 || whyGaps.length > 0) ? (
           <View style={{ flexDirection: "row", gap: 16, marginBottom: 20 }}>
@@ -819,17 +918,18 @@ export default async function handler(req, res) {
 // 5) ForgeTomorrow Candidate Alignment Review
     {
       const profile = {
-        headline: app.user?.headline || "",
-        aboutMe: app.user?.aboutMe || "",
-        skills: app.user?.skillsJson || [],
-        languages: app.user?.languagesJson || [],
-        education: app.user?.educationJson || [],
-        certifications: app.user?.certificationsJson || [],
-        projects: app.user?.projectsJson || [],
-        workPreferences: app.user?.workPreferences || {},
-        profileVisibility: app.user?.profileVisibility || "",
-        location: app.user?.location || "",
-      };
+  headline: app.user?.headline || "",
+  aboutMe: app.user?.aboutMe || "",
+  skills: app.user?.skillsJson || [],
+  languages: app.user?.languagesJson || [],
+  education: app.user?.educationJson || [],
+  certifications: app.user?.certificationsJson || [],
+  projects: app.user?.projectsJson || [],
+  workPreferences: app.user?.workPreferences || {},
+  profileVisibility: app.user?.profileVisibility || "",
+  location: app.user?.location || "",
+  additionalQuestions: additionalAnswers,
+};
       const intelligenceDoc = (
         <FullCandidateIntelligencePDF
           candidateName={candidateName}
