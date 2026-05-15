@@ -76,10 +76,10 @@ export default function CheckMyFit({ job, onImproveResume }) {
           : 'ForgeTomorrow could not detect strong alignment signals for this opportunity yet.';
 
       const primaryGap =
-        gaps[0] ||
-        (score < 60
-          ? 'Your current profile does not yet demonstrate enough direct evidence for this role.'
-          : '');
+  gaps[0] ||
+  (score < 60
+    ? 'Your profile shows transferable capability signals, though some role-specific evidence is currently limited.'
+    : '');
 
       setResult({
         score,
