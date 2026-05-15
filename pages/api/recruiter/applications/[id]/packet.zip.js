@@ -397,6 +397,7 @@ function FullCandidateIntelligencePDF({
   const education = Array.isArray(profile?.education) ? profile.education : safeJsonParse(profile?.education) || [];
   const certifications = Array.isArray(profile?.certifications) ? profile.certifications : safeJsonParse(profile?.certifications) || [];
   const languages = Array.isArray(profile?.languages) ? profile.languages : safeJsonParse(profile?.languages) || [];
+  const additionalQuestions = Array.isArray(profile?.additionalQuestions) ? profile.additionalQuestions : [];
 
   const why = whyResult || forgeAssessment?.result || null;
   const resumeIntelligenceScore =
@@ -619,6 +620,62 @@ const overallSignalScore =
     demonstrated execution, project credibility, communication strength,
     and role-aligned professional positioning.
   </Text>
+</View>
+
+<View style={{ marginTop: 14 }}>
+  {[
+    resumeIntelligenceScore >= 70
+      ? "Strong resume evidence supporting role alignment."
+      : resumeIntelligenceScore >= 50
+      ? "Resume shows partial alignment with opportunities for stronger positioning."
+      : "Resume alignment alone may undersell the candidate’s broader capabilities.",
+
+    profileSignalScore >= 70
+      ? "Profile and portfolio depth strengthen recruiter confidence."
+      : profileSignalScore >= 50
+      ? "Profile contains supporting signals that improve overall evaluation."
+      : "Limited portfolio or profile depth reduces visible recruiter signal.",
+
+    whyTransferable.length > 0
+      ? "Transferable skills and adjacent experience expand role-fit potential."
+      : "Direct transferable signal evidence was limited in this review.",
+
+    additionalQuestions?.length > 0
+      ? "Candidate responses to employer questions contributed additional context."
+      : "No additional employer-response context was available for scoring.",
+  ].map((line, i) => (
+    <View
+      key={i}
+      style={{
+        flexDirection: "row",
+        alignItems: "flex-start",
+        marginBottom: 6,
+      }}
+    >
+      <View
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+          backgroundColor: "#2563EB",
+          marginTop: 4,
+          marginRight: 8,
+          flexShrink: 0,
+        }}
+      />
+
+      <Text
+        style={{
+          fontSize: 9,
+          color: "#374151",
+          flex: 1,
+          lineHeight: 1.6,
+        }}
+      >
+        {line}
+      </Text>
+    </View>
+  ))}
 </View>
 
         {whyReasons.length > 0 ? (
