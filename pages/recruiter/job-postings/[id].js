@@ -10,6 +10,7 @@ import WHYScoreInfo from "@/components/ai/WHYScoreInfo";
 
 // ✅ NEW: Reuse the same WHY UI (consistent with drawer experience)
 import { WhyCandidateInline } from "@/components/recruiter/WhyCandidateDrawer";
+import CandidateProfileModal from "@/components/recruiter/CandidateProfileModal";
 
 function formatDateTime(v) {
   if (!v) return "—";
@@ -544,7 +545,7 @@ function AlignmentModal({ open, onClose, state, onViewFullWhy }) {
   );
 }
 
-function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetails, whyState }) {
+function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetails, whyState, onOpenFullCandidate }) {
   const [loading, setLoading] = useState(false);
   const [packet, setPacket] = useState(null);
   const [error, setError] = useState(null);
@@ -720,15 +721,10 @@ const [whyShowDetails, setWhyShowDetails] = useState(autoOpenWhyDetails || false
                 {whyShowDetails && whyData ? (
                   <div className="mt-3 space-y-3">
 					<WhyCandidateInline explain={whyData} mode="full" title="Why this candidate" onViewCandidate={() => {
-    if (!candidate?.id) return;
-
-    const params = new URLSearchParams({
-      candidateId: String(candidate.id),
-    });
-
-    if (job?.id) params.set("jobId", String(job.id));
-
-    window.location.href = `/recruiter/candidates?${params.toString()}`;
+    const uid = candidate?.userId || candidate?.id;
+    if (!uid) return;
+    onClose();
+    onOpenFullCandidate?.(uid);
   }}
 />
                     <details className="rounded border p-3">
@@ -1596,6 +1592,9 @@ export default function RecruiterJobApplicantsPage() {
   
   const [addCandidateOpen, setAddCandidateOpen] = useState(false);
   const [addError, setAddError]                 = useState(null);
+  const [fullCandidateData, setFullCandidateData] = useState(null);
+  const [fullCandidateLoading, setFullCandidateLoading] = useState(false);
+
 
   useEffect(() => {
     let alive = true;
@@ -1886,6 +1885,36 @@ export default function RecruiterJobApplicantsPage() {
   setApps((prev) => [normalized, ...prev]);
 }
 
+async function openFullCandidate(candidateUserId) {
+    if (!candidateUserId) return;
+    setFullCandidateLoading(true);
+    try {
+      const res = await fetch(`/api/recruiter/candidates/${candidateUserId}`);
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json?.candidate) {
+        setFullCandidateData(json.candidate);
+      } else {
+        setFullCandidateData({
+          id: candidateUserId, userId: candidateUserId,
+          name: openPacketCandidate?.name || openAlignCandidate?.name || "Candidate",
+          title: "", location: "", summary: "", skills: [], languages: [],
+          education: [], experience: [], tags: [], notes: "",
+          workPreferences: {}, activity: [], journey: [],
+        });
+      }
+    } catch {
+      setFullCandidateData({
+        id: candidateUserId, userId: candidateUserId,
+        name: openPacketCandidate?.name || openAlignCandidate?.name || "Candidate",
+        title: "", location: "", summary: "", skills: [], languages: [],
+        education: [], experience: [], tags: [], notes: "",
+        workPreferences: {}, activity: [], journey: [],
+      });
+    } finally {
+      setFullCandidateLoading(false);
+    }
+  }
+
   const headerRight = (
     <div className="flex items-center justify-center gap-2 flex-wrap">
       <div className="inline-flex rounded-xl border bg-white/90 overflow-hidden shadow-sm">
@@ -2147,8 +2176,9 @@ export default function RecruiterJobApplicantsPage() {
             applicationId={openPacketAppId}
             job={job}
             candidate={openPacketCandidate}
-			whyState={whyByAppId?.[openPacketAppId]}
+            whyState={whyByAppId?.[openPacketAppId]}
             autoOpenWhyDetails={openPacketAutoWhy}
+            onOpenFullCandidate={(uid) => openFullCandidate(uid)}
             onClose={() => {
               setOpenPacketAppId(null);
               setOpenPacketCandidate(null);
@@ -2156,6 +2186,46 @@ export default function RecruiterJobApplicantsPage() {
             }}
           />
         ) : null}
+		
+		{fullCandidateData && (
+        <CandidateProfileModal
+          open={true}
+          onClose={() => setFullCandidateData(null)}
+          candidate={fullCandidateData}
+          onSaveNotes={async (id, text) => {
+            try {
+              await fetch("/api/recruiter/candidates/notes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ candidateId: id, notes: text }),
+              });
+            } catch (e) {
+              console.error("[fullCandidate] notes save error:", e);
+            }
+          }}
+          onToggleTag={async (id, tag) => {
+            try {
+              const current = Array.isArray(fullCandidateData?.tags) ? fullCandidateData.tags : [];
+              const has = current.includes(tag);
+              const next = has ? current.filter((t) => t !== tag) : [...current, tag];
+              await fetch("/api/recruiter/candidates/tags", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ candidateId: id, tags: next }),
+              });
+            } catch (e) {
+              console.error("[fullCandidate] tag toggle error:", e);
+            }
+          }}
+        />
+      )}
+      {fullCandidateLoading && (
+        <div className="fixed inset-0 z-[10010] flex items-center justify-center bg-black/30">
+          <div className="rounded-xl bg-white px-6 py-4 text-sm font-medium text-slate-700 shadow-lg">
+            Loading candidate…
+          </div>
+        </div>
+      )}
 		
 		{addCandidateOpen && jobId ? (
   <AddCandidateModal
