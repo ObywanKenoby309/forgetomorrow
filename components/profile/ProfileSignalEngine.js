@@ -221,7 +221,7 @@ function safeArr(v) {
   return [];
 }
 
-function classifySignals(profileData) {
+  const classified = classifySignals(mergedProfileData, jobContext);
   const baseSignals = PROFILE_SIGNALS.map(sig => ({
     ...sig,
     status: sig.check(profileData),
