@@ -509,7 +509,7 @@ const overallSignalScore =
 <View style={{ flexDirection: "row", gap: 16, marginBottom: 20 }}>
   <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 6, padding: "14 16", borderLeftWidth: 4, borderLeftColor: "#FF7043" }}>
     <Text style={{ fontSize: 8, color: "#6B7280", marginBottom: 4 }}>RESUME INTELLIGENCE SCORE</Text>
-	<Text style={{ fontSize: 34, fontWeight: "bold", color: "#0D1B2A", marginBottom: 12, }}>
+	<Text style={{ fontSize: 34, fontWeight: "bold", color: "#0D1B2A", marginBottom: 18, }}>
       {resumeIntelligenceScore ?? "--"}
     </Text>
 
@@ -520,7 +520,7 @@ const overallSignalScore =
 
   <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 6, padding: "14 16", borderLeftWidth: 4, borderLeftColor: "#16A34A" }}>
     <Text style={{ fontSize: 8, color: "#6B7280", marginBottom: 4 }}>PROFILE & PORTFOLIO SIGNAL</Text>
-	<View style={{ flexDirection: "row", alignItems: "flex-end", marginBottom: 12 }}>
+	<View style={{ flexDirection: "row", alignItems: "flex-end", marginBottom: 18 }}>
   <Text style={{ fontSize: 34, fontWeight: "bold", color: "#0D1B2A" }}>
     {profileSignalScore ?? "--"}
   </Text>
