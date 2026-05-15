@@ -571,6 +571,116 @@ const overallSignalScore =
           </View>
         ) : null}
 
+<View style={{ marginBottom: 20 }}>
+  <Text
+    style={{
+      fontSize: 10,
+      fontWeight: "bold",
+      color: "#0D1B2A",
+      marginBottom: 8,
+      letterSpacing: 0.5,
+    }}
+  >
+    PROFILE & PORTFOLIO SIGNALS
+  </Text>
+
+  {[
+    {
+      label: "Professional Identity",
+      status:
+        profile?.headline && profile?.headline.length > 30
+          ? "Strong"
+          : "Needs Improvement",
+      explanation:
+        profile?.headline && profile?.headline.length > 30
+          ? "Candidate positioning and professional identity are clearly communicated."
+          : "Profile headline lacks enough positioning clarity for recruiters.",
+    },
+
+    {
+      label: "Professional Narrative",
+      status:
+        profile?.aboutMe && profile?.aboutMe.length > 250
+          ? "Strong"
+          : "Partial",
+      explanation:
+        profile?.aboutMe && profile?.aboutMe.length > 250
+          ? "Candidate summary provides meaningful context, direction, and value signal."
+          : "Professional summary exists but could better explain measurable value and positioning.",
+    },
+
+    {
+      label: "Project & Portfolio Credibility",
+      status:
+        projects.length >= 2
+          ? "Strong"
+          : projects.length >= 1
+          ? "Moderate"
+          : "Limited",
+      explanation:
+        projects.length >= 2
+          ? "Projects provide visible proof of execution and applied experience."
+          : projects.length >= 1
+          ? "Some portfolio signal exists, but depth is limited."
+          : "No visible project or portfolio proof detected.",
+    },
+
+    {
+      label: "Recruiter Readiness",
+      status:
+        additionalQuestions.length > 0
+          ? "Strong"
+          : "Moderate",
+      explanation:
+        additionalQuestions.length > 0
+          ? "Candidate provided additional employer-specific context and intent."
+          : "Limited employer-specific context available.",
+    },
+  ].map((signal, i) => {
+    const color =
+      signal.status === "Strong"
+        ? "#16A34A"
+        : signal.status === "Moderate" || signal.status === "Partial"
+        ? "#D97706"
+        : "#DC2626";
+
+    return (
+      <View
+        key={i}
+        style={{
+          backgroundColor: "#F9FAFB",
+          borderRadius: 4,
+          padding: "8 12",
+          marginBottom: 6,
+          borderLeftWidth: 3,
+          borderLeftColor: color,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 9,
+            fontWeight: "bold",
+            color: "#0D1B2A",
+            marginBottom: 3,
+          }}
+        >
+          {signal.label} · {signal.status}
+        </Text>
+
+        <Text
+          style={{
+            fontSize: 8,
+            color: "#6B7280",
+            lineHeight: 1.45,
+          }}
+        >
+          {signal.explanation}
+        </Text>
+      </View>
+    );
+  })}
+</View>
+
 <View
   style={{
     backgroundColor: "#F9FAFB",
