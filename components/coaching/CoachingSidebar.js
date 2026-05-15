@@ -217,7 +217,7 @@ export default function CoachingSidebar({
       {/* Profile + Dashboard */}
       <NavItem
         href={resolvedProfileHref}
-        label="Profile"
+        label="Portfolio"
         active={active === 'profile'}
       />
       <NavItem

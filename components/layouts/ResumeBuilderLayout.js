@@ -52,6 +52,44 @@ export default function ResumeBuilderLayout({
   const { isLoaded: planLoaded, plan, role } = usePlan();
 
   const [chromeMode, setChromeMode] = useState(() => normalizeChrome(forceChrome) || 'seeker');
+  const [profileSlug, setProfileSlug] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadProfileSlug = async () => {
+      try {
+        const res = await fetch('/api/profile/details', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!alive) return;
+
+        const nextSlug =
+          data?.user?.slug ||
+          data?.details?.slug ||
+          data?.slug ||
+          '';
+
+        if (nextSlug) {
+          setProfileSlug(String(nextSlug));
+        }
+      } catch {
+        // no-op
+      }
+    };
+
+    loadProfileSlug();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!router?.isReady) return;
@@ -110,14 +148,14 @@ export default function ResumeBuilderLayout({
   const { SidebarComp, sidebarProps } = useMemo(() => {
     switch (chromeMode) {
       case 'coach':
-        return { SidebarComp: CoachingSidebar, sidebarProps: { active: 'resume-cover' } };
+        return { SidebarComp: CoachingSidebar, sidebarProps: { active: 'resume-cover', profileSlug } };
       case 'recruiter-smb':
       case 'recruiter-ent':
-        return { SidebarComp: RecruiterSidebar, sidebarProps: { active: 'resume-cover' } };
+        return { SidebarComp: RecruiterSidebar, sidebarProps: { active: 'resume-cover', profileSlug } };
       default:
-        return { SidebarComp: SeekerSidebar, sidebarProps: { active: 'resume-cover', counts: seekerCounts } };
+        return { SidebarComp: SeekerSidebar, sidebarProps: { active: 'resume-cover', counts: seekerCounts, profileSlug } };
     }
-  }, [chromeMode, seekerCounts]);
+  }, [chromeMode, seekerCounts, profileSlug]);
 
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -260,7 +298,7 @@ export default function ResumeBuilderLayout({
                 ×
               </button>
             </div>
-            <SeekerSidebar active="resume-cover" counts={seekerCounts} />
+            <SidebarComp {...sidebarProps} />
           </div>
         </div>
       )}

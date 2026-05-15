@@ -122,7 +122,45 @@ export default function CandidateCenterLayout({
 
   const [isMobile, setIsMobile] = useState(true);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+  const [profileSlug, setProfileSlug] = useState('');
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadProfileSlug = async () => {
+      try {
+        const res = await fetch('/api/profile/details', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!alive) return;
+
+        const nextSlug =
+          data?.user?.slug ||
+          data?.details?.slug ||
+          data?.slug ||
+          '';
+
+        if (nextSlug) {
+          setProfileSlug(String(nextSlug));
+        }
+      } catch {
+        // no-op
+      }
+    };
+
+    loadProfileSlug();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -278,7 +316,7 @@ export default function CandidateCenterLayout({
               transition: 'opacity 0.25s ease',
             }}
           >
-            {left ?? <RecruiterSidebar active={activeNav} variant={recruiterVariant} counts={counts} />}
+            {left ?? <RecruiterSidebar active={activeNav} variant={recruiterVariant} counts={counts} profileSlug={profileSlug} />}
           </aside>
 
           {hasHeader ? (
@@ -375,7 +413,7 @@ export default function CandidateCenterLayout({
                 ×
               </button>
             </div>
-            {left ?? <RecruiterSidebar active={activeNav} variant={recruiterVariant} counts={counts} />}
+            {left ?? <RecruiterSidebar active={activeNav} variant={recruiterVariant} counts={counts} profileSlug={profileSlug} />}
           </div>
         </div>
       )}

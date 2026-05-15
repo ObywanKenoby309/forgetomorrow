@@ -57,6 +57,44 @@ export default function JobsLayout({
 
   const [isMobile, setIsMobile] = useState(false);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+  const [profileSlug, setProfileSlug] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadProfileSlug = async () => {
+      try {
+        const res = await fetch('/api/profile/details', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!alive) return;
+
+        const nextSlug =
+          data?.user?.slug ||
+          data?.details?.slug ||
+          data?.slug ||
+          '';
+
+        if (nextSlug) {
+          setProfileSlug(String(nextSlug));
+        }
+      } catch {
+        // no-op
+      }
+    };
+
+    loadProfileSlug();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -100,28 +138,28 @@ export default function JobsLayout({
         return {
           HeaderComp: CoachingHeader,
           SidebarComp: CoachingSidebar,
-          sidebarProps: { active: activeNav },
+          sidebarProps: { active: activeNav, profileSlug },
         };
       case 'recruiter-smb':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { active: activeNav, variant: 'smb' },
+          sidebarProps: { active: activeNav, variant: 'smb', profileSlug },
         };
       case 'recruiter-ent':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { active: activeNav, variant: 'enterprise' },
+          sidebarProps: { active: activeNav, variant: 'enterprise', profileSlug },
         };
       default:
         return {
           HeaderComp: SeekerHeader,
           SidebarComp: SeekerSidebar,
-          sidebarProps: { active: activeNav },
+          sidebarProps: { active: activeNav, profileSlug },
         };
     }
-  }, [chromeMode, activeNav]);
+  }, [chromeMode, activeNav, profileSlug]);
 
   const { wallpaperUrl } = useUserWallpaper();
 

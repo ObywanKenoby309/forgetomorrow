@@ -197,7 +197,7 @@ export default function SeekerSidebar({
       }}
     >
       {/* Profile */}
-      <NavItem href={resolvedProfileHref} label="Profile" active={active === 'profile'} />
+      <NavItem href={resolvedProfileHref} label="Portfolio" active={active === 'profile'} />
 
       {/* Dashboard */}
       <NavItem

@@ -224,7 +224,7 @@ export default function RecruiterSidebar({
     >
       <NavItem
         href={resolvedProfileHref}
-        label="Profile"
+        label="Portfolio"
         active={active === 'profile'}
       />
       <NavItem
