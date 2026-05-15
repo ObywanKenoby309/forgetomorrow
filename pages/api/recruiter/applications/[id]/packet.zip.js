@@ -386,17 +386,12 @@ function FullCandidateIntelligencePDF({
               <Text style={aiStyles.qLabel}>
                 {typeof p === "string"
                   ? `Project ${i + 1}`
-                  : safeString(p?.title || `Project ${i + 1}`)}
+                  : safeString(p?.name || p?.title || `Project ${i + 1}`)}
               </Text>
-
               <Text style={aiStyles.qValue}>
                 {typeof p === "string"
                   ? p
-                  : safeString(
-                      p?.description ||
-                      p?.outcome ||
-                      ""
-                    )}
+                  : safeString(p?.notes || p?.description || p?.outcome || "")}
               </Text>
             </View>
           ))
@@ -458,7 +453,15 @@ function FullCandidateIntelligencePDF({
 
         <Text style={aiStyles.qValue}>
           {profile?.workPreferences
-            ? JSON.stringify(profile.workPreferences, null, 2)
+            ? [
+                profile.workPreferences.workStatus ? `Status: ${profile.workPreferences.workStatus}` : null,
+                profile.workPreferences.workType ? `Work type: ${profile.workPreferences.workType}` : null,
+                profile.workPreferences.schedule ? `Schedule: ${profile.workPreferences.schedule}` : null,
+                profile.workPreferences.willingToRelocate ? `Willing to relocate: ${profile.workPreferences.willingToRelocate}` : null,
+                Array.isArray(profile.workPreferences.locations) && profile.workPreferences.locations.length
+                  ? `Preferred locations: ${profile.workPreferences.locations.join(", ")}` : null,
+                profile.workPreferences.startDate ? `Earliest start: ${profile.workPreferences.startDate}` : null,
+              ].filter(Boolean).join("\n")
             : "No work preferences configured"}
         </Text>
 
