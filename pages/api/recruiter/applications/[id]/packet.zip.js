@@ -62,6 +62,16 @@ function safeJsonParse(maybeJson) {
   }
 }
 
+function normalizeResumeTemplateData(raw) {
+  const parsed = safeJsonParse(raw);
+  if (!parsed || typeof parsed !== "object") return null;
+
+  if (parsed.data && typeof parsed.data === "object") return parsed.data;
+  if (parsed.resume && typeof parsed.resume === "object") return parsed.resume;
+
+  return parsed;
+}
+
 function pickName(user) {
   if (!user) return "";
   return (
@@ -731,7 +741,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "Resume not found" });
     }
 
-    const resumeData = safeJsonParse(app.resume.content);
+    const resumeData = normalizeResumeTemplateData(app.resume.content);
     if (!resumeData) {
       return res.status(400).json({ error: "Resume content is not valid JSON" });
     }
