@@ -1236,7 +1236,7 @@ async function bestEffortPersistRun({
         candidateUserId: candidateUserId || null,
         externalName: externalName || null,
         externalEmail: externalEmail || null,
-        jobDescriptionText,
+        jobDescription: jobDescriptionText || "",
         resumeText,
         score: typeof result?.score === "number" ? result.score : null,
         summary: result?.summary || null,

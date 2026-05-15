@@ -1155,6 +1155,11 @@ model RecruiterExplainRun {
   createdAt       DateTime @default(now())
   candidate       User?    @relation("RecruiterExplainRunsAsCandidate", fields: [candidateUserId], references: [id])
   recruiter       User     @relation("RecruiterExplainRunsAsRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  applicationId   Int?
+  externalName    String?
+  externalEmail   String?
+  score           Int?
+  summary         String?
 
   @@index([recruiterUserId])
   @@index([candidateUserId])
