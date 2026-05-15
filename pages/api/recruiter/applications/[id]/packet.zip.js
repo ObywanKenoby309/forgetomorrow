@@ -8,8 +8,8 @@ import { pdf, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer
 import JSZip from "jszip";
 
 import CoverLetterTemplatePDF from "@/components/cover-letter/CoverLetterTemplatePDF";
-import HybridResumeTemplatePDF from "@/components/resume-form/templates/HybridResumeTemplate.pdf";
-import ReverseResumeTemplatePDF from "@/components/resume-form/templates/ReverseResumeTemplate.pdf";
+import HybridResumeTemplatePDF from "@/components/resume-form/templates/HybridResumeTemplate.pdf.js";
+import ReverseResumeTemplatePDF from "@/components/resume-form/templates/ReverseResumeTemplate.pdf.js";
 
 function toInt(val) {
   const n = Number(val);
@@ -562,20 +562,16 @@ export default async function handler(req, res) {
     firstName: true,
     lastName: true,
     email: true,
-    profile: {
-      select: {
-        headline: true,
-        aboutMe: true,
-        skills: true,
-        languages: true,
-        education: true,
-        certifications: true,
-        projects: true,
-        workPreferences: true,
-        profileVisibility: true,
-        location: true,
-      },
-    },
+    headline: true,
+    aboutMe: true,
+    skillsJson: true,
+    languagesJson: true,
+    educationJson: true,
+    certificationsJson: true,
+    projectsJson: true,
+    workPreferences: true,
+    profileVisibility: true,
+    location: true,
   },
 },
         resume: { select: { id: true, name: true, content: true } },
@@ -731,7 +727,18 @@ export default async function handler(req, res) {
 
     // 5) Full Candidate Intelligence Report
     {
-      const profile = app.user?.profile || {};
+      const profile = {
+  headline: app.user?.headline || "",
+  aboutMe: app.user?.aboutMe || "",
+  skills: app.user?.skillsJson || [],
+  languages: app.user?.languagesJson || [],
+  education: app.user?.educationJson || [],
+  certifications: app.user?.certificationsJson || [],
+  projects: app.user?.projectsJson || [],
+  workPreferences: app.user?.workPreferences || {},
+  profileVisibility: app.user?.profileVisibility || "",
+  location: app.user?.location || "",
+};
 
       const intelligenceDoc = (
         <FullCandidateIntelligencePDF
