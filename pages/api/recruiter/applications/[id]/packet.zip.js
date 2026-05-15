@@ -161,6 +161,14 @@ const aiStyles = StyleSheet.create({
   muted: { color: "#6b7280" },
   pre: { fontSize: 9, color: "#111827" },
   divider: { marginTop: 10, marginBottom: 10, borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
+scoreColor: { color: "#16A34A" },
+  projectCard: { backgroundColor: "#F9FAFB", borderRadius: 4, padding: "10 12", marginBottom: 6, borderLeftWidth: 3, borderLeftColor: "#FF7043" },
+  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 },
+  chip: { backgroundColor: "#F3F4F6", borderRadius: 3, padding: "3 8" },
+  twoCol: { flexDirection: "row", gap: 20, marginBottom: 20 },
+  prefBox: { backgroundColor: "#F9FAFB", borderRadius: 6, padding: "12 14" },
+  prefLine: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: "#E5E7EB" },
+  pageHdr: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: "#FF7043" },
 });
 
 function AdditionalInfoPDF({
@@ -298,204 +306,255 @@ function FullCandidateIntelligencePDF({
   profile,
   job,
   forgeAssessment,
+  whyResult,
 }) {
-  const skills =
-    Array.isArray(profile?.skills)
-      ? profile.skills
-      : safeJsonParse(profile?.skills) || [];
+  const skills = Array.isArray(profile?.skills) ? profile.skills : safeJsonParse(profile?.skills) || [];
+  const projects = Array.isArray(profile?.projects) ? profile.projects : safeJsonParse(profile?.projects) || [];
+  const education = Array.isArray(profile?.education) ? profile.education : safeJsonParse(profile?.education) || [];
+  const certifications = Array.isArray(profile?.certifications) ? profile.certifications : safeJsonParse(profile?.certifications) || [];
+  const languages = Array.isArray(profile?.languages) ? profile.languages : safeJsonParse(profile?.languages) || [];
 
-  const projects =
-    Array.isArray(profile?.projects)
-      ? profile.projects
-      : safeJsonParse(profile?.projects) || [];
+  const why = whyResult || forgeAssessment?.result || null;
+  const whyScore = whyResult?.score ?? forgeAssessment?.score ?? null;
+  const whySummary = whyResult?.summary || why?.summary || null;
+  const whyStrengths = Array.isArray(why?.strengths) ? why.strengths : [];
+  const whyGaps = Array.isArray(why?.gaps) ? why.gaps : [];
+  const whyTransferable = Array.isArray(why?.skills?.transferable) ? why.skills.transferable : [];
+  const whyReasons = Array.isArray(why?.reasons) ? why.reasons : [];
+  const whyInterview = why?.interviewQuestions || null;
+  const workPrefs = profile?.workPreferences || {};
 
-  const education =
-    Array.isArray(profile?.education)
-      ? profile.education
-      : safeJsonParse(profile?.education) || [];
-
-  const certifications =
-    Array.isArray(profile?.certifications)
-      ? profile.certifications
-      : safeJsonParse(profile?.certifications) || [];
-
-  const languages =
-    Array.isArray(profile?.languages)
-      ? profile.languages
-      : safeJsonParse(profile?.languages) || [];
+  const scoreColor = whyScore === null ? "#6B7280" : whyScore >= 75 ? "#16A34A" : whyScore >= 50 ? "#D97706" : "#DC2626";
 
   return (
     <Document>
+      {/* COVER PAGE */}
+      <Page size="LETTER" style={{ padding: 0, fontFamily: "Helvetica", backgroundColor: "#0D1B2A" }}>
+        <View style={{ height: 8, backgroundColor: "#FF7043" }} />
+        <View style={{ padding: 48 }}>
+          <Text style={{ fontSize: 10, color: "#FF7043", fontWeight: "bold", letterSpacing: 1, marginBottom: 48 }}>FORGETOMORROW</Text>
+          <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.50)", letterSpacing: 2, marginBottom: 16 }}>CANDIDATE ALIGNMENT REVIEW</Text>
+          <Text style={{ fontSize: 32, fontWeight: "bold", color: "#FFFFFF", marginBottom: 8 }}>{candidateName}</Text>
+          {profile?.headline ? <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", marginBottom: 4 }}>{profile.headline}</Text> : null}
+          {candidateEmail ? <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.40)", marginBottom: 32 }}>{candidateEmail}</Text> : null}
+          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.12)", marginBottom: 32 }} />
+          <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.40)", marginBottom: 6, letterSpacing: 0.5 }}>ROLE APPLIED FOR</Text>
+          <Text style={{ fontSize: 16, color: "#FF7043", fontWeight: "bold", marginBottom: 4 }}>{job?.title || "Position"}</Text>
+          {job?.company ? <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.50)", marginBottom: 32 }}>{job.company}</Text> : null}
+          {whyScore !== null ? (
+            <View style={{ marginTop: 16 }}>
+              <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.40)", marginBottom: 8, letterSpacing: 0.5 }}>FORGETOMORROW ALIGNMENT SCORE</Text>
+              <View style={{ flexDirection: "row", alignItems: "baseline", gap: 12 }}>
+                <Text style={{ fontSize: 52, fontWeight: "bold", color: scoreColor, lineHeight: 1 }}>{whyScore}%</Text>
+                <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.50)" }}>
+                  {whyScore >= 75 ? "Strong Match" : whyScore >= 50 ? "Moderate Match" : "Emerging Match"}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+          <View style={{ position: "absolute", bottom: 48, left: 48, right: 48 }}>
+            <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginBottom: 12 }} />
+            <Text style={{ fontSize: 8, color: "rgba(255,255,255,0.25)", lineHeight: 1.6 }}>
+              Confidential. For authorized recruiter use only. ForgeTomorrow signal analysis is AI-assisted and not a hiring decision. Self-identification excluded.
+            </Text>
+          </View>
+        </View>
+      </Page>
+
+      {/* PAGE 2: ALIGNMENT INTELLIGENCE */}
       <Page size="LETTER" style={aiStyles.page}>
-        <Text style={aiStyles.title}>
-          Full Candidate Intelligence Report
-        </Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: "#FF7043" }}>
+          <Text style={{ fontSize: 14, fontWeight: "bold", color: "#0D1B2A" }}>Alignment Intelligence</Text>
+          <Text style={{ fontSize: 9, color: "#9CA3AF" }}>{candidateName} • ForgeTomorrow</Text>
+        </View>
 
-        <Text style={aiStyles.subtitle}>
-          {candidateName}
-          {candidateEmail ? ` • ${candidateEmail}` : ""}
-          {job?.title ? ` • ${job.title}` : ""}
-        </Text>
-
-        <View style={aiStyles.divider} />
-
-        <Text style={aiStyles.sectionTitle}>
-          Recruiter Summary
-        </Text>
-
-        <Text style={aiStyles.qValue}>
-          This report combines submitted application materials,
-          recruiter-visible profile intelligence, portfolio data,
-          work preferences, and ForgeTomorrow signal analysis
-          against the selected job opportunity.
-        </Text>
-
-        <Text style={aiStyles.sectionTitle}>
-          Headline
-        </Text>
-
-        <Text style={aiStyles.qValue}>
-          {safeString(profile?.headline) || "Not provided"}
-        </Text>
-
-        <Text style={aiStyles.sectionTitle}>
-          Professional Summary
-        </Text>
-
-        <Text style={aiStyles.qValue}>
-          {safeString(profile?.aboutMe) || "Not provided"}
-        </Text>
-
-        <Text style={aiStyles.sectionTitle}>
-          Skills
-        </Text>
-
-        <Text style={aiStyles.qValue}>
-          {skills.length
-            ? skills.map((s) => typeof s === "string" ? s : s?.name).filter(Boolean).join(", ")
-            : "No skills listed"}
-        </Text>
-
-        <Text style={aiStyles.sectionTitle}>
-          Projects & Portfolio Signal
-        </Text>
-
-        {projects.length ? (
-          projects.slice(0, 10).map((p, i) => (
-            <View key={i} style={aiStyles.row}>
-              <Text style={aiStyles.qLabel}>
-                {typeof p === "string"
-                  ? `Project ${i + 1}`
-                  : safeString(p?.name || p?.title || `Project ${i + 1}`)}
-              </Text>
-              <Text style={aiStyles.qValue}>
-                {typeof p === "string"
-                  ? p
-                  : safeString(p?.notes || p?.description || p?.outcome || "")}
-              </Text>
+        {whyScore !== null ? (
+          <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "16 20", marginBottom: 20, borderLeftWidth: 4, borderLeftColor: scoreColor }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 8 }}>
+              <Text style={{ fontSize: 40, fontWeight: "bold", color: scoreColor, lineHeight: 1 }}>{whyScore}%</Text>
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: "bold", color: "#0D1B2A" }}>
+                  {whyScore >= 75 ? "Strong Match" : whyScore >= 50 ? "Moderate Match" : "Emerging Match"}
+                </Text>
+                <Text style={{ fontSize: 9, color: "#6B7280" }}>ForgeTomorrow Alignment Score</Text>
+              </View>
             </View>
-          ))
+            {whySummary ? <Text style={{ fontSize: 10, color: "#374151", lineHeight: 1.6 }}>{whySummary}</Text> : null}
+          </View>
         ) : (
-          <Text style={[aiStyles.qValue, aiStyles.muted]}>
-            No projects listed.
-          </Text>
+          <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "12 16", marginBottom: 20 }}>
+            <Text style={{ fontSize: 10, color: "#6B7280" }}>Run the alignment score from the applicant pipeline to populate this section.</Text>
+          </View>
         )}
 
-        <Text style={aiStyles.sectionTitle}>
-          Education
-        </Text>
-
-        {education.length ? (
-          education.map((e, i) => (
-            <View key={i} style={aiStyles.row}>
-              <Text style={aiStyles.qValue}>
-                {[
-                  e?.degree,
-                  e?.field,
-                  e?.school,
-                ].filter(Boolean).join(" • ")}
-              </Text>
+        {(whyStrengths.length > 0 || whyGaps.length > 0) ? (
+          <View style={{ flexDirection: "row", gap: 16, marginBottom: 20 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 10, fontWeight: "bold", color: "#16A34A", marginBottom: 8, letterSpacing: 0.5 }}>STRENGTHS</Text>
+              {whyStrengths.map((s, i) => (
+                <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: 6 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#16A34A", marginTop: 3, marginRight: 8, flexShrink: 0 }} />
+                  <Text style={{ fontSize: 9, color: "#374151", flex: 1, lineHeight: 1.5 }}>{s}</Text>
+                </View>
+              ))}
             </View>
-          ))
-        ) : (
-          <Text style={[aiStyles.qValue, aiStyles.muted]}>
-            No education listed.
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 10, fontWeight: "bold", color: "#DC2626", marginBottom: 8, letterSpacing: 0.5 }}>GAPS</Text>
+              {whyGaps.map((g, i) => (
+                <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: 6 }}>
+                  <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#DC2626", marginTop: 3, marginRight: 8, flexShrink: 0 }} />
+                  <Text style={{ fontSize: 9, color: "#374151", flex: 1, lineHeight: 1.5 }}>{g}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {whyTransferable.length > 0 ? (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#D97706", marginBottom: 8, letterSpacing: 0.5 }}>TRANSFERABLE SIGNALS</Text>
+            {whyTransferable.map((t, i) => (
+              <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: 6 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#D97706", marginTop: 3, marginRight: 8, flexShrink: 0 }} />
+                <Text style={{ fontSize: 9, color: "#374151", flex: 1, lineHeight: 1.5 }}>{t}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {whyReasons.length > 0 ? (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>SIGNAL BREAKDOWN</Text>
+            {whyReasons.slice(0, 6).map((r, i) => (
+              <View key={i} style={{ backgroundColor: "#F9FAFB", borderRadius: 4, padding: "8 12", marginBottom: 6 }}>
+                <Text style={{ fontSize: 9, fontWeight: "bold", color: "#0D1B2A", marginBottom: 4 }}>{r.requirement}</Text>
+                {Array.isArray(r.evidence) && r.evidence.slice(0, 2).map((ev, j) => (
+                  <Text key={j} style={{ fontSize: 8, color: "#6B7280", lineHeight: 1.4 }}>
+                    {ev.text}{ev.source ? ` · ${ev.source}` : ""}
+                  </Text>
+                ))}
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {whyInterview ? (
+          <View>
+            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>SUGGESTED INTERVIEW QUESTIONS</Text>
+            {Array.isArray(whyInterview.behavioral) && whyInterview.behavioral.slice(0, 2).map((q, i) => (
+              <View key={`b${i}`} style={{ marginBottom: 8 }}>
+                <Text style={{ fontSize: 8, color: "#9CA3AF", marginBottom: 2 }}>BEHAVIORAL</Text>
+                <Text style={{ fontSize: 9, color: "#374151", lineHeight: 1.5 }}>{q}</Text>
+              </View>
+            ))}
+            {Array.isArray(whyInterview.occupational) && whyInterview.occupational.slice(0, 2).map((q, i) => (
+              <View key={`o${i}`} style={{ marginBottom: 8 }}>
+                <Text style={{ fontSize: 8, color: "#9CA3AF", marginBottom: 2 }}>ROLE-SPECIFIC</Text>
+                <Text style={{ fontSize: 9, color: "#374151", lineHeight: 1.5 }}>{q}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </Page>
+
+      {/* PAGE 3: CANDIDATE PROFILE */}
+      <Page size="LETTER" style={aiStyles.page}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: "#FF7043" }}>
+          <Text style={{ fontSize: 14, fontWeight: "bold", color: "#0D1B2A" }}>Candidate Profile</Text>
+          <Text style={{ fontSize: 9, color: "#9CA3AF" }}>{candidateName} • ForgeTomorrow</Text>
+        </View>
+
+        {profile?.aboutMe ? (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 6, letterSpacing: 0.5 }}>PROFESSIONAL SUMMARY</Text>
+            <Text style={{ fontSize: 10, color: "#374151", lineHeight: 1.7 }}>{profile.aboutMe}</Text>
+          </View>
+        ) : null}
+
+        {skills.length > 0 ? (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>SKILLS</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+              {skills.map((s, i) => (
+                <View key={i} style={{ backgroundColor: "#F3F4F6", borderRadius: 3, padding: "3 8" }}>
+                  <Text style={{ fontSize: 8, color: "#374151" }}>{typeof s === "string" ? s : s?.name}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        <View style={{ flexDirection: "row", gap: 20, marginBottom: 20 }}>
+          <View style={{ flex: 1 }}>
+            {certifications.length > 0 ? (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>CERTIFICATIONS</Text>
+                {certifications.map((c, i) => (
+                  <Text key={i} style={{ fontSize: 9, color: "#374151", marginBottom: 4 }}>• {typeof c === "string" ? c : c?.name}</Text>
+                ))}
+              </View>
+            ) : null}
+            {languages.length > 0 ? (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>LANGUAGES</Text>
+                <Text style={{ fontSize: 9, color: "#374151" }}>{languages.join(" • ")}</Text>
+              </View>
+            ) : null}
+            {education.length > 0 ? (
+              <View>
+                <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>EDUCATION</Text>
+                {education.map((e, i) => (
+                  <View key={i} style={{ marginBottom: 6 }}>
+                    <Text style={{ fontSize: 9, fontWeight: "bold", color: "#374151" }}>{[e?.degree, e?.field].filter(Boolean).join(" in ")}</Text>
+                    {e?.school ? <Text style={{ fontSize: 8, color: "#9CA3AF" }}>{e.school}</Text> : null}
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>WORK PREFERENCES</Text>
+            <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "12 14" }}>
+              {[
+                ["Status", workPrefs.workStatus],
+                ["Work type", workPrefs.workType || workPrefs.preferredWorkType],
+                ["Schedule", workPrefs.schedule],
+                ["Relocate", workPrefs.willingToRelocate],
+                ["Locations", Array.isArray(workPrefs.locations) ? workPrefs.locations.join(", ") : workPrefs.locations],
+                ["Earliest start", workPrefs.startDate || workPrefs.earliestStartDate],
+              ].filter(([, v]) => v).map(([label, value], i) => (
+                <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: "#E5E7EB" }}>
+                  <Text style={{ fontSize: 8, color: "#9CA3AF", fontWeight: "bold" }}>{label}</Text>
+                  <Text style={{ fontSize: 8, color: "#374151" }}>{String(value)}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        {projects.length > 0 ? (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>PORTFOLIO & PROJECTS</Text>
+            {projects.slice(0, 6).map((p, i) => (
+              <View key={i} style={{ backgroundColor: "#F9FAFB", borderRadius: 4, padding: "10 12", marginBottom: 6, borderLeftWidth: 3, borderLeftColor: "#FF7043" }}>
+                <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 3 }}>
+                  {typeof p === "string" ? `Project ${i + 1}` : safeString(p?.name || p?.title || `Project ${i + 1}`)}
+                </Text>
+                {(p?.notes || p?.description) ? (
+                  <Text style={{ fontSize: 9, color: "#6B7280", lineHeight: 1.5 }}>{safeString(p?.notes || p?.description)}</Text>
+                ) : null}
+                {p?.url ? <Text style={{ fontSize: 8, color: "#FF7043", marginTop: 3 }}>{p.url}</Text> : null}
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        <View style={{ borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 8, marginTop: 16 }}>
+          <Text style={{ fontSize: 8, color: "#9CA3AF", lineHeight: 1.5 }}>
+            ForgeTomorrow Candidate Alignment Reviews are for recruiter decision support only. AI-assisted signal analysis reflects available profile data at export time. Self-identification answers excluded.
           </Text>
-        )}
-
-        <Text style={aiStyles.sectionTitle}>
-          Certifications
-        </Text>
-
-        <Text style={aiStyles.qValue}>
-          {certifications.length
-            ? certifications.map((c) =>
-                typeof c === "string" ? c : c?.name
-              ).filter(Boolean).join(", ")
-            : "None listed"}
-        </Text>
-
-        <Text style={aiStyles.sectionTitle}>
-          Languages
-        </Text>
-
-        <Text style={aiStyles.qValue}>
-          {languages.length
-            ? languages.map((l) =>
-                typeof l === "string" ? l : l?.name
-              ).filter(Boolean).join(", ")
-            : "None listed"}
-        </Text>
-
-        <Text style={aiStyles.sectionTitle}>
-          Work Preferences
-        </Text>
-
-        <Text style={aiStyles.qValue}>
-          {profile?.workPreferences
-            ? [
-                profile.workPreferences.workStatus ? `Status: ${profile.workPreferences.workStatus}` : null,
-                profile.workPreferences.workType ? `Work type: ${profile.workPreferences.workType}` : null,
-                profile.workPreferences.schedule ? `Schedule: ${profile.workPreferences.schedule}` : null,
-                profile.workPreferences.willingToRelocate ? `Willing to relocate: ${profile.workPreferences.willingToRelocate}` : null,
-                Array.isArray(profile.workPreferences.locations) && profile.workPreferences.locations.length
-                  ? `Preferred locations: ${profile.workPreferences.locations.join(", ")}` : null,
-                profile.workPreferences.startDate ? `Earliest start: ${profile.workPreferences.startDate}` : null,
-              ].filter(Boolean).join("\n")
-            : "No work preferences configured"}
-        </Text>
-
-        <Text style={aiStyles.sectionTitle}>
-          ForgeTomorrow Alignment Intelligence
-        </Text>
-
-        {forgeAssessment ? (
-          <>
-            <View style={aiStyles.row}>
-              <Text style={aiStyles.qLabel}>Assessment Score</Text>
-              <Text style={aiStyles.qValue}>
-                {forgeAssessment.score ?? "Not available"}
-              </Text>
-            </View>
-
-            <View style={aiStyles.row}>
-              <Text style={aiStyles.qLabel}>Assessment Analysis</Text>
-              <Text style={aiStyles.pre}>
-                {JSON.stringify(forgeAssessment.result, null, 2)}
-              </Text>
-            </View>
-          </>
-        ) : (
-          <Text style={[aiStyles.qValue, aiStyles.muted]}>
-            No ForgeTomorrow assessment generated yet.
-          </Text>
-        )}
-
-        <View style={aiStyles.divider} />
-
-        <Text style={[aiStyles.qValue, aiStyles.muted]}>
-          Self-identification answers are not included in recruiter exports.
-        </Text>
+        </View>
       </Page>
     </Document>
   );
@@ -677,6 +736,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Resume content is not valid JSON" });
     }
 
+// Fetch most recent WHY explain run for this application
+    let whyResult = null;
+    try {
+      const explainRun = await prisma.recruiterExplainRun.findFirst({
+        where: { applicationId: applicationId },
+        orderBy: { createdAt: "desc" },
+        select: { result: true, score: true, summary: true },
+      });
+      if (explainRun?.result) {
+        whyResult = {
+          ...(typeof explainRun.result === "object" ? explainRun.result : {}),
+          score: explainRun.score ?? null,
+          summary: explainRun.summary || null,
+        };
+      }
+    } catch (e) {
+      console.warn("[packet.zip] WHY fetch failed:", e?.message);
+    }
+
     // Build ZIP
     const zip = new JSZip();
 
@@ -728,21 +806,20 @@ export default async function handler(req, res) {
       zip.file(`04_Candidate_Additional_Info_${base}.pdf`, addInfoBuf);
     }
 
-    // 5) Full Candidate Intelligence Report
+// 5) ForgeTomorrow Candidate Alignment Review
     {
       const profile = {
-  headline: app.user?.headline || "",
-  aboutMe: app.user?.aboutMe || "",
-  skills: app.user?.skillsJson || [],
-  languages: app.user?.languagesJson || [],
-  education: app.user?.educationJson || [],
-  certifications: app.user?.certificationsJson || [],
-  projects: app.user?.projectsJson || [],
-  workPreferences: app.user?.workPreferences || {},
-  profileVisibility: app.user?.profileVisibility || "",
-  location: app.user?.location || "",
-};
-
+        headline: app.user?.headline || "",
+        aboutMe: app.user?.aboutMe || "",
+        skills: app.user?.skillsJson || [],
+        languages: app.user?.languagesJson || [],
+        education: app.user?.educationJson || [],
+        certifications: app.user?.certificationsJson || [],
+        projects: app.user?.projectsJson || [],
+        workPreferences: app.user?.workPreferences || {},
+        profileVisibility: app.user?.profileVisibility || "",
+        location: app.user?.location || "",
+      };
       const intelligenceDoc = (
         <FullCandidateIntelligencePDF
           candidateName={candidateName}
@@ -750,17 +827,15 @@ export default async function handler(req, res) {
           profile={profile}
           job={app.job}
           forgeAssessment={forgeAssessment}
+          whyResult={whyResult}
         />
       );
-
       const intelligenceBuf = await pdf(intelligenceDoc).toBuffer();
-
       zip.file(
-        `05_Full_Candidate_Intelligence_${base}.pdf`,
+        `05_FT_Candidate_Alignment_Review_${base}.pdf`,
         intelligenceBuf
       );
     }
-
     // Finalize ZIP
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
 
