@@ -239,15 +239,26 @@ function AdditionalInfoPDF({
   additionalQuestions,
   consent,
   forgeAssessment,
-}) { 
+  workPreferences,
+}) {
 
   const std = Array.isArray(standardQuestions) ? standardQuestions : [];
   const addl = Array.isArray(additionalQuestions) ? additionalQuestions : [];
+  const prefs = workPreferences && typeof workPreferences === "object" ? workPreferences : {};
+  const preferenceRows = [
+  ["Status", prefs.workStatus],
+  ["Work type", prefs.workType || prefs.preferredWorkType],
+  ["Schedule", prefs.schedule],
+  ["Willing to relocate", prefs.willingToRelocate],
+  ["Preferred locations", Array.isArray(prefs.locations) ? prefs.locations.join(", ") : prefs.locations],
+  ["Earliest start", prefs.startDate || prefs.earliestStartDate],
+].filter(([, value]) => value !== undefined && value !== null && String(value).trim());
+
 
   return (
     <Document>
       <Page size="LETTER" style={aiStyles.page}>
-        <Text style={aiStyles.title}>Candidate Additional Information</Text>
+        <Text style={aiStyles.title}>Candidate Interview Intake</Text>
         <Text style={aiStyles.subtitle}>
           {candidateName || "Candidate"}
           {candidateEmail ? ` • ${candidateEmail}` : ""}
@@ -285,6 +296,20 @@ function AdditionalInfoPDF({
         ) : (
           <Text style={[aiStyles.qValue, aiStyles.muted]}>No additional questions answered.</Text>
         )}
+
+<Text style={aiStyles.sectionTitle}>Work Preferences and Availability</Text>
+{preferenceRows.length ? (
+  preferenceRows.map(([label, value], i) => (
+    <View key={`pref-${i}`} style={aiStyles.row}>
+      <Text style={aiStyles.qLabel}>{label}</Text>
+      <Text style={aiStyles.qValue}>{String(value)}</Text>
+    </View>
+  ))
+) : (
+  <Text style={[aiStyles.qValue, aiStyles.muted]}>
+    No work preferences or availability details provided.
+  </Text>
+)}
 
         <Text style={aiStyles.sectionTitle}>Consent and Acknowledgement</Text>
         {consent ? (
@@ -429,17 +454,24 @@ const overallSignalScore =
           <Text style={{ fontSize: 16, color: "#FF7043", fontWeight: "bold", marginBottom: 4 }}>{job?.title || "Position"}</Text>
           {job?.company ? <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.50)", marginBottom: 32 }}>{job.company}</Text> : null}
           {overallSignalScore !== null ? (
-            <View style={{ marginTop: 16 }}>
-              <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.40)", marginBottom: 8, letterSpacing: 0.5 }}>FORGETOMORROW INTELLIGENCE SCORE</Text>
+            <View style={{ marginTop: 48 }}>
+              <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.40)", marginBottom: 8, letterSpacing: 0.5 }}>FORGETOMORROW OVERALL SIGNAL SCORE</Text>
               <View style={{ flexDirection: "row", alignItems: "baseline", gap: 12 }}>
-                <Text style={{ fontSize: 52, fontWeight: "bold", color: scoreColor, lineHeight: 1 }}>{overallSignalScore}%</Text>
+                <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
+  <Text style={{ fontSize: 52, fontWeight: "bold", color: scoreColor, lineHeight: 1 }}>
+    {overallSignalScore}
+  </Text>
+  <Text style={{ fontSize: 18, fontWeight: "bold", color: scoreColor, marginBottom: 6 }}>
+    %
+  </Text>
+</View>
                 <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.50)" }}>
                   {overallSignalScore >= 75 ? "Strong Match" : overallSignalScore >= 50 ? "Moderate Match" : "Emerging Match"}
                 </Text>
               </View>
             </View>
           ) : null}
-          <View style={{ position: "absolute", bottom: 48, left: 48, right: 48 }}>
+          <View style={{ position: "absolute", bottom: 24, left: 48, right: 48 }}>
             <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginBottom: 12 }} />
             <Text style={{ fontSize: 8, color: "rgba(255,255,255,0.25)", lineHeight: 1.6 }}>
               Confidential. For authorized recruiter use only. ForgeTomorrow signal analysis is AI-assisted and not a hiring decision. Self-identification excluded.
@@ -477,20 +509,27 @@ const overallSignalScore =
 <View style={{ flexDirection: "row", gap: 16, marginBottom: 20 }}>
   <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 6, padding: "14 16", borderLeftWidth: 4, borderLeftColor: "#FF7043" }}>
     <Text style={{ fontSize: 8, color: "#6B7280", marginBottom: 4 }}>RESUME INTELLIGENCE SCORE</Text>
-    <Text style={{ fontSize: 28, fontWeight: "bold", color: "#0D1B2A" }}>
-      {resumeIntelligenceScore ?? "--"}%
+	<Text style={{ fontSize: 34, fontWeight: "bold", color: "#0D1B2A", marginBottom: 12, }}>
+      {resumeIntelligenceScore ?? "--"}
     </Text>
-    <Text style={{ fontSize: 8, color: "#6B7280" }}>
+
+    <Text style={{ fontSize: 9, color: "#6B7280", lineHeight: 1.6 }}>
       Resume evidence, alignment, gaps, and transferable skill signal.
     </Text>
   </View>
 
   <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 6, padding: "14 16", borderLeftWidth: 4, borderLeftColor: "#16A34A" }}>
     <Text style={{ fontSize: 8, color: "#6B7280", marginBottom: 4 }}>PROFILE & PORTFOLIO SIGNAL</Text>
-    <Text style={{ fontSize: 28, fontWeight: "bold", color: "#0D1B2A" }}>
-      {profileSignalScore ?? "--"}%
-    </Text>
-    <Text style={{ fontSize: 8, color: "#6B7280" }}>
+	<View style={{ flexDirection: "row", alignItems: "flex-end", marginBottom: 12 }}>
+  <Text style={{ fontSize: 34, fontWeight: "bold", color: "#0D1B2A" }}>
+    {profileSignalScore ?? "--"}
+  </Text>
+
+  <Text style={{ fontSize: 14, fontWeight: "bold", color: "#0D1B2A", marginLeft: 2, marginBottom: 3 }}>
+    %
+  </Text>
+</View>
+    <Text style={{ fontSize: 9, color: "#6B7280", lineHeight: 1.6 }}>
       Profile depth, projects, preferences, credentials, and recruiter response signal.
     </Text>
   </View>
@@ -620,25 +659,6 @@ const overallSignalScore =
                 ))}
               </View>
             ) : null}
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>WORK PREFERENCES</Text>
-            <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "12 14" }}>
-              {[
-                ["Status", workPrefs.workStatus],
-                ["Work type", workPrefs.workType || workPrefs.preferredWorkType],
-                ["Schedule", workPrefs.schedule],
-                ["Relocate", workPrefs.willingToRelocate],
-                ["Locations", Array.isArray(workPrefs.locations) ? workPrefs.locations.join(", ") : workPrefs.locations],
-                ["Earliest start", workPrefs.startDate || workPrefs.earliestStartDate],
-              ].filter(([, v]) => v).map(([label, value], i) => (
-                <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: "#E5E7EB" }}>
-                  <Text style={{ fontSize: 8, color: "#9CA3AF", fontWeight: "bold" }}>{label}</Text>
-                  <Text style={{ fontSize: 8, color: "#374151" }}>{String(value)}</Text>
-                </View>
-              ))}
-            </View>
           </View>
         </View>
 
@@ -900,15 +920,16 @@ export default async function handler(req, res) {
 
       const addInfoDoc = (
         <AdditionalInfoPDF
-          candidateName={candidateName}
-          candidateEmail={candidateEmail}
-          jobTitle={safeString(app.job?.title).trim()}
-          jobCompany={safeString(app.job?.company).trim()}
-          standardQuestions={standardQuestions}
-          additionalQuestions={additionalAnswers}
-          consent={consent}
-          forgeAssessment={forgeAssessment}
-        />
+  candidateName={candidateName}
+  candidateEmail={candidateEmail}
+  jobTitle={safeString(app.job?.title).trim()}
+  jobCompany={safeString(app.job?.company).trim()}
+  standardQuestions={standardQuestions}
+  additionalQuestions={additionalAnswers}
+  consent={consent}
+  forgeAssessment={forgeAssessment}
+  workPreferences={app.user?.workPreferences || {}}
+/>
       );
 
       const addInfoBuf = await pdf(addInfoDoc).toBuffer();
