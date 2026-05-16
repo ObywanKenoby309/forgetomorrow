@@ -380,6 +380,9 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
   const whyGaps = Array.isArray(why?.gaps) ? why.gaps : [];
   const whyTransferable = Array.isArray(why?.skills?.transferable) ? why.skills.transferable : [];
   const whyReasons = Array.isArray(why?.reasons) ? why.reasons : [];
+  const whySignalsMatched = Array.isArray(why?.signals?.matched) ? why.signals.matched : [];
+  const whySignalsRequired = Array.isArray(why?.signals?.required) ? why.signals.required : [];
+  const whyNotDemonstrated = Array.isArray(why?.signals?.not_yet_demonstrated) ? why.signals.not_yet_demonstrated : [];
   const whyInterview = why?.interviewQuestions || null;
 
   const resolvedProfileSignals = Array.isArray(profileSignals) && profileSignals.length > 0
@@ -485,7 +488,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
           <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 6, padding: "14 16", borderLeftWidth: 4, borderLeftColor: "#FF7043" }}>
             <Text style={{ fontSize: 8, color: "#6B7280", marginBottom: 4 }}>RESUME INTELLIGENCE SCORE</Text>
             <Text style={{ fontSize: 34, fontWeight: "bold", color: "#0D1B2A", marginBottom: 18 }}>
-              {resumeIntelligenceScore ?? "--"}
+              {resumeIntelligenceScore !== null ? `${resumeIntelligenceScore}%` : "--"}
             </Text>
             <Text style={{ fontSize: 9, color: "#6B7280", lineHeight: 1.6 }}>
               Resume evidence, alignment, gaps, and transferable skill signal.
@@ -560,49 +563,72 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
 
         <View style={{ marginBottom: 20 }}>
           <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>
-            RESUME ALIGNMENT DETAILS
+            SIGNAL ALIGNMENT DETAILS
           </Text>
-
-          {whyReasons.length > 0 ? (
-            whyReasons.slice(0, 6).map((r, i) => (
-              <View
-                key={`reason-${i}`}
-                style={{
-                  backgroundColor: "#F9FAFB",
-                  borderRadius: 5,
-                  padding: "10 12",
-                  marginBottom: 8,
-                  borderLeftWidth: 3,
-                  borderLeftColor: getReasonColor(r),
-                }}
-              >
-                <Text style={{ fontSize: 9, fontWeight: "bold", color: "#111827", marginBottom: 4 }}>
-                  {r.requirement || "Alignment Signal"}
-                </Text>
-
-                <Text style={{ fontSize: 8, color: "#4B5563", lineHeight: 1.6, marginBottom: 6 }}>
-                  {r.explanation ||
-                    r.reason ||
-                    "ForgeTomorrow identified this as a relevant recruiter-facing alignment signal."}
-                </Text>
-
-                {Array.isArray(r.evidence) && r.evidence.length > 0 ? (
-                  r.evidence.slice(0, 2).map((ev, j) => (
-                    <Text key={`evidence-${i}-${j}`} style={{ fontSize: 8, color: "#6B7280", lineHeight: 1.5, marginBottom: 2 }}>
-                      • {safeString(ev?.text || ev)}
-                      {ev?.source ? ` · ${safeString(ev.source)}` : ""}
+          {whySignalsMatched.length > 0 ? (
+            whySignalsMatched.slice(0, 7).map((sig, i) => {
+              const tierColor = sig.tier === "A" ? "#FF7043" : "#6B7280";
+              const strengthPct = typeof sig.strength === "number" ? Math.round(sig.strength * 100) : null;
+              const matchTypeLabel = {
+                tool_implies_category: "Tool → Category match",
+                synonym_phrase: "Synonym / phrase match",
+                single_token_only: "Keyword match",
+                direct_match: "Direct match",
+              }[sig.match_type] || sig.match_type || "Signal match";
+              return (
+                <View key={`sig-${i}`} style={{ backgroundColor: "#F9FAFB", borderRadius: 5, padding: "10 12", marginBottom: 6, borderLeftWidth: 3, borderLeftColor: "#16A34A" }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <Text style={{ fontSize: 9, fontWeight: "bold", color: "#111827" }}>
+                      {sig.label}
                     </Text>
-                  ))
-                ) : null}
-              </View>
-            ))
-          ) : (
+                    <View style={{ flexDirection: "row", gap: 6 }}>
+                      <Text style={{ fontSize: 7, color: tierColor, fontWeight: "bold" }}>
+                        TIER {sig.tier}
+                      </Text>
+                      {strengthPct !== null ? (
+                        <Text style={{ fontSize: 7, color: "#6B7280" }}>
+                          {strengthPct}% confidence
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 8, color: "#6B7280", marginBottom: 4 }}>
+                    {matchTypeLabel}
+                  </Text>
+                  {Array.isArray(sig.evidence) && sig.evidence.slice(0, 1).map((ev, j) => (
+                    <Text key={j} style={{ fontSize: 8, color: "#4B5563", lineHeight: 1.5 }}>
+                      • {safeString(ev?.text || ev)}{ev?.source ? ` · ${ev.source}` : ""}
+                    </Text>
+                  ))}
+                </View>
+              );
+            })
+          ) : null}
+          {whyNotDemonstrated.length > 0 ? (
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 9, fontWeight: "bold", color: "#DC2626", marginBottom: 6 }}>
+                NOT YET DEMONSTRATED
+              </Text>
+              {whyNotDemonstrated.map((sig, i) => (
+                <View key={`gap-sig-${i}`} style={{ backgroundColor: "#FEF2F2", borderRadius: 5, padding: "8 12", marginBottom: 6, borderLeftWidth: 3, borderLeftColor: "#DC2626" }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
+                    <Text style={{ fontSize: 9, fontWeight: "bold", color: "#111827" }}>{sig.label}</Text>
+                    <Text style={{ fontSize: 7, color: "#DC2626", fontWeight: "bold" }}>TIER {sig.tier}</Text>
+                  </View>
+                  <Text style={{ fontSize: 8, color: "#6B7280" }}>
+                    {sig.why_missing || "Not demonstrated in resume text."}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          {whySignalsMatched.length === 0 && whyNotDemonstrated.length === 0 ? (
             <View style={{ backgroundColor: "#F9FAFB", borderRadius: 5, padding: "12 14" }}>
               <Text style={{ fontSize: 8, color: "#6B7280", lineHeight: 1.6 }}>
-                No detailed resume intelligence explanation is stored yet for this application. Rerun the recruiter explain/why flow to populate this section.
+                No signal alignment data available. Run the WHY analysis from the applicant pipeline to populate this section.
               </Text>
             </View>
-          )}
+          ) : null}
         </View>
       </Page>
 
@@ -1005,6 +1031,8 @@ export default async function handler(req, res) {
         workPreferences: app.user?.workPreferences || {},
         profileVisibility: app.user?.profileVisibility || "",
         location: app.user?.location || "",
+		hasResume: Boolean(app.resume?.id),
+        primaryResume: app.resume?.id ? { id: app.resume.id } : null,
         additionalQuestions: additionalAnswers,
       };
 
