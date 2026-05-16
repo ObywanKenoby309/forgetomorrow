@@ -364,11 +364,16 @@ function FullCandidateIntelligencePDF({
     null;
 
 const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? forgeAssessment?.profileScore ?? null;
+  const hasJD = Boolean(job?.description || job?.id);
   const overallSignalScore =
     whyResult?.overallScore ??
     forgeAssessment?.overallScore ??
     (resumeIntelligenceScore !== null && profileSignalScore !== null
-      ? Math.round(resumeIntelligenceScore * 0.55 + profileSignalScore * 0.45)
+      ? Math.round(
+          hasJD
+            ? resumeIntelligenceScore * 0.65 + profileSignalScore * 0.35
+            : resumeIntelligenceScore * 0.30 + profileSignalScore * 0.70
+        )
       : resumeIntelligenceScore ?? profileSignalScore ?? null);
 
   const whyStrengths = Array.isArray(why?.strengths) ? why.strengths : [];
@@ -464,7 +469,9 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
                 <Text style={{ fontSize: 13, fontWeight: "bold", color: "#0D1B2A" }}>
                   {overallSignalScore >= 75 ? "Strong Match" : overallSignalScore >= 50 ? "Moderate Match" : "Emerging Match"}
                 </Text>
-                <Text style={{ fontSize: 9, color: "#6B7280" }}>ForgeTomorrow Alignment Score</Text>
+                <Text style={{ fontSize: 9, color: "#6B7280" }}>
+                  {hasJD ? "Overall Candidate Signal — Role-Specific" : "Overall Candidate Signal — General Profile"}
+                </Text>
               </View>
             </View>
             <Text style={{ fontSize: 10, color: "#374151", lineHeight: 1.6 }}>
@@ -504,8 +511,9 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
             OVERALL CANDIDATE SIGNAL
           </Text>
           <Text style={{ fontSize: 9, color: "#374151", lineHeight: 1.7 }}>
-            This candidate review combines resume alignment intelligence with profile, portfolio, employer-response, and transferable
-            capability analysis to create a fuller picture of recruiter-readiness beyond traditional ATS keyword matching.
+            {hasJD
+              ? "Role-specific hiring confidence. Resume-to-JD alignment carries 65% weight; profile depth, portfolio proof, and recruiter-readiness carry 35%. This is not an ATS score — it is evidence-based hiring signal."
+              : "General recruiter confidence score. Profile depth, portfolio proof, and recruiter-readiness carry 70% weight; resume signal carries 30%. No job description was provided for role-specific alignment."}
           </Text>
         </View>
 
@@ -625,7 +633,9 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
                 {signal.label} · {signal.status === "direct" ? "Proven" : signal.status === "adjacent" ? "Partial" : "Missing"}
               </Text>
               <Text style={{ fontSize: 8, color: "#6B7280", lineHeight: 1.45 }}>
-                {signal.gapReason || signal.explanation || signal.description || ""}
+                {signal.status === "direct"
+                  ? signal.description
+                  : signal.gapReason || signal.description || ""}
               </Text>
             </View>
           ))}
@@ -939,9 +949,9 @@ export default async function handler(req, res) {
 
     const zip = new JSZip();
 
-    const safeCandidateLabel = filenameSafe(candidateName) || "Candidate";
-    const safeJobLabel = filenameSafe(app.job?.title) || "Role";
-    const base = `App${applicationId}_${safeCandidateLabel}_${safeJobLabel}`;
+    const safeCandidateLabel = (filenameSafe(candidateName) || "Candidate").slice(0, 20);
+    const safeJobLabel = (filenameSafe(app.job?.title) || "Role").slice(0, 20);
+    const base = `${applicationId}_${safeCandidateLabel}_${safeJobLabel}`;
 
     if (app.cover?.content) {
       const coverTemplateData = buildCoverTemplateData({ app, candidateName });
@@ -1022,7 +1032,7 @@ export default async function handler(req, res) {
     }
 
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
-    const zipName = `ApplicationPacket_${base}.zip`;
+    const zipName = `FT_Packet_${base}.zip`;
 
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", `attachment; filename="${zipName}"`);
