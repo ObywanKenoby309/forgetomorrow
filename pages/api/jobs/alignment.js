@@ -3,7 +3,6 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
 import { rankJobsBySeekerAlignment } from "@/lib/intelligence/forgeJobMatchEngine";
-import { classifySignals, overallVerdict, signalScoreToPercent } from '@/lib/intelligence/profileSignalShared';
 import { classifySignals, overallVerdict, signalScoreToPercent, signalScoreVsJD } from '@/lib/intelligence/profileSignalShared';
 
 function safeJsonParse(value) {

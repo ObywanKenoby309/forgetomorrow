@@ -132,7 +132,8 @@ export default function JobDetailPanel({
           }}>
             {sourceLabel}
           </span>
- </div>
+		</div>		
+	</div>
         {/* Alignment score chips */}
         {(job?.match !== undefined || profileSignal?.score !== undefined) && (
           <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
