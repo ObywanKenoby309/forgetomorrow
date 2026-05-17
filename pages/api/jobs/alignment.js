@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
 import { rankJobsBySeekerAlignment } from "@/lib/intelligence/forgeJobMatchEngine";
 import { classifySignals, overallVerdict, signalScoreToPercent } from '@/lib/intelligence/profileSignalShared';
+import { classifySignals, overallVerdict, signalScoreToPercent, signalScoreVsJD } from '@/lib/intelligence/profileSignalShared';
 
 function safeJsonParse(value) {
   try {
@@ -153,6 +154,11 @@ export default async function handler(req, res) {
     const alignments = {};
     for (const job of alignedJobs) {
       if (!job?.id) continue;
+      // Compute JD-aware profile signal score per job — pure JS, zero API cost
+      const jdProfileSignal = signalScoreVsJD(profileSignalData, {
+        jobDescription: job.description || job.raw?.description || "",
+        title: job.title || "",
+      });
       alignments[job.id] = {
         score: job.match,
         source: job.matchSource,
@@ -160,12 +166,16 @@ export default async function handler(req, res) {
         reasons: job.alignmentReasons || [],
         evidence: job.alignmentEvidence || [],
         gaps: job.alignmentGaps || [],
+        jdProfileSignal,
       };
     }
 
     return res.status(200).json({
       alignments,
-      jobs: alignedJobs,
+      jobs: alignedJobs.map(job => ({
+        ...job,
+        jdProfileSignal: alignments[job.id]?.jdProfileSignal || null,
+      })),
       profileSignalScore,
       profileSignalLabel,
       profileSignalBreakdown,

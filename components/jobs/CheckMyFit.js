@@ -125,7 +125,7 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
         }}
       >
         <span style={{ fontSize: 16 }}>⚡</span>
-        Explain My Alignment
+        Check Full Resume Alignment
       </button>
     );
   }
@@ -211,7 +211,7 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
               {result.overallScore >= 75 ? 'Strong alignment' : result.overallScore >= 60 ? 'Moderate alignment' : 'Low alignment'}
             </div>
             <div style={{ fontSize: 11, color: '#607D8B', marginTop: 2 }}>
-              Resume {result.resumeScore ?? '—'}% · Profile {result.profScore ?? '—'}%
+              Resume vs JD: {result.resumeScore ?? '—'}% · Profile vs Role: {result.profScore ?? '—'}%
             </div>
           </div>
           <button
@@ -220,6 +220,11 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
             style={{ background: 'none', border: 'none', color: '#90A4AE', fontSize: 18, cursor: 'pointer' }}
             aria-label="Dismiss"
           >×</button>
+		  <div style={{
+        fontSize: 11, color: '#94A3B8', textAlign: 'center', marginTop: 6, lineHeight: 1.5,
+      }}>
+        Uses your primary resume + this JD. Free users: 3/month · Pro: 15/month
+      </div>
         </div>
 
         {/* Summary */}

@@ -140,27 +140,36 @@ export default function JobDetailPanel({
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '5px 12px', borderRadius: 999,
-                background: 'rgba(255,112,67,0.10)',
-                border: '1px solid rgba(255,112,67,0.25)',
+                background: 'rgba(100,116,139,0.08)',
+                border: '1px solid rgba(100,116,139,0.20)',
               }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#FF7043' }}>Resume Alignment</span>
-                <span style={{ fontSize: 13, fontWeight: 900, color: '#FF7043' }}>{Math.round(job.match)}%</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#64748B' }}>Search Relevance</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: '#64748B' }}>{Math.round(job.match)}%</span>
               </div>
             )}
-            {typeof profileSignal?.score === 'number' && (
+            {typeof job?.jdProfileSignal?.score === 'number' ? (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '5px 12px', borderRadius: 999,
-                background: 'rgba(22,163,74,0.08)',
-                border: '1px solid rgba(22,163,74,0.22)',
+                background: 'rgba(255,112,67,0.10)',
+                border: '1px solid rgba(255,112,67,0.25)',
               }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#16A34A' }}>Profile Signal</span>
-                <span style={{ fontSize: 13, fontWeight: 900, color: '#16A34A' }}>{profileSignal.score}%</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#FF7043' }}>Profile vs Role</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: '#FF7043' }}>{job.jdProfileSignal.score}%</span>
               </div>
-            )}
+            ) : typeof profileSignal?.score === 'number' ? (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 999,
+                background: 'rgba(255,112,67,0.10)',
+                border: '1px solid rgba(255,112,67,0.25)',
+              }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#FF7043' }}>Profile Signal</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: '#FF7043' }}>{profileSignal.score}%</span>
+              </div>
+            ) : null}
           </div>
         )}
-      </div>
       {/* ── Divider ── */}
       <div style={{ height: 1, background: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)', flexShrink: 0 }} />
 
