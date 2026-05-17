@@ -323,7 +323,7 @@ function ResultPanel({ data, resumeText, onReset, onBuildProfile }) {
                 fontSize: 12, fontWeight: 700, textDecoration: "none",
               }}
             >
-              Add to Talent Pool →
+              Add to Talent Pool &rarr;
             </a>
           </div>
         </div>
