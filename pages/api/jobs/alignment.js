@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
 import { rankJobsBySeekerAlignment } from "@/lib/intelligence/forgeJobMatchEngine";
+import { classifySignals, overallVerdict, signalScoreToPercent } from '@/lib/intelligence/profileSignalShared';
 
 function safeJsonParse(value) {
   try {
@@ -75,6 +76,9 @@ export default async function handler(req, res) {
         skillsJson: true,
         languagesJson: true,
         educationJson: true,
+        certificationsJson: true,
+        projectsJson: true,
+        profileVisibility: true,
       },
     });
 
@@ -110,6 +114,40 @@ export default async function handler(req, res) {
       resume: extractResumeContext(primaryResume),
     };
 
+// Compute profile signal score once for this seeker
+    const profileSignalData = {
+      headline: user.headline || "",
+      aboutMe: user.aboutMe || "",
+      skills: toArray(user.skillsJson),
+      languages: toArray(user.languagesJson),
+      education: toArray(user.educationJson),
+      certifications: toArray(user.certificationsJson),
+      projects: toArray(user.projectsJson),
+      workPreferences: user.workPreferences && typeof user.workPreferences === "object"
+        ? user.workPreferences : {},
+      profileVisibility: user.profileVisibility || "",
+      hasResume: Boolean(primaryResume?.id),
+      primaryResume: primaryResume?.id ? { id: primaryResume.id } : null,
+    };
+    const profileSignals = classifySignals(profileSignalData);
+    const profileVerdict = overallVerdict(profileSignals);
+    const profileSignalScore = signalScoreToPercent(profileVerdict);
+    const profileSignalLabel = profileVerdict?.label || null;
+    const profileSignalBreakdown = {
+      proven: profileVerdict?.proven ?? 0,
+      partial: profileVerdict?.partial ?? 0,
+      missing: profileVerdict?.missing ?? 0,
+      priority: profileVerdict?.priority
+        ? { label: profileVerdict.priority.label, gapReason: profileVerdict.priority.gapReason }
+        : null,
+      signals: profileSignals.map(s => ({
+        key: s.key,
+        label: s.label,
+        status: s.status,
+        gapReason: s.gapReason,
+      })),
+    };
+
     const alignedJobs = rankJobsBySeekerAlignment(jobs, seekerContext);
 
     const alignments = {};
@@ -128,6 +166,9 @@ export default async function handler(req, res) {
     return res.status(200).json({
       alignments,
       jobs: alignedJobs,
+      profileSignalScore,
+      profileSignalLabel,
+      profileSignalBreakdown,
     });
   } catch (err) {
     console.error("[jobs/alignment] error:", err);

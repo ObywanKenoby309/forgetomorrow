@@ -166,6 +166,8 @@ function ForgeAlignmentExplainer() {
 function JobsUI() {
   const router = useRouter();
   const isMobile = useIsMobile(768);
+  
+  const [profileSignal, setProfileSignal] = useState(null);
 
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
@@ -545,6 +547,13 @@ addViewedJob(job);
             return aligned ? { ...job, ...aligned } : job;
           })
         );
+        if (alignData.profileSignalScore !== undefined) {
+          setProfileSignal({
+            score: alignData.profileSignalScore,
+            label: alignData.profileSignalLabel,
+            breakdown: alignData.profileSignalBreakdown,
+          });
+        }
       } catch (alignErr) {
         console.error('[Jobs] visible alignment load failed', alignErr);
       }
@@ -714,7 +723,6 @@ useEffect(() => {
         {mobileDetailOpen && selectedJob && (
           <MobileJobDetail
             job={selectedJob}
-            onBack={() => setMobileDetailOpen(false)}
             getJobStatus={getJobStatus}
             isInternalJob={isInternalJob}
             getJobTier={getJobTier}
@@ -724,6 +732,7 @@ useEffect(() => {
             onApply={handleApplyClick}
             onResumeAlign={handleResumeAlign}
             onImproveResume={handleImproveResume}
+            profileSignal={profileSignal}
           />
         )}
       </div>
@@ -821,6 +830,7 @@ useEffect(() => {
             onApply={handleApplyClick}
             onResumeAlign={handleResumeAlign}
             onImproveResume={handleImproveResume}
+            profileSignal={profileSignal}
           />
         </section>
       </div>

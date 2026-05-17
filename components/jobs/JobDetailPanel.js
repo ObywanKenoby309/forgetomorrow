@@ -21,7 +21,8 @@ export default function JobDetailPanel({
   isPaidUser,
   onApply,
   onResumeAlign,
-  onImproveResume,  // called after CheckMyFit result to launch resume builder
+  onImproveResume,
+  profileSignal,
 }) {
   if (!job) {
     return (
@@ -131,9 +132,35 @@ export default function JobDetailPanel({
           }}>
             {sourceLabel}
           </span>
-        </div>
+ </div>
+        {/* Alignment score chips */}
+        {(job?.match !== undefined || profileSignal?.score !== undefined) && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            {typeof job?.match === 'number' && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 999,
+                background: 'rgba(255,112,67,0.10)',
+                border: '1px solid rgba(255,112,67,0.25)',
+              }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#FF7043' }}>Resume Alignment</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: '#FF7043' }}>{Math.round(job.match)}%</span>
+              </div>
+            )}
+            {typeof profileSignal?.score === 'number' && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 999,
+                background: 'rgba(22,163,74,0.08)',
+                border: '1px solid rgba(22,163,74,0.22)',
+              }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#16A34A' }}>Profile Signal</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: '#16A34A' }}>{profileSignal.score}%</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-
       {/* ── Divider ── */}
       <div style={{ height: 1, background: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)', flexShrink: 0 }} />
 
@@ -159,7 +186,7 @@ export default function JobDetailPanel({
 
         {/* Alignment intelligence */}
         {status === 'Open' && isPaidUser && (
-          <CheckMyFit job={job} onImproveResume={onImproveResume} />
+          <CheckMyFit job={job} onImproveResume={onImproveResume} profileSignal={profileSignal} />
         )}
       </div>
 
