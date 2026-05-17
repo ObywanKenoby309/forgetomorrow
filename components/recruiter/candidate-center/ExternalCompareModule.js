@@ -316,15 +316,17 @@ function ResultPanel({ data, resumeText, onReset, onBuildProfile }) {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             
-              href="/recruiter/candidate-center?module=pools"
+              <button
+              type="button"
+              onClick={() => window.location.href = "/recruiter/candidate-center?module=pools"}
               style={{
-                padding: "8px 14px", borderRadius: 8,
+                padding: "8px 14px", borderRadius: 8, border: "none",
                 background: "#15803D", color: "white",
-                fontSize: 12, fontWeight: 700, textDecoration: "none",
+                fontSize: 12, fontWeight: 700, cursor: "pointer",
               }}
             >
-              Add to Talent Pool &rarr;
-            </a>
+              Add to Talent Pool
+            </button>
           </div>
         </div>
       )}
