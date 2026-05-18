@@ -259,13 +259,21 @@ export default async function handler(req, res) {
       });
     }
 
-    return res.status(200).json({
-      ok: true,
-      remaining: gate.remaining,
-      limit: gate.limit,
-      tier: gate.tier,
-      hammer: cleanHammerPayload(data),
-    });
+    const cleaned = cleanHammerPayload(data);
+
+return res.status(200).json({
+  ok: true,
+  remaining: gate.remaining,
+  limit: gate.limit,
+  tier: gate.tier,
+  hammer: {
+    ...cleaned,
+    structured:
+      cleaned?.structured ||
+      cleaned?.hammer?.structured ||
+      {},
+  },
+});
   } catch (err) {
     console.error("[jobs/check-fit] error", err);
 
