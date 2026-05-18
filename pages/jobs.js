@@ -263,7 +263,20 @@ function JobsUI() {
 
         const loadedJobs = Array.isArray(data?.jobs) ? data.jobs : [];
 
-        setJobs(loadedJobs);
+        const hasAppliedSearchIntent =
+  Boolean(appliedFilters.keyword) ||
+  Boolean(appliedFilters.company) ||
+  Boolean(appliedFilters.location) ||
+  Boolean(appliedFilters.locationType) ||
+  Boolean(appliedFilters.source) ||
+  Boolean(appliedFilters.days);
+
+setJobs(
+  loadedJobs.map((job) => ({
+    ...job,
+    match: hasAppliedSearchIntent ? job.match : null,
+  }))
+);
         setTotalJobCount(Number(data?.totalCount || loadedJobs.length || 0));
       } catch (err) {
         console.error(err);
@@ -535,8 +548,8 @@ function JobsUI() {
         if (cancelled || !alignedJob) return;
 
         const score =
-  typeof alignedJob?.jdProfileSignal?.score === 'number'
-    ? alignedJob.jdProfileSignal.score
+  alignedJob?.matchSource === 'profile' && typeof alignedJob?.match === 'number'
+    ? alignedJob.match
     : null;
 
         setProfileSignal({ score });
@@ -551,54 +564,6 @@ function JobsUI() {
       cancelled = true;
     };
   }, [selectedJob?.id, loading]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function alignVisibleJobs() {
-      if (!pagedJobs.length || loading) return;
-
-      try {
-        const alignRes = await fetch('/api/jobs/alignment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jobs: pagedJobs }),
-        });
-
-        if (!alignRes.ok) return;
-
-        const alignData = await alignRes.json();
-        const alignedJobs = Array.isArray(alignData?.jobs) ? alignData.jobs : [];
-
-        if (cancelled || !alignedJobs.length) return;
-
-        const alignedMap = new Map(
-          alignedJobs.map((job) => [String(job.id), job])
-        );
-
-        setJobs((prevJobs) =>
-          prevJobs.map((job) => {
-            const aligned = alignedMap.get(String(job.id));
-            return aligned ? { ...job, ...aligned } : job;
-          })
-        );
-      } catch (alignErr) {
-        console.error('[Jobs] visible alignment load failed', alignErr);
-      }
-    }
-
-    alignVisibleJobs();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-  currentPage,
-  pageSize,
-  appliedFilters,
-  pagedJobs.map((job) => job.id).join('|'),
-  loading,
-]);
 
 useEffect(() => {
   if (!selectedJob?.id) return;
