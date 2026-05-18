@@ -535,11 +535,9 @@ function JobsUI() {
         if (cancelled || !alignedJob) return;
 
         const score =
-          typeof alignedJob?.jdProfileSignal?.score === 'number'
-            ? alignedJob.jdProfileSignal.score
-            : typeof alignedJob?.match === 'number'
-            ? alignedJob.match
-            : null;
+  typeof alignedJob?.jdProfileSignal?.score === 'number'
+    ? alignedJob.jdProfileSignal.score
+    : null;
 
         setProfileSignal({ score });
       } catch (err) {
