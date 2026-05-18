@@ -55,7 +55,7 @@ function extractResumeText(resumeData) {
     else if (c?.name) parts.push(c.name);
   }
   const edu = resumeData.educationList || resumeData.education || [];
-  for (const e of Array.isArray(edu) ? e : []) {
+  for (const e of Array.isArray(edu) ? edu : []) {
     if (e?.degree) parts.push(e.degree);
     if (e?.school) parts.push(e.school);
     if (e?.field) parts.push(e.field);
