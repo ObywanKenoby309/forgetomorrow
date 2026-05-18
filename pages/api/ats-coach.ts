@@ -403,8 +403,16 @@ RULES:
     
     let parsed: any = null;
     try { parsed = JSON.parse(raw); } catch {
-      const s = raw.indexOf('{'); const e = raw.lastIndexOf('}');
-      if (s >= 0 && e > s) try { parsed = JSON.parse(raw.slice(s, e + 1)); } catch { parsed = null; }
+      const jsonStart = raw.indexOf('{');
+const jsonEnd = raw.lastIndexOf('}');
+
+if (jsonStart >= 0 && jsonEnd > jsonStart) {
+  try {
+    parsed = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+  } catch {
+    parsed = null;
+  }
+}
     }
 
     if (!parsed || !Array.isArray(parsed.suggestedRoles)) return { triggered: false };
