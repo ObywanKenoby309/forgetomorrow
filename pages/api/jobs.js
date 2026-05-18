@@ -1,6 +1,7 @@
 // pages/api/jobs.js
 import { Pool } from 'pg';
 import { prisma } from '@/lib/prisma';
+import { rankJobsBySignalRelevance } from '@/lib/intelligence/forgeJobMatchEngine';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 

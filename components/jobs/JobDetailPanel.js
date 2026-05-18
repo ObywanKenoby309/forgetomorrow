@@ -21,7 +21,7 @@ export default function JobDetailPanel({
   isPaidUser,
   onApply,
   onResumeAlign,
-  onImproveResume,
+  onImproveResume,  // called after CheckMyFit result to launch resume builder
   profileSignal,
 }) {
   if (!job) {
@@ -132,22 +132,22 @@ export default function JobDetailPanel({
           }}>
             {sourceLabel}
           </span>
-		</div>		
-	</div>
-        {/* Alignment score chips */}
-        {(job?.match !== undefined || profileSignal?.score !== undefined) && (
+        </div>
+
+        {(typeof job?.match === 'number' || typeof profileSignal?.score === 'number') && (
           <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
             {typeof job?.match === 'number' && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '5px 12px', borderRadius: 999,
-                background: 'rgba(100,116,139,0.08)',
-                border: '1px solid rgba(100,116,139,0.20)',
+                background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(100,116,139,0.08)',
+                border: isDark ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(100,116,139,0.20)',
               }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#64748B' }}>Search Relevance</span>
-                <span style={{ fontSize: 13, fontWeight: 900, color: '#64748B' }}>{Math.round(job.match)}%</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: isDark ? '#ECEFF1' : '#64748B' }}>Search Relevance</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: isDark ? '#FFFFFF' : '#64748B' }}>{Math.round(job.match)}%</span>
               </div>
             )}
+
             {typeof profileSignal?.score === 'number' && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
@@ -155,12 +155,14 @@ export default function JobDetailPanel({
                 background: 'rgba(255,112,67,0.10)',
                 border: '1px solid rgba(255,112,67,0.25)',
               }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#FF7043' }}>Profile vs Role</span>
-                <span style={{ fontSize: 13, fontWeight: 900, color: '#FF7043' }}>{profileSignal.score}%</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: isDark ? '#FFCC80' : '#FF7043' }}>Profile vs Role</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: isDark ? '#FFCC80' : '#FF7043' }}>{Math.round(profileSignal.score)}%</span>
               </div>
-			)}            
+            )}
           </div>
         )}
+      </div>
+
       {/* ── Divider ── */}
       <div style={{ height: 1, background: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)', flexShrink: 0 }} />
 
@@ -185,9 +187,9 @@ export default function JobDetailPanel({
         </div>
 
         {/* Alignment intelligence */}
-        {status === 'Open' && (
-		  <CheckMyFit job={job} onImproveResume={onImproveResume} profileSignal={profileSignal} />
-		  )}
+        {status === 'Open' && isPaidUser && (
+          <CheckMyFit job={job} onImproveResume={onImproveResume} profileSignal={profileSignal} />
+        )}
       </div>
 
       {/* ── Divider ── */}

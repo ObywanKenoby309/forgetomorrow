@@ -1,277 +1,293 @@
-// pages/api/jobs/check-fit.js
-import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]";
+// pages/api/jobs.js
+import { Pool } from 'pg';
+import { prisma } from '@/lib/prisma';
+import { rankJobsBySignalRelevance } from '@/lib/intelligence/forgeJobMatchEngine';
 
-function safe(value = "") {
-  return String(value || "").trim();
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+const connectionString = process.env.DATABASE_URL || '';
+const CRON_USER_ID = 'cmiwa2op6000cbvz0f2s8eafb';
+
+let pool = null;
+
+function getPool() {
+  if (!connectionString) return null;
+
+  if (!pool) {
+    pool = new Pool({
+      connectionString,
+      ssl: {
+        rejectUnauthorized: false,
+      },
+    });
+  }
+
+  return pool;
 }
 
-function monthKeyUTC() {
-  const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-function safeJsonParse(value) {
+function toPublishedIso(v) {
   try {
-    if (!value) return null;
-    if (typeof value === "object") return value;
-    if (typeof value !== "string") return null;
-    const s = value.trim();
-    if (!s) return null;
-    return JSON.parse(s);
+    return v ? new Date(v).toISOString() : new Date().toISOString();
   } catch {
-    return null;
+    return new Date().toISOString();
   }
 }
 
-function normalizeResumeTemplateData(raw) {
-  const parsed = safeJsonParse(raw);
-  if (!parsed || typeof parsed !== "object") return null;
+function mapJob(row) {
+  const published =
+    row.publishedat ||
+    row.publishedAt ||
+    row.createdAt ||
+    row.createdat ||
+    row.created_at ||
+    null;
 
-  if (parsed.data && typeof parsed.data === "object") return parsed.data;
-  if (parsed.resume && typeof parsed.resume === "object") return parsed.resume;
-
-  return parsed;
-}
-
-function normalizeCompareText(value) {
-  return safe(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function cleanHammerPayload(payload) {
-  if (!payload || typeof payload !== "object") return payload;
-
-  const structured =
-    payload.structured && typeof payload.structured === "object"
-      ? { ...payload.structured }
-      : null;
-
-  if (!structured) return payload;
-
-  const tips = Array.isArray(payload.tips) ? payload.tips : [];
-
-  const positiveCandidates = [
-    structured?.strongestSignal,
-    structured?.strongestAlignment,
-    tips[0],
-  ];
-
-  if (Array.isArray(structured?.improvementActions)) {
-    for (const action of structured.improvementActions) {
-      if (action?.positiveSignal) positiveCandidates.push(action.positiveSignal);
-    }
-  }
-
-  const strongest = positiveCandidates.map(safe).find(Boolean);
-  const strongestKey = normalizeCompareText(strongest);
-
-  if (strongestKey) {
-    const rawSignalGaps = Array.isArray(structured.signalGaps)
-      ? structured.signalGaps
-      : [];
-
-    const filteredSignalGaps = rawSignalGaps.filter(
-      (gap) => normalizeCompareText(gap) !== strongestKey
-    );
-
-    structured.signalGaps = filteredSignalGaps;
-
-    if (normalizeCompareText(structured.primaryGap) === strongestKey) {
-      structured.primaryGap = filteredSignalGaps[0] || "";
-    }
-
-    if (normalizeCompareText(structured.biggestGap) === strongestKey) {
-      structured.biggestGap = filteredSignalGaps[0] || structured.primaryGap || "";
-    }
-  }
+  const publishedIso = toPublishedIso(published);
+  const companyName = (row.company || '').trim();
+  const isFtOfficial = companyName.toLowerCase() === 'forgetomorrow';
 
   return {
-    ...payload,
-    structured,
+    id: row.id,
+    title: row.title,
+    company: row.company,
+    location: row.location,
+    description: row.description,
+    url: row.url || null,
+    salary: row.compensation || row.salary || null,
+    tags: row.tags || null,
+
+    source: row.source || null,
+    userId: row.userId || row.userid || null,
+    accountKey: row.accountKey || row.accountkey || null,
+    externalId: row.externalId || row.externalid || null,
+
+    origin: row.userId === CRON_USER_ID || row.userid === CRON_USER_ID ? 'external' : 'internal',
+    status: row.status || 'Open',
+    publishedat: publishedIso,
+    updatedAt: row.updatedAt || row.updatedat || null,
+
+    tier: isFtOfficial ? 'ft-official' : row.externalId || row.externalid ? null : 'partner',
+    logoUrl: isFtOfficial ? '/images/logo-color.png' : null,
   };
 }
 
-async function resolveUserId(session) {
-  const directId = session?.user?.id;
-  if (directId) return String(directId);
-
-  const email = safe(session?.user?.email).toLowerCase();
-  if (!email) return null;
-
-  const u = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true },
-  });
-
-  return u?.id ? String(u.id) : null;
-}
-
-async function enforceJobFitGate(userId) {
-  const monthKey = monthKeyUTC();
-
-  return prisma.$transaction(async (tx) => {
-    const user = await tx.user.findUnique({
-      where: { id: userId },
-      select: {
-        plan: true,
-        resumeAlignFreeUses: true,
-        resumeAlignLastResetMonth: true,
-      },
-    });
-
-    const plan = String(user?.plan || "FREE").toUpperCase();
-    const limit = plan === "FREE" ? 3 : 15;
-
-    const last = safe(user?.resumeAlignLastResetMonth);
-    const uses = Number(user?.resumeAlignFreeUses || 0);
-
-    if (last !== monthKey) {
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          resumeAlignFreeUses: 1,
-          resumeAlignLastResetMonth: monthKey,
-        },
-      });
-
-      return {
-        allowed: true,
-        remaining: limit - 1,
-        tier: plan,
-        limit,
-      };
-    }
-
-    if (uses >= limit) {
-      return {
-        allowed: false,
-        remaining: 0,
-        tier: plan,
-        limit,
-      };
-    }
-
-    await tx.user.update({
-      where: { id: userId },
-      data: {
-        resumeAlignFreeUses: { increment: 1 },
-      },
-    });
-
-    return {
-      allowed: true,
-      remaining: Math.max(0, limit - (uses + 1)),
-      tier: plan,
-      limit,
-    };
-  });
+function parsePositiveInt(value, fallback) {
+  const parsed = parseInt(Array.isArray(value) ? value[0] : value, 10);
+  return Number.isNaN(parsed) || parsed < 1 ? fallback : parsed;
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", ["POST"]);
-    return res.status(405).json({ ok: false, error: "Method not allowed" });
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const dbPool = getPool();
+
+  const jobIdParam = req.query?.jobId;
+  const jobId = Array.isArray(jobIdParam) ? jobIdParam[0] : jobIdParam;
+
+  if (jobId && String(jobId).trim()) {
+    const id = String(jobId).trim();
+
+    try {
+      const numericId = Number(id);
+
+      if (!Number.isNaN(numericId)) {
+        const internal = await prisma.job.findUnique({
+          where: { id: numericId },
+        });
+
+        if (internal && String(internal.status || '').toLowerCase() !== 'draft') {
+          return res.status(200).json({ job: mapJob(internal) });
+        }
+      }
+    } catch (e) {
+      console.error('[jobs] findUnique job error:', e);
+    }
+
+    if (dbPool) {
+      try {
+        const client = await dbPool.connect();
+
+        try {
+          const result = await client.query(
+            `
+            SELECT
+              id, title, company, location, description,
+              url, salary, compensation, tags, source, status,
+              "userId", "accountKey", "externalId",
+              "publishedAt", "publishedat", "createdAt", "updatedAt"
+            FROM jobs
+            WHERE id::text = $1
+            LIMIT 1;
+            `,
+            [id]
+          );
+
+          const row = result.rows?.[0];
+
+          if (row) {
+            return res.status(200).json({ job: mapJob(row) });
+          }
+        } finally {
+          client.release();
+        }
+      } catch (error) {
+        console.error('[jobs] Postgres job lookup error:', error);
+      }
+    }
+
+    return res.status(404).json({ error: 'Job not found' });
+  }
+
+  const page = parsePositiveInt(req.query.page, 1);
+  const requestedPageSize = parsePositiveInt(req.query.pageSize, 20);
+  const pageSize = Math.min(requestedPageSize, 100);
+  const offset = (page - 1) * pageSize;
+  const keyword = String(req.query.keyword || '').trim();
+  const company = String(req.query.company || '').trim();
+  const location = String(req.query.location || '').trim();
+  const locationType = String(req.query.locationType || '').trim();
+  const source = String(req.query.source || '').trim();
+  const days = parsePositiveInt(req.query.days, 0);
+
+  if (!dbPool) {
+    return res.status(200).json({
+      jobs: [],
+      page,
+      pageSize,
+      totalCount: 0,
+      totalPages: 1,
+      debugTotal: 0,
+      debugExternalCount: 0,
+      debugInternalCount: 0,
+    });
   }
 
   try {
-    const session = await getServerSession(req, res, authOptions);
+    const client = await dbPool.connect();
 
-    if (!session?.user?.email) {
-      return res.status(401).json({ ok: false, error: "Unauthorized" });
-    }
+    try {
+      const countResult = await client.query(
+        `
+        SELECT COUNT(*)::int AS count
+        FROM jobs
+        WHERE LOWER(COALESCE(status, '')) NOT IN ('draft', 'expired')
+        AND ($1 = '' OR LOWER(title) LIKE LOWER($1) OR LOWER(description) LIKE LOWER($1))
+        AND ($2 = '' OR LOWER(company) LIKE LOWER($2))
+        AND ($3 = '' OR LOWER(location) LIKE LOWER($3))
+        AND (
+          $4 = ''
+          OR ($4 = 'Remote' AND LOWER(location) LIKE '%remote%')
+          OR ($4 = 'Hybrid' AND LOWER(location) LIKE '%hybrid%')
+          OR ($4 = 'On-site' AND LOWER(location) NOT LIKE '%remote%' AND LOWER(location) NOT LIKE '%hybrid%')
+        )
+        AND (
+          $5 = ''
+          OR ($5 = 'external' AND "userId" = $6)
+          OR ($5 = 'internal' AND "userId" != $6)
+        )
+        AND (
+          $7 = 0
+          OR COALESCE("publishedat", "publishedAt", "createdAt") >= NOW() - ($7 || ' days')::interval
+        );
+        `,
+        [
+          `%${keyword}%`,
+          `%${company}%`,
+          `%${location}%`,
+          locationType,
+          source,
+          CRON_USER_ID,
+          days,
+        ]
+      );
 
-    const userId = await resolveUserId(session);
+      const totalCount = Number(countResult.rows?.[0]?.count || 0);
+      const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-    if (!userId) {
-      return res.status(401).json({ ok: false, error: "Unauthorized" });
-    }
+      const result = await client.query(
+        `
+        SELECT
+          id, title, company, location, description,
+          url, salary, compensation, tags, source, status,
+          "userId", "accountKey", "externalId",
+          "publishedAt", "publishedat", "createdAt", "updatedAt"
+        FROM jobs
+        WHERE LOWER(COALESCE(status, '')) NOT IN ('draft', 'expired')
+        AND ($3 = '' OR LOWER(title) LIKE LOWER($3) OR LOWER(description) LIKE LOWER($3))
+        AND ($4 = '' OR LOWER(company) LIKE LOWER($4))
+        AND ($5 = '' OR LOWER(location) LIKE LOWER($5))
+        AND (
+          $6 = ''
+          OR ($6 = 'Remote' AND LOWER(location) LIKE '%remote%')
+          OR ($6 = 'Hybrid' AND LOWER(location) LIKE '%hybrid%')
+          OR ($6 = 'On-site' AND LOWER(location) NOT LIKE '%remote%' AND LOWER(location) NOT LIKE '%hybrid%')
+        )
+        AND (
+          $7 = ''
+          OR ($7 = 'external' AND "userId" = $8)
+          OR ($7 = 'internal' AND "userId" != $8)
+        )
+        AND (
+          $9 = 0
+          OR COALESCE("publishedat", "publishedAt", "createdAt") >= NOW() - ($9 || ' days')::interval
+        )
+        ORDER BY
+          COALESCE("publishedat", "publishedAt", "createdAt") DESC NULLS LAST,
+          id DESC
+        LIMIT $1 OFFSET $2;
+        `,
+        [
+          pageSize,
+          offset,
+          `%${keyword}%`,
+          `%${company}%`,
+          `%${location}%`,
+          locationType,
+          source,
+          CRON_USER_ID,
+          days,
+        ]
+      );
 
-    const primaryResume =
-      (await prisma.resume.findFirst({
-        where: { userId, isPrimary: true },
-        select: { id: true, content: true, updatedAt: true },
-        orderBy: { updatedAt: "desc" },
-      })) ||
-      (await prisma.resume.findFirst({
-        where: { userId },
-        select: { id: true, content: true, updatedAt: true },
-        orderBy: { updatedAt: "desc" },
-      }));
+      const jobs = (result.rows || []).map(mapJob);
+      const hasSearchIntent = Boolean(keyword || company || location || locationType || source || days);
 
-    const resumeData = normalizeResumeTemplateData(primaryResume?.content);
+      const responseJobs = hasSearchIntent
+        ? rankJobsBySignalRelevance(jobs, {
+            keyword,
+            company,
+            location,
+            locationType,
+            source,
+          }).map((job) => ({
+            ...job,
+            match: job.jobMatch ?? null,
+          }))
+        : jobs.map((job) => ({
+            ...job,
+            match: null,
+          }));
 
-    if (!resumeData) {
-      return res.status(400).json({
-        ok: false,
-        error: "Primary resume not found or resume content is not valid JSON.",
-      });
-    }
-
-    const gate = await enforceJobFitGate(userId);
-
-    if (!gate.allowed) {
       return res.status(200).json({
-        ok: true,
-        upgrade: true,
-        text: `Monthly Check My Alignment limit reached (${gate.limit}/month).`,
-        structured: null,
-        remaining: 0,
-        limit: gate.limit,
-        tier: gate.tier,
+        jobs: responseJobs,
+        page,
+        pageSize,
+        totalCount,
+        totalPages,
+        debugTotal: jobs.length,
+        debugExternalCount: jobs.filter((job) => job.origin === 'external').length,
+        debugInternalCount: jobs.filter((job) => job.origin === 'internal').length,
       });
+    } finally {
+      client.release();
     }
-
-    const origin =
-      process.env.NEXTAUTH_URL ||
-      `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}`;
-
-    const atsResponse = await fetch(`${origin}/api/ats-coach`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        cookie: req.headers.cookie || "",
-      },
-      body: JSON.stringify({
-        jdText: req.body?.jdText || "",
-        resumeData,
-        context: { section: "overview", keyword: null },
-        missing: {},
-        jobMeta: req.body?.jobMeta || null,
-        attemptCount: 1,
-        internalBypassGate: true,
-      }),
-    });
-
-    const contentType = atsResponse.headers.get("content-type") || "";
-    const data = contentType.includes("application/json")
-      ? await atsResponse.json()
-      : { ok: false, error: await atsResponse.text() };
-
-    if (!atsResponse.ok || !data?.ok) {
-      return res.status(502).json({
-        ok: false,
-        error: data?.error || "Hammer alignment request failed.",
-      });
-    }
-
-    return res.status(200).json({
-      ok: true,
-      remaining: gate.remaining,
-      limit: gate.limit,
-      tier: gate.tier,
-      hammer: cleanHammerPayload(data),
-    });
-  } catch (err) {
-    console.error("[jobs/check-fit] error", err);
+  } catch (error) {
+    console.error('[jobs] paginated jobs error:', error);
 
     return res.status(500).json({
-      ok: false,
-      error: "Failed to run Check My Alignment.",
+      error: 'Failed to load jobs',
     });
   }
 }

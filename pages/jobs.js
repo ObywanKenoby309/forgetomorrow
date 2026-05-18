@@ -182,6 +182,7 @@ function JobsUI() {
   const [userHasSelected, setUserHasSelected] = useState(false);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [profileSignal, setProfileSignal] = useState(null);
+
   const [keyword, setKeyword] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
@@ -262,6 +263,7 @@ function JobsUI() {
 
         const loadedJobs = Array.isArray(data?.jobs) ? data.jobs : [];
 
+        setJobs(loadedJobs);
         setTotalJobCount(Number(data?.totalCount || loadedJobs.length || 0));
       } catch (err) {
         console.error(err);
@@ -478,16 +480,8 @@ function JobsUI() {
         if (cancelled || !job) return;
 
         setSelectedJob(job);
-
-setJobs((prevJobs) => {
-  const exists = prevJobs.some((j) => String(j.id) === String(job.id));
-  if (exists) return prevJobs;
-
-  return [job, ...prevJobs];
-});
-
-setUserHasSelected(true);
-addViewedJob(job);
+        setUserHasSelected(true);
+        addViewedJob(job);
 
         if (isMobile) {
           setMobileDetailOpen(true);
@@ -513,48 +507,101 @@ addViewedJob(job);
   const totalPages = Math.max(1, Math.ceil(totalJobCount / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const pagedJobs = filteredJobs;
-useEffect(() => {
-  let cancelled = false;
 
-  async function alignSelectedJob() {
-    if (!selectedJob || loading) return;
+  useEffect(() => {
+    let cancelled = false;
 
-    try {
-      const alignRes = await fetch('/api/jobs/alignment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobs: [selectedJob],
-        }),
-      });
+    async function alignSelectedJob() {
+      if (!selectedJob?.id || loading) return;
 
-      if (!alignRes.ok) return;
+      try {
+        setProfileSignal(null);
 
-      const alignData = await alignRes.json();
-      const alignedJob = Array.isArray(alignData?.jobs)
-        ? alignData.jobs[0]
-        : null;
+        const alignRes = await fetch('/api/jobs/alignment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobs: [selectedJob],
+          }),
+        });
 
-      if (cancelled || !alignedJob) return;
+        if (!alignRes.ok) return;
 
-      setProfileSignal({
-        score:
-          alignedJob?.match ??
-          alignedJob?.matchScore ??
-          alignedJob?.alignmentScore ??
-          null,
-      });
-    } catch (err) {
-      console.error('[Jobs] selected alignment load failed', err);
+        const alignData = await alignRes.json();
+        const alignedJob = Array.isArray(alignData?.jobs)
+          ? alignData.jobs[0]
+          : null;
+
+        if (cancelled || !alignedJob) return;
+
+        const score =
+          typeof alignedJob?.jdProfileSignal?.score === 'number'
+            ? alignedJob.jdProfileSignal.score
+            : typeof alignedJob?.match === 'number'
+            ? alignedJob.match
+            : null;
+
+        setProfileSignal({ score });
+      } catch (err) {
+        console.error('[Jobs] selected alignment load failed', err);
+      }
     }
-  }
 
-  alignSelectedJob();
+    alignSelectedJob();
 
-  return () => {
-    cancelled = true;
-  };
-}, [selectedJob?.id, loading]);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedJob?.id, loading]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function alignVisibleJobs() {
+      if (!pagedJobs.length || loading) return;
+
+      try {
+        const alignRes = await fetch('/api/jobs/alignment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobs: pagedJobs }),
+        });
+
+        if (!alignRes.ok) return;
+
+        const alignData = await alignRes.json();
+        const alignedJobs = Array.isArray(alignData?.jobs) ? alignData.jobs : [];
+
+        if (cancelled || !alignedJobs.length) return;
+
+        const alignedMap = new Map(
+          alignedJobs.map((job) => [String(job.id), job])
+        );
+
+        setJobs((prevJobs) =>
+          prevJobs.map((job) => {
+            const aligned = alignedMap.get(String(job.id));
+            return aligned ? { ...job, ...aligned } : job;
+          })
+        );
+      } catch (alignErr) {
+        console.error('[Jobs] visible alignment load failed', alignErr);
+      }
+    }
+
+    alignVisibleJobs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+  currentPage,
+  pageSize,
+  appliedFilters,
+  pagedJobs.map((job) => job.id).join('|'),
+  loading,
+]);
+
 useEffect(() => {
   if (!selectedJob?.id) return;
 
@@ -567,20 +614,15 @@ useEffect(() => {
   setSelectedJob(refreshedSelectedJob);
 }, [jobs, selectedJob?.id]);
 
-useEffect(() => {
-  if (!selectedJob?.id) return;
+  useEffect(() => {
+    if (!selectedJob?.id) return;
+    if (!selectedJobCardRef.current) return;
 
-  const node = selectedJobCardRef.current;
-
-  if (!node || typeof node.scrollIntoView !== 'function') return;
-
-  requestAnimationFrame(() => {
-    node.scrollIntoView({
+    selectedJobCardRef.current.scrollIntoView({
       behavior: 'smooth',
       block: 'center',
     });
-  });
-}, [selectedJob?.id, currentPage]);
+  }, [selectedJob?.id, currentPage]);
 
   useEffect(() => {
     if (userHasSelected) return;
@@ -706,7 +748,8 @@ useEffect(() => {
         {mobileDetailOpen && selectedJob && (
           <MobileJobDetail
             job={selectedJob}
-			profileSignal={profileSignal}
+            profileSignal={profileSignal}
+            onBack={() => setMobileDetailOpen(false)}
             getJobStatus={getJobStatus}
             isInternalJob={isInternalJob}
             getJobTier={getJobTier}
@@ -804,7 +847,7 @@ useEffect(() => {
         >
           <JobDetailPanel
             job={selectedJob}
-			profileSignal={profileSignal}
+            profileSignal={profileSignal}
             getJobStatus={getJobStatus}
             isInternalJob={isInternalJob}
             getJobTier={getJobTier}
