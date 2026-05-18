@@ -275,9 +275,33 @@ AND (
       );
 
       const jobs = (result.rows || []).map(mapJob);
+const hasSearchIntent =
+  Boolean(keyword) ||
+  Boolean(company) ||
+  Boolean(location) ||
+  Boolean(locationType) ||
+  Boolean(source) ||
+  Boolean(days);
+
+const responseJobs = hasSearchIntent
+  ? rankJobsBySignalRelevance(jobs, {
+      keyword,
+      company,
+      location,
+      locationType,
+      source,
+    }).map((job) => ({
+      ...job,
+      match: job.jobMatch ?? null,
+    }))
+  : jobs.map((job) => ({
+      ...job,
+      match: null,
+    }));
+
 
       return res.status(200).json({
-        jobs,
+        jobs: responseJobs,
         page,
         pageSize,
         totalCount,
