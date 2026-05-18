@@ -35,6 +35,67 @@ function normalizeResumeTemplateData(raw) {
   return parsed;
 }
 
+function normalizeCompareText(value) {
+  return safe(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cleanHammerPayload(payload) {
+  if (!payload || typeof payload !== "object") return payload;
+
+  const structured =
+    payload.structured && typeof payload.structured === "object"
+      ? { ...payload.structured }
+      : null;
+
+  if (!structured) return payload;
+
+  const tips = Array.isArray(payload.tips) ? payload.tips : [];
+
+  const positiveCandidates = [
+    structured?.strongestSignal,
+    structured?.strongestAlignment,
+    tips[0],
+  ];
+
+  if (Array.isArray(structured?.improvementActions)) {
+    for (const action of structured.improvementActions) {
+      if (action?.positiveSignal) positiveCandidates.push(action.positiveSignal);
+    }
+  }
+
+  const strongest = positiveCandidates.map(safe).find(Boolean);
+  const strongestKey = normalizeCompareText(strongest);
+
+  if (strongestKey) {
+    const rawSignalGaps = Array.isArray(structured.signalGaps)
+      ? structured.signalGaps
+      : [];
+
+    const filteredSignalGaps = rawSignalGaps.filter(
+      (gap) => normalizeCompareText(gap) !== strongestKey
+    );
+
+    structured.signalGaps = filteredSignalGaps;
+
+    if (normalizeCompareText(structured.primaryGap) === strongestKey) {
+      structured.primaryGap = filteredSignalGaps[0] || "";
+    }
+
+    if (normalizeCompareText(structured.biggestGap) === strongestKey) {
+      structured.biggestGap = filteredSignalGaps[0] || structured.primaryGap || "";
+    }
+  }
+
+  return {
+    ...payload,
+    structured,
+  };
+}
+
 async function resolveUserId(session) {
   const directId = session?.user?.id;
   if (directId) return String(directId);
@@ -203,7 +264,7 @@ export default async function handler(req, res) {
       remaining: gate.remaining,
       limit: gate.limit,
       tier: gate.tier,
-      hammer: data,
+      hammer: cleanHammerPayload(data),
     });
   } catch (err) {
     console.error("[jobs/check-fit] error", err);

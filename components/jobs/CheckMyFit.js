@@ -68,11 +68,25 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
         tips[0] ||
         '';
 
-      const biggestGap =
-        (Array.isArray(structured?.signalGaps) && structured.signalGaps[0]) ||
-        structured?.primaryGap ||
-        structured?.biggestGap ||
-        '';
+      const rawGap =
+  (Array.isArray(structured?.signalGaps) && structured.signalGaps[0]) ||
+  structured?.primaryGap ||
+  structured?.biggestGap ||
+  '';
+
+const normalizeSignal = (v = '') =>
+  String(v || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim();
+
+const strongestNorm = normalizeSignal(strongest);
+const gapNorm = normalizeSignal(rawGap);
+
+const biggestGap =
+  strongestNorm && strongestNorm === gapNorm
+    ? ''
+    : rawGap;
 
             const score =
         typeof structured?.score === 'number'

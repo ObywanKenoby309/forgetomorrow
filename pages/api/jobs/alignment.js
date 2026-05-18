@@ -2,7 +2,7 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
-import { rankJobsBySignalRelevance } from "@/lib/intelligence/forgeJobMatchEngine";
+import { rankJobsBySeekerAlignment } from "@/lib/intelligence/forgeJobMatchEngine";
 import { signalScoreVsJD } from '@/lib/intelligence/profileSignalShared';
 
 function safeJsonParse(value) {
@@ -129,7 +129,7 @@ export default async function handler(req, res) {
       hasResume: Boolean(primaryResume?.id),
       primaryResume: primaryResume?.id ? { id: primaryResume.id } : null,
     };
-    const alignedJobs = rankJobsBySignalRelevance(jobs, req.body?.filters || {});
+    const alignedJobs = rankJobsBySeekerAlignment(jobs, seekerContext);
 
     const alignments = {};
     for (const job of alignedJobs) {
