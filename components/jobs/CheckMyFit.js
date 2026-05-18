@@ -91,10 +91,21 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
           })
         : null;
 
-      const strongest = positiveAction
-        ? safe(positiveAction.resumeEvidence || positiveAction.requiredSignal)
-        : adjacentAction
-        ? safe(adjacentAction.resumeEvidence)
+      // Extract genuine adjacent strength from ifNotTrue field
+      // The hammer puts real transferable evidence there, not in resumeEvidence
+      const strengthSource = positiveAction || adjacentAction;
+      const ifNotTrue = safe(strengthSource?.ifNotTrue || '');
+      
+      // Pull the strongest adjacent signal from ifNotTrue text
+      // Look for the pattern "strongest truthful adjacent proof/evidence is X"
+      const adjacentMatch = ifNotTrue.match(
+        /(?:strongest truthful adjacent (?:proof|evidence|signal) is|adjacent (?:strength|signal|proof) is)\s+([^.]+)/i
+      );
+      
+      const strongest = adjacentMatch
+        ? adjacentMatch[1].trim()
+        : ifNotTrue.length > 20 && ifNotTrue.length < 200
+        ? ifNotTrue
         : '';
 
       // Biggest gap — ONLY from screen-out actions
@@ -106,7 +117,6 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
         ? safe(gapAction.requiredSignal)
         : safe(structured?.signalGaps?.[0] || '');
 
-console.log('[CheckMyFit] improvementActions:', JSON.stringify(improvementActions, null, 2));
 
       setResult({
         score,
