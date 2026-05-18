@@ -78,13 +78,19 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
         structured?.biggestGap ||
         '';
 
-      const score =
+            const score =
         typeof structured?.score === 'number'
           ? structured.score
           : typeof structured?.overallScore === 'number'
           ? structured.overallScore
           : typeof structured?.alignmentScore === 'number'
           ? structured.alignmentScore
+          : typeof job?.alignmentScore === 'number'
+          ? job.alignmentScore
+          : typeof job?.matchScore === 'number'
+          ? job.matchScore
+          : typeof job?.score === 'number'
+          ? job.score
           : null;
 
       setResult({

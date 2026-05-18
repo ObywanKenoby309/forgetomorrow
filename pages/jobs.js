@@ -544,12 +544,22 @@ addViewedJob(job);
           alignedJobs.map((job) => [String(job.id), job])
         );
 
-        setJobs((prevJobs) =>
-          prevJobs.map((job) => {
-            const aligned = alignedMap.get(String(job.id));
-            return aligned ? { ...job, ...aligned } : job;
-          })
-        );
+        setJobs((prevJobs) => {
+          const alignedOrder = alignedJobs.map((aligned) => {
+            const existing = prevJobs.find(
+              (job) => String(job.id) === String(aligned.id)
+            );
+
+            return existing ? { ...existing, ...aligned } : aligned;
+          });
+
+          const alignedIds = new Set(alignedOrder.map((job) => String(job.id)));
+          const remainingJobs = prevJobs.filter(
+            (job) => !alignedIds.has(String(job.id))
+          );
+
+          return [...alignedOrder, ...remainingJobs];
+        });
         if (alignData.profileSignalScore !== undefined) {
           setProfileSignal({
             score: alignData.profileSignalScore,
