@@ -1,6 +1,6 @@
 // components/jobs/CheckMyFit.js
 // On-demand alignment explanation shown only on the job detail panel.
-// Uses the WHY engine via check-fit.js — same engine as External Compare and recruiter packets.
+// Quick truth preview — score, largest strength, largest gap, CTA to Hammer.
 import React, { useEffect, useState } from 'react';
 
 function safe(v) { return String(v || '').trim(); }
@@ -52,38 +52,31 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
         return;
       }
 
-      // WHY engine result — same engine as External Compare and recruiter packets
       const why = data?.why || {};
-
       const score = typeof why?.score === 'number' ? why.score : null;
+      const profileVsRole = typeof profileSignal?.score === 'number' ? profileSignal.score : null;
 
-      const profileVsRole = typeof profileSignal?.score === 'number'
-        ? profileSignal.score
-        : null;
-
-      const summary = why?.summary ||
-        'ForgeTomorrow analyzed your resume against this role.';
-
-      // Strongest — first matched signal, guaranteed to be a real strength
+      // Largest strength — first transferable signal, or first matched strength
+      const transferable = Array.isArray(why?.skills?.transferable) ? why.skills.transferable : [];
       const strengths = Array.isArray(why?.strengths) ? why.strengths : [];
-      const strongest = strengths[0] || '';
+      const largestStrength = transferable[0] || (strengths[0] ? `Strong signal: ${strengths[0]}` : '');
 
-      // Biggest gap — first not-yet-demonstrated signal
+      // Largest gap — first not-yet-demonstrated signal with plain language
       const gaps = Array.isArray(why?.gaps) ? why.gaps : [];
-      const biggestGap = gaps[0] || '';
-
-      // Transferable signals
-      const transferable = Array.isArray(why?.skills?.transferable)
-        ? why.skills.transferable
+      const notYetSignals = Array.isArray(why?.signals?.not_yet_demonstrated)
+        ? why.signals.not_yet_demonstrated
         : [];
+      const largestGap = notYetSignals[0]?.label
+        ? `The resume lacks direct ${notYetSignals[0].label} evidence required by the JD.`
+        : gaps[0]
+        ? `The resume lacks direct ${gaps[0]} evidence required by the JD.`
+        : '';
 
       setResult({
         score,
         profileVsRole,
-        strongest,
-        biggestGap,
-        transferable,
-        summary,
+        largestStrength,
+        largestGap,
         remaining: data?.remaining,
         limit: data?.limit,
       });
@@ -94,93 +87,71 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
     }
   };
 
+  // ── Idle ──
   if (state === 'idle') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <button
           type="button"
           onClick={run}
           style={{
             width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            padding: '11px 16px',
-            borderRadius: 12,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '11px 16px', borderRadius: 12,
             border: '1.5px solid rgba(255,112,67,0.35)',
             background: 'rgba(255,112,67,0.06)',
-            color: '#FF7043',
-            fontWeight: 800,
-            fontSize: 13,
-            cursor: 'pointer',
+            color: '#FF7043', fontWeight: 800, fontSize: 13, cursor: 'pointer',
           }}
         >
           ⚡ Check My Alignment
         </button>
         <div style={{ fontSize: 11, color: '#94A3B8', textAlign: 'center', lineHeight: 1.5 }}>
-          Uses your primary resume + this JD. Free: 3/month · Pro: 15/month
+          Resume vs JD · Free: 3/month · Pro: 15/month
         </div>
       </div>
     );
   }
 
+  // ── Loading ──
   if (state === 'loading') {
     return (
       <div style={{
-        width: '100%',
-        padding: '14px 16px',
-        borderRadius: 12,
-        border: '1px solid #E0E0E0',
-        background: '#FAFAFA',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        color: '#607D8B',
-        fontSize: 13,
-        fontWeight: 700,
+        width: '100%', padding: '14px 16px', borderRadius: 12,
+        border: '1px solid #E0E0E0', background: '#FAFAFA',
+        display: 'flex', alignItems: 'center', gap: 10,
+        color: '#607D8B', fontSize: 13, fontWeight: 700,
       }}>
         <span style={{
-          display: 'inline-block',
-          width: 16, height: 16,
-          borderRadius: 999,
-          border: '2px solid #FF7043',
-          borderTopColor: 'transparent',
-          animation: 'spin 0.7s linear infinite',
-          flexShrink: 0,
+          display: 'inline-block', width: 16, height: 16, borderRadius: 999,
+          border: '2px solid #FF7043', borderTopColor: 'transparent',
+          animation: 'spin 0.7s linear infinite', flexShrink: 0,
         }} />
-        Running resume vs JD alignment...
+        Analyzing your resume against this role...
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
+  // ── Error ──
   if (state === 'error') {
     return (
       <div style={{
-        borderRadius: 12,
-        border: '1px solid rgba(211,47,47,0.20)',
-        background: 'rgba(211,47,47,0.06)',
-        padding: '12px 14px',
-        color: '#D32F2F',
-        fontSize: 13,
-        fontWeight: 700,
+        borderRadius: 12, border: '1px solid rgba(211,47,47,0.20)',
+        background: 'rgba(211,47,47,0.06)', padding: '12px 14px',
+        color: '#D32F2F', fontSize: 13, fontWeight: 700,
       }}>
         Could not analyze this role right now. Please try again.
       </div>
     );
   }
 
+  // ── Locked ──
   if (state === 'done' && result?.locked) {
     return (
       <div style={{
-        borderRadius: 12,
-        border: '1px solid rgba(255,112,67,0.20)',
-        background: 'rgba(255,112,67,0.06)',
-        padding: '14px 16px',
-        color: '#455A64',
-        fontSize: 13,
-        lineHeight: 1.6,
+        borderRadius: 12, border: '1px solid rgba(255,112,67,0.20)',
+        background: 'rgba(255,112,67,0.06)', padding: '14px 16px',
+        color: '#455A64', fontSize: 13, lineHeight: 1.6,
       }}>
         <div style={{ fontWeight: 800, marginBottom: 6 }}>Monthly limit reached</div>
         <div>{result.message}</div>
@@ -188,6 +159,7 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
     );
   }
 
+  // ── Result ──
   if (state === 'done' && result) {
     const scoreColor = result.score >= 75 ? '#16A34A' : result.score >= 50 ? '#FF7043' : '#DC2626';
     const scoreText = typeof result.score === 'number' ? `${result.score}%` : '—';
@@ -195,103 +167,79 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
     return (
       <div style={{
         borderRadius: 14,
-        border: `1px solid ${scoreColor}22`,
-        background: `${scoreColor}06`,
+        border: '1px solid rgba(255,255,255,0.22)',
+        background: 'rgba(255,255,255,0.72)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         padding: '14px 16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12,
+        display: 'flex', flexDirection: 'column', gap: 12,
+        boxShadow: '0 6px 18px rgba(0,0,0,0.08)',
       }}>
 
         {/* Score row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
-            width: 54, height: 54, borderRadius: 999, flexShrink: 0,
+            width: 52, height: 52, borderRadius: 999, flexShrink: 0,
             border: `2px solid ${scoreColor}`,
             background: `${scoreColor}14`,
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
           }}>
-            <span style={{ fontWeight: 900, fontSize: 16, color: scoreColor, lineHeight: 1 }}>
+            <span style={{ fontWeight: 900, fontSize: 15, color: scoreColor, lineHeight: 1 }}>
               {scoreText}
             </span>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: 15, color: '#112033' }}>
+            <div style={{ fontWeight: 800, fontSize: 14, color: '#112033' }}>
               Resume vs Role
             </div>
-            <div style={{ marginTop: 2, fontSize: 11, color: '#607D8B' }}>
-              Profile vs Role: {result.profileVsRole ?? '—'}%
-            </div>
+            {result.profileVsRole !== null && (
+              <div style={{ fontSize: 11, color: '#607D8B', marginTop: 2 }}>
+                Profile vs Role: {result.profileVsRole}%
+              </div>
+            )}
           </div>
           <button
             type="button"
             onClick={() => { setState('idle'); setResult(null); }}
-            style={{ background: 'none', border: 'none', color: '#90A4AE', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}
+            style={{ background: 'none', border: 'none', color: '#90A4AE', fontSize: 20, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}
             aria-label="Dismiss"
-          >
-            ×
-          </button>
+          >×</button>
         </div>
 
-        {/* Summary */}
-        {result.summary && (
-          <div style={{ fontSize: 13, lineHeight: 1.6, color: '#455A64' }}>
-            {result.summary}
-          </div>
-        )}
-
-        {/* Strongest alignment */}
-        {result.strongest && (
+        {/* Largest strength */}
+        {result.largestStrength && (
           <div style={{
             borderRadius: 10, padding: '10px 12px',
             background: 'rgba(22,163,74,0.06)',
             border: '1px solid rgba(22,163,74,0.16)',
           }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#16A34A', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Strongest Alignment
+            <div style={{ fontSize: 10, fontWeight: 800, color: '#16A34A', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Largest Strength
             </div>
-            <div style={{ fontSize: 12, lineHeight: 1.5, color: '#455A64' }}>
-              {result.strongest}
+            <div style={{ fontSize: 12, lineHeight: 1.55, color: '#374151' }}>
+              {result.largestStrength}
             </div>
           </div>
         )}
 
-        {/* Biggest gap */}
-        {result.biggestGap && (
+        {/* Largest gap */}
+        {result.largestGap && (
           <div style={{
             borderRadius: 10, padding: '10px 12px',
             background: 'rgba(220,38,38,0.05)',
             border: '1px solid rgba(220,38,38,0.16)',
           }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#DC2626', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Biggest Gap
+            <div style={{ fontSize: 10, fontWeight: 800, color: '#DC2626', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Largest Gap
             </div>
-            <div style={{ fontSize: 12, lineHeight: 1.5, color: '#455A64' }}>
-              {result.biggestGap}
+            <div style={{ fontSize: 12, lineHeight: 1.55, color: '#374151' }}>
+              {result.largestGap}
             </div>
           </div>
         )}
 
-        {/* Transferable signals */}
-        {result.transferable?.length > 0 && (
-          <div style={{
-            borderRadius: 10, padding: '10px 12px',
-            background: 'rgba(217,119,6,0.05)',
-            border: '1px solid rgba(217,119,6,0.16)',
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#D97706', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Transferable Signals
-            </div>
-            {result.transferable.slice(0, 2).map((t, i) => (
-              <div key={i} style={{ fontSize: 12, lineHeight: 1.5, color: '#455A64', marginBottom: i < result.transferable.slice(0, 2).length - 1 ? 4 : 0 }}>
-                → {t}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Improve resume CTA */}
+        {/* CTA */}
         {typeof onImproveResume === 'function' && (
           <button
             type="button"
@@ -303,13 +251,13 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
               boxShadow: '0 4px 14px rgba(26,75,143,0.20)',
             }}
           >
-            Improve Resume Alignment
+            Improve Resume Alignment →
           </button>
         )}
 
         {/* Usage */}
-        <div style={{ fontSize: 11, color: '#94A3B8', textAlign: 'center', lineHeight: 1.5 }}>
-          Remaining this month: {result.remaining ?? '—'} / {result.limit ?? '—'}
+        <div style={{ fontSize: 10, color: '#94A3B8', textAlign: 'center', lineHeight: 1.5 }}>
+          {result.remaining ?? '—'} of {result.limit ?? '—'} uses remaining this month
         </div>
       </div>
     );
