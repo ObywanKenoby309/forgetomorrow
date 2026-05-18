@@ -106,6 +106,8 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
         ? safe(gapAction.requiredSignal)
         : safe(structured?.signalGaps?.[0] || '');
 
+console.log('[CheckMyFit] improvementActions:', JSON.stringify(improvementActions, null, 2));
+
       setResult({
         score,
         profileVsRole,
