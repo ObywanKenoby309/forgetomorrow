@@ -1,4 +1,4 @@
-pages/api/jobs/check-fit.js
+// pages/api/jobs/check-fit.js
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
