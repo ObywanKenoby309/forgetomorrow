@@ -58,23 +58,23 @@ async function enforceJobFitGate(userId) {
       where: { id: userId },
       select: {
         plan: true,
-        jobAlignFreeUses: true,
-        jobAlignLastResetMonth: true,
+        resumeAlignFreeUses: true,
+        resumeAlignLastResetMonth: true,
       },
     });
 
     const plan = String(user?.plan || "FREE").toUpperCase();
     const limit = plan === "FREE" ? 3 : 15;
 
-    const last = safe(user?.jobAlignLastResetMonth);
-    const uses = Number(user?.jobAlignFreeUses || 0);
+    const last = safe(user?.resumeAlignLastResetMonth);
+    const uses = Number(user?.resumeAlignFreeUses || 0);
 
     if (last !== monthKey) {
       await tx.user.update({
         where: { id: userId },
         data: {
-          jobAlignFreeUses: 1,
-          jobAlignLastResetMonth: monthKey,
+          resumeAlignFreeUses: 1,
+          resumeAlignLastResetMonth: monthKey,
         },
       });
 
@@ -98,7 +98,7 @@ async function enforceJobFitGate(userId) {
     await tx.user.update({
       where: { id: userId },
       data: {
-        jobAlignFreeUses: { increment: 1 },
+        resumeAlignFreeUses: { increment: 1 },
       },
     });
 
