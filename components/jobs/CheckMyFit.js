@@ -53,6 +53,7 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
       }
 
       const why = data?.why || {};
+	  console.log('[CheckMyFit] why gaps:', why?.gaps, why?.signals?.not_yet_demonstrated, why?.skills?.gaps);
       const score = typeof why?.score === 'number' ? why.score : null;
       const profileVsRole = typeof profileSignal?.score === 'number' ? profileSignal.score : null;
 
@@ -66,10 +67,14 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
       const notYetSignals = Array.isArray(why?.signals?.not_yet_demonstrated)
         ? why.signals.not_yet_demonstrated
         : [];
+      // Try not_yet_demonstrated first, then gaps array, then skills.gaps
+      const skillGaps = Array.isArray(why?.skills?.gaps) ? why.skills.gaps : [];
       const largestGap = notYetSignals[0]?.label
         ? `The resume lacks direct ${notYetSignals[0].label} evidence required by the JD.`
         : gaps[0]
         ? `The resume lacks direct ${gaps[0]} evidence required by the JD.`
+        : skillGaps[0]
+        ? `The resume does not yet demonstrate ${skillGaps[0]} as required by this role.`
         : '';
 
       setResult({
