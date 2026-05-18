@@ -170,12 +170,45 @@ export default async function handler(req, res) {
     // No HTTP overhead. No derived score. Real capability-based alignment.
     const why = buildExplain(resumeText, jdText);
 
+const matchedSignals = Array.isArray(why?.signals?.matched) ? why.signals.matched : [];
+const notYetSignals = Array.isArray(why?.signals?.not_yet_demonstrated)
+  ? why.signals.not_yet_demonstrated
+  : [];
+
+let strengthSentence = '';
+const topMatch = matchedSignals[0];
+
+if (topMatch) {
+  const evidence = Array.isArray(topMatch.evidence) ? topMatch.evidence : [];
+  const snippet = evidence.find(
+    (ev) => ev?.text && ev.text.length > 30 && !String(ev.text).startsWith('Matched:')
+  );
+
+  if (snippet?.text) {
+    strengthSentence =
+      snippet.text.length > 140 ? `${snippet.text.slice(0, 137)}...` : snippet.text;
+  } else {
+    strengthSentence = `Your resume shows relevant ${String(topMatch.label || '').toLowerCase()} experience that supports this role.`;
+  }
+}
+
+let gapSentence = '';
+const topGap = notYetSignals[0];
+
+if (topGap?.label) {
+  gapSentence = `The resume does not yet clearly show direct ${String(topGap.label).toLowerCase()} evidence required by this role.`;
+} else if (Array.isArray(why?.gaps) && why.gaps[0]) {
+  gapSentence = `The resume does not yet clearly show direct ${String(why.gaps[0]).toLowerCase()} evidence required by this role.`;
+}
+
     return res.status(200).json({
       ok: true,
       remaining: gate.remaining,
       limit: gate.limit,
       tier: gate.tier,
       why,
+      strengthSentence,
+	  gapSentence,
     });
 
   } catch (err) {

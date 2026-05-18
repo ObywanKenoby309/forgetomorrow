@@ -57,23 +57,8 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
       const score = typeof why?.score === 'number' ? why.score : null;
       const profileVsRole = typeof profileSignal?.score === 'number' ? profileSignal.score : null;
 
-      // Largest strength — use first matched signal label, human readable
-      const strengths = Array.isArray(why?.strengths) ? why.strengths : [];
-      const transferable = Array.isArray(why?.skills?.transferable) ? why.skills.transferable : [];
-      const largestStrength = strengths[0]
-        ? `Strong signal detected: ${strengths[0]}`
-        : transferable[0] || '';
-
-      // Largest gap — use not_yet_demonstrated label directly
-      const gaps = Array.isArray(why?.gaps) ? why.gaps : [];
-      const notYetSignals = Array.isArray(why?.signals?.not_yet_demonstrated)
-        ? why.signals.not_yet_demonstrated
-        : [];
-      const skillGaps = Array.isArray(why?.skills?.gaps) ? why.skills.gaps : [];
-      const gapLabel = notYetSignals[0]?.label || gaps[0] || skillGaps[0] || '';
-      const largestGap = gapLabel
-        ? `Not yet demonstrated: ${gapLabel}`
-        : '';
+      const largestStrength = safe(data?.strengthSentence || '');
+	  const largestGap = safe(data?.gapSentence || '');
 
       setResult({
         score,
