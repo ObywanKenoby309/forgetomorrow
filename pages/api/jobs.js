@@ -150,7 +150,7 @@ export default async function handler(req, res) {
   const locationType = String(req.query.locationType || '').trim();
   const source = String(req.query.source || '').trim();
   const days = parsePositiveInt(req.query.days, 0);
-  
+
   if (!dbPool) {
     return res.status(200).json({
       jobs: [],
@@ -169,51 +169,39 @@ export default async function handler(req, res) {
 
     try {
       const countResult = await client.query(
-  `
-  SELECT COUNT(*)::int AS count
-  FROM jobs
-  WHERE LOWER(COALESCE(status, '')) NOT IN ('draft', 'expired')
-  AND ($1 = '' OR LOWER(title) LIKE LOWER($1) OR LOWER(description) LIKE LOWER($1))
-  AND ($2 = '' OR LOWER(company) LIKE LOWER($2))
-  AND ($3 = '' OR LOWER(location) LIKE LOWER($3))
-  AND (
-    $4 = ''
-    OR (
-      $4 = 'Remote' AND LOWER(location) LIKE '%remote%'
-    )
-    OR (
-      $4 = 'Hybrid' AND LOWER(location) LIKE '%hybrid%'
-    )
-    OR (
-      $4 = 'On-site'
-      AND LOWER(location) NOT LIKE '%remote%'
-      AND LOWER(location) NOT LIKE '%hybrid%'
-    )
-  )
-  AND (
-    $5 = ''
-    OR (
-      $5 = 'external' AND "userId" = $6
-    )
-    OR (
-      $5 = 'internal' AND "userId" != $6
-    )
-  )
-  AND (
-    $7 = 0
-    OR COALESCE("publishedat", "publishedAt", "createdAt") >= NOW() - ($7 || ' days')::interval
-  );
-  `,
-  [
-    `%${keyword}%`,
-    `%${company}%`,
-    `%${location}%`,
-    locationType,
-    source,
-    CRON_USER_ID,
-    days,
-  ]
-);
+        `
+        SELECT COUNT(*)::int AS count
+        FROM jobs
+        WHERE LOWER(COALESCE(status, '')) NOT IN ('draft', 'expired')
+        AND ($1 = '' OR LOWER(title) LIKE LOWER($1) OR LOWER(description) LIKE LOWER($1))
+        AND ($2 = '' OR LOWER(company) LIKE LOWER($2))
+        AND ($3 = '' OR LOWER(location) LIKE LOWER($3))
+        AND (
+          $4 = ''
+          OR ($4 = 'Remote' AND LOWER(location) LIKE '%remote%')
+          OR ($4 = 'Hybrid' AND LOWER(location) LIKE '%hybrid%')
+          OR ($4 = 'On-site' AND LOWER(location) NOT LIKE '%remote%' AND LOWER(location) NOT LIKE '%hybrid%')
+        )
+        AND (
+          $5 = ''
+          OR ($5 = 'external' AND "userId" = $6)
+          OR ($5 = 'internal' AND "userId" != $6)
+        )
+        AND (
+          $7 = 0
+          OR COALESCE("publishedat", "publishedAt", "createdAt") >= NOW() - ($7 || ' days')::interval
+        );
+        `,
+        [
+          `%${keyword}%`,
+          `%${company}%`,
+          `%${location}%`,
+          locationType,
+          source,
+          CRON_USER_ID,
+          days,
+        ]
+      );
 
       const totalCount = Number(countResult.rows?.[0]?.count || 0);
       const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -227,79 +215,60 @@ export default async function handler(req, res) {
           "publishedAt", "publishedat", "createdAt", "updatedAt"
         FROM jobs
         WHERE LOWER(COALESCE(status, '')) NOT IN ('draft', 'expired')
-AND ($3 = '' OR LOWER(title) LIKE LOWER($3) OR LOWER(description) LIKE LOWER($3))
-AND ($4 = '' OR LOWER(company) LIKE LOWER($4))
-AND ($5 = '' OR LOWER(location) LIKE LOWER($5))
-AND (
-  $6 = ''
-  OR (
-    $6 = 'Remote' AND LOWER(location) LIKE '%remote%'
-  )
-  OR (
-    $6 = 'Hybrid' AND LOWER(location) LIKE '%hybrid%'
-  )
-  OR (
-    $6 = 'On-site'
-    AND LOWER(location) NOT LIKE '%remote%'
-    AND LOWER(location) NOT LIKE '%hybrid%'
-  )
-)
-AND (
-  $7 = ''
-  OR (
-    $7 = 'external' AND "userId" = $8
-  )
-  OR (
-    $7 = 'internal' AND "userId" != $8
-  )
-)
-AND (
-  $9 = 0
-  OR COALESCE("publishedat", "publishedAt", "createdAt") >= NOW() - ($9 || ' days')::interval
-)
+        AND ($3 = '' OR LOWER(title) LIKE LOWER($3) OR LOWER(description) LIKE LOWER($3))
+        AND ($4 = '' OR LOWER(company) LIKE LOWER($4))
+        AND ($5 = '' OR LOWER(location) LIKE LOWER($5))
+        AND (
+          $6 = ''
+          OR ($6 = 'Remote' AND LOWER(location) LIKE '%remote%')
+          OR ($6 = 'Hybrid' AND LOWER(location) LIKE '%hybrid%')
+          OR ($6 = 'On-site' AND LOWER(location) NOT LIKE '%remote%' AND LOWER(location) NOT LIKE '%hybrid%')
+        )
+        AND (
+          $7 = ''
+          OR ($7 = 'external' AND "userId" = $8)
+          OR ($7 = 'internal' AND "userId" != $8)
+        )
+        AND (
+          $9 = 0
+          OR COALESCE("publishedat", "publishedAt", "createdAt") >= NOW() - ($9 || ' days')::interval
+        )
         ORDER BY
           COALESCE("publishedat", "publishedAt", "createdAt") DESC NULLS LAST,
           id DESC
         LIMIT $1 OFFSET $2;
         `,
         [
-  pageSize,
-  offset,
-  `%${keyword}%`,
-  `%${company}%`,
-  `%${location}%`,
-  locationType,
-  source,
-  CRON_USER_ID,
-  days,
-]
+          pageSize,
+          offset,
+          `%${keyword}%`,
+          `%${company}%`,
+          `%${location}%`,
+          locationType,
+          source,
+          CRON_USER_ID,
+          days,
+        ]
       );
 
       const jobs = (result.rows || []).map(mapJob);
-const hasSearchIntent =
-  Boolean(keyword) ||
-  Boolean(company) ||
-  Boolean(location) ||
-  Boolean(locationType) ||
-  Boolean(source) ||
-  Boolean(days);
+      const hasSearchIntent = Boolean(keyword || company || location || locationType || source || days);
 
-const responseJobs = hasSearchIntent
-  ? rankJobsBySignalRelevance(jobs, {
-      keyword,
-      company,
-      location,
-      locationType,
-      source,
-    }).map((job) => ({
-      ...job,
-      match: job.jobMatch ?? null,
-    }))
-  : jobs.map((job) => ({
-      ...job,
-      match: null,
-    }));
-
+      const responseJobs = hasSearchIntent
+        ? rankJobsBySignalRelevance(jobs, {
+            keyword,
+            company,
+            location,
+            locationType,
+            source,
+          }).map((job) => ({
+            ...job,
+            match: job.jobMatch ?? null,
+          }))
+        : jobs.map((job) => ({
+            ...job,
+            match: null,
+          }));
 
       return res.status(200).json({
         jobs: responseJobs,
