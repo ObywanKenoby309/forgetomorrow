@@ -21,7 +21,6 @@ export default function JobListCard({
   const location = job.location || '';
   const locationType = inferLocationType(location);
   const internal = isInternalJob(job);
-
   const displaySource = internal ? 'Forge' : 'External';
 
   let postedLabel = 'Date not provided';
@@ -38,27 +37,20 @@ export default function JobListCard({
     }
   }
 
-  const hasMeaningfulAlignment =
-  typeof job.match === 'number' &&
-  job.match > 0 &&
-  (
-    job.matchSource === 'profile' ||
-    job.matchSource === 'resume' ||
-    job.matchSource === 'preferences'
-  );
+  const hasSearchRelevance =
+    typeof job.match === 'number' &&
+    job.match >= 0;
 
-const alignmentScore = hasMeaningfulAlignment
-  ? Math.round(job.match)
-  : null;
+  const relevanceScore = hasSearchRelevance
+    ? Math.round(job.match)
+    : null;
 
   return (
     <article
       onClick={onClick}
       style={{
         cursor: 'pointer',
-        border: isSelected
-          ? '2px solid #FF7043'
-          : '1px solid #E5E7EB',
+        border: isSelected ? '2px solid #FF7043' : '1px solid #E5E7EB',
         background: '#FFFFFF',
         borderRadius: 18,
         padding: '16px 16px 14px',
@@ -75,20 +67,15 @@ const alignmentScore = hasMeaningfulAlignment
         overflow: 'hidden',
       }}
     >
-      {/* TOP ZONE */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 64px',
+          gridTemplateColumns: '1fr 74px',
           gap: 12,
           alignItems: 'start',
         }}
       >
-        <div
-          style={{
-            minWidth: 0,
-          }}
-        >
+        <div style={{ minWidth: 0 }}>
           <div
             title={job.title || ''}
             style={{
@@ -124,44 +111,36 @@ const alignmentScore = hasMeaningfulAlignment
           </div>
         </div>
 
-        <div
-          style={{
-            textAlign: 'right',
-            width: 64,
-            flexShrink: 0,
-          }}
-        >
-          {typeof alignmentScore === 'number' && (
-  <div
-    style={{
-      fontSize: 10,
-      textTransform: 'uppercase',
-      color: '#78909C',
-      fontWeight: 700,
-      letterSpacing: '0.05em',
-    }}
-  >
-    Alignment
-  </div>
-)}
+        <div style={{ textAlign: 'right', width: 74, flexShrink: 0 }}>
+          {typeof relevanceScore === 'number' && (
+            <div
+              style={{
+                fontSize: 9,
+                textTransform: 'uppercase',
+                color: '#78909C',
+                fontWeight: 800,
+                letterSpacing: '0.04em',
+                lineHeight: 1.1,
+              }}
+            >
+              Search<br />Relevance
+            </div>
+          )}
 
           <div
             style={{
-              marginTop: 2,
-              fontSize: 15,
+              marginTop: 3,
+              fontSize: 16,
               lineHeight: 1,
               fontWeight: 900,
               color: '#FF7043',
             }}
           >
-            {typeof alignmentScore === 'number'
-			? `${alignmentScore}%`
-			: ''}
+            {typeof relevanceScore === 'number' ? `${relevanceScore}%` : ''}
           </div>
         </div>
       </div>
 
-      {/* MIDDLE ZONE */}
       <div
         style={{
           display: 'flex',
@@ -204,7 +183,6 @@ const alignmentScore = hasMeaningfulAlignment
         </div>
       </div>
 
-      {/* BOTTOM ZONE */}
       <div
         style={{
           display: 'flex',
