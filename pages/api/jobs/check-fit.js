@@ -12,6 +12,29 @@ function monthKeyUTC() {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+function safeJsonParse(value) {
+  try {
+    if (!value) return null;
+    if (typeof value === "object") return value;
+    if (typeof value !== "string") return null;
+    const s = value.trim();
+    if (!s) return null;
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeResumeTemplateData(raw) {
+  const parsed = safeJsonParse(raw);
+  if (!parsed || typeof parsed !== "object") return null;
+
+  if (parsed.data && typeof parsed.data === "object") return parsed.data;
+  if (parsed.resume && typeof parsed.resume === "object") return parsed.resume;
+
+  return parsed;
+}
+
 async function resolveUserId(session) {
   const directId = session?.user?.id;
   if (directId) return String(directId);
@@ -59,6 +82,7 @@ async function enforceJobFitGate(userId) {
         allowed: true,
         remaining: limit - 1,
         tier: plan,
+        limit,
       };
     }
 
@@ -67,6 +91,7 @@ async function enforceJobFitGate(userId) {
         allowed: false,
         remaining: 0,
         tier: plan,
+        limit,
       };
     }
 
@@ -81,6 +106,7 @@ async function enforceJobFitGate(userId) {
       allowed: true,
       remaining: Math.max(0, limit - (uses + 1)),
       tier: plan,
+      limit,
     };
   });
 }
@@ -104,23 +130,44 @@ export default async function handler(req, res) {
       return res.status(401).json({ ok: false, error: "Unauthorized" });
     }
 
+    const primaryResume =
+      (await prisma.resume.findFirst({
+        where: { userId, isPrimary: true },
+        select: { id: true, content: true, updatedAt: true },
+        orderBy: { updatedAt: "desc" },
+      })) ||
+      (await prisma.resume.findFirst({
+        where: { userId },
+        select: { id: true, content: true, updatedAt: true },
+        orderBy: { updatedAt: "desc" },
+      }));
+
+    const resumeData = normalizeResumeTemplateData(primaryResume?.content);
+
+    if (!resumeData) {
+      return res.status(400).json({
+        ok: false,
+        error: "Primary resume not found or resume content is not valid JSON.",
+      });
+    }
+
     const gate = await enforceJobFitGate(userId);
 
     if (!gate.allowed) {
-      const limitText = gate.tier === "FREE" ? "3" : "15";
-
       return res.status(200).json({
         ok: true,
         upgrade: true,
-        text: `Monthly Check My Alignment limit reached (${limitText}/month).`,
+        text: `Monthly Check My Alignment limit reached (${gate.limit}/month).`,
         structured: null,
         remaining: 0,
+        limit: gate.limit,
+        tier: gate.tier,
       });
     }
 
     const origin =
       process.env.NEXTAUTH_URL ||
-      `${req.headers["x-forwarded-proto"] || "http"}://${req.headers.host}`;
+      `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}`;
 
     const atsResponse = await fetch(`${origin}/api/ats-coach`, {
       method: "POST",
@@ -130,19 +177,32 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         jdText: req.body?.jdText || "",
-        resumeData: req.body?.resumeData || {},
-        context: { section: "overview" },
+        resumeData,
+        context: { section: "overview", keyword: null },
+        missing: {},
         jobMeta: req.body?.jobMeta || null,
         attemptCount: 1,
         internalBypassGate: true,
       }),
     });
 
-    const data = await atsResponse.json();
+    const contentType = atsResponse.headers.get("content-type") || "";
+    const data = contentType.includes("application/json")
+      ? await atsResponse.json()
+      : { ok: false, error: await atsResponse.text() };
+
+    if (!atsResponse.ok || !data?.ok) {
+      return res.status(502).json({
+        ok: false,
+        error: data?.error || "Hammer alignment request failed.",
+      });
+    }
 
     return res.status(200).json({
       ok: true,
       remaining: gate.remaining,
+      limit: gate.limit,
+      tier: gate.tier,
       hammer: data,
     });
   } catch (err) {

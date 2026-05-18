@@ -34,7 +34,10 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
         }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      const data = contentType.includes('application/json')
+        ? await response.json()
+        : { ok: false, error: await response.text() };
 
       if (!response.ok || !data?.ok) {
         throw new Error(data?.error || 'Alignment request failed');
@@ -44,39 +47,59 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
         setResult({
           locked: true,
           message: data?.text || 'Monthly limit reached.',
+          remaining: 0,
+          limit: data?.limit,
         });
         setState('done');
         return;
       }
 
       const structured = data?.hammer?.structured || {};
+      const tips = Array.isArray(data?.hammer?.tips) ? data.hammer.tips : [];
       const profileVsRole =
         typeof profileSignal?.score === 'number'
           ? profileSignal.score
           : null;
 
+      const improvementActions = Array.isArray(structured?.improvementActions)
+        ? structured.improvementActions
+        : [];
+
       const strongest =
-        Array.isArray(structured?.improvementActions) &&
-        structured.improvementActions.length
-          ? structured.improvementActions[0]?.positiveSignal || ''
-          : '';
+        improvementActions.find((a) => a?.positiveSignal)?.positiveSignal ||
+        structured?.strongestSignal ||
+        structured?.strongestAlignment ||
+        tips[0] ||
+        '';
 
       const biggestGap =
-        Array.isArray(structured?.signalGaps) &&
-        structured.signalGaps.length
-          ? structured.signalGaps[0]
-          : '';
+        (Array.isArray(structured?.signalGaps) && structured.signalGaps[0]) ||
+        structured?.primaryGap ||
+        structured?.biggestGap ||
+        '';
+
+      const score =
+        typeof structured?.score === 'number'
+          ? structured.score
+          : typeof structured?.overallScore === 'number'
+          ? structured.overallScore
+          : typeof structured?.alignmentScore === 'number'
+          ? structured.alignmentScore
+          : null;
 
       setResult({
-        score: structured?.score || structured?.overallScore || null,
+        score,
         strongest,
         biggestGap,
         summary:
           structured?.matchAssessment ||
           structured?.summary ||
+          data?.hammer?.text ||
           'ForgeTomorrow analyzed your resume against this role.',
         remaining: data?.remaining,
+        limit: data?.limit,
         profileVsRole,
+        raw: data?.hammer,
       });
 
       setState('done');
@@ -114,18 +137,16 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
 
   if (state === 'loading') {
     return (
-      <div
-        style={{
-          width: '100%',
-          padding: '14px 16px',
-          borderRadius: 12,
-          border: '1px solid #E0E0E0',
-          background: '#FAFAFA',
-          color: '#607D8B',
-          fontSize: 13,
-          fontWeight: 700,
-        }}
-      >
+      <div style={{
+        width: '100%',
+        padding: '14px 16px',
+        borderRadius: 12,
+        border: '1px solid #E0E0E0',
+        background: '#FAFAFA',
+        color: '#607D8B',
+        fontSize: 13,
+        fontWeight: 700,
+      }}>
         Running resume vs JD alignment...
       </div>
     );
@@ -133,17 +154,15 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
 
   if (state === 'error') {
     return (
-      <div
-        style={{
-          borderRadius: 12,
-          border: '1px solid rgba(211,47,47,0.20)',
-          background: 'rgba(211,47,47,0.06)',
-          padding: '12px 14px',
-          color: '#D32F2F',
-          fontSize: 13,
-          fontWeight: 700,
-        }}
-      >
+      <div style={{
+        borderRadius: 12,
+        border: '1px solid rgba(211,47,47,0.20)',
+        background: 'rgba(211,47,47,0.06)',
+        padding: '12px 14px',
+        color: '#D32F2F',
+        fontSize: 13,
+        fontWeight: 700,
+      }}>
         Could not analyze this role right now.
       </div>
     );
@@ -151,155 +170,107 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
 
   if (state === 'done' && result?.locked) {
     return (
-      <div
-        style={{
-          borderRadius: 12,
-          border: '1px solid rgba(255,112,67,0.20)',
-          background: 'rgba(255,112,67,0.06)',
-          padding: '14px 16px',
-          color: '#455A64',
-          fontSize: 13,
-          lineHeight: 1.6,
-        }}
-      >
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>
-          Monthly limit reached
-        </div>
+      <div style={{
+        borderRadius: 12,
+        border: '1px solid rgba(255,112,67,0.20)',
+        background: 'rgba(255,112,67,0.06)',
+        padding: '14px 16px',
+        color: '#455A64',
+        fontSize: 13,
+        lineHeight: 1.6,
+      }}>
+        <div style={{ fontWeight: 800, marginBottom: 6 }}>Monthly limit reached</div>
         <div>{result.message}</div>
       </div>
     );
   }
 
   if (state === 'done' && result) {
-    const score = Number(result.score || 0);
+    const scoreText = typeof result.score === 'number' ? `${result.score}%` : '—';
 
     return (
-      <div
-        style={{
-          borderRadius: 14,
-          border: '1px solid rgba(255,112,67,0.20)',
-          background: 'rgba(255,112,67,0.06)',
-          padding: '14px 16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-        }}
-      >
+      <div style={{
+        borderRadius: 14,
+        border: '1px solid rgba(255,112,67,0.20)',
+        background: 'rgba(255,112,67,0.06)',
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div
-            style={{
-              width: 54,
-              height: 54,
-              borderRadius: 999,
-              border: '2px solid #FF7043',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 900,
-              fontSize: 18,
-              color: '#FF7043',
-              background: 'rgba(255,112,67,0.12)',
-            }}
-          >
-            {score}%
+          <div style={{
+            width: 54,
+            height: 54,
+            borderRadius: 999,
+            border: '2px solid #FF7043',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 900,
+            fontSize: 18,
+            color: '#FF7043',
+            background: 'rgba(255,112,67,0.12)',
+          }}>
+            {scoreText}
           </div>
 
           <div style={{ flex: 1 }}>
-            <div
-              style={{
-                fontWeight: 800,
-                fontSize: 15,
-                color: '#112033',
-              }}
-            >
+            <div style={{ fontWeight: 800, fontSize: 15, color: '#112033' }}>
               Resume vs Role
             </div>
 
-            <div
-              style={{
-                marginTop: 2,
-                fontSize: 11,
-                color: '#607D8B',
-              }}
-            >
+            <div style={{ marginTop: 2, fontSize: 11, color: '#607D8B' }}>
               Profile vs Role: {result.profileVsRole ?? '—'}%
             </div>
           </div>
         </div>
 
         {result.summary && (
-          <div
-            style={{
-              fontSize: 13,
-              lineHeight: 1.6,
-              color: '#455A64',
-            }}
-          >
+          <div style={{ fontSize: 13, lineHeight: 1.6, color: '#455A64' }}>
             {result.summary}
           </div>
         )}
 
         {result.strongest && (
-          <div
-            style={{
-              borderRadius: 10,
-              padding: '10px 12px',
-              background: 'rgba(22,163,74,0.06)',
-              border: '1px solid rgba(22,163,74,0.16)',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                color: '#16A34A',
-                marginBottom: 4,
-                textTransform: 'uppercase',
-              }}
-            >
+          <div style={{
+            borderRadius: 10,
+            padding: '10px 12px',
+            background: 'rgba(22,163,74,0.06)',
+            border: '1px solid rgba(22,163,74,0.16)',
+          }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#16A34A',
+              marginBottom: 4,
+              textTransform: 'uppercase',
+            }}>
               Strongest Alignment
             </div>
-
-            <div
-              style={{
-                fontSize: 12,
-                lineHeight: 1.5,
-                color: '#455A64',
-              }}
-            >
+            <div style={{ fontSize: 12, lineHeight: 1.5, color: '#455A64' }}>
               {result.strongest}
             </div>
           </div>
         )}
 
         {result.biggestGap && (
-          <div
-            style={{
-              borderRadius: 10,
-              padding: '10px 12px',
-              background: 'rgba(211,47,47,0.05)',
-              border: '1px solid rgba(211,47,47,0.16)',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                color: '#D32F2F',
-                marginBottom: 4,
-                textTransform: 'uppercase',
-              }}
-            >
+          <div style={{
+            borderRadius: 10,
+            padding: '10px 12px',
+            background: 'rgba(211,47,47,0.05)',
+            border: '1px solid rgba(211,47,47,0.16)',
+          }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#D32F2F',
+              marginBottom: 4,
+              textTransform: 'uppercase',
+            }}>
               Biggest Gap
             </div>
-
-            <div
-              style={{
-                fontSize: 12,
-                lineHeight: 1.5,
-                color: '#455A64',
-              }}
-            >
+            <div style={{ fontSize: 12, lineHeight: 1.5, color: '#455A64' }}>
               {result.biggestGap}
             </div>
           </div>
@@ -325,15 +296,13 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
           </button>
         )}
 
-        <div
-          style={{
-            fontSize: 11,
-            color: '#94A3B8',
-            textAlign: 'center',
-            lineHeight: 1.5,
-          }}
-        >
-          Remaining this month: {result.remaining ?? '—'}
+        <div style={{
+          fontSize: 11,
+          color: '#94A3B8',
+          textAlign: 'center',
+          lineHeight: 1.5,
+        }}>
+          Remaining this month: {result.remaining ?? '—'} / {result.limit ?? '—'}
         </div>
       </div>
     );

@@ -527,7 +527,10 @@ addViewedJob(job);
         const alignRes = await fetch('/api/jobs/alignment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jobs: pagedJobs }),
+          body: JSON.stringify({
+            jobs: pagedJobs,
+            filters: appliedFilters,
+          }),
         });
 
         if (!alignRes.ok) return;
