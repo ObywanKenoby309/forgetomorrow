@@ -186,14 +186,17 @@ if (topMatch) {
 
   if (snippet?.text) {
     strengthSentence =
-      snippet.text.length > 140 ? `${snippet.text.slice(0, 137)}...` : snippet.text;
+      snippet.text.length > 105 ? `${snippet.text.slice(0, 102)}...` : snippet.text;
   } else {
     strengthSentence = `Your resume shows relevant ${String(topMatch.label || '').toLowerCase()} experience that supports this role.`;
   }
 }
 
 let gapSentence = '';
-const topGap = notYetSignals[0];
+const topGap =
+  notYetSignals.find((g) => g?.tier === 'A') ||
+  notYetSignals.find((g) => g?.tier === 'B') ||
+  notYetSignals[0];
 
 if (topGap?.label) {
   gapSentence = `The resume does not yet clearly show direct ${String(topGap.label).toLowerCase()} evidence required by this role.`;
