@@ -440,7 +440,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   const role = normalizeRole((session?.user as any)?.role);
 
   // Gate — recruiters, coaches, admins are never gated
- const internalBypassGate = Boolean(body?.internalBypassGate);
+ const internalBypassGate = Boolean((req.body as any)?.internalBypassGate);
 
 if (!internalBypassGate && !roleIsUnlimited(role)) {
     try {
