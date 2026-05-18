@@ -440,7 +440,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   const role = normalizeRole((session?.user as any)?.role);
 
   // Gate — recruiters, coaches, admins are never gated
-  if (!roleIsUnlimited(role)) {
+ const internalBypassGate = Boolean(body?.internalBypassGate);
+
+if (!internalBypassGate && !roleIsUnlimited(role)) {
     try {
       const gate = await enforceHammerGate(userId);
       if (!gate.allowed) {
@@ -469,7 +471,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
   try {
     const body = (req.body || {}) as CoachRequestBody;
-
+	const internalBypassGate = Boolean((body as any)?.internalBypassGate);
     const jdText = safe(body.jdText);
     const resumeData = body.resumeData || {};
     const context = body.context || { section: 'overview', keyword: null };

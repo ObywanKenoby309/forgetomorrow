@@ -2,8 +2,8 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
-import { rankJobsBySeekerAlignment } from "@/lib/intelligence/forgeJobMatchEngine";
-import { classifySignals, overallVerdict, signalScoreToPercent, signalScoreVsJD } from '@/lib/intelligence/profileSignalShared';
+import { rankJobsBySignalRelevance } from "@/lib/intelligence/forgeJobMatchEngine";
+import { signalScoreVsJD } from '@/lib/intelligence/profileSignalShared';
 
 function safeJsonParse(value) {
   try {
@@ -129,26 +129,7 @@ export default async function handler(req, res) {
       hasResume: Boolean(primaryResume?.id),
       primaryResume: primaryResume?.id ? { id: primaryResume.id } : null,
     };
-    const profileSignals = classifySignals(profileSignalData);
-    const profileVerdict = overallVerdict(profileSignals);
-    const profileSignalScore = signalScoreToPercent(profileVerdict);
-    const profileSignalLabel = profileVerdict?.label || null;
-    const profileSignalBreakdown = {
-      proven: profileVerdict?.proven ?? 0,
-      partial: profileVerdict?.partial ?? 0,
-      missing: profileVerdict?.missing ?? 0,
-      priority: profileVerdict?.priority
-        ? { label: profileVerdict.priority.label, gapReason: profileVerdict.priority.gapReason }
-        : null,
-      signals: profileSignals.map(s => ({
-        key: s.key,
-        label: s.label,
-        status: s.status,
-        gapReason: s.gapReason,
-      })),
-    };
-
-    const alignedJobs = rankJobsBySeekerAlignment(jobs, seekerContext);
+    const alignedJobs = rankJobsBySignalRelevance(jobs, req.body?.filters || {});
 
     const alignments = {};
     for (const job of alignedJobs) {
@@ -171,13 +152,15 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       alignments,
-      jobs: alignedJobs.map(job => ({
-        ...job,
-        jdProfileSignal: alignments[job.id]?.jdProfileSignal || null,
-      })),
-      profileSignalScore,
-      profileSignalLabel,
-      profileSignalBreakdown,
+     jobs: alignedJobs.map(job => ({...job,
+  match: job.jobMatch,
+  matchSource: "search-relevance",
+  matchTier: job.jobMatchTier,
+  alignmentReasons: job.jobMatchReasons || [],
+  alignmentEvidence: job.jobMatchEvidence || [],
+  alignmentGaps: job.jobMatchGaps || [],
+  jdProfileSignal: alignments[job.id]?.jdProfileSignal || null,
+})),
     });
   } catch (err) {
     console.error("[jobs/alignment] error:", err);
