@@ -79,8 +79,22 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
                impact.includes('confirms') ||
                impact.includes('demonstrates');
       });
+      // If no genuinely positive action found, check resumeEvidence on any action
+      // that isn't a screen-out — adjacent/transferable evidence counts as a strength
+      const adjacentAction = !positiveAction
+        ? improvementActions.find(a => {
+            const impact = String(a?.hiringImpact || '').toLowerCase();
+            return !impact.includes('screen-out') &&
+                   !impact.includes('screening risk') &&
+                   !impact.includes('disqualify') &&
+                   safe(a?.resumeEvidence).length > 10;
+          })
+        : null;
+
       const strongest = positiveAction
         ? safe(positiveAction.resumeEvidence || positiveAction.requiredSignal)
+        : adjacentAction
+        ? safe(adjacentAction.resumeEvidence)
         : '';
 
       // Biggest gap — ONLY from screen-out actions

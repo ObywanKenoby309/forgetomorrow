@@ -269,11 +269,29 @@ export default async function handler(req, res) {
     const totalActions = actions.length;
     const screenOutActions = actions.filter(a => {
       const impact = String(a?.hiringImpact || '').toLowerCase();
-      return impact.includes('screen-out') || impact.includes('screening risk');
+      return impact.includes('screen-out') ||
+             impact.includes('screening risk') ||
+             impact.includes('likely screen') ||
+             impact.includes('major gap') ||
+             impact.includes('disqualify');
     }).length;
+
+    const weakActions = actions.filter(a => {
+      const impact = String(a?.hiringImpact || '').toLowerCase();
+      return impact.includes('moderate') ||
+             impact.includes('partial') ||
+             impact.includes('survivable') ||
+             impact.includes('minor gap');
+    }).length;
+
     const derivedScore = totalActions > 0
-      ? Math.round(Math.max(0, Math.min(100, 100 - (screenOutActions / totalActions) * 100 - (screenOutActions * 10))))
-      : null;
+      ? Math.round(Math.max(5, Math.min(95,
+          100
+          - (screenOutActions / totalActions) * 55
+          - (weakActions / totalActions) * 20
+          - (screenOutActions * 5)
+        )))
+      : 50; // default to 50 if no actions — better than null
 
     return res.status(200).json({
       ok: true,
