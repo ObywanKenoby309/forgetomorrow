@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import { buildSectionCoachPrompt } from '@/lib/forge/strategyBrain';
+import { buildExplain } from "@/lib/intelligence/whyEngine";
 import buildPromptContext from '@/lib/intelligence/buildPromptContext';
 
 type CoachRequestBody = {
@@ -549,15 +550,19 @@ if (!internalBypassGate && !roleIsUnlimited(role)) {
       console.warn('[ats-coach] buildPromptContext failed — continuing without intelligence:', (err as any)?.message);
     }
 
+const resumeText = JSON.stringify(resumeData || {});
+const why = buildExplain(resumeText, jdText);
+
     // ── Build prompt via strategyBrain ────────────────────────────────────
     // This restores the live-safe single Groq call flow.
     const brainPrompt = buildSectionCoachPrompt({
-      jdText,
-      resume: resumeData,
-      context: { ...context, section: promptSection },
-      missing,
-      jobMeta: jobMeta as any,
-    });
+  jdText,
+  resume: resumeData,
+  context: { ...context, section: promptSection },
+  missing,
+  jobMeta: jobMeta as any,
+  whyContext: why,
+});
 
     // Inject specific intent for certifications/languages so AI doesn't give generic coaching
     const intentPrefix = sectionIntent
