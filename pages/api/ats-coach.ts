@@ -62,14 +62,16 @@ type TrajectoryData = {
 
 type CoachResponse =
   | {
-      ok: true;
-      text: string;
-      tips: string[];
-      structured: CoachStructured | null;
-      trajectory: TrajectoryData;
-      raw?: string;
-      upgrade?: boolean;
-    }
+    ok: true;
+    score?: number | null;
+    why?: any;
+    text: string;
+    tips: string[];
+    structured: CoachStructured | null;
+    trajectory: TrajectoryData;
+    raw?: string;
+    upgrade?: boolean;
+  }
   | {
       ok: false;
       error: string;
