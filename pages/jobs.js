@@ -262,7 +262,52 @@ function JobsUI() {
 
         const loadedJobs = Array.isArray(data?.jobs) ? data.jobs : [];
 
-        setJobs(loadedJobs);
+const scoredJobs = loadedJobs.map((job) => {
+  let relevance = null;
+
+  const searchable = [
+    job.title,
+    job.company,
+    job.location,
+    job.description,
+    job.tags,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  const keywordTerms = keyword
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (keywordTerms.length > 0) {
+    let hits = 0;
+
+    keywordTerms.forEach((term) => {
+      if (searchable.includes(term)) {
+        hits += 1;
+      }
+    });
+
+    relevance = Math.min(
+      100,
+      Math.max(
+        8,
+        Math.round((hits / keywordTerms.length) * 100)
+      )
+    );
+  } else {
+  relevance = null;
+}
+
+  return {
+    ...job,
+    match: relevance,
+  };
+});
+
+setJobs(scoredJobs);
         setTotalJobCount(Number(data?.totalCount || loadedJobs.length || 0));
       } catch (err) {
         console.error(err);
