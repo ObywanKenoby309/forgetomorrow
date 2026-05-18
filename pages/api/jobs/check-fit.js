@@ -178,18 +178,10 @@ const notYetSignals = Array.isArray(why?.signals?.not_yet_demonstrated)
 let strengthSentence = '';
 const topMatch = matchedSignals[0];
 
-if (topMatch) {
-  const evidence = Array.isArray(topMatch.evidence) ? topMatch.evidence : [];
-  const snippet = evidence.find(
-    (ev) => ev?.text && ev.text.length > 30 && !String(ev.text).startsWith('Matched:')
-  );
-
-  if (snippet?.text) {
-    strengthSentence =
-      snippet.text.length > 105 ? `${snippet.text.slice(0, 102)}...` : snippet.text;
-  } else {
-    strengthSentence = `Your resume shows relevant ${String(topMatch.label || '').toLowerCase()} experience that supports this role.`;
-  }
+if (topMatch?.seekerLabel || topMatch?.label) {
+  strengthSentence = `Your resume shows relevant ${String(
+    topMatch.seekerLabel || topMatch.label
+  ).toLowerCase()} for this role.`;
 }
 
 let gapSentence = '';
