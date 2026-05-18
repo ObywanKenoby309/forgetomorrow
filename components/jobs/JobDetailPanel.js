@@ -148,7 +148,7 @@ export default function JobDetailPanel({
                 <span style={{ fontSize: 13, fontWeight: 900, color: '#64748B' }}>{Math.round(job.match)}%</span>
               </div>
             )}
-            {typeof job?.jdProfileSignal?.score === 'number' && (
+            {typeof profileSignal?.score === 'number' && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '5px 12px', borderRadius: 999,
@@ -156,7 +156,7 @@ export default function JobDetailPanel({
                 border: '1px solid rgba(255,112,67,0.25)',
               }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#FF7043' }}>Profile vs Role</span>
-                <span style={{ fontSize: 13, fontWeight: 900, color: '#FF7043' }}>{job.jdProfileSignal.score}%</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: '#FF7043' }}>{profileSignal.score}%</span>
               </div>
 			)}            
           </div>
@@ -186,8 +186,8 @@ export default function JobDetailPanel({
 
         {/* Alignment intelligence */}
         {status === 'Open' && (
-		  <CheckMyFit job={job} onImproveResume={onImproveResume} profileSignal={job?.jdProfileSignal || null} />
-		)}
+		  <CheckMyFit job={job} onImproveResume={onImproveResume} profileSignal={profileSignal} />
+		  )}
       </div>
 
       {/* ── Divider ── */}

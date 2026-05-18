@@ -56,10 +56,6 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
 
       const structured = data?.hammer?.structured || {};
       const tips = Array.isArray(data?.hammer?.tips) ? data.hammer.tips : [];
-      const profileVsRole =
-        typeof profileSignal?.score === 'number'
-          ? profileSignal.score
-          : null;
 
       const improvementActions = Array.isArray(structured?.improvementActions)
         ? structured.improvementActions
@@ -93,8 +89,14 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
           ? job.score
           : null;
 
+const profileVsRole =
+  typeof profileSignal?.score === 'number'
+    ? profileSignal.score
+    : null;
+
       setResult({
         score,
+		profileVsRole,
         strongest,
         biggestGap,
         summary:
@@ -104,7 +106,6 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
           'ForgeTomorrow analyzed your resume against this role.',
         remaining: data?.remaining,
         limit: data?.limit,
-        profileVsRole,
         raw: data?.hammer,
       });
 
