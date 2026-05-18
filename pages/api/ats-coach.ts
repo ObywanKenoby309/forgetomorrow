@@ -635,13 +635,15 @@ Include "languages" if the JD mentions language requirements or multilingual pre
     }
 
     return res.status(200).json({
-      ok: true,
-      text: structuredToText(structured),
-      tips,
-      structured,
-      trajectory,
-      raw,
-    });
+  ok: true,
+  score: typeof why?.score === 'number' ? why.score : null,
+  why,
+  text: structuredToText(structured),
+  tips,
+  structured,
+  trajectory,
+  raw,
+});
 
   } catch (err: any) {
     console.error('[ats-coach] error', err);
