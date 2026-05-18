@@ -261,19 +261,31 @@ export default async function handler(req, res) {
 
     const cleaned = cleanHammerPayload(data);
 
-return res.status(200).json({
-  ok: true,
-  remaining: gate.remaining,
-  limit: gate.limit,
-  tier: gate.tier,
-  hammer: {
-    ...cleaned,
-    structured:
-      cleaned?.structured ||
-      cleaned?.hammer?.structured ||
-      {},
-  },
-});
+    // Derive resume alignment score from improvement actions
+    // Count how many actions are survivable vs screen-out
+    const actions = Array.isArray(cleaned?.structured?.improvementActions)
+      ? cleaned.structured.improvementActions
+      : [];
+    const totalActions = actions.length;
+    const screenOutActions = actions.filter(a => {
+      const impact = String(a?.hiringImpact || '').toLowerCase();
+      return impact.includes('screen-out') || impact.includes('screening risk');
+    }).length;
+    const derivedScore = totalActions > 0
+      ? Math.round(Math.max(0, Math.min(100, 100 - (screenOutActions / totalActions) * 100 - (screenOutActions * 10))))
+      : null;
+
+    return res.status(200).json({
+      ok: true,
+      remaining: gate.remaining,
+      limit: gate.limit,
+      tier: gate.tier,
+      resumeAlignScore: derivedScore,
+      hammer: {
+        ...cleaned,
+        structured: cleaned?.structured || {},
+      },
+    });
   } catch (err) {
     console.error("[jobs/check-fit] error", err);
 

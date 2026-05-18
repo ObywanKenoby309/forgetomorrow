@@ -1,8 +1,7 @@
 // components/jobs/CheckMyFit.js
-// On-demand alignment explanation shown only on the job detail panel.
-// Uses the existing card alignment score and evidence. Hammer handles resume-only JD alignment.
-
 import React, { useEffect, useState } from 'react';
+
+function safe(v) { return String(v || '').trim(); }
 
 export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
   const [state, setState] = useState('idle');
@@ -17,13 +16,10 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
 
   const run = async () => {
     setState('loading');
-
     try {
       const response = await fetch('/api/jobs/check-fit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jdText: job.description || '',
           jobMeta: {
@@ -33,7 +29,6 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
           },
         }),
       });
-
       const contentType = response.headers.get('content-type') || '';
       const data = contentType.includes('application/json')
         ? await response.json()
@@ -55,74 +50,58 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
       }
 
       const structured = data?.hammer?.structured || {};
-      const tips = Array.isArray(data?.hammer?.tips) ? data.hammer.tips : [];
-
       const improvementActions = Array.isArray(structured?.improvementActions)
         ? structured.improvementActions
         : [];
 
-      const strongest =
-        improvementActions.find((a) => a?.positiveSignal)?.positiveSignal ||
-        structured?.strongestSignal ||
-        structured?.strongestAlignment ||
-        tips[0] ||
-        '';
+      // Score — from derived score returned by check-fit.js
+      const score = typeof data?.resumeAlignScore === 'number'
+        ? data.resumeAlignScore
+        : null;
 
-      const rawGap =
-  (Array.isArray(structured?.signalGaps) && structured.signalGaps[0]) ||
-  structured?.primaryGap ||
-  structured?.biggestGap ||
-  '';
+      // Profile vs Role — from profileSignal prop (already computed, free)
+      const profileVsRole = typeof profileSignal?.score === 'number'
+        ? profileSignal.score
+        : null;
 
-const normalizeSignal = (v = '') =>
-  String(v || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .trim();
+      // Summary — from matchAssessment first, then fallbacks
+      const summary =
+        structured?.matchAssessment ||
+        structured?.summary ||
+        data?.hammer?.text ||
+        'ForgeTomorrow analyzed your resume against this role.';
 
-const strongestNorm = normalizeSignal(strongest);
-const gapNorm = normalizeSignal(rawGap);
+      // Strongest signal — ONLY from positive evidence, never from gaps
+      const positiveAction = improvementActions.find(a => {
+        const impact = String(a?.hiringImpact || '').toLowerCase();
+        return impact.includes('strength') ||
+               impact.includes('strong') ||
+               impact.includes('confirms') ||
+               impact.includes('demonstrates');
+      });
+      const strongest = positiveAction
+        ? safe(positiveAction.resumeEvidence || positiveAction.requiredSignal)
+        : '';
 
-const biggestGap =
-  strongestNorm && strongestNorm === gapNorm
-    ? ''
-    : rawGap;
-
-            const score =
-        typeof structured?.score === 'number'
-          ? structured.score
-          : typeof structured?.overallScore === 'number'
-          ? structured.overallScore
-          : typeof structured?.alignmentScore === 'number'
-          ? structured.alignmentScore
-          : typeof job?.alignmentScore === 'number'
-          ? job.alignmentScore
-          : typeof job?.matchScore === 'number'
-          ? job.matchScore
-          : typeof job?.score === 'number'
-          ? job.score
-          : null;
-
-const profileVsRole =
-  typeof profileSignal?.score === 'number'
-    ? profileSignal.score
-    : null;
+      // Biggest gap — ONLY from screen-out actions
+      const gapAction = improvementActions.find(a => {
+        const impact = String(a?.hiringImpact || '').toLowerCase();
+        return impact.includes('screen-out') || impact.includes('screening risk');
+      });
+      const biggestGap = gapAction
+        ? safe(gapAction.requiredSignal)
+        : safe(structured?.signalGaps?.[0] || '');
 
       setResult({
         score,
-		profileVsRole,
+        profileVsRole,
         strongest,
         biggestGap,
-        summary:
-          structured?.matchAssessment ||
-          structured?.summary ||
-          data?.hammer?.text ||
-          'ForgeTomorrow analyzed your resume against this role.',
+        summary,
         remaining: data?.remaining,
         limit: data?.limit,
         raw: data?.hammer,
       });
-
       setState('done');
     } catch (err) {
       console.error('[CheckMyFit] error', err);
@@ -208,7 +187,6 @@ const profileVsRole =
 
   if (state === 'done' && result) {
     const scoreText = typeof result.score === 'number' ? `${result.score}%` : '—';
-
     return (
       <div style={{
         borderRadius: 14,
@@ -221,26 +199,18 @@ const profileVsRole =
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
-            width: 54,
-            height: 54,
-            borderRadius: 999,
+            width: 54, height: 54, borderRadius: 999,
             border: '2px solid #FF7043',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 900,
-            fontSize: 18,
-            color: '#FF7043',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 900, fontSize: 18, color: '#FF7043',
             background: 'rgba(255,112,67,0.12)',
           }}>
             {scoreText}
           </div>
-
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 15, color: '#112033' }}>
               Resume vs Role
             </div>
-
             <div style={{ marginTop: 2, fontSize: 11, color: '#607D8B' }}>
               Profile vs Role: {result.profileVsRole ?? '—'}%
             </div>
@@ -255,18 +225,11 @@ const profileVsRole =
 
         {result.strongest && (
           <div style={{
-            borderRadius: 10,
-            padding: '10px 12px',
+            borderRadius: 10, padding: '10px 12px',
             background: 'rgba(22,163,74,0.06)',
             border: '1px solid rgba(22,163,74,0.16)',
           }}>
-            <div style={{
-              fontSize: 11,
-              fontWeight: 800,
-              color: '#16A34A',
-              marginBottom: 4,
-              textTransform: 'uppercase',
-            }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#16A34A', marginBottom: 4, textTransform: 'uppercase' }}>
               Strongest Alignment
             </div>
             <div style={{ fontSize: 12, lineHeight: 1.5, color: '#455A64' }}>
@@ -277,18 +240,11 @@ const profileVsRole =
 
         {result.biggestGap && (
           <div style={{
-            borderRadius: 10,
-            padding: '10px 12px',
+            borderRadius: 10, padding: '10px 12px',
             background: 'rgba(211,47,47,0.05)',
             border: '1px solid rgba(211,47,47,0.16)',
           }}>
-            <div style={{
-              fontSize: 11,
-              fontWeight: 800,
-              color: '#D32F2F',
-              marginBottom: 4,
-              textTransform: 'uppercase',
-            }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#D32F2F', marginBottom: 4, textTransform: 'uppercase' }}>
               Biggest Gap
             </div>
             <div style={{ fontSize: 12, lineHeight: 1.5, color: '#455A64' }}>
@@ -302,27 +258,16 @@ const profileVsRole =
             type="button"
             onClick={() => onImproveResume(job, result)}
             style={{
-              width: '100%',
-              background: '#1A4B8F',
-              color: 'white',
-              padding: '10px 16px',
-              borderRadius: 10,
-              border: 'none',
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: 'pointer',
+              width: '100%', background: '#1A4B8F', color: 'white',
+              padding: '10px 16px', borderRadius: 10, border: 'none',
+              fontWeight: 700, fontSize: 13, cursor: 'pointer',
             }}
           >
-            Improve Resume Alignment →
+            Improve Resume Alignment
           </button>
         )}
 
-        <div style={{
-          fontSize: 11,
-          color: '#94A3B8',
-          textAlign: 'center',
-          lineHeight: 1.5,
-        }}>
+        <div style={{ fontSize: 11, color: '#94A3B8', textAlign: 'center', lineHeight: 1.5 }}>
           Remaining this month: {result.remaining ?? '—'} / {result.limit ?? '—'}
         </div>
       </div>
