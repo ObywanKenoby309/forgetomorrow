@@ -57,24 +57,22 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
       const score = typeof why?.score === 'number' ? why.score : null;
       const profileVsRole = typeof profileSignal?.score === 'number' ? profileSignal.score : null;
 
-      // Largest strength — first transferable signal, or first matched strength
-      const transferable = Array.isArray(why?.skills?.transferable) ? why.skills.transferable : [];
+      // Largest strength — use first matched signal label, human readable
       const strengths = Array.isArray(why?.strengths) ? why.strengths : [];
-      const largestStrength = transferable[0] || (strengths[0] ? `Strong signal: ${strengths[0]}` : '');
+      const transferable = Array.isArray(why?.skills?.transferable) ? why.skills.transferable : [];
+      const largestStrength = strengths[0]
+        ? `Strong signal detected: ${strengths[0]}`
+        : transferable[0] || '';
 
-      // Largest gap — first not-yet-demonstrated signal with plain language
+      // Largest gap — use not_yet_demonstrated label directly
       const gaps = Array.isArray(why?.gaps) ? why.gaps : [];
       const notYetSignals = Array.isArray(why?.signals?.not_yet_demonstrated)
         ? why.signals.not_yet_demonstrated
         : [];
-      // Try not_yet_demonstrated first, then gaps array, then skills.gaps
       const skillGaps = Array.isArray(why?.skills?.gaps) ? why.skills.gaps : [];
-      const largestGap = notYetSignals[0]?.label
-        ? `The resume lacks direct ${notYetSignals[0].label} evidence required by the JD.`
-        : gaps[0]
-        ? `The resume lacks direct ${gaps[0]} evidence required by the JD.`
-        : skillGaps[0]
-        ? `The resume does not yet demonstrate ${skillGaps[0]} as required by this role.`
+      const gapLabel = notYetSignals[0]?.label || gaps[0] || skillGaps[0] || '';
+      const largestGap = gapLabel
+        ? `Not yet demonstrated: ${gapLabel}`
         : '';
 
       setResult({
