@@ -199,6 +199,7 @@ export default function AtsDepthPanel({
   experiences,
   education,
   jobMeta = null,
+  whyScore = null,
   onAddSkill,
   onAddSummary,
   onAddBullet,
