@@ -601,6 +601,8 @@ function extractResumeText(resumeData: any) {
 
 const resumeText = extractResumeText(resumeData);
 const why = buildExplain(resumeText, jdText);
+console.log('[ATS-COACH WHY SCORE]', why?.score);
+console.log('[ATS-COACH RESUME TEXT LENGTH]', resumeText.length);
 
     // ── Build prompt via strategyBrain ────────────────────────────────────
     // This restores the live-safe single Groq call flow.

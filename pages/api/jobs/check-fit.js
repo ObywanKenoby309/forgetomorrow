@@ -169,6 +169,8 @@ export default async function handler(req, res) {
     // Call WHY engine directly — same engine as External Compare and recruiter packets
     // No HTTP overhead. No derived score. Real capability-based alignment.
     const why = buildExplain(resumeText, jdText);
+console.log('[CHECK-FIT WHY SCORE]', why?.score);
+console.log('[CHECK-FIT RESUME TEXT LENGTH]', resumeText.length);
 
 const matchedSignals = Array.isArray(why?.signals?.matched) ? why.signals.matched : [];
 const notYetSignals = Array.isArray(why?.signals?.not_yet_demonstrated)
