@@ -293,13 +293,14 @@ export default function AtsDepthPanel({
     return Math.round(weighted / totalWeight);
   }, [titleCov, hardCov, toolsCov, certsCov, softCov]);
 
-  const primaryScore = aiScore !== null ? aiScore : keywordCoverage;
+  const alignmentScore = aiScore !== null ? aiScore : 0;
+  const keywordScore = keywordCoverage;
 
   let statusText = '';
   let barColor = '#C62828';
-  if (primaryScore >= 85) { statusText = 'Excellent — ready to apply.'; barColor = '#2E7D32'; }
-  else if (primaryScore >= 70) { statusText = 'Good — tighten keywords & metrics to push higher.'; barColor = '#F59E0B'; }
-  else if (primaryScore >= 50) { statusText = 'Fair — add more high-impact terms before applying.'; barColor = '#EF6C00'; }
+  if (alignmentScore >= 85) { statusText = 'Excellent — ready to apply.'; barColor = '#2E7D32'; }
+  else if (alignmentScore >= 70) { statusText = 'Good — tighten keywords & metrics to push higher.'; barColor = '#F59E0B'; }
+  else if (alignmentScore >= 50) { statusText = 'Fair — add more high-impact terms before applying.'; barColor = '#EF6C00'; }
   else { statusText = 'Low — add more high-impact terms (aim ≥85).'; barColor = '#C62828'; }
 
   // ─── Buckets for the Keywords tab ───────────────────────────────────────────
@@ -430,11 +431,11 @@ export default function AtsDepthPanel({
 
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <div style={{ fontSize: 28, fontWeight: 950, color: barColor, letterSpacing: -0.5, lineHeight: 1 }}>
-              {Number.isFinite(primaryScore) ? primaryScore : 0}
+              {Number.isFinite(alignmentScore) ? alignmentScore : 0}
               <span style={{ fontSize: 13, color: '#B0BEC5', marginLeft: 2 }}>/100</span>
             </div>
             <div style={{ marginTop: 3, fontSize: 10, color: '#78909C', fontWeight: 800 }}>
-              {'Keyword signal'}
+              {'Resume alignment'}
             </div>
           </div>
         </div>
@@ -443,7 +444,7 @@ export default function AtsDepthPanel({
         <div style={{ height: 7, borderRadius: 999, background: '#ECEFF1', overflow: 'hidden', marginTop: 9 }}>
           <div
             style={{
-              width: `${Math.max(0, Math.min(100, primaryScore))}%`,
+              width: `${Math.max(0, Math.min(100, alignmentScore))}%`,
               height: '100%',
               background: barColor,
               transition: 'width 0.3s ease',
@@ -824,6 +825,9 @@ export default function AtsDepthPanel({
                 Real terms from this JD — matched against your resume. Click any missing term to get coaching.
               </div>
 
+<div style={{ marginBottom: 10, fontSize: 11, fontWeight: 900, color: '#475569' }}>
+  Keyword Signal: {keywordScore}/100
+</div>
               {buckets.length === 0 ? (
                 <div style={{ fontSize: 12, color: '#388E3C', padding: '10px 0' }}>
                   No keyword categories detected in this JD. Try a more detailed job description.
