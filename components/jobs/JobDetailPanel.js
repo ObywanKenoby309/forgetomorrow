@@ -23,6 +23,7 @@ export default function JobDetailPanel({
   onResumeAlign,
   onImproveResume,  // called after CheckMyFit result to launch resume builder
   profileSignal,
+  showSearchRelevance = false,
 }) {
   if (!job) {
     return (
@@ -134,9 +135,9 @@ export default function JobDetailPanel({
           </span>
         </div>
 
-        {(typeof job?.match === 'number' || typeof profileSignal?.score === 'number') && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-            {typeof job?.match === 'number' && (
+        {(showSearchRelevance && typeof job?.match === 'number' || typeof profileSignal?.score === 'number') && (
+		  <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+			{showSearchRelevance && typeof job?.match === 'number' && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '5px 12px', borderRadius: 999,

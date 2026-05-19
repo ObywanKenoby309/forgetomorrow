@@ -727,8 +727,9 @@ useEffect(() => {
 
         {mobileDetailOpen && selectedJob && (
           <MobileJobDetail
-            job={selectedJob}
+			job={selectedJob}
 			profileSignal={selectedJob?.jdProfileSignal || profileSignal}
+			showSearchRelevance={hasAppliedSearch}
             getJobStatus={getJobStatus}
             isInternalJob={isInternalJob}
             getJobTier={getJobTier}
@@ -826,8 +827,9 @@ useEffect(() => {
           }}
         >
           <JobDetailPanel
-            job={selectedJob}
+			job={selectedJob}
 			profileSignal={selectedJob?.jdProfileSignal || profileSignal}
+			showSearchRelevance={hasAppliedSearch}
             getJobStatus={getJobStatus}
             isInternalJob={isInternalJob}
             getJobTier={getJobTier}
