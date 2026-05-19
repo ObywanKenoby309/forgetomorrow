@@ -348,11 +348,24 @@ export default function AtsDepthPanel({
     setAiUpgrade(false);
 
     try {
-      const resp = await fetch('/api/ats-score', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jd: jdText, resume: resumeData }),
-      });
+      const resp = await fetch('/api/ats-coach', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    jdText,
+    resumeData,
+    context: { section: 'overview', keyword: null },
+    missing: {
+      high: [...missingTitleKeywords, ...missingHardSkills],
+      tools: missingTools,
+      edu: missingCerts,
+      soft: missingSoftSkills,
+      lang: missingLanguages,
+    },
+    jobMeta,
+    attemptCount: 1,
+  }),
+});
 
       const data = await resp.json();
 
