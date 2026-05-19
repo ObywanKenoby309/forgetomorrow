@@ -34,7 +34,6 @@ type Props = {
   experiences: Experience[];
   education: Education[];
   jobMeta?: JobMeta;
-  whyScore?: number | null;
   onAddSkill?: (keyword: string) => void;
   onAddSummary?: (snippet: string) => void;
   onAddBullet?: (snippet: string) => void;
@@ -181,6 +180,22 @@ function jdPreview(text: string, maxChars = 170) {
   return n.length > maxChars ? `${n.slice(0, maxChars)}…` : n;
 }
 
+function cleanJobDescription(input: string = '') {
+  return String(input || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/Preview:/gi, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function guessJobTitle(jdText: string) {
   const jd = (jdText || '').trim();
   if (!jd) return '';
@@ -200,7 +215,6 @@ export default function AtsDepthPanel({
   experiences,
   education,
   jobMeta = null,
-  whyScore = null,
   onAddSkill,
   onAddSummary,
   onAddBullet,
@@ -225,6 +239,8 @@ export default function AtsDepthPanel({
     setMounted(true);
   }, []);
 
+  const cleanJdText = useMemo(() => cleanJobDescription(jdText), [jdText]);
+
   const resumeText = useMemo(() => {
     const expBits = (experiences || [])
       .map((e) => `${e.title || ''} ${e.company || ''} ${(e.bullets || []).join(' ')}`)
@@ -235,7 +251,7 @@ export default function AtsDepthPanel({
     return `${summary || ''} ${(skills || []).join(' ')} ${expBits} ${eduBits}`.toLowerCase();
   }, [summary, skills, experiences, education]);
 
-  const titleKeywords = useMemo(() => extractKeyTerms(jdText, 12), [jdText]);
+  const titleKeywords = useMemo(() => extractKeyTerms(cleanJdText, 12), [cleanJdText]);
 
   const matchedTitleKeywords = useMemo(
     () => titleKeywords.filter((k) => resumeText.includes(k.toLowerCase())),
@@ -243,12 +259,12 @@ export default function AtsDepthPanel({
   );
 
   // ─── Categorized keyword extraction ────────────────────────────────────────
-  const jdHardSkills = useMemo(() => matchPatterns(jdText, HARD_SKILL_PATTERNS), [jdText]);
-  const jdTools      = useMemo(() => matchPatterns(jdText, TOOL_PATTERNS), [jdText]);
-  const jdCerts      = useMemo(() => matchPatterns(jdText, CERT_PATTERNS), [jdText]);
-  const jdSoftSkills = useMemo(() => matchPatterns(jdText, SOFT_SKILL_PATTERNS), [jdText]);
-  const jdLanguages  = useMemo(() => matchPatterns(jdText, LANGUAGE_PATTERNS), [jdText]);
-  const jdEduReqs    = useMemo(() => extractEduRequirements(jdText), [jdText]);
+  const jdHardSkills = useMemo(() => matchPatterns(cleanJdText, HARD_SKILL_PATTERNS), [cleanJdText]);
+  const jdTools      = useMemo(() => matchPatterns(cleanJdText, TOOL_PATTERNS), [cleanJdText]);
+  const jdCerts      = useMemo(() => matchPatterns(cleanJdText, CERT_PATTERNS), [cleanJdText]);
+  const jdSoftSkills = useMemo(() => matchPatterns(cleanJdText, SOFT_SKILL_PATTERNS), [cleanJdText]);
+  const jdLanguages  = useMemo(() => matchPatterns(cleanJdText, LANGUAGE_PATTERNS), [cleanJdText]);
+  const jdEduReqs    = useMemo(() => extractEduRequirements(cleanJdText), [cleanJdText]);
 
   const matchedHardSkills = useMemo(() => jdHardSkills.filter(k => resumeText.includes(k.toLowerCase().replace('.', ' '))), [jdHardSkills, resumeText]);
   const matchedTools      = useMemo(() => jdTools.filter(k => resumeText.includes(k.toLowerCase())), [jdTools, resumeText]);
@@ -295,15 +311,13 @@ export default function AtsDepthPanel({
     return Math.round(weighted / totalWeight);
   }, [titleCov, hardCov, toolsCov, certsCov, softCov]);
 
-  const alignmentScore = whyScore !== null ? whyScore : aiScore !== null ? aiScore : 0;
-  const hasWhyScore = whyScore !== null;
-  const keywordScore = keywordCoverage;
+  const primaryScore = aiScore !== null ? aiScore : keywordCoverage;
 
   let statusText = '';
   let barColor = '#C62828';
-  if (alignmentScore >= 85) { statusText = 'Excellent — ready to apply.'; barColor = '#2E7D32'; }
-  else if (alignmentScore >= 70) { statusText = 'Good — tighten keywords & metrics to push higher.'; barColor = '#F59E0B'; }
-  else if (alignmentScore >= 50) { statusText = 'Fair — add more high-impact terms before applying.'; barColor = '#EF6C00'; }
+  if (primaryScore >= 85) { statusText = 'Excellent — ready to apply.'; barColor = '#2E7D32'; }
+  else if (primaryScore >= 70) { statusText = 'Good — tighten keywords & metrics to push higher.'; barColor = '#F59E0B'; }
+  else if (primaryScore >= 50) { statusText = 'Fair — add more high-impact terms before applying.'; barColor = '#EF6C00'; }
   else { statusText = 'Low — add more high-impact terms (aim ≥85).'; barColor = '#C62828'; }
 
   // ─── Buckets for the Keywords tab ───────────────────────────────────────────
@@ -322,9 +336,9 @@ export default function AtsDepthPanel({
     [summary, skills, experiences, education]
   );
 
-  const guessedTitle = useMemo(() => guessJobTitle(jdText), [jdText]);
-  const words = useMemo(() => countWords(jdText), [jdText]);
-  const preview = useMemo(() => jdPreview(jdText), [jdText]);
+  const guessedTitle = useMemo(() => guessJobTitle(cleanJdText), [cleanJdText]);
+  const words = useMemo(() => countWords(cleanJdText), [cleanJdText]);
+  const preview = useMemo(() => jdPreview(cleanJdText), [cleanJdText]);
 
   const loadedTitle = (jobMeta?.title || '').trim() || guessedTitle || 'Job description';
   const loadedCompany = (jobMeta?.company || '').trim();
@@ -345,41 +359,20 @@ export default function AtsDepthPanel({
   }
 
   async function runAiScan() {
-    if (!jdText?.trim()) return;
+    if (!cleanJdText?.trim()) return;
     setAiLoading(true);
     setAiError(null);
     setAiUpgrade(false);
 
     try {
-		
-		const resumeData = {
-		  summary,
-		  skills,
-		  experiences,
-		  education,
-		};
-
-      const resp = await fetch('/api/ats-coach', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    jdText,
-    resumeData,
-    context: { section: 'overview', keyword: null },
-    missing: {
-      high: [...missingTitleKeywords, ...missingHardSkills],
-      tools: missingTools,
-      edu: missingCerts,
-      soft: missingSoftSkills,
-      lang: missingLanguages,
-    },
-    jobMeta,
-    attemptCount: 1,
-  }),
-});
+      const resp = await fetch('/api/ats-score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jd: cleanJdText, resume: resumeData }),
+      });
 
       const data = await resp.json();
-console.log('[Hammer ats-coach response]', data);
+
       if (data?.upgrade) {
         setAiUpgrade(true);
         setAiScore(null);
@@ -429,7 +422,7 @@ console.log('[Hammer ats-coach response]', data);
     return <div style={{ marginTop: 0 }} />;
   }
 
-  if (!jdText?.trim()) return null;
+  if (!cleanJdText?.trim()) return null;
 
   return (
     <div style={{ marginTop: 0 }}>
@@ -455,11 +448,11 @@ console.log('[Hammer ats-coach response]', data);
 
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <div style={{ fontSize: 28, fontWeight: 950, color: barColor, letterSpacing: -0.5, lineHeight: 1 }}>
-              {Number.isFinite(alignmentScore) ? alignmentScore : 0}
+              {Number.isFinite(primaryScore) ? primaryScore : 0}
               <span style={{ fontSize: 13, color: '#B0BEC5', marginLeft: 2 }}>/100</span>
             </div>
             <div style={{ marginTop: 3, fontSize: 10, color: '#78909C', fontWeight: 800 }}>
-              {hasWhyScore ? 'WHY Score · ForgeTomorrow' : 'Resume alignment'}
+              {'Keyword signal'}
             </div>
           </div>
         </div>
@@ -468,7 +461,7 @@ console.log('[Hammer ats-coach response]', data);
         <div style={{ height: 7, borderRadius: 999, background: '#ECEFF1', overflow: 'hidden', marginTop: 9 }}>
           <div
             style={{
-              width: `${Math.max(0, Math.min(100, alignmentScore))}%`,
+              width: `${Math.max(0, Math.min(100, primaryScore))}%`,
               height: '100%',
               background: barColor,
               transition: 'width 0.3s ease',
@@ -539,7 +532,7 @@ console.log('[Hammer ats-coach response]', data);
 
         {/* Active module */}
         <div style={{ marginTop: 10 }}>
-          {activePanel === 'coach' && (
+          <div style={{ display: activePanel === 'coach' ? 'block' : 'none' }}>
             <div
               style={{
                 padding: 11,
@@ -557,10 +550,7 @@ console.log('[Hammer ats-coach response]', data);
 
               <button
                 type="button"
-                onClick={() => {
-  runAiScan();
-  openCoachOverview();
-}}
+                onClick={openCoachOverview}
                 style={{
                   marginTop: 10,
                   width: '100%',
@@ -621,7 +611,7 @@ console.log('[Hammer ats-coach response]', data);
                     embedded={true}
                     onClose={() => setCoachOpen(false)}
                     context={coachContext}
-                    jdText={jdText}
+                    jdText={cleanJdText}
                     resumeData={resumeData}
                     missing={{
                       high: [...missingTitleKeywords, ...missingHardSkills],
@@ -638,7 +628,7 @@ console.log('[Hammer ats-coach response]', data);
                 </div>
               )}
             </div>
-          )}
+          </div>
 
           {activePanel === 'signal' && (() => {
             // Run deterministic analysis — zero AI tokens, instant
@@ -852,9 +842,6 @@ console.log('[Hammer ats-coach response]', data);
                 Real terms from this JD — matched against your resume. Click any missing term to get coaching.
               </div>
 
-<div style={{ marginBottom: 10, fontSize: 11, fontWeight: 900, color: '#475569' }}>
-  Keyword Signal: {keywordScore}/100
-</div>
               {buckets.length === 0 ? (
                 <div style={{ fontSize: 12, color: '#388E3C', padding: '10px 0' }}>
                   No keyword categories detected in this JD. Try a more detailed job description.
