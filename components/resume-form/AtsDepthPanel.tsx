@@ -368,7 +368,7 @@ export default function AtsDepthPanel({
 });
 
       const data = await resp.json();
-
+console.log('[Hammer ats-coach response]', data);
       if (data?.upgrade) {
         setAiUpgrade(true);
         setAiScore(null);
