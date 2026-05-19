@@ -80,6 +80,70 @@ function buildNotesFromWhy(whyResult) {
   return parts.join("\n") || null;
 }
 
+async function ensureUncategorizedPool({ accountKey, userId }) {
+  const existing = await prisma.talentPool.findFirst({
+    where: { accountKey, name: "Uncategorized" },
+    select: { id: true, name: true },
+  });
+
+  if (existing?.id) return existing;
+
+  return prisma.talentPool.create({
+    data: {
+      accountKey,
+      createdByUserId: userId,
+      name: "Uncategorized",
+      purpose: "Default intake pool for candidates not yet categorized.",
+      tags: ["uncategorized", "intake"],
+    },
+    select: { id: true, name: true },
+  });
+}
+
+async function ensureUncategorizedPoolEntry({
+  accountKey,
+  poolId,
+  candidate,
+  notes,
+  whyResult,
+}) {
+  if (!candidate?.id) return null;
+
+  const existing = await prisma.talentPoolEntry.findFirst({
+    where: {
+      accountKey,
+      poolId,
+      externalCandidateId: candidate.id,
+    },
+    select: { id: true, poolId: true },
+  });
+
+  if (existing?.id) return existing;
+
+  const reasons = [];
+  if (Array.isArray(whyResult?.strengths) && whyResult.strengths.length) {
+    reasons.push(...whyResult.strengths.slice(0, 3).map((s) => String(s || "").trim()).filter(Boolean));
+  }
+
+  return prisma.talentPoolEntry.create({
+    data: {
+      accountKey,
+      poolId,
+      externalCandidateId: candidate.id,
+      candidateName: candidate.name || "External Candidate",
+      candidateHeadline: candidate.headline || null,
+      candidateLocation: candidate.location || null,
+      source: "External",
+      status: "Uncategorized",
+      fit: typeof whyResult?.score === "number" ? `${whyResult.score}% alignment` : null,
+      lastRoleConsidered: null,
+      reasons: reasons.length ? reasons : null,
+      notes: notes || null,
+    },
+    select: { id: true, poolId: true },
+  });
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
@@ -132,10 +196,22 @@ export default async function handler(req, res) {
         select: { id: true, name: true, email: true },
       });
       if (existing) {
+        const effectiveAccountKey = accountKey || "STAFF";
+        const pool = await ensureUncategorizedPool({ accountKey: effectiveAccountKey, userId });
+        const entry = await ensureUncategorizedPoolEntry({
+          accountKey: effectiveAccountKey,
+          poolId: pool.id,
+          candidate: existing,
+          notes,
+          whyResult,
+        });
+
         return res.status(200).json({
           candidate: existing,
+          pool,
+          entry,
           existed: true,
-          message: `External candidate with email ${email} already exists in your database.`,
+          message: `External candidate with email ${email} already exists in your database and is available in Uncategorized.`,
         });
       }
     }
@@ -165,10 +241,22 @@ export default async function handler(req, res) {
       },
     });
 
+    const effectiveAccountKey = accountKey || "STAFF";
+    const pool = await ensureUncategorizedPool({ accountKey: effectiveAccountKey, userId });
+    const entry = await ensureUncategorizedPoolEntry({
+      accountKey: effectiveAccountKey,
+      poolId: pool.id,
+      candidate,
+      notes,
+      whyResult,
+    });
+
     return res.status(200).json({
       candidate,
+      pool,
+      entry,
       existed: false,
-      message: `${name} has been added to your external candidate database.`,
+      message: `${name} has been added to your external candidate database and placed in Uncategorized.`,
     });
   } catch (err) {
     console.error("[build-from-resume] error:", err);
