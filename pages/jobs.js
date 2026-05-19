@@ -543,17 +543,10 @@ useEffect(() => {
 
       if (cancelled || !alignedJob) return;
 
-      const nextProfileSignal = alignedJob?.jdProfileSignal || {
-        score:
-          alignedJob?.match ??
-          alignedJob?.matchScore ??
-          alignedJob?.alignmentScore ??
-          null,
-        label: 'Profile vs Role',
-        breakdown: {
-          source: 'forge-job-match-engine',
-        },
-      };
+      const nextProfileSignal =
+  alignedJob?.jdProfileSignal ||
+  alignData?.profileSignal ||
+  null;
 
       setProfileSignal(nextProfileSignal);
 
