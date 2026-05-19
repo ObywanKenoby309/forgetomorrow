@@ -85,20 +85,25 @@ export default async function handler(req, res) {
       if (existingEntry?.id) continue;
 
       await prisma.talentPoolEntry.create({
-        data: {
-          accountKey,
-          poolId: pool.id,
-          externalCandidateId: candidate.id,
-          candidateName: candidate.name || "External Candidate",
-          candidateHeadline: candidate.headline || null,
-          candidateLocation: candidate.location || null,
-          source: "External",
-          status: "Uncategorized",
-          fit: null,
-          reasons: null,
-          notes: candidate.notes || null,
-        },
-      });
+  data: {
+    accountKey,
+    poolId: pool.id,
+    externalCandidateId: candidate.id,
+
+    candidateName: candidate.name || "External Candidate",
+    candidateHeadline: candidate.headline || null,
+    candidateLocation: candidate.location || null,
+
+    source: "External",
+    status: "Warm",
+
+    fit: "",
+    reasons: [],
+    notes: candidate.notes || "",
+
+    lastRoleConsidered: "",
+  },
+});
 
       created++;
     }
