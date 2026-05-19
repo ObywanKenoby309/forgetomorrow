@@ -348,6 +348,14 @@ export default function AtsDepthPanel({
     setAiUpgrade(false);
 
     try {
+		
+		const resumeData = {
+		  summary,
+		  skills,
+		  experiences,
+		  education,
+		};
+
       const resp = await fetch('/api/ats-coach', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
