@@ -468,15 +468,82 @@ async function openFullProfileFromModal(entryArg) {
     const poolId = String(selectedPoolId || "").trim();
     if (!poolId) return;
 
+    const targetPoolId = String(payload?.targetPoolId || poolId).trim();
+    const shouldMove = targetPoolId && targetPoolId !== poolId;
+
     setSaving(true);
     setError("");
     try {
+      if (shouldMove) {
+        const sourceEntry =
+          modalEntry && typeof modalEntry === "object" ? modalEntry : selectedEntry;
+
+        if (!sourceEntry?.id) {
+          throw new Error("Missing entry details for pool move.");
+        }
+
+        const movePayload = {
+          candidateUserId: sourceEntry.candidateUserId || null,
+          externalCandidateId: sourceEntry.externalCandidateId || null,
+
+          name: String(sourceEntry.name || "Candidate").trim(),
+          headline: String(sourceEntry.headline || "").trim(),
+          location: String(sourceEntry.location || "").trim(),
+
+          source: String(sourceEntry.source || (sourceEntry.candidateUserId ? "Internal" : "External")).trim(),
+          status: String(payload?.status || sourceEntry.status || "Warm").trim() || "Warm",
+          fit: String(payload?.fit ?? sourceEntry.fit ?? "").trim(),
+
+          lastRoleConsidered: String(payload?.lastRoleConsidered ?? sourceEntry.lastRoleConsidered ?? "").trim(),
+          reasons: Array.isArray(payload?.reasons)
+            ? payload.reasons
+            : Array.isArray(sourceEntry.reasons)
+              ? sourceEntry.reasons
+              : [],
+          notes: String(payload?.notes ?? sourceEntry.notes ?? "").trim(),
+        };
+
+        const addRes = await fetch(
+          `/api/recruiter/pools/${encodeURIComponent(targetPoolId)}/entries`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(movePayload),
+          }
+        );
+
+        const addData = await addRes.json().catch(() => ({}));
+        if (!addRes.ok) {
+          throw new Error(addData?.error || "Failed to move entry to selected pool.");
+        }
+
+        const deleteRes = await fetch(
+          `/api/recruiter/pools/${encodeURIComponent(poolId)}/entries?entryId=${encodeURIComponent(sourceEntry.id)}`,
+          { method: "DELETE" }
+        );
+
+        const deleteData = await deleteRes.json().catch(() => ({}));
+        if (!deleteRes.ok) {
+          throw new Error(deleteData?.error || "Moved candidate, but failed to remove old pool entry.");
+        }
+
+        setShowCandidateModal(false);
+        setModalEntry(null);
+        setSelectedEntryId("");
+        setSelectedPoolId(targetPoolId);
+        await loadEntries(targetPoolId);
+        await loadPools();
+        return;
+      }
+
+      const { targetPoolId: _targetPoolId, ...patchPayload } = payload || {};
+
       const res = await fetch(
         `/api/recruiter/pools/${encodeURIComponent(poolId)}/entries`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(patchPayload),
         }
       );
       const data = await res.json().catch(() => ({}));
@@ -632,6 +699,8 @@ async function openFullProfileFromModal(entryArg) {
           saving={saving}
           editable={true}
           onSave={savePoolEntryEdits}
+          pools={pools}
+          currentPoolId={selectedPoolId}
           onMessage={() => messageCandidate(modalEntry)}
           onRemove={() => {
             const id = String(modalEntry?.id || "").trim();

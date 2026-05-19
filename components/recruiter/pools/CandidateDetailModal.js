@@ -15,6 +15,8 @@ export default function CandidateDetailModal({
   // ✅ NEW (additive)
   editable = false,
   onSave,
+  pools = [],
+  currentPoolId = "",
 }) {
   const [localError, setLocalError] = useState("");
 
@@ -24,6 +26,7 @@ export default function CandidateDetailModal({
   const [draftLastRole, setDraftLastRole] = useState("");
   const [draftNotes, setDraftNotes] = useState("");
   const [draftWhy, setDraftWhy] = useState("");
+  const [draftPoolId, setDraftPoolId] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -63,8 +66,9 @@ export default function CandidateDetailModal({
     setDraftLastRole(String(e?.lastRoleConsidered || "").trim());
     setDraftNotes(String(e?.notes || "").trim());
     setDraftWhy(String(firstReason || "").trim());
+    setDraftPoolId(String(currentPoolId || e?.poolId || "").trim());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, e?.id]);
+  }, [open, e?.id, currentPoolId]);
 
   if (!open) return null;
 
@@ -117,6 +121,7 @@ export default function CandidateDetailModal({
       lastRoleConsidered: String(draftLastRole || "").trim(),
       notes: String(draftNotes || "").trim(),
       reasons: newReasons,
+      targetPoolId: String(draftPoolId || "").trim(),
     });
   }
 
@@ -255,6 +260,37 @@ export default function CandidateDetailModal({
                   }}
                 />
               </div>
+
+              {Array.isArray(pools) && pools.length > 1 ? (
+                <div style={{ display: "grid", gap: 6 }}>
+                  <div style={{ fontWeight: 900, color: "#37474F", fontSize: 13 }}>
+                    Move to pool
+                  </div>
+                  <select
+                    value={draftPoolId}
+                    onChange={(e) => setDraftPoolId(e.target.value)}
+                    style={{
+                      border: "1px solid rgba(38,50,56,0.18)",
+                      borderRadius: 10,
+                      padding: "10px 12px",
+                      fontWeight: 800,
+                      outline: "none",
+                      background: "white",
+                    }}
+                  >
+                    {pools.map((pool) => (
+                      <option key={pool.id} value={pool.id}>
+                        {pool.name}
+                      </option>
+                    ))}
+                  </select>
+                  {String(draftPoolId || "") !== String(currentPoolId || e?.poolId || "") ? (
+                    <div style={{ color: "#607D8B", fontSize: 12, lineHeight: 1.35 }}>
+                      Saving will move this candidate to the selected pool.
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div style={{ display: "grid", gap: 6 }}>
                 <div style={{ fontWeight: 900, color: "#37474F", fontSize: 13 }}>
