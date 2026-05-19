@@ -552,7 +552,54 @@ if (!internalBypassGate && !roleIsUnlimited(role)) {
       console.warn('[ats-coach] buildPromptContext failed — continuing without intelligence:', (err as any)?.message);
     }
 
-const resumeText = JSON.stringify(resumeData || {});
+function extractResumeText(resumeData: any) {
+  if (!resumeData || typeof resumeData !== "object") return "";
+
+  const parts: string[] = [];
+
+  if (resumeData.summary) parts.push(resumeData.summary);
+  if (resumeData.professionalSummary) parts.push(resumeData.professionalSummary);
+
+  const experiences =
+    resumeData.experiences ||
+    resumeData.workExperiences ||
+    resumeData.experience ||
+    [];
+
+  for (const exp of Array.isArray(experiences) ? experiences : []) {
+    if (exp?.title) parts.push(exp.title);
+    if (exp?.company) parts.push(exp.company);
+    if (exp?.description) parts.push(exp.description);
+    if (Array.isArray(exp?.highlights)) parts.push(exp.highlights.join(" "));
+    if (Array.isArray(exp?.bullets)) parts.push(exp.bullets.join(" "));
+  }
+
+  const skills = resumeData.skills || [];
+  if (Array.isArray(skills)) parts.push(skills.join(", "));
+
+  const certs = resumeData.certifications || [];
+  for (const c of Array.isArray(certs) ? certs : []) {
+    if (typeof c === "string") parts.push(c);
+    else if (c?.name) parts.push(c.name);
+  }
+
+  const edu = resumeData.educationList || resumeData.education || [];
+  for (const e of Array.isArray(edu) ? edu : []) {
+    if (e?.degree) parts.push(e.degree);
+    if (e?.school) parts.push(e.school);
+    if (e?.field) parts.push(e.field);
+  }
+
+  const projects = resumeData.projects || [];
+  for (const p of Array.isArray(projects) ? projects : []) {
+    if (p?.title) parts.push(p.title);
+    if (p?.description) parts.push(p.description);
+  }
+
+  return parts.filter(Boolean).join("\n");
+}
+
+const resumeText = extractResumeText(resumeData);
 const why = buildExplain(resumeText, jdText);
 
     // ── Build prompt via strategyBrain ────────────────────────────────────
