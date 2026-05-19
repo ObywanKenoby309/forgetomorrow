@@ -553,10 +553,11 @@ useEffect(() => {
       setSelectedJob((prev) => {
         if (!prev || String(prev.id) !== String(alignedJob.id)) return prev;
         return {
-          ...prev,
-          ...alignedJob,
-          jdProfileSignal: nextProfileSignal,
-        };
+  ...prev,
+  ...alignedJob,
+  match: prev?.match ?? alignedJob?.match,  // preserve original search relevance
+  jdProfileSignal: nextProfileSignal,
+};
       });
     } catch (err) {
       console.error('[Jobs] selected alignment load failed', err);
