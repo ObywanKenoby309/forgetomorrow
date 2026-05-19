@@ -23,6 +23,7 @@ export default function MobileJobDetail({
   isPaidUser,
   onApply,
   onResumeAlign,
+  profileSignal,
 }) {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -200,6 +201,80 @@ export default function MobileJobDetail({
             </span>
           )}
         </div>
+
+        {(typeof job?.match === 'number' || typeof profileSignal?.score === 'number') && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            {typeof job?.match === 'number' && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '5px 12px',
+                  borderRadius: 999,
+                  background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(100,116,139,0.08)',
+                  border: isDark
+                    ? '1px solid rgba(255,255,255,0.18)'
+                    : '1px solid rgba(100,116,139,0.20)',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: isDark ? '#ECEFF1' : '#64748B',
+                  }}
+                >
+                  Search Relevance
+                </span>
+
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 900,
+                    color: isDark ? '#FFFFFF' : '#64748B',
+                  }}
+                >
+                  {Math.round(job.match)}%
+                </span>
+              </div>
+            )}
+
+            {typeof profileSignal?.score === 'number' && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '5px 12px',
+                  borderRadius: 999,
+                  background: 'rgba(255,112,67,0.10)',
+                  border: '1px solid rgba(255,112,67,0.25)',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: isDark ? '#FFCC80' : '#FF7043',
+                  }}
+                >
+                  Profile vs Role
+                </span>
+
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 900,
+                    color: isDark ? '#FFCC80' : '#FF7043',
+                  }}
+                >
+                  {Math.round(profileSignal.score)}%
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Scrollable body ── */}

@@ -115,6 +115,22 @@ export default async function handler(req, res) {
     const alignments = {};
     for (const job of alignedJobs) {
       if (!job?.id) continue;
+
+      const jdProfileSignal =
+        typeof job?.match === "number"
+          ? {
+              score: job.match,
+              label: "Profile vs Role",
+              breakdown: {
+                source: job.matchSource || "forge-job-match-engine",
+                tier: job.matchTier || null,
+                reasons: job.alignmentReasons || [],
+                evidence: job.alignmentEvidence || [],
+                gaps: job.alignmentGaps || [],
+              },
+            }
+          : null;
+
       alignments[job.id] = {
         score: job.match,
         source: job.matchSource,
@@ -122,21 +138,22 @@ export default async function handler(req, res) {
         reasons: job.alignmentReasons || [],
         evidence: job.alignmentEvidence || [],
         gaps: job.alignmentGaps || [],
+        jdProfileSignal,
       };
     }
 
     return res.status(200).json({
       alignments,
       jobs: alignedJobs.map((job) => ({
-  ...job,
-  match: job.match,
-  matchSource: job.matchSource || "profile",
-  matchTier: job.matchTier,
-  alignmentReasons: job.alignmentReasons || [],
-  alignmentEvidence: job.alignmentEvidence || [],
-  alignmentGaps: job.alignmentGaps || [],
-  jdProfileSignal: alignments[job.id]?.jdProfileSignal || null,
-})),
+        ...job,
+        match: job.match,
+        matchSource: job.matchSource || "profile",
+        matchTier: job.matchTier,
+        alignmentReasons: job.alignmentReasons || [],
+        alignmentEvidence: job.alignmentEvidence || [],
+        alignmentGaps: job.alignmentGaps || [],
+        jdProfileSignal: alignments[job.id]?.jdProfileSignal || null,
+      })),
     });
   } catch (err) {
     console.error("[jobs/alignment] error:", err);
