@@ -54,7 +54,12 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
 
       const why = data?.why || {};
 	  console.log('[CheckMyFit] why gaps:', why?.gaps, why?.signals?.not_yet_demonstrated, why?.skills?.gaps);
-      const score = typeof why?.score === 'number' ? why.score : null;
+      const score =
+  typeof why?.match?.score === 'number'
+    ? why.match.score
+    : typeof why?.score === 'number'
+      ? why.score
+      : null;
       const profileVsRole = typeof profileSignal?.score === 'number' ? profileSignal.score : null;
 
       const largestStrength = safe(data?.strengthSentence || '');
