@@ -154,9 +154,6 @@ export default async function handler(req, res) {
     }
 
     const resumeText = extractResumeText(resumeData);
-    console.log('[check-fit] resumeData keys:', Object.keys(resumeData || {}));
-    console.log('[check-fit] resumeText length:', resumeText.length);
-    console.log('[check-fit] resumeText preview:', resumeText.slice(0, 500));
     if (!resumeText.trim()) {
       return res.status(400).json({
         ok: false,
@@ -171,8 +168,7 @@ export default async function handler(req, res) {
 
     // Call WHY engine directly — same engine as External Compare and recruiter packets
     // No HTTP overhead. No derived score. Real capability-based alignment.
-	console.log('[check-fit] jdText length:', jdText.length);
-    console.log('[check-fit] jdText preview:', jdText.slice(0, 300));
+    console.log('[check-fit] FULL resumeText:', resumeText);
     const why = buildExplain(resumeText, jdText);
 
 const matchedSignals = Array.isArray(why?.signals?.matched) ? why.signals.matched : [];
