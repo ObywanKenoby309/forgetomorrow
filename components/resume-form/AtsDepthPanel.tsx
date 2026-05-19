@@ -34,6 +34,7 @@ type Props = {
   experiences: Experience[];
   education: Education[];
   jobMeta?: JobMeta;
+  whyScore?: number | null;
   onAddSkill?: (keyword: string) => void;
   onAddSummary?: (snippet: string) => void;
   onAddBullet?: (snippet: string) => void;
