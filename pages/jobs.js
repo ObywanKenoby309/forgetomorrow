@@ -571,14 +571,16 @@ useEffect(() => {
 }, [selectedJob?.id, loading]);
 useEffect(() => {
   if (!selectedJob?.id) return;
-
   const refreshedSelectedJob = jobs.find(
     (job) => String(job.id) === String(selectedJob.id)
   );
-
   if (!refreshedSelectedJob) return;
-
-  setSelectedJob(refreshedSelectedJob);
+  // Merge to preserve alignment data already loaded (jdProfileSignal etc)
+  setSelectedJob((prev) => ({
+    ...refreshedSelectedJob,
+    jdProfileSignal: prev?.jdProfileSignal ?? refreshedSelectedJob?.jdProfileSignal,
+    match: prev?.match ?? refreshedSelectedJob?.match,
+  }));
 }, [jobs, selectedJob?.id]);
 
 useEffect(() => {
