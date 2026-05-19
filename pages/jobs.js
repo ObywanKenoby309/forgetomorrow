@@ -166,6 +166,8 @@ function ForgeAlignmentExplainer() {
 function JobsUI() {
   const router = useRouter();
   const isMobile = useIsMobile(768);
+  
+  const [profileSignal, setProfileSignal] = useState(null);
 
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
@@ -181,7 +183,6 @@ function JobsUI() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [userHasSelected, setUserHasSelected] = useState(false);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
-  const [profileSignal, setProfileSignal] = useState(null);
 
   const [keyword, setKeyword] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
@@ -263,20 +264,7 @@ function JobsUI() {
 
         const loadedJobs = Array.isArray(data?.jobs) ? data.jobs : [];
 
-        const hasAppliedSearchIntent =
-  Boolean(appliedFilters.keyword) ||
-  Boolean(appliedFilters.company) ||
-  Boolean(appliedFilters.location) ||
-  Boolean(appliedFilters.locationType) ||
-  Boolean(appliedFilters.source) ||
-  Boolean(appliedFilters.days);
-
-setJobs(
-  loadedJobs.map((job) => ({
-    ...job,
-    match: hasAppliedSearchIntent ? job.match : null,
-  }))
-);
+        setJobs(loadedJobs);
         setTotalJobCount(Number(data?.totalCount || loadedJobs.length || 0));
       } catch (err) {
         console.error(err);
@@ -386,6 +374,11 @@ setJobs(
         description: job.description,
       },
       ats: atsResult,
+      whyScore: atsResult?.score ?? null,
+      whySummary: atsResult?.summary ?? null,
+      largestStrength: atsResult?.largestStrength ?? null,
+      largestGap: atsResult?.largestGap ?? null,
+      source: 'jobs-check-fit',
     };
 
     try {
@@ -401,7 +394,7 @@ setJobs(
     }
 
     if (typeof window !== 'undefined') {
-      window.location.href = withChrome(`/resume/create?from=match&jobId=${job.id}&copyJD=true`);
+      window.location.href = withChrome(`/resume/create?from=ats&jobId=${job.id}&copyJD=true`);
     }
   };
 
@@ -493,8 +486,16 @@ setJobs(
         if (cancelled || !job) return;
 
         setSelectedJob(job);
-        setUserHasSelected(true);
-        addViewedJob(job);
+
+setJobs((prevJobs) => {
+  const exists = prevJobs.some((j) => String(j.id) === String(job.id));
+  if (exists) return prevJobs;
+
+  return [job, ...prevJobs];
+});
+
+setUserHasSelected(true);
+addViewedJob(job);
 
         if (isMobile) {
           setMobileDetailOpen(true);
@@ -524,46 +525,70 @@ setJobs(
   useEffect(() => {
     let cancelled = false;
 
-    async function alignSelectedJob() {
-      if (!selectedJob?.id || loading) return;
+    async function alignVisibleJobs() {
+      if (!pagedJobs.length || loading) return;
 
       try {
-        setProfileSignal(null);
-
         const alignRes = await fetch('/api/jobs/alignment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            jobs: [selectedJob],
+            jobs: pagedJobs,
+            filters: appliedFilters,
           }),
         });
 
         if (!alignRes.ok) return;
 
         const alignData = await alignRes.json();
-        const alignedJob = Array.isArray(alignData?.jobs)
-          ? alignData.jobs[0]
-          : null;
+        const alignedJobs = Array.isArray(alignData?.jobs) ? alignData.jobs : [];
 
-        if (cancelled || !alignedJob) return;
+        if (cancelled || !alignedJobs.length) return;
 
-        const score =
-  alignedJob?.matchSource === 'profile' && typeof alignedJob?.match === 'number'
-    ? alignedJob.match
-    : null;
+        const alignedMap = new Map(
+          alignedJobs.map((job) => [String(job.id), job])
+        );
 
-        setProfileSignal({ score });
-      } catch (err) {
-        console.error('[Jobs] selected alignment load failed', err);
+        setJobs((prevJobs) => {
+          const alignedOrder = alignedJobs.map((aligned) => {
+            const existing = prevJobs.find(
+              (job) => String(job.id) === String(aligned.id)
+            );
+
+            return existing ? { ...existing, ...aligned } : aligned;
+          });
+
+          const alignedIds = new Set(alignedOrder.map((job) => String(job.id)));
+          const remainingJobs = prevJobs.filter(
+            (job) => !alignedIds.has(String(job.id))
+          );
+
+          return [...alignedOrder, ...remainingJobs];
+        });
+        if (alignData.profileSignalScore !== undefined) {
+          setProfileSignal({
+            score: alignData.profileSignalScore,
+            label: alignData.profileSignalLabel,
+            breakdown: alignData.profileSignalBreakdown,
+          });
+        }
+      } catch (alignErr) {
+        console.error('[Jobs] visible alignment load failed', alignErr);
       }
     }
 
-    alignSelectedJob();
+    alignVisibleJobs();
 
     return () => {
       cancelled = true;
     };
-  }, [selectedJob?.id, loading]);
+  }, [
+  currentPage,
+  pageSize,
+  appliedFilters,
+  pagedJobs.map((job) => job.id).join('|'),
+  loading,
+]);
 
 useEffect(() => {
   if (!selectedJob?.id) return;
@@ -577,15 +602,20 @@ useEffect(() => {
   setSelectedJob(refreshedSelectedJob);
 }, [jobs, selectedJob?.id]);
 
-  useEffect(() => {
-    if (!selectedJob?.id) return;
-    if (!selectedJobCardRef.current) return;
+useEffect(() => {
+  if (!selectedJob?.id) return;
 
-    selectedJobCardRef.current.scrollIntoView({
+  const node = selectedJobCardRef.current;
+
+  if (!node || typeof node.scrollIntoView !== 'function') return;
+
+  requestAnimationFrame(() => {
+    node.scrollIntoView({
       behavior: 'smooth',
       block: 'center',
     });
-  }, [selectedJob?.id, currentPage]);
+  });
+}, [selectedJob?.id, currentPage]);
 
   useEffect(() => {
     if (userHasSelected) return;
@@ -711,8 +741,6 @@ useEffect(() => {
         {mobileDetailOpen && selectedJob && (
           <MobileJobDetail
             job={selectedJob}
-            profileSignal={profileSignal}
-            onBack={() => setMobileDetailOpen(false)}
             getJobStatus={getJobStatus}
             isInternalJob={isInternalJob}
             getJobTier={getJobTier}
@@ -722,6 +750,7 @@ useEffect(() => {
             onApply={handleApplyClick}
             onResumeAlign={handleResumeAlign}
             onImproveResume={handleImproveResume}
+            profileSignal={profileSignal}
           />
         )}
       </div>
@@ -810,7 +839,6 @@ useEffect(() => {
         >
           <JobDetailPanel
             job={selectedJob}
-            profileSignal={profileSignal}
             getJobStatus={getJobStatus}
             isInternalJob={isInternalJob}
             getJobTier={getJobTier}
@@ -820,6 +848,7 @@ useEffect(() => {
             onApply={handleApplyClick}
             onResumeAlign={handleResumeAlign}
             onImproveResume={handleImproveResume}
+            profileSignal={profileSignal}
           />
         </section>
       </div>

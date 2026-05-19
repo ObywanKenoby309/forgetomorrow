@@ -1,3 +1,4 @@
+// components/hammer/ForgeHammerPanel.js
 'use client';
 
 /**
@@ -20,6 +21,7 @@ export default function ForgeHammerPanel({
   experiences,
   education,
   jobMeta = null,
+  whyScore = null,
   onAddSkill,
   onAddSummary,
   onAddBullet,
@@ -42,6 +44,7 @@ export default function ForgeHammerPanel({
       experiences={experiences}
       education={education}
       jobMeta={jobMeta || null}
+      whyScore={whyScore}
       onAddSkill={onAddSkill}
       onAddSummary={onAddSummary}
       onAddBullet={onAddBullet}

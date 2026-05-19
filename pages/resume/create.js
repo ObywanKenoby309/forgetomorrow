@@ -110,6 +110,7 @@ export default function CreateResumePage() {
   const [jdLoading, setJdLoading] = useState(false);
   const [jdStatus, setJdStatus] = useState('');
   const [atsPack, setAtsPack] = useState(null);
+  const [incomingWhyScore, setIncomingWhyScore] = useState(null);
   const [atsJobMeta, setAtsJobMeta] = useState(null);
   const [atsAppliedFromContext, setAtsAppliedFromContext] = useState(false);
   const [jobMeta, setJobMeta] = useState(null);
@@ -280,7 +281,7 @@ export default function CreateResumePage() {
   };
 
   const clearJobFire = async () => {
-    setJd(''); setJdStatus(''); setAtsPack(null); setAtsJobMeta(null); setJobMeta(null);
+    setJd(''); setJdStatus(''); setAtsPack(null); setIncomingWhyScore(null); setAtsJobMeta(null); setJobMeta(null);
     setAtsAppliedFromContext(true); hasAppliedUploadRef.current=false;
     try { await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT,''); await saveDraft(DRAFT_KEYS.ATS_PACK,null); } catch {}
   };
@@ -418,6 +419,8 @@ export default function CreateResumePage() {
           const pack=await getDraft(DRAFT_KEYS.ATS_PACK);
           if(pack){
             setAtsPack(pack||null);
+            if(typeof pack?.whyScore === 'number') setIncomingWhyScore(pack.whyScore);
+            else setIncomingWhyScore(null);
             if(pack?.job) setAtsJobMeta({title:pack.job.title||'',company:pack.job.company||'',location:pack.job.location||''});
             if(pack?.job?.description&&!jd){const clean=normalizeJobText(pack.job.description);setJd(clean);await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT,clean);setJdStatus('Loaded: Job fire from ATS context');applied=true;}
           }
@@ -852,6 +855,7 @@ export default function CreateResumePage() {
                     experiences={experiences}
                     education={educationList}
                     jobMeta={fireMeta||null}
+                    whyScore={incomingWhyScore}
                     onAddSkill={(k)=>{setSkills((s)=>[...s,k]);triggerAutoSave();}}
                     onAddSummary={(k)=>{setSummary((s)=>(s?`${s}
 

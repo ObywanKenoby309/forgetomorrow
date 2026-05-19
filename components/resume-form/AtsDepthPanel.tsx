@@ -34,6 +34,7 @@ type Props = {
   experiences: Experience[];
   education: Education[];
   jobMeta?: JobMeta;
+  whyScore?: number | null;
   onAddSkill?: (keyword: string) => void;
   onAddSummary?: (snippet: string) => void;
   onAddBullet?: (snippet: string) => void;
@@ -199,6 +200,7 @@ export default function AtsDepthPanel({
   experiences,
   education,
   jobMeta = null,
+  whyScore = null,
   onAddSkill,
   onAddSummary,
   onAddBullet,
@@ -293,7 +295,8 @@ export default function AtsDepthPanel({
     return Math.round(weighted / totalWeight);
   }, [titleCov, hardCov, toolsCov, certsCov, softCov]);
 
-  const alignmentScore = aiScore !== null ? aiScore : 0;
+  const alignmentScore = whyScore !== null ? whyScore : aiScore !== null ? aiScore : 0;
+  const hasWhyScore = whyScore !== null;
   const keywordScore = keywordCoverage;
 
   let statusText = '';
@@ -456,7 +459,7 @@ console.log('[Hammer ats-coach response]', data);
               <span style={{ fontSize: 13, color: '#B0BEC5', marginLeft: 2 }}>/100</span>
             </div>
             <div style={{ marginTop: 3, fontSize: 10, color: '#78909C', fontWeight: 800 }}>
-              {'Resume alignment'}
+              {hasWhyScore ? 'WHY Score · ForgeTomorrow' : 'Resume alignment'}
             </div>
           </div>
         </div>
