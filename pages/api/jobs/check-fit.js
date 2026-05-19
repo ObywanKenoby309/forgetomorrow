@@ -168,8 +168,6 @@ export default async function handler(req, res) {
 
     // Call WHY engine directly — same engine as External Compare and recruiter packets
     // No HTTP overhead. No derived score. Real capability-based alignment.
-    console.log('[check-fit] resumeText first 200:', resumeText.slice(0, 200));
-    console.log('[check-fit] resumeText last 200:', resumeText.slice(-200));
     const why = buildExplain(resumeText, jdText);
 
 const matchedSignals = Array.isArray(why?.signals?.matched) ? why.signals.matched : [];
@@ -205,11 +203,12 @@ if (topGap?.label) {
       tier: gate.tier,
       why,
       strengthSentence,
-	  gapSentence,
+      gapSentence,
+      _debug_resumeText: resumeText,
+      _debug_resumeLength: resumeText.length,
     });
 
   } catch (err) {
-    console.error("[jobs/check-fit] error", err);
     return res.status(500).json({ ok: false, error: "Failed to run Check My Alignment." });
   }
 }
