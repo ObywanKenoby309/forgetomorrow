@@ -262,6 +262,7 @@ function JobsUI() {
 
         const loadedJobs = Array.isArray(data?.jobs) ? data.jobs : [];
 
+        setJobs(loadedJobs);
         setTotalJobCount(Number(data?.totalCount || loadedJobs.length || 0));
       } catch (err) {
         console.error(err);
@@ -371,6 +372,11 @@ function JobsUI() {
         description: job.description,
       },
       ats: atsResult,
+      whyScore: atsResult?.score ?? null,
+      whySummary: atsResult?.summary ?? null,
+      largestStrength: atsResult?.largestStrength ?? null,
+      largestGap: atsResult?.largestGap ?? null,
+      source: 'jobs-check-fit',
     };
 
     try {
@@ -386,7 +392,7 @@ function JobsUI() {
     }
 
     if (typeof window !== 'undefined') {
-      window.location.href = withChrome(`/resume/create?from=match&jobId=${job.id}&copyJD=true`);
+      window.location.href = withChrome(`/resume/create?from=ats&jobId=${job.id}&copyJD=true`);
     }
   };
 
@@ -537,12 +543,27 @@ useEffect(() => {
 
       if (cancelled || !alignedJob) return;
 
-      setProfileSignal({
+      const nextProfileSignal = alignedJob?.jdProfileSignal || {
         score:
           alignedJob?.match ??
           alignedJob?.matchScore ??
           alignedJob?.alignmentScore ??
           null,
+        label: 'Profile vs Role',
+        breakdown: {
+          source: 'forge-job-match-engine',
+        },
+      };
+
+      setProfileSignal(nextProfileSignal);
+
+      setSelectedJob((prev) => {
+        if (!prev || String(prev.id) !== String(alignedJob.id)) return prev;
+        return {
+          ...prev,
+          ...alignedJob,
+          jdProfileSignal: nextProfileSignal,
+        };
       });
     } catch (err) {
       console.error('[Jobs] selected alignment load failed', err);
@@ -607,6 +628,10 @@ useEffect(() => {
     sourceFilter,
     daysFilter,
   ].filter(Boolean).length;
+
+  const hasAppliedSearch = Object.values(appliedFilters || {}).some((value) =>
+    String(value || '').trim()
+  );
 
   const filterProps = {
     keyword,
@@ -678,6 +703,7 @@ useEffect(() => {
                 getJobStatus={getJobStatus}
                 isInternalJob={isInternalJob}
                 getJobTier={getJobTier}
+                showSearchRelevance={hasAppliedSearch}
               />
             </div>
           ))}
@@ -768,6 +794,7 @@ useEffect(() => {
                   getJobStatus={getJobStatus}
                   isInternalJob={isInternalJob}
                   getJobTier={getJobTier}
+                  showSearchRelevance={hasAppliedSearch}
                 />
               </div>
             ))}

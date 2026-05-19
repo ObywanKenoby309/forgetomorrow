@@ -15,6 +15,7 @@ export default function JobListCard({
   onClick,
   getJobStatus,
   isInternalJob,
+  showSearchRelevance = false,
 }) {
   if (!job) return null;
 
@@ -38,6 +39,7 @@ export default function JobListCard({
   }
 
   const hasSearchRelevance =
+    showSearchRelevance &&
     typeof job.match === 'number' &&
     job.match >= 0;
 
