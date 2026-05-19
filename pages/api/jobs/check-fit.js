@@ -154,6 +154,9 @@ export default async function handler(req, res) {
     }
 
     const resumeText = extractResumeText(resumeData);
+    console.log('[check-fit] resumeData keys:', Object.keys(resumeData || {}));
+    console.log('[check-fit] resumeText length:', resumeText.length);
+    console.log('[check-fit] resumeText preview:', resumeText.slice(0, 500));
     if (!resumeText.trim()) {
       return res.status(400).json({
         ok: false,
