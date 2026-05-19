@@ -180,22 +180,6 @@ function jdPreview(text: string, maxChars = 170) {
   return n.length > maxChars ? `${n.slice(0, maxChars)}…` : n;
 }
 
-function cleanJobDescription(input: string = '') {
-  return String(input || '')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/Preview:/gi, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function guessJobTitle(jdText: string) {
   const jd = (jdText || '').trim();
   if (!jd) return '';
@@ -239,8 +223,6 @@ export default function AtsDepthPanel({
     setMounted(true);
   }, []);
 
-  const cleanJdText = useMemo(() => cleanJobDescription(jdText), [jdText]);
-
   const resumeText = useMemo(() => {
     const expBits = (experiences || [])
       .map((e) => `${e.title || ''} ${e.company || ''} ${(e.bullets || []).join(' ')}`)
@@ -251,7 +233,7 @@ export default function AtsDepthPanel({
     return `${summary || ''} ${(skills || []).join(' ')} ${expBits} ${eduBits}`.toLowerCase();
   }, [summary, skills, experiences, education]);
 
-  const titleKeywords = useMemo(() => extractKeyTerms(cleanJdText, 12), [cleanJdText]);
+  const titleKeywords = useMemo(() => extractKeyTerms(jdText, 12), [jdText]);
 
   const matchedTitleKeywords = useMemo(
     () => titleKeywords.filter((k) => resumeText.includes(k.toLowerCase())),
@@ -259,12 +241,12 @@ export default function AtsDepthPanel({
   );
 
   // ─── Categorized keyword extraction ────────────────────────────────────────
-  const jdHardSkills = useMemo(() => matchPatterns(cleanJdText, HARD_SKILL_PATTERNS), [cleanJdText]);
-  const jdTools      = useMemo(() => matchPatterns(cleanJdText, TOOL_PATTERNS), [cleanJdText]);
-  const jdCerts      = useMemo(() => matchPatterns(cleanJdText, CERT_PATTERNS), [cleanJdText]);
-  const jdSoftSkills = useMemo(() => matchPatterns(cleanJdText, SOFT_SKILL_PATTERNS), [cleanJdText]);
-  const jdLanguages  = useMemo(() => matchPatterns(cleanJdText, LANGUAGE_PATTERNS), [cleanJdText]);
-  const jdEduReqs    = useMemo(() => extractEduRequirements(cleanJdText), [cleanJdText]);
+  const jdHardSkills = useMemo(() => matchPatterns(jdText, HARD_SKILL_PATTERNS), [jdText]);
+  const jdTools      = useMemo(() => matchPatterns(jdText, TOOL_PATTERNS), [jdText]);
+  const jdCerts      = useMemo(() => matchPatterns(jdText, CERT_PATTERNS), [jdText]);
+  const jdSoftSkills = useMemo(() => matchPatterns(jdText, SOFT_SKILL_PATTERNS), [jdText]);
+  const jdLanguages  = useMemo(() => matchPatterns(jdText, LANGUAGE_PATTERNS), [jdText]);
+  const jdEduReqs    = useMemo(() => extractEduRequirements(jdText), [jdText]);
 
   const matchedHardSkills = useMemo(() => jdHardSkills.filter(k => resumeText.includes(k.toLowerCase().replace('.', ' '))), [jdHardSkills, resumeText]);
   const matchedTools      = useMemo(() => jdTools.filter(k => resumeText.includes(k.toLowerCase())), [jdTools, resumeText]);
@@ -311,7 +293,13 @@ export default function AtsDepthPanel({
     return Math.round(weighted / totalWeight);
   }, [titleCov, hardCov, toolsCov, certsCov, softCov]);
 
-  const primaryScore = aiScore !== null ? aiScore : keywordCoverage;
+  const hasWhyScore = typeof whyScore === 'number';
+  const primaryScore = hasWhyScore
+    ? Math.max(0, Math.min(100, Math.round(whyScore)))
+    : aiScore !== null
+    ? aiScore
+    : 0;
+  const keywordScore = keywordCoverage;
 
   let statusText = '';
   let barColor = '#C62828';
@@ -336,9 +324,9 @@ export default function AtsDepthPanel({
     [summary, skills, experiences, education]
   );
 
-  const guessedTitle = useMemo(() => guessJobTitle(cleanJdText), [cleanJdText]);
-  const words = useMemo(() => countWords(cleanJdText), [cleanJdText]);
-  const preview = useMemo(() => jdPreview(cleanJdText), [cleanJdText]);
+  const guessedTitle = useMemo(() => guessJobTitle(jdText), [jdText]);
+  const words = useMemo(() => countWords(jdText), [jdText]);
+  const preview = useMemo(() => jdPreview(jdText), [jdText]);
 
   const loadedTitle = (jobMeta?.title || '').trim() || guessedTitle || 'Job description';
   const loadedCompany = (jobMeta?.company || '').trim();
@@ -359,7 +347,7 @@ export default function AtsDepthPanel({
   }
 
   async function runAiScan() {
-    if (!cleanJdText?.trim()) return;
+    if (!jdText?.trim()) return;
     setAiLoading(true);
     setAiError(null);
     setAiUpgrade(false);
@@ -368,7 +356,7 @@ export default function AtsDepthPanel({
       const resp = await fetch('/api/ats-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jd: cleanJdText, resume: resumeData }),
+        body: JSON.stringify({ jd: jdText, resume: resumeData }),
       });
 
       const data = await resp.json();
@@ -422,7 +410,7 @@ export default function AtsDepthPanel({
     return <div style={{ marginTop: 0 }} />;
   }
 
-  if (!cleanJdText?.trim()) return null;
+  if (!jdText?.trim()) return null;
 
   return (
     <div style={{ marginTop: 0 }}>
@@ -452,7 +440,7 @@ export default function AtsDepthPanel({
               <span style={{ fontSize: 13, color: '#B0BEC5', marginLeft: 2 }}>/100</span>
             </div>
             <div style={{ marginTop: 3, fontSize: 10, color: '#78909C', fontWeight: 800 }}>
-              {'Keyword signal'}
+              {hasWhyScore ? 'WHY Score · ForgeTomorrow' : 'Resume alignment'}
             </div>
           </div>
         </div>
@@ -532,7 +520,7 @@ export default function AtsDepthPanel({
 
         {/* Active module */}
         <div style={{ marginTop: 10 }}>
-          <div style={{ display: activePanel === 'coach' ? 'block' : 'none' }}>
+          {activePanel === 'coach' && (
             <div
               style={{
                 padding: 11,
@@ -611,7 +599,7 @@ export default function AtsDepthPanel({
                     embedded={true}
                     onClose={() => setCoachOpen(false)}
                     context={coachContext}
-                    jdText={cleanJdText}
+                    jdText={jdText}
                     resumeData={resumeData}
                     missing={{
                       high: [...missingTitleKeywords, ...missingHardSkills],
@@ -628,7 +616,7 @@ export default function AtsDepthPanel({
                 </div>
               )}
             </div>
-          </div>
+          )}
 
           {activePanel === 'signal' && (() => {
             // Run deterministic analysis — zero AI tokens, instant
@@ -840,6 +828,10 @@ export default function AtsDepthPanel({
               </div>
               <div style={{ fontSize: 12, color: '#607D8B', lineHeight: 1.4, marginBottom: 10 }}>
                 Real terms from this JD — matched against your resume. Click any missing term to get coaching.
+              </div>
+
+              <div style={{ marginBottom: 10, fontSize: 11, fontWeight: 900, color: '#475569' }}>
+                Keyword Signal: {keywordScore}/100
               </div>
 
               {buckets.length === 0 ? (
