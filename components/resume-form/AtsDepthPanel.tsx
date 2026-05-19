@@ -546,7 +546,10 @@ console.log('[Hammer ats-coach response]', data);
 
               <button
                 type="button"
-                onClick={openCoachOverview}
+                onClick={() => {
+  runAiScan();
+  openCoachOverview();
+}}
                 style={{
                   marginTop: 10,
                   width: '100%',
