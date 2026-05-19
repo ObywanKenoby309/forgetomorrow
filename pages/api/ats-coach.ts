@@ -658,6 +658,8 @@ Include "languages" if the JD mentions language requirements or multilingual pre
 
     // Graceful fallback if JSON failed entirely
     if (!parsed || typeof parsed !== 'object') {
+console.log('[ATS-COACH WHY SCORE]', why?.score);
+console.log('[ATS-COACH RETURN SCORE]', typeof why?.score === 'number' ? why.score : null);		
       return res.status(200).json({
         ok: true,
         text: raw || 'Coach returned a response but it could not be formatted. Try again.',
