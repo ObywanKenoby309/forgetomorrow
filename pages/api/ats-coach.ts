@@ -689,7 +689,12 @@ console.log('[ATS-COACH RETURN SCORE]', typeof why?.score === 'number' ? why.sco
 
     return res.status(200).json({
   ok: true,
-  score: typeof why?.score === 'number' ? why.score : null,
+  score:
+  typeof why?.match?.score === 'number'
+    ? why.match.score
+    : typeof why?.score === 'number'
+      ? why.score
+      : null,
   why,
   text: structuredToText(structured),
   tips,
