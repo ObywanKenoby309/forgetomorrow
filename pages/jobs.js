@@ -156,7 +156,7 @@ function ForgeAlignmentExplainer() {
             color: '#2E7D32',
           }}
         >
-          Pro users: unlimited explanations
+          Paid subscriptions: 15 explanations monthly
         </div>
       </div>
     </div>
