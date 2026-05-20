@@ -1,211 +1,388 @@
 // pages/search.js
-// ForgeTomorrow Full Platform Search Page
-// Deep platform discovery page. This is separate from job/career intelligence search.
-
-import Head from 'next/head';
-import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
+import InternalLayout from '@/components/layouts/InternalLayout';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
 const ORANGE = '#FF7043';
 
-const SECTION_LABELS = {
-  all: 'All',
-  members: 'Members',
-  companies: 'Companies',
-  pages: 'Pages',
-  groups: 'Groups',
-  posts: 'Posts',
-  newsletters: 'Newsletters',
-  events: 'Events',
-  faqs: 'FAQs',
-  knowledgeBase: 'Knowledge Base',
-  forums: 'Forums',
+const GLASS = {
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
 };
 
-const SECTIONS = ['all', 'members', 'companies', 'pages', 'groups', 'posts', 'newsletters', 'events', 'faqs', 'knowledgeBase', 'forums'];
+const TYPES = [
+  { key: 'all', label: 'All' },
+  { key: 'members', label: 'Members' },
+  { key: 'companies', label: 'Companies' },
+  { key: 'pages', label: 'Pages' },
+  { key: 'groups', label: 'Groups' },
+  { key: 'posts', label: 'Posts' },
+  { key: 'newsletters', label: 'Newsletters' },
+  { key: 'events', label: 'Events' },
+  { key: 'faqs', label: 'FAQs' },
+  { key: 'knowledgeBase', label: 'Knowledge Base' },
+  { key: 'forums', label: 'Forums' },
+];
 
-function flattenGroups(groups = {}) {
-  return Object.entries(groups).flatMap(([section, items]) =>
-    (Array.isArray(items) ? items : []).map((item) => ({ ...item, section }))
+function cleanSnippet(value) {
+  if (!value) return '';
+
+  let text = String(value);
+
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed?.body) text = parsed.body;
+    else if (parsed?.content) text = parsed.content;
+    else if (parsed?.text) text = parsed.text;
+  } catch {}
+
+  return text
+    .replace(/"attachments"\s*:\s*\[\]/gi, '')
+    .replace(/[{}[\]]/g, '')
+    .replace(/"body"\s*:\s*/gi, '')
+    .replace(/\\"/g, '"')
+    .replace(/"\s*,?\s*$/g, '')
+    .trim()
+    .slice(0, 220);
+}
+
+function flattenResults(data) {
+  const rows = [];
+
+  for (const type of TYPES) {
+    if (type.key === 'all') continue;
+    const group = Array.isArray(data?.[type.key]) ? data[type.key] : [];
+
+    for (const item of group) {
+      rows.push({
+        ...item,
+        groupKey: type.key,
+        groupLabel: type.label,
+        snippet: cleanSnippet(item?.snippet),
+      });
+    }
+  }
+
+  return rows;
+}
+
+function ResultCard({ item }) {
+  return (
+    <a
+      href={item.url || '#'}
+      style={{
+        ...GLASS,
+        display: 'grid',
+        gridTemplateColumns: '52px 1fr auto',
+        gap: 14,
+        alignItems: 'center',
+        borderRadius: 16,
+        padding: 16,
+        color: '#263238',
+        textDecoration: 'none',
+      }}
+    >
+      <div
+        style={{
+          width: 52,
+          height: 52,
+          borderRadius: 14,
+          overflow: 'hidden',
+          display: 'grid',
+          placeItems: 'center',
+          background: 'rgba(255,255,255,0.62)',
+          fontWeight: 900,
+          color: '#32465A',
+        }}
+      >
+        {item.avatar ? (
+          <img
+            src={item.avatar}
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          String(item.type || item.groupLabel || 'R').charAt(0).toUpperCase()
+        )}
+      </div>
+
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <strong style={{ fontSize: 15, color: '#132238' }}>
+            {item.title || 'Untitled'}
+          </strong>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              color: '#53677A',
+              background: 'rgba(255,255,255,0.62)',
+              borderRadius: 999,
+              padding: '3px 8px',
+            }}
+          >
+            {item.groupLabel}
+          </span>
+        </div>
+
+        {item.subtitle ? (
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#4F6B86', marginTop: 4 }}>
+            {item.subtitle}
+          </div>
+        ) : null}
+
+        {item.snippet ? (
+          <div style={{ fontSize: 13, color: '#53677A', marginTop: 6, lineHeight: 1.45 }}>
+            {item.snippet}
+          </div>
+        ) : null}
+      </div>
+
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 900,
+          color: ORANGE,
+          background: 'rgba(255,255,255,0.7)',
+          borderRadius: 999,
+          padding: '6px 10px',
+        }}
+      >
+        {Math.round(item.relevance || 0)}%
+      </div>
+    </a>
   );
 }
 
-export default function PlatformSearchPage() {
+export default function SearchPage() {
   const router = useRouter();
-  const initialQuery = typeof router.query.q === 'string' ? router.query.q : '';
-
-  const [query, setQuery] = useState(initialQuery);
-  const [submittedQuery, setSubmittedQuery] = useState(initialQuery);
-  const [activeSection, setActiveSection] = useState('all');
+  const [collapseSiderails, setCollapseSiderails] = useState(false);
+  const [query, setQuery] = useState('');
+  const [activeType, setActiveType] = useState('all');
   const [loading, setLoading] = useState(false);
-  const [groups, setGroups] = useState({});
-  const [error, setError] = useState('');
+  const [data, setData] = useState({});
 
   useEffect(() => {
-    if (typeof router.query.q === 'string') {
-      setQuery(router.query.q);
-      setSubmittedQuery(router.query.q);
+    if (!router.isReady) return;
+    const q = typeof router.query.q === 'string' ? router.query.q : '';
+    setQuery(q);
+  }, [router.isReady, router.query.q]);
+
+  const rows = useMemo(() => flattenResults(data), [data]);
+
+  const counts = useMemo(() => {
+    const next = { all: rows.length };
+    for (const type of TYPES) {
+      if (type.key === 'all') continue;
+      next[type.key] = Array.isArray(data?.[type.key]) ? data[type.key].length : 0;
     }
-  }, [router.query.q]);
+    return next;
+  }, [data, rows.length]);
 
-  useEffect(() => {
-    const q = submittedQuery.trim();
+  const visibleRows = useMemo(() => {
+    if (activeType === 'all') return rows;
+    return rows.filter((r) => r.groupKey === activeType);
+  }, [rows, activeType]);
 
-    if (q.length < 2) {
-      setGroups({});
+  const runSearch = async (nextQuery = query) => {
+    const q = String(nextQuery || '').trim();
+
+    if (!q) {
+      setData({});
       return;
     }
 
-    let alive = true;
+    setLoading(true);
 
-    async function runSearch() {
-      setLoading(true);
-      setError('');
+    try {
+      const res = await fetch('/api/search/global', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ query: q, limit: 10 }),
+      });
 
-      try {
-        const response = await fetch('/api/search/global', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: q, limit: 12 }),
-        });
+      const json = await res.json();
+      setData(json || {});
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data?.error || 'Search failed');
-        }
-
-        if (alive) setGroups(data.groups || {});
-      } catch (err) {
-        console.error('[search page] search failed', err);
-        if (alive) {
-          setError('Search failed. Please try again.');
-          setGroups({});
-        }
-      } finally {
-        if (alive) setLoading(false);
-      }
+      const nextQueryParams = { ...router.query, q };
+      router.replace(
+        { pathname: '/search', query: nextQueryParams },
+        undefined,
+        { shallow: true, scroll: false }
+      );
+    } catch (err) {
+      console.error('[search page] failed:', err);
+      setData({});
+    } finally {
+      setLoading(false);
     }
+  };
 
-    runSearch();
+  useEffect(() => {
+    if (!router.isReady) return;
+    const q = typeof router.query.q === 'string' ? router.query.q : '';
+    if (q) runSearch(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady]);
 
-    return () => {
-      alive = false;
-    };
-  }, [submittedQuery]);
+  const headerCard = (
+    <section
+      style={{
+        ...GLASS,
+        borderRadius: 18,
+        padding: '18px 20px',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          letterSpacing: '0.16em',
+          textTransform: 'uppercase',
+          fontWeight: 900,
+          color: '#55708A',
+          marginBottom: 6,
+        }}
+      >
+        Platform Search
+      </div>
 
-  const allResults = useMemo(() => flattenGroups(groups).sort((a, b) => Number(b.relevance || 0) - Number(a.relevance || 0)), [groups]);
+      <h1
+        style={{
+          margin: 0,
+          color: ORANGE,
+          fontSize: 30,
+          lineHeight: 1.1,
+          fontWeight: 950,
+          textShadow: '0 2px 8px rgba(0,0,0,0.18)',
+        }}
+      >
+        Search ForgeTomorrow
+      </h1>
 
-  const visibleResults = activeSection === 'all'
-    ? allResults
-    : Array.isArray(groups[activeSection])
-      ? groups[activeSection]
-      : [];
-
-  function submitSearch(event) {
-    event?.preventDefault?.();
-    const q = query.trim();
-    if (q.length < 2) return;
-    setSubmittedQuery(q);
-    setActiveSection('all');
-    router.replace(`/search?q=${encodeURIComponent(q)}`, undefined, { shallow: true });
-  }
+      <p style={{ margin: '10px 0 0', color: '#425B73', fontSize: 14, maxWidth: 760 }}>
+        Find members, companies, posts, groups, pages, newsletters, and platform resources.
+        Career/job intelligence stays on the Jobs page.
+      </p>
+    </section>
+  );
 
   return (
-    <>
-      <Head>
-        <title>Search ForgeTomorrow</title>
-      </Head>
+    <InternalLayout
+      title="Search ForgeTomorrow"
+      activeNav="search"
+      header={headerCard}
+      right={<RightRailPlacementManager />}
+      rightVariant="light"
+      collapseSiderails={collapseSiderails}
+      onToggleSiderails={() => setCollapseSiderails((v) => !v)}
+    >
+      <section
+        style={{
+          ...GLASS,
+          borderRadius: 18,
+          padding: 18,
+          display: 'grid',
+          gap: 16,
+        }}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            runSearch(query);
+          }}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) auto',
+            gap: 12,
+          }}
+        >
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search people, companies, posts, groups, events..."
+            style={{
+              height: 46,
+              borderRadius: 14,
+              border: '1px solid rgba(255,255,255,0.48)',
+              background: 'rgba(255,255,255,0.86)',
+              padding: '0 16px',
+              fontWeight: 800,
+              color: '#132238',
+              outline: 'none',
+              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.06)',
+            }}
+          />
 
-      <main className="min-h-screen px-6 py-8 text-slate-900">
-        <section className="mx-auto max-w-6xl rounded-3xl border border-white/25 bg-white/70 p-6 shadow-xl backdrop-blur-xl">
-          <div className="mb-6">
-            <p className="mb-1 text-xs font-black uppercase tracking-[0.22em] text-slate-500">Platform Search</p>
-            <h1 className="text-3xl font-black" style={{ color: ORANGE }}>Search ForgeTomorrow</h1>
-            <p className="mt-2 max-w-3xl text-sm font-medium text-slate-600">
-              Find members, companies, posts, groups, pages, newsletters, and platform resources. Career/job intelligence stays on the Jobs page.
-            </p>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              height: 46,
+              border: 'none',
+              borderRadius: 14,
+              background: ORANGE,
+              color: '#fff',
+              padding: '0 22px',
+              fontWeight: 900,
+              cursor: loading ? 'wait' : 'pointer',
+              boxShadow: '0 10px 22px rgba(255,112,67,0.28)',
+            }}
+          >
+            {loading ? 'Searching...' : 'Search'}
+          </button>
+        </form>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {TYPES.map((type) => {
+            const active = activeType === type.key;
+            const count = counts[type.key] || 0;
+
+            return (
+              <button
+                key={type.key}
+                type="button"
+                onClick={() => setActiveType(type.key)}
+                style={{
+                  border: 'none',
+                  borderRadius: 999,
+                  padding: '8px 13px',
+                  background: active ? ORANGE : 'rgba(255,255,255,0.78)',
+                  color: active ? '#fff' : '#34495E',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  boxShadow: active
+                    ? '0 10px 20px rgba(255,112,67,0.22)'
+                    : '0 6px 14px rgba(0,0,0,0.08)',
+                }}
+              >
+                {type.label} {count ? `(${count})` : ''}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section style={{ display: 'grid', gap: 12 }}>
+        {loading ? (
+          <div style={{ ...GLASS, borderRadius: 16, padding: 18, color: '#425B73' }}>
+            Searching ForgeTomorrow...
           </div>
-
-          <form onSubmit={submitSearch} className="mb-5 flex gap-3">
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search people, companies, posts, groups..."
-              className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm font-bold outline-none focus:border-orange-300"
-            />
-            <button
-              type="submit"
-              className="rounded-2xl px-5 py-3 text-sm font-black text-white shadow"
-              style={{ background: ORANGE }}
-            >
-              Search
-            </button>
-          </form>
-
-          <div className="mb-6 flex flex-wrap gap-2">
-            {SECTIONS.map((section) => {
-              const count = section === 'all' ? allResults.length : (groups[section] || []).length;
-              const active = activeSection === section;
-
-              return (
-                <button
-                  key={section}
-                  type="button"
-                  onClick={() => setActiveSection(section)}
-                  className="rounded-full border px-3 py-1.5 text-xs font-black"
-                  style={{
-                    borderColor: active ? ORANGE : 'rgba(15,23,42,0.12)',
-                    background: active ? ORANGE : 'rgba(255,255,255,0.75)',
-                    color: active ? 'white' : '#475569',
-                  }}
-                >
-                  {SECTION_LABELS[section]} {count ? `(${count})` : ''}
-                </button>
-              );
-            })}
+        ) : visibleRows.length ? (
+          visibleRows.map((item, index) => (
+            <ResultCard key={`${item.groupKey}-${item.id}-${index}`} item={item} />
+          ))
+        ) : (
+          <div style={{ ...GLASS, borderRadius: 16, padding: 22, color: '#425B73' }}>
+            {query ? 'No results found yet.' : 'Enter a search to explore the platform.'}
           </div>
-
-          {loading ? (
-            <div className="rounded-2xl border border-slate-200 bg-white/75 p-10 text-center text-sm font-black text-slate-500">Searching...</div>
-          ) : error ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-bold text-red-700">{error}</div>
-          ) : submittedQuery.trim().length < 2 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white/75 p-10 text-center text-sm font-semibold text-slate-500">Enter at least 2 characters to search the platform.</div>
-          ) : visibleResults.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white/75 p-10 text-center text-sm font-semibold text-slate-500">No results found.</div>
-          ) : (
-            <div className="grid gap-3">
-              {visibleResults.map((item) => (
-                <a
-                  key={`${item.type}-${item.id}`}
-                  href={item.url || '#'}
-                  className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-sm font-black text-slate-600">
-                    {item.avatar ? <img src={item.avatar} alt="" className="h-full w-full object-cover" /> : item.type?.slice(0, 1)?.toUpperCase()}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="truncate text-sm font-black text-slate-900">{item.title}</h2>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-slate-500">
-                        {item.type}
-                      </span>
-                    </div>
-                    {item.subtitle ? <p className="truncate text-xs font-bold text-slate-500">{item.subtitle}</p> : null}
-                    {item.snippet ? <p className="mt-1 line-clamp-2 text-xs text-slate-500">{item.snippet}</p> : null}
-                  </div>
-
-                  <div className="rounded-full bg-orange-50 px-3 py-1 text-xs font-black" style={{ color: ORANGE }}>
-                    {item.relevance}%
-                  </div>
-                </a>
-              ))}
-            </div>
-          )}
-        </section>
-      </main>
-    </>
+        )}
+      </section>
+    </InternalLayout>
   );
 }

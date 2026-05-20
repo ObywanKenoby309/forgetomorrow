@@ -170,7 +170,7 @@ function MobileCard({ tile, isActive, onSelect, withChrome, profileSlug }) {
 if (isLink) {
   const href =
     tile.id === "profile"
-      ? withChrome(`/profile/${profileSlug}?edit=1`)
+      ? withChrome(`/profile?edit=1`)
       : withChrome("/resume-cover");
 
   return (
@@ -458,7 +458,7 @@ function DesktopTile({ tile, onOpen, withChrome, profileSlug }) {
     if (isLink) {
     const href =
       tile.id === "profile"
-        ? withChrome(`/profile/${profileSlug}?edit=1`)
+        ? withChrome(`/profile?edit=1`)
         : withChrome("/resume-cover");
 
     return (
