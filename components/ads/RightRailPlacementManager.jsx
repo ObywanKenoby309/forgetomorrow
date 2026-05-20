@@ -366,6 +366,18 @@ export default function RightRailPlacementManager({
 
   const surface = useMemo(() => {
     const path = router?.asPath || router?.pathname || '/';
+
+    // Global platform search is a shared discovery surface for all tiers.
+    // Keep this here so /search can receive a right-rail house ad even if
+    // surfaceMap has not been expanded yet.
+    if (String(path || '').startsWith('/search')) {
+      return {
+        surfaceId: 'platform_search',
+        segment: 'seeker',
+        carousel: true,
+      };
+    }
+
     if (surfaceIdProp) {
       // caller provided surfaceId directly — still resolve segment/carousel from map
       const resolved = resolveSurface(path);
@@ -392,7 +404,11 @@ export default function RightRailPlacementManager({
       return;
     }
 
-    const allowedSlots = getDefaultRailSlotsForSurface(surfaceId);
+    const allowedSlots =
+      surfaceId === 'platform_search'
+        ? ['right_rail_1']
+        : getDefaultRailSlotsForSurface(surfaceId);
+
     if (!allowedSlots.includes(slot)) {
       setPlacements([]);
       setLoading(false);

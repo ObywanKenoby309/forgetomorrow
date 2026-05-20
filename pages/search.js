@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import InternalLayout from '@/components/layouts/InternalLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
 
 const ORANGE = '#FF7043';
 
@@ -231,57 +233,23 @@ export default function SearchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady]);
 
-  const headerCard = (
-    <section
-      style={{
-        ...GLASS,
-        borderRadius: 18,
-        padding: '18px 20px',
-      }}
-    >
-      <div
-        style={{
-          fontSize: 11,
-          letterSpacing: '0.16em',
-          textTransform: 'uppercase',
-          fontWeight: 900,
-          color: '#55708A',
-          marginBottom: 6,
-        }}
-      >
-        Platform Search
-      </div>
-
-      <h1
-        style={{
-          margin: 0,
-          color: ORANGE,
-          fontSize: 30,
-          lineHeight: 1.1,
-          fontWeight: 950,
-          textShadow: '0 2px 8px rgba(0,0,0,0.18)',
-        }}
-      >
-        Search ForgeTomorrow
-      </h1>
-
-      <p style={{ margin: '10px 0 0', color: '#425B73', fontSize: 14, maxWidth: 760 }}>
-        Find members, companies, posts, groups, pages, newsletters, and platform resources.
-        Career/job intelligence stays on the Jobs page.
-      </p>
-    </section>
-  );
+  const greeting = getTimeGreeting();
 
   return (
     <InternalLayout
       title="Search ForgeTomorrow"
       activeNav="search"
-      header={headerCard}
       right={<RightRailPlacementManager />}
       rightVariant="light"
       collapseSiderails={collapseSiderails}
       onToggleSiderails={() => setCollapseSiderails((v) => !v)}
     >
+      <SeekerTitleCard
+        greeting={greeting}
+        title="Search ForgeTomorrow"
+        subtitle="Find members, companies, posts, groups, pages, newsletters, and platform resources. Career/job intelligence stays on the Jobs page."
+      />
+
       <section
         style={{
           ...GLASS,
