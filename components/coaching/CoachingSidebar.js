@@ -285,6 +285,13 @@ export default function CoachingSidebar({
           />
         </>
       ) : null}
+
+      <SectionLabel>Platform</SectionLabel>
+      <NavItem
+        href="/search?chrome=coach"
+        label="Advanced Search"
+        active={active === 'search'}
+      />
     </nav>
   );
 }

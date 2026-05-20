@@ -1,4 +1,14 @@
 // pages/api/search/jobs.js
+// LEGACY SEARCH ENDPOINT
+// --------------------------------------------------
+// Older jobs-only search API using searchService()
+// prior to Universal Brain + jobSearchEngine rollout.
+//
+// Keep temporarily for backward compatibility until
+// all callers are verified and migrated.
+//
+// DO NOT DELETE until confirmed unused.
+// --------------------------------------------------
 import { searchService } from '@/lib/searchClient';
 import { expandStateNamesInQuery, expandStateQuery } from '@/lib/stateNormalize';
 

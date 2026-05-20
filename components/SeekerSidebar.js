@@ -238,6 +238,9 @@ export default function SeekerSidebar({
           />
         </>
       ) : null}
+
+      <SectionLabel>Platform</SectionLabel>
+      <NavItem href="/search" label="Advanced Search" active={active === 'search'} />
     </nav>
   );
 }

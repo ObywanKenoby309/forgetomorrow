@@ -6,6 +6,7 @@ import { usePlan } from "@/context/PlanContext";
 import Avatar from "@/components/common/Avatar";
 import { useCurrentUserAvatar } from "@/hooks/useCurrentUserAvatar";
 import { useSession, signOut } from "next-auth/react";
+import GlobalSearchOverlay from "@/components/search/GlobalSearchOverlay";
 
 function readCookie(name) {
   try {
@@ -58,11 +59,12 @@ export default function EnterpriseHeader({
 
   const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
 
-  // ✅ client-only flag so we can show "Stop impersonating" in the menu
   const [isImpersonating, setIsImpersonating] = useState(false);
 
   const [openMobile, setOpenMobile] = useState(false);
   const [openProfile, setOpenProfile] = useState(false);
+  const [openSearch, setOpenSearch] = useState(false);
+
   const profileRef = useRef(null);
   const isActive = (href) => router.pathname === href;
 
@@ -88,7 +90,21 @@ export default function EnterpriseHeader({
     return () => document.removeEventListener("keydown", handleEsc);
   }, [openMobile]);
 
-  // ✅ read impersonation UI flag cookie
+  useEffect(() => {
+    const handleShortcut = (e) => {
+      const isSearchShortcut = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k";
+      if (!isSearchShortcut) return;
+
+      e.preventDefault();
+      setOpenSearch(true);
+      setOpenMobile(false);
+      setOpenProfile(false);
+    };
+
+    document.addEventListener("keydown", handleShortcut);
+    return () => document.removeEventListener("keydown", handleShortcut);
+  }, []);
+
   useEffect(() => {
     if (!isPlatformAdmin) return;
     setIsImpersonating(readCookie("ft_imp_active") === "1");
@@ -160,12 +176,15 @@ export default function EnterpriseHeader({
 
   const resolvedOptionsHref = buildUrlWithContext(optionsHref);
   const resolvedSupportHref = buildUrlWithContext(supportHref);
-
-  // ✅ impersonation page link
   const resolvedImpersonateHref = buildUrlWithContext("/admin/impersonate");
 
   return (
     <>
+      <GlobalSearchOverlay
+        open={openSearch}
+        onClose={() => setOpenSearch(false)}
+      />
+
       <header className="bg-[#2a2a2a] text-gray-300 shadow-md sticky top-0 z-50 w-full">
         <nav
           className={`${resolvedContainer} ${resolvedHeight} grid items-center ${gridGapClass}`}
@@ -258,107 +277,132 @@ export default function EnterpriseHeader({
                 )}
 
                 {showUserMenu && (
-                  <div className="relative" ref={profileRef}>
+                  <>
                     <button
-                      onClick={() => setOpenProfile((v) => !v)}
-                      className="hidden md:flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[#333] focus-visible:ring-2 focus-visible:ring-orange-500"
-                      aria-haspopup="true"
-                      aria-expanded={openProfile}
+                      type="button"
+                      onClick={() => {
+                        setOpenSearch(true);
+                        setOpenProfile(false);
+                      }}
+                      aria-label="Search ForgeTomorrow"
+                      title="Search ForgeTomorrow"
+                      className="hidden md:inline-flex items-center justify-center h-10 w-10 rounded-md hover:bg-[#333] focus-visible:ring-2 focus-visible:ring-orange-500 transition"
                     >
-                      <Avatar avatarUrl={avatarUrl} initials={initials} size="md" />
                       <svg
-                        className="h-5 w-5 text-gray-400"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
+                        className="h-5 w-5 text-gray-300"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
                       >
                         <path
-                          fillRule="evenodd"
-                          d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-                          clipRule="evenodd"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M21 21l-4.35-4.35m1.1-5.4a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"
                         />
                       </svg>
                     </button>
 
-                    {openProfile && (
-                      <div
-                        role="menu"
-                        className="absolute right-0 mt-2 w-56 bg-[#2f2f2f] border border-[#3a3a3a] rounded-md shadow-xl"
+                    <div className="relative" ref={profileRef}>
+                      <button
+                        onClick={() => setOpenProfile((v) => !v)}
+                        className="hidden md:flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[#333] focus-visible:ring-2 focus-visible:ring-orange-500"
+                        aria-haspopup="true"
+                        aria-expanded={openProfile}
                       >
-                        <Link
-                          href={resolvedOptionsHref}
-                          className="block px-4 py-3 text-sm hover:bg-[#333]"
-                          role="menuitem"
+                        <Avatar avatarUrl={avatarUrl} initials={initials} size="md" />
+                        <svg
+                          className="h-5 w-5 text-gray-400"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
                         >
-                          Settings
-                        </Link>
+                          <path
+                            fillRule="evenodd"
+                            d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
 
-                        <Link
-                          href={resolvedSupportHref}
-                          className="block px-4 py-3 text-sm hover:bg-[#333]"
-                          role="menuitem"
+                      {openProfile && (
+                        <div
+                          role="menu"
+                          className="absolute right-0 mt-2 w-56 bg-[#2f2f2f] border border-[#3a3a3a] rounded-md shadow-xl"
                         >
-                          Support
-                        </Link>
-
-                        {/* ✅ Impersonation links (Forge staff only) */}
-                        {isPlatformAdmin && (
-                          <>
-                            <div className="h-px bg-[#3a3a3a]" />
-                            <Link
-                              href={resolvedImpersonateHref}
-                              className="block px-4 py-3 text-sm hover:bg-[#333]"
-                              role="menuitem"
-                              onClick={() => setOpenProfile(false)}
-                            >
-                              Impersonate…
-                            </Link>
-
-                            {isImpersonating && (
-                              <button
-                                className="w-full text-left px-4 py-3 text-sm hover:bg-[#333]"
-                                role="menuitem"
-                                onClick={async () => {
-                                  try {
-                                    setOpenProfile(false);
-                                    await fetch("/api/admin/impersonation/stop", {
-                                      method: "POST",
-                                    });
-                                    router.replace(router.asPath);
-                                  } catch {
-                                    // no-throw
-                                  }
-                                }}
-                              >
-                                Stop impersonating
-                              </button>
-                            )}
-                          </>
-                        )}
-
-                        <div className="h-px bg-[#3a3a3a]" />
-
-                        <button
-                          className="w-full text-left px-4 py-3 text-sm hover:bg-[#333]"
-                          role="menuitem"
-                          onClick={async () => {
-                            setOpenProfile(false);
-                            await signOut({ callbackUrl: "/auth/signin" });
-                          }}
-                        >
-                          Log Out
-                        </button>
-
-                        {process.env.NODE_ENV !== "production" && (
-                          <button
-                            onClick={togglePlan}
-                            className="w-full text-left px-4 py-3 text-xs text-gray-400 hover:bg-[#333]"
+                          <Link
+                            href={resolvedOptionsHref}
+                            className="block px-4 py-3 text-sm hover:bg-[#333]"
+                            role="menuitem"
                           >
-                            Toggle Plan (Dev)
+                            Settings
+                          </Link>
+
+                          <Link
+                            href={resolvedSupportHref}
+                            className="block px-4 py-3 text-sm hover:bg-[#333]"
+                            role="menuitem"
+                          >
+                            Support
+                          </Link>
+
+                          {isPlatformAdmin && (
+                            <>
+                              <div className="h-px bg-[#3a3a3a]" />
+                              <Link
+                                href={resolvedImpersonateHref}
+                                className="block px-4 py-3 text-sm hover:bg-[#333]"
+                                role="menuitem"
+                                onClick={() => setOpenProfile(false)}
+                              >
+                                Impersonate…
+                              </Link>
+
+                              {isImpersonating && (
+                                <button
+                                  className="w-full text-left px-4 py-3 text-sm hover:bg-[#333]"
+                                  role="menuitem"
+                                  onClick={async () => {
+                                    try {
+                                      setOpenProfile(false);
+                                      await fetch("/api/admin/impersonation/stop", {
+                                        method: "POST",
+                                      });
+                                      router.replace(router.asPath);
+                                    } catch {}
+                                  }}
+                                >
+                                  Stop impersonating
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          <div className="h-px bg-[#3a3a3a]" />
+
+                          <button
+                            className="w-full text-left px-4 py-3 text-sm hover:bg-[#333]"
+                            role="menuitem"
+                            onClick={async () => {
+                              setOpenProfile(false);
+                              await signOut({ callbackUrl: "/auth/signin" });
+                            }}
+                          >
+                            Log Out
                           </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+
+                          {process.env.NODE_ENV !== "production" && (
+                            <button
+                              onClick={togglePlan}
+                              className="w-full text-left px-4 py-3 text-xs text-gray-400 hover:bg-[#333]"
+                            >
+                              Toggle Plan (Dev)
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </>
             )}
@@ -398,7 +442,6 @@ export default function EnterpriseHeader({
         </nav>
       </header>
 
-      {/* MOBILE OVERLAY MENU — centered panel */}
       {openMobile && (
         <div className="fixed inset-0 z-[99999] bg-black/60 flex items-start justify-center overflow-y-auto">
           <div className="mt-10 mb-10 w-full max-w-md bg-[#2a2a2a] rounded-3xl px-6 py-8 flex flex-col shadow-2xl">
@@ -444,6 +487,19 @@ export default function EnterpriseHeader({
             </div>
 
             <nav className="flex flex-col gap-6 flex-1">
+              {!publicVariant && showUserMenu && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenMobile(false);
+                    setOpenSearch(true);
+                  }}
+                  className="text-left text-xl font-medium text-gray-300 hover:text-[#FF7043] focus:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-xl py-3 transition"
+                >
+                  Search
+                </button>
+              )}
+
               {navItems.map((item) => (
                 <Link
                   key={item.href}
@@ -455,7 +511,6 @@ export default function EnterpriseHeader({
                 </Link>
               ))}
 
-              {/* staff-only tools in mobile menu */}
               {showUserMenu && isPlatformAdmin && (
                 <div className="mt-4 space-y-3">
                   <Link

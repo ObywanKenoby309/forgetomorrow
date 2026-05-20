@@ -179,6 +179,7 @@ function AppShell({ Component, pageProps }) {
       '/member-profile',
       '/messages',
       '/action-center',
+      '/search',
     ].includes(router.pathname);
 
   const isCoachingRoute =
@@ -243,6 +244,7 @@ function AppShell({ Component, pageProps }) {
         lastRoute === '/coaching-dashboard' ||
         lastRoute === '/feed' ||
         lastRoute === '/settings' ||
+        lastRoute.startsWith('/search') ||
         lastRoute.startsWith('/anvil') ||
         lastRoute.startsWith('/roadmap'));
 

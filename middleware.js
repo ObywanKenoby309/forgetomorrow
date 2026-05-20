@@ -55,7 +55,7 @@ const PUBLIC_PATHS = new Set([
 // ✅ Internal / Workspace routes (staff-only by login)
 const INTERNAL_PREFIXES = ["/internal", "/workspace"];
 // ✅ App routes that must require login (but are NOT staff-only)
-const AUTH_PREFIXES = ["/action-center", "/profile"];
+const AUTH_PREFIXES = ["/action-center", "/profile", "/search"];
 
 function isPublicPath(pathname) {
   // Direct matches

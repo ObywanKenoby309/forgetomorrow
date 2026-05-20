@@ -296,6 +296,13 @@ export default function RecruiterSidebar({
           />
         </>
       ) : null}
+
+      <SectionLabel>Platform</SectionLabel>
+      <NavItem
+        href={`/search?chrome=${chromeRecruiter}`}
+        label="Advanced Search"
+        active={active === 'search'}
+      />
     </nav>
   );
 }
