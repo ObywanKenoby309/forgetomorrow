@@ -226,12 +226,22 @@ export default function SearchPage() {
     }
   };
 
+const [mounted, setMounted] = useState(false);
+
+useEffect(() => {
+  setMounted(true);
+}, []);
+
   useEffect(() => {
     if (!router.isReady) return;
     const q = typeof router.query.q === 'string' ? router.query.q : '';
     if (q) runSearch(q);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady]);
+
+if (!mounted) {
+  return null;
+}
 
   const greeting = getTimeGreeting();
 
