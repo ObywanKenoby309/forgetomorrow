@@ -1,4 +1,5 @@
 // components/recruiter/JobFormModal.js
+// updated for deployment push
 import { useEffect, useMemo, useState } from "react";
 import JDOptimizer from "@/components/ai/JDOptimizer";
 import ATSAdvisor from "@/components/ai/ATSAdvisor";
