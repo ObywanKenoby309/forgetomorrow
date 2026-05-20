@@ -136,6 +136,7 @@ function shapeJob(job, { lite = false } = {}) {
     id: job.id,
     title: job.title,
     company: job.company,
+	companyURL: job.companyURL,
     worksite: job.worksite,
     location: job.location,
     status: job.status,
@@ -366,6 +367,7 @@ export default async function handler(req, res) {
       const {
         title,
         company,
+		companyUrl,
         worksite,
         location,
         type,
@@ -425,6 +427,7 @@ export default async function handler(req, res) {
             data: {
               title: safeText(title),
               company: safeText(company),
+			  companyUrl: safeText(companyUrl, ""),
               worksite: safeText(worksite),
               location: safeText(location),
               type: safeText(type, ""),
@@ -448,6 +451,7 @@ export default async function handler(req, res) {
         data: {
           title: safeText(title),
           company: safeText(company),
+		  companyUrl: safeText(companyUrl, ""),
           worksite: safeText(worksite),
           location: safeText(location),
           type: safeText(type, ""),
@@ -482,6 +486,7 @@ export default async function handler(req, res) {
         urgent,
         title,
         company,
+		companyUrl,
         worksite,
         location,
         type,
@@ -512,6 +517,7 @@ export default async function handler(req, res) {
         data: {
           title: title !== undefined ? safeText(title) : existing.title,
           company: company !== undefined ? safeText(company) : existing.company,
+		  companyUrl: companyUrl !== undefined ? safeText(companyUrl, "") : existing.companyUrl,
           worksite:
             worksite !== undefined ? safeText(worksite) : existing.worksite,
           location:

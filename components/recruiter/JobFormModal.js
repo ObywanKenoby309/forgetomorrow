@@ -9,6 +9,7 @@ const ORANGE_DARK = "#F4511E";
 
 const BLANK = {
   company: "",
+  companyUrl: "",
   title: "",
   worksite: "Remote",
   location: "",
@@ -95,6 +96,7 @@ export default function JobFormModal({
 
       setData({
         company: initialJob.company || "",
+		companyUrl: initialJob.companyUrl || "",
         title: initialJob.title || "",
         worksite: initialJob.worksite || "Remote",
         location: initialJob.location || "",
@@ -208,6 +210,7 @@ export default function JobFormModal({
     setData((p) => ({
       ...p,
       company: t.company || p.company || "",
+	  companyUrl: t.companyUrl || p.companyUrl || "",
       title: t.title || p.title || "",
       worksite: t.worksite || p.worksite || "Remote",
       location: t.location || p.location || "",
@@ -805,6 +808,25 @@ export default function JobFormModal({
                   )}
                 </div>
               </Field>
+
+<Field label="Company / About Us URL">
+  <input
+    type="url"
+    className="border border-slate-200 rounded-xl px-3 py-2 w-full bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#FF7043]/35"
+    value={data.companyUrl}
+    onChange={(e) =>
+      setData((p) => ({ ...p, companyUrl: e.target.value }))
+    }
+    disabled={isView}
+    placeholder="https://company.com/about"
+  />
+
+  {!isView && (
+    <div className="mt-2 text-[11px] text-slate-500">
+      Keep the job description focused on the role. Add your company website or About Us page here for candidates who want additional background.
+    </div>
+  )}
+</Field>
 
               <Field label="Status">
                 <select
