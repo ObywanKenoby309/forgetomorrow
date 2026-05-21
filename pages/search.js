@@ -57,7 +57,11 @@ function flattenResults(data) {
 
   for (const type of TYPES) {
     if (type.key === 'all') continue;
-    const group = Array.isArray(data?.[type.key]) ? data[type.key] : [];
+    const group = Array.isArray(data?.groups?.[type.key])
+  ? data.groups[type.key]
+  : Array.isArray(data?.[type.key])
+  ? data[type.key]
+  : [];
 
     for (const item of group) {
       rows.push({
@@ -181,7 +185,13 @@ export default function SearchPage() {
     const next = { all: rows.length };
     for (const type of TYPES) {
       if (type.key === 'all') continue;
-      next[type.key] = Array.isArray(data?.[type.key]) ? data[type.key].length : 0;
+      const group = Array.isArray(data?.groups?.[type.key])
+  ? data.groups[type.key]
+  : Array.isArray(data?.[type.key])
+  ? data[type.key]
+  : [];
+
+next[type.key] = group.length;
     }
     return next;
   }, [data, rows.length]);
