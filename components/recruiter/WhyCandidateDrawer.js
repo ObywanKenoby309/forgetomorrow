@@ -347,7 +347,7 @@ function WhyPanel({
       <div className="text-[10px] font-black uppercase tracking-wide opacity-75">
         {label}
       </div>
-      <div className="mt-1 text-sm font-black leading-tight">{value || "—"}</div>
+      <div className="mt-0.5 text-xs font-black leading-tight">{value || "—"}</div>
     </div>
   );
 
@@ -453,7 +453,7 @@ function WhyPanel({
               Internal Search Weighting
             </div>
             <div className="mt-1 text-sm font-semibold text-slate-900">
-              Portfolio leads the discovery review. Primary resume supports the signal.
+              Portfolio-first discovery review. Primary resume supports the signal.
             </div>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
               {discoverySummary}
@@ -633,7 +633,14 @@ function WhyPanel({
         >
           {discoverySections.length ? (
             <div className="grid gap-3 md:grid-cols-2">
-              {discoverySections.slice(0, isFull ? 6 : 4).map((section, i) => (
+              {discoverySections
+                .filter((s) =>
+                  isFull
+                    ? true
+                    : ["Professional Positioning","Capability & Execution","Validation Areas"].includes(s?.title)
+                )
+                .slice(0, isFull ? 6 : 3)
+                .map((section, i) => (
                 <RecruiterBriefBlock key={`${section.title || "section"}-${i}`} title={section.title || "Recruiter Signal"}>
                   {section.interpretation ? (
                     <p className="text-sm leading-relaxed text-slate-700">{section.interpretation}</p>
@@ -645,14 +652,14 @@ function WhyPanel({
                         Evidence / Context
                       </div>
                       <ul className="mt-1 grid gap-1 text-xs text-slate-700">
-                        {section.evidence.slice(0, 4).map((item, idx) => (
+                        {section.evidence.slice(0, isFull ? 4 : 2).map((item, idx) => (
                           <li key={`${String(item).slice(0, 24)}-${idx}`}>• {String(item)}</li>
                         ))}
                       </ul>
                     </div>
                   ) : null}
 
-                  {section.note ? (
+                  {(isFull && section.note) ? (
                     <div className="mt-2 border-t border-slate-100 pt-2 text-xs leading-relaxed text-slate-500">
                       <span className="font-black text-slate-600">Recruiter Note: </span>
                       {section.note}
@@ -775,6 +782,8 @@ function WhyPanel({
           Internal recruiter discovery view — portfolio-first signal, supported by primary resume evidence.
         </div>
 
+        {isFull ? (
+        <>
         {/* Career path */}
         <CollapsibleSection
           title="Career path"
@@ -822,6 +831,8 @@ function WhyPanel({
             )}
           </div>
         </CollapsibleSection>
+        </>
+        ) : null}
       </div>
 
       {/* Footer */}
@@ -829,13 +840,17 @@ function WhyPanel({
         className="p-4 border-t flex items-center justify-start gap-2"
         style={{ paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))" }}
       >
-        {!isFull && <SecondaryButton href="#upgrade">Upgrade WHY</SecondaryButton>}
-        <SecondaryButton onClick={onClose}>Close</SecondaryButton>
         {onViewCandidate ? (
           <PrimaryButton onClick={onViewCandidate}>View full candidate</PrimaryButton>
         ) : (
           <PrimaryButton href="#view-candidate">View full candidate</PrimaryButton>
         )}
+
+        <SecondaryButton href="#download-resume">
+          Download resume
+        </SecondaryButton>
+
+        <SecondaryButton onClick={onClose}>Close</SecondaryButton>
       </div>
     </div>
   );
