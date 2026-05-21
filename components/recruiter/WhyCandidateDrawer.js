@@ -427,7 +427,7 @@ function WhyPanel({
       >
         <div className="min-w-0">
           <div className="font-semibold truncate">{title}</div>
-          <div className="mt-1">{controls}</div>
+          {isFull ? <div className="mt-1">{controls}</div> : null}
         </div>
         {showClose && <SecondaryButton onClick={onClose}>Close</SecondaryButton>}
       </div>
@@ -476,6 +476,8 @@ function WhyPanel({
           </p>
         </CollapsibleSection>
 
+        {isFull ? (
+        <>
         {/* Requirements / Resume scan table (click row for evidence) */}
         <CollapsibleSection
           title="Capability Signals"
@@ -625,9 +627,12 @@ function WhyPanel({
           </div>
         </CollapsibleSection>
 
+        </>
+        ) : null}
+
         {/* Signals (chips) — re-framed to avoid ATS language */}
         <CollapsibleSection
-          title="Capability & Execution Signals"
+          title={isFull ? "Capability & Execution Signals" : "Recruiter Snapshot"}
           isOpen={Boolean(openMap[SECTION_KEYS.skills])}
           onToggle={() => toggle(SECTION_KEYS.skills)}
         >
@@ -778,9 +783,11 @@ function WhyPanel({
         </CollapsibleSection>
 
         {/* Internal Candidate Signals label */}
-        <div className="text-[11px] text-slate-500 px-0.5">
-          Internal recruiter discovery view — portfolio-first signal, supported by primary resume evidence.
-        </div>
+        {isFull ? (
+          <div className="text-[11px] text-slate-500 px-0.5">
+            Internal recruiter discovery view — portfolio-first signal, supported by primary resume evidence.
+          </div>
+        ) : null}
 
         {isFull ? (
         <>
