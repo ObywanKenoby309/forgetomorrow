@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { classifySignals, overallVerdict, signalScoreToPercent } from "@/lib/intelligence/profileSignalShared";
+import { inferOperationalConclusion, inferCandidateOperationalProfile } from "@/lib/intelligence/operationalInference";
 
 function toSafeArray(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -127,42 +128,19 @@ function capabilityClusters(skills = []) {
 
 
 function roleInterpretation(exp = {}) {
-  const signals = roleSignals(exp);
-  if (!signals.length) return "Recruiter should review role details for scope, systems, and delivery evidence.";
-
-  const parts = [];
-  if (signals.includes("Support delivery")) parts.push("support delivery");
-  if (signals.includes("Endpoint operations")) parts.push("endpoint operations");
-  if (signals.includes("Identity/access support")) parts.push("identity/access support");
-  if (signals.includes("Knowledge/process ownership")) parts.push("knowledge/process ownership");
-  if (signals.includes("Client-facing communication")) parts.push("client-facing communication");
-  if (signals.includes("Outcome evidence")) parts.push("outcome evidence");
-
-  return `Operational evidence indicates ${parts.slice(0, 4).join(", ")}.`;
+  return inferOperationalConclusion(exp).conclusion;
 }
 
-function buildInterviewFocus({ roleSignalList = [], hasProjects, hasResume }) {
+function buildInterviewFocus({ roleSignalList = [], hasProjects, hasResume, candidateProfileInference = null }) {
+  const sharedFocus = candidateProfileInference?.validationFocus || [];
+  if (sharedFocus.length) return sharedFocus.slice(0, 5);
+
   const focus = [];
-
-  if (roleSignalList.includes("Support delivery")) {
-    focus.push("Validate support volume, ticket complexity, escalation handling, and service ownership.");
-  }
-  if (roleSignalList.includes("Endpoint operations")) {
-    focus.push("Ask for examples of endpoint lifecycle work, imaging, deployment, and troubleshooting depth.");
-  }
-  if (roleSignalList.includes("Identity/access support")) {
-    focus.push("Confirm identity/access administration scope, tools used, and security boundaries.");
-  }
-  if (roleSignalList.includes("Knowledge/process ownership")) {
-    focus.push("Ask how documentation, process improvement, or knowledge ownership changed team outcomes.");
-  }
-  if (!hasProjects) {
-    focus.push("Request one concrete project or work example with scope, ownership, and measurable result.");
-  }
-  if (!hasResume) {
-    focus.push("Ask for resume detail or source artifacts before advancing to final evaluation.");
-  }
-
+  if (roleSignalList.includes("Support delivery")) focus.push("Validate support volume, ticket complexity, escalation handling, and service ownership.");
+  if (roleSignalList.includes("Endpoint operations")) focus.push("Ask for examples of endpoint lifecycle work, imaging, deployment, and troubleshooting depth.");
+  if (roleSignalList.includes("Identity/access support")) focus.push("Confirm identity/access administration scope, tools used, and security boundaries.");
+  if (!hasProjects) focus.push("Request one concrete project or work example with scope, ownership, and measurable result.");
+  if (!hasResume) focus.push("Ask for resume detail or source artifacts before advancing to final evaluation.");
   return focus.slice(0, 5);
 }
 
@@ -657,6 +635,13 @@ export default function CandidateProfileModal({
     new Set(experienceList.flatMap((exp) => roleSignals(exp)))
   ).slice(0, 8);
 
+  const candidateProfileInference = inferCandidateOperationalProfile({
+    experience: experienceList,
+    skills: skillsLocal,
+    projects: projectList,
+    hasResume,
+  });
+
   const profileVisibility =
     candidate?.profileVisibility ||
     candidate?.visibility ||
@@ -854,8 +839,14 @@ export default function CandidateProfileModal({
                             </div>
 
                             <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs leading-5 text-slate-700">
-                              <span className="font-black text-slate-800">Recruiter read: </span>
-                              {roleInterpretation(exp)}
+                              <div>
+                                <span className="font-black text-slate-800">Recruiter read: </span>
+                                {inferOperationalConclusion(exp).conclusion}
+                              </div>
+                              <div className="mt-1 text-slate-600">
+                                <span className="font-black text-slate-700">Meaning: </span>
+                                {inferOperationalConclusion(exp).recruiterMeaning}
+                              </div>
                             </div>
 
                             {signals.length ? (
@@ -1069,9 +1060,7 @@ export default function CandidateProfileModal({
                       Primary Recruiter Interpretation
                     </div>
                     <p className="mt-1 text-xs leading-5 text-slate-700">
-                      {roleSignalList.length
-                        ? `Career evidence supports ${roleSignalList.slice(0, 4).join(", ").toLowerCase()} for recruiter review.`
-                        : "Career evidence should be reviewed for scope, systems, and delivery context."}
+                      {candidateProfileInference.overallConclusion}
                     </p>
                   </div>
 
@@ -1080,7 +1069,7 @@ export default function CandidateProfileModal({
                       Suggested Interview Focus
                     </div>
                     <ul className="mt-2 grid gap-1.5 text-xs leading-5 text-slate-700">
-                      {buildInterviewFocus({ roleSignalList, hasProjects, hasResume }).map((item, idx) => (
+                      {buildInterviewFocus({ roleSignalList, hasProjects, hasResume, candidateProfileInference }).map((item, idx) => (
                         <li key={`focus-${idx}`}>• {item}</li>
                       ))}
                     </ul>
