@@ -454,7 +454,7 @@ function ReadinessSignalSummary({ signal, title, accent = "#0D1B2A" }) {
   const focus = safeString(signal.recruiterFocus || "");
 
   return (
-    <View style={{ padding: "7 0", borderBottomWidth: 1, borderBottomColor: "#E5E7EB" }}>
+    <View style={{ padding: "5 0", borderBottomWidth: 1, borderBottomColor: "#E5E7EB" }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10, marginBottom: 3 }}>
         <Text style={{ fontSize: 8.6, fontWeight: "bold", color: "#0D1B2A", flex: 1 }}>{title}</Text>
         <View style={{ flexDirection: "row", gap: 4 }}>
@@ -495,7 +495,7 @@ function InterviewPathBlock({ whyInterview }) {
   if (!behavioral.length && !roleSpecific.length) return null;
 
   return (
-    <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "9 11", borderLeftWidth: 3, borderLeftColor: "#0D1B2A", marginTop: 10 }}>
+    <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "7 9", borderLeftWidth: 3, borderLeftColor: "#0D1B2A", marginTop: 8 }}>
       <Text style={{ fontSize: 9, fontWeight: "bold", color: "#0D1B2A", marginBottom: 7 }}>
         RECOMMENDED INTERVIEW PATHS
       </Text>
@@ -915,12 +915,12 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
       </Page>
 
       <Page size="LETTER" style={aiStyles.page}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: "#FF7043" }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 13, paddingBottom: 8, borderBottomWidth: 2, borderBottomColor: "#FF7043" }}>
           <Text style={{ fontSize: 13, fontWeight: "bold", color: "#0D1B2A" }}>Recruiter Readiness & Hiring Logistics</Text>
           <Text style={{ fontSize: 9, color: "#9CA3AF" }}>{candidateName} • ForgeTomorrow</Text>
         </View>
 
-        <View style={{ backgroundColor: "#0D1B2A", borderRadius: 6, padding: "9 11", marginBottom: 10 }}>
+        <View style={{ backgroundColor: "#0D1B2A", borderRadius: 6, padding: "8 10", marginBottom: 8 }}>
           <Text style={{ fontSize: 7.8, color: "#FF7043", fontWeight: "bold", marginBottom: 4, letterSpacing: 0.4 }}>
             OPERATIONAL HIRING CONTEXT
           </Text>
@@ -929,7 +929,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
           </Text>
         </View>
 
-        <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "9 11", borderLeftWidth: 3, borderLeftColor: "#FF7043", marginBottom: 10 }}>
+        <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "8 10", borderLeftWidth: 3, borderLeftColor: "#FF7043", marginBottom: 8 }}>
           <Text style={{ fontSize: 8.6, fontWeight: "bold", color: "#0D1B2A", marginBottom: 6 }}>HIRING LOGISTICS SNAPSHOT</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
             {readinessSnapshot.length ? readinessSnapshot.slice(0, 9).map(([label, value], i) => (
@@ -943,7 +943,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
           </View>
         </View>
 
-        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 6, padding: "9 11", borderWidth: 1, borderColor: "#E5E7EB", marginBottom: 10 }}>
+        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 6, padding: "8 10", borderWidth: 1, borderColor: "#E5E7EB", marginBottom: 8 }}>
           <Text style={{ fontSize: 8.6, fontWeight: "bold", color: "#0D1B2A", marginBottom: 4 }}>RECRUITER READINESS SIGNALS</Text>
           <Text style={{ fontSize: 7.2, color: "#6B7280", lineHeight: 1.3, marginBottom: 3 }}>
             Operational signals below are shown for recruiter workflow, not candidate skill ranking.
@@ -956,11 +956,6 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
 
         <InterviewPathBlock whyInterview={whyInterview} />
 
-        <View style={{ borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 7, marginTop: 10 }}>
-          <Text style={{ fontSize: 7.8, color: "#9CA3AF", lineHeight: 1.45 }}>
-            ForgeTomorrow Candidate Alignment Reviews are for recruiter decision support only. AI-assisted signal analysis reflects available portfolio data at export time. Self-identification answers excluded.
-          </Text>
-        </View>
       </Page>
 
       <Page size="LETTER" style={aiStyles.page}>
