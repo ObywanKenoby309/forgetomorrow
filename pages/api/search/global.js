@@ -162,7 +162,7 @@ export default async function handler(req, res) {
           title: displayName,
           subtitle,
           snippet: u.aboutMe || '',
-          url: u.slug ? `/portfolio/${u.slug}` : `/portfolio/${u.id}`,
+          url: u.slug ? `/profile/${u.slug}` : `/profile/view/${u.id}`,
           avatar: u.avatarUrl || u.image || '',
           relevance: scoreText({ query, title: displayName, subtitle, snippet: u.aboutMe, base: 60 }),
           visibilityReason: 'Public member profile',
