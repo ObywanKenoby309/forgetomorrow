@@ -1,5 +1,5 @@
 // components/recruiter/CandidateProfileModal.js
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import ProfileSignalEngine from "@/components/profile/ProfileSignalEngine";
@@ -433,7 +433,7 @@ export default function CandidateProfileModal({
     hasResume
   );
 
-  const skillClusters = useMemo(() => capabilityClusters(skillsLocal), [skillsLocal]);
+  const skillClusters = capabilityClusters(skillsLocal);
 
   const summaryText =
     candidate.summary ||
