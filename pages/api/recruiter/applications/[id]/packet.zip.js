@@ -383,7 +383,8 @@ function SignalIntelligenceCard({ signal, index }) {
       </View>
 
       {interpretation ? (
-        <View style={{ marginBottom: 4 }}>          <Text style={{ fontSize: 7.5, color: "#374151", lineHeight: 1.35 }}>{interpretation}</Text>
+        <View style={{ marginBottom: 4 }}>
+          <Text style={{ fontSize: 7.5, color: "#374151", lineHeight: 1.35 }}>{interpretation}</Text>
         </View>
       ) : null}
 
@@ -427,6 +428,90 @@ function CompactInsightColumn({ title, color, items, emptyText }) {
       ) : (
         <Text style={{ fontSize: 7.5, color: "#9CA3AF", lineHeight: 1.4 }}>{emptyText || "No items detected."}</Text>
       )}
+    </View>
+  );
+}
+
+function matchTypeDisplay(matchType) {
+  return {
+    tool_implies_category: "Supporting operational evidence",
+    synonym_phrase: "Strong transferable evidence",
+    single_token_only: "Supporting keyword evidence",
+    direct_match: "Direct evidence match",
+    exact_phrase: "Direct evidence match",
+  }[matchType] || "Signal match";
+}
+
+function EvidenceAnalysisGrid({ matched = [], notDemonstrated = [] }) {
+  const demonstrated = Array.isArray(matched) ? matched.slice(0, 7) : [];
+  const validation = Array.isArray(notDemonstrated) ? notDemonstrated.slice(0, 7) : [];
+
+  if (!demonstrated.length && !validation.length) {
+    return (
+      <View style={{ backgroundColor: "#F9FAFB", borderRadius: 5, padding: "12 14" }}>
+        <Text style={{ fontSize: 8, color: "#6B7280", lineHeight: 1.6 }}>
+          No signal alignment data available. Run the WHY analysis from the applicant pipeline to populate this section.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ flexDirection: "row", gap: 10 }}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 8.5, fontWeight: "bold", color: "#16A34A", marginBottom: 6 }}>
+          DEMONSTRATED / TRANSFERABLE
+        </Text>
+
+        {demonstrated.length ? demonstrated.map((sig, i) => {
+          const tierColor = sig.tier === "A" ? "#FF7043" : "#6B7280";
+          const strengthPct = typeof sig.strength === "number" ? Math.round(sig.strength * 100) : null;
+          const ev = Array.isArray(sig.evidence) && sig.evidence.length ? sig.evidence[0] : null;
+
+          return (
+            <View key={`demo-${i}`} style={{ backgroundColor: "#F9FAFB", borderRadius: 5, padding: "8 10", marginBottom: 5, borderLeftWidth: 3, borderLeftColor: "#16A34A" }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
+                <Text style={{ fontSize: 8.5, fontWeight: "bold", color: "#111827", maxWidth: 190 }}>{sig.label}</Text>
+                <Text style={{ fontSize: 6.8, color: tierColor, fontWeight: "bold" }}>TIER {sig.tier}</Text>
+              </View>
+              <Text style={{ fontSize: 7.2, color: "#6B7280", marginBottom: 3 }}>
+                {matchTypeDisplay(sig.match_type)}{strengthPct !== null ? ` • ${strengthPct}% confidence` : ""}
+              </Text>
+              {ev ? (
+                <Text style={{ fontSize: 7.4, color: "#4B5563", lineHeight: 1.35 }}>
+                  • {safeString(ev?.text || ev)}{ev?.source ? ` · ${ev.source}` : ""}
+                </Text>
+              ) : null}
+            </View>
+          );
+        }) : (
+          <Text style={{ fontSize: 7.5, color: "#9CA3AF", lineHeight: 1.4 }}>No demonstrated signals detected yet.</Text>
+        )}
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 8.5, fontWeight: "bold", color: "#DC2626", marginBottom: 6 }}>
+          VALIDATION / NOT YET DEMONSTRATED
+        </Text>
+
+        {validation.length ? validation.map((sig, i) => (
+          <View key={`validation-${i}`} style={{ backgroundColor: "#FEF2F2", borderRadius: 5, padding: "8 10", marginBottom: 5, borderLeftWidth: 3, borderLeftColor: "#DC2626" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
+              <Text style={{ fontSize: 8.5, fontWeight: "bold", color: "#111827", maxWidth: 190 }}>{sig.label}</Text>
+              <Text style={{ fontSize: 6.8, color: "#DC2626", fontWeight: "bold" }}>TIER {sig.tier}</Text>
+            </View>
+            <Text style={{ fontSize: 7.4, color: "#6B7280", lineHeight: 1.4 }}>
+              {sig.why_missing || "Not demonstrated in the provided resume text. Recruiter should validate through interview, portfolio, or additional candidate evidence."}
+            </Text>
+          </View>
+        )) : (
+          <View style={{ backgroundColor: "#F0FDF4", borderRadius: 5, padding: "8 10", borderLeftWidth: 3, borderLeftColor: "#16A34A" }}>
+            <Text style={{ fontSize: 7.5, color: "#166534", lineHeight: 1.4 }}>
+              No major missing signals were detected from the available WHY analysis.
+            </Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -543,6 +628,36 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
             </View>
           ) : null}
 
+          <View style={{
+            marginTop: 24,
+            backgroundColor: "rgba(255,255,255,0.08)",
+            borderRadius: 6,
+            padding: "12 14",
+            borderLeftWidth: 3,
+            borderLeftColor: "#FF7043",
+          }}>
+            <Text style={{
+              fontSize: 8,
+              fontWeight: "bold",
+              color: "#FF7043",
+              marginBottom: 5,
+              letterSpacing: 0.4,
+            }}>
+              FORGETOMORROW INTERPRETATION
+            </Text>
+            <Text style={{
+              fontSize: 9,
+              color: "rgba(255,255,255,0.78)",
+              lineHeight: 1.55,
+            }}>
+              {overallSignalScore >= 75
+                ? "ForgeTomorrow sees strong direct alignment supported by credible execution evidence, transferable capability depth, and recruiter-usable validation signals."
+                : overallSignalScore >= 50
+                ? "ForgeTomorrow sees meaningful transferable capability and operational alignment, though some role-specific validation areas remain."
+                : "ForgeTomorrow sees emerging alignment potential, but additional direct evidence or recruiter validation may still be required."}
+            </Text>
+          </View>
+
           <View style={{ position: "absolute", bottom: 24, left: 48, right: 48 }}>
             <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginBottom: 12 }} />
             <Text style={{ fontSize: 8, color: "rgba(255,255,255,0.25)", lineHeight: 1.6 }}>
@@ -550,36 +665,6 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
               Self-identification excluded.
             </Text>
 
-            <View style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: 5,
-              padding: "12 14",
-              marginTop: 12,
-              borderLeftWidth: 3,
-              borderLeftColor: "#FF7043",
-            }}>
-              <Text style={{
-                fontSize: 8,
-                fontWeight: "bold",
-                color: "#FF7043",
-                marginBottom: 4,
-                letterSpacing: 0.3,
-              }}>
-                FORGETOMORROW INTERPRETATION
-              </Text>
-
-              <Text style={{
-                fontSize: 9,
-                color: "#374151",
-                lineHeight: 1.7,
-              }}>
-                {overallSignalScore >= 75
-                  ? "ForgeTomorrow sees strong direct alignment supported by credible execution evidence, transferable capability depth, and recruiter-usable validation signals."
-                  : overallSignalScore >= 50
-                  ? "ForgeTomorrow sees meaningful transferable capability and operational alignment, though some role-specific validation areas remain."
-                  : "ForgeTomorrow sees emerging alignment potential, but additional direct evidence or recruiter validation may still be required."}
-              </Text>
-            </View>
           </View>
         </View>
       </Page>
@@ -663,70 +748,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
           <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>
             EVIDENCE & ALIGNMENT ANALYSIS
           </Text>
-          {whySignalsMatched.length > 0 ? (
-            whySignalsMatched.slice(0, 7).map((sig, i) => {
-              const tierColor = sig.tier === "A" ? "#FF7043" : "#6B7280";
-              const strengthPct = typeof sig.strength === "number" ? Math.round(sig.strength * 100) : null;
-              const matchTypeLabel = {
-                tool_implies_category: "Supporting operational evidence",
-                synonym_phrase: "Strong transferable evidence",
-                single_token_only: "Supporting keyword evidence",
-                direct_match: "Direct evidence match",
-              }[sig.match_type] || sig.match_type || "Signal match";
-              return (
-                <View key={`sig-${i}`} style={{ backgroundColor: "#F9FAFB", borderRadius: 5, padding: "10 12", marginBottom: 4, borderLeftWidth: 3, borderLeftColor: "#16A34A" }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <Text style={{ fontSize: 9, fontWeight: "bold", color: "#111827" }}>
-                      {sig.label}
-                    </Text>
-                    <View style={{ flexDirection: "row", gap: 6 }}>
-                      <Text style={{ fontSize: 7, color: tierColor, fontWeight: "bold" }}>
-                        TIER {sig.tier}
-                      </Text>
-                      {strengthPct !== null ? (
-                        <Text style={{ fontSize: 7, color: "#6B7280" }}>
-                          {strengthPct}% confidence
-                        </Text>
-                      ) : null}
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 8, color: "#6B7280", marginBottom: 4 }}>
-                    {matchTypeLabel}
-                  </Text>
-                  {Array.isArray(sig.evidence) && sig.evidence.slice(0, 1).map((ev, j) => (
-                    <Text key={j} style={{ fontSize: 8, color: "#4B5563", lineHeight: 1.5 }}>
-                      • {safeString(ev?.text || ev)}{ev?.source ? ` · ${ev.source}` : ""}
-                    </Text>
-                  ))}
-                </View>
-              );
-            })
-          ) : null}
-          {whyNotDemonstrated.length > 0 ? (
-            <View style={{ marginTop: 8 }}>
-              <Text style={{ fontSize: 9, fontWeight: "bold", color: "#DC2626", marginBottom: 4 }}>
-                NOT YET DEMONSTRATED
-              </Text>
-              {whyNotDemonstrated.map((sig, i) => (
-                <View key={`gap-sig-${i}`} style={{ backgroundColor: "#FEF2F2", borderRadius: 5, padding: "8 12", marginBottom: 4, borderLeftWidth: 3, borderLeftColor: "#DC2626" }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
-                    <Text style={{ fontSize: 9, fontWeight: "bold", color: "#111827" }}>{sig.label}</Text>
-                    <Text style={{ fontSize: 7, color: "#DC2626", fontWeight: "bold" }}>TIER {sig.tier}</Text>
-                  </View>
-                  <Text style={{ fontSize: 8, color: "#6B7280" }}>
-                    {sig.why_missing || "Not demonstrated in resume text."}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-          {whySignalsMatched.length === 0 && whyNotDemonstrated.length === 0 ? (
-            <View style={{ backgroundColor: "#F9FAFB", borderRadius: 5, padding: "12 14" }}>
-              <Text style={{ fontSize: 8, color: "#6B7280", lineHeight: 1.6 }}>
-                No signal alignment data available. Run the WHY analysis from the applicant pipeline to populate this section.
-              </Text>
-            </View>
-          ) : null}
+          <EvidenceAnalysisGrid matched={whySignalsMatched} notDemonstrated={whyNotDemonstrated} />
         </View>
       </Page>
 
@@ -751,7 +773,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
               WHAT FORGETOMORROW SEES
             </Text>
             <Text style={{ fontSize: 8.5, color: "#E5E7EB", lineHeight: 1.55 }}>
-              This section evaluates the candidate’s profile, portfolio, preferences, credibility evidence, and recruiter-readiness beyond the resume. It is designed to show what evidence is visible, what still needs validation, and where the recruiter should focus follow-up.
+              This section separates candidate capability signals from recruiter-readiness signals. Core signals evaluate proof, narrative, credibility, and portfolio evidence. Logistics signals such as availability, visibility, and language should be interpreted as context unless the role explicitly requires them.
             </Text>
           </View>
 
@@ -760,6 +782,19 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
               <SignalIntelligenceCard key={`profile-signal-${i}`} signal={signal} index={i} />
             ))}
           </View>
+        </View>
+
+        <View style={{ borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 8, marginTop: 12 }}>
+          <Text style={{ fontSize: 8, color: "#9CA3AF", lineHeight: 1.5 }}>
+            ForgeTomorrow Candidate Alignment Reviews are for recruiter decision support only. AI-assisted signal analysis reflects available profile data at export time. Self-identification answers excluded.
+          </Text>
+        </View>
+      </Page>
+
+      <Page size="LETTER" style={aiStyles.page}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: "#FF7043" }}>
+          <Text style={{ fontSize: 14, fontWeight: "bold", color: "#0D1B2A" }}>Candidate Narrative & Supporting Evidence</Text>
+          <Text style={{ fontSize: 9, color: "#9CA3AF" }}>{candidateName} • ForgeTomorrow</Text>
         </View>
 
         {profile?.aboutMe ? (
