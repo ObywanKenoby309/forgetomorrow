@@ -43,7 +43,7 @@ function CollapsibleSection({
         <div className="flex items-center gap-2 shrink-0">
           {right ? right : null}
           <span className="text-xs font-semibold text-slate-500">
-            {isOpen ? "Collapse" : "Expand"}
+            {isOpen ? "Hide Details" : "View Details"}
           </span>
         </div>
       </button>
@@ -290,7 +290,7 @@ function WhyPanel({
         onClick={() => setAll(true)}
         className="text-[11px] font-semibold text-slate-600 hover:text-slate-900"
       >
-        Expand all
+        View all
       </button>
       <span className="text-slate-300">•</span>
       <button
@@ -298,7 +298,7 @@ function WhyPanel({
         onClick={() => setAll(false)}
         className="text-[11px] font-semibold text-slate-600 hover:text-slate-900"
       >
-        Collapse all
+        Hide all
       </button>
     </div>
   );
@@ -367,7 +367,7 @@ function WhyPanel({
       <div className="p-4 flex-1 min-h-0 overflow-y-auto grid gap-4">
         {/* Match Summary */}
         <CollapsibleSection
-          title="Match Summary"
+          title="Professional Positioning"
           isOpen={Boolean(openMap[SECTION_KEYS.summary])}
           onToggle={() => toggle(SECTION_KEYS.summary)}
           right={
@@ -384,7 +384,7 @@ function WhyPanel({
           {needsJD ? (
             <div className="mt-2 rounded border bg-slate-50 p-3">
               <div className="text-sm font-semibold text-slate-800">
-                Add a job description to generate requirements and a WHY score.
+                No job context loaded. Showing portfolio-first professional intelligence.
               </div>
               <div className="text-xs text-slate-600 mt-1">
                 Right now, this view is resume-only. It will not infer or score requirements until the JD has enough detail.
@@ -399,7 +399,7 @@ function WhyPanel({
 
         {/* Requirements / Resume scan table (click row for evidence) */}
         <CollapsibleSection
-          title={scanTitle}
+          title="Capability Signals"
           isOpen={Boolean(openMap[SECTION_KEYS.requirements])}
           onToggle={() => toggle(SECTION_KEYS.requirements)}
           right={
@@ -548,15 +548,15 @@ function WhyPanel({
 
         {/* Signals (chips) — re-framed to avoid ATS language */}
         <CollapsibleSection
-          title="Capability signals detected"
+          title="Capability & Execution Signals"
           isOpen={Boolean(openMap[SECTION_KEYS.skills])}
           onToggle={() => toggle(SECTION_KEYS.skills)}
         >
           <div className="grid gap-4">
-            {/* Observed capabilities */}
+            {/* Demonstrated capabilities */}
             <div>
               <div className="text-xs font-semibold text-slate-700 mb-2">
-                Observed capabilities
+                Demonstrated capabilities
               </div>
               <div className="flex flex-wrap gap-2">
                 {matchedSkills.length ? (
@@ -578,7 +578,7 @@ function WhyPanel({
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <div className="text-xs font-semibold text-slate-700 mb-2">
-                    Adjacent strengths (validated)
+                    Transferable strengths
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {transferableSkills.length ? (
@@ -595,7 +595,7 @@ function WhyPanel({
 
                 <div>
                   <div className="text-xs font-semibold text-slate-700 mb-2">
-                    Not evidenced in submitted materials
+                    Validation Areas
                   </div>
 
                   {needsJD ? (
@@ -630,7 +630,7 @@ function WhyPanel({
             ) : gapSkills.length || noCriticalGaps ? (
               <div>
                 <div className="text-xs font-semibold text-slate-700 mb-2">
-                  Not evidenced in submitted materials (preview)
+                  Validation Areas (preview)
                 </div>
 
                 {needsJD ? (
@@ -690,7 +690,7 @@ function WhyPanel({
 
         {/* Filters that triggered */}
         <CollapsibleSection
-          title="Matched your filters"
+          title="Search Alignment"
           isOpen={Boolean(openMap[SECTION_KEYS.filters])}
           onToggle={() => toggle(SECTION_KEYS.filters)}
         >

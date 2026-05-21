@@ -44,10 +44,7 @@ export default function WhyInfo() {
               </h2>
 
               <p className="text-sm text-slate-700 leading-relaxed">
-                Our explainability engine maps your job’s requirements to the
-                candidate’s skills, experience, and written achievements. Every
-                match is backed by extracted evidence — transparent, traceable,
-                and reviewable by recruiters at every step.
+                ForgeTomorrow evaluates professional positioning, execution evidence, transferable capability, recruiter readiness, and portfolio intelligence using explainable reasoning systems. Every signal shown is evidence-backed and recruiter-reviewable.
               </p>
 
               <ul className="mt-3 text-sm text-slate-700 list-disc pl-5 space-y-1">

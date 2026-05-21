@@ -416,7 +416,7 @@ function toWhyResponse({ forgeCandidate, filters, job }) {
     summary,
     reasons: reasons.slice(0, 12),
 
-    skills: {
+    capabilitySignals: {
       matched: Array.isArray(scored.skills) ? scored.skills.slice(0, 24) : [],
       gaps: matchedGaps.slice(0, 24),
       transferable: [],

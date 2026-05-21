@@ -815,7 +815,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
               </View>
             </View>
             <Text style={{ fontSize: 10, color: "#374151", lineHeight: 1.6 }}>
-              This score combines resume intelligence, profile depth, portfolio proof, employer-response context, and transferable
+              This score combines resume intelligence, portfolio proof and depth, employer-response context, and transferable
               capability signals for this specific role.
             </Text>
           </View>
