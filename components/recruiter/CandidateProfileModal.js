@@ -797,11 +797,12 @@ export default function CandidateProfileModal({
                 <GlassCard>
                   <SectionTitle eyebrow="Recruiter Intelligence" title="Signal Interpretation" />
                   <ProfileSignalEngine
-                    profileData={signalProfileData}
-                    mode="recruiter"
-                    readOnly={true}
-                    title="Recruiter Signal View"
-                  />
+  key={candidate?.id || 'signal-engine'}
+  profileData={signalProfileData}
+  mode="recruiter"
+  readOnly={true}
+  title="Recruiter Signal View"
+/>
 
                   {!isForgeCandidate && (
                     <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
