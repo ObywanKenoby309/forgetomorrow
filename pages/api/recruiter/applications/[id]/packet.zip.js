@@ -12,6 +12,7 @@ import HybridResumeTemplatePDF from "@/components/resume-form/templates/HybridRe
 import ReverseResumeTemplatePDF from "@/components/resume-form/templates/ReverseResumeTemplate.pdf.js";
 
 import { safeArr, classifySignals, overallVerdict, signalScoreToPercent } from '@/lib/intelligence/profileSignalShared';
+import { buildProfileExplain } from '@/lib/intelligence/whyEngine';
 
 function toInt(val) {
   const n = Number(val);
@@ -347,12 +348,43 @@ function IntelligencePill({ label, value, color = "#0D1B2A" }) {
   );
 }
 
+function SignalMetaBadge({ children, color = "#374151", bg = "#F3F4F6" }) {
+  if (!children) return null;
+  return (
+    <View style={{ backgroundColor: bg, borderRadius: 999, padding: "3 6" }}>
+      <Text style={{ fontSize: 6.3, fontWeight: "bold", color }}>{String(children).toUpperCase()}</Text>
+    </View>
+  );
+}
+
+function SignalFieldList({ items, max = 3 }) {
+  const list = safeList(items, max);
+  if (!list.length) return null;
+  return (
+    <View style={{ gap: 2 }}>
+      {list.map((item, i) => {
+        const parts = String(item).split(":");
+        const label = parts.length > 1 ? parts.shift() : null;
+        const value = parts.join(":").trim();
+        return (
+          <Text key={`field-${i}`} style={{ fontSize: 7.2, color: "#374151", lineHeight: 1.3 }}>
+            {label ? `${label}: ` : "• "}{label ? value : item}
+          </Text>
+        );
+      })}
+    </View>
+  );
+}
+
 function SignalIntelligenceCard({ signal, index }) {
   const color = getSignalColor(signal.status);
-  const evidence = safeList(signal.evidenceDetected, 3);
-  const missing = safeList(signal.missingValidation, 3);
-  const interpretation = safeString(signal.recruiterInterpretation || signal.gapReason || signal.description);
-  const impact = safeString(signal.signalImpact);
+  const evidence = safeList(signal.recruiterContext || signal.evidenceDetected, 3);
+  const missing = safeList(signal.missingValidation, 2);
+  const title = safeString(signal.interpretationTitle || signal.label);
+  const interpretation = safeString(signal.interpretationSummary || signal.recruiterInterpretation || signal.gapReason || signal.description);
+  const focus = safeString(signal.recruiterFocus || signal.signalImpact);
+  const risk = signal.recruiterRisk || (signal.status === "direct" ? "Low Risk" : signal.status === "adjacent" ? "Medium Risk" : "High Risk");
+  const confidence = signal.confidenceLevel ? `${signal.confidenceLevel} Confidence` : "Measured Confidence";
 
   return (
     <View
@@ -362,56 +394,51 @@ function SignalIntelligenceCard({ signal, index }) {
         width: "48.5%",
         backgroundColor: "#F9FAFB",
         borderRadius: 5,
-        padding: "7 9",
-        marginBottom: 8,
+        padding: "6 8",
+        marginBottom: 6,
         borderLeftWidth: 3,
         borderLeftColor: color,
       }}
     >
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-        <Text style={{ fontSize: 8.5, fontWeight: "bold", color: "#0D1B2A", maxWidth: 170 }}>
-          {signal.label}
-        </Text>
-        <Text style={{ fontSize: 7, fontWeight: "bold", color }}>
-          {statusLabel(signal.status)}
-        </Text>
-      </View>
-
-      <View style={{ flexDirection: "row", gap: 5, marginBottom: 4 }}>
-        <IntelligencePill label="Risk" value={signal.recruiterRisk || (signal.status === "direct" ? "Low" : signal.status === "adjacent" ? "Medium" : "High")} color={color} />
-        <IntelligencePill label="Confidence" value={signal.confidenceLevel || "Measured"} color="#0D1B2A" />
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 6, marginBottom: 5 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 8.4, fontWeight: "bold", color: "#0D1B2A" }}>{title}</Text>
+          <Text style={{ fontSize: 6.5, color, fontWeight: "bold", marginTop: 1 }}>{statusLabel(signal.status)}</Text>
+        </View>
+        <View style={{ flexDirection: "row", gap: 3, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: 150 }}>
+          <SignalMetaBadge color={color} bg={signal.status === "direct" ? "#ECFDF5" : signal.status === "adjacent" ? "#FFFBEB" : "#FEF2F2"}>{risk}</SignalMetaBadge>
+          <SignalMetaBadge color="#1D4ED8" bg="#EFF6FF">{confidence}</SignalMetaBadge>
+        </View>
       </View>
 
       {interpretation ? (
-        <View style={{ marginBottom: 4 }}>
-          <Text style={{ fontSize: 7.5, color: "#374151", lineHeight: 1.35 }}>{interpretation}</Text>
-        </View>
+        <Text style={{ fontSize: 7.5, color: "#374151", lineHeight: 1.32, marginBottom: 4 }}>{interpretation}</Text>
       ) : null}
 
       {evidence.length ? (
         <View style={{ marginBottom: 4 }}>
-          <Text style={{ fontSize: 6.5, fontWeight: "bold", color: "#16A34A", marginBottom: 2, textTransform: "uppercase" }}>
-            Evidence Detected
+          <Text style={{ fontSize: 6.3, fontWeight: "bold", color: "#16A34A", marginBottom: 2, textTransform: "uppercase" }}>
+            Evidence / Context
           </Text>
-          <CompactBulletList items={evidence} color="#374151" max={3} />
+          <SignalFieldList items={evidence} max={3} />
         </View>
       ) : null}
 
       {missing.length ? (
         <View style={{ marginBottom: 4 }}>
-          <Text style={{ fontSize: 6.5, fontWeight: "bold", color: "#D97706", marginBottom: 2, textTransform: "uppercase" }}>
-            Missing Validation
+          <Text style={{ fontSize: 6.3, fontWeight: "bold", color: "#D97706", marginBottom: 2, textTransform: "uppercase" }}>
+            Validation Needed
           </Text>
-          <CompactBulletList items={missing} color="#374151" max={3} />
+          <CompactBulletList items={missing} color="#374151" max={2} />
         </View>
       ) : null}
 
-      {impact ? (
-        <View style={{ borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 5, marginTop: 2 }}>
-          <Text style={{ fontSize: 6.5, fontWeight: "bold", color: "#6B7280", marginBottom: 2, textTransform: "uppercase" }}>
-            Signal Impact
+      {focus ? (
+        <View style={{ borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 4, marginTop: 2 }}>
+          <Text style={{ fontSize: 6.3, fontWeight: "bold", color: "#6B7280", marginBottom: 2, textTransform: "uppercase" }}>
+            Recruiter Focus
           </Text>
-          <Text style={{ fontSize: 7.2, color: "#4B5563", lineHeight: 1.3 }}>{impact}</Text>
+          <Text style={{ fontSize: 7, color: "#4B5563", lineHeight: 1.28 }}>{focus}</Text>
         </View>
       ) : null}
     </View>
@@ -676,9 +703,9 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
         </View>
 
         {overallSignalScore !== null ? (
-          <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "16 20", marginBottom: 20, borderLeftWidth: 4, borderLeftColor: scoreColor }}>
+          <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "10 14", marginBottom: 12, borderLeftWidth: 4, borderLeftColor: scoreColor }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 8 }}>
-              <Text style={{ fontSize: 40, fontWeight: "bold", color: scoreColor, lineHeight: 1 }}>{overallSignalScore}%</Text>
+              <Text style={{ fontSize: 32, fontWeight: "bold", color: scoreColor, lineHeight: 1 }}>{overallSignalScore}%</Text>
               <View>
                 <Text style={{ fontSize: 13, fontWeight: "bold", color: "#0D1B2A" }}>
                   {overallSignalScore >= 75 ? "Strong Match" : overallSignalScore >= 50 ? "Moderate Match" : "Emerging Match"}
@@ -695,10 +722,10 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
           </View>
         ) : null}
 
-        <View style={{ flexDirection: "row", gap: 16, marginBottom: 20 }}>
-          <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 6, padding: "14 16", borderLeftWidth: 4, borderLeftColor: "#FF7043" }}>
+        <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
+          <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 6, padding: "9 12", borderLeftWidth: 4, borderLeftColor: "#FF7043" }}>
             <Text style={{ fontSize: 8, color: "#6B7280", marginBottom: 4 }}>RESUME INTELLIGENCE SCORE</Text>
-            <Text style={{ fontSize: 34, fontWeight: "bold", color: "#0D1B2A", marginBottom: 18 }}>
+            <Text style={{ fontSize: 25, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8 }}>
               {resumeIntelligenceScore !== null ? `${resumeIntelligenceScore}%` : "--"}
             </Text>
             <Text style={{ fontSize: 9, color: "#6B7280", lineHeight: 1.6 }}>
@@ -706,10 +733,10 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
             </Text>
           </View>
 
-          <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 6, padding: "14 16", borderLeftWidth: 4, borderLeftColor: "#16A34A" }}>
+          <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 6, padding: "9 12", borderLeftWidth: 4, borderLeftColor: "#16A34A" }}>
             <Text style={{ fontSize: 8, color: "#6B7280", marginBottom: 4 }}>PROFILE & PORTFOLIO SIGNAL</Text>
             <View style={{ flexDirection: "row", alignItems: "flex-end", marginBottom: 18 }}>
-              <Text style={{ fontSize: 34, fontWeight: "bold", color: "#0D1B2A" }}>
+              <Text style={{ fontSize: 25, fontWeight: "bold", color: "#0D1B2A" }}>
                 {profileSignalScore ?? "--"}
               </Text>
               <Text style={{ fontSize: 14, fontWeight: "bold", color: "#0D1B2A", marginLeft: 2, marginBottom: 3 }}>%</Text>
@@ -720,11 +747,11 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
           </View>
         </View>
 
-        <View style={{ backgroundColor: "#FFF7ED", borderRadius: 6, padding: "16 18", borderLeftWidth: 4, borderLeftColor: "#FF7043", marginBottom: 18 }}>
-          <Text style={{ fontSize: 11, fontWeight: "bold", color: "#7C2D12", marginBottom: 10, letterSpacing: 0.3 }}>
+        <View style={{ backgroundColor: "#FFF7ED", borderRadius: 6, padding: "9 12", borderLeftWidth: 3, borderLeftColor: "#FF7043", marginBottom: 12 }}>
+          <Text style={{ fontSize: 8.5, fontWeight: "bold", color: "#7C2D12", marginBottom: 4, letterSpacing: 0.3 }}>
             OVERALL CANDIDATE SIGNAL
           </Text>
-          <Text style={{ fontSize: 9, color: "#374151", lineHeight: 1.7 }}>
+          <Text style={{ fontSize: 8, color: "#374151", lineHeight: 1.45 }}>
             {hasJD
               ? "Role-specific hiring confidence. Resume-to-JD alignment carries 65% weight; profile depth, portfolio proof, and recruiter-readiness carry 35%. This is not an ATS score — it is evidence-based hiring signal."
               : "General recruiter confidence score. Profile depth, portfolio proof, and recruiter-readiness carry 70% weight; resume signal carries 30%. No job description was provided for role-specific alignment."}
@@ -768,11 +795,11 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
             </Text>
           </View>
 
-          <View style={{ backgroundColor: "#0D1B2A", borderRadius: 6, padding: "12 14", marginBottom: 10 }}>
+          <View style={{ backgroundColor: "#0D1B2A", borderRadius: 6, padding: "8 10", marginBottom: 8 }}>
             <Text style={{ fontSize: 8, color: "#FF7043", fontWeight: "bold", marginBottom: 4, letterSpacing: 0.4 }}>
               WHAT FORGETOMORROW SEES
             </Text>
-            <Text style={{ fontSize: 8.5, color: "#E5E7EB", lineHeight: 1.55 }}>
+            <Text style={{ fontSize: 7.4, color: "#E5E7EB", lineHeight: 1.35 }}>
               This section separates candidate capability signals from recruiter-readiness signals. Core signals evaluate proof, narrative, credibility, and portfolio evidence. Logistics signals such as availability, visibility, and language should be interpreted as context unless the role explicitly requires them.
             </Text>
           </View>
@@ -1166,10 +1193,12 @@ export default async function handler(req, res) {
         additionalQuestions: additionalAnswers,
       };
 
-      // Run real profile signal engine
-      const profileSignals = classifySignals(profile);
-      const profileVerdict = overallVerdict(profileSignals);
-      const realProfileSignalScore = signalScoreToPercent(profileVerdict);
+      // Run unified WHY-backed profile signal explanation.
+      // profileSignalShared extracts structure; WHY converts it into evidence-first presentation data.
+      const profileExplain = buildProfileExplain(profile, app.job);
+      const profileSignals = Array.isArray(profileExplain?.signals) ? profileExplain.signals : classifySignals(profile, app.job);
+      const profileVerdict = profileExplain?.verdict || overallVerdict(profileSignals);
+      const realProfileSignalScore = profileExplain?.score ?? signalScoreToPercent(profileVerdict);
 
       const intelligenceDoc = (
         <FullCandidateIntelligencePDF
