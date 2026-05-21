@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import ProfileSignalEngine from "@/components/profile/ProfileSignalEngine";
+import { classifySignals, overallVerdict, signalScoreToPercent } from "@/lib/intelligence/profileSignalShared";
 
 function toSafeArray(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -263,6 +263,152 @@ function Pill({ children, tone = "neutral", onRemove, disabled }) {
     </span>
   );
 }
+
+
+function statusLabel(status) {
+  if (status === "direct") return "Proven";
+  if (status === "adjacent") return "Validation";
+  return "Review";
+}
+
+function statusTone(status) {
+  if (status === "direct") return "good";
+  if (status === "adjacent") return "warn";
+  return "risk";
+}
+
+function RecruiterPortfolioReview({ profileData }) {
+  const signals = classifySignals(profileData || {}, null);
+  const verdict = overallVerdict(signals);
+  const score = signalScoreToPercent(verdict);
+
+  const proven = signals.filter((s) => s.status === "direct");
+  const validation = signals.filter((s) => s.status === "adjacent");
+  const review = signals.filter((s) => s.status === "missing");
+
+  const portfolioSignal = signals.find((s) => s.key === "portfolio");
+  const identitySignal = signals.find((s) => s.key === "identity");
+  const credibilitySignal = signals.find((s) => s.key === "credentials");
+  const readinessSignal = signals.find((s) => s.key === "availability");
+
+  const headline =
+    score >= 75
+      ? "Strong recruiter-visible portfolio signal."
+      : score >= 50
+      ? "Usable portfolio signal with validation areas."
+      : "Portfolio signal requires deeper recruiter review.";
+
+  const validationAreas = [...review, ...validation].slice(0, 3);
+
+  return (
+    <div className="grid gap-3">
+      <div className="rounded-2xl border border-slate-200 bg-slate-950 p-4 text-white shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#FF7043]">
+              Portfolio Intelligence
+            </div>
+            <div className="mt-1 text-base font-black leading-tight">
+              {headline}
+            </div>
+            <div className="mt-2 text-xs leading-5 text-slate-300">
+              Recruiter-facing interpretation from ForgeTomorrow&apos;s shared portfolio signal engine.
+            </div>
+          </div>
+          <div className="shrink-0 text-right">
+            <div className="text-3xl font-black text-[#FF7043]">
+              {score !== null && score !== undefined ? `${score}%` : "—"}
+            </div>
+            <div className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+              Signal Confidence
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2">
+            <div className="text-[10px] font-black uppercase tracking-wide text-slate-400">Proven</div>
+            <div className="mt-1 text-sm font-black text-emerald-200">{proven.length}</div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2">
+            <div className="text-[10px] font-black uppercase tracking-wide text-slate-400">Validate</div>
+            <div className="mt-1 text-sm font-black text-amber-200">{validation.length}</div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2">
+            <div className="text-[10px] font-black uppercase tracking-wide text-slate-400">Review</div>
+            <div className="mt-1 text-sm font-black text-rose-200">{review.length}</div>
+          </div>
+        </div>
+      </div>
+
+      {[identitySignal, portfolioSignal, credibilitySignal, readinessSignal]
+        .filter(Boolean)
+        .map((sig) => (
+          <div key={sig.key} className="rounded-2xl border border-slate-200 bg-white/88 p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs font-black text-slate-950">
+                  {String(sig.label || "").replace(" Signal", "")}
+                </div>
+                <div className="mt-1 text-xs leading-5 text-slate-600">
+                  {sig.recruiterInterpretation}
+                </div>
+              </div>
+              <span
+                className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-black uppercase ${
+                  statusTone(sig.status) === "good"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : statusTone(sig.status) === "warn"
+                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                    : "border-rose-200 bg-rose-50 text-rose-800"
+                }`}
+              >
+                {statusLabel(sig.status)}
+              </span>
+            </div>
+
+            {Array.isArray(sig.evidenceDetected) && sig.evidenceDetected.length ? (
+              <div className="mt-2 rounded-xl bg-slate-50 p-2">
+                <div className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                  Evidence
+                </div>
+                <ul className="mt-1 grid gap-1 text-xs text-slate-700">
+                  {sig.evidenceDetected.slice(0, 3).map((item, idx) => (
+                    <li key={`${sig.key}-evidence-${idx}`}>• {item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ))}
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        <div className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+          Recruiter Validation Areas
+        </div>
+        {validationAreas.length ? (
+          <div className="mt-2 grid gap-2">
+            {validationAreas.map((sig) => (
+              <div key={`validation-${sig.key}`} className="rounded-xl border border-white bg-white p-2">
+                <div className="text-xs font-black text-slate-800">
+                  {String(sig.label || "").replace(" Signal", "")}
+                </div>
+                <div className="mt-1 text-xs leading-5 text-slate-600">
+                  {sig.missingValidation?.[0] || sig.recruiterInterpretation || "Validate during recruiter review."}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-2 text-xs leading-5 text-slate-600">
+            No major portfolio validation concerns detected from the current visible evidence.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 function PrefRow({ label, value }) {
   if (!value) return null;
@@ -795,14 +941,8 @@ export default function CandidateProfileModal({
               {/* Recruiter command rail */}
               <div className="space-y-5">
                 <GlassCard>
-                  <SectionTitle eyebrow="Recruiter Intelligence" title="Signal Interpretation" />
-                  <ProfileSignalEngine
-  key={candidate?.id || 'signal-engine'}
-  profileData={signalProfileData}
-  mode="recruiter"
-  readOnly={true}
-  title="Recruiter Signal View"
-/>
+                  <SectionTitle eyebrow="Recruiter Intelligence" title="Portfolio Review" />
+                  <RecruiterPortfolioReview profileData={signalProfileData} />
 
                   {!isForgeCandidate && (
                     <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
