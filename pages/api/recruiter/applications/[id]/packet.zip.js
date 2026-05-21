@@ -351,8 +351,8 @@ function IntelligencePill({ label, value, color = "#0D1B2A" }) {
 function SignalMetaBadge({ children, color = "#374151", bg = "#F3F4F6" }) {
   if (!children) return null;
   return (
-    <View style={{ backgroundColor: bg, borderRadius: 999, padding: "3 6" }}>
-      <Text style={{ fontSize: 6.3, fontWeight: "bold", color }}>{String(children).toUpperCase()}</Text>
+    <View style={{ backgroundColor: bg, borderRadius: 999, padding: "3 7" }}>
+      <Text style={{ fontSize: 6.2, fontWeight: "bold", color }}>{String(children).toUpperCase()}</Text>
     </View>
   );
 }
@@ -383,7 +383,8 @@ function SignalIntelligenceCard({ signal, index }) {
   const title = safeString(signal.interpretationTitle || signal.label);
   const interpretation = safeString(signal.interpretationSummary || signal.recruiterInterpretation || signal.gapReason || signal.description);
   const focus = safeString(signal.recruiterFocus || signal.signalImpact);
-  const risk = signal.recruiterRisk || (signal.status === "direct" ? "Low Risk" : signal.status === "adjacent" ? "Medium Risk" : "High Risk");
+  const rawRisk = signal.recruiterRisk || (signal.status === "direct" ? "Low" : signal.status === "adjacent" ? "Medium" : "High");
+  const risk = String(rawRisk).toLowerCase().includes("risk") ? rawRisk : `${rawRisk} Risk`;
   const confidence = signal.confidenceLevel ? `${signal.confidenceLevel} Confidence` : "Measured Confidence";
 
   return (
@@ -452,6 +453,8 @@ function ReadinessSignalSummary({ signal, title, accent = "#0D1B2A" }) {
   const summary = safeString(signal.interpretationSummary || signal.recruiterInterpretation || signal.description);
   const context = safeList(signal.recruiterContext || signal.evidenceDetected, 4);
   const focus = safeString(signal.recruiterFocus || "");
+  const rawRisk = signal.recruiterRisk || (signal.status === "direct" ? "Low" : signal.status === "adjacent" ? "Medium" : "High");
+  const riskLabel = String(rawRisk).toLowerCase().includes("risk") ? rawRisk : `${rawRisk} Risk`;
 
   return (
     <View style={{ padding: "5 0", borderBottomWidth: 1, borderBottomColor: "#E5E7EB" }}>
@@ -459,7 +462,7 @@ function ReadinessSignalSummary({ signal, title, accent = "#0D1B2A" }) {
         <Text style={{ fontSize: 8.6, fontWeight: "bold", color: "#0D1B2A", flex: 1 }}>{title}</Text>
         <View style={{ flexDirection: "row", gap: 4 }}>
           <SignalMetaBadge color={getSignalColor(signal.status)} bg={signal.status === "direct" ? "#ECFDF5" : signal.status === "adjacent" ? "#FFFBEB" : "#FEF2F2"}>
-            {signal.recruiterRisk || (signal.status === "direct" ? "Low Risk" : signal.status === "adjacent" ? "Medium Risk" : "High Risk")}
+            {riskLabel}
           </SignalMetaBadge>
           <SignalMetaBadge color="#1D4ED8" bg="#EFF6FF">
             {signal.confidenceLevel ? `${signal.confidenceLevel} Confidence` : "Measured Confidence"}
@@ -479,7 +482,7 @@ function ReadinessSignalSummary({ signal, title, accent = "#0D1B2A" }) {
 
       {focus ? (
         <Text style={{ fontSize: 7.2, color: "#6B7280", lineHeight: 1.3 }}>
-          Validation: {focus}
+          Recruiter Note: {focus}
         </Text>
       ) : null}
     </View>
@@ -495,7 +498,7 @@ function InterviewPathBlock({ whyInterview }) {
   if (!behavioral.length && !roleSpecific.length) return null;
 
   return (
-    <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "7 9", borderLeftWidth: 3, borderLeftColor: "#0D1B2A", marginTop: 8 }}>
+    <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "7 9", borderLeftWidth: 3, borderLeftColor: "#0D1B2A", marginTop: 7 }}>
       <Text style={{ fontSize: 9, fontWeight: "bold", color: "#0D1B2A", marginBottom: 7 }}>
         RECOMMENDED INTERVIEW PATHS
       </Text>
@@ -850,7 +853,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
           <Text style={{ fontSize: 8, color: "#374151", lineHeight: 1.45 }}>
             {hasJD
               ? "Role-specific hiring confidence. Resume-to-JD alignment carries 65% weight; profile depth, portfolio proof, and recruiter-readiness carry 35%. This is not an ATS score — it is evidence-based hiring signal."
-              : "General recruiter confidence score. Profile depth, portfolio proof, and recruiter-readiness carry 70% weight; resume signal carries 30%. No job description was provided for role-specific alignment."}
+              : "General recruiter confidence score. Portfolio depth, portfolio proof, and recruiter-readiness carry 70% weight; resume signal carries 30%. No job description was provided for role-specific alignment."}
           </Text>
         </View>
 
@@ -896,7 +899,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
               WHAT FORGETOMORROW SEES
             </Text>
             <Text style={{ fontSize: 7.4, color: "#E5E7EB", lineHeight: 1.35 }}>
-              This section evaluates the candidate’s visible professional substance: positioning, narrative, capability proof, portfolio evidence, and credibility markers. Recruiter logistics are separated onto the next page so capability is not confused with availability or access metadata.
+              Visible professional capability, execution proof, positioning, and credibility evidence. Recruiter logistics are separated so capability is not confused with availability or access metadata.
             </Text>
           </View>
 
@@ -925,7 +928,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
             OPERATIONAL HIRING CONTEXT
           </Text>
           <Text style={{ fontSize: 7.4, color: "#E5E7EB", lineHeight: 1.35 }}>
-            Recruiter workflow context for scheduling, accessibility, communication, and follow-up. These details support hiring operations and should not be treated as candidate capability scoring.
+            Operational hiring context for scheduling, accessibility, communication, and follow-up. Not candidate capability scoring.
           </Text>
         </View>
 
@@ -943,10 +946,10 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
           </View>
         </View>
 
-        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 6, padding: "8 10", borderWidth: 1, borderColor: "#E5E7EB", marginBottom: 8 }}>
+        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 6, padding: "7 9", borderTopWidth: 1, borderTopColor: "#E5E7EB", marginBottom: 7 }}>
           <Text style={{ fontSize: 8.6, fontWeight: "bold", color: "#0D1B2A", marginBottom: 4 }}>RECRUITER READINESS SIGNALS</Text>
           <Text style={{ fontSize: 7.2, color: "#6B7280", lineHeight: 1.3, marginBottom: 3 }}>
-            Operational signals support recruiter workflow and hiring coordination.
+            Operational hiring context only.
           </Text>
 
           <ReadinessSignalSummary signal={readinessByKey.get("availability")} title="Work Structure & Scheduling" accent="#FF7043" />
