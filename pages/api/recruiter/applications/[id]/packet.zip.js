@@ -553,6 +553,7 @@ function FullCandidateIntelligencePDF({
   profileSignals,
   profileVerdict,
   realProfileSignalScore,
+  profileExplain,
 }) {
   const skills = Array.isArray(profile?.skills) ? profile.skills : safeJsonParse(profile?.skills) || [];
   const projects = Array.isArray(profile?.projects) ? profile.projects : safeJsonParse(profile?.projects) || [];
@@ -595,6 +596,29 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
   const resolvedProfileSignals = Array.isArray(profileSignals) && profileSignals.length > 0
     ? profileSignals
     : [];
+
+  const capabilitySignals = Array.isArray(profileExplain?.capabilitySignals) && profileExplain.capabilitySignals.length > 0
+    ? profileExplain.capabilitySignals
+    : resolvedProfileSignals.filter((s) => s?.signalGroup !== "recruiter_readiness" && !["availability", "language", "visibility"].includes(s?.key));
+
+  const readinessSignals = Array.isArray(profileExplain?.readinessSignals) && profileExplain.readinessSignals.length > 0
+    ? profileExplain.readinessSignals
+    : resolvedProfileSignals.filter((s) => s?.signalGroup === "recruiter_readiness" || ["availability", "language", "visibility"].includes(s?.key));
+
+  const readinessByKey = new Map(readinessSignals.map((s) => [s?.key, s]));
+
+  const workPrefs = profile?.workPreferences && typeof profile.workPreferences === "object" ? profile.workPreferences : {};
+  const readinessSnapshot = [
+    ["Work Status", workPrefs.workStatus || workPrefs.status || workPrefs.openTo],
+    ["Work Type", workPrefs.workType || workPrefs.preferredWorkType],
+    ["Schedule", workPrefs.schedule],
+    ["Location", profile?.location],
+    ["Relocation", workPrefs.willingToRelocate],
+    ["Start Timing", workPrefs.startDate || workPrefs.earliestStartDate],
+    ["Primary Resume", profile?.hasResume || profile?.primaryResume ? "Available" : "Not attached"],
+    ["Profile Visibility", profile?.profileVisibility],
+    ["Language", languages.length ? languages.join(", ") : null],
+  ].filter(([, value]) => value !== undefined && value !== null && String(value).trim());
 
   const scoreColor =
     overallSignalScore === null
@@ -781,14 +805,14 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
 
       <Page size="LETTER" style={aiStyles.page}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: "#FF7043" }}>
-          <Text style={{ fontSize: 14, fontWeight: "bold", color: "#0D1B2A" }}>Profile & Portfolio Intelligence</Text>
+          <Text style={{ fontSize: 14, fontWeight: "bold", color: "#0D1B2A" }}>Capability & Credibility Intelligence</Text>
           <Text style={{ fontSize: 9, color: "#9CA3AF" }}>{candidateName} • ForgeTomorrow</Text>
         </View>
 
         <View style={{ marginBottom: 16 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
             <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", letterSpacing: 0.5 }}>
-              PROFILE & PORTFOLIO INTELLIGENCE
+              CAPABILITY & CREDIBILITY INTELLIGENCE
             </Text>
             <Text style={{ fontSize: 7.5, color: "#6B7280" }}>
               {profileVerdict?.proven ?? 0} proven • {profileVerdict?.partial ?? 0} partial • {profileVerdict?.missing ?? 0} missing
@@ -800,18 +824,89 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
               WHAT FORGETOMORROW SEES
             </Text>
             <Text style={{ fontSize: 7.4, color: "#E5E7EB", lineHeight: 1.35 }}>
-              This section separates candidate capability signals from recruiter-readiness signals. Core signals evaluate proof, narrative, credibility, and portfolio evidence. Logistics signals such as availability, visibility, and language should be interpreted as context unless the role explicitly requires them.
+              This section evaluates the candidate’s visible professional substance: positioning, narrative, capability proof, portfolio evidence, and credibility markers. Recruiter logistics are separated onto the next page so capability is not confused with availability or access metadata.
             </Text>
           </View>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-            {resolvedProfileSignals.map((signal, i) => (
-              <SignalIntelligenceCard key={`profile-signal-${i}`} signal={signal} index={i} />
+            {capabilitySignals.map((signal, i) => (
+              <SignalIntelligenceCard key={`capability-signal-${i}`} signal={signal} index={i} />
             ))}
           </View>
         </View>
 
         <View style={{ borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 8, marginTop: 12 }}>
+          <Text style={{ fontSize: 8, color: "#9CA3AF", lineHeight: 1.5 }}>
+            ForgeTomorrow Candidate Alignment Reviews are for recruiter decision support only. AI-assisted signal analysis reflects available profile data at export time. Self-identification answers excluded.
+          </Text>
+        </View>
+      </Page>
+
+      <Page size="LETTER" style={aiStyles.page}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 18, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: "#FF7043" }}>
+          <Text style={{ fontSize: 14, fontWeight: "bold", color: "#0D1B2A" }}>Recruiter Readiness & Hiring Logistics</Text>
+          <Text style={{ fontSize: 9, color: "#9CA3AF" }}>{candidateName} • ForgeTomorrow</Text>
+        </View>
+
+        <View style={{ backgroundColor: "#0D1B2A", borderRadius: 6, padding: "10 12", marginBottom: 12 }}>
+          <Text style={{ fontSize: 8, color: "#FF7043", fontWeight: "bold", marginBottom: 4, letterSpacing: 0.4 }}>
+            OPERATIONAL HIRING CONTEXT
+          </Text>
+          <Text style={{ fontSize: 7.8, color: "#E5E7EB", lineHeight: 1.4 }}>
+            These signals support recruiter workflow, scheduling, verification, and follow-up. They are intentionally separated from capability scoring so logistics do not become a false measure of candidate skill.
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
+          <View style={{ flex: 1.1, backgroundColor: "#F9FAFB", borderRadius: 6, padding: "10 12", borderLeftWidth: 3, borderLeftColor: "#FF7043" }}>
+            <Text style={{ fontSize: 9, fontWeight: "bold", color: "#0D1B2A", marginBottom: 7 }}>HIRING LOGISTICS SNAPSHOT</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5 }}>
+              {readinessSnapshot.length ? readinessSnapshot.slice(0, 9).map(([label, value], i) => (
+                <View key={`ready-snapshot-${i}`} style={{ width: "31%", backgroundColor: "#FFFFFF", borderRadius: 4, padding: "6 7", borderWidth: 1, borderColor: "#E5E7EB" }}>
+                  <Text style={{ fontSize: 6.2, color: "#6B7280", fontWeight: "bold", marginBottom: 2, textTransform: "uppercase" }}>{label}</Text>
+                  <Text style={{ fontSize: 7.4, color: "#111827", fontWeight: "bold", lineHeight: 1.25 }}>{String(value)}</Text>
+                </View>
+              )) : (
+                <Text style={{ fontSize: 8, color: "#6B7280", lineHeight: 1.4 }}>No work preference or readiness details were provided.</Text>
+              )}
+            </View>
+          </View>
+
+          <View style={{ flex: 0.9, backgroundColor: "#FFF7ED", borderRadius: 6, padding: "10 12", borderLeftWidth: 3, borderLeftColor: "#FF7043" }}>
+            <Text style={{ fontSize: 9, fontWeight: "bold", color: "#7C2D12", marginBottom: 6 }}>READINESS INTERPRETATION</Text>
+            <Text style={{ fontSize: 7.8, color: "#374151", lineHeight: 1.45 }}>
+              Availability, language, and visibility are recruiter-readiness signals. They should guide follow-up and workflow decisions, not replace evaluation of capability, experience, or portfolio proof.
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 12 }}>
+          {readinessSignals.map((signal, i) => (
+            <SignalIntelligenceCard key={`readiness-signal-${i}`} signal={signal} index={i} />
+          ))}
+        </View>
+
+        {whyInterview ? (
+          <View style={{ backgroundColor: "#F9FAFB", borderRadius: 6, padding: "10 12", borderLeftWidth: 3, borderLeftColor: "#0D1B2A", marginBottom: 12 }}>
+            <Text style={{ fontSize: 9, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8 }}>SUGGESTED INTERVIEW FOCUS</Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 6.8, fontWeight: "bold", color: "#6B7280", marginBottom: 4, textTransform: "uppercase" }}>Behavioral</Text>
+                {Array.isArray(whyInterview.behavioral) && whyInterview.behavioral.slice(0, 2).map((q, i) => (
+                  <Text key={`ready-behavioral-${i}`} style={{ fontSize: 7.5, color: "#374151", lineHeight: 1.35, marginBottom: 4 }}>• {q}</Text>
+                ))}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 6.8, fontWeight: "bold", color: "#6B7280", marginBottom: 4, textTransform: "uppercase" }}>Role-Specific</Text>
+                {Array.isArray(whyInterview.occupational) && whyInterview.occupational.slice(0, 2).map((q, i) => (
+                  <Text key={`ready-role-${i}`} style={{ fontSize: 7.5, color: "#374151", lineHeight: 1.35, marginBottom: 4 }}>• {q}</Text>
+                ))}
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        <View style={{ borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 8, marginTop: 10 }}>
           <Text style={{ fontSize: 8, color: "#9CA3AF", lineHeight: 1.5 }}>
             ForgeTomorrow Candidate Alignment Reviews are for recruiter decision support only. AI-assisted signal analysis reflects available profile data at export time. Self-identification answers excluded.
           </Text>
@@ -909,28 +1004,6 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
           </View>
         ) : null}
 
-        {whyInterview ? (
-          <View style={{ marginBottom: 16 }}>
-            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>
-              SUGGESTED INTERVIEW QUESTIONS
-            </Text>
-
-            {Array.isArray(whyInterview.behavioral) &&
-              whyInterview.behavioral.slice(0, 2).map((q, i) => (
-                <View key={`behavioral-${i}`} style={{ marginBottom: 8 }}>
-                  <Text style={{ fontSize: 8, color: "#9CA3AF", marginBottom: 2 }}>BEHAVIORAL</Text>
-                  <Text style={{ fontSize: 9, color: "#374151", lineHeight: 1.5 }}>{q}</Text>
-                </View>
-              ))}
-
-            {Array.isArray(whyInterview.occupational) &&
-              whyInterview.occupational.slice(0, 2).map((q, i) => (
-                <View key={`occupational-${i}`} style={{ marginBottom: 8 }}>
-                  <Text style={{ fontSize: 8, color: "#9CA3AF", marginBottom: 2 }}>ROLE-SPECIFIC</Text>
-                  <Text style={{ fontSize: 9, color: "#374151", lineHeight: 1.5 }}>{q}</Text>
-                </View>
-              ))}
-          </View>
         ) : null}
 
         <View style={{ borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 8, marginTop: 16 }}>
@@ -1211,6 +1284,7 @@ export default async function handler(req, res) {
           profileSignals={profileSignals}
           profileVerdict={profileVerdict}
           realProfileSignalScore={realProfileSignalScore}
+          profileExplain={profileExplain}
         />
       );
 
