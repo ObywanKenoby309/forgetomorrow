@@ -326,7 +326,17 @@ if (!mounted) {
           </button>
         </form>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        <div
+  style={{
+    display: 'flex',
+    flexWrap: 'nowrap',
+    overflowX: 'auto',
+    gap: 10,
+    paddingBottom: 2,
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+  }}
+>
           {TYPES.map((type) => {
             const active = activeType === type.key;
             const count = counts[type.key] || 0;
@@ -337,17 +347,20 @@ if (!mounted) {
                 type="button"
                 onClick={() => setActiveType(type.key)}
                 style={{
-                  border: 'none',
-                  borderRadius: 999,
-                  padding: '8px 13px',
-                  background: active ? ORANGE : 'rgba(255,255,255,0.78)',
-                  color: active ? '#fff' : '#34495E',
-                  fontWeight: 900,
-                  cursor: 'pointer',
-                  boxShadow: active
-                    ? '0 10px 20px rgba(255,112,67,0.22)'
-                    : '0 6px 14px rgba(0,0,0,0.08)',
-                }}
+  border: 'none',
+  borderRadius: 999,
+  padding: '8px 13px',
+  background: active ? ORANGE : 'rgba(255,255,255,0.78)',
+  color: active ? '#fff' : '#34495E',
+  fontWeight: 900,
+  cursor: 'pointer',
+  boxShadow: active
+    ? '0 10px 20px rgba(255,112,67,0.22)'
+    : '0 6px 14px rgba(0,0,0,0.08)',
+
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+}}
               >
                 {type.label} {count ? `(${count})` : ''}
               </button>
