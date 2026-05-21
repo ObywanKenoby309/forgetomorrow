@@ -1004,7 +1004,6 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
           </View>
         ) : null}
 
-        ) : null}
 
         <View style={{ borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 8, marginTop: 16 }}>
           <Text style={{ fontSize: 8, color: "#9CA3AF", lineHeight: 1.5 }}>
