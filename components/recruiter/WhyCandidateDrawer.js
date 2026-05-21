@@ -334,6 +334,32 @@ function WhyPanel({
     );
   };
 
+  const BriefMetric = ({ label, value, tone = "neutral" }) => (
+    <div
+      className={`rounded-xl border px-3 py-2 ${tone === "good"
+        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+        : tone === "warn"
+        ? "border-amber-200 bg-amber-50 text-amber-800"
+        : tone === "risk"
+        ? "border-rose-200 bg-rose-50 text-rose-800"
+        : "border-slate-200 bg-slate-50 text-slate-700"}`}
+    >
+      <div className="text-[10px] font-black uppercase tracking-wide opacity-75">
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-black leading-tight">{value || "—"}</div>
+    </div>
+  );
+
+  const RecruiterBriefBlock = ({ title, children }) => (
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+        {title}
+      </div>
+      <div className="mt-2">{children}</div>
+    </div>
+  );
+
   function rowKey(row) {
     return `${String(row?.tier || "")}::${String(row?.label || "").trim().toLowerCase()}`;
   }
@@ -345,8 +371,51 @@ function WhyPanel({
   const scanTitle = needsJD ? "Resume capabilities (scan)" : "Required capabilities (scan)";
 
   const scanEmptyMessage = needsJD
-    ? "Job description is too short to infer requirements. Showing resume-only capability scan."
+    ? "No role context loaded. Showing portfolio-first professional intelligence supported by primary resume evidence."
     : "No requirement mappings available.";
+
+  const recruiterDiscovery = explain?.recruiterDiscovery || null;
+  const discoveryMetrics = Array.isArray(recruiterDiscovery?.metrics) ? recruiterDiscovery.metrics : [];
+  const discoverySections = Array.isArray(recruiterDiscovery?.sections) ? recruiterDiscovery.sections : [];
+  const discoverySummary =
+    recruiterDiscovery?.summary ||
+    summary ||
+    "Portfolio-first professional intelligence is available for recruiter review.";
+
+  const metricTone = (value) => {
+    const v = String(value || "").toLowerCase();
+    if (v.includes("strong") || v.includes("low") || v.includes("available")) return "good";
+    if (v.includes("review") || v.includes("moderate") || v.includes("limited")) return "warn";
+    if (v.includes("high") || v.includes("missing") || v.includes("emerging")) return "risk";
+    return "neutral";
+  };
+
+  const defaultMetrics = [
+    {
+      label: "Professional Signal",
+      value: typeof score === "number" ? (score >= 75 ? "Strong" : score >= 55 ? "Moderate" : "Emerging") : "Review",
+      tone: typeof score === "number" ? (score >= 75 ? "good" : score >= 55 ? "warn" : "risk") : "neutral",
+    },
+    {
+      label: "Portfolio Weight",
+      value: "65%",
+      tone: "good",
+    },
+    {
+      label: "Resume Support",
+      value: "35%",
+      tone: "neutral",
+    },
+    {
+      label: "Validation Risk",
+      value: gapSkills.length || gapsSignals.length ? "Review" : "Low",
+      tone: gapSkills.length || gapsSignals.length ? "warn" : "good",
+    },
+  ];
+
+  const briefMetrics = discoveryMetrics.length
+    ? discoveryMetrics.map((m) => ({ ...m, tone: m.tone || metricTone(m.value) }))
+    : defaultMetrics;
 
   return (
     <div className="h-full flex flex-col">
@@ -379,21 +448,31 @@ function WhyPanel({
             </div>
           }
         >
-          {!!summary && <p className="text-sm text-slate-600 mt-1">{summary}</p>}
-
-          {needsJD ? (
-            <div className="mt-2 rounded border bg-slate-50 p-3">
-              <div className="text-sm font-semibold text-slate-800">
-                No job context loaded. Showing portfolio-first professional intelligence.
-              </div>
-              <div className="text-xs text-slate-600 mt-1">
-                Right now, this view is resume-only. It will not infer or score requirements until the JD has enough detail.
-              </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+              Internal Search Weighting
             </div>
-          ) : null}
+            <div className="mt-1 text-sm font-semibold text-slate-900">
+              Portfolio leads the discovery review. Primary resume supports the signal.
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-slate-600">
+              {discoverySummary}
+            </p>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+            {briefMetrics.slice(0, 4).map((m, i) => (
+              <BriefMetric
+                key={`${m.label || "metric"}-${i}`}
+                label={m.label}
+                value={m.value}
+                tone={m.tone}
+              />
+            ))}
+          </div>
 
           <p className="mt-2 text-xs text-slate-500">
-            Evidence-first guidance for recruiter judgment. Recruiters review and override all decisions.
+            Evidence-backed professional intelligence. Recruiters control all final decisions.
           </p>
         </CollapsibleSection>
 
@@ -424,7 +503,7 @@ function WhyPanel({
         >
           {needsJD ? (
             <div className="mb-3 text-xs text-slate-600">
-              JD is missing or too short - labels below reflect what is evidenced in the resume only.
+              No role context loaded. Signals below reflect portfolio and primary resume evidence.
             </div>
           ) : null}
 
@@ -540,7 +619,7 @@ function WhyPanel({
 
             {!isFull ? (
               <div className="px-3 py-2 border-t bg-slate-50 text-xs text-slate-500">
-                WHY Lite shows the top items for fast scan. Upgrade for full evidence.
+                WHY Lite shows top evidence for fast scan. Upgrade for full evidence.
               </div>
             ) : null}
           </div>
@@ -552,6 +631,37 @@ function WhyPanel({
           isOpen={Boolean(openMap[SECTION_KEYS.skills])}
           onToggle={() => toggle(SECTION_KEYS.skills)}
         >
+          {discoverySections.length ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {discoverySections.slice(0, isFull ? 6 : 4).map((section, i) => (
+                <RecruiterBriefBlock key={`${section.title || "section"}-${i}`} title={section.title || "Recruiter Signal"}>
+                  {section.interpretation ? (
+                    <p className="text-sm leading-relaxed text-slate-700">{section.interpretation}</p>
+                  ) : null}
+
+                  {Array.isArray(section.evidence) && section.evidence.length ? (
+                    <div className="mt-2 rounded-lg bg-slate-50 p-2">
+                      <div className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                        Evidence / Context
+                      </div>
+                      <ul className="mt-1 grid gap-1 text-xs text-slate-700">
+                        {section.evidence.slice(0, 4).map((item, idx) => (
+                          <li key={`${String(item).slice(0, 24)}-${idx}`}>• {String(item)}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {section.note ? (
+                    <div className="mt-2 border-t border-slate-100 pt-2 text-xs leading-relaxed text-slate-500">
+                      <span className="font-black text-slate-600">Recruiter Note: </span>
+                      {section.note}
+                    </div>
+                  ) : null}
+                </RecruiterBriefBlock>
+              ))}
+            </div>
+          ) : (
           <div className="grid gap-4">
             {/* Demonstrated capabilities */}
             <div>
@@ -600,11 +710,11 @@ function WhyPanel({
 
                   {needsJD ? (
                     <div className="text-sm text-slate-600">
-                      Add a job description to show what is required vs. what is evidenced.
+                      Load a role context to compare discovery signals against role-specific requirements.
                     </div>
                   ) : noCriticalGaps ? (
                     <div className="text-sm text-emerald-700">
-                      No critical gaps detected.
+                      No critical validation concerns detected.
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
@@ -623,7 +733,7 @@ function WhyPanel({
                   )}
 
                   <div className="text-xs text-slate-500 mt-2">
-                    This reflects what is (or is not) evidenced in the resume text provided.
+                    Areas below may require recruiter validation or interview follow-up.
                   </div>
                 </div>
               </div>
@@ -635,11 +745,11 @@ function WhyPanel({
 
                 {needsJD ? (
                   <div className="text-sm text-slate-600">
-                    Add a job description to show what is required vs. what is evidenced.
+                    Load a role context to compare discovery signals against role-specific requirements.
                   </div>
                 ) : noCriticalGaps ? (
                   <div className="text-sm text-emerald-700">
-                    No critical gaps detected.
+                    No critical validation concerns detected.
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
@@ -657,11 +767,12 @@ function WhyPanel({
               </div>
             ) : null}
           </div>
+          )}
         </CollapsibleSection>
 
         {/* Internal Candidate Signals label */}
         <div className="text-[11px] text-slate-500 px-0.5">
-          Internal Candidate Signals — shown only when evaluating internal candidates against internal roles or saved recruiter searches.
+          Internal recruiter discovery view — portfolio-first signal, supported by primary resume evidence.
         </div>
 
         {/* Career path */}

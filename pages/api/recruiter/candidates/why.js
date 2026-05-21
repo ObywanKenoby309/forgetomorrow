@@ -302,6 +302,207 @@ function buildFiltersTriggered(filters, job) {
   return triggered;
 }
 
+
+function scoreBand(score) {
+  const n = Number(score);
+  if (!Number.isFinite(n)) return "Review";
+  if (n >= 75) return "Strong";
+  if (n >= 55) return "Moderate";
+  return "Emerging";
+}
+
+function metricTone(value) {
+  const v = String(value || "").toLowerCase();
+  if (v.includes("strong") || v.includes("low") || v.includes("available") || v.includes("clear")) return "good";
+  if (v.includes("moderate") || v.includes("review") || v.includes("limited")) return "warn";
+  if (v.includes("emerging") || v.includes("high") || v.includes("missing")) return "risk";
+  return "neutral";
+}
+
+function plainLabel(item, fallback = "Signal") {
+  if (!item) return fallback;
+  if (typeof item === "string") return item;
+  return (
+    item.label ||
+    item.requirement ||
+    item.type ||
+    item.signal_id ||
+    item.text ||
+    fallback
+  );
+}
+
+function evidenceText(item, fallback = "Evidence available for recruiter review.") {
+  if (!item) return fallback;
+  if (typeof item === "string") return item;
+  return item.text || item.label || item.requirement || item.type || fallback;
+}
+
+function buildRecruiterReadiness(scored = {}) {
+  const prefs = scored.workPreferences && typeof scored.workPreferences === "object" ? scored.workPreferences : {};
+
+  const workStatus = scored.workStatus || prefs.workStatus || prefs.currentWorkStatus || prefs.status || "";
+  const workType = scored.preferredWorkType || prefs.preferredWorkType || prefs.workType || prefs.employmentType || "";
+  const relocate = scored.willingToRelocate ?? prefs.willingToRelocate ?? prefs.relocate ?? prefs.relocation ?? "";
+  const locations = Array.isArray(scored.preferredLocations)
+    ? scored.preferredLocations
+    : Array.isArray(prefs.preferredLocations)
+    ? prefs.preferredLocations
+    : Array.isArray(prefs.locations)
+    ? prefs.locations
+    : [];
+
+  const evidence = [
+    workStatus ? `Work status: ${workStatus}` : "",
+    workType ? `Work type: ${workType}` : "",
+    relocate !== "" && relocate !== null && relocate !== undefined ? `Relocation: ${relocate}` : "",
+    locations.length ? `Preferred locations: ${locations.slice(0, 4).join(", ")}` : "",
+    scored.resumeId ? "Primary resume available" : "Primary resume not found",
+  ].filter(Boolean);
+
+  return {
+    title: "Recruiter Readiness",
+    interpretation: evidence.length
+      ? "Work preferences and recruiter access context are available for review."
+      : "Recruiter readiness context is limited.",
+    evidence,
+    note: "Use readiness signals for workflow coordination, not capability scoring.",
+  };
+}
+
+function buildRecruiterDiscovery({ scored, explained, filters, job, matchedEvidence, matchedGaps }) {
+  const score = typeof scored.match === "number" ? scored.match : explained?.score ?? null;
+  const firstName = normStr(scored.name).split(" ")[0] || "Candidate";
+
+  const profileSkills = Array.isArray(scored.skillsProfile) ? scored.skillsProfile : [];
+  const resumeSkills = Array.isArray(scored.skillsResume) ? scored.skillsResume : [];
+  const visibleSkills = Array.isArray(scored.skills) ? scored.skills : [];
+
+  const evidenceItems = Array.isArray(matchedEvidence) ? matchedEvidence : [];
+  const validationItems = Array.isArray(matchedGaps) ? matchedGaps : [];
+
+  const positioningEvidence = [
+    scored.headline ? `Headline: ${scored.headline}` : "",
+    scored.summary ? "Professional summary available" : "",
+    scored.location ? `Location: ${scored.location}` : "",
+  ].filter(Boolean);
+
+  const capabilityEvidence = [
+    ...visibleSkills.slice(0, 6).map((s) => `Capability: ${s}`),
+    ...evidenceItems.slice(0, 4).map((e) => evidenceText(e)),
+  ].filter(Boolean);
+
+  const validationEvidence = validationItems.length
+    ? validationItems.slice(0, 6).map((g) => plainLabel(g, "Validation area"))
+    : ["No major validation concerns detected from current search signals."];
+
+  const transferableEvidence = evidenceItems
+    .filter((e) => {
+      const txt = String(e?.type || e?.label || e?.text || "").toLowerCase();
+      return txt.includes("transfer") || txt.includes("adjacent") || txt.includes("support") || txt.includes("operations");
+    })
+    .slice(0, 4)
+    .map((e) => evidenceText(e));
+
+  const hasJobContext = Boolean(job?.id || job?.title || filters?.jobTitle);
+
+  const summary =
+    explained?.summary && explained.summary !== "No strong signal was detected for the current recruiter search."
+      ? `${firstName}: ${explained.summary}`
+      : hasJobContext
+      ? `${firstName} has recruiter-visible portfolio and primary resume signals for this role context.`
+      : `${firstName} has recruiter-visible portfolio identity signals supported by primary resume evidence.`;
+
+  const validationRisk = validationItems.length ? "Review" : "Low";
+
+  return {
+    mode: "recruiter_search",
+    weighting: {
+      label: "Portfolio-first discovery signal",
+      portfolioWeight: 65,
+      resumeWeight: 35,
+      note: "Internal recruiter search weighs portfolio identity first. Primary resume evidence supports the review.",
+    },
+    score,
+    summary,
+    metrics: [
+      {
+        label: "Professional Signal",
+        value: scoreBand(score),
+        tone: metricTone(scoreBand(score)),
+      },
+      {
+        label: "Portfolio Weight",
+        value: "65%",
+        tone: "good",
+      },
+      {
+        label: "Resume Support",
+        value: "35%",
+        tone: "neutral",
+      },
+      {
+        label: "Validation Risk",
+        value: validationRisk,
+        tone: metricTone(validationRisk),
+      },
+    ],
+    sections: [
+      {
+        key: "positioning",
+        title: "Professional Positioning",
+        interpretation: positioningEvidence.length
+          ? "Recruiter-visible professional identity and positioning are available."
+          : "Professional positioning requires recruiter review.",
+        evidence: positioningEvidence.length ? positioningEvidence : ["No headline or summary context available."],
+        note: "Use positioning to understand the candidate’s professional direction before reviewing tactical resume details.",
+      },
+      {
+        key: "capability",
+        title: "Capability & Execution",
+        interpretation: capabilityEvidence.length
+          ? "Visible capability signals are present across portfolio and primary resume evidence."
+          : "Capability evidence is limited in the current search context.",
+        evidence: capabilityEvidence.length ? capabilityEvidence.slice(0, 8) : ["No capability evidence found for this search."],
+        note: "Validate the strongest signals against role needs during recruiter review.",
+      },
+      {
+        key: "transferable",
+        title: "Transferable Strengths",
+        interpretation: transferableEvidence.length
+          ? "Adjacent and transferable strengths are visible for recruiter consideration."
+          : "Transferable strengths may require recruiter interpretation.",
+        evidence: transferableEvidence.length
+          ? transferableEvidence
+          : [
+              profileSkills.length ? `Profile skills available: ${profileSkills.slice(0, 4).join(", ")}` : "",
+              resumeSkills.length ? `Primary resume skills available: ${resumeSkills.slice(0, 4).join(", ")}` : "",
+            ].filter(Boolean),
+        note: "Treat transferable strengths as interview validation prompts, not automatic fit conclusions.",
+      },
+      {
+        key: "validation",
+        title: "Validation Areas",
+        interpretation: validationItems.length
+          ? "Some areas require recruiter validation before moving forward."
+          : "No major validation concerns detected from current search signals.",
+        evidence: validationEvidence,
+        note: "Validation areas are review prompts, not rejection reasons.",
+      },
+      buildRecruiterReadiness(scored),
+    ].filter(Boolean),
+    interviewGuidance: {
+      behavioral: [
+        "Tell me about a time you handled competing priorities under a tight deadline. What did you prioritize and why?",
+        "Describe a process you improved. What changed and what was the impact?",
+      ],
+      capability: visibleSkills.slice(0, 2).map((skill) => `Walk me through a real example where you delivered outcomes using ${skill}.`),
+    },
+    filters: buildFiltersTriggered(filters, job),
+  };
+}
+
+
 function buildForgeCandidate({ candidate, bestResume }) {
   const workPreferencesObj = getWorkPreferencesObject(candidate.workPreferences);
 
@@ -411,16 +612,36 @@ function toWhyResponse({ forgeCandidate, filters, job }) {
         .filter((t) => t.title || t.company)
     : [];
 
+  const recruiterDiscovery = buildRecruiterDiscovery({
+    scored,
+    explained,
+    filters,
+    job,
+    matchedEvidence,
+    matchedGaps,
+  });
+
   return {
+    // Shared score fields retained for existing consumers.
     score: typeof scored.match === "number" ? scored.match : explained?.score ?? null,
     summary,
     reasons: reasons.slice(0, 12),
 
+    // Legacy compatibility: existing drawer/compare surfaces may still read these.
     capabilitySignals: {
       matched: Array.isArray(scored.skills) ? scored.skills.slice(0, 24) : [],
       gaps: matchedGaps.slice(0, 24),
       transferable: [],
     },
+    skills: {
+      matched: Array.isArray(scored.skills) ? scored.skills.slice(0, 24) : [],
+      gaps: matchedGaps.slice(0, 24),
+      transferable: [],
+    },
+
+    // New recruiter internal-search interpretation.
+    // Portfolio-first discovery mode: portfolio 65%, primary resume 35%.
+    recruiterDiscovery,
 
     trajectory,
     filters_triggered: buildFiltersTriggered(filters, job),
@@ -433,6 +654,9 @@ function toWhyResponse({ forgeCandidate, filters, job }) {
     resumeId: scored.resumeId || null,
     resumeSource: scored.resumeSource || "none",
     resumeUpdatedAt: scored.resumeUpdatedAt || null,
+
+    contextMode: "recruiter_search",
+    weighting: recruiterDiscovery.weighting,
   };
 }
 

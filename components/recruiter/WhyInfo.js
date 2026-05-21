@@ -38,26 +38,29 @@ export default function WhyInfo() {
             role="dialog"
             aria-modal="true"
           >
-            <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 border">
-              <h2 className="text-xl font-bold text-[#FF7043] mb-2">
+            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 border border-slate-200">
+              <h2 className="text-xl font-black text-[#FF7043] mb-2">
                 How ForgeTomorrow Computes “WHY”
               </h2>
 
               <p className="text-sm text-slate-700 leading-relaxed">
-                ForgeTomorrow evaluates professional positioning, execution evidence, transferable capability, recruiter readiness, and portfolio intelligence using explainable reasoning systems. Every signal shown is evidence-backed and recruiter-reviewable.
+                ForgeTomorrow evaluates professional positioning, execution evidence,
+                transferable capability, recruiter readiness, and portfolio intelligence
+                using explainable reasoning systems. Every signal shown is evidence-backed
+                and recruiter-reviewable.
               </p>
 
-              <ul className="mt-3 text-sm text-slate-700 list-disc pl-5 space-y-1">
-                <li>Matches your requirements to real resume text</li>
-                <li>Extracts evidence for each skill or requirement</li>
-                <li>Highlights gaps and transferable strengths</li>
-                <li>Never ranks candidates without showing “why”</li>
-                <li>Your review overrides AI suggestions — always</li>
+              <ul className="mt-4 text-sm text-slate-700 list-disc pl-5 space-y-2">
+                <li>Portfolio-first professional intelligence for recruiter discovery</li>
+                <li>Evidence-backed capability interpretation</li>
+                <li>Transferable strength and validation analysis</li>
+                <li>Transparent recruiter-facing reasoning and signal visibility</li>
+                <li>Recruiters always control final hiring decisions</li>
               </ul>
 
-              <div className="mt-4 text-xs text-slate-500">
-                Transparent AI. No black boxes. No surprises.
-                You’re always in control.
+              <div className="mt-5 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs leading-relaxed text-slate-600">
+                Internal recruiter search prioritizes portfolio and professional identity
+                signals first. Primary resume evidence supports the review.
               </div>
 
               <div className="mt-6 flex justify-end">
