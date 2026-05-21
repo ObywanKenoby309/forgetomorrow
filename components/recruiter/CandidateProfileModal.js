@@ -125,6 +125,66 @@ function capabilityClusters(skills = []) {
   return assigned.slice(0, 5);
 }
 
+
+function roleInterpretation(exp = {}) {
+  const signals = roleSignals(exp);
+  if (!signals.length) return "Recruiter should review role details for scope, systems, and delivery evidence.";
+
+  const parts = [];
+  if (signals.includes("Support delivery")) parts.push("support delivery");
+  if (signals.includes("Endpoint operations")) parts.push("endpoint operations");
+  if (signals.includes("Identity/access support")) parts.push("identity/access support");
+  if (signals.includes("Knowledge/process ownership")) parts.push("knowledge/process ownership");
+  if (signals.includes("Client-facing communication")) parts.push("client-facing communication");
+  if (signals.includes("Outcome evidence")) parts.push("outcome evidence");
+
+  return `Operational evidence indicates ${parts.slice(0, 4).join(", ")}.`;
+}
+
+function buildInterviewFocus({ roleSignalList = [], hasProjects, hasResume }) {
+  const focus = [];
+
+  if (roleSignalList.includes("Support delivery")) {
+    focus.push("Validate support volume, ticket complexity, escalation handling, and service ownership.");
+  }
+  if (roleSignalList.includes("Endpoint operations")) {
+    focus.push("Ask for examples of endpoint lifecycle work, imaging, deployment, and troubleshooting depth.");
+  }
+  if (roleSignalList.includes("Identity/access support")) {
+    focus.push("Confirm identity/access administration scope, tools used, and security boundaries.");
+  }
+  if (roleSignalList.includes("Knowledge/process ownership")) {
+    focus.push("Ask how documentation, process improvement, or knowledge ownership changed team outcomes.");
+  }
+  if (!hasProjects) {
+    focus.push("Request one concrete project or work example with scope, ownership, and measurable result.");
+  }
+  if (!hasResume) {
+    focus.push("Ask for resume detail or source artifacts before advancing to final evaluation.");
+  }
+
+  return focus.slice(0, 5);
+}
+
+function portfolioReviewCopy(sig) {
+  if (!sig) return "";
+
+  if (sig.key === "credentials") {
+    return "Professional credibility is supported through operational execution, structured support experience, and formal education visibility.";
+  }
+
+  if (sig.key === "portfolio" && sig.status === "missing") {
+    return "Structured project proof is not yet visible. Resume history and interview examples should be used to validate execution depth.";
+  }
+
+  if (sig.key === "identity" && sig.status !== "direct") {
+    return "Professional identity is present, but role level, specialization, or impact signal could be clearer for faster recruiter interpretation.";
+  }
+
+  return sig.recruiterInterpretation;
+}
+
+
 function roleSignals(exp = {}) {
   const text = textOf(exp).toLowerCase();
   const signals = [];
@@ -351,7 +411,7 @@ function RecruiterPortfolioReview({ profileData }) {
                   {String(sig.label || "").replace(" Signal", "")}
                 </div>
                 <div className="mt-1 text-xs leading-5 text-slate-600">
-                  {sig.recruiterInterpretation}
+                  {portfolioReviewCopy(sig)}
                 </div>
               </div>
               <span
@@ -394,7 +454,11 @@ function RecruiterPortfolioReview({ profileData }) {
                   {String(sig.label || "").replace(" Signal", "")}
                 </div>
                 <div className="mt-1 text-xs leading-5 text-slate-600">
-                  {sig.missingValidation?.[0] || sig.recruiterInterpretation || "Validate during recruiter review."}
+                  {sig.key === "portfolio"
+                    ? "Ask for one concrete project, work sample, implementation example, or measurable outcome."
+                    : sig.key === "credentials"
+                    ? "Confirm credibility through experience scope, education, training, certifications, service background, or documented execution."
+                    : sig.missingValidation?.[0] || portfolioReviewCopy(sig) || "Validate during recruiter review."}
                 </div>
               </div>
             ))}
@@ -598,8 +662,26 @@ export default function CandidateProfileModal({
     candidate?.visibility ||
     (candidate?.slug ? "PUBLIC" : "");
 
+  const displayLocation =
+    candidate.location ||
+    preferredLocationList?.[0] ||
+    (preferredLocationList.length ? "Preferred locations listed" : "Location not listed");
+
+  const portfolioIdentityPoints = [
+    summaryText,
+    experienceList.length,
+    hasSkills,
+    hasEducation,
+    hasWorkPrefs,
+    preferredLocationList.length,
+    profileVisibility,
+  ].filter(Boolean).length;
+
   const portfolioDepth =
-    hasProjects ? "Project Evidence" : isForgeCandidate ? "Profile Only" : "Limited";
+    portfolioIdentityPoints >= 5 ? "Strong" : portfolioIdentityPoints >= 3 ? "Moderate" : "Emerging";
+
+  const portfolioProof =
+    hasProjects ? "Project Evidence" : "Limited Project Evidence";
 
   const executionVisibility =
     hasProjects || roleSignalList.length >= 4 ? "Strong" : roleSignalList.length ? "Moderate" : "Limited";
@@ -653,7 +735,7 @@ export default function CandidateProfileModal({
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300">
               <span>{candidate.role || candidate.headline || "Candidate"}</span>
               <span>•</span>
-              <span>{candidate.location || "Location not listed"}</span>
+              <span>{displayLocation}</span>
               {workStatusFmt ? (
                 <>
                   <span>•</span>
@@ -713,7 +795,7 @@ export default function CandidateProfileModal({
                 <SignalMetric label="Professional Signal" value={hasResume || hasSkills ? "Strong" : "Review"} tone={hasResume || hasSkills ? "good" : "warn"} />
                 <SignalMetric label="Execution Visibility" value={executionVisibility} tone={executionVisibility === "Strong" ? "good" : executionVisibility === "Moderate" ? "warn" : "risk"} />
                 <SignalMetric label="Validation Risk" value={validationRisk} tone={validationRisk === "Low" ? "good" : "warn"} />
-                <SignalMetric label="Portfolio Depth" value={portfolioDepth} tone={hasProjects ? "good" : isForgeCandidate ? "warn" : "risk"} />
+                <SignalMetric label="Portfolio Depth" value={portfolioDepth} tone={portfolioDepth === "Strong" ? "good" : portfolioDepth === "Moderate" ? "warn" : "risk"} />
                 <SignalMetric label="Resume Access" value={hasResume ? "Available" : "Missing"} tone={hasResume ? "good" : "risk"} />
               </div>
             </GlassCard>
@@ -771,6 +853,11 @@ export default function CandidateProfileModal({
                               ) : null}
                             </div>
 
+                            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs leading-5 text-slate-700">
+                              <span className="font-black text-slate-800">Recruiter read: </span>
+                              {roleInterpretation(exp)}
+                            </div>
+
                             {signals.length ? (
                               <div className="mt-3 flex flex-wrap gap-2">
                                 {signals.map((signal) => (
@@ -821,7 +908,7 @@ export default function CandidateProfileModal({
                   </GlassCard>
 
                   <GlassCard>
-                    <SectionTitle eyebrow="Portfolio Proof" title="Projects & Evidence" />
+                    <SectionTitle eyebrow="Execution Proof" title={portfolioProof} />
                     {hasProjects ? (
                       <div className="grid gap-3">
                         {projectList.slice(0, 4).map((project, idx) => {
@@ -845,7 +932,7 @@ export default function CandidateProfileModal({
                       </div>
                     ) : (
                       <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                        Portfolio project proof is limited. Use resume evidence and interview validation to confirm execution depth.
+                        No structured project entries are listed yet. Resume history and operational experience currently carry execution proof; validate project ownership, outcomes, and measurable impact during recruiter review.
                       </div>
                     )}
                   </GlassCard>
@@ -976,7 +1063,32 @@ export default function CandidateProfileModal({
                 </GlassCard>
 
                 <GlassCard>
-                  <SectionTitle eyebrow="Team Controls" title="Skills, Tags & Notes" />
+                  <SectionTitle eyebrow="Recruiter Read" title="Interpretation & Interview Focus" />
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                      Primary Recruiter Interpretation
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-slate-700">
+                      {roleSignalList.length
+                        ? `Career evidence supports ${roleSignalList.slice(0, 4).join(", ").toLowerCase()} for recruiter review.`
+                        : "Career evidence should be reviewed for scope, systems, and delivery context."}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-white/80 p-3">
+                    <div className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                      Suggested Interview Focus
+                    </div>
+                    <ul className="mt-2 grid gap-1.5 text-xs leading-5 text-slate-700">
+                      {buildInterviewFocus({ roleSignalList, hasProjects, hasResume }).map((item, idx) => (
+                        <li key={`focus-${idx}`}>• {item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </GlassCard>
+
+                <GlassCard>
+                  <SectionTitle eyebrow="Recruiter Utilities" title="Team Notes & Controls" />
                   <div className="text-[11px] text-slate-400 mb-3">
                     Visible to your team only. Does not modify the candidate&apos;s portfolio.
                   </div>
