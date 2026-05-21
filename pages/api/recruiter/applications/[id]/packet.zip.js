@@ -336,6 +336,144 @@ function AdditionalInfoPDF({
   );
 }
 
+
+function statusLabel(status) {
+  if (status === "direct") return "Proven";
+  if (status === "adjacent") return "Partial";
+  return "Missing";
+}
+
+function safeList(value, limit = 4) {
+  return Array.isArray(value)
+    ? value.map((v) => safeString(v).trim()).filter(Boolean).slice(0, limit)
+    : [];
+}
+
+function CompactBulletList({ items, color = "#374151", max = 4 }) {
+  const list = safeList(items, max);
+  if (!list.length) return null;
+
+  return (
+    <View style={{ gap: 2 }}>
+      {list.map((item, i) => (
+        <Text key={`bullet-${i}`} style={{ fontSize: 7.5, color, lineHeight: 1.35 }}>
+          • {item}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+function IntelligencePill({ label, value, color = "#0D1B2A" }) {
+  if (!value && value !== 0) return null;
+
+  return (
+    <View
+      style={{
+        backgroundColor: "#F3F4F6",
+        borderRadius: 4,
+        padding: "5 7",
+        minWidth: 76,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+      }}
+    >
+      <Text style={{ fontSize: 6.5, color: "#6B7280", fontWeight: "bold", marginBottom: 2, textTransform: "uppercase" }}>
+        {label}
+      </Text>
+      <Text style={{ fontSize: 8, color, fontWeight: "bold" }}>{String(value)}</Text>
+    </View>
+  );
+}
+
+function SignalIntelligenceCard({ signal, index }) {
+  const color = getSignalColor(signal.status);
+  const evidence = safeList(signal.evidenceDetected, 3);
+  const missing = safeList(signal.missingValidation, 3);
+  const interpretation = safeString(signal.recruiterInterpretation || signal.gapReason || signal.description);
+  const impact = safeString(signal.signalImpact);
+
+  return (
+    <View
+      key={`profile-signal-${index}`}
+      wrap={false}
+      style={{
+        width: "48.5%",
+        backgroundColor: "#F9FAFB",
+        borderRadius: 5,
+        padding: "9 10",
+        marginBottom: 8,
+        borderLeftWidth: 3,
+        borderLeftColor: color,
+      }}
+    >
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+        <Text style={{ fontSize: 8.5, fontWeight: "bold", color: "#0D1B2A", maxWidth: 170 }}>
+          {signal.label}
+        </Text>
+        <Text style={{ fontSize: 7, fontWeight: "bold", color }}>
+          {statusLabel(signal.status)}
+        </Text>
+      </View>
+
+      <View style={{ flexDirection: "row", gap: 5, marginBottom: 6 }}>
+        <IntelligencePill label="Risk" value={signal.recruiterRisk || (signal.status === "direct" ? "Low" : signal.status === "adjacent" ? "Medium" : "High")} color={color} />
+        <IntelligencePill label="Confidence" value={signal.confidenceLevel || "Measured"} color="#0D1B2A" />
+      </View>
+
+      {interpretation ? (
+        <View style={{ marginBottom: 6 }}>
+          <Text style={{ fontSize: 6.5, fontWeight: "bold", color: "#FF7043", marginBottom: 2, textTransform: "uppercase" }}>
+            What ForgeTomorrow Sees
+          </Text>
+          <Text style={{ fontSize: 7.5, color: "#374151", lineHeight: 1.35 }}>{interpretation}</Text>
+        </View>
+      ) : null}
+
+      {evidence.length ? (
+        <View style={{ marginBottom: 6 }}>
+          <Text style={{ fontSize: 6.5, fontWeight: "bold", color: "#16A34A", marginBottom: 2, textTransform: "uppercase" }}>
+            Evidence Detected
+          </Text>
+          <CompactBulletList items={evidence} color="#374151" max={3} />
+        </View>
+      ) : null}
+
+      {missing.length ? (
+        <View style={{ marginBottom: 6 }}>
+          <Text style={{ fontSize: 6.5, fontWeight: "bold", color: "#D97706", marginBottom: 2, textTransform: "uppercase" }}>
+            Missing Validation
+          </Text>
+          <CompactBulletList items={missing} color="#374151" max={3} />
+        </View>
+      ) : null}
+
+      {impact ? (
+        <View style={{ borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 5, marginTop: 2 }}>
+          <Text style={{ fontSize: 6.5, fontWeight: "bold", color: "#6B7280", marginBottom: 2, textTransform: "uppercase" }}>
+            Signal Impact
+          </Text>
+          <Text style={{ fontSize: 7.2, color: "#4B5563", lineHeight: 1.3 }}>{impact}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function CompactInsightColumn({ title, color, items, emptyText }) {
+  const list = safeList(items, 4);
+  return (
+    <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 5, padding: "9 10", borderTopWidth: 3, borderTopColor: color }}>
+      <Text style={{ fontSize: 8, fontWeight: "bold", color, marginBottom: 5 }}>{title}</Text>
+      {list.length ? (
+        <CompactBulletList items={list} max={4} />
+      ) : (
+        <Text style={{ fontSize: 7.5, color: "#9CA3AF", lineHeight: 1.4 }}>{emptyText || "No items detected."}</Text>
+      )}
+    </View>
+  );
+}
+
 function FullCandidateIntelligencePDF({
   candidateName,
   candidateEmail,
@@ -521,43 +659,15 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
         </View>
 
         {(whyStrengths.length > 0 || whyGaps.length > 0 || whyTransferable.length > 0) ? (
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 10, letterSpacing: 0.5 }}>
+          <View style={{ marginBottom: 18 }}>
+            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>
               RESUME INTELLIGENCE SUMMARY
             </Text>
-
-            {whyStrengths.length > 0 ? (
-              <View style={{ marginBottom: 10 }}>
-                <Text style={{ fontSize: 9, fontWeight: "bold", color: "#16A34A", marginBottom: 6 }}>Strengths</Text>
-                {whyStrengths.map((s, i) => (
-                  <Text key={`strength-${i}`} style={{ fontSize: 8, color: "#374151", lineHeight: 1.5, marginBottom: 3 }}>
-                    • {safeString(s)}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-
-            {whyTransferable.length > 0 ? (
-              <View style={{ marginBottom: 10 }}>
-                <Text style={{ fontSize: 9, fontWeight: "bold", color: "#D97706", marginBottom: 6 }}>Transferable Signals</Text>
-                {whyTransferable.map((t, i) => (
-                  <Text key={`transfer-${i}`} style={{ fontSize: 8, color: "#374151", lineHeight: 1.5, marginBottom: 3 }}>
-                    • {safeString(t)}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-
-            {whyGaps.length > 0 ? (
-              <View>
-                <Text style={{ fontSize: 9, fontWeight: "bold", color: "#DC2626", marginBottom: 6 }}>Validation Areas</Text>
-                {whyGaps.map((g, i) => (
-                  <Text key={`gap-${i}`} style={{ fontSize: 8, color: "#374151", lineHeight: 1.5, marginBottom: 3 }}>
-                    • {safeString(g)}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <CompactInsightColumn title="Strengths" color="#16A34A" items={whyStrengths} emptyText="No clear strengths detected yet." />
+              <CompactInsightColumn title="Transferable" color="#D97706" items={whyTransferable} emptyText="No transferable signals detected yet." />
+              <CompactInsightColumn title="Validate" color="#DC2626" items={whyGaps} emptyText="No major validation areas detected." />
+            </View>
           </View>
         ) : null}
 
@@ -638,33 +748,30 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
           <Text style={{ fontSize: 9, color: "#9CA3AF" }}>{candidateName} • ForgeTomorrow</Text>
         </View>
 
-        <View style={{ marginBottom: 20 }}>
-          <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>
-            PROFILE & PORTFOLIO SIGNALS
-          </Text>
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
+            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", letterSpacing: 0.5 }}>
+              PROFILE & PORTFOLIO INTELLIGENCE
+            </Text>
+            <Text style={{ fontSize: 7.5, color: "#6B7280" }}>
+              {profileVerdict?.proven ?? 0} proven • {profileVerdict?.partial ?? 0} partial • {profileVerdict?.missing ?? 0} missing
+            </Text>
+          </View>
 
-          {resolvedProfileSignals.map((signal, i) => (
-            <View
-              key={`profile-signal-${i}`}
-              style={{
-                backgroundColor: "#F9FAFB",
-                borderRadius: 4,
-                padding: "8 12",
-                marginBottom: 6,
-                borderLeftWidth: 3,
-                borderLeftColor: getSignalColor(signal.status),
-              }}
-            >
-              <Text style={{ fontSize: 9, fontWeight: "bold", color: "#0D1B2A", marginBottom: 3 }}>
-                {signal.label} · {signal.status === "direct" ? "Proven" : signal.status === "adjacent" ? "Partial" : "Missing"}
-              </Text>
-              <Text style={{ fontSize: 8, color: "#6B7280", lineHeight: 1.45 }}>
-                {signal.status === "direct"
-                  ? signal.description
-                  : signal.gapReason || signal.description || ""}
-              </Text>
-            </View>
-          ))}
+          <View style={{ backgroundColor: "#0D1B2A", borderRadius: 6, padding: "12 14", marginBottom: 10 }}>
+            <Text style={{ fontSize: 8, color: "#FF7043", fontWeight: "bold", marginBottom: 4, letterSpacing: 0.4 }}>
+              WHAT FORGETOMORROW SEES
+            </Text>
+            <Text style={{ fontSize: 8.5, color: "#E5E7EB", lineHeight: 1.55 }}>
+              This section evaluates the candidate’s profile, portfolio, preferences, credibility evidence, and recruiter-readiness beyond the resume. It is designed to show what evidence is visible, what still needs validation, and where the recruiter should focus follow-up.
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+            {resolvedProfileSignals.map((signal, i) => (
+              <SignalIntelligenceCard key={`profile-signal-${i}`} signal={signal} index={i} />
+            ))}
+          </View>
         </View>
 
         {profile?.aboutMe ? (
@@ -983,7 +1090,7 @@ export default async function handler(req, res) {
       const coverTemplateData = buildCoverTemplateData({ app, candidateName });
       const coverDoc = <CoverLetterTemplatePDF data={coverTemplateData} />;
       const coverBuf = await pdf(coverDoc).toBuffer();
-      zip.file(`01_CoverLetter_${base}.pdf`, coverBuf);
+      zip.file(`05_CoverLetter_${base}.pdf`, coverBuf);
     }
 
     {
@@ -1056,7 +1163,7 @@ export default async function handler(req, res) {
       );
 
       const intelligenceBuf = await pdf(intelligenceDoc).toBuffer();
-      zip.file(`05_FT_Candidate_Alignment_Review_${base}.pdf`, intelligenceBuf);
+      zip.file(`01_FT_Candidate_Alignment_Review_${base}.pdf`, intelligenceBuf);
     }
 
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });

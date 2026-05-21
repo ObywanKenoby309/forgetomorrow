@@ -65,6 +65,7 @@ function AssistPanel({ signal, profileData, careerContext, onApply, onClose }) {
           signalContext: {
             signal: signal.key,
             gapReason: signal.gapReason,
+            recruiterInterpretation: signal.recruiterInterpretation || '',
             currentStatus: signal.status,
           },
           notes: notes || null,
@@ -560,7 +561,7 @@ useEffect(() => {
 				  fontWeight: 600,
 				}}
 			  >
-				<strong>Recruiter interpretation:</strong> this signal is not fully carrying its weight yet. Strengthen this area to make your profile easier to validate, search, and trust.
+				<strong>Recruiter interpretation:</strong> {sig.recruiterInterpretation || 'This signal needs more visible evidence before recruiters can fully validate it. Treat this as a signal-strength note, not an automatic disqualifier.'}
 			  </div>
 			)}
 
