@@ -436,7 +436,7 @@ function SignalIntelligenceCard({ signal, index }) {
       {focus ? (
         <View style={{ borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 4, marginTop: 2 }}>
           <Text style={{ fontSize: 6.3, fontWeight: "bold", color: "#6B7280", marginBottom: 2, textTransform: "uppercase" }}>
-            Recruiter Focus
+            Validation Note
           </Text>
           <Text style={{ fontSize: 7, color: "#4B5563", lineHeight: 1.28 }}>{focus}</Text>
         </View>
@@ -479,7 +479,7 @@ function ReadinessSignalSummary({ signal, title, accent = "#0D1B2A" }) {
 
       {focus ? (
         <Text style={{ fontSize: 7.2, color: "#6B7280", lineHeight: 1.3 }}>
-          Focus: {focus}
+          Validation: {focus}
         </Text>
       ) : null}
     </View>
@@ -946,7 +946,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
         <View style={{ backgroundColor: "#FFFFFF", borderRadius: 6, padding: "8 10", borderWidth: 1, borderColor: "#E5E7EB", marginBottom: 8 }}>
           <Text style={{ fontSize: 8.6, fontWeight: "bold", color: "#0D1B2A", marginBottom: 4 }}>RECRUITER READINESS SIGNALS</Text>
           <Text style={{ fontSize: 7.2, color: "#6B7280", lineHeight: 1.3, marginBottom: 3 }}>
-            Operational signals below are shown for recruiter workflow, not candidate skill ranking.
+            Operational signals support recruiter workflow and hiring coordination.
           </Text>
 
           <ReadinessSignalSummary signal={readinessByKey.get("availability")} title="Work Structure & Scheduling" accent="#FF7043" />
