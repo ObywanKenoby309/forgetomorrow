@@ -165,13 +165,13 @@ function buildCoverTemplateData({ app, candidateName }) {
 
 const aiStyles = StyleSheet.create({
   page: { padding: 40, fontFamily: "Helvetica", fontSize: 10, color: "#111827", lineHeight: 1.4 },
-  title: { fontSize: 16, fontWeight: "bold", marginBottom: 6 },
+  title: { fontSize: 16, fontWeight: "bold", marginBottom: 4 },
   subtitle: { fontSize: 10, color: "#6b7280", marginBottom: 16 },
   sectionTitle: {
     fontSize: 11,
     fontWeight: "bold",
     marginTop: 14,
-    marginBottom: 6,
+    marginBottom: 4,
     textTransform: "uppercase",
     color: "#111827",
   },
@@ -292,45 +292,6 @@ function AdditionalInfoPDF({
         ) : (
           <Text style={[aiStyles.qValue, aiStyles.muted]}>No consent record found.</Text>
         )}
-
-        <Text style={aiStyles.sectionTitle}>ForgeTomorrow Assessment</Text>
-        {forgeAssessment ? (
-          <View>
-            <View style={aiStyles.row}>
-              <Text style={aiStyles.qLabel}>Model</Text>
-              <Text style={aiStyles.qValue}>
-                {forgeAssessment.model || "Unknown"}
-                {forgeAssessment.modelVersion ? ` (${forgeAssessment.modelVersion})` : ""}
-              </Text>
-            </View>
-            <View style={aiStyles.row}>
-              <Text style={aiStyles.qLabel}>Score</Text>
-              <Text style={aiStyles.qValue}>
-                {forgeAssessment.score === null || forgeAssessment.score === undefined
-                  ? "Not provided"
-                  : String(forgeAssessment.score)}
-              </Text>
-            </View>
-            <View style={aiStyles.row}>
-              <Text style={aiStyles.qLabel}>Generated at</Text>
-              <Text style={aiStyles.qValue}>
-                {forgeAssessment.generatedAt ? String(forgeAssessment.generatedAt) : "Not provided"}
-              </Text>
-            </View>
-
-            <View style={aiStyles.row}>
-              <Text style={aiStyles.qLabel}>Result</Text>
-              <Text style={aiStyles.pre}>{JSON.stringify(forgeAssessment.result, null, 2)}</Text>
-            </View>
-
-            <View style={aiStyles.divider} />
-            <Text style={[aiStyles.qValue, aiStyles.muted]}>
-              Self-identification answers are not included in recruiter packets.
-            </Text>
-          </View>
-        ) : (
-          <Text style={[aiStyles.qValue, aiStyles.muted]}>Not generated yet.</Text>
-        )}
       </Page>
     </Document>
   );
@@ -401,7 +362,7 @@ function SignalIntelligenceCard({ signal, index }) {
         width: "48.5%",
         backgroundColor: "#F9FAFB",
         borderRadius: 5,
-        padding: "9 10",
+        padding: "7 9",
         marginBottom: 8,
         borderLeftWidth: 3,
         borderLeftColor: color,
@@ -416,22 +377,18 @@ function SignalIntelligenceCard({ signal, index }) {
         </Text>
       </View>
 
-      <View style={{ flexDirection: "row", gap: 5, marginBottom: 6 }}>
+      <View style={{ flexDirection: "row", gap: 5, marginBottom: 4 }}>
         <IntelligencePill label="Risk" value={signal.recruiterRisk || (signal.status === "direct" ? "Low" : signal.status === "adjacent" ? "Medium" : "High")} color={color} />
         <IntelligencePill label="Confidence" value={signal.confidenceLevel || "Measured"} color="#0D1B2A" />
       </View>
 
       {interpretation ? (
-        <View style={{ marginBottom: 6 }}>
-          <Text style={{ fontSize: 6.5, fontWeight: "bold", color: "#FF7043", marginBottom: 2, textTransform: "uppercase" }}>
-            What ForgeTomorrow Sees
-          </Text>
-          <Text style={{ fontSize: 7.5, color: "#374151", lineHeight: 1.35 }}>{interpretation}</Text>
+        <View style={{ marginBottom: 4 }}>          <Text style={{ fontSize: 7.5, color: "#374151", lineHeight: 1.35 }}>{interpretation}</Text>
         </View>
       ) : null}
 
       {evidence.length ? (
-        <View style={{ marginBottom: 6 }}>
+        <View style={{ marginBottom: 4 }}>
           <Text style={{ fontSize: 6.5, fontWeight: "bold", color: "#16A34A", marginBottom: 2, textTransform: "uppercase" }}>
             Evidence Detected
           </Text>
@@ -440,7 +397,7 @@ function SignalIntelligenceCard({ signal, index }) {
       ) : null}
 
       {missing.length ? (
-        <View style={{ marginBottom: 6 }}>
+        <View style={{ marginBottom: 4 }}>
           <Text style={{ fontSize: 6.5, fontWeight: "bold", color: "#D97706", marginBottom: 2, textTransform: "uppercase" }}>
             Missing Validation
           </Text>
@@ -463,7 +420,7 @@ function SignalIntelligenceCard({ signal, index }) {
 function CompactInsightColumn({ title, color, items, emptyText }) {
   const list = safeList(items, 4);
   return (
-    <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 5, padding: "9 10", borderTopWidth: 3, borderTopColor: color }}>
+    <View style={{ flex: 1, backgroundColor: "#F9FAFB", borderRadius: 5, padding: "7 9", borderTopWidth: 3, borderTopColor: color }}>
       <Text style={{ fontSize: 8, fontWeight: "bold", color, marginBottom: 5 }}>{title}</Text>
       {list.length ? (
         <CompactBulletList items={list} max={4} />
@@ -557,7 +514,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
 
           <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.12)", marginBottom: 32 }} />
 
-          <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.40)", marginBottom: 6, letterSpacing: 0.5 }}>
+          <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.40)", marginBottom: 4, letterSpacing: 0.5 }}>
             ROLE APPLIED FOR
           </Text>
           <Text style={{ fontSize: 16, color: "#FF7043", fontWeight: "bold", marginBottom: 4 }}>
@@ -577,7 +534,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
                   <Text style={{ fontSize: 52, fontWeight: "bold", color: scoreColor, lineHeight: 1 }}>
                     {overallSignalScore}
                   </Text>
-                  <Text style={{ fontSize: 18, fontWeight: "bold", color: scoreColor, marginBottom: 6 }}>%</Text>
+                  <Text style={{ fontSize: 18, fontWeight: "bold", color: scoreColor, marginBottom: 4 }}>%</Text>
                 </View>
                 <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.50)" }}>
                   {overallSignalScore >= 75 ? "Strong Match" : overallSignalScore >= 50 ? "Moderate Match" : "Emerging Match"}
@@ -592,6 +549,37 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
               Confidential. For authorized recruiter use only. ForgeTomorrow signal analysis is AI-assisted and not a hiring decision.
               Self-identification excluded.
             </Text>
+
+            <View style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: 5,
+              padding: "12 14",
+              marginTop: 12,
+              borderLeftWidth: 3,
+              borderLeftColor: "#FF7043",
+            }}>
+              <Text style={{
+                fontSize: 8,
+                fontWeight: "bold",
+                color: "#FF7043",
+                marginBottom: 4,
+                letterSpacing: 0.3,
+              }}>
+                FORGETOMORROW INTERPRETATION
+              </Text>
+
+              <Text style={{
+                fontSize: 9,
+                color: "#374151",
+                lineHeight: 1.7,
+              }}>
+                {overallSignalScore >= 75
+                  ? "ForgeTomorrow sees strong direct alignment supported by credible execution evidence, transferable capability depth, and recruiter-usable validation signals."
+                  : overallSignalScore >= 50
+                  ? "ForgeTomorrow sees meaningful transferable capability and operational alignment, though some role-specific validation areas remain."
+                  : "ForgeTomorrow sees emerging alignment potential, but additional direct evidence or recruiter validation may still be required."}
+              </Text>
+            </View>
           </View>
         </View>
       </Page>
@@ -664,29 +652,29 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
               RESUME INTELLIGENCE SUMMARY
             </Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <CompactInsightColumn title="Strengths" color="#16A34A" items={whyStrengths} emptyText="No clear strengths detected yet." />
-              <CompactInsightColumn title="Transferable" color="#D97706" items={whyTransferable} emptyText="No transferable signals detected yet." />
-              <CompactInsightColumn title="Validate" color="#DC2626" items={whyGaps} emptyText="No major validation areas detected." />
+              <CompactInsightColumn title="Operational Strengths" color="#16A34A" items={whyStrengths} emptyText="No clear strengths detected yet." />
+              <CompactInsightColumn title="Transferable Capability Signals" color="#D97706" items={whyTransferable} emptyText="No transferable signals detected yet." />
+              <CompactInsightColumn title="Recruiter Validation Areas" color="#DC2626" items={whyGaps} emptyText="No major validation areas detected." />
             </View>
           </View>
         ) : null}
 
         <View style={{ marginBottom: 20 }}>
           <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 8, letterSpacing: 0.5 }}>
-            SIGNAL ALIGNMENT DETAILS
+            EVIDENCE & ALIGNMENT ANALYSIS
           </Text>
           {whySignalsMatched.length > 0 ? (
             whySignalsMatched.slice(0, 7).map((sig, i) => {
               const tierColor = sig.tier === "A" ? "#FF7043" : "#6B7280";
               const strengthPct = typeof sig.strength === "number" ? Math.round(sig.strength * 100) : null;
               const matchTypeLabel = {
-                tool_implies_category: "Tool → Category match",
-                synonym_phrase: "Synonym / phrase match",
-                single_token_only: "Keyword match",
-                direct_match: "Direct match",
+                tool_implies_category: "Supporting operational evidence",
+                synonym_phrase: "Strong transferable evidence",
+                single_token_only: "Supporting keyword evidence",
+                direct_match: "Direct evidence match",
               }[sig.match_type] || sig.match_type || "Signal match";
               return (
-                <View key={`sig-${i}`} style={{ backgroundColor: "#F9FAFB", borderRadius: 5, padding: "10 12", marginBottom: 6, borderLeftWidth: 3, borderLeftColor: "#16A34A" }}>
+                <View key={`sig-${i}`} style={{ backgroundColor: "#F9FAFB", borderRadius: 5, padding: "10 12", marginBottom: 4, borderLeftWidth: 3, borderLeftColor: "#16A34A" }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                     <Text style={{ fontSize: 9, fontWeight: "bold", color: "#111827" }}>
                       {sig.label}
@@ -716,11 +704,11 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
           ) : null}
           {whyNotDemonstrated.length > 0 ? (
             <View style={{ marginTop: 8 }}>
-              <Text style={{ fontSize: 9, fontWeight: "bold", color: "#DC2626", marginBottom: 6 }}>
+              <Text style={{ fontSize: 9, fontWeight: "bold", color: "#DC2626", marginBottom: 4 }}>
                 NOT YET DEMONSTRATED
               </Text>
               {whyNotDemonstrated.map((sig, i) => (
-                <View key={`gap-sig-${i}`} style={{ backgroundColor: "#FEF2F2", borderRadius: 5, padding: "8 12", marginBottom: 6, borderLeftWidth: 3, borderLeftColor: "#DC2626" }}>
+                <View key={`gap-sig-${i}`} style={{ backgroundColor: "#FEF2F2", borderRadius: 5, padding: "8 12", marginBottom: 4, borderLeftWidth: 3, borderLeftColor: "#DC2626" }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
                     <Text style={{ fontSize: 9, fontWeight: "bold", color: "#111827" }}>{sig.label}</Text>
                     <Text style={{ fontSize: 7, color: "#DC2626", fontWeight: "bold" }}>TIER {sig.tier}</Text>
@@ -776,7 +764,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
 
         {profile?.aboutMe ? (
           <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 6, letterSpacing: 0.5 }}>
+            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 4, letterSpacing: 0.5 }}>
               PROFESSIONAL SUMMARY
             </Text>
             <Text style={{ fontSize: 10, color: "#374151", lineHeight: 1.7 }}>{profile.aboutMe}</Text>
@@ -828,7 +816,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
                   EDUCATION
                 </Text>
                 {education.map((e, i) => (
-                  <View key={`edu-${i}`} style={{ marginBottom: 6 }}>
+                  <View key={`edu-${i}`} style={{ marginBottom: 4 }}>
                     <Text style={{ fontSize: 9, fontWeight: "bold", color: "#374151" }}>
                       {[e?.degree, e?.field].filter(Boolean).join(" in ")}
                     </Text>
@@ -846,7 +834,7 @@ const profileSignalScore = realProfileSignalScore ?? whyResult?.profileScore ?? 
               PORTFOLIO & PROJECTS
             </Text>
             {projects.slice(0, 6).map((p, i) => (
-              <View key={`project-${i}`} style={{ backgroundColor: "#F9FAFB", borderRadius: 4, padding: "10 12", marginBottom: 6, borderLeftWidth: 3, borderLeftColor: "#FF7043" }}>
+              <View key={`project-${i}`} style={{ backgroundColor: "#F9FAFB", borderRadius: 4, padding: "10 12", marginBottom: 4, borderLeftWidth: 3, borderLeftColor: "#FF7043" }}>
                 <Text style={{ fontSize: 10, fontWeight: "bold", color: "#0D1B2A", marginBottom: 3 }}>
                   {typeof p === "string" ? `Project ${i + 1}` : safeString(p?.name || p?.title || `Project ${i + 1}`)}
                 </Text>
