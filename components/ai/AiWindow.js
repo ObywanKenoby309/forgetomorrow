@@ -63,14 +63,20 @@ export default function AiWindow({
 
   const scrollRef = useRef(null);
 
-  // ✅ NEW: capture page context (client-side only)
+  // ✅ capture page context + optional Forge workspace intelligence packet
   const buildClientContext = useCallback(() => {
     try {
+      const ftContext =
+        typeof window !== 'undefined' && window.__FT_CONTEXT__ && typeof window.__FT_CONTEXT__ === 'object'
+          ? window.__FT_CONTEXT__
+          : null;
+
       return {
         mode: resolvedMode,
         pathname: String(router?.pathname || ''),
         asPath: String(router?.asPath || ''),
         query: router?.query || {},
+        ftContext,
         ts: new Date().toISOString(),
       };
     } catch {

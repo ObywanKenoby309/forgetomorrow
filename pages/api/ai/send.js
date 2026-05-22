@@ -3,6 +3,15 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
 import jwt from "jsonwebtoken";
+import {
+  buildStrikerContextPacket,
+  summarizeContextPacket,
+} from "@/lib/ai/strikerContextBuilders";
+import {
+  detectStrikerIntent,
+  buildOperationalGuidance,
+  buildRouteSystemHint,
+} from "@/lib/ai/strikerRoutes";
 
 function readCookie(req, name) {
   try {
@@ -349,10 +358,10 @@ function buildForgeIntelligenceGlossary() {
 }
 
 function buildWorkspaceIntelligence(context) {
-  const ctx = safeJson(context) || {};
+  const ctx = buildStrikerContextPacket(context || {});
   const blocks = [];
 
-  const surface = buildSurfacePlaybook({ mode: String(ctx.mode || "").toUpperCase(), context });
+  const surface = buildSurfacePlaybook({ mode: String(ctx.mode || "").toUpperCase(), context: ctx });
   blocks.push(
     [
       "Workspace intelligence:",
@@ -578,11 +587,13 @@ function buildSystemPrompt(mode, context) {
           ? "Mode: RECRUITER. Help recruiter workflows: job templates, candidate review, pipeline steps, explainability."
           : `Mode: ${String(mode || "UNKNOWN")}.`;
 
-  const ctx = safeJson(context) || {};
+  const ctx = buildStrikerContextPacket(context || {});
   const pageBits = [
     ctx?.pathname ? `pathname=${coerceStr(ctx.pathname, 200)}` : "",
     ctx?.asPath ? `asPath=${coerceStr(ctx.asPath, 200)}` : "",
     ctx?.mode ? `clientMode=${coerceStr(ctx.mode, 40)}` : "",
+    ctx?.surface ? `surface=${coerceStr(ctx.surface, 80)}` : "",
+    summarizeContextPacket(ctx) ? `workspace=${coerceStr(summarizeContextPacket(ctx), 500)}` : "",
   ].filter(Boolean);
 
   const pageLine = pageBits.length
@@ -684,8 +695,24 @@ async function generateAssistantReply({
   prisma,
   lastUserContent,
 }) {
+  const normalizedContext = buildStrikerContextPacket(context || {});
+  const route = detectStrikerIntent({
+    message: lastUserContent,
+    mode: threadMode,
+    context: normalizedContext,
+  });
+
+  const operationalReply = buildOperationalGuidance({
+    route,
+    mode: threadMode,
+    context: normalizedContext,
+    message: lastUserContent,
+  });
+
+  if (operationalReply) return operationalReply;
+
   // ✅ Forge-specific direct answers BEFORE generic model generation
-  const direct = buildDirectForgeAnswer({ threadMode, content: lastUserContent, context });
+  const direct = buildDirectForgeAnswer({ threadMode, content: lastUserContent, context: normalizedContext });
   if (direct) return direct;
 
   // ✅ NEW: handoff guardrail BEFORE any generation
@@ -706,7 +733,11 @@ async function generateAssistantReply({
 
   const generated = await tryGenerateWithOpenAI({
     mode: threadMode,
-    context,
+    context: {
+      ...(normalizedContext || {}),
+      route,
+      routeHint: buildRouteSystemHint({ route, context: normalizedContext }),
+    },
     history,
   });
 
@@ -742,8 +773,9 @@ export default async function handler(req, res) {
   const threadId = String(body.threadId || "").trim();
   const content = String(body.content || "").trim();
 
-  // ✅ optional client context (page awareness, chrome, etc.)
-  const context = body.context && typeof body.context === "object" ? body.context : null;
+  // ✅ optional client context (page awareness, chrome, workspace intelligence, etc.)
+  const rawContext = body.context && typeof body.context === "object" ? body.context : null;
+  const context = rawContext ? buildStrikerContextPacket(rawContext) : null;
 
   if (!threadId) return res.status(400).json({ error: "Missing threadId" });
   if (!content) return res.status(400).json({ error: "Missing content" });
