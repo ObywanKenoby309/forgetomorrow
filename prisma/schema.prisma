@@ -78,6 +78,7 @@ model Application {
   recruiterNotes      String?
   seekerNotes         String?
   answers             ApplicationAnswer[]
+  interviewPrep       SeekerInterviewPrep?
   assessment          ApplicationAssessment?
   consent             ApplicationConsent?
   expectations        ApplicationExpectations?
@@ -220,6 +221,20 @@ model ApplicationAssessment {
 
   @@index([applicationId])
   @@map("application_assessments")
+}
+
+model SeekerInterviewPrep {
+  id            String      @id @default(cuid())
+  applicationId Int         @unique
+  result        Json
+  resumeText    String
+  jobId         Int?
+  generatedAt   DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@map("seeker_interview_prep")
 }
 
 model ApplicationPacketExport {
@@ -839,6 +854,8 @@ model User {
   resumeAlignLastResetMonth    String?
   jobAlignFreeUses        Int     @default(0)
   jobAlignLastResetMonth  String?
+  interviewPrepFreeUses        Int                            @default(0)
+  interviewPrepLastResetMonth  String?
   department                   Department?
   employee                     Boolean                        @default(false)
   growthPivotFreeUses          Int                            @default(0)

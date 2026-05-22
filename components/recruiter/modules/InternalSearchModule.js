@@ -1651,6 +1651,98 @@ export default function InternalSearchModule() {
   const [whyData, setWhyData] = useState(null);
   const [whyCandidate, setWhyCandidate] = useState(null);
 
+  // ── Striker context injection ────────────────────────────────────────────────
+  // Writes window.__FT_CONTEXT__ whenever candidate, WHY, search, or filter state
+  // changes. AiWindow reads this on every message send via buildClientContext().
+  // WHY state takes priority for activeCandidate when the WHY drawer is open.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const strikerCandidate = whyOpen && whyCandidate ? whyCandidate : selected;
+
+      window.__FT_CONTEXT__ = {
+        surface: "recruiter_candidate_center",
+
+        activeCandidate: strikerCandidate
+          ? {
+              id:         strikerCandidate.id        || null,
+              name:       strikerCandidate.name       || null,
+              title:      strikerCandidate.currentTitle || strikerCandidate.title || strikerCandidate.role || null,
+              location:   strikerCandidate.location   || strikerCandidate.city   || strikerCandidate.region || null,
+              workStatus: strikerCandidate.workStatus || strikerCandidate.status || null,
+              match:      typeof strikerCandidate.match === "number" ? strikerCandidate.match : null,
+              skills:     Array.isArray(strikerCandidate.skills)
+                            ? strikerCandidate.skills.slice(0, 16)
+                            : [],
+              summary:    strikerCandidate.about || strikerCandidate.summary || strikerCandidate.bio || null,
+              profileSlug: strikerCandidate.slug || strikerCandidate.profileSlug || null,
+            }
+          : null,
+
+        activeWhy: whyData
+          ? {
+              score:              typeof whyData.score === "number" ? whyData.score : null,
+              summary:            whyData.summary            || null,
+              strongestAlignment: whyData.strongestAlignment || whyData.strongest || null,
+              biggestGap:         whyData.biggestGap         || whyData.gap        || null,
+              reasons:            Array.isArray(whyData.reasons) ? whyData.reasons.slice(0, 6) : [],
+              skillsMatched:      Array.isArray(whyData.skills?.matched)    ? whyData.skills.matched.slice(0, 10)    : [],
+              skillsGaps:         Array.isArray(whyData.skills?.gaps)       ? whyData.skills.gaps.slice(0, 10)       : [],
+              skillsTransferable: Array.isArray(whyData.skills?.transferable) ? whyData.skills.transferable.slice(0, 6) : [],
+              trajectory:         Array.isArray(whyData.trajectory)         ? whyData.trajectory.slice(0, 5)         : [],
+              filtersTriggered:   Array.isArray(whyData.filters_triggered)  ? whyData.filters_triggered.slice(0, 8)  : [],
+            }
+          : null,
+
+        // activeJob: the recruiter's search intent — no formal job posting object
+        // in this module, but jobTitle is the closest proxy
+        activeJob: jobTitle
+          ? { title: jobTitle, company: null }
+          : null,
+
+        activeSearch: {
+          query:       nameQuery    || null,
+          location:    locQuery     || locationFilter || null,
+          bool:        boolQuery    || null,
+          resultCount: Array.isArray(candidates) ? candidates.length : null,
+        },
+
+        activeTargetingFilters: {
+          summaryKeywords:   summaryKeywords   || null,
+          jobTitle:          jobTitle          || null,
+          workStatus:        workStatus        || null,
+          preferredWorkType: preferredWorkType || null,
+          willingToRelocate: willingToRelocate || null,
+          location:          locationFilter    || null,
+          skills:            skills            || null,
+          languages:         languages         || null,
+          education:         education         || null,
+        },
+      };
+    } catch {
+      // Never crash the recruiter UI — Striker context is best-effort
+    }
+  }, [
+    selected,
+    whyOpen,
+    whyCandidate,
+    whyData,
+    nameQuery,
+    locQuery,
+    boolQuery,
+    locationFilter,
+    summaryKeywords,
+    jobTitle,
+    workStatus,
+    preferredWorkType,
+    willingToRelocate,
+    skills,
+    languages,
+    education,
+    candidates,
+  ]);
+
   const fetchWhyExplainForCandidate = async (c) => {
     if (!c) {
       throw new Error("Missing candidate for WHY.");

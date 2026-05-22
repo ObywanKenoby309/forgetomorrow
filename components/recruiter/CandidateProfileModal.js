@@ -509,6 +509,56 @@ export default function CandidateProfileModal({
     setTagsLocal(toSafeArray(incomingTags));
   }, [open, candidate]);
 
+  // ── Striker context injection ────────────────────────────────────────────────
+  // Writes window.__FT_CONTEXT__ when the full candidate profile modal is open.
+  // This gives Striker the richest available candidate signal — full profile,
+  // resume, projects, skills, education, work preferences.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!open || !candidate) return;
+
+    try {
+      const allSkills = [
+        ...toSafeArray(skillsLocal),
+        ...toSafeArray(candidate?.skills),
+        ...toSafeArray(candidate?.skillsProfile),
+      ].filter(Boolean).slice(0, 20);
+
+      window.__FT_CONTEXT__ = {
+        surface: "recruiter_candidate_center",
+
+        activeCandidate: {
+          id:          candidate.id          || null,
+          name:        candidate.name        || null,
+          title:       candidate.currentTitle || candidate.title || candidate.role || candidate.headline || null,
+          location:    candidate.location    || null,
+          workStatus:  candidate.workStatus  || candidate.workPreferences?.workStatus || null,
+          match:       typeof candidate.match === "number" ? candidate.match : null,
+          skills:      allSkills,
+          summary:     candidate.aboutMe || candidate.about || candidate.summary || candidate.bio || candidate.profileSummary || null,
+          profileSlug: candidate.slug || candidate.profileSlug || null,
+          // Full profile extras — richer than the search card
+          workType:       candidate.preferredWorkType || candidate.workPreferences?.workType || null,
+          willingToRelocate: candidate.willingToRelocate ?? candidate.workPreferences?.willingToRelocate ?? null,
+          education:      toSafeArray(candidate.education).slice(0, 3),
+          projects:       toSafeArray(candidate.projects || candidate.portfolioProjects).slice(0, 5),
+          certifications: toSafeArray(candidate.certifications).slice(0, 5),
+          hasResume:      Boolean(candidate.resumeId),
+          tags:           toSafeArray(tagsLocal).slice(0, 10),
+        },
+
+        // No WHY data in profile modal — cleared so Striker doesn't
+        // use stale WHY from a prior drawer open on a different candidate
+        activeWhy: null,
+        activeJob: null,
+        activeSearch: null,
+        activeTargetingFilters: null,
+      };
+    } catch {
+      // Never crash the recruiter UI — Striker context is best-effort
+    }
+  }, [open, candidate, skillsLocal, tagsLocal]);
+
   if (!mounted || !open || !candidate) return null;
   if (typeof document === "undefined") return null;
 

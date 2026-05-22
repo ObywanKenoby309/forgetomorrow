@@ -1,5 +1,5 @@
 // components/recruiter/candidate-center/ExternalCompareModule.js
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const ORANGE = "#FF7043";
 const DARK = "#0D1B2A";
@@ -344,6 +344,75 @@ export default function ExternalCompareModule() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
+
+  // ── Striker context injection ────────────────────────────────────────────────
+  // Writes window.__FT_CONTEXT__ when an external compare result is available.
+  // Striker sees the analysis output: score, summary, strengths, gaps, reasons.
+  // When result is cleared (reset), context is cleared back to the surface only.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      if (!result) {
+        // No result yet — just surface awareness, no candidate or WHY data
+        window.__FT_CONTEXT__ = {
+          surface: "external_candidate_compare",
+          activeCandidate: null,
+          activeWhy: null,
+          activeJob: jobDescription.trim()
+            ? { title: null, company: null, description: jobDescription.slice(0, 400) }
+            : null,
+          activeSearch: null,
+          activeTargetingFilters: null,
+        };
+        return;
+      }
+
+      // Result is available — give Striker the full analysis
+      window.__FT_CONTEXT__ = {
+        surface: "external_candidate_compare",
+
+        activeCandidate: {
+          id:    null, // external candidate — no platform ID yet
+          name:  result?.candidate?.name  || result?.name  || null,
+          title: result?.candidate?.title || result?.title || null,
+          location:   null,
+          workStatus: null,
+          match:      typeof result?.score === "number" ? result.score : null,
+          skills:     Array.isArray(result?.skills?.matched)
+                        ? result.skills.matched.slice(0, 16)
+                        : [],
+          summary: result?.summary || result?.match?.summary || null,
+          isExternal: true, // flag so Striker knows this is not an internal candidate
+        },
+
+        activeWhy: {
+          score:              typeof result?.score === "number" ? result.score : null,
+          summary:            result?.summary || result?.match?.summary || null,
+          strongestAlignment: Array.isArray(result?.strengths) ? result.strengths[0] || null : null,
+          biggestGap:         Array.isArray(result?.gaps)      ? result.gaps[0]      || null : null,
+          reasons:            Array.isArray(result?.reasons)   ? result.reasons.slice(0, 6)  : [],
+          skillsMatched:      Array.isArray(result?.skills?.matched)            ? result.skills.matched.slice(0, 10)            : [],
+          skillsGaps:         Array.isArray(result?.gaps)                       ? result.gaps.slice(0, 10)                      : [],
+          skillsTransferable: Array.isArray(result?.skills?.transferable)       ? result.skills.transferable.slice(0, 6)        : [],
+          signalsMatched:     Array.isArray(result?.signals?.matched)           ? result.signals.matched.slice(0, 8)            : [],
+          signalsNotDemonstrated: Array.isArray(result?.signals?.not_yet_demonstrated)
+                                    ? result.signals.not_yet_demonstrated.slice(0, 8)
+                                    : [],
+          interviewQuestions: Array.isArray(result?.interviewQuestions)         ? result.interviewQuestions.slice(0, 5)         : [],
+        },
+
+        activeJob: jobDescription.trim()
+          ? { title: null, company: null, description: jobDescription.slice(0, 400) }
+          : null,
+
+        activeSearch: null,
+        activeTargetingFilters: null,
+      };
+    } catch {
+      // Never crash the recruiter UI — Striker context is best-effort
+    }
+  }, [result, jobDescription]);
 
   async function handleAnalyze() {
     if (!resumeText.trim() || !jobDescription.trim()) {
