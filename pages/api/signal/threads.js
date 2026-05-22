@@ -32,7 +32,7 @@ export default async function handler(req, res) {
 
     // ✅ Conversations sorted newest first (cheap fields only)
     const conversations = await prisma.conversation.findMany({
-      where: { id: { in: conversationIds } },
+      where: { id: { in: conversationIds }, channel: 'seeker' },
       orderBy: { updatedAt: 'desc' },
       select: {
         id: true,
