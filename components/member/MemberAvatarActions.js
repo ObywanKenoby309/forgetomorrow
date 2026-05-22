@@ -61,10 +61,10 @@ export default function MemberAvatarActions({
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // Internal pages always go to the internal portfolio view.
-  // External links (og:url, share sheet) still use /u/[slug].
+  // Routes to the internal portfolio page.
+  // Once pages/profile/view/[slug].js is deployed, switch back to /profile/view/
   const resolvedProfilePath =
-    profilePath || (targetUserSlug ? `/profile/view/${targetUserSlug}` : '');
+    profilePath || (targetUserSlug ? `/profile/${targetUserSlug}` : '');
 
   // ── Lazy status fetch — only when dropdown opens ──────────────────────────
   const fetchStatus = useCallback(async () => {
