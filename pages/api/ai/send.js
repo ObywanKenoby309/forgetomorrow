@@ -65,23 +65,23 @@ async function resolveEffectiveUser(prisma, req, session) {
 function buildPlaceholderReply(mode) {
   if (mode === "SEEKER") {
     return (
-      "Got it. I’m your Seeker Striker. For now, I’m in DB-wired mode (AI generation is next). " +
-      "Tell me what you’re working on: resume alignment, applications pipeline, profile upgrades, incentives, or a 30/60/90 plan."
+      "I’m your Seeker Striker. Tell me the outcome you want: apply to a job, strengthen your profile, improve a resume section, prep for an interview, or build a 30/60/90 plan. " +
+      "I’ll guide the task step by step and help you finish it."
     );
   }
   if (mode === "COACH") {
     return (
-      "Got it. I’m your Coach Striker. DB wiring is live; AI generation is next. " +
-      "Tell me the client goal and what you want to produce (resume feedback, roadmap, interview prep, session plan)."
+      "I’m your Coach Striker. Tell me the client outcome: session plan, profile review, resume feedback, target strategy, roadmap, or homework. " +
+      "I’ll turn the client context into a usable coaching action."
     );
   }
   if (mode === "RECRUITER") {
     return (
-      "Got it. I’m your Recruiter Striker. DB wiring is live; AI generation is next. " +
-      "Tell me what you’re doing: JD cleanup, candidate evaluation, pipeline steps, or explainability packet prep."
+      "I’m your Recruiter Striker. Tell me the outcome: evaluate a candidate, refine a search, create targeting, prepare outreach, clean up a JD, or build a screening plan. " +
+      "I’ll focus on evidence, risks, validation, and next action."
     );
   }
-  return "Got it. DB wiring is live; AI generation is next.";
+  return "Tell me the outcome you want and I’ll help you complete the task.";
 }
 
 // ----------------------------------------------------------------------------
@@ -103,6 +103,296 @@ function coerceStr(v, max = 400) {
   const s = String(v || "");
   if (s.length <= max) return s;
   return s.slice(0, max) + "…";
+}
+
+function normalizePathForSurface(context) {
+  const ctx = safeJson(context) || {};
+  return String(ctx.asPath || ctx.pathname || "").toLowerCase();
+}
+
+function compactList(value, maxItems = 8, maxChars = 80) {
+  const arr = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(/[,|\n]/g)
+      : [];
+
+  return arr
+    .map((x) => coerceStr(String(x || "").trim(), maxChars))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function compactObjectLines(label, obj, maxPairs = 12) {
+  const data = safeJson(obj);
+  if (!data) return "";
+  const lines = [];
+
+  for (const [key, value] of Object.entries(data).slice(0, maxPairs)) {
+    if (value == null || value === "") continue;
+
+    if (Array.isArray(value)) {
+      const list = compactList(value, 8, 70);
+      if (list.length) lines.push(`- ${key}: ${list.join(", ")}`);
+      continue;
+    }
+
+    if (typeof value === "object") {
+      const nested = compactObjectLines(key, value, 6);
+      if (nested) lines.push(`- ${key}: ${coerceStr(JSON.stringify(value), 280)}`);
+      continue;
+    }
+
+    lines.push(`- ${key}: ${coerceStr(value, 180)}`);
+  }
+
+  if (!lines.length) return "";
+  return `${label}:\n${lines.join("\n")}`;
+}
+
+function detectSurface(context) {
+  const path = normalizePathForSurface(context);
+
+  if (path.includes("/recruiter/candidate-center")) return "recruiter_candidate_center";
+  if (path.includes("/recruiter/candidates")) return "internal_candidate_search";
+  if (path.includes("/recruiter/explain")) return "external_candidate_compare";
+  if (path.includes("/recruiter/pools")) return "talent_pools";
+  if (path.includes("/recruiter/jobs") || path.includes("/recruiter/job")) return "recruiter_jobs";
+  if (path.includes("/resume/create")) return "resume_builder";
+  if (path.includes("/jobs")) return "job_search";
+  if (path.includes("/anvil")) return "anvil";
+  if (path.includes("/offer") || path.includes("negotiation")) return "offer_negotiation";
+  if (path.includes("/coaching") && path.includes("/clients")) return "coaching_client";
+  if (path.includes("/coaching")) return "coaching_workspace";
+  if (path.includes("/profile") || path.includes("/u/")) return "portfolio_profile";
+  if (path.includes("/seeker/messages") || path.includes("/signal")) return "signal_messages";
+  if (path.includes("/feed")) return "career_signal_feed";
+
+  return "general_workspace";
+}
+
+function buildSurfacePlaybook({ mode, context }) {
+  const surface = detectSurface(context);
+
+  const playbooks = {
+    recruiter_candidate_center: {
+      outcome: "Help the recruiter choose and complete the correct candidate workflow.",
+      actions: [
+        "Identify whether they need internal discovery, external compare, or talent pool organization.",
+        "Route thinking toward the next concrete action, not a generic explanation.",
+        "Clarify Discovery Match vs Targeting Match only when relevant.",
+      ],
+    },
+    internal_candidate_search: {
+      outcome: "Help the recruiter find, evaluate, compare, and act on ForgeTomorrow candidates.",
+      actions: [
+        "Use Discovery Match as broad semantic relevance.",
+        "Use Targeting Match as stricter qualification / automation-ready scoring.",
+        "Help refine search terms, targeting filters, candidate comparison, outreach, and WHY review.",
+        "When a candidate is referenced, focus on evidence, risks, interview probes, and next action.",
+      ],
+    },
+    external_candidate_compare: {
+      outcome: "Help the recruiter turn an external resume + JD into an evidence-backed candidate read.",
+      actions: [
+        "Focus on evidence, fit, gaps, risk, and interview validation.",
+        "Do not coach the candidate; support recruiter decision-making.",
+        "Produce concise screening questions and next-step recommendations when asked.",
+      ],
+    },
+    talent_pools: {
+      outcome: "Help the recruiter organize candidates into reusable hiring pipelines.",
+      actions: [
+        "Suggest pool names, segmentation logic, follow-up timing, and next actions.",
+        "Keep talent pool advice tied to recruiter workflow and evidence.",
+      ],
+    },
+    recruiter_jobs: {
+      outcome: "Help the recruiter create clearer, fairer, better-structured job posts.",
+      actions: [
+        "Separate role requirements from company boilerplate.",
+        "Identify must-have versus nice-to-have requirements.",
+        "Keep job descriptions clean, evidence-oriented, and candidate-readable.",
+      ],
+    },
+    resume_builder: {
+      outcome: "Help the seeker complete a stronger resume or application packet.",
+      actions: [
+        "Give exact section-level improvements.",
+        "Preserve truthfulness and do not invent experience.",
+        "Tie resume guidance to JD alignment, metrics, proof, and recruiter readability.",
+      ],
+    },
+    job_search: {
+      outcome: "Help the seeker evaluate jobs and decide what to do next.",
+      actions: [
+        "Help interpret fit, risk, missing evidence, and application strategy.",
+        "Recommend next action: save, tailor, apply, skip, or research.",
+      ],
+    },
+    anvil: {
+      outcome: "Help the user complete career intelligence tasks inside The Anvil.",
+      actions: [
+        "Identify the active tool: profile development, offer negotiation, growth/pivot, project promotion, or resume/cover.",
+        "Guide the user to complete the task with concrete inputs and outputs.",
+      ],
+    },
+    offer_negotiation: {
+      outcome: "Help the seeker prepare a grounded, professional offer negotiation strategy.",
+      actions: [
+        "Clarify leverage, constraints, compensation components, risk, and ask structure.",
+        "Produce scripts and decision options when asked.",
+      ],
+    },
+    coaching_client: {
+      outcome: "Help the coach turn client evidence into session strategy and next steps.",
+      actions: [
+        "Focus on client goals, narrative, blockers, roadmap, and homework.",
+        "Keep outputs coach-facing unless the user asks for client-facing language.",
+      ],
+    },
+    coaching_workspace: {
+      outcome: "Help the coach manage coaching work and produce useful client outputs.",
+      actions: [
+        "Help structure session plans, feedback, homework, and client strategy.",
+      ],
+    },
+    portfolio_profile: {
+      outcome: "Help interpret or improve professional profile/portfolio signal.",
+      actions: [
+        "Look for clarity, proof, positioning, project evidence, and recruiter readiness.",
+        "Recommend portfolio improvements without inventing achievements.",
+      ],
+    },
+    signal_messages: {
+      outcome: "Help the user communicate clearly and move the conversation forward.",
+      actions: [
+        "Draft concise messages only when asked.",
+        "Keep tone professional, human, and outcome-oriented.",
+      ],
+    },
+    career_signal_feed: {
+      outcome: "Help the user turn posts and network activity into career signal.",
+      actions: [
+        "Support post ideas, replies, professional positioning, and credibility-building.",
+      ],
+    },
+    general_workspace: {
+      outcome: "Help the user complete the current ForgeTomorrow task.",
+      actions: [
+        "Ask only essential clarifying questions.",
+        "Prefer concrete next actions, checklists, or direct outputs.",
+      ],
+    },
+  };
+
+  const selected = playbooks[surface] || playbooks.general_workspace;
+
+  return {
+    surface,
+    outcome: selected.outcome,
+    actions: selected.actions,
+  };
+}
+
+function buildModeOutcomeRules(mode) {
+  if (mode === "SEEKER") {
+    return [
+      "Outcome style:",
+      "- Do not merely explain. Help the seeker complete the task.",
+      "- Prefer: exact next step, specific edits, scripts, checklists, decision guidance, and tool direction.",
+      "- When the user is applying for a job, resume/JD fit leads; portfolio/profile supports.",
+      "- If the user asks what to do next, give the next best action immediately.",
+    ].join("\n");
+  }
+
+  if (mode === "COACH") {
+    return [
+      "Outcome style:",
+      "- Do not merely explain. Help the coach produce client-ready strategy, session structure, homework, or review notes.",
+      "- Translate career intelligence into coaching actions.",
+      "- Separate coach-facing observations from client-facing language when useful.",
+      "- Keep the coach in control; provide structure they can use immediately.",
+    ].join("\n");
+  }
+
+  if (mode === "RECRUITER") {
+    return [
+      "Outcome style:",
+      "- Do not merely explain. Help the recruiter complete recruiter work: evaluate, compare, shortlist, message, structure jobs, or build targeting.",
+      "- For internal search, portfolio/profile signal leads; primary resume supports.",
+      "- For application/JD evaluation, resume evidence leads; profile/portfolio supports.",
+      "- Never present AI as the hiring decision-maker. Give evidence, risks, validation prompts, and next actions.",
+    ].join("\n");
+  }
+
+  return [
+    "Outcome style:",
+    "- Help the user complete the current task with practical next actions.",
+  ].join("\n");
+}
+
+function buildWorkspaceIntelligence(context) {
+  const ctx = safeJson(context) || {};
+  const blocks = [];
+
+  const surface = buildSurfacePlaybook({ mode: String(ctx.mode || "").toUpperCase(), context });
+  blocks.push(
+    [
+      "Workspace intelligence:",
+      `- surface: ${surface.surface}`,
+      `- desired outcome: ${surface.outcome}`,
+      "- recommended operating actions:",
+      ...surface.actions.map((a) => `  - ${a}`),
+    ].join("\n")
+  );
+
+  const activeObjects = [
+    ["Active candidate", ctx.activeCandidate || ctx.candidate || ctx.candidateContext],
+    ["Active job", ctx.activeJob || ctx.job || ctx.jobContext],
+    ["Active resume", ctx.activeResume || ctx.resume || ctx.resumeContext],
+    ["Active portfolio/profile", ctx.activePortfolio || ctx.portfolio || ctx.profileContext],
+    ["Active search", ctx.activeSearch || ctx.search || ctx.searchContext],
+    ["Active targeting filters", ctx.activeTargetingFilters || ctx.targetingFilters || ctx.filters],
+    ["Active ATS / Hammer signal", ctx.activeATS || ctx.ats || ctx.hammerContext],
+    ["Active WHY / explainability signal", ctx.activeWhy || ctx.why || ctx.explainability],
+    ["Active coaching client", ctx.activeClient || ctx.client || ctx.clientContext],
+    ["Active Anvil tool", ctx.activeTool || ctx.tool || ctx.anvilTool],
+  ];
+
+  for (const [label, obj] of activeObjects) {
+    const block = compactObjectLines(label, obj, 14);
+    if (block) blocks.push(block);
+  }
+
+  if (ctx.selectedText) {
+    blocks.push(`Selected text:\n${coerceStr(ctx.selectedText, 1200)}`);
+  }
+
+  return blocks.filter(Boolean).join("\n\n");
+}
+
+function buildStrikerOperatingSystem(mode, context) {
+  const playbook = buildSurfacePlaybook({ mode, context });
+  const workspace = buildWorkspaceIntelligence(context);
+  const modeOutcomeRules = buildModeOutcomeRules(mode);
+
+  return [
+    "ForgeTomorrow Striker operating system:",
+    "- You are not a generic chatbot.",
+    "- You are an outcome-focused workspace assistant inside ForgeTomorrow.",
+    "- Your job is to help the user finish the task in front of them.",
+    "- Use ForgeTomorrow language and product concepts naturally.",
+    "- Be direct, practical, and specific.",
+    "- Do not over-explain unless the user asks for depth.",
+    "- Prefer one strong recommendation over a menu of weak options.",
+    "- If context is missing, say exactly what is missing and give the next best action anyway.",
+    "- Do not invent facts, candidate evidence, profile data, resume content, scores, or database state.",
+    `Current surface: ${playbook.surface}`,
+    `Current outcome: ${playbook.outcome}`,
+    modeOutcomeRules,
+    workspace ? `\n${workspace}` : "",
+  ].filter(Boolean).join("\n");
 }
 
 // ✅ NEW: Strict mode guardrails (no site paths needed)
@@ -282,10 +572,16 @@ function buildSystemPrompt(mode, context) {
     ? `Client context: ${pageBits.join(" | ")}`
     : "Client context: (none)";
 
-  // ✅ NEW: append guardrails (no path mapping needed)
   const guardrails = buildModeGuardrails(mode);
+  const strikerOperatingSystem = buildStrikerOperatingSystem(mode, context);
 
-  return [base, modeLine, pageLine, guardrails].join("\n");
+  return [
+    base,
+    modeLine,
+    pageLine,
+    guardrails,
+    strikerOperatingSystem,
+  ].join("\n\n");
 }
 
 function toOpenAiMessages(mode, systemPrompt, history) {
@@ -331,8 +627,8 @@ async function tryGenerateWithOpenAI({ mode, context, history }) {
     const resp = await client.chat.completions.create({
       model,
       messages,
-      temperature: 0.3,
-      max_tokens: 350,
+      temperature: 0.25,
+      max_tokens: 700,
     });
 
     const text = resp?.choices?.[0]?.message?.content;
