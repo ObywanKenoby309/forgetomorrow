@@ -1,7 +1,7 @@
 // components/signal/SignalMessages.js
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/router';
-import MemberActions from '../member/MemberActions';
+import MemberAvatarActions from '../member/MemberAvatarActions';
 
 export default function SignalMessages() {
   const router = useRouter();
@@ -372,6 +372,7 @@ export default function SignalMessages() {
           title: resolvedName,
           otherUserId: deepLinkIdRaw,
           otherAvatarUrl: data?.otherAvatarUrl || null,
+          otherUserSlug: data?.otherUserSlug || data?.otherSlug || data?.slug || data?.profileSlug || null,
           lastMessage: '',
           lastMessageAt: null,
         };
@@ -685,15 +686,15 @@ export default function SignalMessages() {
               {filteredThreads.map((t) => {
                 const otherId = t.otherUserId || null;
                 const otherName = t.title || 'Member';
-
-                const openMenu = (e) => {
-                  e.stopPropagation();
-                  if (!otherId) return;
-                  openProfileMenu(otherId, otherName);
-                };
+                const otherSlug =
+                  t.otherUserSlug ||
+                  t.otherSlug ||
+                  t.userSlug ||
+                  t.slug ||
+                  t.profileSlug ||
+                  null;
 
                 const isActive = t.id === activeConversationId;
-                const showMenu = profileMenu.open && profileMenu.userId === otherId;
 
                 return (
                   <li
@@ -703,42 +704,28 @@ export default function SignalMessages() {
                     }`}
                     onClick={() => openConversation(t)}
                   >
-                    <button
-                      type="button"
-                      onClick={openMenu}
-                      className="flex-shrink-0"
-                      aria-label="Open member actions"
+                    <MemberAvatarActions
+                      targetUserId={otherId}
+                      targetUserSlug={otherSlug}
+                      targetName={otherName}
+                      surface="signal"
+                      showMessage={false}
+                      showConnect={false}
                     >
-                      {t.otherAvatarUrl ? (
-                        <img
-                          src={t.otherAvatarUrl}
-                          alt={otherName}
-                          className="w-9 h-9 rounded-full object-cover border border-gray-200"
-                        />
-                      ) : (
-                        <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-700 border border-gray-200">
-                          {otherName?.charAt(0)?.toUpperCase() || '?'}
-                        </div>
-                      )}
-                    </button>
-
-                    {showMenu && otherId && (
-                      <div
-                        ref={menuRef}
-                        onClick={(e) => e.stopPropagation()}
-                        className="absolute z-20 left-12 top-10 bg-white border border-gray-200 rounded-lg shadow-lg text-sm w-56 overflow-hidden"
-                      >
-                        <div className="px-3 py-2 border-b font-extrabold text-gray-900">
-                          {profileMenu.name}
-                        </div>
-                        <MemberActions
-                          targetUserId={profileMenu.userId}
-                          targetName={profileMenu.name}
-                          layout="menu"
-                          onClose={closeProfileMenu}
-                        />
-                      </div>
-                    )}
+                      <span className="flex-shrink-0 inline-flex" aria-label="Open member actions">
+                        {t.otherAvatarUrl ? (
+                          <img
+                            src={t.otherAvatarUrl}
+                            alt={otherName}
+                            className="w-9 h-9 rounded-full object-cover border border-gray-200"
+                          />
+                        ) : (
+                          <span className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-700 border border-gray-200">
+                            {otherName?.charAt(0)?.toUpperCase() || '?'}
+                          </span>
+                        )}
+                      </span>
+                    </MemberAvatarActions>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">

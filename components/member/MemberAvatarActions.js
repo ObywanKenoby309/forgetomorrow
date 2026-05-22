@@ -7,12 +7,25 @@ export default function MemberAvatarActions({
   targetUserId,
   targetUserSlug,
   targetName = 'Member',
-  showMessage = true,
+  surface = 'default',
+  showProfile = true,
+  showMessage,
+  showConnect = true,
+  profilePath,
+  stopPropagation = true,
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
-  const toggle = () => {
+  const normalizedSurface = String(surface || 'default').toLowerCase();
+  const resolvedShowMessage =
+    typeof showMessage === 'boolean' ? showMessage : normalizedSurface !== 'signal';
+
+  const toggle = (event) => {
+    if (stopPropagation) {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+    }
     if (!targetUserId) return;
     setOpen((prev) => !prev);
   };
@@ -58,8 +71,12 @@ export default function MemberAvatarActions({
             targetUserSlug={targetUserSlug}
             targetName={targetName}
             layout="menu"
+            surface={normalizedSurface}
             onClose={close}
-            showMessage={showMessage}
+            showProfile={showProfile}
+            showMessage={resolvedShowMessage}
+            showConnect={showConnect}
+            profilePath={profilePath}
           />
         </div>
       )}

@@ -8,7 +8,12 @@ export default function MemberActions({
   targetUserSlug,
   targetName = 'Member',
   layout = 'menu', // menu | inline (future)
+  surface = 'default',
   onClose,
+  showProfile = true,
+  showMessage = true,
+  showConnect = true,
+  profilePath,
 }) {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
@@ -26,7 +31,19 @@ export default function MemberActions({
   // We intentionally do not try to infer "self" here.
   // Backend already blocks self-connect and self-message.
   const isSelf = false;
-  const isAlreadyOnProfilePage = router.pathname === '/u/[slug]' || router.pathname === '/profile/[slug]';
+  const normalizedSurface = String(surface || 'default').toLowerCase();
+  const resolvedProfilePath =
+    profilePath ||
+    (targetUserSlug ? `/u/${targetUserSlug}` : '');
+
+  const shouldShowMessage = showMessage && normalizedSurface !== 'signal';
+  const shouldShowProfile = showProfile && !!resolvedProfilePath;
+  const shouldShowConnect = showConnect && normalizedSurface !== 'signal';
+
+  const isAlreadyOnProfilePage =
+    router.pathname === '/u/[slug]' ||
+    router.pathname === '/profile/[slug]' ||
+    router.pathname === '/profile/view/[slug]';
 
   // ── Load relationship status ────────────────────────────
   useEffect(() => {
@@ -53,17 +70,17 @@ export default function MemberActions({
   // ── Actions ──────────────────────────────────────────────
 
   const viewProfile = async () => {
-    if (!targetUserId || !targetUserSlug) return;
+    if (!targetUserId || !resolvedProfilePath) return;
 
     // log profile view for analytics
     try {
-      await logView(targetUserId, 'member-actions');
+      await logView(targetUserId, `member-actions:${normalizedSurface}`);
     } catch (err) {
       console.error('logView error in MemberActions:', err);
     }
 
     onClose?.();
-    router.push(withChrome(`/u/${targetUserSlug}`));
+    router.push(withChrome(resolvedProfilePath));
   };
 
   const messageUser = async () => {
@@ -275,14 +292,14 @@ export default function MemberActions({
 
   return (
     <>
-      {!isAlreadyOnProfilePage && (
+      {shouldShowProfile && !isAlreadyOnProfilePage && (
         <Button onClick={viewProfile}>View profile</Button>
       )}
 
-      {/* Message is always visible, but front-end gated by status */}
-      {!isSelf && <Button onClick={messageUser}>Message</Button>}
+      {/* Message is surface-aware. Hidden inside The Signal because user is already there. */}
+      {shouldShowMessage && !isSelf && <Button onClick={messageUser}>Message</Button>}
 
-      {status === 'none' && <Button onClick={sendConnect}>Connect</Button>}
+      {shouldShowConnect && status === 'none' && <Button onClick={sendConnect}>Connect</Button>}
 
       {status === 'outgoing' && <Button disabled>Requested</Button>}
 
