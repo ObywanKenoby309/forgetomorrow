@@ -26,7 +26,7 @@ export default function MemberActions({
   // We intentionally do not try to infer "self" here.
   // Backend already blocks self-connect and self-message.
   const isSelf = false;
-  const isAlreadyOnProfilePage = router.pathname === '/profile/[slug]';
+  const isAlreadyOnProfilePage = router.pathname === '/u/[slug]' || router.pathname === '/profile/[slug]';
 
   // ── Load relationship status ────────────────────────────
   useEffect(() => {
@@ -63,7 +63,7 @@ export default function MemberActions({
     }
 
     onClose?.();
-    router.push(withChrome(`/profile/${targetUserSlug}`));
+    router.push(withChrome(`/u/${targetUserSlug}`));
   };
 
   const messageUser = async () => {

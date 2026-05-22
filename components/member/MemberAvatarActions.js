@@ -46,7 +46,7 @@ export default function MemberAvatarActions({
 
   return (
     <div ref={containerRef} className="relative inline-block">
-      <div onClick={toggle}>{children}</div>
+      <div onClick={toggle} className="cursor-pointer">{children}</div>
 
       {open && (
         <div className="absolute z-30 mt-1 w-56 rounded-lg border bg-white shadow-lg text-sm">

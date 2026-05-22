@@ -56,6 +56,53 @@ const mkWhySnapshot = (explain, mode) => ({
   filters: explain?.filters_triggered || [],
 });
 
+
+function normalizePortfolioUrl(candidate = {}) {
+  const rawUrl =
+    candidate?.portfolioUrl ||
+    candidate?.publicPortfolioUrl ||
+    candidate?.profileUrl ||
+    candidate?.publicProfileUrl ||
+    candidate?.url ||
+    candidate?.profile?.url ||
+    candidate?.profile?.profileUrl ||
+    candidate?.profile?.portfolioUrl ||
+    "";
+
+  const rawSlug =
+    candidate?.slug ||
+    candidate?.profileSlug ||
+    candidate?.publicSlug ||
+    candidate?.portfolioSlug ||
+    candidate?.profile?.slug ||
+    candidate?.user?.slug ||
+    candidate?.user?.profileSlug ||
+    candidate?.user?.publicSlug ||
+    "";
+
+  const cleanSlug = String(rawSlug || "").trim().replace(/^\/+|\/+$/g, "");
+  if (cleanSlug) return `/u/${encodeURIComponent(cleanSlug)}`;
+
+  const cleanUrl = String(rawUrl || "").trim();
+  if (!cleanUrl) return "";
+
+  try {
+    const parsed = new URL(cleanUrl, typeof window !== "undefined" ? window.location.origin : "https://forgetomorrow.com");
+    const path = parsed.pathname || "";
+
+    if (path.startsWith("/u/")) return `${path}${parsed.search || ""}`;
+    if (path.startsWith("/portfolio/")) return path.replace(/^\/portfolio\//, "/u/") + (parsed.search || "");
+    if (path.startsWith("/profile/")) return path.replace(/^\/profile\//, "/u/") + (parsed.search || "");
+
+    return `${path || cleanUrl}${parsed.search || ""}`;
+  } catch {
+    if (cleanUrl.startsWith("/u/")) return cleanUrl;
+    if (cleanUrl.startsWith("/portfolio/")) return cleanUrl.replace(/^\/portfolio\//, "/u/");
+    if (cleanUrl.startsWith("/profile/")) return cleanUrl.replace(/^\/profile\//, "/u/");
+    return cleanUrl;
+  }
+}
+
 const GlassPanel = ({ className = "", children, style = {} }) => (
   <section
     style={style}
@@ -1060,10 +1107,23 @@ function Body() {
 
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(null);
-  const onView = (c) => {
+
+  const openCandidateIntelligence = useCallback((c) => {
     setSelected(c);
     setOpen(true);
-  };
+  }, []);
+
+  const onView = useCallback((c) => {
+    const portfolioUrl = normalizePortfolioUrl(c);
+
+    if (!portfolioUrl) {
+      console.warn("[Recruiter Candidates] Missing portfolio URL/slug for candidate", c);
+      setActionError("This candidate does not have a visible portfolio link yet.");
+      return;
+    }
+
+    router.push(portfolioUrl);
+  }, [router]);
 
   const [personaOpen, setPersonaOpen] = useState(false);
   const [personaCandidate, setPersonaCandidate] = useState(null);
@@ -2022,8 +2082,7 @@ function Body() {
         mode={whyMode}
         onViewCandidate={() => {
           if (whyCandidate) {
-            setSelected(whyCandidate);
-            setOpen(true);
+            openCandidateIntelligence(whyCandidate);
           }
           setWhyOpen(false);
         }}
