@@ -11,7 +11,17 @@ import {
   detectStrikerIntent,
   buildOperationalGuidance,
   buildRouteSystemHint,
+  detectMappedHandoff,
 } from "@/lib/ai/strikerRoutes";
+import {
+  getSurfacePlaybook,
+} from "@/lib/ai/strikerSiteMap";
+import {
+  ROLE_IDENTITY,
+  buildGuardRailBlock,
+  PLATFORM_PRINCIPLES,
+  FORGE_GLOSSARY,
+} from "@/lib/ai/strikerWorkflowMap";
 
 function readCookie(req, name) {
   try {
@@ -160,201 +170,58 @@ function compactObjectLines(label, obj, maxPairs = 12) {
 }
 
 function detectSurface(context) {
-  const path = normalizePathForSurface(context);
-
-  if (path.includes("/recruiter/candidate-center")) return "recruiter_candidate_center";
-  if (path.includes("/recruiter/candidates")) return "internal_candidate_search";
-  if (path.includes("/recruiter/explain")) return "external_candidate_compare";
-  if (path.includes("/recruiter/pools")) return "talent_pools";
-  if (path.includes("/recruiter/jobs") || path.includes("/recruiter/job")) return "recruiter_jobs";
-  if (path.includes("/resume/create")) return "resume_builder";
-  if (path.includes("/jobs")) return "job_search";
-  if (path.includes("/anvil")) return "anvil";
-  if (path.includes("/offer") || path.includes("negotiation")) return "offer_negotiation";
-  if (path.includes("/coaching") && path.includes("/clients")) return "coaching_client";
-  if (path.includes("/coaching")) return "coaching_workspace";
-  if (path.includes("/profile") || path.includes("/u/")) return "portfolio_profile";
-  if (path.includes("/seeker/messages") || path.includes("/signal")) return "signal_messages";
-  if (path.includes("/feed")) return "career_signal_feed";
-
-  return "general_workspace";
+  const ctx = buildStrikerContextPacket(context || {});
+  return ctx.surface || "general_workspace";
 }
 
 function buildSurfacePlaybook({ mode, context }) {
-  const surface = detectSurface(context);
-
-  const playbooks = {
-    recruiter_candidate_center: {
-      outcome: "Help the recruiter choose and complete the correct candidate workflow.",
-      actions: [
-        "Identify whether they need internal discovery, external compare, or talent pool organization.",
-        "Route thinking toward the next concrete action, not a generic explanation.",
-        "Clarify Discovery Match vs Targeting Match only when relevant.",
-      ],
-    },
-    internal_candidate_search: {
-      outcome: "Help the recruiter find, evaluate, compare, and act on ForgeTomorrow candidates.",
-      actions: [
-        "Use Discovery Match as broad semantic relevance.",
-        "Use Targeting Match as stricter qualification / automation-ready scoring.",
-        "Help refine search terms, targeting filters, candidate comparison, outreach, and WHY review.",
-        "When a candidate is referenced, focus on evidence, risks, interview probes, and next action.",
-      ],
-    },
-    external_candidate_compare: {
-      outcome: "Help the recruiter turn an external resume + JD into an evidence-backed candidate read.",
-      actions: [
-        "Focus on evidence, fit, gaps, risk, and interview validation.",
-        "Do not coach the candidate; support recruiter decision-making.",
-        "Produce concise screening questions and next-step recommendations when asked.",
-      ],
-    },
-    talent_pools: {
-      outcome: "Help the recruiter organize candidates into reusable hiring pipelines.",
-      actions: [
-        "Suggest pool names, segmentation logic, follow-up timing, and next actions.",
-        "Keep talent pool advice tied to recruiter workflow and evidence.",
-      ],
-    },
-    recruiter_jobs: {
-      outcome: "Help the recruiter create clearer, fairer, better-structured job posts.",
-      actions: [
-        "Separate role requirements from company boilerplate.",
-        "Identify must-have versus nice-to-have requirements.",
-        "Keep job descriptions clean, evidence-oriented, and candidate-readable.",
-      ],
-    },
-    resume_builder: {
-      outcome: "Help the seeker complete a stronger resume or application packet.",
-      actions: [
-        "Give exact section-level improvements.",
-        "Preserve truthfulness and do not invent experience.",
-        "Tie resume guidance to JD alignment, metrics, proof, and recruiter readability.",
-      ],
-    },
-    job_search: {
-      outcome: "Help the seeker evaluate jobs and decide what to do next.",
-      actions: [
-        "Help interpret fit, risk, missing evidence, and application strategy.",
-        "Recommend next action: save, tailor, apply, skip, or research.",
-      ],
-    },
-    anvil: {
-      outcome: "Help the user complete career intelligence tasks inside The Anvil.",
-      actions: [
-        "Identify the active tool: profile development, offer negotiation, growth/pivot, project promotion, or resume/cover.",
-        "Guide the user to complete the task with concrete inputs and outputs.",
-      ],
-    },
-    offer_negotiation: {
-      outcome: "Help the seeker prepare a grounded, professional offer negotiation strategy.",
-      actions: [
-        "Clarify leverage, constraints, compensation components, risk, and ask structure.",
-        "Produce scripts and decision options when asked.",
-      ],
-    },
-    coaching_client: {
-      outcome: "Help the coach turn client evidence into session strategy and next steps.",
-      actions: [
-        "Focus on client goals, narrative, blockers, roadmap, and homework.",
-        "Keep outputs coach-facing unless the user asks for client-facing language.",
-      ],
-    },
-    coaching_workspace: {
-      outcome: "Help the coach manage coaching work and produce useful client outputs.",
-      actions: [
-        "Help structure session plans, feedback, homework, and client strategy.",
-      ],
-    },
-    portfolio_profile: {
-      outcome: "Help interpret or improve professional profile/portfolio signal.",
-      actions: [
-        "Look for clarity, proof, positioning, project evidence, and recruiter readiness.",
-        "Recommend portfolio improvements without inventing achievements.",
-      ],
-    },
-    signal_messages: {
-      outcome: "Help the user communicate clearly and move the conversation forward.",
-      actions: [
-        "Draft concise messages only when asked.",
-        "Keep tone professional, human, and outcome-oriented.",
-      ],
-    },
-    career_signal_feed: {
-      outcome: "Help the user turn posts and network activity into career signal.",
-      actions: [
-        "Support post ideas, replies, professional positioning, and credibility-building.",
-      ],
-    },
-    general_workspace: {
-      outcome: "Help the user complete the current ForgeTomorrow task.",
-      actions: [
-        "Ask only essential clarifying questions.",
-        "Prefer concrete next actions, checklists, or direct outputs.",
-      ],
-    },
-  };
-
-  const selected = playbooks[surface] || playbooks.general_workspace;
+  const ctx = buildStrikerContextPacket(context || {});
+  const surface = ctx.surface || "general_workspace";
+  const playbook = getSurfacePlaybook?.(surface) || {};
 
   return {
     surface,
-    outcome: selected.outcome,
-    actions: selected.actions,
+    outcome: playbook.outcome || "Help the user complete the current ForgeTomorrow task.",
+    actions: Array.isArray(playbook.actions)
+      ? playbook.actions
+      : ["Ask only essential clarifying questions.", "Prefer concrete next actions, checklists, or direct outputs."],
+    forwardTo: Array.isArray(playbook.forwardTo) ? playbook.forwardTo : [],
+    guardRails: Array.isArray(playbook.guardRails) ? playbook.guardRails : [],
   };
 }
 
 function buildModeOutcomeRules(mode) {
-  if (mode === "SEEKER") {
-    return [
-      "Outcome style:",
-      "- Do not merely explain. Help the seeker complete the task.",
-      "- Prefer: exact next step, specific edits, scripts, checklists, decision guidance, and tool direction.",
-      "- When the user is applying for a job, resume/JD fit leads; portfolio/profile supports.",
-      "- If the user asks what to do next, give the next best action immediately.",
-    ].join("\n");
-  }
+  const normalized = String(mode || "").toUpperCase();
+  const identity = ROLE_IDENTITY?.[normalized];
 
-  if (mode === "COACH") {
-    return [
-      "Outcome style:",
-      "- Do not merely explain. Help the coach produce client-ready strategy, session structure, homework, or review notes.",
-      "- Translate career intelligence into coaching actions.",
-      "- Separate coach-facing observations from client-facing language when useful.",
-      "- Keep the coach in control; provide structure they can use immediately.",
-    ].join("\n");
-  }
-
-  if (mode === "RECRUITER") {
-    return [
-      "Outcome style:",
-      "- Do not merely explain. Help the recruiter complete recruiter work: evaluate, compare, shortlist, message, structure jobs, or build targeting.",
-      "- For internal search, portfolio/profile signal leads; primary resume supports.",
-      "- For application/JD evaluation, resume evidence leads; profile/portfolio supports.",
-      "- Never present AI as the hiring decision-maker. Give evidence, risks, validation prompts, and next actions.",
-    ].join("\n");
-  }
-
-  return [
+  const base = [
     "Outcome style:",
-    "- Help the user complete the current task with practical next actions.",
-  ].join("\n");
+    "- Do not merely explain. Help the user complete the task.",
+    "- Prefer exact next steps, concrete outputs, decision guidance, and tool direction.",
+    "- Use ForgeTomorrow-specific paths, tools, and workflow language.",
+    "- If context is missing, name what is missing and give the next best action anyway.",
+  ];
+
+  if (identity?.persona) base.push(`- Persona: ${identity.persona}`);
+  if (identity?.mindset) base.push(`- Mindset: ${identity.mindset}`);
+  if (identity?.notA) base.push(`- Not: ${identity.notA}`);
+
+  return base.join("
+");
 }
 
 
 function buildForgeIntelligenceGlossary() {
-  return [
+  const glossary = FORGE_GLOSSARY || {};
+  const lines = [
     "ForgeTomorrow intelligence definitions:",
-    "- Discovery Match is NOT external candidate matching.",
-    "- Discovery Match is the broader internal candidate discovery score used in Internal Candidate Search.",
-    "- Discovery Match helps recruiters find candidates who may fit based on semantic relevance, adjacent-role logic, profile/portfolio signal, primary resume support, skills, preferences, and visible platform evidence.",
-    "- Targeting Match is NOT external candidate matching.",
-    "- Targeting Match is the stricter qualification score used when recruiter targeting filters, saved automation, or precision workflows are active.",
-    "- Targeting Match is more conservative because it evaluates closer fit against explicit recruiter criteria such as title, skills, status, location, education, languages, work preferences, and saved targeting rules.",
-    "- External Compare is a separate recruiter workflow for uploaded/pasted external resumes and job descriptions.",
-    "- Internal Candidate Search, Targeting Match, and External Compare must not be described as the same thing.",
-    "- If asked to explain Discovery vs Targeting, answer with the ForgeTomorrow definitions above and keep it short.",
-  ].join("\\n");
+    glossary["Discovery Match"] ? `- Discovery Match: ${glossary["Discovery Match"]}` : "- Discovery Match is broader internal candidate discovery, not external matching.",
+    glossary["Targeting Match"] ? `- Targeting Match: ${glossary["Targeting Match"]}` : "- Targeting Match is stricter internal qualification, not external matching.",
+    glossary["External Compare"] ? `- External Compare: ${glossary["External Compare"]}` : "- External Compare is separate recruiter workflow for external resumes/JDs.",
+  ];
+
+  return lines.join("
+");
 }
 
 function buildWorkspaceIntelligence(context) {
@@ -416,6 +283,9 @@ function buildStrikerOperatingSystem(mode, context) {
     `Current surface: ${playbook.surface}`,
     `Current outcome: ${playbook.outcome}`,
     buildForgeIntelligenceGlossary(),
+    Array.isArray(PLATFORM_PRINCIPLES) && PLATFORM_PRINCIPLES.length
+      ? `Platform principles:\n${PLATFORM_PRINCIPLES.slice(0, 12).map((p) => `- ${p}`).join("\n")}`
+      : "",
     modeOutcomeRules,
     workspace ? `\n${workspace}` : "",
   ].filter(Boolean).join("\n");
@@ -423,41 +293,16 @@ function buildStrikerOperatingSystem(mode, context) {
 
 // ✅ NEW: Strict mode guardrails (no site paths needed)
 function buildModeGuardrails(mode) {
-  if (mode === "SEEKER") {
-    return [
-      "Hard rules:",
-      "- You are helping a job seeker execute job search tasks.",
-      "- You MAY give resume improvement guidance, JD alignment steps, application strategy, interview prep, and profile improvement.",
-      "- You MUST NOT write, rewrite, standardize, or generate job descriptions for posting (JD creation is recruiter-side work).",
-      "- You MUST NOT act as a hiring decision-maker or give recruiter-side pipeline instructions as if the user is the recruiter.",
-      "- If the user is asking to evaluate a candidate for hiring, tell them to switch to Recruiter Striker.",
-    ].join("\n");
-  }
-
-  if (mode === "COACH") {
-    return [
-      "Hard rules:",
-      "- You are helping a coach support a client with structured outputs (plans, feedback, session structure).",
-      "- You MAY translate tool outputs into coaching actions and homework.",
-      "- You MUST NOT make recruiter-side hiring decisions.",
-      "- If the user is asking how to apply personally, suggest switching to Seeker Striker unless they are explicitly coaching a client.",
-    ].join("\n");
-  }
-
-  if (mode === "RECRUITER") {
-    return [
-      "Hard rules:",
-      "- You are helping a recruiter make hiring decisions and run recruiter workflows.",
-      "- You MAY discuss resumes only as evaluation artifacts (evidence, gaps, interview probes).",
-      "- You MUST NOT coach the user on how to write or optimize THEIR OWN resume, how to apply for jobs, or job-seeker outreach strategy.",
-      "- If the user is asking for job-seeker resume/application coaching, tell them to switch to Seeker Striker.",
-    ].join("\n");
-  }
+  const normalized = String(mode || "").toUpperCase();
+  const block = buildGuardRailBlock?.(normalized);
+  if (block) return block;
 
   return [
     "Hard rules:",
     "- Stay in the current mode and do not cross into another persona’s responsibilities.",
-  ].join("\n");
+    "- Do not invent facts, evidence, scores, database state, or user data.",
+  ].join("
+");
 }
 
 // ✅ NEW: Simple handoff detection (no mapping; keyword-based)
@@ -715,7 +560,11 @@ async function generateAssistantReply({
   const direct = buildDirectForgeAnswer({ threadMode, content: lastUserContent, context: normalizedContext });
   if (direct) return direct;
 
-  // ✅ NEW: handoff guardrail BEFORE any generation
+  // ✅ mapped handoff guardrail BEFORE generic generation
+  const mappedHandoff = detectMappedHandoff({ threadMode, content: lastUserContent });
+  if (mappedHandoff?.reply) return mappedHandoff.reply;
+
+  // ✅ legacy fallback handoff guardrail
   const handoff = detectHandoff({ threadMode, content: lastUserContent });
   if (handoff?.reply) return handoff.reply;
 
@@ -736,7 +585,7 @@ async function generateAssistantReply({
     context: {
       ...(normalizedContext || {}),
       route,
-      routeHint: buildRouteSystemHint({ route, context: normalizedContext }),
+      routeHint: buildRouteSystemHint({ route, context: normalizedContext, mode: threadMode }),
     },
     history,
   });
