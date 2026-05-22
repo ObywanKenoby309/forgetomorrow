@@ -1,5 +1,6 @@
 // components/ai/AiWindowsHost.js
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import AiLauncher from '@/components/ai/AiLauncher';
 import AiWindow from '@/components/ai/AiWindow';
 
@@ -52,6 +53,11 @@ export default function AiWindowsHost({ allowedModes = [] }) {
   const [threadIds, setThreadIds] = useState(() => ({}));
   const [lastSeenAt, setLastSeenAt] = useState(() => ({}));
   const [unreadByMode, setUnreadByMode] = useState(() => ({}));
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // ✅ Refs so polling loop always reads fresh state (no stale closures)
   const windowsRef = useRef(windows);
@@ -264,32 +270,46 @@ export default function AiWindowsHost({ allowedModes = [] }) {
     return sum;
   }, [allowed, unreadByMode]);
 
-  if (!allowed.length) return null;
+  if (!allowed.length || !mounted || typeof document === 'undefined') return null;
 
-  return (
-    <>
-      <AiLauncher allowedModes={allowed} onOpenMode={openMode} badgeCount={unreadTotal} />
+  const strikerLayer = (
+    <div
+      id="forge-striker-os-layer"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 2147483000,
+        pointerEvents: 'none',
+        isolation: 'isolate',
+      }}
+    >
+      <div style={{ pointerEvents: 'auto' }}>
+        <AiLauncher allowedModes={allowed} onOpenMode={openMode} badgeCount={unreadTotal} />
+      </div>
 
       {allowed.map((mode) => {
         const st = windows?.[mode];
         if (!st?.open || st?.minimized) return null;
 
         return (
-          <AiWindow
-            key={mode}
-            mode={mode}
-            title={LABELS[mode] || 'AI Striker'}
-            zIndex={st.z || 20}
-            x={st.x}
-            y={st.y}
-            onFocus={() => bringToFront(mode)}
-            onClose={() => closeMode(mode)}
-            onMinimize={() => minimizeMode(mode)}
-            onSetPosition={(pos) => setPosition(mode, pos)}
-            onMarkSeen={() => markSeenNow(mode)}
-          />
+          <div key={mode} style={{ pointerEvents: 'auto' }}>
+            <AiWindow
+              mode={mode}
+              title={LABELS[mode] || 'AI Striker'}
+              zIndex={st.z || 20}
+              x={st.x}
+              y={st.y}
+              onFocus={() => bringToFront(mode)}
+              onClose={() => closeMode(mode)}
+              onMinimize={() => minimizeMode(mode)}
+              onSetPosition={(pos) => setPosition(mode, pos)}
+              onMarkSeen={() => markSeenNow(mode)}
+            />
+          </div>
         );
       })}
-    </>
+    </div>
   );
+
+  return createPortal(strikerLayer, document.body);
 }
