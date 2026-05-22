@@ -4,8 +4,8 @@ import { useRouter } from 'next/router';
 
 const GLASS = {
   border: '1px solid rgba(255,255,255,0.22)',
-  background: 'rgba(255,255,255,0.86)',
-  boxShadow: '0 18px 44px rgba(0,0,0,0.22)',
+  background: 'rgba(255,255,255,0.94)',
+  boxShadow: '0 24px 60px rgba(0,0,0,0.34)',
   backdropFilter: 'blur(12px)',
   WebkitBackdropFilter: 'blur(12px)',
 };
@@ -271,11 +271,13 @@ export default function AiWindow({
     <div
       onMouseDown={() => onFocus?.()}
       style={{
-        position: 'fixed',
-        left: pos.x ?? 18,
-        top: pos.y ?? (NAV_HEIGHT + 18),
-        width: WIN_W,
-        height,
+  position: 'fixed',
+  isolation: 'isolate',
+  pointerEvents: 'auto',
+  left: pos.x ?? 18,
+  top: pos.y ?? (NAV_HEIGHT + 18),
+  width: WIN_W,
+  height,
         // ✅ FIX #3: zIndex bumped well above nav header (typically z ~100)
         zIndex: 10000 + (zIndex || 0),
         borderRadius: 16,

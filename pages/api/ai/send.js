@@ -332,6 +332,22 @@ function buildModeOutcomeRules(mode) {
   ].join("\n");
 }
 
+
+function buildForgeIntelligenceGlossary() {
+  return [
+    "ForgeTomorrow intelligence definitions:",
+    "- Discovery Match is NOT external candidate matching.",
+    "- Discovery Match is the broader internal candidate discovery score used in Internal Candidate Search.",
+    "- Discovery Match helps recruiters find candidates who may fit based on semantic relevance, adjacent-role logic, profile/portfolio signal, primary resume support, skills, preferences, and visible platform evidence.",
+    "- Targeting Match is NOT external candidate matching.",
+    "- Targeting Match is the stricter qualification score used when recruiter targeting filters, saved automation, or precision workflows are active.",
+    "- Targeting Match is more conservative because it evaluates closer fit against explicit recruiter criteria such as title, skills, status, location, education, languages, work preferences, and saved targeting rules.",
+    "- External Compare is a separate recruiter workflow for uploaded/pasted external resumes and job descriptions.",
+    "- Internal Candidate Search, Targeting Match, and External Compare must not be described as the same thing.",
+    "- If asked to explain Discovery vs Targeting, answer with the ForgeTomorrow definitions above and keep it short.",
+  ].join("\\n");
+}
+
 function buildWorkspaceIntelligence(context) {
   const ctx = safeJson(context) || {};
   const blocks = [];
@@ -390,6 +406,7 @@ function buildStrikerOperatingSystem(mode, context) {
     "- Do not invent facts, candidate evidence, profile data, resume content, scores, or database state.",
     `Current surface: ${playbook.surface}`,
     `Current outcome: ${playbook.outcome}`,
+    buildForgeIntelligenceGlossary(),
     modeOutcomeRules,
     workspace ? `\n${workspace}` : "",
   ].filter(Boolean).join("\n");
@@ -640,6 +657,26 @@ async function tryGenerateWithOpenAI({ mode, context, history }) {
   }
 }
 
+
+function buildDirectForgeAnswer({ threadMode, content, context }) {
+  const text = String(content || "").toLowerCase();
+
+  const asksDiscoveryTargeting =
+    (text.includes("discovery match") || text.includes("discover match")) &&
+    text.includes("targeting match");
+
+  if (asksDiscoveryTargeting) {
+    return (
+      "On this page, **Discovery Match** is the broader internal candidate discovery score. " +
+      "It helps recruiters find people who may fit by using semantic relevance, adjacent-role logic, portfolio/profile signal, primary resume support, skills, and visible preferences.\\n\\n" +
+      "**Targeting Match** is stricter. It is used for precision filters, saved automation, and repeatable recruiter workflows, so it weighs explicit criteria more tightly: title, skills, status, location, education, languages, work preferences, and targeting rules.\\n\\n" +
+      "So the difference is simple: **Discovery helps you find possible fits. Targeting helps you qualify precise fits.**"
+    );
+  }
+
+  return null;
+}
+
 async function generateAssistantReply({
   threadMode,
   context,
@@ -647,6 +684,10 @@ async function generateAssistantReply({
   prisma,
   lastUserContent,
 }) {
+  // ✅ Forge-specific direct answers BEFORE generic model generation
+  const direct = buildDirectForgeAnswer({ threadMode, content: lastUserContent, context });
+  if (direct) return direct;
+
   // ✅ NEW: handoff guardrail BEFORE any generation
   const handoff = detectHandoff({ threadMode, content: lastUserContent });
   if (handoff?.reply) return handoff.reply;
