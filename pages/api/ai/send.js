@@ -206,8 +206,7 @@ function buildModeOutcomeRules(mode) {
   if (identity?.mindset) base.push(`- Mindset: ${identity.mindset}`);
   if (identity?.notA) base.push(`- Not: ${identity.notA}`);
 
-  return base.join("
-");
+  return base.join("\n");
 }
 
 
@@ -220,8 +219,7 @@ function buildForgeIntelligenceGlossary() {
     glossary["External Compare"] ? `- External Compare: ${glossary["External Compare"]}` : "- External Compare is separate recruiter workflow for external resumes/JDs.",
   ];
 
-  return lines.join("
-");
+  return lines.join("\n");
 }
 
 function buildWorkspaceIntelligence(context) {
@@ -301,8 +299,7 @@ function buildModeGuardrails(mode) {
     "Hard rules:",
     "- Stay in the current mode and do not cross into another persona’s responsibilities.",
     "- Do not invent facts, evidence, scores, database state, or user data.",
-  ].join("
-");
+  ].join("\n");
 }
 
 // ✅ NEW: Simple handoff detection (no mapping; keyword-based)
