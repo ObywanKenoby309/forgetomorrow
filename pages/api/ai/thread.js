@@ -86,8 +86,8 @@ export default async function handler(req, res) {
 
   if (!session?.user?.email) return res.status(401).json({ error: "Not authenticated" });
 
-  if (req.method !== "GET") {
-    res.setHeader("Allow", ["GET"]);
+  if (!["GET", "POST"].includes(req.method)) {
+    res.setHeader("Allow", ["GET", "POST"]);
     return res.status(405).json({ error: "Method not allowed" });
   }
 
@@ -100,6 +100,49 @@ export default async function handler(req, res) {
   // Paid tiers only (NO seeker free gets buddies)
   if (String(user.plan || "") === "FREE") {
     return res.status(403).json({ error: "AI Buddies require a paid plan." });
+  }
+
+  // ✅ NEW CHAT / RESET THREAD
+  if (req.method === "POST") {
+    const action = String(req.body?.action || "").trim().toLowerCase();
+
+    if (action !== "reset") {
+      return res.status(400).json({ error: "Invalid action" });
+    }
+
+    try {
+      await prisma.aiThread.updateMany({
+        where: {
+          userId: user.id,
+          mode,
+        },
+        data: {
+          mode: `${mode}_ARCHIVED_${Date.now()}`,
+          updatedAt: new Date(),
+        },
+      });
+
+      const newThread = await prisma.aiThread.create({
+        data: {
+          userId: user.id,
+          mode,
+        },
+        select: {
+          id: true,
+          mode: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      return res.status(200).json({
+        ok: true,
+        thread: newThread,
+      });
+    } catch (err) {
+      console.error("[ai/thread] RESET error:", err);
+      return res.status(500).json({ error: "Failed to reset AI thread." });
+    }
   }
 
   try {

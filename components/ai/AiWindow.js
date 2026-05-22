@@ -323,6 +323,56 @@ export default function AiWindow({
         <div style={{ display: 'flex', gap: 6 }}>
           <button
             type="button"
+            title="Start new chat"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={async () => {
+              try {
+                setSending(true);
+                setError('');
+
+                const res = await fetch('/api/ai/thread', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    mode: resolvedMode,
+                    action: 'reset',
+                  }),
+                });
+
+                const json = await res.json();
+
+                if (!res.ok) {
+                  throw new Error(json?.error || 'Failed to reset thread');
+                }
+
+                setThreadId(String(json?.thread?.id || ''));
+                setMessages([]);
+                setText('');
+
+                onMarkSeen?.();
+              } catch (e) {
+                setError(String(e?.message || 'Failed to reset chat.'));
+              } finally {
+                setSending(false);
+              }
+            }}
+            aria-label="New Chat"
+            style={{
+              border: '1px solid rgba(255,112,67,0.22)',
+              background: 'rgba(255,112,67,0.10)',
+              color: '#FF7043',
+              borderRadius: 10,
+              padding: '6px 10px',
+              cursor: 'pointer',
+              fontWeight: 900,
+              fontSize: 11,
+            }}
+          >
+            ↻ New
+          </button>
+
+          <button
+            type="button"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={onMinimize}
             aria-label="Minimize"
