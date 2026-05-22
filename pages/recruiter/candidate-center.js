@@ -117,7 +117,7 @@ function buildTiles(isEnterprise) {
       id: "search",
       title: "Internal Candidate Search",
       desc: "Search and automate discovery of candidates already on ForgeTomorrow.",
-      subtitle: "Internal candidate search, targeting, WHY, compare, and recruiter workflow tools.",
+      subtitle: "Explainable internal candidate search, targeting, comparing, and workflow tools.",
       src: "/recruiter/candidates?chrome=recruiter-ent",
       img: null,
     },
