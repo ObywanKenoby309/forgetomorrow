@@ -972,6 +972,75 @@ function CommandBar({
   );
 }
 
+
+function MatchScoreExplainer({ activeFilterCount = 0 }) {
+  return (
+    <div
+      style={{
+        marginTop: -4,
+        marginBottom: 14,
+        borderRadius: 14,
+        border: "1px solid rgba(255,255,255,0.45)",
+        background: "rgba(255,255,255,0.58)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+        boxShadow: "0 8px 22px rgba(15,23,42,0.07)",
+        padding: "10px 12px",
+        display: "grid",
+        gap: 6,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.12em",
+            color: "#FF7043",
+          }}
+        >
+          Match scoring guide
+        </span>
+        {activeFilterCount > 0 && (
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              color: "#475569",
+              border: "1px solid rgba(15,23,42,0.10)",
+              background: "rgba(255,255,255,0.72)",
+              borderRadius: 999,
+              padding: "2px 7px",
+            }}
+          >
+            Targeting active
+          </span>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: 8,
+          color: "#475569",
+          fontSize: 12,
+          lineHeight: 1.45,
+        }}
+      >
+        <div>
+          <strong style={{ color: "#0f172a" }}>Discovery Match</strong> is broader semantic relevance for finding candidates who may fit, including adjacent-role and portfolio signals.
+        </div>
+        <div>
+          <strong style={{ color: "#0f172a" }}>Targeting Match</strong> is stricter qualification logic for precision filters, saved automation, and repeatable recruiter workflows.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function RightToolsCard({ whyMode, creditsLeft = null }) {
   const { isEnterprise } = usePlan();
   const resolvedMode = whyMode || (isEnterprise ? "full" : "lite");
@@ -1939,7 +2008,9 @@ function Body() {
         isMobile={isMobile}
       />
 
-      <TargetingDrawer
+      
+              <MatchScoreExplainer activeFilterCount={activeFilterCount} />
+<TargetingDrawer
         open={targetingOpen}
         onClose={() => setTargetingOpen(false)}
         filters={{
