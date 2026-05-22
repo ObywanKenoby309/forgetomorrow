@@ -190,8 +190,76 @@ function WorkspaceModuleShell({ title, subtitle, onBack, children }) {
         </p>
       </div>
 
+      {title === "Internal Candidate Search" && <MatchScoreMiniGuide />}
+
       {children}
     </section>
+  );
+}
+
+
+function MatchScoreMiniGuide() {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 10,
+        borderRadius: 16,
+        border: "1px solid rgba(255,255,255,0.38)",
+        background: "rgba(255,255,255,0.54)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+        boxShadow: "0 10px 24px rgba(15,23,42,0.08)",
+        padding: "11px 14px",
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 900,
+            lineHeight: 1.1,
+            color: ORANGE,
+          }}
+        >
+          Discovery Match
+        </div>
+        <div
+          style={{
+            marginTop: 3,
+            fontSize: 12,
+            lineHeight: 1.35,
+            color: "#475569",
+          }}
+        >
+          Broader semantic + adjacent-role candidate discovery
+        </div>
+      </div>
+
+      <div>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 900,
+            lineHeight: 1.1,
+            color: ORANGE,
+          }}
+        >
+          Targeting Match
+        </div>
+        <div
+          style={{
+            marginTop: 3,
+            fontSize: 12,
+            lineHeight: 1.35,
+            color: "#475569",
+          }}
+        >
+          Stricter qualification + automation-ready scoring
+        </div>
+      </div>
+    </div>
   );
 }
 
