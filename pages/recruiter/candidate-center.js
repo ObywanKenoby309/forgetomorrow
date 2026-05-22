@@ -172,25 +172,35 @@ function WorkspaceModuleShell({ title, subtitle, onBack, children }) {
         ← Return to Main
       </button>
 
-      <div style={{ display: "grid", gap: 8 }}>
-        <h2
-          style={{
-            margin: 0,
-            fontSize: 22,
-            color: ORANGE,
-            lineHeight: 1.2,
-            letterSpacing: "-0.01em",
-            ...ORANGE_HEADING_LIFT,
-          }}
-        >
-          {title}
-        </h2>
-        <p style={{ margin: 0, color: "#546E7A", fontSize: 15, lineHeight: 1.6 }}>
-          {subtitle}
-        </p>
-      </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 22,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ minWidth: 260, flex: "1 1 420px", display: "grid", gap: 8 }}>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 22,
+              color: ORANGE,
+              lineHeight: 1.2,
+              letterSpacing: "-0.01em",
+              ...ORANGE_HEADING_LIFT,
+            }}
+          >
+            {title}
+          </h2>
+          <p style={{ margin: 0, color: "#546E7A", fontSize: 15, lineHeight: 1.6 }}>
+            {subtitle}
+          </p>
+        </div>
 
-      {title === "Internal Candidate Search" && <MatchScoreMiniGuide />}
+        {title === "Internal Candidate Search" && <MatchScoreMiniGuide />}
+      </div>
 
       {children}
     </section>
@@ -200,24 +210,26 @@ function WorkspaceModuleShell({ title, subtitle, onBack, children }) {
 
 function MatchScoreMiniGuide() {
   return (
-    <div
+    <aside
+      aria-label="Match scoring guide"
       style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-        gap: 10,
+        width: "min(100%, 330px)",
+        flexShrink: 0,
         borderRadius: 16,
         border: "1px solid rgba(255,255,255,0.38)",
         background: "rgba(255,255,255,0.54)",
         backdropFilter: "blur(10px)",
         WebkitBackdropFilter: "blur(10px)",
         boxShadow: "0 10px 24px rgba(15,23,42,0.08)",
-        padding: "11px 14px",
+        padding: "14px 16px",
+        display: "grid",
+        gap: 14,
       }}
     >
       <div>
         <div
           style={{
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: 900,
             lineHeight: 1.1,
             color: ORANGE,
@@ -227,7 +239,7 @@ function MatchScoreMiniGuide() {
         </div>
         <div
           style={{
-            marginTop: 3,
+            marginTop: 4,
             fontSize: 12,
             lineHeight: 1.35,
             color: "#475569",
@@ -240,7 +252,7 @@ function MatchScoreMiniGuide() {
       <div>
         <div
           style={{
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: 900,
             lineHeight: 1.1,
             color: ORANGE,
@@ -250,7 +262,7 @@ function MatchScoreMiniGuide() {
         </div>
         <div
           style={{
-            marginTop: 3,
+            marginTop: 4,
             fontSize: 12,
             lineHeight: 1.35,
             color: "#475569",
@@ -259,7 +271,7 @@ function MatchScoreMiniGuide() {
           Stricter qualification + automation-ready scoring
         </div>
       </div>
-    </div>
+    </aside>
   );
 }
 
