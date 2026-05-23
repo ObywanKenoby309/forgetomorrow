@@ -7,6 +7,7 @@ export default function ApplicationDetailsModal({
   onClose,
   onEdit,    // optional: (job, stage) => void
   onDelete,  // optional: (id, stage) => void
+  onOpenPrep, // optional: (job, stage) => void
 }) {
   useEffect(() => {
     const onEsc = (e) => e.key === 'Escape' && onClose?.();
@@ -15,6 +16,8 @@ export default function ApplicationDetailsModal({
   }, [onClose]);
 
   if (!job) return null;
+
+  const showPrep = stage === 'Interviewing' && Boolean(job.jobId);
 
   const Row = ({ label, value }) => (
     <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 10 }}>
@@ -122,6 +125,24 @@ export default function ApplicationDetailsModal({
             padding: '12px 20px 20px',
           }}
         >
+          {showPrep && onOpenPrep && (
+            <button
+              onClick={() => onOpenPrep(job, stage)}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 6,
+                border: '1px solid #FF7043',
+                background: '#FAECE7',
+                color: '#993C1D',
+                cursor: 'pointer',
+                fontWeight: 700,
+              }}
+              title="Open interview prep"
+            >
+              Interview Prep
+            </button>
+          )}
+
           {onDelete && (
             <button
               onClick={() => onDelete(job.id, stage)}

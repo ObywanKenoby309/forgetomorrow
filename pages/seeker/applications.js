@@ -6,6 +6,7 @@ import RightRailPlacementManager from '@/components/ads/RightRailPlacementManage
 import ApplicationForm from '@/components/applications/ApplicationForm';
 import ApplicationDetailsModal from '@/components/applications/ApplicationDetailsModal';
 import ApplicationsBoard from '@/components/applications/ApplicationsBoard';
+import InterviewPrepOverlay from '@/components/applications/InterviewPrepOverlay';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
@@ -170,6 +171,8 @@ export default function SeekerApplicationsPage() {
   const [jobToEdit, setJobToEdit] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [details, setDetails] = useState({ job: null, stage: null });
+  const [prepOpen, setPrepOpen] = useState(false);
+  const [prepApplication, setPrepApplication] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -531,6 +534,17 @@ export default function SeekerApplicationsPage() {
     setDetailsOpen(true);
   };
 
+  const openInterviewPrep = (job, stage) => {
+    if (!job?.id) return;
+    setPrepApplication({ job, stage });
+    setPrepOpen(true);
+  };
+
+  const closeInterviewPrep = () => {
+    setPrepOpen(false);
+    setPrepApplication(null);
+  };
+
   const GLASS = {
     borderRadius: 14,
     border: '1px solid rgba(255,255,255,0.22)',
@@ -675,6 +689,7 @@ const HeaderBox = (
             onDelete={deleteApplication}
             onEdit={startEdit}
             onView={onView}
+            onOpenPrep={openInterviewPrep}
           />
         </section>
       </div>
@@ -705,8 +720,16 @@ const HeaderBox = (
           onClose={() => setDetailsOpen(false)}
           onEdit={startEdit}
           onDelete={deleteApplication}
+          onOpenPrep={openInterviewPrep}
         />
       )}
+
+      <InterviewPrepOverlay
+        open={prepOpen}
+        applicationId={prepApplication?.job?.id || null}
+        applicationLabel={prepApplication?.job?.title || ''}
+        onClose={closeInterviewPrep}
+      />
     </SeekerLayout>
   );
 }

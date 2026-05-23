@@ -438,7 +438,7 @@ export default function InterviewPrepPage() {
           ))}
         </Section>
 
-        {/* Hearth CTA */}
+        {/* Anvil CTA */}
         <div style={{
           background: 'rgba(255,112,67,0.06)',
           border: '1px solid rgba(255,112,67,0.20)',
@@ -467,11 +467,11 @@ export default function InterviewPrepPage() {
               More tools for your professional journey
             </div>
             <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, marginBottom: 10 }}>
-              The Hearth has everything you need to keep growing — offer negotiation tools,
-              project promotion guides, mentorship spotlights, and more being added all the time.
+              The Anvil is your professional workshop for offer negotiation tools,
+              project promotion guides, and more being added all the time.
             </div>
             <button
-              onClick={() => router.push('/the-hearth')}
+              onClick={() => router.push('/anvil')}
               style={{
                 background: ORANGE,
                 border: 'none',
@@ -483,7 +483,7 @@ export default function InterviewPrepPage() {
                 cursor: 'pointer',
               }}
             >
-              Visit The Hearth →
+              Visit The Anvil →
             </button>
           </div>
         </div>

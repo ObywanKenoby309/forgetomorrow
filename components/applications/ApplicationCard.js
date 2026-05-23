@@ -1,6 +1,5 @@
 // components/applications/ApplicationCard.js
 import React, { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/router';
 import { FaExchangeAlt } from 'react-icons/fa';
 
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
@@ -67,10 +66,10 @@ export default function ApplicationCard({
   onEdit,
   onDelete,
   onMove,
+  onOpenPrep,
   dragListeners,
   dragAttributes,
 }) {
-  const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [showMoveSelect, setShowMoveSelect] = useState(false);
 
@@ -250,7 +249,7 @@ export default function ApplicationCard({
           {/* Right: Interview Prep CTA — only on Interviewing + on-platform */}
           {showPrep && (
             <button
-              onClick={() => router.push(`/dashboard/seeker/interview-prep/${job.id}`)}
+              onClick={() => onOpenPrep?.(job, stage)}
               title="Interview prep"
               aria-label="Open interview prep"
               style={{
