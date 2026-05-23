@@ -145,6 +145,15 @@ function pick(arr = [], seed = "") {
   return arr[total % arr.length];
 }
 
+const CONFIDENCE_CLOSE_PATTERNS = [
+  "Use this early so the interviewer establishes confidence in your capabilities before the conversation narrows into weaker areas.",
+  "This is one of your strongest proof areas and can help anchor the conversation around demonstrated capability.",
+  "Use this early to establish credibility before the interview shifts toward adjacent or missing experience.",
+  "This helps frame you as immediately useful before the discussion moves into ramp-up concerns.",
+];
+
+
+
 function capabilityGuidance(label = "") {
   const text = safeLower(label);
   const cleanLabel = safe(label) || "this capability";
@@ -185,11 +194,11 @@ function capabilityGuidance(label = "") {
     return {
       family: "analysis",
       validation:
-        "The interview is likely to test whether you can turn information into decisions, not just collect or report data.",
+        "The interview is likely to test whether you can translate metrics, reporting, dashboards, or KPI visibility into operational or business decisions.",
       bridge:
-        "Use an example where your analysis changed a process, clarified a problem, improved visibility, or helped someone make a better decision.",
+        "Use an example where reporting, KPI review, dashboards, or operational metrics helped identify a problem, improve visibility, or influence a business decision.",
       strength:
-        "Lead with examples where information capture, KPI review, reporting, or research led to an operational improvement.",
+        "Lead with examples where metrics, dashboards, reporting, or KPI review directly improved operational visibility or business decision-making.",
       storyPrompt:
         `${pick(STORY_PATTERNS, cleanLabel)} you used data, research, or pattern recognition to identify a problem and influence what happened next.`,
       questionTip:
@@ -333,11 +342,13 @@ function translateStrengthToConfidence(strength) {
     .replace(/^Lead with\s+/i, "")
     .trim();
 
+  const closer = pick(CONFIDENCE_CLOSE_PATTERNS, text);
+
   return {
     area: text,
     note:
       `${lead} ${coreStrength.charAt(0).toLowerCase()}${coreStrength.slice(1)} ` +
-      "This should be one of your early proof points so the conversation starts from demonstrated strength instead of only reacting to gaps.",
+      closer,
   };
 }
 
