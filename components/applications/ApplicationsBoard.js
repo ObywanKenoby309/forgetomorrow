@@ -32,7 +32,7 @@ const stageKey = (stage) =>
     'Closed Out': 'info',
   }[stage] || 'info');
 
-function SortableCard({ job, stage, onView, onEdit, onDelete, onMove }) {
+function SortableCard({ job, stage, onView, onEdit, onDelete, onMove, onOpenPrep }) {
   if (!job || !job.id) return null;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -56,6 +56,7 @@ function SortableCard({ job, stage, onView, onEdit, onDelete, onMove }) {
         onEdit={onEdit}
         onDelete={onDelete}
         onMove={onMove}
+        onOpenPrep={onOpenPrep}
         dragListeners={listeners}
         dragAttributes={attributes}
       />
@@ -84,6 +85,7 @@ export default function ApplicationsBoard({
   onEdit,
   onDelete,
   onView,
+  onOpenPrep,
   compact = false,
   columns = 5,
   title = 'Job Application Tracker',
@@ -434,6 +436,7 @@ export default function ApplicationsBoard({
                           onEdit={onEdit}
                           onDelete={onDelete}
                           onMove={onMove}
+                          onOpenPrep={onOpenPrep}
                         />
                       ))}
                     </SortableContext>
@@ -471,6 +474,7 @@ export default function ApplicationsBoard({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onMove={onMove}
+                onOpenPrep={onOpenPrep}
               />
             </div>
           ) : null}
