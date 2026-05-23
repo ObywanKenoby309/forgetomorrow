@@ -146,10 +146,11 @@ function pick(arr = [], seed = "") {
 }
 
 const CONFIDENCE_CLOSE_PATTERNS = [
-  "Use this early so the interviewer establishes confidence in your capabilities before the conversation narrows into weaker areas.",
-  "This is one of your strongest proof areas and can help anchor the conversation around demonstrated capability.",
-  "Use this early to establish credibility before the interview shifts toward adjacent or missing experience.",
-  "This helps frame you as immediately useful before the discussion moves into ramp-up concerns.",
+  "Use this early so the conversation starts from proven capability, not only from what still needs explaining.",
+  "This can anchor the interview around demonstrated strength before the conversation moves into weaker or adjacent areas.",
+  "Bring this forward early to establish credibility and reduce concern about ramp-up risk.",
+  "This helps position you as immediately useful before the interviewer focuses on validation gaps.",
+  "Use this as a proof point that shows how you already create value in work that resembles this role.",
 ];
 
 
@@ -190,19 +191,35 @@ function capabilityGuidance(label = "") {
     };
   }
 
-  if (includesAny(text, ["data", "analytics", "bi", "report", "kpi", "metrics", "analysis", "research"])) {
+  if (includesAny(text, ["data analytics", "analytics", "bi", "business intelligence", "dashboard", "dashboards", "report", "reporting", "kpi", "metrics", "metric"])) {
     return {
-      family: "analysis",
+      family: "data_bi",
       validation:
-        "The interview is likely to test whether you can translate metrics, reporting, dashboards, or KPI visibility into operational or business decisions.",
+        "The interview is likely to test whether you can turn metrics, dashboards, KPI visibility, or reporting into operational clarity and better decisions.",
       bridge:
-        "Use an example where reporting, KPI review, dashboards, or operational metrics helped identify a problem, improve visibility, or influence a business decision.",
+        "Use an example where reporting, KPI review, dashboards, or operational metrics helped expose a trend, improve visibility, or guide a business decision.",
       strength:
-        "Lead with examples where metrics, dashboards, reporting, or KPI review directly improved operational visibility or business decision-making.",
+        "Use examples where metrics, dashboards, reporting, or KPI review directly improved operational visibility or decision-making.",
       storyPrompt:
-        `${pick(STORY_PATTERNS, cleanLabel)} you used data, research, or pattern recognition to identify a problem and influence what happened next.`,
+        `${pick(STORY_PATTERNS, cleanLabel)} metrics, dashboards, reporting, or KPI review helped you identify a trend, clarify performance, or influence a decision.`,
       questionTip:
-        "Explain the question you were trying to answer, the information you used, the pattern you found, and what changed because of it.",
+        "Explain the metric or report, what it revealed, who needed the insight, and what decision or operational change followed.",
+    };
+  }
+
+  if (includesAny(text, ["research", "analysis", "analytical", "investigation", "investigate", "pattern recognition", "root cause", "problem solving"])) {
+    return {
+      family: "research_analysis",
+      validation:
+        "The interview is likely to test investigative thinking, pattern recognition, ambiguity handling, and your ability to make sense of incomplete information.",
+      bridge:
+        "Use an example where you investigated a problem, found patterns or root causes, clarified uncertainty, or helped guide a recommendation.",
+      strength:
+        "Use examples where investigation, analysis, or pattern recognition clarified a problem and influenced what happened next.",
+      storyPrompt:
+        `${pick(STORY_PATTERNS, cleanLabel)} you investigated a confusing problem, found the pattern or root cause, and helped move the work toward a better decision.`,
+      questionTip:
+        "Explain what was unclear, how you investigated it, what pattern or root cause you found, and how your thinking shaped the next action.",
     };
   }
 
@@ -333,16 +350,17 @@ function translateStrengthToConfidence(strength) {
 
   const guidance = capabilityGuidance(text);
   const lead = pick(LEAD_PATTERNS, text);
+  const closer = pick(CONFIDENCE_CLOSE_PATTERNS, text);
 
   const coreStrength = safe(guidance.strength)
     .replace(/^Lead with examples that show\s+/i, "")
     .replace(/^Lead with support examples that show\s+/i, "")
     .replace(/^Lead with examples where\s+/i, "")
     .replace(/^Lead with a concrete example that shows\s+/i, "")
+    .replace(/^Use examples where\s+/i, "")
+    .replace(/^Use early proof that shows\s+/i, "")
     .replace(/^Lead with\s+/i, "")
     .trim();
-
-  const closer = pick(CONFIDENCE_CLOSE_PATTERNS, text);
 
   return {
     area: text,
@@ -368,7 +386,7 @@ function translateTransferableToBridge(signal) {
     skill,
     note:
       `${guidance.bridge} ${bridgePattern} ` +
-      "Make the overlap clear through ownership, process familiarity, transferable outcomes, and ramp speed. The point is not to claim identical experience; it is to show why the transition is credible.",
+      "Make the overlap clear through ownership, process familiarity, transferable outcomes, and ramp speed. The point is not to claim identical experience; it is to show why the transition is credible and worth validating.",
   };
 }
 
