@@ -125,11 +125,15 @@ function StatTile({ label, value, tone = 'neutral' }) {
         borderRadius: 14,
         border: `1px solid ${t.border}`,
         background: t.bg,
-        padding: '10px 12px',
-        minWidth: 0,
+        padding: '9px 14px',
+        minWidth: 132,
+        minHeight: 58,
+        display: 'grid',
+        alignContent: 'center',
+        textAlign: 'center',
       }}
     >
-      <div style={{ fontSize: 10, fontWeight: 950, color: t.color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+      <div style={{ fontSize: 10, fontWeight: 950, color: t.color, textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
         {label}
       </div>
       <div style={{ marginTop: 3, fontSize: 22, fontWeight: 950, color: t.color, lineHeight: 1 }}>
@@ -456,7 +460,7 @@ function PrepWorkspace({ data, onNavigate }) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, minmax(112px, 1fr))',
+            gridTemplateColumns: 'repeat(4, 132px)',
             gap: 10,
           }}
         >

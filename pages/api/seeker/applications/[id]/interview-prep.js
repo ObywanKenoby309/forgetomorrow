@@ -116,6 +116,35 @@ function cleanEngineReason(value) {
   return text;
 }
 
+const LEAD_PATTERNS = [
+  "Lead with examples that show",
+  "Anchor the conversation with examples that demonstrate",
+  "Use early proof that shows",
+  "Establish credibility early by highlighting",
+];
+
+const STORY_PATTERNS = [
+  "Prepare a story where",
+  "Be ready to discuss a situation where",
+  "Have an example ready that shows how",
+  "Think through a real example where",
+];
+
+const BRIDGE_PATTERNS = [
+  "The goal is not to overclaim — it is to make the connection obvious.",
+  "Do not apologize for adjacent experience. Translate it clearly.",
+  "The interviewer should not have to infer the connection themselves.",
+  "Frame the overlap directly instead of assuming it will be noticed.",
+];
+
+function pick(arr = [], seed = "") {
+  if (!Array.isArray(arr) || arr.length === 0) return "";
+  const s = String(seed || "");
+  let total = 0;
+  for (let i = 0; i < s.length; i++) total += s.charCodeAt(i);
+  return arr[total % arr.length];
+}
+
 function capabilityGuidance(label = "") {
   const text = safeLower(label);
   const cleanLabel = safe(label) || "this capability";
@@ -130,7 +159,7 @@ function capabilityGuidance(label = "") {
       strength:
         "Lead with support examples that show calm communication, problem ownership, and reliable follow-through—not just task completion.",
       storyPrompt:
-        "Prepare a story where someone needed help, the situation had pressure or frustration, and you stayed accountable until the issue was resolved.",
+        `${pick(STORY_PATTERNS, cleanLabel)} someone needed help, the situation carried pressure or frustration, and you stayed accountable until the issue was resolved.`,
       questionTip:
         "Focus on the customer/user problem, how you clarified need, what you communicated, and how you closed the loop.",
     };
@@ -146,7 +175,7 @@ function capabilityGuidance(label = "") {
       strength:
         "Lead with examples where you combined technical troubleshooting with reliable service delivery and clear communication.",
       storyPrompt:
-        "Prepare a story where you diagnosed a technical issue, kept the user informed, and drove the issue to resolution or the right escalation path.",
+        `${pick(STORY_PATTERNS, cleanLabel)} you diagnosed a technical issue, kept the user informed, and drove the issue to resolution or the right escalation path.`,
       questionTip:
         "Be specific about scope, tools, diagnosis steps, escalation judgment, and measurable user or business impact.",
     };
@@ -162,7 +191,7 @@ function capabilityGuidance(label = "") {
       strength:
         "Lead with examples where information capture, KPI review, reporting, or research led to an operational improvement.",
       storyPrompt:
-        "Prepare a story where you used data, research, or pattern recognition to identify a problem and influence what happened next.",
+        `${pick(STORY_PATTERNS, cleanLabel)} you used data, research, or pattern recognition to identify a problem and influence what happened next.`,
       questionTip:
         "Explain the question you were trying to answer, the information you used, the pattern you found, and what changed because of it.",
     };
@@ -178,7 +207,7 @@ function capabilityGuidance(label = "") {
       strength:
         "Lead with examples where you made a tool, process, knowledge base, or workflow easier for others to use.",
       storyPrompt:
-        "Prepare a story where you noticed friction in a process or tool and made the experience clearer, faster, or easier for users.",
+        `${pick(STORY_PATTERNS, cleanLabel)} you noticed friction in a process or tool and made the experience clearer, faster, or easier for users.`,
       questionTip:
         "Talk about the user problem, the friction you saw, the change you made, and how the experience improved.",
     };
@@ -194,7 +223,7 @@ function capabilityGuidance(label = "") {
       strength:
         "Lead with examples that show consultative communication, not just selling activity.",
       storyPrompt:
-        "Prepare a story where you uncovered a need, explained value clearly, and helped someone choose an appropriate solution.",
+        `${pick(STORY_PATTERNS, cleanLabel)} you uncovered a need, explained value clearly, and helped someone choose an appropriate solution.`,
       questionTip:
         "Show how you understood the need, built trust, handled hesitation, and created a useful outcome.",
     };
@@ -210,7 +239,7 @@ function capabilityGuidance(label = "") {
       strength:
         "Lead with examples where your documentation or training helped a team perform more consistently.",
       storyPrompt:
-        "Prepare a story where you turned your knowledge into a process, guide, training, or resource others could use.",
+        `${pick(STORY_PATTERNS, cleanLabel)} you turned your knowledge into a process, guide, training, or resource others could use.`,
       questionTip:
         "Explain the gap, what you built, who used it, and how it improved consistency or speed.",
     };
@@ -226,7 +255,7 @@ function capabilityGuidance(label = "") {
       strength:
         "Lead with examples that show calm judgment, process discipline, and responsible escalation.",
       storyPrompt:
-        "Prepare a story where a situation carried risk, urgency, or potential impact and you handled it responsibly.",
+        `${pick(STORY_PATTERNS, cleanLabel)} a situation carried risk, urgency, or potential impact and you handled it responsibly.`,
       questionTip:
         "Focus on what was at risk, what decision you made, who needed to know, and how you protected the outcome.",
     };
@@ -242,7 +271,7 @@ function capabilityGuidance(label = "") {
       strength:
         "Lead with examples that show ownership from planning through execution and follow-through.",
       storyPrompt:
-        "Prepare a story where you owned a project, rollout, or operational change from start to finish.",
+        `${pick(STORY_PATTERNS, cleanLabel)} you owned a project, rollout, or operational change from start to finish.`,
       questionTip:
         "Clarify scope, your role, what changed, obstacles handled, and the result.",
     };
@@ -257,7 +286,7 @@ function capabilityGuidance(label = "") {
     strength:
       `Lead with a concrete example that shows how you have applied ${cleanLabel} in real work.`,
     storyPrompt:
-      `Prepare a story that proves your closest real experience with ${cleanLabel}: what happened, what you owned, what you did, and what changed.`,
+      `${pick(STORY_PATTERNS, cleanLabel)} you demonstrated your closest real experience with ${cleanLabel}: what happened, what you owned, what you did, and what changed.`,
     questionTip:
       "Answer with a concrete example: context, responsibility, actions, decisions, and measurable result.",
   };
@@ -290,25 +319,45 @@ function translateStrengthToConfidence(strength) {
       ? strength
       : strength?.seekerLabel || strength?.label || strength?.text || ""
   );
+
   if (!text) return null;
 
   const guidance = capabilityGuidance(text);
+  const lead = pick(LEAD_PATTERNS, text);
+
+  const coreStrength = safe(guidance.strength)
+    .replace(/^Lead with examples that show\s+/i, "")
+    .replace(/^Lead with support examples that show\s+/i, "")
+    .replace(/^Lead with examples where\s+/i, "")
+    .replace(/^Lead with a concrete example that shows\s+/i, "")
+    .replace(/^Lead with\s+/i, "")
+    .trim();
 
   return {
     area: text,
-    note: `${guidance.strength} Use this early so the interviewer hears your strongest proof before the conversation narrows into gaps.`,
+    note:
+      `${lead} ${coreStrength.charAt(0).toLowerCase()}${coreStrength.slice(1)} ` +
+      "This should be one of your early proof points so the conversation starts from demonstrated strength instead of only reacting to gaps.",
   };
 }
 
 function translateTransferableToBridge(signal) {
-  const skill = safe(typeof signal === "string" ? signal : signal?.label || signal?.name || signal?.skill || "");
+  const skill = safe(
+    typeof signal === "string"
+      ? signal
+      : signal?.label || signal?.name || signal?.skill || ""
+  );
+
   if (!skill) return null;
 
   const guidance = capabilityGuidance(skill);
+  const bridgePattern = pick(BRIDGE_PATTERNS, skill);
 
   return {
     skill,
-    note: `${guidance.bridge} The goal is not to overclaim; it is to make the connection obvious so the interviewer does not have to infer it.`,
+    note:
+      `${guidance.bridge} ${bridgePattern} ` +
+      "Make the overlap clear through ownership, process familiarity, transferable outcomes, and ramp speed. The point is not to claim identical experience; it is to show why the transition is credible.",
   };
 }
 
@@ -399,9 +448,9 @@ function buildPrepPayload(why, job) {
     ? prepAreas.slice(0, 4).map(p => p.storyPrompt).filter(Boolean)
     : [
         "Prepare a story where you owned a project or problem from start to finish. Focus on scope, decisions, obstacles, and result.",
-        "Prepare a story where you learned something quickly under pressure and turned that learning into a useful outcome.",
-        "Prepare a story where you handled disagreement or changing expectations without losing professionalism or momentum.",
-        "Prepare a story where you solved a complex problem by breaking it down, communicating clearly, and following through.",
+        "Be ready to discuss a situation where you had to learn quickly, adapt under pressure, and turn that learning into a useful outcome.",
+        "Have an example ready that shows how you handled disagreement, changing expectations, or ambiguity without losing professionalism or momentum.",
+        "Think through a real example where you solved a complex problem by breaking it down, communicating clearly, and following through.",
       ];
 
   const company = safe(job?.company) || "the company";
@@ -458,9 +507,9 @@ const UNIVERSAL_PREP_FALLBACK = [
 
 const STORY_PROMPTS_FALLBACK = [
   "Prepare a story where you owned a project or problem from start to finish. Focus on scope, decisions, obstacles, and result.",
-  "Prepare a story where you learned something quickly under pressure and turned that learning into a useful outcome.",
-  "Prepare a story where you handled disagreement or changing expectations without losing professionalism or momentum.",
-  "Prepare a story where you solved a complex problem by breaking it down, communicating clearly, and following through.",
+  "Be ready to discuss a situation where you had to learn quickly, adapt under pressure, and turn that learning into a useful outcome.",
+  "Have an example ready that shows how you handled disagreement, changing expectations, or ambiguity without losing professionalism or momentum.",
+  "Think through a real example where you solved a complex problem by breaking it down, communicating clearly, and following through.",
 ];
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
