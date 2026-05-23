@@ -11,6 +11,11 @@
 //   First call  → run buildExplain() → persist to SeekerInterviewPrep → return
 //   Any re-visit → read from SeekerInterviewPrep → return immediately (no engine)
 //   Deleted when Application is deleted (cascade)
+//
+// Translation goal:
+//   Raw WHY signal → seeker-facing interview preparation.
+//   Do not expose recruiter/hiring-manager framing directly.
+//   Translate into: likely validation, how to frame proof, and what story to prepare.
 
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
@@ -19,6 +24,10 @@ import { buildExplain } from "@/lib/intelligence/whyEngine";
 
 function safe(value = "") {
   return String(value || "").trim();
+}
+
+function safeLower(value = "") {
+  return safe(value).toLowerCase();
 }
 
 function safeJsonParse(value) {
@@ -90,21 +99,188 @@ function safeArray(val, limit = 10) {
   return [];
 }
 
-function translateGapToPrep(gap) {
-  const label = safe(gap?.label || gap?.requirement || gap?.skill || "");
-  const why   = safe(gap?.why_missing || gap?.description || "");
-  const tier  = safe(gap?.tier || "B");
-  if (!label) return null;
+function includesAny(text, terms = []) {
+  const t = safeLower(text);
+  return terms.some((term) => t.includes(String(term || "").toLowerCase()));
+}
 
-  const safeWhy = (why && !why.toLowerCase().includes("recruiter") && !why.toLowerCase().includes("hiring manager"))
-    ? why
-    : `Be ready to speak to your experience with ${label} using a specific example.`;
+function cleanEngineReason(value) {
+  const text = safe(value);
+  if (!text) return "";
+
+  const lower = text.toLowerCase();
+  if (lower.includes("recruiter") || lower.includes("hiring manager") || lower.includes("provided resume text")) {
+    return "";
+  }
+
+  return text;
+}
+
+function capabilityGuidance(label = "") {
+  const text = safeLower(label);
+  const cleanLabel = safe(label) || "this capability";
+
+  if (includesAny(text, ["customer service", "customer support", "client service", "support", "patron", "service delivery"])) {
+    return {
+      family: "customer_service",
+      validation:
+        "The interview is likely to test direct customer-facing issue handling, communication under pressure, de-escalation, and follow-through.",
+      bridge:
+        "Use an example where you owned a user or customer problem from intake to resolution, especially if expectations were unclear or emotions were high.",
+      strength:
+        "Lead with support examples that show calm communication, problem ownership, and reliable follow-through—not just task completion.",
+      storyPrompt:
+        "Prepare a story where someone needed help, the situation had pressure or frustration, and you stayed accountable until the issue was resolved.",
+      questionTip:
+        "Focus on the customer/user problem, how you clarified need, what you communicated, and how you closed the loop.",
+    };
+  }
+
+  if (includesAny(text, ["desktop", "technical support", "help desk", "service desk", "endpoint", "device", "hardware", "software", "troubleshooting"])) {
+    return {
+      family: "technical_support",
+      validation:
+        "The interview is likely to test troubleshooting discipline, user communication, ticket ownership, escalation judgment, and ability to solve without overcomplicating the issue.",
+      bridge:
+        "Use a real support example that shows how you diagnosed the issue, communicated with the user, escalated only when appropriate, and documented the result.",
+      strength:
+        "Lead with examples where you combined technical troubleshooting with reliable service delivery and clear communication.",
+      storyPrompt:
+        "Prepare a story where you diagnosed a technical issue, kept the user informed, and drove the issue to resolution or the right escalation path.",
+      questionTip:
+        "Be specific about scope, tools, diagnosis steps, escalation judgment, and measurable user or business impact.",
+    };
+  }
+
+  if (includesAny(text, ["data", "analytics", "bi", "report", "kpi", "metrics", "analysis", "research"])) {
+    return {
+      family: "analysis",
+      validation:
+        "The interview is likely to test whether you can turn information into decisions, not just collect or report data.",
+      bridge:
+        "Use an example where your analysis changed a process, clarified a problem, improved visibility, or helped someone make a better decision.",
+      strength:
+        "Lead with examples where information capture, KPI review, reporting, or research led to an operational improvement.",
+      storyPrompt:
+        "Prepare a story where you used data, research, or pattern recognition to identify a problem and influence what happened next.",
+      questionTip:
+        "Explain the question you were trying to answer, the information you used, the pattern you found, and what changed because of it.",
+    };
+  }
+
+  if (includesAny(text, ["ux", "ui", "design", "user experience", "interface", "usability", "workflow", "friction"])) {
+    return {
+      family: "ux_ui",
+      validation:
+        "The interview may be testing whether you understand user friction, workflow clarity, and how people actually experience a tool or process.",
+      bridge:
+        "If you have improved a process, trained users, documented workflows, or reduced confusion, frame that as user-experience thinking even if your title was not UX/UI.",
+      strength:
+        "Lead with examples where you made a tool, process, knowledge base, or workflow easier for others to use.",
+      storyPrompt:
+        "Prepare a story where you noticed friction in a process or tool and made the experience clearer, faster, or easier for users.",
+      questionTip:
+        "Talk about the user problem, the friction you saw, the change you made, and how the experience improved.",
+    };
+  }
+
+  if (includesAny(text, ["sales", "business development", "revenue", "upsell", "product sales", "account"])) {
+    return {
+      family: "sales",
+      validation:
+        "The interview is likely to test whether you can recognize need, communicate value, and influence a decision without sounding transactional.",
+      bridge:
+        "Use an example where you listened first, identified what the person actually needed, and connected them to the right product, service, or next step.",
+      strength:
+        "Lead with examples that show consultative communication, not just selling activity.",
+      storyPrompt:
+        "Prepare a story where you uncovered a need, explained value clearly, and helped someone choose an appropriate solution.",
+      questionTip:
+        "Show how you understood the need, built trust, handled hesitation, and created a useful outcome.",
+    };
+  }
+
+  if (includesAny(text, ["training", "enablement", "knowledge", "documentation", "manual", "kb", "onboarding", "sme"])) {
+    return {
+      family: "enablement",
+      validation:
+        "The interview is likely to test whether you can make knowledge repeatable for others, not just perform the work yourself.",
+      bridge:
+        "Use an example where you documented a process, trained someone, standardized work, or reduced dependency on tribal knowledge.",
+      strength:
+        "Lead with examples where your documentation or training helped a team perform more consistently.",
+      storyPrompt:
+        "Prepare a story where you turned your knowledge into a process, guide, training, or resource others could use.",
+      questionTip:
+        "Explain the gap, what you built, who used it, and how it improved consistency or speed.",
+    };
+  }
+
+  if (includesAny(text, ["incident", "security", "risk", "compliance", "governance", "vulnerability", "quarantine", "p1", "p2"])) {
+    return {
+      family: "risk",
+      validation:
+        "The interview is likely to test judgment under pressure, risk awareness, escalation discipline, and how you communicate when stakes are high.",
+      bridge:
+        "Use an example where you followed process, escalated appropriately, protected the environment or customer, and kept the right people informed.",
+      strength:
+        "Lead with examples that show calm judgment, process discipline, and responsible escalation.",
+      storyPrompt:
+        "Prepare a story where a situation carried risk, urgency, or potential impact and you handled it responsibly.",
+      questionTip:
+        "Focus on what was at risk, what decision you made, who needed to know, and how you protected the outcome.",
+    };
+  }
+
+  if (includesAny(text, ["project", "deployment", "implementation", "rollout", "lifecycle", "ownership", "delivery"])) {
+    return {
+      family: "delivery",
+      validation:
+        "The interview is likely to test whether you can own work through completion, manage moving parts, and keep outcomes on track.",
+      bridge:
+        "Use an example where you coordinated people, tools, timing, or process details and delivered a completed outcome.",
+      strength:
+        "Lead with examples that show ownership from planning through execution and follow-through.",
+      storyPrompt:
+        "Prepare a story where you owned a project, rollout, or operational change from start to finish.",
+      questionTip:
+        "Clarify scope, your role, what changed, obstacles handled, and the result.",
+    };
+  }
 
   return {
-    area:        label,
-    priority:    tier === "A" ? "high" : tier === "B" ? "medium" : "low",
-    prepNote:    safeWhy,
-    storyPrompt: `Think of a time you worked with ${label}. What was your role, what did you do, and what was the result?`,
+    family: "general",
+    validation:
+      `The interview is likely to test practical evidence of ${cleanLabel}, not just familiarity with the phrase.`,
+    bridge:
+      `Use your closest real example that proves scope, ownership, actions taken, and result connected to ${cleanLabel}.`,
+    strength:
+      `Lead with a concrete example that shows how you have applied ${cleanLabel} in real work.`,
+    storyPrompt:
+      `Prepare a story that proves your closest real experience with ${cleanLabel}: what happened, what you owned, what you did, and what changed.`,
+    questionTip:
+      "Answer with a concrete example: context, responsibility, actions, decisions, and measurable result.",
+  };
+}
+
+function translateGapToPrep(gap) {
+  const label = safe(gap?.label || gap?.requirement || gap?.skill || "");
+  const rawWhy = safe(gap?.why_missing || gap?.description || "");
+  const tier = safe(gap?.tier || "B");
+  if (!label) return null;
+
+  const guidance = capabilityGuidance(label);
+  const engineReason = cleanEngineReason(rawWhy);
+
+  const prepNote = engineReason
+    ? `${engineReason} In the interview, be ready to bridge this with a specific example. ${guidance.bridge}`
+    : `${guidance.validation} ${guidance.bridge}`;
+
+  return {
+    area: label,
+    priority: tier === "A" ? "high" : tier === "B" ? "medium" : "low",
+    prepNote,
+    storyPrompt: guidance.storyPrompt,
   };
 }
 
@@ -115,20 +291,76 @@ function translateStrengthToConfidence(strength) {
       : strength?.seekerLabel || strength?.label || strength?.text || ""
   );
   if (!text) return null;
+
+  const guidance = capabilityGuidance(text);
+
   return {
     area: text,
-    note: "Your application shows strong evidence here. Don't wait to be asked — lead with it.",
+    note: `${guidance.strength} Use this early so the interviewer hears your strongest proof before the conversation narrows into gaps.`,
   };
+}
+
+function translateTransferableToBridge(signal) {
+  const skill = safe(typeof signal === "string" ? signal : signal?.label || signal?.name || signal?.skill || "");
+  if (!skill) return null;
+
+  const guidance = capabilityGuidance(skill);
+
+  return {
+    skill,
+    note: `${guidance.bridge} The goal is not to overclaim; it is to make the connection obvious so the interviewer does not have to infer it.`,
+  };
+}
+
+function buildQuestionTip(question, type = "") {
+  const q = safeLower(question);
+
+  if (includesAny(q, ["competing priorities", "tight deadline", "prioritize", "pressure"])) {
+    return "The interviewer is testing judgment under pressure. Explain what mattered most, what you deprioritized, who you communicated with, and what outcome followed.";
+  }
+
+  if (includesAny(q, ["process", "improved", "changed", "impact"])) {
+    return "Show the before-and-after. Explain the friction you saw, what you changed, who it helped, and how the result was measured or noticed.";
+  }
+
+  if (includesAny(q, ["expectations shift", "customer", "needs change", "communicate"])) {
+    return "Focus on communication discipline. Show how you clarified the new expectation, reset scope or timeline, and kept trust intact.";
+  }
+
+  if (includesAny(q, ["walk me through", "real example", "delivered outcomes"])) {
+    const after = question.split(" in ").pop() || "";
+    const guidance = capabilityGuidance(after);
+    return guidance.questionTip;
+  }
+
+  if (type === "behavioral") {
+    return "Use STAR, but keep it practical: what was happening, what you owned, what decision you made, what changed, and what the result proved.";
+  }
+
+  return "Be specific about tools, scope, ownership, decisions, and measurable outcome. Avoid generic claims—prove the capability with one real example.";
 }
 
 function buildInterviewQuestions(whyInterview) {
   if (!whyInterview) return [];
-  const behavioral   = safeArray(whyInterview.behavioral, 3).map(q => ({
-    type: "behavioral",    question: safe(q), tip: "Use the STAR format: Situation, Task, Action, Result.",
-  }));
-  const roleSpecific = safeArray(whyInterview.occupational || whyInterview.roleSpecific, 3).map(q => ({
-    type: "role-specific", question: safe(q), tip: "Be specific about tools, scope, and measurable outcomes.",
-  }));
+
+  const behavioral = safeArray(whyInterview.behavioral, 3)
+    .map(q => safe(q))
+    .filter(Boolean)
+    .map(q => ({
+      type: "behavioral",
+      question: q,
+      tip: buildQuestionTip(q, "behavioral"),
+    }));
+
+  const roleSpecific = safeArray(whyInterview.occupational || whyInterview.roleSpecific, 3)
+    .map(q => safe(q))
+    .filter(Boolean)
+    .map(q => ({
+      type: "role-specific",
+      question: q,
+      tip: buildQuestionTip(q, "role-specific"),
+    }));
+
   return [...behavioral, ...roleSpecific].filter(q => q.question);
 }
 
@@ -154,44 +386,81 @@ function buildPrepPayload(why, job) {
     )
     .slice(0, 5);
 
-  const transferable = safeArray(why?.skills?.transferable, 6).map(s => ({
-    skill: safe(typeof s === "string" ? s : s?.label || s?.name || ""),
-    note:  "You have adjacent experience here. Bridge it explicitly — don't assume the interviewer will connect the dots.",
-  })).filter(s => s.skill);
+  const transferable = safeArray(why?.skills?.transferable, 6)
+    .map(translateTransferableToBridge)
+    .filter(Boolean)
+    .filter((item, i, self) =>
+      i === self.findIndex(t => t.skill.toLowerCase() === item.skill.toLowerCase())
+    );
 
   const interviewQuestions = buildInterviewQuestions(why?.interviewQuestions);
 
   const storyBankPrompts = prepAreas.length > 0
     ? prepAreas.slice(0, 4).map(p => p.storyPrompt).filter(Boolean)
     : [
-        "Tell me about a project where you had full ownership. What was the scope, what did you do, what was the result?",
-        "Describe a time you had to learn something new quickly under pressure. How did you approach it?",
-        "Tell me about a time you disagreed with a decision. How did you handle it?",
-        "What's the most complex problem you've solved in a role like this? Walk me through it.",
+        "Prepare a story where you owned a project or problem from start to finish. Focus on scope, decisions, obstacles, and result.",
+        "Prepare a story where you learned something quickly under pressure and turned that learning into a useful outcome.",
+        "Prepare a story where you handled disagreement or changing expectations without losing professionalism or momentum.",
+        "Prepare a story where you solved a complex problem by breaking it down, communicating clearly, and following through.",
       ];
 
+  const company = safe(job?.company) || "the company";
+  const title = safe(job?.title) || "the role";
+
   const universalPrep = [
-    { area: "Know the company",          note: `Research ${safe(job?.company) || "the company"}'s mission, recent news, products, and culture before the interview.`, storyPrompt: null },
-    { area: "Know the role",             note: `Review every requirement in the ${safe(job?.title) || "job"} description. Be ready to speak to each one.`,            storyPrompt: null },
-    { area: "Your walk-away conditions", note: "Know your minimum acceptable offer before you go in — compensation, role scope, work arrangement.",                    storyPrompt: null },
-    { area: "Questions for them",        note: "Prepare 3-5 questions that show you've thought seriously about the role. Skip anything answered on their website.",    storyPrompt: null },
+    {
+      area: "Know the company",
+      note: `Review ${company}'s mission, product/service, customer base, and recent public-facing updates. You want at least one reason why their work matters to you beyond needing a job.`,
+      storyPrompt: null,
+    },
+    {
+      area: "Know the role",
+      note: `Read the ${title} description like an interviewer: identify the top 3 responsibilities, the top 3 requirements, and one example you can use for each.`,
+      storyPrompt: null,
+    },
+    {
+      area: "Your walk-away conditions",
+      note: "Know your minimum acceptable compensation, role scope, schedule/work arrangement, and any deal-breakers before the conversation gets emotional.",
+      storyPrompt: null,
+    },
+    {
+      area: "Questions for them",
+      note: "Prepare 3-5 questions that reveal expectations, success measures, team structure, and what a strong first 90 days would look like.",
+      storyPrompt: null,
+    },
   ];
 
   return { prepAreas, confidenceAreas, transferable, interviewQuestions, storyBankPrompts, universalPrep };
 }
 
 const UNIVERSAL_PREP_FALLBACK = [
-  { area: "Know the company",          note: "Research their mission, recent news, products, and culture.",     storyPrompt: null },
-  { area: "Know the role",             note: "Review every requirement in the job description.",                storyPrompt: null },
-  { area: "Your walk-away conditions", note: "Know your minimum acceptable offer before you go in.",            storyPrompt: null },
-  { area: "Questions for them",        note: "Prepare 3-5 questions that show you've thought about the role.", storyPrompt: null },
+  {
+    area: "Know the company",
+    note: "Review the company's mission, services/products, customers, and recent public-facing updates before the interview.",
+    storyPrompt: null,
+  },
+  {
+    area: "Know the role",
+    note: "Identify the top responsibilities and prepare one proof story for each major requirement.",
+    storyPrompt: null,
+  },
+  {
+    area: "Your walk-away conditions",
+    note: "Know your minimum acceptable compensation, role scope, schedule/work arrangement, and deal-breakers.",
+    storyPrompt: null,
+  },
+  {
+    area: "Questions for them",
+    note: "Prepare questions that uncover expectations, success measures, team structure, and first-90-day priorities.",
+    storyPrompt: null,
+  },
 ];
 
 const STORY_PROMPTS_FALLBACK = [
-  "Tell me about a project where you had full ownership. What was the scope, what did you do, what was the result?",
-  "Describe a time you had to learn something new quickly under pressure.",
-  "Tell me about a time you disagreed with a decision. How did you handle it?",
-  "What's the most complex problem you've solved in a role like this?",
+  "Prepare a story where you owned a project or problem from start to finish. Focus on scope, decisions, obstacles, and result.",
+  "Prepare a story where you learned something quickly under pressure and turned that learning into a useful outcome.",
+  "Prepare a story where you handled disagreement or changing expectations without losing professionalism or momentum.",
+  "Prepare a story where you solved a complex problem by breaking it down, communicating clearly, and following through.",
 ];
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -219,9 +488,9 @@ export default async function handler(req, res) {
     const app = await prisma.application.findFirst({
       where: { id: appId, userId },
       select: {
-        id:     true,
+        id: true,
         status: true,
-        jobId:  true,
+        jobId: true,
         job: {
           select: { id: true, title: true, company: true, description: true },
         },
@@ -239,18 +508,18 @@ export default async function handler(req, res) {
     // ── Stored result — return immediately, no engine call ───────────────────
     if (app.interviewPrep?.result) {
       const stored = app.interviewPrep.result;
-      const why    = typeof stored === "object" ? stored : JSON.parse(stored);
-      const prep   = buildPrepPayload(why, app.job);
+      const why = typeof stored === "object" ? stored : JSON.parse(stored);
+      const prep = buildPrepPayload(why, app.job);
 
       return res.status(200).json({
-        applicationId:     appId,
-        job:               app.job ? { id: app.job.id, title: app.job.title, company: app.job.company } : null,
-        resume:            app.resume ? { id: app.resume.id, name: app.resume.name } : null,
+        applicationId: appId,
+        job: app.job ? { id: app.job.id, title: app.job.title, company: app.job.company } : null,
+        resume: app.resume ? { id: app.resume.id, name: app.resume.name } : null,
         applicationStatus: app.status,
-        hasIntelligence:   true,
-        fromCache:         true,
-        generatedAt:       app.interviewPrep.generatedAt,
-        intelligenceNote:  "Your prep is powered by ForgeTomorrow alignment intelligence for this application.",
+        hasIntelligence: true,
+        fromCache: true,
+        generatedAt: app.interviewPrep.generatedAt,
+        intelligenceNote: "Your prep is powered by ForgeTomorrow alignment intelligence for this application.",
         ...prep,
       });
     }
@@ -258,26 +527,26 @@ export default async function handler(req, res) {
     // ── Off-platform jobs — universal prep only, no engine ───────────────────
     if (!app.jobId || !app.job) {
       return res.status(200).json({
-        applicationId:     appId,
-        job:               null,
-        resume:            app.resume ? { id: app.resume.id, name: app.resume.name } : null,
+        applicationId: appId,
+        job: null,
+        resume: app.resume ? { id: app.resume.id, name: app.resume.name } : null,
         applicationStatus: app.status,
-        hasIntelligence:   false,
-        fromCache:         false,
-        intelligenceNote:  "ForgeTomorrow interview intelligence is available for jobs posted on ForgeTomorrow. For off-platform applications, use the universal prep guide below.",
-        prepAreas:          [],
-        confidenceAreas:    [],
-        transferable:       [],
+        hasIntelligence: false,
+        fromCache: false,
+        intelligenceNote: "ForgeTomorrow interview intelligence is available for jobs posted on ForgeTomorrow. For off-platform applications, use the universal prep guide below.",
+        prepAreas: [],
+        confidenceAreas: [],
+        transferable: [],
         interviewQuestions: [],
-        storyBankPrompts:   STORY_PROMPTS_FALLBACK,
-        universalPrep:      UNIVERSAL_PREP_FALLBACK,
+        storyBankPrompts: STORY_PROMPTS_FALLBACK,
+        universalPrep: UNIVERSAL_PREP_FALLBACK,
       });
     }
 
     // ── Pull resume — application resume first, then primary ─────────────────
     let resumeContent = app.resume?.content || null;
-    let resumeId      = app.resume?.id      || null;
-    let resumeName    = app.resume?.name    || null;
+    let resumeId = app.resume?.id || null;
+    let resumeName = app.resume?.name || null;
 
     if (!resumeContent) {
       const primary = await prisma.resume.findFirst({
@@ -290,8 +559,8 @@ export default async function handler(req, res) {
         orderBy: { updatedAt: "desc" },
       });
       resumeContent = primary?.content || null;
-      resumeId      = primary?.id      || null;
-      resumeName    = primary?.name    || null;
+      resumeId = primary?.id || null;
+      resumeName = primary?.name || null;
     }
 
     if (!resumeContent) {
@@ -320,23 +589,23 @@ export default async function handler(req, res) {
     await prisma.seekerInterviewPrep.create({
       data: {
         applicationId: appId,
-        result:        why,
-        resumeText:    resumeText.slice(0, 20000),
-        jobId:         app.jobId,
+        result: why,
+        resumeText: resumeText.slice(0, 20000),
+        jobId: app.jobId,
       },
     });
 
     const prep = buildPrepPayload(why, app.job);
 
     return res.status(200).json({
-      applicationId:     appId,
-      job:               { id: app.job.id, title: app.job.title, company: app.job.company },
-      resume:            { id: resumeId, name: resumeName },
+      applicationId: appId,
+      job: { id: app.job.id, title: app.job.title, company: app.job.company },
+      resume: { id: resumeId, name: resumeName },
       applicationStatus: app.status,
-      hasIntelligence:   true,
-      fromCache:         false,
-      generatedAt:       new Date().toISOString(),
-      intelligenceNote:  "Your prep is powered by ForgeTomorrow alignment intelligence for this application.",
+      hasIntelligence: true,
+      fromCache: false,
+      generatedAt: new Date().toISOString(),
+      intelligenceNote: "Your prep is powered by ForgeTomorrow alignment intelligence for this application.",
       ...prep,
     });
 
