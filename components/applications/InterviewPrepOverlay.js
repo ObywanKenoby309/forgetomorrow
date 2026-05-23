@@ -728,21 +728,9 @@ function PrepWorkspace({ data, onNavigate }) {
       </div>
     </div>
   );
-}) {
-  const prepAreas = safeArray(data?.prepAreas);
-  const confidenceAreas = safeArray(data?.confidenceAreas);
-  const transferable = safeArray(data?.transferable);
-  const interviewQuestions = safeArray(data?.interviewQuestions);
-  const storyBankPrompts = safeArray(data?.storyBankPrompts);
-  const universalPrep = safeArray(data?.universalPrep);
+}
 
-  const topFocus = prepAreas.slice(0, 4);
-  const secondaryFocus = prepAreas.slice(4);
-  const topQuestions = interviewQuestions.slice(0, 6);
-  const topStories = storyBankPrompts.slice(0, 5);
-
-  return (
-    <div style={{ display: 'grid', gap: 14 }}>
+export default function InterviewPrepOverlay({ open, applicationId, applicationLabel, onClose }) {
       {data?.intelligenceNote && (
         <div
           style={{
