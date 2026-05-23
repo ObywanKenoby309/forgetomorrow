@@ -403,7 +403,7 @@ function LoadingState() {
     <div
       style={{
         ...GLASS,
-        padding: 22,
+        padding: 10,
         fontSize: 14,
         fontWeight: 900,
         color: '#64748B',
@@ -419,7 +419,7 @@ function ErrorState({ error }) {
     <div
       style={{
         ...GLASS,
-        padding: 22,
+        padding: 10,
         color: '#B91C1C',
         fontSize: 14,
         fontWeight: 900,
@@ -430,7 +430,305 @@ function ErrorState({ error }) {
   );
 }
 
-function PrepWorkspace({ data }) {
+function PrepWorkspace({ data, onNavigate }) {
+  const prepAreas = safeArray(data?.prepAreas);
+  const confidenceAreas = safeArray(data?.confidenceAreas);
+  const transferable = safeArray(data?.transferable);
+  const interviewQuestions = safeArray(data?.interviewQuestions);
+  const storyBankPrompts = safeArray(data?.storyBankPrompts);
+  const universalPrep = safeArray(data?.universalPrep);
+
+  const topFocus = prepAreas.slice(0, 3);
+  const secondaryFocus = prepAreas.slice(3);
+  const topQuestions = interviewQuestions.slice(0, 6);
+  const topStories = storyBankPrompts.slice(0, 4);
+
+  return (
+    <div style={{ display: 'grid', gap: 14 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(420px, 528px) minmax(260px, 1fr)',
+          gap: 14,
+          alignItems: 'center',
+        }}
+      >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, minmax(112px, 1fr))',
+            gap: 10,
+          }}
+        >
+          <StatTile label="High Focus" value={countPriority(prepAreas, 'high')} tone="high" />
+          <StatTile label="Strong Signals" value={confidenceAreas.length} tone="good" />
+          <StatTile label="Bridge" value={transferable.length} tone="blue" />
+          <StatTile label="Questions" value={interviewQuestions.length} tone="amber" />
+        </div>
+
+        {data?.intelligenceNote && (
+          <div
+            style={{
+              justifySelf: 'end',
+              maxWidth: 430,
+              background: data?.hasIntelligence ? 'rgba(255,112,67,0.08)' : 'rgba(148,163,184,0.08)',
+              border: `1px solid ${data?.hasIntelligence ? 'rgba(255,112,67,0.25)' : 'rgba(148,163,184,0.25)'}`,
+              borderRadius: 999,
+              padding: '10px 14px',
+              fontSize: 12,
+              color: data?.hasIntelligence ? '#7C2D12' : '#475569',
+              fontWeight: 900,
+              lineHeight: 1.25,
+              textAlign: 'center',
+            }}
+          >
+            {data.intelligenceNote}
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1.05fr 0.95fr 0.95fr',
+          gap: 14,
+          alignItems: 'start',
+        }}
+      >
+        <Panel
+          eyebrow="Recruiter validation"
+          title="Focus First"
+          count={prepAreas.length}
+          subtitle="Prepare one clear STAR story for each high-focus item before the interview."
+          style={{ minHeight: 250 }}
+        >
+          {topFocus.length ? (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {topFocus.map((item, i) => (
+                <PrepAreaCard key={`prep-${i}`} item={item} />
+              ))}
+            </div>
+          ) : (
+            <EmptyMini message="No major validation gaps were detected from the current application evidence." />
+          )}
+
+          {secondaryFocus.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <details>
+                <summary style={{ cursor: 'pointer', color: ORANGE, fontSize: 12, fontWeight: 950 }}>
+                  Show {secondaryFocus.length} additional prep {secondaryFocus.length === 1 ? 'area' : 'areas'}
+                </summary>
+                <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+                  {secondaryFocus.map((item, i) => (
+                    <PrepAreaCard key={`prep-extra-${i}`} item={item} />
+                  ))}
+                </div>
+              </details>
+            </div>
+          )}
+        </Panel>
+
+        <Panel
+          eyebrow="Confidence"
+          title="Lead With These"
+          count={confidenceAreas.length}
+          subtitle="Strong signals already visible in your application."
+          style={{ minHeight: 250 }}
+        >
+          {confidenceAreas.length ? (
+            <div style={{ display: 'grid', gap: 9 }}>
+              {confidenceAreas.slice(0, 5).map((item, i) => (
+                <ConfidenceCard key={`conf-${i}`} item={item} />
+              ))}
+            </div>
+          ) : (
+            <EmptyMini message="No specific strength signals were returned yet. Use your strongest resume examples." />
+          )}
+        </Panel>
+
+        <Panel
+          eyebrow="Bridge"
+          title="Connect the Dots"
+          count={transferable.length || null}
+          subtitle="Adjacent evidence that needs to be explained clearly."
+          style={{ minHeight: 250 }}
+        >
+          {transferable.length ? (
+            <div style={{ display: 'grid', gap: 9 }}>
+              {transferable.slice(0, 5).map((item, i) => (
+                <TransferableCard key={`trans-${i}`} item={item} />
+              ))}
+            </div>
+          ) : (
+            <EmptyMini message="No transferable-skill bridges were detected. Focus on direct strengths and high-priority prep." />
+          )}
+        </Panel>
+      </div>
+
+      <div
+        style={{
+          borderRadius: 18,
+          background: 'linear-gradient(135deg, rgba(17,32,51,0.98), rgba(30,41,59,0.95))',
+          color: 'white',
+          padding: '14px 16px',
+          border: '1px solid rgba(255,255,255,0.10)',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 410px)',
+          gap: 14,
+          alignItems: 'center',
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: '0.16em', color: ORANGE, textTransform: 'uppercase' }}>
+            Prep cockpit
+          </div>
+          <div style={{ marginTop: 4, fontSize: 17, fontWeight: 950, lineHeight: 1.22 }}>
+            Practice the story, not just the answer.
+          </div>
+          <div style={{ marginTop: 5, fontSize: 12, color: 'rgba(255,255,255,0.72)', lineHeight: 1.42 }}>
+            Use the prompts below to rehearse clean, specific examples before the conversation.
+          </div>
+        </div>
+
+        <div
+          style={{
+            borderRadius: 15,
+            border: '1px solid rgba(255,112,67,0.22)',
+            background: 'rgba(255,255,255,0.08)',
+            padding: '12px 14px',
+            display: 'flex',
+            gap: 11,
+            alignItems: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              background: 'rgba(255,112,67,0.16)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: '0 0 auto',
+              fontSize: 18,
+            }}
+          >
+            🔥
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 950, color: 'white', marginBottom: 3 }}>
+              Need deeper prep?
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.72)', lineHeight: 1.35 }}>
+              Use The Anvil and Hearth for negotiation, project promotion, and coaching support.
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => onNavigate?.('/anvil')}
+                style={{
+                  border: '1px solid rgba(255,112,67,0.35)',
+                  background: 'rgba(255,112,67,0.18)',
+                  color: '#FFD7C8',
+                  borderRadius: 999,
+                  padding: '5px 9px',
+                  fontSize: 11,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                }}
+              >
+                The Anvil
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate?.('/the-hearth')}
+                style={{
+                  border: '1px solid rgba(255,255,255,0.20)',
+                  background: 'rgba(255,255,255,0.10)',
+                  color: 'white',
+                  borderRadius: 999,
+                  padding: '5px 9px',
+                  fontSize: 11,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                }}
+              >
+                The Hearth
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1.85fr) minmax(320px, 0.9fr)',
+          gap: 14,
+          alignItems: 'start',
+        }}
+      >
+        <Panel
+          eyebrow="Practice"
+          title="Likely Questions"
+          count={interviewQuestions.length}
+          subtitle="Open the tips only where you need help."
+        >
+          {topQuestions.length ? (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 10,
+              }}
+            >
+              {topQuestions.map((item, i) => (
+                <QuestionCard key={`q-${i}`} item={item} />
+              ))}
+            </div>
+          ) : (
+            <EmptyMini message="No role-specific questions were returned. Use the story prompts." />
+          )}
+        </Panel>
+
+        <div style={{ display: 'grid', gap: 14 }}>
+          <Panel
+            eyebrow="Story bank"
+            title="Proof Stories"
+            count={storyBankPrompts.length || null}
+            subtitle="Prepare short, real examples."
+          >
+            {topStories.length ? (
+              <div style={{ display: 'grid', gap: 9 }}>
+                {topStories.map((prompt, i) => (
+                  <StoryPromptCard key={`story-${i}`} prompt={prompt} />
+                ))}
+              </div>
+            ) : (
+              <EmptyMini message="No story prompts were generated yet." />
+            )}
+          </Panel>
+
+          <Panel
+            eyebrow="Baseline"
+            title="Always Prepare"
+          >
+            {universalPrep.length ? (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {universalPrep.map((item, i) => (
+                  <UniversalPrepCard key={`universal-${i}`} item={item} />
+                ))}
+              </div>
+            ) : (
+              <EmptyMini message="Review the company, role, walk-away conditions, and questions for them." />
+            )}
+          </Panel>
+        </div>
+      </div>
+    </div>
+  );
+}) {
   const prepAreas = safeArray(data?.prepAreas);
   const confidenceAreas = safeArray(data?.confidenceAreas);
   const transferable = safeArray(data?.transferable);
@@ -698,6 +996,12 @@ export default function InterviewPrepOverlay({ open, applicationId, applicationL
     return 'Prepare your strongest stories before the interview.';
   }, [jobCompany, jobTitle]);
 
+  const handleNavigate = (href) => {
+    if (typeof window !== 'undefined' && href) {
+      window.location.href = href;
+    }
+  };
+
   useEffect(() => {
     if (!open || !applicationId) return;
 
@@ -789,7 +1093,7 @@ export default function InterviewPrepOverlay({ open, applicationId, applicationL
         display: 'flex',
         alignItems: 'stretch',
         justifyContent: 'center',
-        padding: 22,
+        padding: 10,
         background: 'rgba(2,6,23,0.54)',
         backdropFilter: 'blur(5px)',
         WebkitBackdropFilter: 'blur(5px)',
@@ -798,8 +1102,8 @@ export default function InterviewPrepOverlay({ open, applicationId, applicationL
     >
       <div
         style={{
-          width: 'min(1320px, 100%)',
-          maxHeight: 'calc(100vh - 44px)',
+          width: 'min(1380px, 100%)',
+          maxHeight: 'calc(100vh - 20px)',
           borderRadius: 24,
           border: '1px solid rgba(255,255,255,0.30)',
           background: 'linear-gradient(180deg, rgba(248,250,252,0.96), rgba(226,232,240,0.92))',
@@ -891,11 +1195,11 @@ export default function InterviewPrepOverlay({ open, applicationId, applicationL
         <div
           style={{
             overflowY: 'auto',
-            padding: 16,
+            padding: 14,
             background: 'radial-gradient(circle at top left, rgba(255,112,67,0.13), transparent 34%)',
           }}
         >
-          {loading ? <LoadingState /> : error ? <ErrorState error={error} /> : <PrepWorkspace data={data} />}
+          {loading ? <LoadingState /> : error ? <ErrorState error={error} /> : <PrepWorkspace data={data} onNavigate={handleNavigate} />}
         </div>
       </div>
     </div>,
