@@ -5,6 +5,7 @@
 // API remains: /api/seeker/applications/[id]/interview-prep
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const ORANGE = '#FF7043';
 const DARK = '#112033';
@@ -413,12 +414,12 @@ export default function InterviewPrepOverlay({ open, applicationId, applicationL
     } catch {}
   }, [open, data, loading, error]);
 
-  if (!open) return null;
+  if (!open || typeof document === 'undefined') return null;
 
   const jobTitle = data?.job?.title || applicationLabel || 'Interview Prep';
   const jobCompany = data?.job?.company || '';
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
@@ -496,5 +497,7 @@ export default function InterviewPrepOverlay({ open, applicationId, applicationL
         </div>
       </div>
     </div>
+  ,
+  document.body
   );
 }
