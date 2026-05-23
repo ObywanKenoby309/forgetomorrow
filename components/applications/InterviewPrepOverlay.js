@@ -125,15 +125,11 @@ function StatTile({ label, value, tone = 'neutral' }) {
         borderRadius: 14,
         border: `1px solid ${t.border}`,
         background: t.bg,
-        padding: '9px 14px',
-        minWidth: 132,
-        minHeight: 58,
-        display: 'grid',
-        alignContent: 'center',
-        textAlign: 'center',
+        padding: '10px 12px',
+        minWidth: 0,
       }}
     >
-      <div style={{ fontSize: 10, fontWeight: 950, color: t.color, textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+      <div style={{ fontSize: 10, fontWeight: 950, color: t.color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
         {label}
       </div>
       <div style={{ marginTop: 3, fontSize: 22, fontWeight: 950, color: t.color, lineHeight: 1 }}>
@@ -445,6 +441,9 @@ function PrepWorkspace({ data, onNavigate }) {
   const topFocus = prepAreas.slice(0, 3);
   const secondaryFocus = prepAreas.slice(3);
   const topQuestions = interviewQuestions.slice(0, 6);
+  const behavioralQuestions = topQuestions.filter((item) => item?.type === 'behavioral');
+  const roleSpecificQuestions = topQuestions.filter((item) => item?.type === 'role-specific');
+  const otherQuestions = topQuestions.filter((item) => item?.type !== 'behavioral' && item?.type !== 'role-specific');
   const topStories = storyBankPrompts.slice(0, 4);
 
   return (
@@ -460,7 +459,7 @@ function PrepWorkspace({ data, onNavigate }) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 132px)',
+            gridTemplateColumns: 'repeat(4, minmax(112px, 1fr))',
             gap: 10,
           }}
         >
@@ -684,12 +683,49 @@ function PrepWorkspace({ data, onNavigate }) {
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                gap: 10,
+                gap: 12,
+                alignItems: 'start',
               }}
             >
-              {topQuestions.map((item, i) => (
-                <QuestionCard key={`q-${i}`} item={item} />
-              ))}
+              <div style={{ display: 'grid', gap: 10 }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 950,
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    color: '#1D4ED8',
+                  }}
+                >
+                  Behavioral
+                </div>
+
+                {(behavioralQuestions.length ? behavioralQuestions : otherQuestions).map((item, i) => (
+                  <QuestionCard key={`behavioral-q-${i}`} item={item} />
+                ))}
+              </div>
+
+              <div style={{ display: 'grid', gap: 10 }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 950,
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    color: '#7C3AED',
+                  }}
+                >
+                  Role-specific
+                </div>
+
+                {roleSpecificQuestions.length ? (
+                  roleSpecificQuestions.map((item, i) => (
+                    <QuestionCard key={`role-q-${i}`} item={item} />
+                  ))
+                ) : (
+                  <EmptyMini message="Role-specific questions were not returned for this role yet. Use the story prompts to prepare examples." />
+                )}
+              </div>
             </div>
           ) : (
             <EmptyMini message="No role-specific questions were returned. Use the story prompts." />
