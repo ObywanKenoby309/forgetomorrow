@@ -60,9 +60,17 @@ function extractResumeContext(resume: any) {
 }
 
 async function getSessionEmail(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getServerSession(req, res, authOptions as any);
-  const email = session?.user?.email ? String(session.user.email).toLowerCase().trim() : '';
-  return email || null;
+  const session = (await getServerSession(req, res, authOptions as any)) as {
+  user?: {
+    email?: string | null;
+  };
+} | null;
+
+const email = session?.user?.email
+  ? String(session.user.email).toLowerCase().trim()
+  : '';
+
+return email || null;
 }
 
 async function loadIdentityContext(userId: string, email: string) {
