@@ -12,7 +12,7 @@ const GLASS_BORDER = 'rgba(255,255,255,0.22)';
 const GLASS_SHADOW = '0 10px 26px rgba(0,0,0,0.12)';
 const GLASS_BLUR = 'blur(12px)';
 
-const HOVER_BG = 'rgba(255,112,67,0.10)';
+const HOVER_BG = 'rgba(255,112,67,0.18)';
 const ACTIVE_SHADOW = '0 12px 24px rgba(0,0,0,0.12)';
 
 function Badge({ value }) {
@@ -67,7 +67,7 @@ function NavItem({ href, label, active, badge, dot }) {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    padding: '8px 12px',
+    padding: '6px 12px',
     textDecoration: 'none',
     fontWeight: 700,
     fontSize: 14,
@@ -122,7 +122,7 @@ function SectionLabel({ children }) {
         letterSpacing: '0.12em',
         textTransform: 'uppercase',
         color: 'rgba(31, 41, 55, 0.55)',
-        padding: '8px 4px 2px',
+        padding: '5px 4px 1px',
       }}
     >
       {children}
@@ -205,11 +205,13 @@ export default function RecruiterSidebar({
       aria-label="Recruiter navigation"
       style={{
         display: 'grid',
-        gap: 6,
+        gap: 4,
         position: 'sticky',
         top: 24,
         alignSelf: 'start',
-        height: 'fit-content',
+        maxHeight: 'calc(100vh - 48px)',
+        overflowY: 'auto',
+        scrollbarWidth: 'thin',
 
         zIndex: 10,
 
@@ -218,6 +220,7 @@ export default function RecruiterSidebar({
         border: `1px solid ${GLASS_BORDER}`,
         boxShadow: GLASS_SHADOW,
         padding: 12,
+        paddingRight: 4,
         backdropFilter: GLASS_BLUR,
         WebkitBackdropFilter: GLASS_BLUR,
       }}
