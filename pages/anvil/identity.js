@@ -1,6 +1,5 @@
-// pages/anvil/identity.js
 import Head from 'next/head';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 
@@ -46,7 +45,8 @@ const TEXTAREA = {
 
 const SECTION_HDR = {
   padding: '10px 14px',
-  background: 'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',
+  background:
+    'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',
   color: 'white',
   fontWeight: 900,
   fontSize: 12,
@@ -58,10 +58,13 @@ function getChromeFromAsPath(asPath) {
   try {
     const s = String(asPath || '');
     if (!s.includes('chrome=')) return '';
+
     const qIndex = s.indexOf('?');
     if (qIndex === -1) return '';
+
     const query = s.slice(qIndex + 1);
     const params = new URLSearchParams(query);
+
     return String(params.get('chrome') || '').toLowerCase();
   } catch {
     return '';
@@ -70,10 +73,29 @@ function getChromeFromAsPath(asPath) {
 
 function Pill({ children, tone = 'orange' }) {
   const colors = {
-    orange: ['rgba(255,112,67,0.10)', ORANGE, 'rgba(255,112,67,0.24)'],
-    green: ['rgba(22,163,74,0.10)', '#15803D', 'rgba(22,163,74,0.24)'],
-    blue: ['rgba(14,165,233,0.10)', '#0369A1', 'rgba(14,165,233,0.24)'],
-    amber: ['rgba(245,158,11,0.12)', '#92400E', 'rgba(245,158,11,0.26)'],
+    orange: [
+      'rgba(255,112,67,0.10)',
+      ORANGE,
+      'rgba(255,112,67,0.24)',
+    ],
+
+    green: [
+      'rgba(22,163,74,0.10)',
+      '#15803D',
+      'rgba(22,163,74,0.24)',
+    ],
+
+    blue: [
+      'rgba(14,165,233,0.10)',
+      '#0369A1',
+      'rgba(14,165,233,0.24)',
+    ],
+
+    amber: [
+      'rgba(245,158,11,0.12)',
+      '#92400E',
+      'rgba(245,158,11,0.26)',
+    ],
   };
 
   const [bg, color, border] = colors[tone] || colors.orange;
@@ -98,12 +120,31 @@ function Pill({ children, tone = 'orange' }) {
   );
 }
 
-function SelectField({ label, value, onChange, options }) {
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+}) {
   return (
     <label style={{ display: 'grid', gap: 6 }}>
-      <span style={{ fontSize: 12, fontWeight: 900, color: SLATE }}>{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={INPUT}>
+      <span
+        style={{
+          fontSize: 12,
+          fontWeight: 900,
+          color: SLATE,
+        }}
+      >
+        {label}
+      </span>
+
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={INPUT}
+      >
         <option value="">Choose one…</option>
+
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
@@ -114,10 +155,24 @@ function SelectField({ label, value, onChange, options }) {
   );
 }
 
-function TextField({ label, value, onChange, placeholder }) {
+function TextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}) {
   return (
     <label style={{ display: 'grid', gap: 6 }}>
-      <span style={{ fontSize: 12, fontWeight: 900, color: SLATE }}>{label}</span>
+      <span
+        style={{
+          fontSize: 12,
+          fontWeight: 900,
+          color: SLATE,
+        }}
+      >
+        {label}
+      </span>
+
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -130,12 +185,31 @@ function TextField({ label, value, onChange, placeholder }) {
 
 function BulletList({ items, color = ORANGE }) {
   const arr = Array.isArray(items) ? items.filter(Boolean) : [];
+
   if (!arr.length) {
-    return <div style={{ fontSize: 12, color: '#94A3B8', fontStyle: 'italic' }}>—</div>;
+    return (
+      <div
+        style={{
+          fontSize: 12,
+          color: '#94A3B8',
+          fontStyle: 'italic',
+        }}
+      >
+        —
+      </div>
+    );
   }
 
   return (
-    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 7 }}>
+    <ul
+      style={{
+        margin: 0,
+        padding: 0,
+        listStyle: 'none',
+        display: 'grid',
+        gap: 7,
+      }}
+    >
       {arr.map((item, idx) => (
         <li
           key={`${idx}-${item}`}
@@ -148,7 +222,15 @@ function BulletList({ items, color = ORANGE }) {
             lineHeight: 1.5,
           }}
         >
-          <span style={{ color, fontWeight: 900, marginTop: 1 }}>•</span>
+          <span
+            style={{
+              color,
+              fontWeight: 900,
+              marginTop: 1,
+            }}
+          >
+            •
+          </span>
           <span>{item}</span>
         </li>
       ))}
@@ -156,7 +238,11 @@ function BulletList({ items, color = ORANGE }) {
   );
 }
 
-function ResultCard({ title, tone = 'orange', children }) {
+function ResultCard({
+  title,
+  tone = 'orange',
+  children,
+}) {
   const hdr =
     tone === 'green'
       ? 'rgba(22,163,74,0.86)'
@@ -168,13 +254,16 @@ function ResultCard({ title, tone = 'orange', children }) {
 
   return (
     <section style={{ ...WHITE_CARD, overflow: 'hidden' }}>
-      <div style={{ ...SECTION_HDR, background: hdr }}>{title}</div>
+      <div style={{ ...SECTION_HDR, background: hdr }}>
+        {title}
+      </div>
+
       <div style={{ padding: 14 }}>{children}</div>
     </section>
   );
 }
 
-function buildIdentitySnapshot(form) {
+function buildOperatingProfile(form) {
   const autonomy = form.autonomy;
   const ambiguity = form.ambiguity;
   const energy = form.energy;
@@ -191,10 +280,13 @@ function buildIdentitySnapshot(form) {
 
   if (pressure === 'calm') strengthSignals.push('Calm under pressure');
   if (pressure === 'direct') strengthSignals.push('Decisive problem solver');
+  if (pressure === 'collaborative') strengthSignals.push('Coordinated responder');
+  if (pressure === 'reflective') strengthSignals.push('Measured decision maker');
+
   if (autonomy === 'high') strengthSignals.push('Independent operator');
   if (ambiguity === 'high') strengthSignals.push('Ambiguity-capable builder');
 
-  const coreMode =
+  const operatingStyle =
     energy === 'systems'
       ? 'Operational Systems Builder'
       : energy === 'people'
@@ -203,54 +295,85 @@ function buildIdentitySnapshot(form) {
       ? 'Strategic Direction Setter'
       : 'Execution-Focused Operator';
 
-  const environment = [
+  const professionalSummary =
+    energy === 'systems'
+      ? 'You appear to operate best when you can turn complexity into structure, improve how work moves, and create systems that help others perform more effectively.'
+      : energy === 'people'
+      ? 'You appear to operate best when your work involves trust, guidance, communication, and helping people move through decisions or challenges with clarity.'
+      : energy === 'strategy'
+      ? 'You appear to operate best when you can assess direction, connect signals, solve complex problems, and help shape what should happen next.'
+      : 'You appear to operate best when there is meaningful work to move forward, clear outcomes to deliver, and visible progress to create.';
+
+  const thrivesIn = [
     autonomy === 'high'
-      ? 'Best with ownership, trust, and room to make decisions.'
+      ? 'High-ownership environments where trust, outcomes, and accountability matter.'
       : autonomy === 'medium'
-      ? 'Best with clear goals and reasonable autonomy.'
-      : 'Best with clear structure, defined expectations, and close alignment.',
+      ? 'Environments with clear goals, reasonable autonomy, and useful check-ins.'
+      : 'Structured environments with clear expectations, defined success measures, and steady alignment.',
+
     ambiguity === 'high'
-      ? 'Can navigate unclear environments when outcomes matter.'
+      ? 'Ambiguous or developing situations where someone needs to create order and momentum.'
       : ambiguity === 'medium'
-      ? 'Handles change well when priorities are clarified.'
-      : 'Performs best when role expectations and success measures are stable.',
+      ? 'Changing environments where priorities are clarified and communication stays consistent.'
+      : 'Stable environments where expectations, handoffs, and responsibilities are well defined.',
+
     communication === 'direct'
-      ? 'Likely values clear, direct, low-politics communication.'
+      ? 'Teams that value direct, low-politics communication and practical problem solving.'
       : communication === 'collaborative'
-      ? 'Likely values discussion, shared context, and team buy-in.'
-      : 'Likely values thoughtful written context before major decisions.',
+      ? 'Teams that value shared context, discussion, trust, and cross-functional buy-in.'
+      : 'Teams that value thoughtful written context, documentation, and well-structured decisions.',
   ];
 
-  const opportunities = [
+  const supportAreas = [
     growth === 'visibility'
-      ? 'Increase visibility by documenting wins, decisions, and measurable outcomes.'
+      ? 'May benefit from more consistent documentation and communication of wins so value is visible beyond day-to-day execution.'
       : growth === 'delegation'
-      ? 'Watch for over-ownership; build repeatable systems others can carry.'
+      ? 'May benefit from support delegating ownership instead of carrying too much alone.'
       : growth === 'focus'
-      ? 'Protect focus by narrowing priorities and reducing context-switching.'
-      : 'Strengthen strategic framing so your work is understood beyond task completion.',
-    'Review whether your current role rewards your natural operating style.',
-    'Use this snapshot as a coaching conversation starter, not a fixed identity label.',
+      ? 'May benefit from clearer prioritization boundaries when multiple urgent needs compete for attention.'
+      : 'May benefit from stronger strategic framing so work is understood as business impact, not just task completion.',
+
+    'Should watch for environments that reward politics more than performance or create disconnects between leadership direction and frontline reality.',
+
+    'Can use this profile as a conversation starter with coaches, mentors, managers, or hiring teams.',
+  ];
+
+  const integrationGuidance = [
+    'Give this person clarity on the outcome, the operational context, and where success will be measured.',
+
+    autonomy === 'high'
+      ? 'Provide trust and decision space, then use check-ins to remove blockers instead of micromanaging execution.'
+      : 'Provide clear expectations and cadence, then increase autonomy as trust and context develop.',
+
+    communication === 'written'
+      ? 'Provide written context for complex decisions and allow time to process important tradeoffs.'
+      : 'Use direct, timely communication and practical feedback loops to keep momentum strong.',
   ];
 
   const evidence = [
     form.recentWin
-      ? `Recent win signal: ${form.recentWin}`
-      : 'Recent win signal should be added later from resume, portfolio, and project history.',
+      ? `Self-reported professional win: ${form.recentWin}`
+      : 'No recent win entered yet. Future versions should also pull from resume, portfolio, and project evidence.',
+
     form.drain
-      ? `Drain pattern: ${form.drain}`
-      : 'Drain pattern should be refined through additional self-reflection.',
+      ? `Self-reported drain pattern: ${form.drain}`
+      : 'No drain pattern entered yet.',
+
     form.goal
-      ? `Current direction: ${form.goal}`
-      : 'Current direction should be connected to Anvil goals later.',
+      ? `Current reflection goal: ${form.goal}`
+      : 'No current reflection goal entered yet.',
   ];
 
   return {
-    coreMode,
-    strengthSignals: Array.from(new Set(strengthSignals)).slice(0, 6),
-    environment,
-    opportunities,
+    title: 'Professional Operating Profile',
+    operatingStyle,
+    professionalSummary,
+    strengthSignals: Array.from(new Set(strengthSignals)).slice(0, 8),
+    thrivesIn,
+    supportAreas,
+    integrationGuidance,
     evidence,
+    generatedAt: new Date().toISOString(),
   };
 }
 
@@ -278,20 +401,105 @@ export default function IdentityPage() {
 
   const [snapshot, setSnapshot] = useState(null);
   const [error, setError] = useState('');
+  const [loadingSaved, setLoadingSaved] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+
+  const [shareSettings, setShareSettings] = useState({
+    showOnPortfolio: false,
+    shareWithCoach: false,
+    includeInHiringPacket: false,
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    const loadSaved = async () => {
+      try {
+        setLoadingSaved(true);
+
+        const res = await fetch('/api/anvil/identity', {
+          method: 'GET',
+          credentials: 'include',
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!active) return;
+
+        if (res.ok && data?.profile) {
+          if (data.profile.answersJson) {
+            setForm(data.profile.answersJson);
+          }
+
+          if (data.profile.snapshotJson) {
+            setSnapshot(data.profile.snapshotJson);
+          }
+
+          setShareSettings({
+            showOnPortfolio: Boolean(data.profile.showOnPortfolio),
+            shareWithCoach: Boolean(data.profile.shareWithCoach),
+            includeInHiringPacket: Boolean(data.profile.includeInHiringPacket),
+          });
+        }
+      } catch {
+        // Non-blocking: user can still generate a new profile.
+      } finally {
+        if (active) setLoadingSaved(false);
+      }
+    };
+
+    loadSaved();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const completion = useMemo(() => {
-    const required = ['energy', 'autonomy', 'ambiguity', 'pressure', 'communication', 'growth'];
+    const required = [
+      'energy',
+      'autonomy',
+      'ambiguity',
+      'pressure',
+      'communication',
+      'growth',
+    ];
+
     const complete = required.filter((key) => Boolean(form[key])).length;
+
     return Math.round((complete / required.length) * 100);
   }, [form]);
 
   const setField = (key, value) => {
     setError('');
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setSaveMessage('');
+
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const setShareField = (key, value) => {
+    setSaveMessage('');
+
+    setShareSettings((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   };
 
   const generateSnapshot = () => {
-    const required = ['energy', 'autonomy', 'ambiguity', 'pressure', 'communication', 'growth'];
+    const required = [
+      'energy',
+      'autonomy',
+      'ambiguity',
+      'pressure',
+      'communication',
+      'growth',
+    ];
+
     const missing = required.filter((key) => !form[key]);
 
     if (missing.length) {
@@ -299,17 +507,63 @@ export default function IdentityPage() {
       return;
     }
 
-    setSnapshot(buildIdentitySnapshot(form));
+    setSnapshot(buildOperatingProfile(form));
+    setSaveMessage('');
+  };
+
+  const saveProfile = async () => {
+    if (!snapshot) {
+      setError('Generate your Professional Operating Profile before saving.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setSaveMessage('');
+
+    try {
+      const res = await fetch('/api/anvil/identity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          answersJson: form,
+          snapshotJson: snapshot,
+          showOnPortfolio: shareSettings.showOnPortfolio,
+          shareWithCoach: shareSettings.shareWithCoach,
+          includeInHiringPacket: shareSettings.includeInHiringPacket,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(
+          data?.error || 'Failed to save Professional Operating Profile.'
+        );
+      }
+
+      setSaveMessage('Professional Operating Profile saved.');
+    } catch (e) {
+      setError(
+        e?.message || 'Failed to save Professional Operating Profile.'
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const reset = () => {
     setSnapshot(null);
     setError('');
+    setSaveMessage('');
   };
 
   const Header = (
     <section
-      aria-label="Forge Identity Compass header"
+      aria-label="Professional Operating Profile header"
       style={{
         background: 'white',
         borderRadius: 12,
@@ -319,28 +573,55 @@ export default function IdentityPage() {
         textAlign: 'center',
       }}
     >
-      <h1 style={{ margin: 0, color: ORANGE, fontSize: 24, fontWeight: 900 }}>
-        Forge Identity Compass
+      <h1
+        style={{
+          margin: 0,
+          color: ORANGE,
+          fontSize: 24,
+          fontWeight: 900,
+        }}
+      >
+        Professional Operating Profile
       </h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 820, lineHeight: 1.5 }}>
-        A voluntary professional identity reflection built around work patterns, evidence, and practical guidance — not labels, diagnosis, or personality boxes.
+
+      <p
+        style={{
+          margin: '6px auto 0',
+          color: '#607D8B',
+          maxWidth: 840,
+          lineHeight: 1.5,
+        }}
+      >
+        A voluntary professional reflection that helps you explain where you
+        thrive, where you need support, and how you integrate into a team or
+        operation.
       </p>
     </section>
   );
-
-  return (
+  
+    return (
     <>
       <Head>
-        <title>Identity | The Anvil | ForgeTomorrow</title>
+        <title>
+          Professional Operating Profile | The Anvil | ForgeTomorrow
+        </title>
       </Head>
 
       <SeekerLayout
-        title="Identity | The Anvil | ForgeTomorrow"
+        title="Professional Operating Profile | The Anvil | ForgeTomorrow"
         header={Header}
         right={null}
         activeNav={null}
       >
-        <div style={{ width: '100%', maxWidth: 1120, margin: '0 auto', display: 'grid', gap: 14 }}>
+        <div
+          style={{
+            width: '100%',
+            maxWidth: 1120,
+            margin: '0 auto',
+            display: 'grid',
+            gap: 14,
+          }}
+        >
           <div style={{ ...GLASS, padding: 16 }}>
             <div
               style={{
@@ -353,11 +634,30 @@ export default function IdentityPage() {
             >
               <div>
                 <Pill>Voluntary reflection</Pill>
-                <h2 style={{ margin: '10px 0 4px', color: DARK, fontSize: 20, fontWeight: 900 }}>
-                  Understand how you work best
+
+                <h2
+                  style={{
+                    margin: '10px 0 4px',
+                    color: DARK,
+                    fontSize: 20,
+                    fontWeight: 900,
+                  }}
+                >
+                  Speak to who you are, not only what you have done
                 </h2>
-                <p style={{ margin: 0, color: '#64748B', fontSize: 13, lineHeight: 1.55, maxWidth: 780 }}>
-                  This first version uses self-reflection only. Later, we’ll connect resume, portfolio, project, coaching, and preference signals so the result can explain why it reached each recommendation.
+
+                <p
+                  style={{
+                    margin: 0,
+                    color: '#64748B',
+                    fontSize: 13,
+                    lineHeight: 1.55,
+                    maxWidth: 790,
+                  }}
+                >
+                  This profile is user-owned and share-controlled. It is not a
+                  hidden score, personality test, diagnosis, or automatic hiring
+                  filter.
                 </p>
               </div>
 
@@ -380,7 +680,18 @@ export default function IdentityPage() {
             </div>
           </div>
 
-          {!snapshot ? (
+          {loadingSaved ? (
+            <section
+              style={{
+                ...GLASS,
+                padding: 18,
+                color: SLATE,
+                fontWeight: 800,
+              }}
+            >
+              Loading saved Professional Operating Profile…
+            </section>
+          ) : !snapshot ? (
             <div
               style={{
                 display: 'grid',
@@ -390,29 +701,95 @@ export default function IdentityPage() {
               }}
             >
               <section style={{ ...GLASS, overflow: 'hidden' }}>
-                <div style={SECTION_HDR}>🧭 IDENTITY REFLECTION</div>
+                <div style={SECTION_HDR}>
+                  🧭 OPERATING PROFILE REFLECTION
+                </div>
 
-                <div style={{ padding: 16, display: 'grid', gap: 14 }}>
+                <div
+                  style={{
+                    padding: 16,
+                    display: 'grid',
+                    gap: 14,
+                  }}
+                >
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
-                      <span style={{ fontSize: 12, fontWeight: 900, color: SLATE }}>Completion</span>
-                      <span style={{ fontSize: 12, fontWeight: 900, color: ORANGE }}>{completion}%</span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginBottom: 7,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 900,
+                          color: SLATE,
+                        }}
+                      >
+                        Completion
+                      </span>
+
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 900,
+                          color: ORANGE,
+                        }}
+                      >
+                        {completion}%
+                      </span>
                     </div>
-                    <div style={{ height: 8, borderRadius: 999, background: 'rgba(15,23,42,0.10)', overflow: 'hidden' }}>
-                      <div style={{ width: `${completion}%`, height: '100%', background: ORANGE, transition: 'width 180ms ease' }} />
+
+                    <div
+                      style={{
+                        height: 8,
+                        borderRadius: 999,
+                        background: 'rgba(15,23,42,0.10)',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${completion}%`,
+                          height: '100%',
+                          background: ORANGE,
+                          transition: 'width 180ms ease',
+                        }}
+                      />
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: 12,
+                    }}
+                  >
                     <SelectField
                       label="What type of work gives you the most energy?"
                       value={form.energy}
                       onChange={(v) => setField('energy', v)}
                       options={[
-                        { value: 'systems', label: 'Improving systems, processes, and operations' },
-                        { value: 'people', label: 'Helping, advising, coaching, or supporting people' },
-                        { value: 'execution', label: 'Getting things done and moving work forward' },
-                        { value: 'strategy', label: 'Planning direction, solving complex problems, or shaping vision' },
+                        {
+                          value: 'systems',
+                          label: 'Improving systems, processes, and operations',
+                        },
+                        {
+                          value: 'people',
+                          label:
+                            'Helping, advising, coaching, or supporting people',
+                        },
+                        {
+                          value: 'execution',
+                          label: 'Getting things done and moving work forward',
+                        },
+                        {
+                          value: 'strategy',
+                          label:
+                            'Planning direction, solving complex problems, or shaping vision',
+                        },
                       ]}
                     />
 
@@ -421,9 +798,20 @@ export default function IdentityPage() {
                       value={form.autonomy}
                       onChange={(v) => setField('autonomy', v)}
                       options={[
-                        { value: 'high', label: 'High autonomy — give me the outcome and trust me' },
-                        { value: 'medium', label: 'Balanced autonomy with clear check-ins' },
-                        { value: 'low', label: 'Clear structure, close alignment, and defined steps' },
+                        {
+                          value: 'high',
+                          label:
+                            'High autonomy — give me the outcome and trust me',
+                        },
+                        {
+                          value: 'medium',
+                          label: 'Balanced autonomy with clear check-ins',
+                        },
+                        {
+                          value: 'low',
+                          label:
+                            'Clear structure, close alignment, and defined steps',
+                        },
                       ]}
                     />
 
@@ -432,9 +820,20 @@ export default function IdentityPage() {
                       value={form.ambiguity}
                       onChange={(v) => setField('ambiguity', v)}
                       options={[
-                        { value: 'high', label: 'Very comfortable — I can build through uncertainty' },
-                        { value: 'medium', label: 'Comfortable if priorities are clear' },
-                        { value: 'low', label: 'I prefer stable expectations and defined scope' },
+                        {
+                          value: 'high',
+                          label:
+                            'Very comfortable — I can build through uncertainty',
+                        },
+                        {
+                          value: 'medium',
+                          label: 'Comfortable if priorities are clear',
+                        },
+                        {
+                          value: 'low',
+                          label:
+                            'I prefer stable expectations and defined scope',
+                        },
                       ]}
                     />
 
@@ -443,10 +842,23 @@ export default function IdentityPage() {
                       value={form.pressure}
                       onChange={(v) => setField('pressure', v)}
                       options={[
-                        { value: 'calm', label: 'I get calm and stabilize the situation' },
-                        { value: 'direct', label: 'I make decisions quickly and act' },
-                        { value: 'collaborative', label: 'I gather people and coordinate a response' },
-                        { value: 'reflective', label: 'I pause, assess, and choose carefully' },
+                        {
+                          value: 'calm',
+                          label: 'I get calm and stabilize the situation',
+                        },
+                        {
+                          value: 'direct',
+                          label: 'I make decisions quickly and act',
+                        },
+                        {
+                          value: 'collaborative',
+                          label:
+                            'I gather people and coordinate a response',
+                        },
+                        {
+                          value: 'reflective',
+                          label: 'I pause, assess, and choose carefully',
+                        },
                       ]}
                     />
 
@@ -455,9 +867,20 @@ export default function IdentityPage() {
                       value={form.communication}
                       onChange={(v) => setField('communication', v)}
                       options={[
-                        { value: 'direct', label: 'Direct, clear, and low-politics' },
-                        { value: 'collaborative', label: 'Collaborative, relational, and context-rich' },
-                        { value: 'written', label: 'Written, thoughtful, and well-structured' },
+                        {
+                          value: 'direct',
+                          label: 'Direct, clear, and low-politics',
+                        },
+                        {
+                          value: 'collaborative',
+                          label:
+                            'Collaborative, relational, and context-rich',
+                        },
+                        {
+                          value: 'written',
+                          label:
+                            'Written, thoughtful, and well-structured',
+                        },
                       ]}
                     />
 
@@ -466,10 +889,26 @@ export default function IdentityPage() {
                       value={form.growth}
                       onChange={(v) => setField('growth', v)}
                       options={[
-                        { value: 'visibility', label: 'Being more visible for the value I create' },
-                        { value: 'delegation', label: 'Delegating and not carrying too much alone' },
-                        { value: 'focus', label: 'Improving focus and reducing overload' },
-                        { value: 'strategy', label: 'Positioning my work more strategically' },
+                        {
+                          value: 'visibility',
+                          label:
+                            'Being more visible for the value I create',
+                        },
+                        {
+                          value: 'delegation',
+                          label:
+                            'Delegating and not carrying too much alone',
+                        },
+                        {
+                          value: 'focus',
+                          label:
+                            'Improving focus and reducing overload',
+                        },
+                        {
+                          value: 'strategy',
+                          label:
+                            'Positioning my work more strategically',
+                        },
                       ]}
                     />
                   </div>
@@ -524,62 +963,96 @@ export default function IdentityPage() {
                       fontSize: 14,
                       fontWeight: 900,
                       cursor: 'pointer',
-                      boxShadow: '0 4px 14px rgba(255,112,67,0.34)',
+                      boxShadow:
+                        '0 4px 14px rgba(255,112,67,0.34)',
                     }}
                   >
-                    Generate My Identity Compass
+                    Generate My Professional Operating Profile
                   </button>
                 </div>
               </section>
 
-              <aside style={{ display: 'grid', gap: 12 }}>
-                <section style={{ ...GLASS, padding: 14, background: 'rgba(30,41,59,0.88)' }}>
-                  <div style={{ fontWeight: 900, color: ORANGE, fontSize: 14, marginBottom: 6 }}>
+              <aside
+                style={{
+                  display: 'grid',
+                  gap: 12,
+                }}
+              >
+                <section
+                  style={{
+                    ...GLASS,
+                    padding: 14,
+                    background: 'rgba(30,41,59,0.88)',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      color: ORANGE,
+                      fontSize: 14,
+                      marginBottom: 6,
+                    }}
+                  >
                     Why this is different
                   </div>
-                  <p style={{ margin: 0, color: 'rgba(255,255,255,0.72)', fontSize: 12, lineHeight: 1.6 }}>
-                    This is not a personality test, clinical tool, or hiring score. It is a professional reflection layer designed to help people understand work patterns and explain their value with evidence.
+
+                  <p
+                    style={{
+                      margin: 0,
+                      color: 'rgba(255,255,255,0.72)',
+                      fontSize: 12,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    This is not a personality test, clinical tool,
+                    hiring score, or automatic decision tool. It is
+                    a user-controlled professional reflection layer.
                   </p>
                 </section>
 
-                <section style={{ ...WHITE_CARD, padding: 14 }}>
-                  <div style={{ fontWeight: 900, color: DARK, fontSize: 13, marginBottom: 8 }}>
-                    Future save/share options
+                <section
+                  style={{
+                    ...WHITE_CARD,
+                    padding: 14,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      color: DARK,
+                      fontSize: 13,
+                      marginBottom: 8,
+                    }}
+                  >
+                    Save/share model
                   </div>
 
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    {[
-                      'Save my results',
-                      'Show on portfolio',
-                      'Share with coach',
-                      'Include in hiring packet',
-                    ].map((item) => (
-                      <label
-                        key={item}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          fontSize: 12,
-                          fontWeight: 800,
-                          color: '#64748B',
-                        }}
-                      >
-                        <input type="checkbox" disabled />
-                        {item}
-                      </label>
-                    ))}
-                  </div>
-
-                  <div style={{ marginTop: 10, fontSize: 11, color: '#94A3B8', lineHeight: 1.45 }}>
-                    Disabled for this test pass. We wire these after the experience is approved.
-                  </div>
+                  <BulletList
+                    items={[
+                      'Save as its own DB record.',
+                      'Only show externally when the user opts in.',
+                      'Portfolio, coaches, and hiring packets can call this source later.',
+                    ]}
+                  />
                 </section>
 
-                <section style={{ ...WHITE_CARD, padding: 14 }}>
-                  <div style={{ fontWeight: 900, color: DARK, fontSize: 13, marginBottom: 8 }}>
+                <section
+                  style={{
+                    ...WHITE_CARD,
+                    padding: 14,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      color: DARK,
+                      fontSize: 13,
+                      marginBottom: 8,
+                    }}
+                  >
                     Grounding principle
                   </div>
+
                   <BulletList
                     items={[
                       'Patterns, not labels.',
@@ -591,20 +1064,57 @@ export default function IdentityPage() {
                 </section>
               </aside>
             </div>
+			
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) minmax(0, 1fr)', gap: 14 }}>
-              <aside style={{ ...GLASS, padding: 14, alignSelf: 'start', position: 'sticky', top: 16 }}>
-                <Pill tone="green">Snapshot generated</Pill>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns:
+                  'minmax(280px, 340px) minmax(0, 1fr)',
+                gap: 14,
+              }}
+            >
+              <aside
+                style={{
+                  ...GLASS,
+                  padding: 14,
+                  alignSelf: 'start',
+                  position: 'sticky',
+                  top: 16,
+                }}
+              >
+                <Pill tone="green">Profile generated</Pill>
 
-                <h2 style={{ margin: '10px 0 4px', color: DARK, fontSize: 20, fontWeight: 900 }}>
-                  {snapshot.coreMode}
+                <h2
+                  style={{
+                    margin: '10px 0 4px',
+                    color: DARK,
+                    fontSize: 20,
+                    fontWeight: 900,
+                  }}
+                >
+                  {snapshot.operatingStyle}
                 </h2>
 
-                <p style={{ margin: '0 0 12px', color: '#64748B', fontSize: 12, lineHeight: 1.55 }}>
-                  This result is a working reflection based on your answers. Later versions should add resume, portfolio, project, and coaching evidence.
+                <p
+                  style={{
+                    margin: '0 0 12px',
+                    color: '#64748B',
+                    fontSize: 12,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {snapshot.professionalSummary}
                 </p>
 
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    flexWrap: 'wrap',
+                    marginBottom: 12,
+                  }}
+                >
                   {snapshot.strengthSignals.map((s) => (
                     <Pill key={s}>{s}</Pill>
                   ))}
@@ -617,8 +1127,10 @@ export default function IdentityPage() {
                     width: '100%',
                     borderRadius: 999,
                     padding: '8px 14px',
-                    border: '1px solid rgba(255,112,67,0.25)',
-                    background: 'rgba(255,112,67,0.08)',
+                    border:
+                      '1px solid rgba(255,112,67,0.25)',
+                    background:
+                      'rgba(255,112,67,0.08)',
                     color: ORANGE,
                     fontSize: 12,
                     fontWeight: 900,
@@ -629,53 +1141,225 @@ export default function IdentityPage() {
                 </button>
               </aside>
 
-              <section style={{ display: 'grid', gap: 12 }}>
+              <section
+                style={{
+                  display: 'grid',
+                  gap: 12,
+                }}
+              >
                 <ResultCard title="🔥 CORE STRENGTH SIGNALS">
-                  <BulletList items={snapshot.strengthSignals} />
+                  <BulletList
+                    items={snapshot.strengthSignals}
+                  />
                 </ResultCard>
 
-                <ResultCard title="🌍 BEST-FIT WORK ENVIRONMENT" tone="blue">
-                  <BulletList items={snapshot.environment} color="#0369A1" />
+                <ResultCard
+                  title="🌍 WHERE I THRIVE"
+                  tone="blue"
+                >
+                  <BulletList
+                    items={snapshot.thrivesIn}
+                    color="#0369A1"
+                  />
                 </ResultCard>
 
-                <ResultCard title="📈 GROWTH OPPORTUNITIES" tone="amber">
-                  <BulletList items={snapshot.opportunities} color="#92400E" />
+                <ResultCard
+                  title="🤝 WHERE I MAY NEED SUPPORT"
+                  tone="amber"
+                >
+                  <BulletList
+                    items={snapshot.supportAreas}
+                    color="#92400E"
+                  />
                 </ResultCard>
 
-                <ResultCard title="🧾 WHY THIS RESULT APPEARED" tone="green">
-                  <BulletList items={snapshot.evidence} color="#15803D" />
+                <ResultCard
+                  title="⚙️ HOW I INTEGRATE INTO OPERATIONS"
+                  tone="green"
+                >
+                  <BulletList
+                    items={snapshot.integrationGuidance}
+                    color="#15803D"
+                  />
                 </ResultCard>
 
-                <section style={{ ...GLASS, padding: 14 }}>
-                  <div style={{ fontWeight: 900, color: ORANGE, fontSize: 13, marginBottom: 8 }}>
-                    Save & share controls coming next
+                <ResultCard
+                  title="🧾 WHY THIS RESULT APPEARED"
+                  tone="green"
+                >
+                  <BulletList
+                    items={snapshot.evidence}
+                    color="#15803D"
+                  />
+                </ResultCard>
+
+                <section
+                  style={{
+                    ...GLASS,
+                    padding: 14,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      color: ORANGE,
+                      fontSize: 13,
+                      marginBottom: 8,
+                    }}
+                  >
+                    Save & share controls
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
-                    {[
-                      'Save my results',
-                      'Show on portfolio',
-                      'Share with coach',
-                      'Include in hiring packet',
-                    ].map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        disabled
-                        style={{
-                          padding: '10px 8px',
-                          borderRadius: 10,
-                          border: '1px solid rgba(0,0,0,0.10)',
-                          background: 'rgba(255,255,255,0.72)',
-                          color: '#94A3B8',
-                          fontSize: 11,
-                          fontWeight: 900,
-                          cursor: 'not-allowed',
-                        }}
-                      >
-                        {item}
-                      </button>
-                    ))}
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns:
+                        'repeat(3, minmax(0, 1fr))',
+                      gap: 8,
+                    }}
+                  >
+                    <label
+                      style={{
+                        ...WHITE_CARD,
+                        padding: 10,
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: SLATE,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          shareSettings.showOnPortfolio
+                        }
+                        onChange={(e) =>
+                          setShareField(
+                            'showOnPortfolio',
+                            e.target.checked
+                          )
+                        }
+                        style={{ marginRight: 7 }}
+                      />
+                      Show on portfolio
+                    </label>
+
+                    <label
+                      style={{
+                        ...WHITE_CARD,
+                        padding: 10,
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: SLATE,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          shareSettings.shareWithCoach
+                        }
+                        onChange={(e) =>
+                          setShareField(
+                            'shareWithCoach',
+                            e.target.checked
+                          )
+                        }
+                        style={{ marginRight: 7 }}
+                      />
+                      Share with coach
+                    </label>
+
+                    <label
+                      style={{
+                        ...WHITE_CARD,
+                        padding: 10,
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: SLATE,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          shareSettings.includeInHiringPacket
+                        }
+                        onChange={(e) =>
+                          setShareField(
+                            'includeInHiringPacket',
+                            e.target.checked
+                          )
+                        }
+                        style={{ marginRight: 7 }}
+                      />
+                      Include in hiring packet
+                    </label>
                   </div>
+
+                  {error ? (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        padding: 11,
+                        borderRadius: 10,
+                        background:
+                          'rgba(220,38,38,0.10)',
+                        border:
+                          '1px solid rgba(220,38,38,0.25)',
+                        color: '#B91C1C',
+                        fontSize: 12,
+                        fontWeight: 800,
+                      }}
+                    >
+                      {error}
+                    </div>
+                  ) : null}
+
+                  {saveMessage ? (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        padding: 11,
+                        borderRadius: 10,
+                        background:
+                          'rgba(22,163,74,0.10)',
+                        border:
+                          '1px solid rgba(22,163,74,0.25)',
+                        color: '#15803D',
+                        fontSize: 12,
+                        fontWeight: 800,
+                      }}
+                    >
+                      {saveMessage}
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={saveProfile}
+                    disabled={saving}
+                    style={{
+                      width: '100%',
+                      marginTop: 12,
+                      border: 'none',
+                      borderRadius: 12,
+                      background: saving
+                        ? '#9CA3AF'
+                        : ORANGE,
+                      color: 'white',
+                      padding: 14,
+                      fontSize: 14,
+                      fontWeight: 900,
+                      cursor: saving
+                        ? 'not-allowed'
+                        : 'pointer',
+                      boxShadow: saving
+                        ? 'none'
+                        : '0 4px 14px rgba(255,112,67,0.34)',
+                    }}
+                  >
+                    {saving
+                      ? 'Saving…'
+                      : 'Save Professional Operating Profile'}
+                  </button>
                 </section>
               </section>
             </div>

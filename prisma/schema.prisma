@@ -237,6 +237,23 @@ model SeekerInterviewPrep {
   @@map("seeker_interview_prep")
 }
 
+model ProfessionalOperatingProfile {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  answersJson           Json
+  snapshotJson          Json
+  showOnPortfolio       Boolean  @default(false)
+  shareWithCoach        Boolean  @default(false)
+  includeInHiringPacket Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("professional_operating_profiles")
+}
+
 model ApplicationPacketExport {
   id              String      @id @default(cuid())
   applicationId   Int
@@ -856,6 +873,7 @@ model User {
   jobAlignLastResetMonth  String?
   interviewPrepFreeUses        Int                            @default(0)
   interviewPrepLastResetMonth  String?
+  professionalOperatingProfile ProfessionalOperatingProfile?
   department                   Department?
   employee                     Boolean                        @default(false)
   growthPivotFreeUses          Int                            @default(0)
