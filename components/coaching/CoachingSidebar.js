@@ -1,21 +1,17 @@
 // components/coaching/CoachingSidebar.js
 import React from 'react';
 import Link from 'next/link';
-
-// ✅ NEW
 import { useEffect, useState } from 'react';
 
 const ORANGE = '#FF7043';
 const TEXT_MAIN = '#263238';
 
-// ✅ Glass standard (align with RecruiterSidebar canonical frosted glass)
 const GLASS_BG = 'rgba(255,255,255,0.68)';
 const GLASS_BORDER = 'rgba(255,255,255,0.22)';
 const GLASS_SHADOW = '0 10px 26px rgba(0,0,0,0.12)';
 const GLASS_BLUR = 'blur(12px)';
 
-// Hover / subtle fills on glass
-const HOVER_BG = 'rgba(255,112,67,0.10)'; // orange tint but still “breathes”
+const HOVER_BG = 'rgba(255,112,67,0.18)';
 const ACTIVE_SHADOW = '0 12px 24px rgba(0,0,0,0.12)';
 
 function Badge({ value }) {
@@ -44,7 +40,6 @@ function Badge({ value }) {
   );
 }
 
-// ✅ NEW: subtle dot (used for Action Center unread indicator)
 function Dot({ show }) {
   if (!show) return null;
   return (
@@ -71,7 +66,7 @@ function NavItem({ href, label, active, badge, dot }) {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    padding: '8px 12px',
+    padding: '6px 12px',
     textDecoration: 'none',
     fontWeight: 700,
     fontSize: 14,
@@ -112,9 +107,7 @@ function NavItem({ href, label, active, badge, dot }) {
       )}
       <span style={{ marginLeft: active ? 6 : 0 }}>{label}</span>
 
-      {/* ✅ NEW: dot indicator (Action Center unread) */}
       <Dot show={dot} />
-
       <Badge value={badge} />
     </Link>
   );
@@ -129,7 +122,7 @@ function SectionLabel({ children }) {
         letterSpacing: '0.12em',
         textTransform: 'uppercase',
         color: 'rgba(31, 41, 55, 0.55)',
-        padding: '8px 4px 2px',
+        padding: '5px 4px 1px',
       }}
     >
       {children}
@@ -148,7 +141,6 @@ export default function CoachingSidebar({
     feed: 0,
   },
 
-  // ✅ NEW: DB-backed staff fields (from session/user)
   employee = false,
   department = '',
   profileSlug = '',
@@ -160,7 +152,6 @@ export default function CoachingSidebar({
     ? `/profile/${profileSlug}?chrome=coach`
     : '/profile/edit?chrome=coach';
 
-  // ✅ NEW: unread dot for Action Center (shown on Dashboard in sidebar)
   const [hasActionUnread, setHasActionUnread] = useState(false);
 
   useEffect(() => {
@@ -179,9 +170,7 @@ export default function CoachingSidebar({
         if (!alive) return;
 
         setHasActionUnread(!!data?.hasUnread);
-      } catch {
-        // swallow - no dot if API fails
-      }
+      } catch {}
     };
 
     load();
@@ -198,28 +187,30 @@ export default function CoachingSidebar({
       aria-label="Coach navigation"
       style={{
         display: 'grid',
-        gap: 6,
+        gap: 4,
         position: 'sticky',
         top: 24,
         alignSelf: 'start',
-        height: 'fit-content',
+        maxHeight: 'calc(100vh - 48px)',
+        overflowY: 'auto',
+        scrollbarWidth: 'thin',
 
-        // ✅ Glass container (match Recruiter)
         background: GLASS_BG,
         borderRadius: 18,
         border: `1px solid ${GLASS_BORDER}`,
         boxShadow: GLASS_SHADOW,
         padding: 12,
+        paddingRight: 4,
         backdropFilter: GLASS_BLUR,
         WebkitBackdropFilter: GLASS_BLUR,
       }}
     >
-      {/* Profile + Dashboard */}
       <NavItem
         href={resolvedProfileHref}
         label="Portfolio"
         active={active === 'profile'}
       />
+
       <NavItem
         href="/coaching-dashboard"
         label="Dashboard"
@@ -227,20 +218,22 @@ export default function CoachingSidebar({
         dot={hasActionUnread}
       />
 
-      {/* Connections */}
       <SectionLabel>Connections</SectionLabel>
+
       <NavItem
         href="/seeker/contact-center?chrome=coach"
         label="Contact Center"
         active={active === 'contacts'}
         badge={counts.connections}
       />
+
       <NavItem
         href="/seeker/messages?chrome=coach"
         label="The Signal"
         active={active === 'messages'}
         badge={counts.signal}
       />
+
       <NavItem
         href="/feed?chrome=coach"
         label="Community Feed"
@@ -248,36 +241,38 @@ export default function CoachingSidebar({
         badge={counts.feed}
       />
 
-      {/* Seeker Tools (coach chrome) */}
       <SectionLabel>Seeker Tools</SectionLabel>
+
       <NavItem
         href="/seeker-dashboard?chrome=coach"
         label="Seeker Dashboard"
         active={active === 'seeker-dashboard'}
       />
+
       <NavItem
         href="/jobs?chrome=coach"
         label="Apply to Jobs"
         active={active === 'jobs'}
       />
+
       <NavItem
         href="/anvil?chrome=coach"
         label="The Anvil"
         active={active === 'anvil' || active === 'roadmap'}
       />
 
-      {/* Resources */}
       <SectionLabel>Resources</SectionLabel>
+
       <NavItem
         href="/the-hearth?chrome=coach"
         label="The Hearth"
         active={active === 'hearth'}
       />
 
-      {/* ✅ NEW: Staff tools (DB-backed via employee + department) */}
       {staffAccess ? (
         <>
           <SectionLabel>Staff Tools</SectionLabel>
+
           <NavItem
             href="/internal/dashboard"
             label="Forge Workspace"
@@ -287,6 +282,7 @@ export default function CoachingSidebar({
       ) : null}
 
       <SectionLabel>Platform</SectionLabel>
+
       <NavItem
         href="/search?chrome=coach"
         label="Advanced Search"
