@@ -250,6 +250,11 @@ export default function RecruiterSidebar({
         active={active === 'messages'}
         badge={counts.signal}
       />
+	  <NavItem
+		href={`/foundry?chrome=${chromeRecruiter}`}
+		label="Foundries"
+		active={active === 'foundries'}
+	  />
       <NavItem
         href={`/feed?chrome=${chromeRecruiter}`}
         label="Community Feed"
