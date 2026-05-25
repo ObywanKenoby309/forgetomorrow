@@ -34,8 +34,9 @@ export default function FoundryBottomBar({
 }) {
   return (
     <div style={S.bar}>
-      {/* Group 1 — Communication */}
+      {/* Group 1 — Communication (spacer clears cookie banner) */}
       <div style={S.group}>
+        <div style={{ width: 52 }} />
         <button
           style={S.btn(micMuted, micMuted)}
           onClick={onMicToggle}
