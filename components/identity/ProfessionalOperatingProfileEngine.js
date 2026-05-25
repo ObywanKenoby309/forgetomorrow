@@ -629,32 +629,49 @@ function StepScreen({ step, stepIndex, totalSteps, form, setField, onBack, onNex
         </p>
       </div>
 
-      {/* Fields */}
+      {/* Fields — scrollable content area, pinned nav below */}
       <div style={{
         ...surface,
         borderTopLeftRadius: 0, borderTopRightRadius: 0,
-        borderTop: 'none', padding: '20px 20px 24px',
-        display: 'grid', gap: 20,
+        borderTop: 'none',
+        display: 'grid',
+        gridTemplateRows: '1fr auto',
+        overflow: 'hidden',
       }}>
-        {step.fields.map(fieldKey => (
-          <FieldRenderer
-            key={fieldKey}
-            fieldKey={fieldKey}
-            value={form[fieldKey] || ''}
-            onChange={v => setField(fieldKey, v)}
-          />
-        ))}
+        {/* Scrollable questions */}
+        <div style={{
+          overflowY: 'auto',
+          maxHeight: 420,
+          padding: '20px 20px 8px',
+          display: 'grid', gap: 20,
+        }}>
+          {step.fields.map(fieldKey => (
+            <FieldRenderer
+              key={fieldKey}
+              fieldKey={fieldKey}
+              value={form[fieldKey] || ''}
+              onChange={v => setField(fieldKey, v)}
+            />
+          ))}
 
-        {error && (
-          <div style={{ padding: '9px 12px', borderRadius: 8,
-            background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.20)',
-            color: '#B91C1C', fontSize: 12, fontWeight: 700 }}>
-            {error}
-          </div>
-        )}
+          {error && (
+            <div style={{ padding: '9px 12px', borderRadius: 8,
+              background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.20)',
+              color: '#B91C1C', fontSize: 12, fontWeight: 700 }}>
+              {error}
+            </div>
+          )}
+        </div>
 
-        {/* Navigation */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 4 }}>
+        {/* Pinned navigation — always visible */}
+        <div style={{
+          borderTop: `1px solid ${T.border}`,
+          padding: '14px 20px 18px',
+          background: 'rgba(255,255,255,0.90)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
 
           {/* Back */}
           {stepIndex > 0 ? (
@@ -709,7 +726,7 @@ function StepScreen({ step, stepIndex, totalSteps, form, setField, onBack, onNex
 
         {/* Optional step skip hint */}
         {isLast && (
-          <div style={{ textAlign: 'center', marginTop: -8 }}>
+          <div style={{ textAlign: 'center', marginTop: 8 }}>
             <button type="button" onClick={onGenerate} disabled={generating} style={{
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: 11, color: T.light, textDecoration: 'underline',
@@ -718,6 +735,7 @@ function StepScreen({ step, stepIndex, totalSteps, form, setField, onBack, onNex
             </button>
           </div>
         )}
+        </div> {/* end pinned nav wrapper */}
       </div>
     </div>
   );
