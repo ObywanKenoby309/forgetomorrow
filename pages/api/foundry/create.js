@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import prisma from '@/lib/prisma';
 import { nanoid } from 'nanoid';
+import { createDailyRoom } from '@/lib/foundry/daily';
 
 const CAN_HOST = ['COACH', 'RECRUITER', 'ADMIN', 'OWNER', 'SITE_ADMIN'];
 
@@ -28,6 +29,10 @@ export default async function handler(req, res) {
   try {
     const roomId = nanoid(10);
 
+    // Create the Daily room first
+    const dailyRoom = await createDailyRoom(roomId);
+
+    // Then create the Foundry DB record, storing the Daily room name
     const room = await prisma.foundryRoom.create({
       data: {
         roomId,
@@ -35,9 +40,12 @@ export default async function handler(req, res) {
         hostId: session.user.id,
         status: 'ACTIVE',
         startedAt: new Date(),
+        dailyRoomName: dailyRoom.name,  // store Daily's room name
+        dailyRoomUrl: dailyRoom.url,    // store full Daily URL
       },
     });
 
+    // Auto-join host as participant
     await prisma.foundryParticipant.create({
       data: {
         roomId: room.id,

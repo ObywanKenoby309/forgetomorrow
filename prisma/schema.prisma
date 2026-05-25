@@ -1374,21 +1374,23 @@ model Message {
 }
 
 model FoundryRoom {
-  id          String               @id @default(cuid())
-  roomId      String               @unique          // short public ID (nanoid)
-  title       String
-  status      FoundryStatus        @default(ACTIVE)
-  hostId      String
-  startedAt   DateTime             @default(now())
-  endedAt     DateTime?
-  isRecording Boolean              @default(false)
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  id             String               @id @default(cuid())
+  roomId         String               @unique          // short public ID (nanoid)
+  title          String
+  status         FoundryStatus        @default(ACTIVE)
+  hostId         String
+  dailyRoomName  String?
+  dailyRoomUrl   String?
+  startedAt      DateTime             @default(now())
+  endedAt        DateTime?
+  isRecording    Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
-  host         User                 @relation("FoundryHost", fields: [hostId], references: [id])
-  participants FoundryParticipant[]
-  sharedFiles  FoundrySharedFile[]
-  notes        FoundryNote[]
+  host           User                 @relation("FoundryHost", fields: [hostId], references: [id])
+  participants   FoundryParticipant[]
+  sharedFiles    FoundrySharedFile[]
+  notes          FoundryNote[]
 
   @@index([hostId])
   @@index([status])
