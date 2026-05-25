@@ -71,6 +71,12 @@ function getChromeFromAsPath(asPath) {
   }
 }
 
+function toList(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return [];
+}
+
 function Pill({ children, tone = 'orange' }) {
   const colors = {
     orange: [
@@ -78,23 +84,25 @@ function Pill({ children, tone = 'orange' }) {
       ORANGE,
       'rgba(255,112,67,0.24)',
     ],
-
     green: [
       'rgba(22,163,74,0.10)',
       '#15803D',
       'rgba(22,163,74,0.24)',
     ],
-
     blue: [
       'rgba(14,165,233,0.10)',
       '#0369A1',
       'rgba(14,165,233,0.24)',
     ],
-
     amber: [
       'rgba(245,158,11,0.12)',
       '#92400E',
       'rgba(245,158,11,0.26)',
+    ],
+    slate: [
+      'rgba(15,23,42,0.08)',
+      '#334155',
+      'rgba(15,23,42,0.14)',
     ],
   };
 
@@ -160,6 +168,7 @@ function TextField({
   value,
   onChange,
   placeholder,
+  minHeight = 92,
 }) {
   return (
     <label style={{ display: 'grid', gap: 6 }}>
@@ -177,7 +186,10 @@ function TextField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        style={TEXTAREA}
+        style={{
+          ...TEXTAREA,
+          minHeight,
+        }}
       />
     </label>
   );
@@ -231,6 +243,7 @@ function BulletList({ items, color = ORANGE }) {
           >
             •
           </span>
+
           <span>{item}</span>
         </li>
       ))}
@@ -250,6 +263,8 @@ function ResultCard({
       ? 'rgba(14,165,233,0.86)'
       : tone === 'amber'
       ? 'rgba(245,158,11,0.90)'
+      : tone === 'slate'
+      ? 'rgba(51,65,85,0.92)'
       : 'rgba(255,112,67,0.90)';
 
   return (
@@ -258,123 +273,11 @@ function ResultCard({
         {title}
       </div>
 
-      <div style={{ padding: 14 }}>{children}</div>
+      <div style={{ padding: 14 }}>
+        {children}
+      </div>
     </section>
   );
-}
-
-function buildOperatingProfile(form) {
-  const autonomy = form.autonomy;
-  const ambiguity = form.ambiguity;
-  const energy = form.energy;
-  const pressure = form.pressure;
-  const communication = form.communication;
-  const growth = form.growth;
-
-  const strengthSignals = [];
-
-  if (energy === 'systems') strengthSignals.push('Systems thinker');
-  if (energy === 'people') strengthSignals.push('Relationship builder');
-  if (energy === 'execution') strengthSignals.push('Execution driver');
-  if (energy === 'strategy') strengthSignals.push('Strategic navigator');
-
-  if (pressure === 'calm') strengthSignals.push('Calm under pressure');
-  if (pressure === 'direct') strengthSignals.push('Decisive problem solver');
-  if (pressure === 'collaborative') strengthSignals.push('Coordinated responder');
-  if (pressure === 'reflective') strengthSignals.push('Measured decision maker');
-
-  if (autonomy === 'high') strengthSignals.push('Independent operator');
-  if (ambiguity === 'high') strengthSignals.push('Ambiguity-capable builder');
-
-  const operatingStyle =
-    energy === 'systems'
-      ? 'Operational Systems Builder'
-      : energy === 'people'
-      ? 'Trust-Centered Connector'
-      : energy === 'strategy'
-      ? 'Strategic Direction Setter'
-      : 'Execution-Focused Operator';
-
-  const professionalSummary =
-    energy === 'systems'
-      ? 'You appear to operate best when you can turn complexity into structure, improve how work moves, and create systems that help others perform more effectively.'
-      : energy === 'people'
-      ? 'You appear to operate best when your work involves trust, guidance, communication, and helping people move through decisions or challenges with clarity.'
-      : energy === 'strategy'
-      ? 'You appear to operate best when you can assess direction, connect signals, solve complex problems, and help shape what should happen next.'
-      : 'You appear to operate best when there is meaningful work to move forward, clear outcomes to deliver, and visible progress to create.';
-
-  const thrivesIn = [
-    autonomy === 'high'
-      ? 'High-ownership environments where trust, outcomes, and accountability matter.'
-      : autonomy === 'medium'
-      ? 'Environments with clear goals, reasonable autonomy, and useful check-ins.'
-      : 'Structured environments with clear expectations, defined success measures, and steady alignment.',
-
-    ambiguity === 'high'
-      ? 'Ambiguous or developing situations where someone needs to create order and momentum.'
-      : ambiguity === 'medium'
-      ? 'Changing environments where priorities are clarified and communication stays consistent.'
-      : 'Stable environments where expectations, handoffs, and responsibilities are well defined.',
-
-    communication === 'direct'
-      ? 'Teams that value direct, low-politics communication and practical problem solving.'
-      : communication === 'collaborative'
-      ? 'Teams that value shared context, discussion, trust, and cross-functional buy-in.'
-      : 'Teams that value thoughtful written context, documentation, and well-structured decisions.',
-  ];
-
-  const supportAreas = [
-    growth === 'visibility'
-      ? 'May benefit from more consistent documentation and communication of wins so value is visible beyond day-to-day execution.'
-      : growth === 'delegation'
-      ? 'May benefit from support delegating ownership instead of carrying too much alone.'
-      : growth === 'focus'
-      ? 'May benefit from clearer prioritization boundaries when multiple urgent needs compete for attention.'
-      : 'May benefit from stronger strategic framing so work is understood as business impact, not just task completion.',
-
-    'Should watch for environments that reward politics more than performance or create disconnects between leadership direction and frontline reality.',
-
-    'Can use this profile as a conversation starter with coaches, mentors, managers, or hiring teams.',
-  ];
-
-  const integrationGuidance = [
-    'Give this person clarity on the outcome, the operational context, and where success will be measured.',
-
-    autonomy === 'high'
-      ? 'Provide trust and decision space, then use check-ins to remove blockers instead of micromanaging execution.'
-      : 'Provide clear expectations and cadence, then increase autonomy as trust and context develop.',
-
-    communication === 'written'
-      ? 'Provide written context for complex decisions and allow time to process important tradeoffs.'
-      : 'Use direct, timely communication and practical feedback loops to keep momentum strong.',
-  ];
-
-  const evidence = [
-    form.recentWin
-      ? `Self-reported professional win: ${form.recentWin}`
-      : 'No recent win entered yet. Future versions should also pull from resume, portfolio, and project evidence.',
-
-    form.drain
-      ? `Self-reported drain pattern: ${form.drain}`
-      : 'No drain pattern entered yet.',
-
-    form.goal
-      ? `Current reflection goal: ${form.goal}`
-      : 'No current reflection goal entered yet.',
-  ];
-
-  return {
-    title: 'Professional Operating Profile',
-    operatingStyle,
-    professionalSummary,
-    strengthSignals: Array.from(new Set(strengthSignals)).slice(0, 8),
-    thrivesIn,
-    supportAreas,
-    integrationGuidance,
-    evidence,
-    generatedAt: new Date().toISOString(),
-  };
 }
 
 export default function IdentityPage() {
@@ -385,7 +288,9 @@ export default function IdentityPage() {
     getChromeFromAsPath(router.asPath);
 
   const withChrome = (path) =>
-    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+    chrome
+      ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}`
+      : path;
 
   const [form, setForm] = useState({
     energy: '',
@@ -394,12 +299,23 @@ export default function IdentityPage() {
     pressure: '',
     communication: '',
     growth: '',
+
+    learningStyle: '',
+    challengeStyle: '',
+    motivation: '',
+    recognitionStyle: '',
+    careerHope: '',
+    idealImpact: '',
+    stressTrigger: '',
+    supportNeed: '',
+
     recentWin: '',
     drain: '',
     goal: '',
   });
 
   const [snapshot, setSnapshot] = useState(null);
+
   const [error, setError] = useState('');
   const [loadingSaved, setLoadingSaved] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -429,7 +345,10 @@ export default function IdentityPage() {
 
         if (res.ok && data?.profile) {
           if (data.profile.answersJson) {
-            setForm(data.profile.answersJson);
+            setForm((prev) => ({
+              ...prev,
+              ...data.profile.answersJson,
+            }));
           }
 
           if (data.profile.snapshotJson) {
@@ -439,11 +358,13 @@ export default function IdentityPage() {
           setShareSettings({
             showOnPortfolio: Boolean(data.profile.showOnPortfolio),
             shareWithCoach: Boolean(data.profile.shareWithCoach),
-            includeInHiringPacket: Boolean(data.profile.includeInHiringPacket),
+            includeInHiringPacket: Boolean(
+              data.profile.includeInHiringPacket
+            ),
           });
         }
       } catch {
-        // Non-blocking: user can still generate a new profile.
+        // non-blocking
       } finally {
         if (active) setLoadingSaved(false);
       }
@@ -455,7 +376,7 @@ export default function IdentityPage() {
       active = false;
     };
   }, []);
-
+  
   const completion = useMemo(() => {
     const required = [
       'energy',
@@ -464,11 +385,19 @@ export default function IdentityPage() {
       'pressure',
       'communication',
       'growth',
+      'learningStyle',
+      'challengeStyle',
+      'motivation',
+      'careerHope',
     ];
 
-    const complete = required.filter((key) => Boolean(form[key])).length;
+    const complete = required.filter(
+      (key) => Boolean(form[key])
+    ).length;
 
-    return Math.round((complete / required.length) * 100);
+    return Math.round(
+      (complete / required.length) * 100
+    );
   }, [form]);
 
   const setField = (key, value) => {
@@ -490,7 +419,7 @@ export default function IdentityPage() {
     }));
   };
 
-  const generateSnapshot = () => {
+  const generateSnapshot = async () => {
     const required = [
       'energy',
       'autonomy',
@@ -498,22 +427,68 @@ export default function IdentityPage() {
       'pressure',
       'communication',
       'growth',
+      'learningStyle',
+      'challengeStyle',
+      'motivation',
+      'careerHope',
     ];
 
-    const missing = required.filter((key) => !form[key]);
+    const missing = required.filter(
+      (key) => !form[key]
+    );
 
     if (missing.length) {
-      setError('Complete the required reflection questions first.');
+      setError(
+        'Complete the required reflection questions first.'
+      );
       return;
     }
 
-    setSnapshot(buildOperatingProfile(form));
+    setError('');
     setSaveMessage('');
+
+    try {
+      const res = await fetch('/api/anvil/identity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          answersJson: form,
+          showOnPortfolio:
+            shareSettings.showOnPortfolio,
+          shareWithCoach:
+            shareSettings.shareWithCoach,
+          includeInHiringPacket:
+            shareSettings.includeInHiringPacket,
+          generateOnly: true,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(
+          data?.error ||
+            'Failed to generate Professional Operating Profile.'
+        );
+      }
+
+      setSnapshot(data?.snapshot || null);
+    } catch (e) {
+      setError(
+        e?.message ||
+          'Failed to generate Professional Operating Profile.'
+      );
+    }
   };
 
   const saveProfile = async () => {
     if (!snapshot) {
-      setError('Generate your Professional Operating Profile before saving.');
+      setError(
+        'Generate your Professional Operating Profile before saving.'
+      );
       return;
     }
 
@@ -531,9 +506,12 @@ export default function IdentityPage() {
         body: JSON.stringify({
           answersJson: form,
           snapshotJson: snapshot,
-          showOnPortfolio: shareSettings.showOnPortfolio,
-          shareWithCoach: shareSettings.shareWithCoach,
-          includeInHiringPacket: shareSettings.includeInHiringPacket,
+          showOnPortfolio:
+            shareSettings.showOnPortfolio,
+          shareWithCoach:
+            shareSettings.shareWithCoach,
+          includeInHiringPacket:
+            shareSettings.includeInHiringPacket,
         }),
       });
 
@@ -541,14 +519,18 @@ export default function IdentityPage() {
 
       if (!res.ok) {
         throw new Error(
-          data?.error || 'Failed to save Professional Operating Profile.'
+          data?.error ||
+            'Failed to save Professional Operating Profile.'
         );
       }
 
-      setSaveMessage('Professional Operating Profile saved.');
+      setSaveMessage(
+        'Professional Operating Profile saved.'
+      );
     } catch (e) {
       setError(
-        e?.message || 'Failed to save Professional Operating Profile.'
+        e?.message ||
+          'Failed to save Professional Operating Profile.'
       );
     } finally {
       setSaving(false);
@@ -568,7 +550,8 @@ export default function IdentityPage() {
         background: 'white',
         borderRadius: 12,
         padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        boxShadow:
+          '0 2px 6px rgba(0,0,0,0.06)',
         border: '1px solid #eee',
         textAlign: 'center',
       }}
@@ -588,22 +571,27 @@ export default function IdentityPage() {
         style={{
           margin: '6px auto 0',
           color: '#607D8B',
-          maxWidth: 840,
+          maxWidth: 920,
           lineHeight: 1.5,
         }}
       >
-        A voluntary professional reflection that helps you explain where you
-        thrive, where you need support, and how you integrate into a team or
-        operation.
+        A voluntary professional reflection
+        designed to help explain how you
+        operate, learn, process pressure,
+        integrate into teams, and perform at
+        your best — backed by evidence from
+        your portfolio, projects, resume, and
+        reflection responses.
       </p>
     </section>
   );
-  
-    return (
+
+  return (
     <>
       <Head>
         <title>
-          Professional Operating Profile | The Anvil | ForgeTomorrow
+          Professional Operating Profile |
+          The Anvil | ForgeTomorrow
         </title>
       </Head>
 
@@ -616,12 +604,13 @@ export default function IdentityPage() {
         <div
           style={{
             width: '100%',
-            maxWidth: 1120,
+            maxWidth: 1180,
             margin: '0 auto',
             display: 'grid',
             gap: 14,
           }}
         >
+
           <div style={{ ...GLASS, padding: 16 }}>
             <div
               style={{
@@ -633,7 +622,9 @@ export default function IdentityPage() {
               }}
             >
               <div>
-                <Pill>Voluntary reflection</Pill>
+                <Pill>
+                  Voluntary · Evidence-backed · User-controlled
+                </Pill>
 
                 <h2
                   style={{
@@ -652,21 +643,27 @@ export default function IdentityPage() {
                     color: '#64748B',
                     fontSize: 13,
                     lineHeight: 1.55,
-                    maxWidth: 790,
+                    maxWidth: 840,
                   }}
                 >
-                  This profile is user-owned and share-controlled. It is not a
-                  hidden score, personality test, diagnosis, or automatic hiring
-                  filter.
+                  This profile is not a personality test,
+                  diagnosis, hidden score, or automatic hiring
+                  filter. It combines your own reflection with
+                  professional evidence to create a defensible
+                  operating profile.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => router.push(withChrome('/anvil'))}
+                onClick={() =>
+                  router.push(withChrome('/anvil'))
+                }
                 style={{
-                  border: '1px solid rgba(255,112,67,0.28)',
-                  background: 'rgba(255,112,67,0.08)',
+                  border:
+                    '1px solid rgba(255,112,67,0.28)',
+                  background:
+                    'rgba(255,112,67,0.08)',
                   color: ORANGE,
                   borderRadius: 999,
                   padding: '8px 14px',
@@ -689,18 +686,25 @@ export default function IdentityPage() {
                 fontWeight: 800,
               }}
             >
-              Loading saved Professional Operating Profile…
+              Loading saved Professional Operating
+              Profile…
             </section>
           ) : !snapshot ? (
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 340px)',
+                gridTemplateColumns:
+                  'minmax(0, 1fr) minmax(280px, 340px)',
                 gap: 14,
                 alignItems: 'start',
               }}
             >
-              <section style={{ ...GLASS, overflow: 'hidden' }}>
+              <section
+                style={{
+                  ...GLASS,
+                  overflow: 'hidden',
+                }}
+              >
                 <div style={SECTION_HDR}>
                   🧭 OPERATING PROFILE REFLECTION
                 </div>
@@ -745,7 +749,8 @@ export default function IdentityPage() {
                       style={{
                         height: 8,
                         borderRadius: 999,
-                        background: 'rgba(15,23,42,0.10)',
+                        background:
+                          'rgba(15,23,42,0.10)',
                         overflow: 'hidden',
                       }}
                     >
@@ -754,7 +759,8 @@ export default function IdentityPage() {
                           width: `${completion}%`,
                           height: '100%',
                           background: ORANGE,
-                          transition: 'width 180ms ease',
+                          transition:
+                            'width 180ms ease',
                         }}
                       />
                     </div>
@@ -763,10 +769,12 @@ export default function IdentityPage() {
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
+                      gridTemplateColumns:
+                        'repeat(2, minmax(0, 1fr))',
                       gap: 12,
                     }}
                   >
+
                     <SelectField
                       label="What type of work gives you the most energy?"
                       value={form.energy}
@@ -774,7 +782,8 @@ export default function IdentityPage() {
                       options={[
                         {
                           value: 'systems',
-                          label: 'Improving systems, processes, and operations',
+                          label:
+                            'Improving systems, processes, and operations',
                         },
                         {
                           value: 'people',
@@ -783,7 +792,8 @@ export default function IdentityPage() {
                         },
                         {
                           value: 'execution',
-                          label: 'Getting things done and moving work forward',
+                          label:
+                            'Getting things done and moving work forward',
                         },
                         {
                           value: 'strategy',
@@ -805,7 +815,8 @@ export default function IdentityPage() {
                         },
                         {
                           value: 'medium',
-                          label: 'Balanced autonomy with clear check-ins',
+                          label:
+                            'Balanced autonomy with clear check-ins',
                         },
                         {
                           value: 'low',
@@ -827,7 +838,8 @@ export default function IdentityPage() {
                         },
                         {
                           value: 'medium',
-                          label: 'Comfortable if priorities are clear',
+                          label:
+                            'Comfortable if priorities are clear',
                         },
                         {
                           value: 'low',
@@ -844,11 +856,13 @@ export default function IdentityPage() {
                       options={[
                         {
                           value: 'calm',
-                          label: 'I get calm and stabilize the situation',
+                          label:
+                            'I get calm and stabilize the situation',
                         },
                         {
                           value: 'direct',
-                          label: 'I make decisions quickly and act',
+                          label:
+                            'I make decisions quickly and act',
                         },
                         {
                           value: 'collaborative',
@@ -857,7 +871,8 @@ export default function IdentityPage() {
                         },
                         {
                           value: 'reflective',
-                          label: 'I pause, assess, and choose carefully',
+                          label:
+                            'I pause, assess, and choose carefully',
                         },
                       ]}
                     />
@@ -869,7 +884,8 @@ export default function IdentityPage() {
                       options={[
                         {
                           value: 'direct',
-                          label: 'Direct, clear, and low-politics',
+                          label:
+                            'Direct, clear, and low-politics',
                         },
                         {
                           value: 'collaborative',
@@ -911,27 +927,194 @@ export default function IdentityPage() {
                         },
                       ]}
                     />
+
+                    <SelectField
+                      label="How do you learn best?"
+                      value={form.learningStyle}
+                      onChange={(v) => setField('learningStyle', v)}
+                      options={[
+                        {
+                          value: 'hands_on',
+                          label:
+                            'Hands-on — let me work through the real thing',
+                        },
+                        {
+                          value: 'mentor_guided',
+                          label:
+                            'Mentor-guided — show me the pattern, then let me try',
+                        },
+                        {
+                          value: 'documentation',
+                          label:
+                            'Documentation-first — give me the structure and reference material',
+                        },
+                        {
+                          value: 'trial_and_error',
+                          label:
+                            'Trial and error — I learn by testing and adjusting',
+                        },
+                      ]}
+                    />
+
+                    <SelectField
+                      label="How do you usually see challenges?"
+                      value={form.challengeStyle}
+                      onChange={(v) => setField('challengeStyle', v)}
+                      options={[
+                        {
+                          value: 'builder',
+                          label:
+                            'As something to build through or improve',
+                        },
+                        {
+                          value: 'solver',
+                          label:
+                            'As a problem to diagnose and resolve',
+                        },
+                        {
+                          value: 'stabilizer',
+                          label:
+                            'As something to calm, organize, and stabilize',
+                        },
+                        {
+                          value: 'strategist',
+                          label:
+                            'As a signal that direction or priorities need review',
+                        },
+                      ]}
+                    />
+
+                    <SelectField
+                      label="What most motivates you professionally?"
+                      value={form.motivation}
+                      onChange={(v) => setField('motivation', v)}
+                      options={[
+                        {
+                          value: 'mission',
+                          label:
+                            'Mission — doing work that matters',
+                        },
+                        {
+                          value: 'mastery',
+                          label:
+                            'Mastery — becoming excellent at what I do',
+                        },
+                        {
+                          value: 'impact',
+                          label:
+                            'Impact — seeing meaningful results from the work',
+                        },
+                        {
+                          value: 'ownership',
+                          label:
+                            'Ownership — being trusted to carry important work',
+                        },
+                        {
+                          value: 'growth',
+                          label:
+                            'Growth — building toward a bigger future',
+                        },
+                      ]}
+                    />
+
+                    <SelectField
+                      label="What do you hope your career gives you more of?"
+                      value={form.careerHope}
+                      onChange={(v) => setField('careerHope', v)}
+                      options={[
+                        {
+                          value: 'purpose',
+                          label:
+                            'Purpose and meaningful contribution',
+                        },
+                        {
+                          value: 'stability',
+                          label:
+                            'Stability and room to breathe',
+                        },
+                        {
+                          value: 'leadership',
+                          label:
+                            'Leadership influence and responsibility',
+                        },
+                        {
+                          value: 'craft',
+                          label:
+                            'A stronger craft and deeper expertise',
+                        },
+                        {
+                          value: 'freedom',
+                          label:
+                            'Freedom, autonomy, and self-direction',
+                        },
+                      ]}
+                    />
                   </div>
 
                   <TextField
                     label="Optional: Describe a recent professional win"
                     value={form.recentWin}
-                    onChange={(v) => setField('recentWin', v)}
+                    onChange={(v) =>
+                      setField('recentWin', v)
+                    }
                     placeholder="Example: improved a process, helped a team, solved a recurring issue, delivered under pressure…"
                   />
 
                   <TextField
-                    label="Optional: What drains you professionally?"
+                    label="Optional: What tends to drain you professionally?"
                     value={form.drain}
-                    onChange={(v) => setField('drain', v)}
-                    placeholder="Example: unclear priorities, office politics, repetitive admin work, no ownership, constant interruptions…"
+                    onChange={(v) =>
+                      setField('drain', v)
+                    }
+                    placeholder="Example: disconnected leadership, unclear priorities, constant context switching, politics, repetitive work without ownership…"
+                  />
+
+                  <TextField
+                    label="Optional: What professional pressure or stress affects you the most?"
+                    value={form.stressTrigger}
+                    onChange={(v) =>
+                      setField('stressTrigger', v)
+                    }
+                    placeholder="Example: lack of clarity, unstable leadership, constant interruption, no trust, overloaded timelines…"
+                  />
+
+                  <TextField
+                    label="Optional: What kind of support helps you perform best?"
+                    value={form.supportNeed}
+                    onChange={(v) =>
+                      setField('supportNeed', v)
+                    }
+                    placeholder="Example: clear priorities, communication, trust, mentorship, room to focus, operational alignment…"
+                  />
+
+                  <TextField
+                    label="Optional: What kind of impact do you most want your work to create?"
+                    value={form.idealImpact}
+                    onChange={(v) =>
+                      setField('idealImpact', v)
+                    }
+                    placeholder="Example: helping people, improving systems, creating stability, solving meaningful problems, building something lasting…"
+                  />
+
+                  <TextField
+                    label="Optional: How do you prefer to be recognized for your work?"
+                    value={form.recognitionStyle}
+                    onChange={(v) =>
+                      setField(
+                        'recognitionStyle',
+                        v
+                      )
+                    }
+                    placeholder="Example: quiet trust, measurable outcomes, leadership responsibility, compensation, visible appreciation…"
                   />
 
                   <TextField
                     label="Optional: What are you trying to understand or decide right now?"
                     value={form.goal}
-                    onChange={(v) => setField('goal', v)}
-                    placeholder="Example: whether to pivot, whether to lead, what role fits me, how to explain my strengths…"
+                    onChange={(v) =>
+                      setField('goal', v)
+                    }
+                    placeholder="Example: whether to pivot, lead, specialize, build, scale, or better explain my strengths…"
                   />
 
                   {error ? (
@@ -939,8 +1122,10 @@ export default function IdentityPage() {
                       style={{
                         padding: 11,
                         borderRadius: 10,
-                        background: 'rgba(220,38,38,0.10)',
-                        border: '1px solid rgba(220,38,38,0.25)',
+                        background:
+                          'rgba(220,38,38,0.10)',
+                        border:
+                          '1px solid rgba(220,38,38,0.25)',
                         color: '#B91C1C',
                         fontSize: 12,
                         fontWeight: 800,
@@ -982,7 +1167,8 @@ export default function IdentityPage() {
                   style={{
                     ...GLASS,
                     padding: 14,
-                    background: 'rgba(30,41,59,0.88)',
+                    background:
+                      'rgba(30,41,59,0.88)',
                   }}
                 >
                   <div
@@ -993,20 +1179,26 @@ export default function IdentityPage() {
                       marginBottom: 6,
                     }}
                   >
-                    Why this is different
+                    What this is designed to do
                   </div>
 
                   <p
                     style={{
                       margin: 0,
-                      color: 'rgba(255,255,255,0.72)',
+                      color:
+                        'rgba(255,255,255,0.72)',
                       fontSize: 12,
                       lineHeight: 1.6,
                     }}
                   >
-                    This is not a personality test, clinical tool,
-                    hiring score, or automatic decision tool. It is
-                    a user-controlled professional reflection layer.
+                    Help explain how a person
+                    best operates professionally —
+                    including motivation, stress
+                    processing, learning style,
+                    integration needs, operational
+                    strengths, and work environment
+                    alignment — backed by
+                    explainable evidence.
                   </p>
                 </section>
 
@@ -1024,14 +1216,16 @@ export default function IdentityPage() {
                       marginBottom: 8,
                     }}
                   >
-                    Save/share model
+                    Evidence model
                   </div>
 
                   <BulletList
                     items={[
-                      'Save as its own DB record.',
-                      'Only show externally when the user opts in.',
-                      'Portfolio, coaches, and hiring packets can call this source later.',
+                      'Self-reflection evidence',
+                      'Resume evidence',
+                      'Portfolio/about evidence',
+                      'Project evidence',
+                      'Operational intelligence signals',
                     ]}
                   />
                 </section>
@@ -1064,7 +1258,7 @@ export default function IdentityPage() {
                 </section>
               </aside>
             </div>
-			
+
           ) : (
             <div
               style={{
@@ -1083,7 +1277,9 @@ export default function IdentityPage() {
                   top: 16,
                 }}
               >
-                <Pill tone="green">Profile generated</Pill>
+                <Pill tone="green">
+                  Profile generated
+                </Pill>
 
                 <h2
                   style={{
@@ -1115,9 +1311,11 @@ export default function IdentityPage() {
                     marginBottom: 12,
                   }}
                 >
-                  {snapshot.strengthSignals.map((s) => (
-                    <Pill key={s}>{s}</Pill>
-                  ))}
+                  {toList(snapshot.strengthSignals).map(
+                    (s) => (
+                      <Pill key={s}>{s}</Pill>
+                    )
+                  )}
                 </div>
 
                 <button
@@ -1147,7 +1345,41 @@ export default function IdentityPage() {
                   gap: 12,
                 }}
               >
-                <ResultCard title="🔥 CORE STRENGTH SIGNALS">
+                <ResultCard
+                  title="👤 THE PERSON"
+                  tone="slate"
+                >
+                  <BulletList
+                    items={
+                      toList(snapshot.person)
+                        .length
+                        ? snapshot.person
+                        : [
+                            snapshot.professionalSummary,
+                          ]
+                    }
+                    color="#334155"
+                  />
+                </ResultCard>
+
+                <ResultCard
+                  title="💼 THE PROFESSIONAL"
+                  tone="orange"
+                >
+                  <BulletList
+                    items={
+                      toList(snapshot.professional)
+                        .length
+                        ? snapshot.professional
+                        : snapshot.strengthSignals
+                    }
+                  />
+                </ResultCard>
+
+                <ResultCard
+                  title="🔥 CORE STRENGTH SIGNALS"
+                  tone="orange"
+                >
                   <BulletList
                     items={snapshot.strengthSignals}
                   />
@@ -1164,6 +1396,63 @@ export default function IdentityPage() {
                 </ResultCard>
 
                 <ResultCard
+                  title="🧠 HOW I LEARN"
+                  tone="blue"
+                >
+                  <BulletList
+                    items={
+                      toList(snapshot.learningStyle)
+                        .length
+                        ? snapshot.learningStyle
+                        : snapshot.learningGuidance
+                    }
+                    color="#0369A1"
+                  />
+                </ResultCard>
+
+                <ResultCard
+                  title="⚡ HOW I PROCESS PRESSURE"
+                  tone="amber"
+                >
+                  <BulletList
+                    items={
+                      toList(snapshot.stressProcessing)
+                        .length
+                        ? snapshot.stressProcessing
+                        : snapshot.pressureGuidance
+                    }
+                    color="#92400E"
+                  />
+                </ResultCard>
+				
+                <ResultCard
+                  title="🎯 WHAT MOTIVATES ME"
+                  tone="green"
+                >
+                  <BulletList
+                    items={
+                      toList(snapshot.motivationDrivers)
+                        .length
+                        ? snapshot.motivationDrivers
+                        : snapshot.motivation
+                    }
+                    color="#15803D"
+                  />
+                </ResultCard>
+
+                <ResultCard
+                  title="🧩 HOW I INTEGRATE INTO OPERATIONS"
+                  tone="green"
+                >
+                  <BulletList
+                    items={
+                      snapshot.integrationGuidance
+                    }
+                    color="#15803D"
+                  />
+                </ResultCard>
+
+                <ResultCard
                   title="🤝 WHERE I MAY NEED SUPPORT"
                   tone="amber"
                 >
@@ -1174,12 +1463,20 @@ export default function IdentityPage() {
                 </ResultCard>
 
                 <ResultCard
-                  title="⚙️ HOW I INTEGRATE INTO OPERATIONS"
-                  tone="green"
+                  title="🚀 CAREER DIRECTION & HOPE"
+                  tone="blue"
                 >
                   <BulletList
-                    items={snapshot.integrationGuidance}
-                    color="#15803D"
+                    items={
+                      toList(snapshot.careerDirection)
+                        .length
+                        ? snapshot.careerDirection
+                        : [
+                            form.goal ||
+                              'Career direction guidance will strengthen as more evidence is connected.',
+                          ]
+                    }
+                    color="#0369A1"
                   />
                 </ResultCard>
 
@@ -1187,12 +1484,121 @@ export default function IdentityPage() {
                   title="🧾 WHY THIS RESULT APPEARED"
                   tone="green"
                 >
-                  <BulletList
-                    items={snapshot.evidence}
-                    color="#15803D"
-                  />
-                </ResultCard>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gap: 14,
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 900,
+                          color: '#15803D',
+                          fontSize: 12,
+                          marginBottom: 8,
+                        }}
+                      >
+                        Self-reflection evidence
+                      </div>
 
+                      <BulletList
+                        items={
+                          snapshot?.why
+                            ?.selfReflection ||
+                          []
+                        }
+                        color="#15803D"
+                      />
+                    </div>
+
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 900,
+                          color: '#0369A1',
+                          fontSize: 12,
+                          marginBottom: 8,
+                        }}
+                      >
+                        Resume evidence
+                      </div>
+
+                      <BulletList
+                        items={
+                          snapshot?.why
+                            ?.resumeEvidence || []
+                        }
+                        color="#0369A1"
+                      />
+                    </div>
+
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 900,
+                          color: ORANGE,
+                          fontSize: 12,
+                          marginBottom: 8,
+                        }}
+                      >
+                        Portfolio evidence
+                      </div>
+
+                      <BulletList
+                        items={
+                          snapshot?.why
+                            ?.portfolioEvidence ||
+                          []
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 900,
+                          color: '#92400E',
+                          fontSize: 12,
+                          marginBottom: 8,
+                        }}
+                      >
+                        Project evidence
+                      </div>
+
+                      <BulletList
+                        items={
+                          snapshot?.why
+                            ?.projectEvidence || []
+                        }
+                        color="#92400E"
+                      />
+                    </div>
+
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 900,
+                          color: '#334155',
+                          fontSize: 12,
+                          marginBottom: 8,
+                        }}
+                      >
+                        Operational intelligence signals
+                      </div>
+
+                      <BulletList
+                        items={
+                          snapshot?.why
+                            ?.intelligenceEvidence ||
+                          []
+                        }
+                        color="#334155"
+                      />
+                    </div>
+                  </div>
+                </ResultCard>
+				
                 <section
                   style={{
                     ...GLASS,

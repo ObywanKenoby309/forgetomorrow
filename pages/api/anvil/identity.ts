@@ -170,6 +170,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         identityContext,
       });
 
+	  if (body.generateOnly) {
+	    return res.status(200).json({
+		  snapshot: snapshotJson,
+		});
+	  }
+
       const profile = await prisma.professionalOperatingProfile.upsert({
         where: { userId: user.id },
         create: {
@@ -189,7 +195,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       });
 
-      return res.status(200).json({ profile, snapshotJson });
+      return res.status(200).json({
+		profile,
+		snapshot: snapshotJson,
+	  });
     } catch (error) {
       console.error('[anvil/identity] SAVE error', error);
       return res.status(500).json({ error: 'Failed to save Professional Operating Profile' });
