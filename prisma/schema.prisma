@@ -902,6 +902,9 @@ model User {
   contactCategories            ContactCategory[]
   contactCategoryAssignments   ContactCategoryAssignment[]
   conversationParticipants     ConversationParticipant[]      @relation("UserConversationParticipants")
+  foundryRoomsHosted           FoundryRoom[]                  @relation("FoundryHost")
+  foundryParticipations        FoundryParticipant[]           @relation("FoundryParticipations")
+  foundryNotes                 FoundryNote[]                  
   reportsReceived              ConversationReport[]           @relation("UserReportsAsReported")
   reportsFiled                 ConversationReport[]           @relation("UserReportsAsReporter")
   covers                       Cover[]
@@ -1368,6 +1371,84 @@ model Message {
   @@index([conversationId, createdAt])
   @@index([senderId])
   @@map("messages")
+}
+
+model FoundryRoom {
+  id          String               @id @default(cuid())
+  roomId      String               @unique          // short public ID (nanoid)
+  title       String
+  status      FoundryStatus        @default(ACTIVE)
+  hostId      String
+  startedAt   DateTime             @default(now())
+  endedAt     DateTime?
+  isRecording Boolean              @default(false)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  host         User                 @relation("FoundryHost", fields: [hostId], references: [id])
+  participants FoundryParticipant[]
+  sharedFiles  FoundrySharedFile[]
+  notes        FoundryNote[]
+
+  @@index([hostId])
+  @@index([status])
+  @@map("foundry_rooms")
+}
+
+model FoundryParticipant {
+  id       String    @id @default(cuid())
+  roomId   String
+  userId   String
+  role     String    @default("PARTICIPANT") // HOST | PARTICIPANT | OBSERVER
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+  micMuted Boolean   @default(false)
+  videoOff Boolean   @default(false)
+
+  room FoundryRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User        @relation("FoundryParticipations", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+  @@index([userId])
+  @@map("foundry_participants")
+}
+
+model FoundrySharedFile {
+  id           String   @id @default(cuid())
+  roomId       String
+  sharedById   String
+  sharedByName String
+  fileName     String
+  fileUrl      String?
+  source       String   @default("COMPUTER") // FORGE | COMPUTER
+  sharedAt     DateTime @default(now())
+
+  room FoundryRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@map("foundry_shared_files")
+}
+
+model FoundryNote {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  content   String   @default("")
+  updatedAt DateTime @updatedAt
+
+  room FoundryRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+  @@map("foundry_notes")
+}
+
+enum FoundryStatus {
+  ACTIVE
+  ENDED
+  SCHEDULED
 }
 
 model UserBlock {

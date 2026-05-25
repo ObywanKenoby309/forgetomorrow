@@ -146,6 +146,9 @@ function AppShell({ Component, pageProps }) {
   const isInternalRoute = router.pathname.startsWith('/internal');
   const isWorkspaceRoute = router.pathname.startsWith('/workspace');
 
+  // Foundry routes are INTERNAL full-screen routes (no external header/footer)
+  const isFoundryRoute = router.pathname.startsWith('/foundry');
+
   // Job apply route should be treated as INTERNAL seeker-style page
   const isJobApplyRoute = router.pathname === '/job/[id]/apply';
 
@@ -194,7 +197,7 @@ function AppShell({ Component, pageProps }) {
   const isSupportRoute =
     router.pathname === '/support' || router.pathname === '/support/chat' || router.pathname.startsWith('/support/');
 
-  // admin/internal/workspace routes are NOT public
+  // admin/internal/workspace/foundry routes are NOT public
   const isPublicByPath =
     !isRecruiterRoute &&
     !isAdminRoute &&
@@ -203,7 +206,8 @@ function AppShell({ Component, pageProps }) {
     !isSeekerRoute &&
     !isCoachingRoute &&
     !isSettingsRoute &&
-    !isSupportRoute;
+    !isSupportRoute &&
+    !isFoundryRoute;
 
   const universalHeaderRoutes = new Set([]);
   const isUniversalPage = universalHeaderRoutes.has(router.pathname) && !router.query?.chrome;
@@ -402,6 +406,18 @@ function AppShell({ Component, pageProps }) {
 }
 
 export default function App({ Component, pageProps: { session, ...pageProps } }) {
+  // If the page defines its own layout (e.g. FoundryRoom), use it.
+  // This bypasses AppShell's chrome entirely for that page.
+  const getLayout = Component.getLayout;
+
+  if (getLayout) {
+    return (
+      <SessionProvider session={session}>
+        {getLayout(<Component {...pageProps} />)}
+      </SessionProvider>
+    );
+  }
+
   return (
     <SessionProvider session={session}>
       <AppShell Component={Component} pageProps={pageProps} />

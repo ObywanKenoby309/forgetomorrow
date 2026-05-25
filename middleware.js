@@ -1,4 +1,4 @@
-// middleware.js — Updated PUBLIC PAGES version with profile + asset + billing/stripe bypass
+// middleware.js — Updated PUBLIC PAGES version with profile + asset + billing/stripe bypass + Foundry protection
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { Ratelimit } from "@upstash/ratelimit";
@@ -54,8 +54,12 @@ const PUBLIC_PATHS = new Set([
 
 // ✅ Internal / Workspace routes (staff-only by login)
 const INTERNAL_PREFIXES = ["/internal", "/workspace"];
+
 // ✅ App routes that must require login (but are NOT staff-only)
 const AUTH_PREFIXES = ["/action-center", "/profile", "/search"];
+
+// ✅ Foundry routes must always require login, independent of SITE_LOCK
+const FOUNDRY_PREFIXES = ["/foundry", "/api/foundry"];
 
 function isPublicPath(pathname) {
   // Direct matches
@@ -92,6 +96,10 @@ function isAuthPath(pathname) {
   return AUTH_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
+function isFoundryPath(pathname) {
+  return FOUNDRY_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
 async function hasValidNextAuthSession(req) {
   const token = await getToken({
     req,
@@ -99,6 +107,13 @@ async function hasValidNextAuthSession(req) {
   });
 
   return !!token;
+}
+
+function redirectToSignin(req, pathname) {
+  const url = req.nextUrl.clone();
+  url.pathname = "/auth/signin";
+  url.searchParams.set("from", pathname);
+  return NextResponse.redirect(url, 302);
 }
 
 export async function middleware(req) {
@@ -132,6 +147,17 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
+  // ✅ 1d. Foundry routes are always protected, independent of SITE_LOCK
+  if (isFoundryPath(pathname)) {
+    const hasSession = await hasValidNextAuthSession(req);
+
+    if (!hasSession) {
+      return redirectToSignin(req, pathname);
+    }
+
+    return NextResponse.next();
+  }
+
   // 2. Always allow public profile slugs (/u and /u/:slug)
   if (pathname === "/u" || pathname.startsWith("/u/")) {
     return NextResponse.next();
@@ -147,10 +173,7 @@ export async function middleware(req) {
     const hasSession = await hasValidNextAuthSession(req);
 
     if (!hasSession) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/auth/signin";
-      url.searchParams.set("from", pathname);
-      return NextResponse.redirect(url, 302);
+      return redirectToSignin(req, pathname);
     }
 
     return NextResponse.next();
@@ -161,10 +184,7 @@ export async function middleware(req) {
     const hasSession = await hasValidNextAuthSession(req);
 
     if (!hasSession) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/auth/signin";
-      url.searchParams.set("from", pathname);
-      return NextResponse.redirect(url, 302);
+      return redirectToSignin(req, pathname);
     }
 
     // Authenticated: allow for now.
@@ -177,10 +197,7 @@ export async function middleware(req) {
     const hasSession = await hasValidNextAuthSession(req);
 
     if (!hasSession) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/auth/signin";
-      url.searchParams.set("from", pathname);
-      return NextResponse.redirect(url, 302);
+      return redirectToSignin(req, pathname);
     }
   }
 
