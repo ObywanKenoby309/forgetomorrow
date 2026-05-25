@@ -397,7 +397,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome, profile
                   ← The Anvil
                 </button>
               </div>
-              <ProfessionalOperatingProfileEngine />
+              <ProfessionalOperatingProfileEngine profileSlug={profileSlug} />
             </div>
           )}
 		  {activeModule === "project-promotion" && (
@@ -659,7 +659,7 @@ export default function AnvilPage({ profileSlug = "" }) {
                     ← The Anvil
                   </button>
                 </div>
-                <ProfessionalOperatingProfileEngine />
+                <ProfessionalOperatingProfileEngine profileSlug={profileSlug} />
               </div>
             )}
 

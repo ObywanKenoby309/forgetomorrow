@@ -321,7 +321,7 @@ function EvidenceSection({ label, items, tone, defaultOpen=false }) {
 
 
 // ── Welcome screen ────────────────────────────────────────────────────────────
-function WelcomeScreen({ onStart }) {
+function WelcomeScreen({ onStart, profileSlug = '' }) {
   const WHAT_IT_DOES = [
     { icon: '◉', label: 'Operating style',      desc: 'How you work, learn, and respond under pressure.' },
     { icon: '⬡', label: 'Strength signal map',  desc: 'What you do best — backed by evidence, not assumptions.' },
@@ -437,7 +437,7 @@ function WelcomeScreen({ onStart }) {
                   </div>
                   {(isResume || isPortfolio) && (
                     <a
-                      href={isResume ? '/resume/create' : '/profile'}
+                      href={isResume ? '/resume/create' : profileSlug ? `/profile/${profileSlug}?edit=1` : '/profile'}
                       style={{
                         flexShrink: 0, fontSize: 11, fontWeight: 700,
                         color: c.fg, textDecoration: 'none',
@@ -733,7 +733,7 @@ const OUTPUT_TABS = [
 ];
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function ProfessionalOperatingProfileEngine() {
+export default function ProfessionalOperatingProfileEngine({ profileSlug = '' }) {
   const [form, setForm] = useState({
     energy:'', autonomy:'', ambiguity:'', pressure:'', communication:'',
     challengeStyle:'', learningStyle:'', growth:'', motivation:'', careerHope:'',
@@ -844,7 +844,7 @@ export default function ProfessionalOperatingProfileEngine() {
 
   // ── Welcome screen ───────────────────────────────────────────────────────
   if (!snapshot && !started) return (
-    <WelcomeScreen onStart={() => { setStarted(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+    <WelcomeScreen onStart={() => { setStarted(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} profileSlug={profileSlug} />
   );
 
   // ── Journey form ─────────────────────────────────────────────────────────
