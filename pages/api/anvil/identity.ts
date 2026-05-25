@@ -86,6 +86,7 @@ async function loadIdentityContext(userId: string, email: string) {
       skillsJson: true,
       languagesJson: true,
       educationJson: true,
+      projectsJson: true,
     },
   });
 
@@ -115,6 +116,7 @@ async function loadIdentityContext(userId: string, email: string) {
     skills: toArray(user.skillsJson),
     languages: toArray(user.languagesJson),
     education: toArray(user.educationJson),
+    projects: toArray((user as any).projectsJson),
     resume,
     resumeId: resume.resumeId,
     resumeUpdatedAt: primaryResume?.updatedAt || null,
