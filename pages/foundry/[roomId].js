@@ -1,8 +1,4 @@
 // pages/foundry/[roomId].js
-// The live Foundry meeting room.
-// Uses FoundryLayout — bypasses SeekerLayout entirely.
-// getLayout pattern ensures _app.js renders nothing around this page.
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
@@ -12,39 +8,13 @@ import FoundryVideoGrid from '@/components/foundry/FoundryVideoGrid';
 import FoundryRightPanel from '@/components/foundry/FoundryRightPanel';
 import FoundryBottomBar from '@/components/foundry/FoundryBottomBar';
 
-// ── Seed data (replaced by real API/socket data in production) ──
-const SEED_PARTICIPANTS = [
-  { id: 'p1', name: 'Coach Rivera', role: 'Coach', isHost: true, micMuted: false, videoOff: false, color: '#FF7043' },
-  { id: 'p2', name: 'Marcus Holt', role: 'Seeker', isHost: false, micMuted: true, videoOff: false, color: '#5C6BC0' },
-  { id: 'p3', name: 'Taylor M.', role: 'Observer', isHost: false, micMuted: false, videoOff: true, color: '#26A69A' },
-];
-
-const SEED_MESSAGES = [
-  { sender: 'Coach Rivera', text: 'Marcus — open Files. Sharing your Q3 resume review now.', time: '24:01', color: '#FF7043' },
-  { sender: 'Marcus Holt', text: 'Got it. Should I share my updated version from Forge?', time: '24:08', color: '#5C6BC0' },
-  { sender: 'Coach Rivera', text: 'Yes — Files → Your Forge → add to Shared.', time: '24:13', color: '#FF7043' },
-];
-
-const SEED_DMS = [
-  { name: 'Marcus Holt', preview: 'Sent you the LinkedIn link privately', color: '#5C6BC0', unread: 2, conversationId: null },
-  { name: 'Taylor M.', preview: 'Thanks for the intro earlier', color: '#26A69A', unread: 0, conversationId: null },
-];
-
-const SEED_FORGE_FILES = [
-  { name: 'Marcus_Holt_Resume_v4.pdf', type: 'Resume', ago: '3 days ago' },
-  { name: 'Negotiation Packet — FAANG.pdf', type: 'Coaching doc', ago: '1 week ago' },
-  { name: 'ATS Signal Report — Oct 2025.pdf', type: 'ATS report', ago: '5 days ago' },
-];
-
 export default function FoundryRoom() {
   const router = useRouter();
   const { roomId } = router.query;
   const { data: session, status } = useSession();
 
-  // Room state
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   // AV state
   const [micMuted, setMicMuted] = useState(true);
@@ -59,40 +29,69 @@ export default function FoundryRoom() {
   // Panel state
   const [activePanel, setActivePanel] = useState('People');
 
-  // Data state (will come from API/socket)
-  const [participants, setParticipants] = useState(SEED_PARTICIPANTS);
-  const [messages, setMessages] = useState(SEED_MESSAGES);
-  const [dms] = useState(SEED_DMS);
-  const [sharedFiles, setSharedFiles] = useState([
-    { name: 'Q3 Resume Review — Rivera.pdf', sharedBy: 'Coach Rivera', ago: '2 min ago' },
-  ]);
-  const [forgeFiles] = useState(SEED_FORGE_FILES);
-  const [notes, setNotes] = useState(
-    '— Targeting FAANG product roles Q1 2026\n— Resume gap at 2022 needs framing\n— Homework: rewrite impact bullets for Stripe role'
-  );
+  // Daily call object
+  const callRef = useRef(null);
 
-  const startTimeRef = useRef(Date.now() - 24 * 60 * 1000); // seed: 24min in
+  // Live data — all starts empty, populated from API or real events
+  const [participants, setParticipants] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [dms] = useState([]);
+  const [sharedFiles, setSharedFiles] = useState([]);
+  const [forgeFiles, setForgeFiles] = useState([]);
+  const [notes, setNotes] = useState('');
 
-  // ── Load room ──────────────────────────────────────────────
+  const startTimeRef = useRef(Date.now());
+
+  // Load room + user's Forge files
   useEffect(() => {
     if (!roomId || status === 'loading') return;
     if (status === 'unauthenticated') { router.replace('/login'); return; }
 
+    // Load room
     fetch(`/api/foundry/room/${roomId}`)
       .then(r => r.json())
       .then(data => {
-        if (data.error) { setError(data.error); }
-        else { setRoom(data.room); startTimeRef.current = new Date(data.room.startedAt).getTime(); }
+        if (!data.error) {
+          setRoom(data.room);
+          setNotes(data.room.notes || '');
+          setSharedFiles(data.room.sharedFiles || []);
+          startTimeRef.current = new Date(data.room.startedAt).getTime();
+        }
         setLoading(false);
       })
-      .catch(() => {
-        // Graceful fallback — room still renders with seed data
-        setRoom({ title: 'Career Strategy Session — Marcus & Coach Rivera', status: 'ACTIVE' });
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
+
+    // Load user's resumes for Your Forge section
+    fetch('/api/resumes')
+      .then(r => r.json())
+      .then(data => {
+        if (data.resumes) {
+          setForgeFiles(data.resumes.map(r => ({
+            name: r.name,
+            type: 'Resume',
+            ago: new Date(r.updatedAt).toLocaleDateString(),
+          })));
+        }
+      })
+      .catch(() => {});
   }, [roomId, status, router]);
 
-  // ── Notes auto-save ────────────────────────────────────────
+  const handleCallReady = useCallback((call) => {
+    callRef.current = call;
+  }, []);
+
+  const handleParticipantsChange = useCallback((list) => {
+    setParticipants(list.map(p => ({
+      id: p.session_id,
+      name: p.user_name || 'Guest',
+      isHost: !!p.owner,
+      micMuted: !p.tracks?.audio || p.tracks.audio.state === 'off',
+      videoOff: !p.tracks?.video || p.tracks.video.state === 'off',
+      local: p.local,
+    })));
+  }, []);
+
+  // Notes auto-save
   const saveTimer = useRef(null);
   const handleNotesChange = useCallback((val) => {
     setNotes(val);
@@ -107,60 +106,86 @@ export default function FoundryRoom() {
     }, 1500);
   }, [roomId]);
 
-  // ── Chat send ──────────────────────────────────────────────
+  // Chat send
   const handleSend = useCallback((text) => {
-    const me = session?.user;
     setMessages(prev => [...prev, {
-      sender: me?.name || 'You',
+      sender: session?.user?.name || 'You',
       text,
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
       color: '#FF7043',
     }]);
-    // TODO: emit via WebSocket / POST to /api/foundry/room/[roomId]/chat
   }, [session]);
 
-  // ── File share ─────────────────────────────────────────────
+  // Share a Forge file into the session
   const handleShare = useCallback((file) => {
     if (!file) return;
     setSharedFiles(prev => {
       if (prev.find(f => f.name === file.name)) return prev;
-      return [...prev, { name: file.name, sharedBy: session?.user?.name || 'You', ago: 'Just now' }];
+      return [...prev, {
+        name: file.name,
+        sharedBy: session?.user?.name || 'You',
+        ago: 'Just now',
+      }];
     });
-  }, [session]);
+    fetch(`/api/foundry/room/${roomId}/share-file`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileName: file.name, source: 'FORGE' }),
+    }).catch(() => {});
+  }, [roomId, session]);
 
-  // ── End session ────────────────────────────────────────────
+  // Screen share
+  const handleShareScreen = useCallback(async () => {
+    if (!callRef.current) return;
+    try {
+      await callRef.current.startScreenShare();
+    } catch (err) {
+      console.error('[foundry] screen share:', err);
+    }
+  }, []);
+
+  // Recording
+  const handleRecordToggle = useCallback(async () => {
+    if (!callRef.current) return;
+    if (isRecording) {
+      await callRef.current.stopRecording().catch(() => {});
+      setIsRecording(false);
+    } else {
+      await callRef.current.startRecording().catch(() => {});
+      setIsRecording(true);
+    }
+  }, [isRecording]);
+
+  // End session
   const handleEnd = useCallback(async () => {
-    if (!confirm('End this Foundry session?')) return;
+    if (!confirm('End this Foundry session for everyone?')) return;
+    if (callRef.current) {
+      await callRef.current.leave().catch(() => {});
+    }
     try {
       await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' });
     } catch {}
     router.push('/seeker-dashboard');
   }, [roomId, router]);
 
-  // ── Bottom bar panel toggles ───────────────────────────────
   const togglePanel = (tab) => {
     if (sidebarHidden) setSidebarHidden(false);
     setActivePanel(tab);
   };
 
   if (loading) return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
-      Joining Foundry…
+    <div style={{
+      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: '#555', fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+    }}>
+      Opening Foundry…
     </div>
   );
-
-  if (error) return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef5350', fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
-      {error}
-    </div>
-  );
-
-  const sessionTitle = room?.title || `Foundry · ${roomId}`;
 
   return (
     <>
       <FoundryTopBar
-        sessionTitle={sessionTitle}
+        sessionTitle={room?.title || `Foundry · ${roomId}`}
         isRecording={isRecording}
         startTime={startTimeRef.current}
         activeView={activeView}
@@ -173,8 +198,12 @@ export default function FoundryRoom() {
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <FoundryVideoGrid
-          participants={participants}
+          roomId={roomId}
           compact={compact}
+          micMuted={micMuted}
+          camOff={camOff}
+          onCallReady={handleCallReady}
+          onParticipantsChange={handleParticipantsChange}
           onInvite={() => togglePanel('People')}
         />
 
@@ -188,11 +217,11 @@ export default function FoundryRoom() {
             notes={notes}
             onNotesChange={handleNotesChange}
             onSend={handleSend}
-            onDm={(p) => { setActivePanel('Chat'); }}
-            onDmOpen={(dm) => { setActivePanel('Chat'); }}
+            onDm={() => setActivePanel('Chat')}
+            onDmOpen={() => setActivePanel('Chat')}
             onShare={handleShare}
-            onUpload={() => { /* trigger file input */ }}
-            isHost={true}
+            onUpload={() => {}}
+            isHost={room?.hostId === session?.user?.id}
             initialTab={activePanel}
           />
         )}
@@ -207,11 +236,11 @@ export default function FoundryRoom() {
         peopleOpen={activePanel === 'People' && !sidebarHidden}
         onMicToggle={() => setMicMuted(v => !v)}
         onCamToggle={() => setCamOff(v => !v)}
-        onShareScreen={() => {}}
+        onShareScreen={handleShareScreen}
         onChatToggle={() => togglePanel('Chat')}
         onFilesToggle={() => togglePanel('Files')}
         onPeopleToggle={() => togglePanel('People')}
-        onRecordToggle={() => setIsRecording(v => !v)}
+        onRecordToggle={handleRecordToggle}
         onMore={() => {}}
         onEnd={handleEnd}
       />
@@ -219,9 +248,6 @@ export default function FoundryRoom() {
   );
 }
 
-// ── Layout bypass ──────────────────────────────────────────────
-// _app.js reads this and wraps page content with FoundryLayout
-// instead of the normal public/internal chrome.
 FoundryRoom.getLayout = function getLayout(page) {
   return <FoundryLayout title="Foundry">{page}</FoundryLayout>;
 };
