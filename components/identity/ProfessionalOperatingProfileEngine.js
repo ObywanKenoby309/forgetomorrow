@@ -319,6 +319,184 @@ function EvidenceSection({ label, items, tone, defaultOpen=false }) {
   );
 }
 
+
+// ── Welcome screen ────────────────────────────────────────────────────────────
+function WelcomeScreen({ onStart }) {
+  const WHAT_IT_DOES = [
+    { icon: '◉', label: 'Operating style',      desc: 'How you work, learn, and respond under pressure.' },
+    { icon: '⬡', label: 'Strength signal map',  desc: 'What you do best — backed by evidence, not assumptions.' },
+    { icon: '◈', label: 'Business integration', desc: 'How to place, utilize, and support you effectively.' },
+    { icon: '◎', label: 'Evidence trail',        desc: 'Every conclusion is explainable and traceable to a source.' },
+  ];
+
+  const EVIDENCE_SOURCES = [
+    { tone: 'orange', label: 'Your reflection',  desc: '10 guided questions + optional free-text answers.' },
+    { tone: 'blue',   label: 'Your resume',       desc: 'Upload your primary resume for richer signal.' },
+    { tone: 'slate',  label: 'Your portfolio',    desc: 'Complete your profile and about section for stronger results.' },
+    { tone: 'green',  label: 'Platform intelligence', desc: 'ForgeTomorrow operational signals from your activity.' },
+  ];
+
+  return (
+    <div style={{ display: 'grid', gap: 0 }}>
+
+      {/* Hero */}
+      <div style={{
+        ...surface, padding: '24px 24px 20px',
+        borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
+        borderBottom: '1px solid rgba(255,112,67,0.12)',
+        background: 'rgba(255,255,255,0.75)',
+      }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          {['Voluntary', 'Evidence-backed', 'User-controlled'].map(l => (
+            <Tag key={l} tone="slate">{l}</Tag>
+          ))}
+        </div>
+
+        <h2 style={{
+          margin: '0 0 10px', fontSize: 22, fontWeight: 900,
+          color: T.orange, letterSpacing: '-0.025em', lineHeight: 1.2,
+        }}>
+          Professional Operating Profile
+        </h2>
+
+        <p style={{ margin: '0 0 16px', fontSize: 13, color: T.slate, lineHeight: 1.65, maxWidth: 680 }}>
+          A voluntary, evidence-backed reflection that helps you understand how you operate
+          professionally — and helps the people you work with understand how to work with you.
+          Not a personality test. Not a score. A structured professional intelligence profile
+          you own and control.
+        </p>
+
+        <p style={{ margin: 0, fontSize: 12, color: T.mid, lineHeight: 1.6, maxWidth: 680 }}>
+          The profile draws from your answers, your resume, your portfolio, and ForgeTomorrow's
+          intelligence signals. The more complete your profile and resume are before you begin,
+          the richer and more specific your output will be.
+        </p>
+      </div>
+
+      {/* Body */}
+      <div style={{
+        ...surface, padding: '20px 24px 24px',
+        borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: 'none',
+        display: 'grid', gap: 20,
+      }}>
+
+        {/* What it produces */}
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.10em',
+            textTransform: 'uppercase', color: T.orange, marginBottom: 12 }}>
+            What you'll get
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
+            {WHAT_IT_DOES.map(item => (
+              <div key={item.label} style={{
+                ...card, padding: '12px 14px',
+                display: 'flex', alignItems: 'flex-start', gap: 12,
+              }}>
+                <span style={{ fontSize: 16, lineHeight: 1, color: T.orange, flexShrink: 0, marginTop: 2 }}>
+                  {item.icon}
+                </span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.dark, marginBottom: 3 }}>
+                    {item.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: T.mid, lineHeight: 1.5 }}>
+                    {item.desc}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Evidence sources + nudge */}
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.10em',
+            textTransform: 'uppercase', color: T.mid, marginBottom: 12 }}>
+            How the profile is built
+          </div>
+          <div style={{ display: 'grid', gap: 7 }}>
+            {EVIDENCE_SOURCES.map(src => {
+              const c = TONE[src.tone] || TONE.slate;
+              const isResume    = src.tone === 'blue';
+              const isPortfolio = src.tone === 'slate';
+              return (
+                <div key={src.label} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 14px', borderRadius: 9,
+                  background: c.bg, border: `1px solid ${c.border}`,
+                }}>
+                  <div style={{ width: 3, alignSelf: 'stretch', borderRadius: 2,
+                    background: c.bar, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T.dark, marginBottom: 2 }}>
+                      {src.label}
+                    </div>
+                    <div style={{ fontSize: 11, color: T.mid, lineHeight: 1.45 }}>
+                      {src.desc}
+                    </div>
+                  </div>
+                  {(isResume || isPortfolio) && (
+                    <a
+                      href={isResume ? '/resume/create' : '/profile'}
+                      style={{
+                        flexShrink: 0, fontSize: 11, fontWeight: 700,
+                        color: c.fg, textDecoration: 'none',
+                        padding: '5px 10px', borderRadius: 6,
+                        border: `1px solid ${c.border}`, background: 'white',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {isResume ? 'Add resume →' : 'Complete profile →'}
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Ground rules */}
+        <div style={{
+          padding: '12px 16px', borderRadius: 10,
+          background: 'rgba(15,23,42,0.03)', border: `1px solid ${T.border}`,
+          display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start',
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.08em',
+            textTransform: 'uppercase', color: T.light, flexShrink: 0, paddingTop: 2 }}>
+            Ground rules
+          </div>
+          {['Patterns, not labels.','Evidence, not assumptions.','Guidance, not diagnosis.','You decide what gets shared.'].map(r => (
+            <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 4, height: 4, borderRadius: '50%', background: T.light, flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: T.mid }}>{r}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 12, color: T.mid, lineHeight: 1.55, maxWidth: 480 }}>
+            The reflection takes about <strong style={{ color: T.slate }}>5 minutes</strong> to complete.
+            You can return and edit your answers at any time.
+          </div>
+          <button type="button" onClick={onStart} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '13px 28px', borderRadius: 10, border: 'none',
+            background: T.orange, color: 'white',
+            fontSize: 14, fontWeight: 900, cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(255,112,67,0.30)',
+            letterSpacing: '-0.01em', whiteSpace: 'nowrap',
+          }}>
+            Begin reflection →
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ── Progress indicator ────────────────────────────────────────────────────────
 function StepProgress({ current, total, stepLabel }) {
   return (
@@ -564,6 +742,7 @@ export default function ProfessionalOperatingProfileEngine() {
   });
 
   const [stepIndex, setStepIndex]     = useState(0);
+  const [started, setStarted]         = useState(false);
   const [snapshot, setSnapshot]       = useState(null);
   const [activeTab, setActiveTab]     = useState('snapshot');
   const [error, setError]             = useState('');
@@ -650,6 +829,7 @@ export default function ProfessionalOperatingProfileEngine() {
   const restartJourney = () => {
     setSnapshot(null);
     setStepIndex(0);
+    setStarted(true); // skip welcome — they already know what this is
     setError('');
     setSaveMessage('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -660,6 +840,11 @@ export default function ProfessionalOperatingProfileEngine() {
     <div style={{ ...surface, padding: '16px 20px', fontSize: 12, color: T.mid }}>
       Loading your Professional Operating Profile…
     </div>
+  );
+
+  // ── Welcome screen ───────────────────────────────────────────────────────
+  if (!snapshot && !started) return (
+    <WelcomeScreen onStart={() => { setStarted(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
   );
 
   // ── Journey form ─────────────────────────────────────────────────────────
