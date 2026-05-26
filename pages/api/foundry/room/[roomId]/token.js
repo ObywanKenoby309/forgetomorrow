@@ -1,6 +1,5 @@
 // pages/api/foundry/room/[roomId]/token.js
 // Returns a Daily meeting token for the authenticated user.
-// Passes avatarUrl via user_data so the video grid can render real profile photos.
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
@@ -14,11 +13,17 @@ export default async function handler(req, res) {
   if (!session?.user?.id) return res.status(401).json({ error: 'Not authenticated' });
 
   const { roomId } = req.query;
+  const resolvedRoomId = Array.isArray(roomId) ? roomId[0] : roomId;
 
   try {
     const room = await prisma.foundryRoom.findUnique({
-      where: { roomId },
-      select: { id: true, hostId: true, status: true, dailyRoomName: true },
+      where: { roomId: resolvedRoomId },
+      select: {
+        id: true,
+        hostId: true,
+        status: true,
+        dailyRoomName: true,
+      },
     });
 
     if (!room) return res.status(404).json({ error: 'Foundry not found' });
@@ -26,19 +31,28 @@ export default async function handler(req, res) {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { firstName: true, lastName: true, avatarUrl: true },
+      select: {
+        name: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      },
     });
 
-    const userName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Guest';
+    const userName =
+      user?.name ||
+      [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
+      user?.email ||
+      'Guest';
+
     const isOwner = room.hostId === session.user.id;
-    const dailyRoomName = room.dailyRoomName || roomId;
+    const dailyRoomName = room.dailyRoomName || resolvedRoomId;
 
     const token = await createDailyToken({
       roomId: dailyRoomName,
       userId: session.user.id,
       userName,
       isOwner,
-      avatarUrl: user?.avatarUrl || null, // ← flows into participant.userData on the client
     });
 
     return res.status(200).json({
@@ -49,7 +63,17 @@ export default async function handler(req, res) {
       isOwner,
     });
   } catch (err) {
-    console.error('[foundry/token]', err);
-    return res.status(500).json({ error: 'Could not generate meeting token' });
+    console.error('[foundry/token]', {
+      roomId: resolvedRoomId,
+      message: String(err?.message || err),
+    });
+
+    return res.status(500).json({
+      error: 'Could not generate meeting token',
+      detail:
+        process.env.NODE_ENV !== 'production'
+          ? String(err?.message || err)
+          : undefined,
+    });
   }
 }
