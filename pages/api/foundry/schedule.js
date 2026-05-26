@@ -39,22 +39,44 @@ export default async function handler(req, res) {
     // Validate FT invitees are contacts
     const ftInvitees = invitees.filter(i => i.userId);
     if (ftInvitees.length > 0) {
-      const contacts = await prisma.contact.findMany({
+      const invitedIds = ftInvitees.map(i => i.userId);
+
+const contacts = await prisma.contact.findMany({
   where: {
     OR: [
       {
         userId: session.user.id,
-        contactUserId: { in: ftInvitees.map(i => i.userId) },
+        contactUserId: { in: invitedIds },
       },
       {
         contactUserId: session.user.id,
-        userId: { in: ftInvitees.map(i => i.userId) },
+        userId: { in: invitedIds },
       },
     ],
   },
   select: {
     userId: true,
     contactUserId: true,
+  },
+});
+
+const acceptedRequests = await prisma.contactRequest.findMany({
+  where: {
+    status: 'ACCEPTED',
+    OR: [
+      {
+        fromUserId: session.user.id,
+        toUserId: { in: invitedIds },
+      },
+      {
+        toUserId: session.user.id,
+        fromUserId: { in: invitedIds },
+      },
+    ],
+  },
+  select: {
+    fromUserId: true,
+    toUserId: true,
   },
 });
 
@@ -70,17 +92,19 @@ contacts.forEach((c) => {
   }
 });
 
+acceptedRequests.forEach((r) => {
+  if (r.fromUserId === session.user.id) {
+    validIds.add(r.toUserId);
+  }
+
+  if (r.toUserId === session.user.id) {
+    validIds.add(r.fromUserId);
+  }
+});
+
 const nonContacts = ftInvitees.filter(
   (i) => !validIds.has(i.userId)
 );
-
-console.log('[FOUNDY CONTACT DEBUG]', {
-  hostId: session.user.id,
-  ftInvitees,
-  contacts,
-  validIds: [...validIds],
-  nonContacts,
-});
       if (nonContacts.length > 0) {
         return res.status(403).json({
           error: `Some invitees are not in your contacts: ${nonContacts.map(i => i.name).join(', ')}`,
