@@ -64,11 +64,24 @@ export default function FoundryLobby() {
       .then((r) => r.json())
       .then((data) => {
         if (data.contacts) {
-          setContacts(data.contacts.map((c) => ({
-            id: c.contactUserId || c.id,
-            name: c.name || [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Unknown',
-            avatarUrl: c.avatarUrl || null,
-          })));
+          const deduped = new Map();
+
+data.contacts.forEach((c) => {
+  const userId = c.userId || c.contactUserId;
+
+  if (!userId || deduped.has(userId)) return;
+
+  deduped.set(userId, {
+    id: userId,
+    name:
+      c.name ||
+      [c.firstName, c.lastName].filter(Boolean).join(' ') ||
+      'Unknown',
+    avatarUrl: c.avatarUrl || null,
+  });
+});
+
+setContacts(Array.from(deduped.values()));
         }
       })
       .catch(() => {});
