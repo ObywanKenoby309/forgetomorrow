@@ -104,28 +104,47 @@ function initials(name) {
 }
 
 function VideoTile({ participant, isMain = false }) {
-  const videoRef = useRef(null);
   const audioRef = useRef(null);
 
   const videoTrack = participant?.tracks?.video?.persistentTrack;
   const audioTrack = participant?.tracks?.audio?.persistentTrack;
 
-  // FIX 1: assign srcObject whenever track changes OR when ref mounts
-  useEffect(() => {
-    if (!videoRef.current) return;
+  // FIX: ref callback assigns srcObject immediately when element mounts.
+  // This handles the case where the track already exists before the element renders.
+  const videoRefCallback = useCallback((el) => {
+    if (!el) return;
+
     if (videoTrack) {
-      const stream = new MediaStream([videoTrack]);
-      videoRef.current.srcObject = stream;
+      el.srcObject = new MediaStream([videoTrack]);
     } else {
-      videoRef.current.srcObject = null;
+      el.srcObject = null;
     }
   }, [videoTrack]);
 
+  // Also update srcObject if track changes after mount.
+  const videoElRef = useRef(null);
+
+  useEffect(() => {
+    if (!videoElRef.current) return;
+
+    if (videoTrack) {
+      videoElRef.current.srcObject = new MediaStream([videoTrack]);
+    } else {
+      videoElRef.current.srcObject = null;
+    }
+  }, [videoTrack]);
+
+  // Combined ref — both the callback and the stored ref.
+  const setVideoRef = useCallback((el) => {
+    videoElRef.current = el;
+    videoRefCallback(el);
+  }, [videoRefCallback]);
+
   useEffect(() => {
     if (!audioRef.current || participant?.local) return;
+
     if (audioTrack) {
-      const stream = new MediaStream([audioTrack]);
-      audioRef.current.srcObject = stream;
+      audioRef.current.srcObject = new MediaStream([audioTrack]);
     } else {
       audioRef.current.srcObject = null;
     }
@@ -135,8 +154,6 @@ function VideoTile({ participant, isMain = false }) {
   const avatarUrl = participant?.userData?.avatarUrl || null;
   const isGuest = !avatarUrl;
 
-  // FIX 2: only treat video as off when state is explicitly 'off' or 'blocked'
-  // 'playable', 'loading', undefined → show video element
   const videoState = participant?.tracks?.video?.state;
   const videoOff = videoState === 'off' || videoState === 'blocked' || !videoTrack;
 
@@ -151,13 +168,9 @@ function VideoTile({ participant, isMain = false }) {
           <div style={S.floor} />
           <div style={S.frameLine} />
 
-          {/* Always render video element — show avatar on top when off */}
           <video
-            ref={videoRef}
-            style={{
-              ...S.videoEl,
-              display: videoOff ? 'none' : 'block',
-            }}
+            ref={setVideoRef}
+            style={{ ...S.videoEl, display: videoOff ? 'none' : 'block' }}
             autoPlay
             muted
             playsInline
@@ -184,14 +197,17 @@ function VideoTile({ participant, isMain = false }) {
     );
   }
 
-  // PIP tile
   return (
     <div style={S.pip}>
       <video
-        ref={videoRef}
+        ref={setVideoRef}
         style={{
-          position: 'absolute', inset: 0, width: '100%', height: '100%',
-          objectFit: 'cover', display: videoOff ? 'none' : 'block',
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          display: videoOff ? 'none' : 'block',
         }}
         autoPlay
         muted
