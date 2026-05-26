@@ -16,28 +16,25 @@ export default function FoundryRoom() {
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // AV state — synced to Daily via FoundryVideoGrid useEffects
   const [micMuted, setMicMuted] = useState(true);
   const [camOff, setCamOff] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
-  // View state
   const [activeView, setActiveView] = useState('grid');
   const [sidebarHidden, setSidebarHidden] = useState(false);
   const [compact, setCompact] = useState(false);
   const [activePanel, setActivePanel] = useState('People');
 
-  // Daily call object — set once joined
   const callRef = useRef(null);
 
-  // Live data
   const [participants, setParticipants] = useState([]);
-  const [meetingMessages, setMeetingMessages] = useState([]); // ephemeral, Daily only
+  const [meetingMessages, setMeetingMessages] = useState([]);
   const [sharedFiles, setSharedFiles] = useState([]);
   const [forgeFiles, setForgeFiles] = useState([]);
   const [notes, setNotes] = useState('');
 
   const startTimeRef = useRef(Date.now());
+  const saveTimer = useRef(null);
 
   // Load room
   useEffect(() => {
@@ -57,7 +54,6 @@ export default function FoundryRoom() {
       })
       .catch(() => setLoading(false));
 
-    // Load Forge files (resumes)
     fetch('/api/resume/list')
       .then(r => r.json())
       .then(data => {
@@ -72,12 +68,9 @@ export default function FoundryRoom() {
       .catch(() => {});
   }, [roomId, status, router]);
 
-  // Receive Daily call object — also wire app messages for meeting chat
   const handleCallReady = useCallback((call) => {
     callRef.current = call;
-
-    // Listen for meeting chat messages from other participants
-    call.on('app-message', ({ data, fromId }) => {
+    call.on('app-message', ({ data }) => {
       if (data?.type === 'MEETING_CHAT') {
         setMeetingMessages(prev => [...prev, {
           sender: data.senderName,
@@ -90,7 +83,6 @@ export default function FoundryRoom() {
     });
   }, []);
 
-  // Receive live participant list from VideoGrid
   const handleParticipantsChange = useCallback((list) => {
     setParticipants(list.map(p => ({
       id: p.session_id,
@@ -103,41 +95,23 @@ export default function FoundryRoom() {
     })));
   }, []);
 
-  // Meeting chat send — via Daily sendAppMessage (ephemeral, no DB)
   const handleSend = useCallback((text) => {
     const me = session?.user;
     const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-    const msg = {
-      sender: me?.name || 'You',
-      text,
-      time: now,
-      color: '#FF7043',
-      avatarUrl: me?.avatarUrl || null,
-    };
-
-    // Add to own state immediately
+    const msg = { sender: me?.name || 'You', text, time: now, color: '#FF7043', avatarUrl: me?.avatarUrl || null };
     setMeetingMessages(prev => [...prev, msg]);
-
-    // Broadcast to all other participants via Daily
     if (callRef.current) {
       try {
         callRef.current.sendAppMessage({
-          type: 'MEETING_CHAT',
-          senderName: me?.name || 'Host',
-          text,
-          time: now,
-          color: '#FF7043',
-          avatarUrl: me?.avatarUrl || null,
-        }, '*'); // '*' = broadcast to all
+          type: 'MEETING_CHAT', senderName: me?.name || 'Host',
+          text, time: now, color: '#FF7043', avatarUrl: me?.avatarUrl || null,
+        }, '*');
       } catch (err) {
         console.error('[foundry] sendAppMessage error:', err);
       }
     }
   }, [session]);
 
-  // Notes auto-save
-  const saveTimer = useRef(null);
   const handleNotesChange = useCallback((val) => {
     setNotes(val);
     clearTimeout(saveTimer.current);
@@ -151,7 +125,6 @@ export default function FoundryRoom() {
     }, 1500);
   }, [roomId]);
 
-  // File share
   const handleShare = useCallback((file) => {
     if (!file) return;
     setSharedFiles(prev => {
@@ -165,19 +138,15 @@ export default function FoundryRoom() {
     }).catch(() => {});
   }, [roomId, session]);
 
-  // Screen share
   const handleShareScreen = useCallback(async () => {
     if (!callRef.current) return;
     try {
-      const { screens } = await callRef.current.startScreenShare();
+      await callRef.current.startScreenShare();
     } catch (err) {
-      if (err.message !== 'AbortError') {
-        console.error('[foundry] screen share:', err);
-      }
+      if (err.message !== 'AbortError') console.error('[foundry] screen share:', err);
     }
   }, []);
 
-  // Recording
   const handleRecordToggle = useCallback(async () => {
     if (!callRef.current) return;
     try {
@@ -193,15 +162,17 @@ export default function FoundryRoom() {
     }
   }, [isRecording]);
 
-  // End session
   const handleEnd = useCallback(async () => {
     if (!confirm('End this Foundry session for everyone?')) return;
-    if (callRef.current) {
-      await callRef.current.leave().catch(() => {});
-    }
-    try {
-      await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' });
-    } catch {}
+    if (callRef.current) await callRef.current.leave().catch(() => {});
+    try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
+    router.push('/foundry');
+  }, [roomId, router]);
+
+  // ← FIXED: was after early return, now above it
+  const handleRoomEmpty = useCallback(async () => {
+    if (callRef.current) await callRef.current.leave().catch(() => {});
+    try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
     router.push('/foundry');
   }, [roomId, router]);
 
@@ -210,22 +181,12 @@ export default function FoundryRoom() {
     setActivePanel(tab);
   };
 
+  // Early return is safe here — all hooks are above this line
   if (loading) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
       Opening Foundry…
     </div>
   );
-
-const handleRoomEmpty = useCallback(async () => {
-  // All participants have left — auto-end the session
-  if (callRef.current) {
-    await callRef.current.leave().catch(() => {});
-  }
-  try {
-    await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' });
-  } catch {}
-  router.push('/foundry');
-}, [roomId, router]);
 
   return (
     <>
@@ -250,7 +211,7 @@ const handleRoomEmpty = useCallback(async () => {
           onCallReady={handleCallReady}
           onParticipantsChange={handleParticipantsChange}
           onInvite={() => togglePanel('People')}
-		  onRoomEmpty={handleRoomEmpty}
+          onRoomEmpty={handleRoomEmpty}
         />
 
         {!sidebarHidden && (

@@ -153,7 +153,6 @@ const S = {
     borderRadius: 8,
     padding: '8px 10px',
   },
-  // Recent foundries
   recentLabel: {
     fontSize: 11,
     color: '#334155',
@@ -211,6 +210,7 @@ export default function FoundryLobby() {
   const { data: session, status } = useSession();
   const greeting = getTimeGreeting();
 
+  // ALL state hooks declared unconditionally at the top
   const [title, setTitle] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [creating, setCreating] = useState(false);
@@ -220,18 +220,14 @@ export default function FoundryLobby() {
   const [contacts, setContacts] = useState([]);
   const [recentRooms, setRecentRooms] = useState([]);
 
-  if (status === 'loading') return null;
-  if (status === 'unauthenticated') {
-    router.replace('/login');
-    return null;
-  }
-
+  // Derive role after hooks — never before
   const userRole = String(session?.user?.role || '').toUpperCase();
   const canHost = CAN_HOST.includes(userRole);
 
-  // Load contacts + recent rooms for hosts
+  // useEffect unconditionally declared — guard is inside the effect
   useEffect(() => {
-    if (!canHost) return;
+    // Guard inside effect body, never skip the hook itself
+    if (status !== 'authenticated' || !canHost) return;
 
     fetch('/api/contacts/list')
       .then(r => r.json())
@@ -250,13 +246,17 @@ export default function FoundryLobby() {
       .then(r => r.json())
       .then(data => { if (data.rooms) setRecentRooms(data.rooms); })
       .catch(() => {});
-  }, [canHost]);
+  }, [status, canHost]);
+
+  // Early returns are safe here — all hooks already ran above
+  if (status === 'loading') return null;
+  if (status === 'unauthenticated') {
+    router.replace('/login');
+    return null;
+  }
 
   const handleCreate = async () => {
-    if (!title.trim()) {
-      setErr('Please give this Foundry a title.');
-      return;
-    }
+    if (!title.trim()) { setErr('Please give this Foundry a title.'); return; }
     setCreating(true);
     setErr('');
     try {
@@ -280,10 +280,7 @@ export default function FoundryLobby() {
 
   const handleJoin = () => {
     const raw = joinCode.trim();
-    if (!raw) {
-      setErr('Enter a Foundry code or link.');
-      return;
-    }
+    if (!raw) { setErr('Enter a Foundry code or link.'); return; }
     setJoining(true);
     setErr('');
     const roomId = raw.includes('/foundry/')
@@ -364,10 +361,7 @@ export default function FoundryLobby() {
                   {creating ? 'Opening Foundry…' : 'Open a Foundry Now'}
                 </button>
 
-                <button
-                  style={S.scheduleBtn}
-                  onClick={() => setShowScheduler(true)}
-                >
+                <button style={S.scheduleBtn} onClick={() => setShowScheduler(true)}>
                   📅 Schedule a Foundry
                 </button>
 
@@ -397,7 +391,6 @@ export default function FoundryLobby() {
             </button>
           </div>
 
-          {/* Recent Foundries — hosts only */}
           {canHost && recentRooms.length > 0 && (
             <div style={S.card}>
               <span style={S.recentLabel}>Recent Foundries</span>
