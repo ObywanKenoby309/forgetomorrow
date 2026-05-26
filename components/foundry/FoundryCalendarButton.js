@@ -28,11 +28,9 @@ export default function FoundryCalendarButton({ onScheduled }) {
   const userRole = String(session?.user?.role || '').toUpperCase();
   const canHost = CAN_HOST.includes(userRole);
 
-  // Don't render for seekers
-  if (!canHost) return null;
-
   useEffect(() => {
-    if (!open) return;
+    if (!open || !canHost) return;
+
     fetch('/api/contacts/list')
       .then(r => r.json())
       .then(data => {
@@ -45,7 +43,10 @@ export default function FoundryCalendarButton({ onScheduled }) {
         }
       })
       .catch(() => {});
-  }, [open]);
+  }, [open, canHost]);
+
+  // Don't render for seekers
+  if (!canHost) return null;
 
   return (
     <>
