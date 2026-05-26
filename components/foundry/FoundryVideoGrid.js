@@ -1,10 +1,4 @@
 // components/foundry/FoundryVideoGrid.js
-// Handles both authenticated users (fetches token from API)
-// and guests (receives token directly as props).
-// FT users: renders their profile avatar when camera is off.
-// Guests: renders initials circle.
-// Auto-ends the Foundry when all participants have left.
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import DailyIframe from '@daily-co/daily-js';
 
@@ -113,24 +107,41 @@ function VideoTile({ participant, isMain = false }) {
   const videoRef = useRef(null);
   const audioRef = useRef(null);
 
+  const videoTrack = participant?.tracks?.video?.persistentTrack;
+  const audioTrack = participant?.tracks?.audio?.persistentTrack;
+
+  // FIX 1: assign srcObject whenever track changes OR when ref mounts
   useEffect(() => {
-    if (!videoRef.current || !participant?.tracks?.video?.persistentTrack) return;
-    const stream = new MediaStream([participant.tracks.video.persistentTrack]);
-    videoRef.current.srcObject = stream;
-  }, [participant?.tracks?.video?.persistentTrack]);
+    if (!videoRef.current) return;
+    if (videoTrack) {
+      const stream = new MediaStream([videoTrack]);
+      videoRef.current.srcObject = stream;
+    } else {
+      videoRef.current.srcObject = null;
+    }
+  }, [videoTrack]);
 
   useEffect(() => {
-    if (!audioRef.current || !participant?.tracks?.audio?.persistentTrack) return;
-    if (participant.local) return;
-    const stream = new MediaStream([participant.tracks.audio.persistentTrack]);
-    audioRef.current.srcObject = stream;
-  }, [participant?.tracks?.audio?.persistentTrack, participant?.local]);
+    if (!audioRef.current || participant?.local) return;
+    if (audioTrack) {
+      const stream = new MediaStream([audioTrack]);
+      audioRef.current.srcObject = stream;
+    } else {
+      audioRef.current.srcObject = null;
+    }
+  }, [audioTrack, participant?.local]);
 
-  const videoOff = !participant?.tracks?.video?.state || participant.tracks.video.state === 'off';
-  const micMuted = !participant?.tracks?.audio?.state || participant.tracks.audio.state === 'off';
   const name = participant?.user_name || 'Guest';
   const avatarUrl = participant?.userData?.avatarUrl || null;
   const isGuest = !avatarUrl;
+
+  // FIX 2: only treat video as off when state is explicitly 'off' or 'blocked'
+  // 'playable', 'loading', undefined → show video element
+  const videoState = participant?.tracks?.video?.state;
+  const videoOff = videoState === 'off' || videoState === 'blocked' || !videoTrack;
+
+  const audioState = participant?.tracks?.audio?.state;
+  const micMuted = audioState === 'off' || audioState === 'blocked';
 
   if (isMain) {
     return (
@@ -139,16 +150,27 @@ function VideoTile({ participant, isMain = false }) {
           <div style={S.ambient} />
           <div style={S.floor} />
           <div style={S.frameLine} />
-          {videoOff ? (
-            avatarUrl ? (
-              <img src={avatarUrl} alt={name} style={S.avatarImg} />
-            ) : (
-              <div style={S.initialsCircle}>{initials(name)}</div>
-            )
-          ) : (
-            <video ref={videoRef} style={S.videoEl} autoPlay muted playsInline />
+
+          {/* Always render video element — show avatar on top when off */}
+          <video
+            ref={videoRef}
+            style={{
+              ...S.videoEl,
+              display: videoOff ? 'none' : 'block',
+            }}
+            autoPlay
+            muted
+            playsInline
+          />
+
+          {videoOff && (
+            avatarUrl
+              ? <img src={avatarUrl} alt={name} style={S.avatarImg} />
+              : <div style={S.initialsCircle}>{initials(name)}</div>
           )}
+
           <audio ref={audioRef} autoPlay playsInline style={{ display: 'none' }} />
+
           <div style={S.nameTag}>
             <span style={{ color: micMuted ? '#ef5350' : '#4caf50', fontSize: 12 }}>
               {micMuted ? '🔇' : '🎤'}
@@ -162,21 +184,26 @@ function VideoTile({ participant, isMain = false }) {
     );
   }
 
+  // PIP tile
   return (
     <div style={S.pip}>
-      {videoOff ? (
-        avatarUrl ? (
-          <img src={avatarUrl} alt={name} style={S.pipAvatarImg} />
-        ) : (
-          <div style={S.pipInitialsCircle}>{initials(name)}</div>
-        )
-      ) : (
-        <video
-          ref={videoRef}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-          autoPlay muted playsInline
-        />
+      <video
+        ref={videoRef}
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', display: videoOff ? 'none' : 'block',
+        }}
+        autoPlay
+        muted
+        playsInline
+      />
+
+      {videoOff && (
+        avatarUrl
+          ? <img src={avatarUrl} alt={name} style={S.pipAvatarImg} />
+          : <div style={S.pipInitialsCircle}>{initials(name)}</div>
       )}
+
       <audio ref={audioRef} autoPlay playsInline style={{ display: 'none' }} />
       <div style={S.pipName}>{name.split(' ')[0]}</div>
       {micMuted && <span style={S.pipMute}>🔇</span>}
@@ -188,7 +215,7 @@ export default function FoundryVideoGrid({
   roomId, compact = false, onInvite,
   micMuted, camOff,
   onCallReady, onParticipantsChange,
-  onRoomEmpty, // called when all participants have left
+  onRoomEmpty,
   guestToken = null,
   guestRoomUrl = null,
 }) {
@@ -196,8 +223,6 @@ export default function FoundryVideoGrid({
   const [participants, setParticipants] = useState({});
   const [joinState, setJoinState] = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
-
-  // Track whether we've already fired onRoomEmpty to avoid double-firing
   const roomEndedRef = useRef(false);
 
   const updateParticipants = useCallback(() => {
@@ -207,14 +232,11 @@ export default function FoundryVideoGrid({
     return current;
   }, []);
 
-  // Check if room is empty (no remote participants, only local or nobody)
   const checkRoomEmpty = useCallback((current) => {
     if (roomEndedRef.current) return;
     const all = Object.values(current || {});
     const remoteCount = all.filter(p => !p.local).length;
     if (remoteCount === 0 && all.length > 0) {
-      // Only local participant remains — room is effectively empty
-      // Give it a 3-second grace period in case someone is reconnecting
       setTimeout(() => {
         if (!callRef.current || roomEndedRef.current) return;
         const fresh = callRef.current.participants();
@@ -263,14 +285,12 @@ export default function FoundryVideoGrid({
 
         const refresh = () => {
           if (destroyed) return;
-          const current = updateParticipants();
-          return current;
+          updateParticipants();
         };
 
         call.on('participant-joined', refresh);
         call.on('participant-updated', refresh);
 
-        // On participant-left: update state AND check if room is now empty
         call.on('participant-left', () => {
           if (destroyed) return;
           const current = callRef.current?.participants() || {};
@@ -297,7 +317,12 @@ export default function FoundryVideoGrid({
           if (!destroyed) setJoinState('idle');
         });
 
-        await call.join({ url: roomUrl, token, startVideoOff: false, startAudioOff: true });
+        await call.join({
+          url: roomUrl,
+          token,
+          startVideoOff: false,  // request camera on join
+          startAudioOff: true,   // muted by default
+        });
 
       } catch (err) {
         if (!destroyed) {
