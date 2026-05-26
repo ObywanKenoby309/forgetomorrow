@@ -1,8 +1,4 @@
 // components/foundry/FoundryCalendarButton.js
-// Renders a "Schedule a Foundry" button that triggers the scheduler modal.
-// Self-gates — renders nothing for seekers.
-// Styled light to match the platform calendar UI.
-
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import FoundrySchedulerModal from './FoundrySchedulerModal';
@@ -25,12 +21,13 @@ export default function FoundryCalendarButton({ onScheduled }) {
   const [open, setOpen] = useState(false);
   const [contacts, setContacts] = useState([]);
 
+  // All hooks must run unconditionally — derive role after
   const userRole = String(session?.user?.role || '').toUpperCase();
   const canHost = CAN_HOST.includes(userRole);
 
   useEffect(() => {
+    // Guard inside the effect — never skip the hook itself
     if (!open || !canHost) return;
-
     fetch('/api/contacts/list')
       .then(r => r.json())
       .then(data => {
@@ -45,7 +42,7 @@ export default function FoundryCalendarButton({ onScheduled }) {
       .catch(() => {});
   }, [open, canHost]);
 
-  // Don't render for seekers
+  // Early return is fine here — all hooks already ran above
   if (!canHost) return null;
 
   return (
@@ -53,7 +50,6 @@ export default function FoundryCalendarButton({ onScheduled }) {
       <button style={S.btn} onClick={() => setOpen(true)}>
         🔨 Schedule a Foundry
       </button>
-
       {open && (
         <FoundrySchedulerModal
           dark={false}
