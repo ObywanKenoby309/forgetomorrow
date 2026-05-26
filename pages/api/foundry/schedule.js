@@ -73,6 +73,14 @@ contacts.forEach((c) => {
 const nonContacts = ftInvitees.filter(
   (i) => !validIds.has(i.userId)
 );
+
+console.log('[FOUNDY CONTACT DEBUG]', {
+  hostId: session.user.id,
+  ftInvitees,
+  contacts,
+  validIds: [...validIds],
+  nonContacts,
+});
       if (nonContacts.length > 0) {
         return res.status(403).json({
           error: `Some invitees are not in your contacts: ${nonContacts.map(i => i.name).join(', ')}`,
