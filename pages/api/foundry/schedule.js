@@ -40,14 +40,39 @@ export default async function handler(req, res) {
     const ftInvitees = invitees.filter(i => i.userId);
     if (ftInvitees.length > 0) {
       const contacts = await prisma.contact.findMany({
-        where: {
-          userId: session.user.id,
-          contactUserId: { in: ftInvitees.map(i => i.userId) },
-        },
-        select: { contactUserId: true },
-      });
-      const contactIds = new Set(contacts.map(c => c.contactUserId));
-      const nonContacts = ftInvitees.filter(i => !contactIds.has(i.userId));
+  where: {
+    OR: [
+      {
+        userId: session.user.id,
+        contactUserId: { in: ftInvitees.map(i => i.userId) },
+      },
+      {
+        contactUserId: session.user.id,
+        userId: { in: ftInvitees.map(i => i.userId) },
+      },
+    ],
+  },
+  select: {
+    userId: true,
+    contactUserId: true,
+  },
+});
+
+const validIds = new Set();
+
+contacts.forEach((c) => {
+  if (c.userId === session.user.id) {
+    validIds.add(c.contactUserId);
+  }
+
+  if (c.contactUserId === session.user.id) {
+    validIds.add(c.userId);
+  }
+});
+
+const nonContacts = ftInvitees.filter(
+  (i) => !validIds.has(i.userId)
+);
       if (nonContacts.length > 0) {
         return res.status(403).json({
           error: `Some invitees are not in your contacts: ${nonContacts.map(i => i.name).join(', ')}`,

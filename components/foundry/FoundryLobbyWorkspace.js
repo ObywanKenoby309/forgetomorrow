@@ -240,6 +240,19 @@ const S = {
     position: 'relative',
   },
   deviceVideo: { width: '100%', height: '100%', objectFit: 'cover' },
+  screenPreview: {
+    borderRadius: 14,
+    background: '#0b0d11',
+    border: '1px solid rgba(255,255,255,0.14)',
+    minHeight: 150,
+    overflow: 'hidden',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    marginBottom: 12,
+  },
+  screenVideo: { width: '100%', height: '100%', minHeight: 150, objectFit: 'contain', background: '#000' },
   deviceEmpty: {
     position: 'absolute',
     inset: 0,
@@ -405,12 +418,15 @@ function JoinPanel({ joinCode, setJoinCode, joining, error, onJoin }) {
 
 function DeviceTestPanel() {
   const videoRef = useRef(null);
+  const screenRef = useRef(null);
   const streamRef = useRef(null);
+  const screenStreamRef = useRef(null);
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const rafRef = useRef(null);
 
   const [testing, setTesting] = useState(false);
+  const [screenTesting, setScreenTesting] = useState(false);
   const [level, setLevel] = useState(0);
   const [deviceError, setDeviceError] = useState('');
   const [devices, setDevices] = useState([]);
@@ -421,6 +437,19 @@ function DeviceTestPanel() {
   const cameras = devices.filter((d) => d.kind === 'videoinput');
   const microphones = devices.filter((d) => d.kind === 'audioinput');
   const speakers = devices.filter((d) => d.kind === 'audiooutput');
+
+  const stopScreenTest = () => {
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((track) => track.stop());
+      screenStreamRef.current = null;
+    }
+
+    if (screenRef.current) {
+      screenRef.current.srcObject = null;
+    }
+
+    setScreenTesting(false);
+  };
 
   const stopTest = () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -512,16 +541,33 @@ function DeviceTestPanel() {
     }
   };
 
-  const testScreenShare = async () => {
+  const startScreenTest = async () => {
     setDeviceError('');
+    stopScreenTest();
 
     try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      screenStream.getTracks().forEach((track) => track.stop());
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+      });
+
+      screenStreamRef.current = screenStream;
+
+      screenStream.getTracks().forEach((track) => {
+        track.onended = () => stopScreenTest();
+      });
+
+      if (screenRef.current) {
+        screenRef.current.srcObject = screenStream;
+        screenRef.current.play().catch(() => {});
+      }
+
+      setScreenTesting(true);
     } catch (err) {
       if (err?.name !== 'AbortError') {
         setDeviceError(err?.message || 'Could not start screen share test.');
       }
+      setScreenTesting(false);
     }
   };
 
@@ -535,7 +581,11 @@ function DeviceTestPanel() {
 
   useEffect(() => {
     loadDevices();
-    return () => stopTest();
+
+    return () => {
+      stopTest();
+      stopScreenTest();
+    };
   }, []);
 
   useEffect(() => {
@@ -557,9 +607,16 @@ function DeviceTestPanel() {
       {deviceError && <div style={S.error}>{deviceError}</div>}
 
       <div style={S.deviceGrid}>
-        <div style={S.devicePreview}>
-          <video ref={videoRef} style={S.deviceVideo} autoPlay muted playsInline />
-          {!testing && <div style={S.deviceEmpty}>Camera preview</div>}
+        <div>
+          <div style={S.devicePreview}>
+            <video ref={videoRef} style={S.deviceVideo} autoPlay muted playsInline />
+            {!testing && <div style={S.deviceEmpty}>Camera preview</div>}
+          </div>
+
+          <div style={S.screenPreview}>
+            <video ref={screenRef} style={S.screenVideo} autoPlay muted playsInline />
+            {!screenTesting && <div style={S.deviceEmpty}>Screen share preview</div>}
+          </div>
         </div>
 
         <div>
@@ -600,15 +657,15 @@ function DeviceTestPanel() {
 
           <div style={S.buttonRow}>
             <button style={S.primaryBtn} onClick={testing ? stopTest : startTest}>
-              {testing ? 'Stop test' : 'Start camera/mic test'}
+              {testing ? 'Stop camera/mic test' : 'Start camera/mic test'}
             </button>
 
             <button style={S.outlineBtn} onClick={testSpeaker}>
               Test speaker
             </button>
 
-            <button style={S.outlineBtn} onClick={testScreenShare}>
-              Test screen share
+            <button style={S.outlineBtn} onClick={screenTesting ? stopScreenTest : startScreenTest}>
+              {screenTesting ? 'Stop screen test' : 'Test screen share'}
             </button>
           </div>
         </div>

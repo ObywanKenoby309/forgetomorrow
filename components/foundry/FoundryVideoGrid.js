@@ -265,14 +265,32 @@ export default function FoundryVideoGrid({
   const [remoteScreenSharer, setRemoteScreenSharer] = useState('');
   const [isLocalSharing, setIsLocalSharing] = useState(false);
 
-  const updateParticipants = useCallback(() => {
-    if (!callRef.current) return;
-    const current = callRef.current.participants();
-    setParticipants({ ...current });
+  const syncScreenShareState = useCallback((current) => {
+    const local = current?.local;
 
-    const remoteSharer = Object.values(current).find(
-      p => !p.local && p.tracks?.screenVideo?.state === 'playable'
-    );
+    const localScreen =
+      local?.tracks?.screenVideo?.persistentTrack &&
+      local?.tracks?.screenVideo?.state !== 'off' &&
+      local?.tracks?.screenVideo?.state !== 'blocked'
+        ? local.tracks.screenVideo.persistentTrack
+        : null;
+
+    if (localScreen) {
+      setScreenTrack(localScreen);
+      setIsLocalSharing(true);
+      onScreenShareChange?.(true);
+    } else {
+      setScreenTrack(null);
+      setIsLocalSharing(false);
+    }
+
+    const remoteSharer = Object.values(current || {}).find((p) => (
+      !p.local &&
+      p.tracks?.screenVideo?.persistentTrack &&
+      p.tracks?.screenVideo?.state !== 'off' &&
+      p.tracks?.screenVideo?.state !== 'blocked'
+    ));
+
     if (remoteSharer) {
       setRemoteScreenTrack(remoteSharer.tracks.screenVideo.persistentTrack || null);
       setRemoteScreenSharer(remoteSharer.user_name || 'Participant');
@@ -280,8 +298,15 @@ export default function FoundryVideoGrid({
       setRemoteScreenTrack(null);
       setRemoteScreenSharer('');
     }
+  }, [onScreenShareChange]);
+
+  const updateParticipants = useCallback(() => {
+    if (!callRef.current) return;
+    const current = callRef.current.participants();
+    setParticipants({ ...current });
+    syncScreenShareState(current);
     return current;
-  }, []);
+  }, [syncScreenShareState]);
 
   const checkRoomEmpty = useCallback((current) => {
     if (roomEndedRef.current) return;
@@ -344,18 +369,29 @@ export default function FoundryVideoGrid({
 
         call.on('local-screen-share-started', () => {
           if (destroyed) return;
-          const local = callRef.current?.participants()?.local;
-          const track = local?.tracks?.screenVideo?.persistentTrack;
-          setScreenTrack(track || null);
-          setIsLocalSharing(true);
-          onScreenShareChange?.(true);
+
+          const sync = () => {
+            if (destroyed || !callRef.current) return;
+            const current = callRef.current.participants();
+            setParticipants({ ...current });
+            syncScreenShareState(current);
+          };
+
+          sync();
+          setTimeout(sync, 150);
+          setTimeout(sync, 500);
         });
 
         call.on('local-screen-share-stopped', () => {
           if (destroyed) return;
+
           setScreenTrack(null);
           setIsLocalSharing(false);
           onScreenShareChange?.(false);
+
+          const current = callRef.current?.participants() || {};
+          setParticipants({ ...current });
+          syncScreenShareState(current);
         });
 
         call.on('joined-meeting', () => {
@@ -392,7 +428,7 @@ export default function FoundryVideoGrid({
       if (call) { call.leave().catch(() => {}); call.destroy().catch(() => {}); }
       callRef.current = null;
     };
-  }, [roomId, guestToken, guestRoomUrl]);
+  }, [roomId, guestToken, guestRoomUrl, updateParticipants, checkRoomEmpty, syncScreenShareState, onCallReady, onScreenShareChange]);
 
   useEffect(() => {
     if (!callRef.current || joinState !== 'joined') return;
