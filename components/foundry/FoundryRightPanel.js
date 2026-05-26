@@ -1,10 +1,5 @@
 // components/foundry/FoundryRightPanel.js
-// Right panel with People / Chat / Files / Notes tabs.
-// Chat tab has two sub-views:
-//   - Meeting Chat: ephemeral Daily sendAppMessage, session only
-//   - Direct Messages: full Signal inbox via FoundrySignalPanel
-
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import FoundrySignalPanel from './FoundrySignalPanel';
 
 const ORANGE = '#FF7043';
@@ -24,8 +19,6 @@ const S = {
     fontFamily: "'DM Sans', sans-serif",
   }),
   content: { flex: 1, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column' },
-
-  // Chat sub-tabs
   chatSub: {
     display: 'flex', gap: 2, background: 'rgba(255,255,255,0.04)',
     borderRadius: 5, padding: 2, marginBottom: 10, flexShrink: 0,
@@ -36,8 +29,6 @@ const S = {
     fontSize: 10, fontWeight: 500, padding: '4px 6px', borderRadius: 3,
     transition: 'all 0.15s', textAlign: 'center', fontFamily: "'DM Sans', sans-serif",
   }),
-
-  // Meeting chat
   msgs: { display: 'flex', flexDirection: 'column', gap: 8, flex: 1, overflowY: 'auto', minHeight: 0 },
   msgRow: { display: 'flex', gap: 6 },
   msgAv: (color) => ({
@@ -55,15 +46,11 @@ const S = {
   },
   chatInEl: { background: 'none', border: 'none', outline: 'none', color: '#ccc', fontSize: 11, flex: 1, fontFamily: 'inherit' },
   sendB: { background: ORANGE, border: 'none', color: '#fff', borderRadius: 4, padding: '3px 7px', cursor: 'pointer', fontSize: 13 },
-
-  // Convert to notes button
   convertBtn: {
     width: '100%', background: 'rgba(255,200,50,0.08)', border: '1px solid rgba(255,200,50,0.15)',
     color: 'rgba(255,200,50,0.7)', fontSize: 10, padding: '6px 10px', borderRadius: 6,
     cursor: 'pointer', fontFamily: 'inherit', marginTop: 6, transition: 'all 0.15s',
   },
-
-  // People
   searchBox: {
     display: 'flex', alignItems: 'center', gap: 5,
     background: 'rgba(255,255,255,0.05)', borderRadius: 6,
@@ -82,8 +69,6 @@ const S = {
   pRole: { fontSize: 10, color: '#555' },
   dmBtn: { background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: '#666', fontSize: 9, padding: '2px 5px', borderRadius: 3, cursor: 'pointer', fontFamily: 'inherit' },
   hcBtn: { width: '100%', background: 'none', border: 'none', color: '#555', fontSize: 11, padding: '5px 5px', borderRadius: 5, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2, fontFamily: 'inherit' },
-
-  // Files
   fsec: { marginBottom: 12 },
   fsh: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
   fshl: { display: 'flex', alignItems: 'center', gap: 5 },
@@ -96,8 +81,6 @@ const S = {
   liveBadge: { fontSize: 8, background: 'rgba(76,175,80,0.12)', color: '#4caf50', border: '1px solid rgba(76,175,80,0.18)', padding: '1px 4px', borderRadius: 2, marginLeft: 4 },
   emptyDrop: { textAlign: 'center', padding: '12px 8px', background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.07)', borderRadius: 7, color: '#3a3a3a', fontSize: 10, lineHeight: 1.6, cursor: 'pointer' },
   fdiv: { border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '10px 0' },
-
-  // Notes
   sticky: { background: '#1a1a10', border: '1px solid rgba(255,200,50,0.12)', borderRadius: 8, padding: 10, flex: 1 },
   stickyHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingBottom: 6, borderBottom: '1px solid rgba(255,200,50,0.08)' },
   stickyTitle: { fontSize: 10, color: 'rgba(255,200,50,0.5)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' },
@@ -114,7 +97,6 @@ function initials(name) {
   return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
-// ── People Tab ─────────────────────────────────────────────────
 function PeopleTab({ participants, isHost, onDmParticipant }) {
   const [query, setQuery] = useState('');
   const filtered = participants.filter(p => p.name?.toLowerCase().includes(query.toLowerCase()));
@@ -140,9 +122,7 @@ function PeopleTab({ participants, isHost, onDmParticipant }) {
           <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: p.micMuted ? '#ef5350' : '#4caf50' }}>{p.micMuted ? '🔇' : '🎤'}</span>
             <span style={{ fontSize: 11, color: p.videoOff ? '#ef5350' : '#4caf50' }}>{p.videoOff ? '📵' : '📹'}</span>
-            {!p.local && (
-              <button style={S.dmBtn} onClick={() => onDmParticipant(p)}>DM</button>
-            )}
+            {!p.local && <button style={S.dmBtn} onClick={() => onDmParticipant(p)}>DM</button>}
           </div>
         </div>
       ))}
@@ -158,93 +138,6 @@ function PeopleTab({ participants, isHost, onDmParticipant }) {
   );
 }
 
-// ── Chat Tab ───────────────────────────────────────────────────
-function ChatTab({
-  messages, onSend,
-  currentUserId, currentUserRole, participants,
-  notes, onNotesChange, onConvertChatToNotes,
-  onDmParticipant,
-}) {
-  const [sub, setSub] = useState('meeting');
-  const [draft, setDraft] = useState('');
-  const [dmTarget, setDmTarget] = useState(null); // participant to DM
-
-  const handleSend = () => {
-    if (!draft.trim()) return;
-    onSend(draft.trim());
-    setDraft('');
-  };
-
-  // When DM button clicked from People tab, switch to DMs sub and open that participant
-  const handleDmParticipant = (p) => {
-    setSub('dms');
-    setDmTarget(p);
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={S.chatSub}>
-        <button style={S.subBtn(sub === 'meeting')} onClick={() => setSub('meeting')}>Meeting Chat</button>
-        <button style={S.subBtn(sub === 'dms')} onClick={() => setSub('dms')}>Direct Messages</button>
-      </div>
-
-      {sub === 'meeting' && (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <div style={S.msgs}>
-            {messages.length === 0 && (
-              <div style={{ fontSize: 11, color: '#444', textAlign: 'center', padding: '20px 0' }}>
-                Meeting chat is live and ephemeral — messages disappear when the Foundry ends.
-              </div>
-            )}
-            {messages.map((msg, i) => (
-              <div key={i} style={S.msgRow}>
-                {msg.avatarUrl ? (
-                  <img src={msg.avatarUrl} alt={msg.sender} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, marginTop: 1 }} />
-                ) : (
-                  <div style={S.msgAv(msg.color)}>{initials(msg.sender)}</div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={S.msgName}>{msg.sender}</span>
-                  <span style={S.msgTime}>{msg.time}</span>
-                  <div style={S.msgText}>{msg.text}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={S.chatIn}>
-            <input
-              style={S.chatInEl}
-              placeholder="Send to everyone…"
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSend()}
-              aria-label="Meeting chat message"
-            />
-            <button style={S.sendB} onClick={handleSend} aria-label="Send">→</button>
-          </div>
-          {messages.length > 0 && (
-            <button style={S.convertBtn} onClick={() => onConvertChatToNotes(messages)}>
-              📝 Convert chat to session notes
-            </button>
-          )}
-        </div>
-      )}
-
-      {sub === 'dms' && (
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          <FoundrySignalPanel
-            currentUserId={currentUserId}
-            currentUserRole={currentUserRole}
-            foundryParticipants={participants.filter(p => !p.local)}
-            initialDmTarget={dmTarget}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Files Tab ──────────────────────────────────────────────────
 function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload }) {
   return (
     <div>
@@ -314,7 +207,6 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload }) {
   );
 }
 
-// ── Notes Tab ──────────────────────────────────────────────────
 function NotesTab({ notes, onNotesChange }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -343,7 +235,8 @@ function NotesTab({ notes, onNotesChange }) {
   );
 }
 
-// ── Main Panel ─────────────────────────────────────────────────
+const TABS_LIST = ['People', 'Chat', 'Files', 'Notes'];
+
 export default function FoundryRightPanel({
   participants = [],
   messages = [],
@@ -360,12 +253,13 @@ export default function FoundryRightPanel({
   currentUserRole,
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [chatSub, setChatSub] = useState('meeting');
+  const [draft, setDraft] = useState('');
 
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab);
   }, [initialTab]);
 
-  // Convert meeting chat to notes
   const handleConvertChatToNotes = (msgs) => {
     const transcript = msgs.map(m => `[${m.time}] ${m.sender}: ${m.text}`).join('\n');
     const appended = notes
@@ -375,15 +269,16 @@ export default function FoundryRightPanel({
     setActiveTab('Notes');
   };
 
-  // DM a participant — switch to Chat > DMs
-  const handleDmParticipant = () => {
-    setActiveTab('Chat');
+  const handleSend = () => {
+    if (!draft.trim()) return;
+    onSend(draft.trim());
+    setDraft('');
   };
 
   return (
     <div style={S.panel}>
       <div style={S.tabBar} role="tablist">
-        {TABS.map(tab => (
+        {TABS_LIST.map(tab => (
           <button
             key={tab}
             style={S.tab(activeTab === tab)}
@@ -396,38 +291,90 @@ export default function FoundryRightPanel({
         ))}
       </div>
 
-      <div style={S.content}>
-        {activeTab === 'People' && (
-          <PeopleTab
-            participants={participants}
-            isHost={isHost}
-            onDmParticipant={handleDmParticipant}
-          />
-        )}
-        {activeTab === 'Chat' && (
-          <ChatTab
-            messages={messages}
-            onSend={onSend}
+      {/* ── Always-mounted panels — visibility toggled via display:none ── */}
+      {/* This prevents React hook count mismatches from conditional rendering */}
+
+      {/* People */}
+      <div style={{ ...S.content, display: activeTab === 'People' ? 'flex' : 'none' }}>
+        <PeopleTab
+          participants={participants}
+          isHost={isHost}
+          onDmParticipant={() => { setActiveTab('Chat'); setChatSub('dms'); }}
+        />
+      </div>
+
+      {/* Chat — always mounted, sub-tabs switch between meeting chat and Signal */}
+      <div style={{ ...S.content, display: activeTab === 'Chat' ? 'flex' : 'none', flexDirection: 'column' }}>
+        <div style={S.chatSub}>
+          <button style={S.subBtn(chatSub === 'meeting')} onClick={() => setChatSub('meeting')}>Meeting Chat</button>
+          <button style={S.subBtn(chatSub === 'dms')} onClick={() => setChatSub('dms')}>Direct Messages</button>
+        </div>
+
+        {/* Meeting chat */}
+        <div style={{ display: chatSub === 'meeting' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          <div style={S.msgs}>
+            {messages.length === 0 && (
+              <div style={{ fontSize: 11, color: '#444', textAlign: 'center', padding: '20px 0' }}>
+                Meeting chat is ephemeral — messages disappear when the Foundry ends.
+              </div>
+            )}
+            {messages.map((msg, i) => (
+              <div key={i} style={S.msgRow}>
+                {msg.avatarUrl ? (
+                  <img src={msg.avatarUrl} alt={msg.sender} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, marginTop: 1 }} />
+                ) : (
+                  <div style={S.msgAv(msg.color)}>{initials(msg.sender)}</div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={S.msgName}>{msg.sender}</span>
+                  <span style={S.msgTime}>{msg.time}</span>
+                  <div style={S.msgText}>{msg.text}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={S.chatIn}>
+            <input
+              style={S.chatInEl}
+              placeholder="Send to everyone…"
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+              aria-label="Meeting chat message"
+            />
+            <button style={S.sendB} onClick={handleSend}>→</button>
+          </div>
+          {messages.length > 0 && (
+            <button style={S.convertBtn} onClick={() => handleConvertChatToNotes(messages)}>
+              📝 Convert chat to session notes
+            </button>
+          )}
+        </div>
+
+        {/* Signal DMs — always mounted, hidden when not active */}
+        {/* KEY FIX: FoundrySignalPanel is always in the tree so its hooks never change count */}
+        <div style={{ display: chatSub === 'dms' ? 'flex' : 'none', flex: 1, minHeight: 0, flexDirection: 'column' }}>
+          <FoundrySignalPanel
             currentUserId={currentUserId}
             currentUserRole={currentUserRole}
-            participants={participants}
-            notes={notes}
-            onNotesChange={onNotesChange}
-            onConvertChatToNotes={handleConvertChatToNotes}
-            onDmParticipant={handleDmParticipant}
+            foundryParticipants={participants.filter(p => !p.local)}
           />
-        )}
-        {activeTab === 'Files' && (
-          <FilesTab
-            sharedFiles={sharedFiles}
-            forgeFiles={forgeFiles}
-            onShare={onShare}
-            onUpload={onUpload}
-          />
-        )}
-        {activeTab === 'Notes' && (
-          <NotesTab notes={notes} onNotesChange={onNotesChange} />
-        )}
+        </div>
+      </div>
+
+      {/* Files */}
+      <div style={{ ...S.content, display: activeTab === 'Files' ? 'flex' : 'none' }}>
+        <FilesTab
+          sharedFiles={sharedFiles}
+          forgeFiles={forgeFiles}
+          onShare={onShare}
+          onUpload={onUpload}
+        />
+      </div>
+
+      {/* Notes */}
+      <div style={{ ...S.content, display: activeTab === 'Notes' ? 'flex' : 'none' }}>
+        <NotesTab notes={notes} onNotesChange={onNotesChange} />
       </div>
     </div>
   );
