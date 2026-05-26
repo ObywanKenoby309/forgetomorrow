@@ -428,15 +428,21 @@ export default function FoundryVideoGrid({
 
   return (
     <div style={S.area}>
-      <div style={{ ...S.mainTile, position: 'relative' }}>
+      <div style={{ flex: 1, position: 'relative', display: 'flex', minHeight: 0 }}>
         {(joinState === 'idle' || joinState === 'fetching') && (
-          <div style={S.stateMsg}><span>Connecting…</span></div>
+          <div style={{ ...S.mainTile, flex: 1 }}>
+            <div style={S.stateMsg}><span>Connecting…</span></div>
+          </div>
         )}
         {joinState === 'joining' && (
-          <div style={S.stateMsg}><span>Joining Foundry…</span></div>
+          <div style={{ ...S.mainTile, flex: 1 }}>
+            <div style={S.stateMsg}><span>Joining Foundry…</span></div>
+          </div>
         )}
         {joinState === 'error' && (
-          <div style={S.errorMsg}>{errorMsg}</div>
+          <div style={{ ...S.mainTile, flex: 1 }}>
+            <div style={S.errorMsg}>{errorMsg}</div>
+          </div>
         )}
         {joinState === 'joined' && showScreen && (
           <ScreenShareTile
@@ -450,9 +456,11 @@ export default function FoundryVideoGrid({
           <VideoTile participant={mainParticipant} isMain />
         )}
         {joinState === 'joined' && !showScreen && !mainParticipant && (
-          <div style={S.stateMsg}>
-            <span style={{ fontSize: 22 }}>🔨</span>
-            <span>Waiting for others to join…</span>
+          <div style={{ ...S.mainTile, flex: 1 }}>
+            <div style={S.stateMsg}>
+              <span style={{ fontSize: 22 }}>🔨</span>
+              <span>Waiting for others to join…</span>
+            </div>
           </div>
         )}
       </div>
