@@ -16,7 +16,7 @@ export default function FoundryRoom() {
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // AV state
+  // AV state — synced to Daily via FoundryVideoGrid useEffects
   const [micMuted, setMicMuted] = useState(true);
   const [camOff, setCamOff] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -25,29 +25,25 @@ export default function FoundryRoom() {
   const [activeView, setActiveView] = useState('grid');
   const [sidebarHidden, setSidebarHidden] = useState(false);
   const [compact, setCompact] = useState(false);
-
-  // Panel state
   const [activePanel, setActivePanel] = useState('People');
 
-  // Daily call object
+  // Daily call object — set once joined
   const callRef = useRef(null);
 
-  // Live data — all starts empty, populated from API or real events
+  // Live data
   const [participants, setParticipants] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [dms] = useState([]);
+  const [meetingMessages, setMeetingMessages] = useState([]); // ephemeral, Daily only
   const [sharedFiles, setSharedFiles] = useState([]);
   const [forgeFiles, setForgeFiles] = useState([]);
   const [notes, setNotes] = useState('');
 
   const startTimeRef = useRef(Date.now());
 
-  // Load room + user's Forge files
+  // Load room
   useEffect(() => {
     if (!roomId || status === 'loading') return;
     if (status === 'unauthenticated') { router.replace('/login'); return; }
 
-    // Load room
     fetch(`/api/foundry/room/${roomId}`)
       .then(r => r.json())
       .then(data => {
@@ -61,8 +57,8 @@ export default function FoundryRoom() {
       })
       .catch(() => setLoading(false));
 
-    // Load user's resumes for Your Forge section
-    fetch('/api/resumes')
+    // Load Forge files (resumes)
+    fetch('/api/resume/list')
       .then(r => r.json())
       .then(data => {
         if (data.resumes) {
@@ -76,10 +72,25 @@ export default function FoundryRoom() {
       .catch(() => {});
   }, [roomId, status, router]);
 
+  // Receive Daily call object — also wire app messages for meeting chat
   const handleCallReady = useCallback((call) => {
     callRef.current = call;
+
+    // Listen for meeting chat messages from other participants
+    call.on('app-message', ({ data, fromId }) => {
+      if (data?.type === 'MEETING_CHAT') {
+        setMeetingMessages(prev => [...prev, {
+          sender: data.senderName,
+          text: data.text,
+          time: data.time,
+          color: data.color || '#5C6BC0',
+          avatarUrl: data.avatarUrl || null,
+        }]);
+      }
+    });
   }, []);
 
+  // Receive live participant list from VideoGrid
   const handleParticipantsChange = useCallback((list) => {
     setParticipants(list.map(p => ({
       id: p.session_id,
@@ -88,8 +99,42 @@ export default function FoundryRoom() {
       micMuted: !p.tracks?.audio || p.tracks.audio.state === 'off',
       videoOff: !p.tracks?.video || p.tracks.video.state === 'off',
       local: p.local,
+      avatarUrl: p.userData?.avatarUrl || null,
     })));
   }, []);
+
+  // Meeting chat send — via Daily sendAppMessage (ephemeral, no DB)
+  const handleSend = useCallback((text) => {
+    const me = session?.user;
+    const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    const msg = {
+      sender: me?.name || 'You',
+      text,
+      time: now,
+      color: '#FF7043',
+      avatarUrl: me?.avatarUrl || null,
+    };
+
+    // Add to own state immediately
+    setMeetingMessages(prev => [...prev, msg]);
+
+    // Broadcast to all other participants via Daily
+    if (callRef.current) {
+      try {
+        callRef.current.sendAppMessage({
+          type: 'MEETING_CHAT',
+          senderName: me?.name || 'Host',
+          text,
+          time: now,
+          color: '#FF7043',
+          avatarUrl: me?.avatarUrl || null,
+        }, '*'); // '*' = broadcast to all
+      } catch (err) {
+        console.error('[foundry] sendAppMessage error:', err);
+      }
+    }
+  }, [session]);
 
   // Notes auto-save
   const saveTimer = useRef(null);
@@ -106,26 +151,12 @@ export default function FoundryRoom() {
     }, 1500);
   }, [roomId]);
 
-  // Chat send
-  const handleSend = useCallback((text) => {
-    setMessages(prev => [...prev, {
-      sender: session?.user?.name || 'You',
-      text,
-      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-      color: '#FF7043',
-    }]);
-  }, [session]);
-
-  // Share a Forge file into the session
+  // File share
   const handleShare = useCallback((file) => {
     if (!file) return;
     setSharedFiles(prev => {
       if (prev.find(f => f.name === file.name)) return prev;
-      return [...prev, {
-        name: file.name,
-        sharedBy: session?.user?.name || 'You',
-        ago: 'Just now',
-      }];
+      return [...prev, { name: file.name, sharedBy: session?.user?.name || 'You', ago: 'Just now' }];
     });
     fetch(`/api/foundry/room/${roomId}/share-file`, {
       method: 'POST',
@@ -138,21 +169,27 @@ export default function FoundryRoom() {
   const handleShareScreen = useCallback(async () => {
     if (!callRef.current) return;
     try {
-      await callRef.current.startScreenShare();
+      const { screens } = await callRef.current.startScreenShare();
     } catch (err) {
-      console.error('[foundry] screen share:', err);
+      if (err.message !== 'AbortError') {
+        console.error('[foundry] screen share:', err);
+      }
     }
   }, []);
 
   // Recording
   const handleRecordToggle = useCallback(async () => {
     if (!callRef.current) return;
-    if (isRecording) {
-      await callRef.current.stopRecording().catch(() => {});
-      setIsRecording(false);
-    } else {
-      await callRef.current.startRecording().catch(() => {});
-      setIsRecording(true);
+    try {
+      if (isRecording) {
+        await callRef.current.stopRecording();
+        setIsRecording(false);
+      } else {
+        await callRef.current.startRecording();
+        setIsRecording(true);
+      }
+    } catch (err) {
+      console.error('[foundry] recording:', err);
     }
   }, [isRecording]);
 
@@ -165,7 +202,7 @@ export default function FoundryRoom() {
     try {
       await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' });
     } catch {}
-    router.push('/seeker-dashboard');
+    router.push('/foundry');
   }, [roomId, router]);
 
   const togglePanel = (tab) => {
@@ -174,10 +211,7 @@ export default function FoundryRoom() {
   };
 
   if (loading) return (
-    <div style={{
-      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: '#555', fontFamily: "'DM Sans', sans-serif", fontSize: 13,
-    }}>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
       Opening Foundry…
     </div>
   );
@@ -210,19 +244,18 @@ export default function FoundryRoom() {
         {!sidebarHidden && (
           <FoundryRightPanel
             participants={participants}
-            messages={messages}
-            dms={dms}
+            messages={meetingMessages}
             sharedFiles={sharedFiles}
             forgeFiles={forgeFiles}
             notes={notes}
             onNotesChange={handleNotesChange}
             onSend={handleSend}
-            onDm={() => setActivePanel('Chat')}
-            onDmOpen={() => setActivePanel('Chat')}
             onShare={handleShare}
             onUpload={() => {}}
             isHost={room?.hostId === session?.user?.id}
             initialTab={activePanel}
+            currentUserId={session?.user?.id}
+            currentUserRole={session?.user?.role}
           />
         )}
       </div>

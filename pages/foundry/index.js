@@ -1,15 +1,13 @@
 // pages/foundry/index.js
-// Foundry lobby — lives inside the normal platform chrome.
-// Uses SeekerLayout so the user gets their wallpaper, header, and sidebar
-// just like every other internal page.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import Head from 'next/head';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
+import FoundrySchedulerModal from '@/components/foundry/FoundrySchedulerModal';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 
 const ORANGE = '#FF7043';
@@ -45,20 +43,6 @@ const S = {
     borderRadius: 5,
     marginBottom: 14,
     textTransform: 'uppercase',
-  },
-  heading: {
-    fontSize: 22,
-    fontWeight: 800,
-    color: '#112033',
-    marginBottom: 6,
-    lineHeight: 1.2,
-  },
-  sub: {
-    fontSize: 13,
-    color: '#334155',
-    marginBottom: 0,
-    lineHeight: 1.7,
-    fontWeight: 500,
   },
   sectionHeading: {
     fontSize: 18,
@@ -125,6 +109,25 @@ const S = {
     transition: 'all 0.15s',
     letterSpacing: '0.01em',
   },
+  scheduleBtn: {
+    width: '100%',
+    background: 'none',
+    border: '1px solid rgba(255,112,67,0.35)',
+    color: ORANGE,
+    borderRadius: 10,
+    padding: '11px 14px',
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    transition: 'all 0.15s',
+    letterSpacing: '0.01em',
+    marginBottom: 8,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
   divider: {
     display: 'flex',
     alignItems: 'center',
@@ -150,6 +153,55 @@ const S = {
     borderRadius: 8,
     padding: '8px 10px',
   },
+  // Recent foundries
+  recentLabel: {
+    fontSize: 11,
+    color: '#334155',
+    fontWeight: 700,
+    letterSpacing: '0.01em',
+    marginBottom: 10,
+    display: 'block',
+  },
+  recentRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '9px 0',
+    borderBottom: '1px solid rgba(0,0,0,0.06)',
+  },
+  recentStatusDot: (status) => ({
+    width: 7,
+    height: 7,
+    borderRadius: '50%',
+    flexShrink: 0,
+    background: status === 'ACTIVE' ? '#16A34A' : status === 'SCHEDULED' ? ORANGE : '#CBD5E1',
+  }),
+  recentName: {
+    flex: 1,
+    fontSize: 12,
+    color: '#334155',
+    fontWeight: 500,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  recentMeta: {
+    fontSize: 11,
+    color: '#94A3B8',
+    whiteSpace: 'nowrap',
+  },
+  recentBtn: {
+    background: 'rgba(255,112,67,0.09)',
+    border: '1px solid rgba(255,112,67,0.25)',
+    color: ORANGE,
+    fontSize: 10,
+    fontWeight: 700,
+    padding: '3px 9px',
+    borderRadius: 5,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    flexShrink: 0,
+  },
 };
 
 const CAN_HOST = ['COACH', 'RECRUITER', 'ADMIN', 'OWNER', 'SITE_ADMIN'];
@@ -164,6 +216,9 @@ export default function FoundryLobby() {
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
   const [err, setErr] = useState('');
+  const [showScheduler, setShowScheduler] = useState(false);
+  const [contacts, setContacts] = useState([]);
+  const [recentRooms, setRecentRooms] = useState([]);
 
   if (status === 'loading') return null;
   if (status === 'unauthenticated') {
@@ -174,24 +229,43 @@ export default function FoundryLobby() {
   const userRole = String(session?.user?.role || '').toUpperCase();
   const canHost = CAN_HOST.includes(userRole);
 
+  // Load contacts + recent rooms for hosts
+  useEffect(() => {
+    if (!canHost) return;
+
+    fetch('/api/contacts/list')
+      .then(r => r.json())
+      .then(data => {
+        if (data.contacts) {
+          setContacts(data.contacts.map(c => ({
+            id: c.contactUserId || c.id,
+            name: c.name || [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Unknown',
+            avatarUrl: c.avatarUrl || null,
+          })));
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/foundry/recent')
+      .then(r => r.json())
+      .then(data => { if (data.rooms) setRecentRooms(data.rooms); })
+      .catch(() => {});
+  }, [canHost]);
+
   const handleCreate = async () => {
     if (!title.trim()) {
       setErr('Please give this Foundry a title.');
       return;
     }
-
     setCreating(true);
     setErr('');
-
     try {
       const res = await fetch('/api/foundry/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title.trim() }),
       });
-
       const data = await res.json();
-
       if (data.roomId) {
         router.push(`/foundry/${data.roomId}`);
       } else {
@@ -206,21 +280,35 @@ export default function FoundryLobby() {
 
   const handleJoin = () => {
     const raw = joinCode.trim();
-
     if (!raw) {
       setErr('Enter a Foundry code or link.');
       return;
     }
-
     setJoining(true);
     setErr('');
-
     const roomId = raw.includes('/foundry/')
       ? raw.split('/foundry/')[1].split('?')[0]
       : raw;
-
     router.push(`/foundry/${roomId}`);
   };
+
+  const handleScheduled = () => {
+    setShowScheduler(false);
+    fetch('/api/foundry/recent')
+      .then(r => r.json())
+      .then(data => { if (data.rooms) setRecentRooms(data.rooms); })
+      .catch(() => {});
+  };
+
+  function recentMetaLabel(room) {
+    if (room.status === 'ACTIVE') return 'Live now';
+    if (room.status === 'SCHEDULED' && room.scheduledAt) {
+      return new Date(room.scheduledAt).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+      });
+    }
+    return 'Ended';
+  }
 
   return (
     <>
@@ -260,7 +348,6 @@ export default function FoundryLobby() {
             {canHost && (
               <>
                 <label style={S.label}>Session title</label>
-
                 <input
                   style={S.input}
                   placeholder="e.g. Career Strategy Session — Q4 Review"
@@ -269,16 +356,19 @@ export default function FoundryLobby() {
                   onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                   aria-label="Session title"
                 />
-
                 <button
-                  style={{
-                    ...S.primaryBtn,
-                    opacity: creating ? 0.7 : 1,
-                  }}
+                  style={{ ...S.primaryBtn, opacity: creating ? 0.7 : 1 }}
                   onClick={handleCreate}
                   disabled={creating}
                 >
-                  {creating ? 'Opening Foundry…' : 'Open a Foundry'}
+                  {creating ? 'Opening Foundry…' : 'Open a Foundry Now'}
+                </button>
+
+                <button
+                  style={S.scheduleBtn}
+                  onClick={() => setShowScheduler(true)}
+                >
+                  📅 Schedule a Foundry
                 </button>
 
                 <div style={S.divider}>
@@ -290,7 +380,6 @@ export default function FoundryLobby() {
             )}
 
             <label style={S.label}>Foundry code or link</label>
-
             <input
               style={S.input}
               placeholder="Paste a Foundry code or invite link"
@@ -299,20 +388,47 @@ export default function FoundryLobby() {
               onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
               aria-label="Foundry code"
             />
-
             <button
-              style={{
-                ...S.secondaryBtn,
-                opacity: joining ? 0.7 : 1,
-              }}
+              style={{ ...S.secondaryBtn, opacity: joining ? 0.7 : 1 }}
               onClick={handleJoin}
               disabled={joining}
             >
               {joining ? 'Joining…' : 'Join Foundry'}
             </button>
           </div>
+
+          {/* Recent Foundries — hosts only */}
+          {canHost && recentRooms.length > 0 && (
+            <div style={S.card}>
+              <span style={S.recentLabel}>Recent Foundries</span>
+              {recentRooms.map((room) => (
+                <div key={room.roomId} style={S.recentRow}>
+                  <div style={S.recentStatusDot(room.status)} />
+                  <span style={S.recentName}>{room.title}</span>
+                  <span style={S.recentMeta}>{recentMetaLabel(room)}</span>
+                  {room.status !== 'ENDED' && (
+                    <button
+                      style={S.recentBtn}
+                      onClick={() => router.push(`/foundry/${room.roomId}`)}
+                    >
+                      {room.status === 'ACTIVE' ? 'Rejoin' : 'Open'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </SeekerLayout>
+
+      {showScheduler && (
+        <FoundrySchedulerModal
+          dark={false}
+          contacts={contacts}
+          onClose={() => setShowScheduler(false)}
+          onScheduled={handleScheduled}
+        />
+      )}
     </>
   );
 }
