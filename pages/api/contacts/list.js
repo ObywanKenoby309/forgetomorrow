@@ -19,11 +19,26 @@ export default async function handler(req, res) {
 
     // Contacts (accepted connections)
     const contacts = await prisma.contact.findMany({
-      where: { userId },
+  where: {
+    OR: [
+      { userId },
+      { contactUserId: userId },
+    ],
+  },
       orderBy: { createdAt: 'desc' },
       include: {
         // pull basic info for the other user
-        user: false,
+        user: {
+  select: {
+    id: true,
+    name: true,
+    firstName: true,
+    lastName: true,
+    headline: true,
+    avatarUrl: true,
+    status: true,
+  },
+},
         contactUser: {
           select: {
             id: true,
@@ -38,20 +53,32 @@ export default async function handler(req, res) {
       },
     });
 
-    const contactItems = contacts.map((c) => ({
-      id: c.id,
-      userId: c.contactUserId,
-      name:
-        c.contactUser.name ||
-        [c.contactUser.firstName, c.contactUser.lastName]
-          .filter(Boolean)
-          .join(' ') ||
-        'Member',
-      headline: c.contactUser.headline || '',
-      status: c.contactUser.status || '',
-      avatarUrl: c.contactUser.avatarUrl || null,
-      createdAt: c.createdAt,
-    }));
+    const contactItems = contacts.map((c) => {
+  const otherUser =
+    c.userId === userId
+      ? c.contactUser
+      : c.user;
+
+  const otherUserId =
+    c.userId === userId
+      ? c.contactUserId
+      : c.userId;
+
+  return {
+    id: c.id,
+    userId: otherUserId,
+    name:
+      otherUser?.name ||
+      [otherUser?.firstName, otherUser?.lastName]
+        .filter(Boolean)
+        .join(' ') ||
+      'Member',
+    headline: otherUser?.headline || '',
+    status: otherUser?.status || '',
+    avatarUrl: otherUser?.avatarUrl || null,
+    createdAt: c.createdAt,
+  };
+});
 
     // Incoming requests (to me, still pending)
     const incoming = await prisma.contactRequest.findMany({
