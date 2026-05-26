@@ -17,17 +17,13 @@ const S = {
 };
 
 export default function FoundryCalendarButton({ onScheduled }) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const [contacts, setContacts] = useState([]);
 
-  // All hooks must run unconditionally — derive role after
-  const userRole = String(session?.user?.role || '').toUpperCase();
-  const canHost = CAN_HOST.includes(userRole);
-
+  // ALL hooks run unconditionally — no early returns before this line
   useEffect(() => {
-    // Guard inside the effect — never skip the hook itself
-    if (!open || !canHost) return;
+    if (!open) return;
     fetch('/api/contacts/list')
       .then(r => r.json())
       .then(data => {
@@ -40,10 +36,12 @@ export default function FoundryCalendarButton({ onScheduled }) {
         }
       })
       .catch(() => {});
-  }, [open, canHost]);
+  }, [open]);
 
-  // Early return is fine here — all hooks already ran above
-  if (!canHost) return null;
+  // Safe to return null here — all hooks already ran
+  if (status === 'loading') return null;
+  const userRole = String(session?.user?.role || '').toUpperCase();
+  if (!CAN_HOST.includes(userRole)) return null;
 
   return (
     <>
