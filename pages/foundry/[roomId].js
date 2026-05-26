@@ -8,6 +8,8 @@ import FoundryVideoGrid from '@/components/foundry/FoundryVideoGrid';
 import FoundryRightPanel from '@/components/foundry/FoundryRightPanel';
 import FoundryBottomBar from '@/components/foundry/FoundryBottomBar';
 
+const ORANGE = '#FF7043';
+
 export default function FoundryRoom() {
   const router = useRouter();
   const { roomId } = router.query;
@@ -16,17 +18,26 @@ export default function FoundryRoom() {
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // AV state
   const [micMuted, setMicMuted] = useState(true);
   const [camOff, setCamOff] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
 
+  // View state
   const [activeView, setActiveView] = useState('grid');
   const [sidebarHidden, setSidebarHidden] = useState(false);
   const [compact, setCompact] = useState(false);
   const [activePanel, setActivePanel] = useState('People');
 
-  const callRef = useRef(null);
+  // Edge recommendation toast
+  const [showEdgeToast, setShowEdgeToast] = useState(false);
+  const edgeToastShownRef = useRef(false);
 
+  const callRef = useRef(null);
+  const saveTimer = useRef(null);
+
+  // Live data
   const [participants, setParticipants] = useState([]);
   const [meetingMessages, setMeetingMessages] = useState([]);
   const [sharedFiles, setSharedFiles] = useState([]);
@@ -34,7 +45,6 @@ export default function FoundryRoom() {
   const [notes, setNotes] = useState('');
 
   const startTimeRef = useRef(Date.now());
-  const saveTimer = useRef(null);
 
   // Load room
   useEffect(() => {
@@ -95,6 +105,11 @@ export default function FoundryRoom() {
     })));
   }, []);
 
+  // Screen share change from VideoGrid
+  const handleScreenShareChange = useCallback((sharing) => {
+    setIsScreenSharing(sharing);
+  }, []);
+
   const handleSend = useCallback((text) => {
     const me = session?.user;
     const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -138,14 +153,39 @@ export default function FoundryRoom() {
     }).catch(() => {});
   }, [roomId, session]);
 
+  // Screen share — toggle on/off, include audio, show Edge recommendation once
   const handleShareScreen = useCallback(async () => {
     if (!callRef.current) return;
-    try {
-      await callRef.current.startScreenShare();
-    } catch (err) {
-      if (err.message !== 'AbortError') console.error('[foundry] screen share:', err);
+
+    // If already sharing — stop
+    if (isScreenSharing) {
+      try {
+        await callRef.current.stopScreenShare();
+      } catch {}
+      setIsScreenSharing(false);
+      return;
     }
-  }, []);
+
+    // Show Edge recommendation toast once per session
+    if (!edgeToastShownRef.current) {
+      edgeToastShownRef.current = true;
+      setShowEdgeToast(true);
+      setTimeout(() => setShowEdgeToast(false), 6000);
+    }
+
+    try {
+      await callRef.current.startScreenShare({
+        displayMediaOptions: {
+          video: true,
+          audio: true, // request system audio — user must check the box in browser picker
+        },
+      });
+    } catch (err) {
+      if (err.name !== 'AbortError' && err.message !== 'AbortError') {
+        console.error('[foundry] screen share:', err);
+      }
+    }
+  }, [isScreenSharing]);
 
   const handleRecordToggle = useCallback(async () => {
     if (!callRef.current) return;
@@ -169,7 +209,7 @@ export default function FoundryRoom() {
     router.push('/foundry');
   }, [roomId, router]);
 
-  // ← FIXED: was after early return, now above it
+  // Auto-end when all participants leave
   const handleRoomEmpty = useCallback(async () => {
     if (callRef.current) await callRef.current.leave().catch(() => {});
     try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
@@ -181,7 +221,7 @@ export default function FoundryRoom() {
     setActivePanel(tab);
   };
 
-  // Early return is safe here — all hooks are above this line
+  // All hooks above — safe to early return here
   if (loading) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
       Opening Foundry…
@@ -210,6 +250,7 @@ export default function FoundryRoom() {
           camOff={camOff}
           onCallReady={handleCallReady}
           onParticipantsChange={handleParticipantsChange}
+          onScreenShareChange={handleScreenShareChange}
           onInvite={() => togglePanel('People')}
           onRoomEmpty={handleRoomEmpty}
         />
@@ -237,6 +278,7 @@ export default function FoundryRoom() {
         micMuted={micMuted}
         camOff={camOff}
         isRecording={isRecording}
+        isScreenSharing={isScreenSharing}
         chatOpen={activePanel === 'Chat' && !sidebarHidden}
         filesOpen={activePanel === 'Files' && !sidebarHidden}
         peopleOpen={activePanel === 'People' && !sidebarHidden}
@@ -250,6 +292,32 @@ export default function FoundryRoom() {
         onMore={() => {}}
         onEnd={handleEnd}
       />
+
+      {/* Edge recommendation toast — shows once when screen share is first triggered */}
+      {showEdgeToast && (
+        <div style={{
+          position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          background: '#141720', border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: 10, padding: '12px 18px', zIndex: 9999,
+          maxWidth: 360, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ddd', marginBottom: 4 }}>
+                💡 For best audio sharing experience
+              </div>
+              <div style={{ fontSize: 11, color: '#888', lineHeight: 1.6 }}>
+                PC users are recommended to use <strong style={{ color: '#FF7043' }}>Microsoft Edge</strong> for screen sharing. Edge supports system audio from all sources. In Chrome, audio sharing works for browser tabs only.
+              </div>
+            </div>
+            <button
+              onClick={() => setShowEdgeToast(false)}
+              style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 16, flexShrink: 0, padding: 0 }}
+            >×</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
