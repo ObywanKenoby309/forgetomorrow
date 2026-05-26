@@ -4,6 +4,7 @@ import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingTitleCard from '@/components/coaching/CoachingTitleCard';
 import CoachingSessionsCalendarInterface from '@/components/calendar/CoachingSessionsCalendarInterface';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
+import FoundryCalendarButton from '@/components/foundry/FoundryCalendarButton';
 
 const API_URL = '/api/coaching/sessions';
 
@@ -88,6 +89,11 @@ export default function CoachingSessionsCalendarPage() {
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
       <div style={{ display: 'grid', gap: 24, width: '100%' }}>
+        {/* Foundry action row */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <FoundryCalendarButton onScheduled={loadSessions} />
+        </div>
+
         <CoachingSessionsCalendarInterface
           title={loading ? 'Sessions Calendar (loading…)' : 'Sessions Calendar'}
           events={sessions}

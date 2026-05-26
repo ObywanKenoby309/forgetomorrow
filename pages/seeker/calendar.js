@@ -5,6 +5,7 @@ import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import SeekerCalendar from '@/components/calendar/SeekerCalendar';
+import FoundryCalendarButton from '@/components/foundry/FoundryCalendarButton';
 
 const STORAGE_KEY = 'seekerCalendar_live_v1';
 const API_URL = '/api/seeker/calendar';
@@ -87,6 +88,12 @@ export default function SeekerCalendarPage() {
       right={null}
       activeNav="calendar"
     >
+      {/* Foundry action row — only coaches/recruiters will see this button
+          (FoundryCalendarButton checks role internally and renders nothing for seekers) */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <FoundryCalendarButton onScheduled={loadEvents} />
+      </div>
+
       <SeekerCalendar
         title={loading ? 'My Calendar (loading…)' : 'My Calendar'}
         events={events}

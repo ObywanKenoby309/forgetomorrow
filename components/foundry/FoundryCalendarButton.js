@@ -1,26 +1,35 @@
 // components/foundry/FoundryCalendarButton.js
-// Drop this into the seeker and recruiter calendar pages.
-// Renders an "Open a Foundry" button that triggers the scheduler modal.
+// Renders a "Schedule a Foundry" button that triggers the scheduler modal.
+// Self-gates — renders nothing for seekers.
 // Styled light to match the platform calendar UI.
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import FoundrySchedulerModal from './FoundrySchedulerModal';
 
 const ORANGE = '#FF7043';
+const CAN_HOST = ['COACH', 'RECRUITER', 'ADMIN', 'OWNER', 'SITE_ADMIN'];
 
 const S = {
   btn: {
     display: 'inline-flex', alignItems: 'center', gap: 6,
-    background: 'rgba(255,112,67,0.1)', border: '1px solid rgba(255,112,67,0.3)',
+    background: 'rgba(255,112,67,0.09)', border: '1px solid rgba(255,112,67,0.3)',
     color: ORANGE, fontSize: 12, fontWeight: 700, padding: '8px 14px',
     borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
-    transition: 'all 0.15s',
+    transition: 'all 0.15s', whiteSpace: 'nowrap',
   },
 };
 
 export default function FoundryCalendarButton({ onScheduled }) {
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const [contacts, setContacts] = useState([]);
+
+  const userRole = String(session?.user?.role || '').toUpperCase();
+  const canHost = CAN_HOST.includes(userRole);
+
+  // Don't render for seekers
+  if (!canHost) return null;
 
   useEffect(() => {
     if (!open) return;

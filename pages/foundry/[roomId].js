@@ -250,6 +250,7 @@ const handleRoomEmpty = useCallback(async () => {
           onCallReady={handleCallReady}
           onParticipantsChange={handleParticipantsChange}
           onInvite={() => togglePanel('People')}
+		  onRoomEmpty={handleRoomEmpty}
         />
 
         {!sidebarHidden && (

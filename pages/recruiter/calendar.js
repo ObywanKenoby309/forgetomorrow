@@ -1,9 +1,11 @@
+// pages/recruiter/calendar.js
 import React from 'react';
 import { PlanProvider } from '@/context/PlanContext';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import RecruiterCalendar from '@/components/calendar/RecruiterCalendar';
 import RecruiterTitleCard from '@/components/recruiter/RecruiterTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
+import FoundryCalendarButton from '@/components/foundry/FoundryCalendarButton';
 
 const STORAGE_KEY = 'recruiterCalendar_live_v1';
 
@@ -29,6 +31,11 @@ export default function RecruiterCalendarPage() {
         activeNav="calendar"
       >
         <div style={{ width: '100%' }}>
+          {/* Foundry action row */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <FoundryCalendarButton />
+          </div>
+
           <RecruiterCalendar
             title="Month View"
             storageKey={STORAGE_KEY}
