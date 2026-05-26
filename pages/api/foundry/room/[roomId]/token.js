@@ -1,6 +1,6 @@
 // pages/api/foundry/room/[roomId]/token.js
 // Returns a Daily meeting token for the authenticated user.
-// Called client-side when the Foundry room page loads.
+// Passes avatarUrl via user_data so the video grid can render real profile photos.
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { firstName: true, lastName: true },
+      select: { firstName: true, lastName: true, avatarUrl: true },
     });
 
     const userName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Guest';
@@ -38,6 +38,7 @@ export default async function handler(req, res) {
       userId: session.user.id,
       userName,
       isOwner,
+      avatarUrl: user?.avatarUrl || null, // ← flows into participant.userData on the client
     });
 
     return res.status(200).json({

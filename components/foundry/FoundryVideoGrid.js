@@ -1,6 +1,8 @@
 // components/foundry/FoundryVideoGrid.js
-// Real Daily.co video integration.
-// Fetches a meeting token, joins the Daily room, and renders live video tiles.
+// Handles both authenticated users (fetches token from API)
+// and guests (receives token directly as props).
+// FT users: renders their profile avatar when camera is off.
+// Guests: renders initials circle.
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import DailyIframe from '@daily-co/daily-js';
@@ -11,7 +13,10 @@ const S = {
     flex: 1, borderRadius: 10, position: 'relative', overflow: 'hidden',
     background: '#070910', border: '1px solid rgba(255,255,255,0.06)',
   },
-  inner: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  inner: {
+    width: '100%', height: '100%', display: 'flex',
+    alignItems: 'center', justifyContent: 'center', position: 'relative',
+  },
   ambient: {
     position: 'absolute', inset: 0,
     background: 'radial-gradient(ellipse 60% 50% at 50% 60%, rgba(255,112,67,0.045) 0%, transparent 70%)',
@@ -36,12 +41,35 @@ const S = {
     background: 'rgba(255,112,67,0.2)', color: '#FF7043',
     fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 3,
   },
-  avatar: (color) => ({
+  guestBadge: {
+    background: 'rgba(255,255,255,0.1)', color: '#aaa',
+    fontSize: 9, fontWeight: 600, padding: '2px 5px', borderRadius: 3,
+  },
+  // Initials circle — used for guests only
+  initialsCircle: {
     width: 80, height: 80, borderRadius: '50%',
-    background: color || 'linear-gradient(135deg,#BF360C,#FF7043)',
+    background: 'linear-gradient(135deg,#BF360C,#FF7043)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 30, fontWeight: 700, color: '#fff', position: 'relative', zIndex: 1,
-  }),
+  },
+  // Profile photo — used for FT users when camera is off
+  avatarImg: {
+    width: 80, height: 80, borderRadius: '50%',
+    objectFit: 'cover', position: 'relative', zIndex: 1,
+    border: '2px solid rgba(255,255,255,0.1)',
+  },
+  // PIP avatar photo
+  pipAvatarImg: {
+    width: 32, height: 32, borderRadius: '50%',
+    objectFit: 'cover',
+  },
+  // PIP initials circle
+  pipInitialsCircle: {
+    width: 32, height: 32, borderRadius: '50%',
+    background: '#5C6BC0',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: 11, fontWeight: 600, color: '#fff',
+  },
   videoEl: {
     width: '100%', height: '100%', objectFit: 'cover',
     position: 'absolute', inset: 0, borderRadius: 10,
@@ -53,13 +81,6 @@ const S = {
     position: 'relative', overflow: 'hidden',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer', transition: 'border-color 0.15s',
-  },
-  pipSelected: { border: '1.5px solid rgba(255,112,67,0.6)' },
-  pipAvatar: {
-    width: 32, height: 32, borderRadius: '50%',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 11, fontWeight: 600, color: '#fff',
-    background: '#5C6BC0',
   },
   pipName: {
     position: 'absolute', bottom: 4, left: 5, fontSize: 9,
@@ -77,7 +98,7 @@ const S = {
     display: 'flex', flexDirection: 'column', alignItems: 'center',
     justifyContent: 'center', gap: 3, color: 'rgba(255,255,255,0.2)', fontSize: 9,
   },
-  joining: {
+  stateMsg: {
     position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
     justifyContent: 'center', color: '#555', fontSize: 13,
     fontFamily: "'DM Sans', sans-serif", flexDirection: 'column', gap: 8,
@@ -93,9 +114,9 @@ function initials(name) {
   return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
-// Video tile for a single participant
 function VideoTile({ participant, isMain = false }) {
   const videoRef = useRef(null);
+  const audioRef = useRef(null);
 
   useEffect(() => {
     if (!videoRef.current || !participant?.tracks?.video?.persistentTrack) return;
@@ -103,10 +124,9 @@ function VideoTile({ participant, isMain = false }) {
     videoRef.current.srcObject = stream;
   }, [participant?.tracks?.video?.persistentTrack]);
 
-  const audioRef = useRef(null);
   useEffect(() => {
     if (!audioRef.current || !participant?.tracks?.audio?.persistentTrack) return;
-    if (participant.local) return; // never play back own audio
+    if (participant.local) return;
     const stream = new MediaStream([participant.tracks.audio.persistentTrack]);
     audioRef.current.srcObject = stream;
   }, [participant?.tracks?.audio?.persistentTrack, participant?.local]);
@@ -115,6 +135,10 @@ function VideoTile({ participant, isMain = false }) {
   const micMuted = !participant?.tracks?.audio?.state || participant.tracks.audio.state === 'off';
   const name = participant?.user_name || 'Guest';
 
+  // avatarUrl comes from user_data set during token creation — only FT users have it
+  const avatarUrl = participant?.userData?.avatarUrl || null;
+  const isGuest = !avatarUrl;
+
   if (isMain) {
     return (
       <div style={S.mainTile}>
@@ -122,18 +146,26 @@ function VideoTile({ participant, isMain = false }) {
           <div style={S.ambient} />
           <div style={S.floor} />
           <div style={S.frameLine} />
+
           {videoOff ? (
-            <div style={S.avatar()}>{initials(name)}</div>
+            avatarUrl ? (
+              <img src={avatarUrl} alt={name} style={S.avatarImg} />
+            ) : (
+              <div style={S.initialsCircle}>{initials(name)}</div>
+            )
           ) : (
             <video ref={videoRef} style={S.videoEl} autoPlay muted playsInline />
           )}
+
           <audio ref={audioRef} autoPlay playsInline style={{ display: 'none' }} />
+
           <div style={S.nameTag}>
             <span style={{ color: micMuted ? '#ef5350' : '#4caf50', fontSize: 12 }}>
               {micMuted ? '🔇' : '🎤'}
             </span>
             {name}
             {participant?.owner && <span style={S.hostBadge}>Host</span>}
+            {isGuest && !participant?.owner && <span style={S.guestBadge}>Guest</span>}
           </div>
         </div>
       </div>
@@ -144,10 +176,13 @@ function VideoTile({ participant, isMain = false }) {
   return (
     <div style={S.pip}>
       {videoOff ? (
-        <div style={S.pipOff}>
-          <span style={{ fontSize: 16 }}>📵</span>
-          <span>Camera off</span>
-        </div>
+        avatarUrl ? (
+          // FT user — show their profile photo
+          <img src={avatarUrl} alt={name} style={S.pipAvatarImg} />
+        ) : (
+          // Guest — show initials circle
+          <div style={S.pipInitialsCircle}>{initials(name)}</div>
+        )
       ) : (
         <video
           ref={videoRef}
@@ -166,10 +201,12 @@ export default function FoundryVideoGrid({
   roomId, compact = false, onInvite,
   micMuted, camOff,
   onCallReady, onParticipantsChange,
+  guestToken = null,
+  guestRoomUrl = null,
 }) {
   const callRef = useRef(null);
   const [participants, setParticipants] = useState({});
-  const [joinState, setJoinState] = useState('idle'); // idle | fetching | joining | joined | error
+  const [joinState, setJoinState] = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
   const updateParticipants = useCallback(() => {
@@ -177,7 +214,6 @@ export default function FoundryVideoGrid({
     setParticipants({ ...callRef.current.participants() });
   }, []);
 
-  // Join the Daily room
   useEffect(() => {
     if (!roomId) return;
 
@@ -188,13 +224,20 @@ export default function FoundryVideoGrid({
       try {
         setJoinState('fetching');
 
-        // Get token from our API
-        const res = await fetch(`/api/foundry/room/${roomId}/token`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Could not get meeting token');
+        let token, roomUrl;
+
+        if (guestToken && guestRoomUrl) {
+          token = guestToken;
+          roomUrl = guestRoomUrl;
+        } else {
+          const res = await fetch(`/api/foundry/room/${roomId}/token`);
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Could not get meeting token');
+          token = data.token;
+          roomUrl = data.roomUrl;
+        }
 
         if (destroyed) return;
-
         setJoinState('joining');
 
         call = DailyIframe.createCallObject({
@@ -205,7 +248,6 @@ export default function FoundryVideoGrid({
 
         callRef.current = call;
 
-        // Event listeners
         const refresh = () => { if (!destroyed) updateParticipants(); };
         call.on('participant-joined', refresh);
         call.on('participant-updated', refresh);
@@ -227,12 +269,7 @@ export default function FoundryVideoGrid({
           if (!destroyed) setJoinState('idle');
         });
 
-        await call.join({
-          url: data.roomUrl,
-          token: data.token,
-          startVideoOff: false,
-          startAudioOff: true, // muted by default
-        });
+        await call.join({ url: roomUrl, token, startVideoOff: false, startAudioOff: true });
 
       } catch (err) {
         if (!destroyed) {
@@ -246,52 +283,39 @@ export default function FoundryVideoGrid({
 
     return () => {
       destroyed = true;
-      if (call) {
-        call.leave().catch(() => {});
-        call.destroy().catch(() => {});
-      }
+      if (call) { call.leave().catch(() => {}); call.destroy().catch(() => {}); }
       callRef.current = null;
     };
-  }, [roomId]);
+  }, [roomId, guestToken, guestRoomUrl]);
 
-  // Sync mic state to Daily
   useEffect(() => {
     if (!callRef.current || joinState !== 'joined') return;
     callRef.current.setLocalAudio(!micMuted);
   }, [micMuted, joinState]);
 
-  // Sync camera state to Daily
   useEffect(() => {
     if (!callRef.current || joinState !== 'joined') return;
     callRef.current.setLocalVideo(!camOff);
   }, [camOff, joinState]);
 
-  // Notify parent of participant changes
   useEffect(() => {
-    const list = Object.values(participants);
-    onParticipantsChange?.(list);
+    onParticipantsChange?.(Object.values(participants));
   }, [participants]);
 
   const participantList = Object.values(participants);
   const local = participantList.find(p => p.local);
   const remote = participantList.filter(p => !p.local);
-
-  // Main tile = first remote participant, or local if alone
   const mainParticipant = remote[0] || local;
   const pipParticipants = remote[0] ? [local, ...remote.slice(1)].filter(Boolean) : [];
 
   return (
     <div style={S.area}>
-      {/* Main tile */}
       <div style={{ ...S.mainTile, position: 'relative' }}>
-        {joinState === 'idle' && (
-          <div style={S.joining}><span>Preparing Foundry…</span></div>
-        )}
-        {joinState === 'fetching' && (
-          <div style={S.joining}><span>Connecting…</span></div>
+        {(joinState === 'idle' || joinState === 'fetching') && (
+          <div style={S.stateMsg}><span>Connecting…</span></div>
         )}
         {joinState === 'joining' && (
-          <div style={S.joining}><span>Joining Foundry…</span></div>
+          <div style={S.stateMsg}><span>Joining Foundry…</span></div>
         )}
         {joinState === 'error' && (
           <div style={S.errorMsg}>{errorMsg}</div>
@@ -300,29 +324,30 @@ export default function FoundryVideoGrid({
           <VideoTile participant={mainParticipant} isMain />
         )}
         {joinState === 'joined' && !mainParticipant && (
-          <div style={S.joining}>
+          <div style={S.stateMsg}>
             <span style={{ fontSize: 22 }}>🔨</span>
             <span>Waiting for others to join…</span>
           </div>
         )}
       </div>
 
-      {/* PIP strip */}
       {!compact && joinState === 'joined' && (
         <div style={S.pipRow}>
           {pipParticipants.map(p => (
             <VideoTile key={p.session_id} participant={p} />
           ))}
-          <div
-            style={{ ...S.pip, ...S.pipAdd }}
-            onClick={onInvite}
-            tabIndex={0}
-            role="button"
-            aria-label="Invite participant"
-          >
-            <span style={{ fontSize: 16 }}>+</span>
-            <span>Invite</span>
-          </div>
+          {!guestToken && (
+            <div
+              style={{ ...S.pip, ...S.pipAdd }}
+              onClick={onInvite}
+              tabIndex={0}
+              role="button"
+              aria-label="Invite participant"
+            >
+              <span style={{ fontSize: 16 }}>+</span>
+              <span>Invite</span>
+            </div>
+          )}
         </div>
       )}
     </div>

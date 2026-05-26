@@ -59,6 +59,7 @@ const INTERNAL_PREFIXES = ["/internal", "/workspace"];
 const AUTH_PREFIXES = ["/action-center", "/profile", "/search"];
 
 // ✅ Foundry routes must always require login, independent of SITE_LOCK
+// Guest join routes are intentionally public.
 const FOUNDRY_PREFIXES = ["/foundry", "/api/foundry"];
 
 function isPublicPath(pathname) {
@@ -98,6 +99,10 @@ function isAuthPath(pathname) {
 
 function isFoundryPath(pathname) {
   return FOUNDRY_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
+function isPublicFoundryGuestPath(pathname) {
+  return pathname.startsWith("/foundry/join/") || pathname === "/api/foundry/guest-token";
 }
 
 async function hasValidNextAuthSession(req) {
@@ -147,7 +152,12 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // ✅ 1d. Foundry routes are always protected, independent of SITE_LOCK
+  // ✅ 1d. Guest Foundry join routes are public
+  if (isPublicFoundryGuestPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  // ✅ 1e. All other Foundry routes are always protected, independent of SITE_LOCK
   if (isFoundryPath(pathname)) {
     const hasSession = await hasValidNextAuthSession(req);
 

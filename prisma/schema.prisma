@@ -905,6 +905,7 @@ model User {
   foundryRoomsHosted           FoundryRoom[]                  @relation("FoundryHost")
   foundryParticipations        FoundryParticipant[]           @relation("FoundryParticipations")
   foundryNotes                 FoundryNote[]                  
+  foundryInvitations 		   FoundryInvitee[] 			  @relation("FoundryInviteeUser")
   reportsReceived              ConversationReport[]           @relation("UserReportsAsReported")
   reportsFiled                 ConversationReport[]           @relation("UserReportsAsReporter")
   covers                       Cover[]
@@ -1386,6 +1387,11 @@ model FoundryRoom {
   isRecording    Boolean              @default(false)
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
+  scheduledAt    DateTime?
+  timezone       String?    		  @default("America/New_York")
+  guestToken     String?    		  @unique   // short code for external join links
+  invitesSentAt  DateTime?
+  invitees       FoundryInvitee[]
 
   host           User                 @relation("FoundryHost", fields: [hostId], references: [id])
   participants   FoundryParticipant[]
@@ -1414,6 +1420,28 @@ model FoundryParticipant {
   @@index([roomId])
   @@index([userId])
   @@map("foundry_participants")
+}
+
+model FoundryInvitee {
+  id          String    @id @default(cuid())
+  roomId      String
+  // FT user (contact) — null for external
+  userId      String?
+  // External guest fields
+  email       String?
+  name        String?
+  // Status
+  status      String    @default("PENDING") // PENDING | ACCEPTED | DECLINED
+  invitedAt   DateTime  @default(now())
+  respondedAt DateTime?
+
+  room FoundryRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User?       @relation("FoundryInviteeUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@index([userId])
+  @@index([email])
+  @@map("foundry_invitees")
 }
 
 model FoundrySharedFile {

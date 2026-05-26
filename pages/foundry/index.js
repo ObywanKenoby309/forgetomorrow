@@ -1,54 +1,84 @@
 // pages/foundry/index.js
+// Foundry lobby — lives inside the normal platform chrome.
+// Uses SeekerLayout so the user gets their wallpaper, header, and sidebar
+// just like every other internal page.
+
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import Head from 'next/head';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
 
 const ORANGE = '#FF7043';
 
 const S = {
   page: {
-    minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    background: '#0b0d11', fontFamily: "'DM Sans', sans-serif", padding: 20,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 'calc(100vh - 140px)',
+    padding: '24px 0',
   },
   card: {
-    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: 14, padding: '40px 36px', maxWidth: 440, width: '100%',
+    background: 'rgba(255,255,255,0.58)',
+    border: '1px solid rgba(255,255,255,0.22)',
+    borderRadius: 14,
+    padding: '32px 30px',
+    maxWidth: 420,
+    width: '100%',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
   },
   badge: {
     display: 'inline-flex', alignItems: 'center', gap: 6,
-    background: 'rgba(255,112,67,0.15)', border: '1px solid rgba(255,112,67,0.3)',
-    color: ORANGE, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
-    padding: '4px 10px', borderRadius: 6, marginBottom: 20, textTransform: 'uppercase',
+    background: 'rgba(255,112,67,0.12)', border: '1px solid rgba(255,112,67,0.3)',
+    color: ORANGE, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
+    padding: '3px 9px', borderRadius: 5, marginBottom: 14, textTransform: 'uppercase',
   },
-  heading: { fontSize: 22, fontWeight: 700, color: '#f0f0f0', marginBottom: 6 },
-  sub: { fontSize: 13, color: '#666', marginBottom: 30, lineHeight: 1.6 },
-  label: { fontSize: 11, color: '#666', marginBottom: 5, display: 'block' },
+  heading: {
+    fontSize: 20, fontWeight: 800, color: '#112033',
+    marginBottom: 5, lineHeight: 1.2,
+  },
+  sub: {
+    fontSize: 12, color: '#546E7A', marginBottom: 22, lineHeight: 1.6,
+  },
+  label: {
+    fontSize: 11, color: '#78909C', marginBottom: 4, display: 'block', fontWeight: 500,
+  },
   input: {
-    width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: 8, padding: '10px 14px', color: '#e0e0e0', fontSize: 13,
-    outline: 'none', marginBottom: 10, fontFamily: "'DM Sans', sans-serif",
-    boxSizing: 'border-box',
+    width: '100%', background: 'rgba(255,255,255,0.8)',
+    border: '1px solid rgba(0,0,0,0.12)',
+    borderRadius: 8, padding: '9px 12px', color: '#112033', fontSize: 13,
+    outline: 'none', marginBottom: 8, fontFamily: 'inherit',
+    boxSizing: 'border-box', transition: 'border-color 0.15s',
   },
   primaryBtn: {
     width: '100%', background: ORANGE, border: 'none', color: '#fff',
-    borderRadius: 8, padding: '11px 14px', fontSize: 13, fontWeight: 600,
-    cursor: 'pointer', marginBottom: 10, fontFamily: "'DM Sans', sans-serif",
-    transition: 'background 0.15s',
+    borderRadius: 8, padding: '10px 14px', fontSize: 13, fontWeight: 700,
+    cursor: 'pointer', marginBottom: 8, fontFamily: 'inherit',
+    transition: 'background 0.15s', letterSpacing: '0.01em',
   },
   secondaryBtn: {
-    width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-    color: '#aaa', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontWeight: 500,
-    cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
+    width: '100%', background: 'rgba(255,255,255,0.6)',
+    border: '1px solid rgba(0,0,0,0.12)',
+    color: '#37474F', borderRadius: 8, padding: '10px 14px', fontSize: 13, fontWeight: 600,
+    cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
   },
-  divider: { display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' },
-  divLine: { flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' },
-  divTxt: { fontSize: 11, color: '#444' },
-  error: { color: '#ef5350', fontSize: 12, marginBottom: 10 },
+  divider: {
+    display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0',
+  },
+  divLine: { flex: 1, height: 1, background: 'rgba(0,0,0,0.08)' },
+  divTxt: { fontSize: 11, color: '#90A4AE' },
+  error: {
+    color: '#c62828', fontSize: 11, marginBottom: 8,
+    background: 'rgba(198,40,40,0.07)', border: '1px solid rgba(198,40,40,0.15)',
+    borderRadius: 6, padding: '6px 10px',
+  },
   seekerNote: {
-    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-    borderRadius: 8, padding: '14px 16px', marginBottom: 20,
-    fontSize: 12, color: '#555', lineHeight: 1.6,
+    background: 'rgba(255,112,67,0.06)', border: '1px solid rgba(255,112,67,0.15)',
+    borderRadius: 8, padding: '12px 14px', marginBottom: 18,
+    fontSize: 12, color: '#78909C', lineHeight: 1.6,
   },
 };
 
@@ -84,10 +114,10 @@ export default function FoundryLobby() {
         router.push(`/foundry/${data.roomId}`);
       } else {
         setErr(data.error || 'Could not create Foundry.');
+        setCreating(false);
       }
     } catch {
       setErr('Network error. Please try again.');
-    } finally {
       setCreating(false);
     }
   };
@@ -103,18 +133,18 @@ export default function FoundryLobby() {
   };
 
   return (
-    <>
-      <Head><title>Foundry · ForgeTomorrow</title></Head>
+    <SeekerLayout title="Foundry · ForgeTomorrow" activeNav="foundry">
       <div style={S.page}>
         <div style={S.card}>
           <div style={S.badge}>🔨 Foundry</div>
+
           <h1 style={S.heading}>
             {canHost ? 'Start or join a Foundry' : 'Join a Foundry'}
           </h1>
           <p style={S.sub}>
             {canHost
-              ? 'A secure professional collaboration room — coaching, interviews, document review, and direct messaging in one place.'
-              : 'Your coach or recruiter will send you a Foundry link or code. Enter it below to join the session.'}
+              ? 'A secure professional collaboration room — live video, coaching, document review, and direct messaging in one place.'
+              : 'Your coach or recruiter will send you a Foundry link or code. Enter it below to join.'}
           </p>
 
           {err && <div style={S.error}>{err}</div>}
@@ -166,6 +196,6 @@ export default function FoundryLobby() {
           </button>
         </div>
       </div>
-    </>
+    </SeekerLayout>
   );
 }
