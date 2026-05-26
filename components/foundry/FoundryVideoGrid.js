@@ -3,6 +3,7 @@
 // and guests (receives token directly as props).
 // FT users: renders their profile avatar when camera is off.
 // Guests: renders initials circle.
+// Auto-ends the Foundry when all participants have left.
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import DailyIframe from '@daily-co/daily-js';
@@ -45,28 +46,22 @@ const S = {
     background: 'rgba(255,255,255,0.1)', color: '#aaa',
     fontSize: 9, fontWeight: 600, padding: '2px 5px', borderRadius: 3,
   },
-  // Initials circle — used for guests only
   initialsCircle: {
     width: 80, height: 80, borderRadius: '50%',
     background: 'linear-gradient(135deg,#BF360C,#FF7043)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 30, fontWeight: 700, color: '#fff', position: 'relative', zIndex: 1,
   },
-  // Profile photo — used for FT users when camera is off
   avatarImg: {
     width: 80, height: 80, borderRadius: '50%',
     objectFit: 'cover', position: 'relative', zIndex: 1,
     border: '2px solid rgba(255,255,255,0.1)',
   },
-  // PIP avatar photo
   pipAvatarImg: {
-    width: 32, height: 32, borderRadius: '50%',
-    objectFit: 'cover',
+    width: 32, height: 32, borderRadius: '50%', objectFit: 'cover',
   },
-  // PIP initials circle
   pipInitialsCircle: {
-    width: 32, height: 32, borderRadius: '50%',
-    background: '#5C6BC0',
+    width: 32, height: 32, borderRadius: '50%', background: '#5C6BC0',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 11, fontWeight: 600, color: '#fff',
   },
@@ -134,8 +129,6 @@ function VideoTile({ participant, isMain = false }) {
   const videoOff = !participant?.tracks?.video?.state || participant.tracks.video.state === 'off';
   const micMuted = !participant?.tracks?.audio?.state || participant.tracks.audio.state === 'off';
   const name = participant?.user_name || 'Guest';
-
-  // avatarUrl comes from user_data set during token creation — only FT users have it
   const avatarUrl = participant?.userData?.avatarUrl || null;
   const isGuest = !avatarUrl;
 
@@ -146,7 +139,6 @@ function VideoTile({ participant, isMain = false }) {
           <div style={S.ambient} />
           <div style={S.floor} />
           <div style={S.frameLine} />
-
           {videoOff ? (
             avatarUrl ? (
               <img src={avatarUrl} alt={name} style={S.avatarImg} />
@@ -156,9 +148,7 @@ function VideoTile({ participant, isMain = false }) {
           ) : (
             <video ref={videoRef} style={S.videoEl} autoPlay muted playsInline />
           )}
-
           <audio ref={audioRef} autoPlay playsInline style={{ display: 'none' }} />
-
           <div style={S.nameTag}>
             <span style={{ color: micMuted ? '#ef5350' : '#4caf50', fontSize: 12 }}>
               {micMuted ? '🔇' : '🎤'}
@@ -172,15 +162,12 @@ function VideoTile({ participant, isMain = false }) {
     );
   }
 
-  // PIP tile
   return (
     <div style={S.pip}>
       {videoOff ? (
         avatarUrl ? (
-          // FT user — show their profile photo
           <img src={avatarUrl} alt={name} style={S.pipAvatarImg} />
         ) : (
-          // Guest — show initials circle
           <div style={S.pipInitialsCircle}>{initials(name)}</div>
         )
       ) : (
@@ -201,6 +188,7 @@ export default function FoundryVideoGrid({
   roomId, compact = false, onInvite,
   micMuted, camOff,
   onCallReady, onParticipantsChange,
+  onRoomEmpty, // called when all participants have left
   guestToken = null,
   guestRoomUrl = null,
 }) {
@@ -209,10 +197,35 @@ export default function FoundryVideoGrid({
   const [joinState, setJoinState] = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Track whether we've already fired onRoomEmpty to avoid double-firing
+  const roomEndedRef = useRef(false);
+
   const updateParticipants = useCallback(() => {
     if (!callRef.current) return;
-    setParticipants({ ...callRef.current.participants() });
+    const current = callRef.current.participants();
+    setParticipants({ ...current });
+    return current;
   }, []);
+
+  // Check if room is empty (no remote participants, only local or nobody)
+  const checkRoomEmpty = useCallback((current) => {
+    if (roomEndedRef.current) return;
+    const all = Object.values(current || {});
+    const remoteCount = all.filter(p => !p.local).length;
+    if (remoteCount === 0 && all.length > 0) {
+      // Only local participant remains — room is effectively empty
+      // Give it a 3-second grace period in case someone is reconnecting
+      setTimeout(() => {
+        if (!callRef.current || roomEndedRef.current) return;
+        const fresh = callRef.current.participants();
+        const stillEmpty = Object.values(fresh).filter(p => !p.local).length === 0;
+        if (stillEmpty) {
+          roomEndedRef.current = true;
+          onRoomEmpty?.();
+        }
+      }, 3000);
+    }
+  }, [onRoomEmpty]);
 
   useEffect(() => {
     if (!roomId) return;
@@ -248,10 +261,23 @@ export default function FoundryVideoGrid({
 
         callRef.current = call;
 
-        const refresh = () => { if (!destroyed) updateParticipants(); };
+        const refresh = () => {
+          if (destroyed) return;
+          const current = updateParticipants();
+          return current;
+        };
+
         call.on('participant-joined', refresh);
         call.on('participant-updated', refresh);
-        call.on('participant-left', refresh);
+
+        // On participant-left: update state AND check if room is now empty
+        call.on('participant-left', () => {
+          if (destroyed) return;
+          const current = callRef.current?.participants() || {};
+          setParticipants({ ...current });
+          checkRoomEmpty(current);
+        });
+
         call.on('joined-meeting', () => {
           if (!destroyed) {
             setJoinState('joined');
@@ -259,12 +285,14 @@ export default function FoundryVideoGrid({
             onCallReady?.(call);
           }
         });
+
         call.on('error', (e) => {
           if (!destroyed) {
             setJoinState('error');
             setErrorMsg(e?.errorMsg || 'Connection error');
           }
         });
+
         call.on('left-meeting', () => {
           if (!destroyed) setJoinState('idle');
         });

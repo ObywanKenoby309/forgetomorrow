@@ -216,6 +216,17 @@ export default function FoundryRoom() {
     </div>
   );
 
+const handleRoomEmpty = useCallback(async () => {
+  // All participants have left — auto-end the session
+  if (callRef.current) {
+    await callRef.current.leave().catch(() => {});
+  }
+  try {
+    await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' });
+  } catch {}
+  router.push('/foundry');
+}, [roomId, router]);
+
   return (
     <>
       <FoundryTopBar
