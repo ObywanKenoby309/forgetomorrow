@@ -211,6 +211,13 @@ export default function SeekerSidebar({
         badge={counts.connections}
       />
 
+	  <SectionLabel>Foundries</SectionLabel>
+	  <NavItem
+	    href="/foundry?chrome=seeker"
+		label="Foundries"
+		active={active === 'foundries'}
+	  />
+
       <SectionLabel>Tools</SectionLabel>
       <NavItem
         href="/anvil"

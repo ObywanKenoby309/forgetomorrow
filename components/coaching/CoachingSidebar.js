@@ -234,6 +234,12 @@ export default function CoachingSidebar({
         badge={counts.signal}
       />
 
+	  <NavItem
+		href="/foundry?chrome=coach"
+		label="Foundries"
+		active={active === 'foundries'}
+	  />
+
       <NavItem
         href="/feed?chrome=coach"
         label="Community Feed"
