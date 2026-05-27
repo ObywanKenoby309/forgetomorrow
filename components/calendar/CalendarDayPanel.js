@@ -14,6 +14,65 @@ function typeColors(type) {
   return { strip: '#90A4AE', pillBg: '#F5F7FB', pillFg: '#455A64' };
 }
 
+
+function getTimeZoneOffsetMs(date, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(date);
+
+  const values = {};
+  parts.forEach((part) => {
+    if (part.type !== 'literal') values[part.type] = part.value;
+  });
+
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+
+  return asUtc - date.getTime();
+}
+
+function buildScheduledAt(date, time, timezone) {
+  const [year, month, day] = String(date).split('-').map(Number);
+  const [hour, minute] = String(time || '09:00').split(':').map(Number);
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour || 0, minute || 0, 0));
+  const offsetMs = getTimeZoneOffsetMs(utcGuess, timezone);
+  return new Date(utcGuess.getTime() - offsetMs).toISOString();
+}
+
+function getTimezoneAbbr(date, time, timezone) {
+  const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
+  try {
+    const instant = buildScheduledAt(date, time, tz);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'short',
+    }).formatToParts(new Date(instant));
+    return parts.find((part) => part.type === 'timeZoneName')?.value || tz;
+  } catch {
+    return tz;
+  }
+}
+
+function formatEventTime(event) {
+  const time = event?.time || '09:00';
+  const timezone = event?.timezone || event?.foundryTimezone;
+  const abbr = getTimezoneAbbr(event?.date, time, timezone);
+  return `${time} ${abbr}`;
+}
+
 function fmtLongDayLabel(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
@@ -91,6 +150,7 @@ export default function CalendarDayPanel({ selectedDate, events = [], onAdd, onE
             : e.candidateName || e.type || 'Item');
 
           const startTime = e.time || '09:00';
+          const displayStartTime = formatEventTime(e);
           const [h, m] = startTime.split(':').map(Number);
           const endH = h + 1;
           const endTime = `${String(endH).padStart(2,'0')}:${String(m || 0).padStart(2,'0')}`;
@@ -112,7 +172,7 @@ export default function CalendarDayPanel({ selectedDate, events = [], onAdd, onE
               <div style={{ height: 3, background: strip }} />
               <div style={{ padding: '8px 10px' }}>
                 <div style={{ fontSize: 10, color: '#90A4AE', fontWeight: 700, marginBottom: 2 }}>
-                  {startTime} – {endTime}
+                  {displayStartTime} – {endTime}
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 800, color: '#112033', marginBottom: 4, lineHeight: 1.3 }}>
                   {titleText}
@@ -134,7 +194,7 @@ export default function CalendarDayPanel({ selectedDate, events = [], onAdd, onE
                   </span>
                   {e.enableVideo && (
                     <span style={{ fontSize: 10, background: 'rgba(26,75,143,0.10)', color: '#1A4B8F', padding: '1px 6px', borderRadius: 999, fontWeight: 700 }}>
-                      🔨 Foundry
+                      Audio/Video
                     </span>
                   )}
                 </div>

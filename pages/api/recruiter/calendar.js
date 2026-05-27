@@ -30,6 +30,7 @@ function mapDbToEvent(item) {
     // frontend expects plain Y-M-D + time string
     date: item.date.toISOString().slice(0, 10),
     time: item.time || '',
+    timezone: item.timezone || 'America/New_York',
 
     title: item.title,
     type: item.type,
@@ -114,6 +115,7 @@ async function mirrorFoundryInviteToPersonalCalendar({
     title,
     type: baseType,
     status: item.status || 'Scheduled',
+    timezone: item.timezone || 'America/New_York',
     notes: notesParts.join('\n\n') || null,
     source: 'recruiter',
     sourceItemId: item.id,
@@ -384,6 +386,7 @@ async function syncRecruiterItemToSeekerCalendar(item, opts = {}) {
     title,
     type: baseType,
     status: item.status || 'Scheduled',
+    timezone: item.timezone || 'America/New_York',
     notes: existing?.notes || '',
     source: 'recruiter',
     sourceItemId: itemId,
@@ -462,6 +465,7 @@ export default async function handler(req, res) {
             title: mirror.title || 'Coaching session',
             type: mirror.type || 'Interview',
             status: mirror.status || 'Scheduled',
+            timezone: mirror.timezone || 'America/New_York',
             notes: mirror.notes || '',
             candidateType: 'external',
             candidateUserId: null,
@@ -496,6 +500,7 @@ export default async function handler(req, res) {
       company,
       jobTitle,
       req: reqCode, // avoid shadowing `req` object
+      timezone,
     } = req.body || {};
 
     // ───────────────── POST / PUT: create or update item ────────────────
@@ -516,6 +521,7 @@ export default async function handler(req, res) {
           : 'external';
 
       const safeTime = time || '09:00';
+      const safeTimezone = timezone || 'America/New_York';
       const dateTime = new Date(`${date}T${safeTime}:00Z`);
 
       let item;
@@ -548,6 +554,7 @@ export default async function handler(req, res) {
             scope: safeScope,
             date: dateTime,
             time: safeTime,
+            timezone: safeTimezone,
             title,
             type: type || 'Interview',
             status: status || 'Scheduled',
@@ -573,6 +580,7 @@ export default async function handler(req, res) {
             scope: safeScope,
             date: dateTime,
             time: safeTime,
+            timezone: safeTimezone,
             title,
             type: type || 'Interview',
             status: status || 'Scheduled',

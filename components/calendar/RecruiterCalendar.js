@@ -51,6 +51,68 @@ function fmtLongDayLabel(dateStr) {
   });
 }
 
+
+function getBrowserTimezone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
+}
+
+function getTimeZoneOffsetMs(date, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(date);
+
+  const values = {};
+  parts.forEach((part) => {
+    if (part.type !== 'literal') values[part.type] = part.value;
+  });
+
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+
+  return asUtc - date.getTime();
+}
+
+function buildScheduledAt(date, time, timezone) {
+  const [year, month, day] = String(date).split('-').map(Number);
+  const [hour, minute] = String(time || '09:00').split(':').map(Number);
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour || 0, minute || 0, 0));
+  const offsetMs = getTimeZoneOffsetMs(utcGuess, timezone);
+  return new Date(utcGuess.getTime() - offsetMs).toISOString();
+}
+
+function getTimezoneAbbr(date, time, timezone) {
+  const tz = timezone || getBrowserTimezone();
+  try {
+    const instant = buildScheduledAt(date, time, tz);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'short',
+    }).formatToParts(new Date(instant));
+    return parts.find((part) => part.type === 'timeZoneName')?.value || tz;
+  } catch {
+    return tz;
+  }
+}
+
+function formatEventTime(event) {
+  const time = event?.time || '09:00';
+  const abbr = getTimezoneAbbr(event?.date, time, event?.timezone || event?.foundryTimezone);
+  return `${time} ${abbr}`;
+}
+
 // ─── Normalizers ──────────────────────────────────────────────────────────────
 function normalizeEvent(raw) {
   if (!raw) return null;
@@ -74,6 +136,7 @@ function normalizeEvent(raw) {
     id: raw.id,
     date: date || new Date().toISOString().slice(0, 10),
     time: time || '09:00',
+    timezone: raw.timezone || raw.foundryTimezone || getBrowserTimezone(),
     title: raw.title || '',
     type: raw.type || 'Interview',
     status: raw.status || 'Scheduled',
@@ -653,7 +716,7 @@ function MobileCalendar({ scopedEvents, viewScope, setViewScope, cursor, setCurs
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed = [], storageKey, onDaySelect, selectedDate: externalSelectedDate, onRegisterActions }) {
+const RecruiterCalendar = React.forwardRef(function RecruiterCalendar({ title = 'Recruiter Calendar', seed = [], storageKey, onDaySelect, selectedDate: externalSelectedDate }, ref) {
   const isMobile = useIsMobile(768);
 
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
@@ -772,18 +835,14 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
   );
 
 
-
-  useEffect(() => {
-    onRegisterActions?.({
-      add: openAdd,
-      edit: openEdit,
-    });
-  }, [onRegisterActions, openAdd, openEdit]);
-
-  useEffect(() => {
-    if (!externalSelectedDate) return;
-    onDaySelect?.(externalSelectedDate, eventsByDate[externalSelectedDate] || []);
-  }, [externalSelectedDate, eventsByDate, onDaySelect]);
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      openAdd,
+      openEdit,
+    }),
+    [openAdd, openEdit]
+  );
 
   const closeModal = () => {
     setModal({ open: false, mode: 'add', eventId: null, initial: null });
@@ -797,11 +856,16 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
     });
 
     setEvents((prev) => {
-      if (mode === 'edit') {
-        return normalizeEvents(prev.map((e) => (e.id === normalized.id ? normalized : e)));
+      const next = mode === 'edit'
+        ? normalizeEvents(prev.map((e) => (e.id === normalized.id ? normalized : e)))
+        : normalizeEvents([...prev, normalized]);
+
+      const activeDate = externalSelectedDate || normalized.date;
+      if (onDaySelect && activeDate) {
+        onDaySelect(activeDate, next.filter((e) => e.date === activeDate));
       }
 
-      return normalizeEvents([...prev, normalized]);
+      return next;
     });
   };
 
@@ -828,6 +892,7 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
         candidateEmail: formData.candidateEmail,
         scope: scopeFromForm,
         calendarScope: scopeFromForm,
+        timezone: formData.timezone || getBrowserTimezone(),
         internalInvitees: formData.internalInvitees || [],
         externalInvitees: formData.externalInvitees || [],
         invitees: formData.invitees || [],
@@ -881,7 +946,13 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
         console.warn('Delete API error:', err);
       }
 
-      setEvents((prev) => prev.filter((e) => e.id !== eventId));
+      setEvents((prev) => {
+        const next = prev.filter((e) => e.id !== eventId);
+        if (onDaySelect && externalSelectedDate) {
+          onDaySelect(externalSelectedDate, next.filter((e) => e.date === externalSelectedDate));
+        }
+        return next;
+      });
       closeModal();
     } finally {
       setSaving(false);
@@ -1103,7 +1174,7 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
                     <div style={{ background: strip }} />
                     <div style={{ padding: '10px 10px', borderRight: '1px solid #EEF2F7', fontSize: 11, fontWeight: 700, color: '#455A64' }}>
                       <div>{e.date}</div>
-                      <div style={{ color: '#90A4AE', fontWeight: 500 }}>{e.time || ''}</div>
+                      <div style={{ color: '#90A4AE', fontWeight: 500 }}>{formatEventTime(e)}</div>
                     </div>
                     <div style={{ padding: '10px 12px' }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#112033', marginBottom: 4 }}>{titleText}</div>
@@ -1188,7 +1259,7 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
                             <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11 }}>
                               {titleText}
                             </div>
-                            <div style={{ fontSize: 11, color: '#546E7A', whiteSpace: 'nowrap' }}>{e.time || ''}</div>
+                            <div style={{ fontSize: 11, color: '#546E7A', whiteSpace: 'nowrap' }}>{formatEventTime(e)}</div>
                           </div>
 
                           {subtitle && (
@@ -1261,4 +1332,6 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
       )}
     </>
   );
-}
+});
+
+export default RecruiterCalendar;

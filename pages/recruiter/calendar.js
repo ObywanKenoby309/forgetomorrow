@@ -10,7 +10,6 @@ import { getTimeGreeting } from '@/lib/dashboardGreeting';
 
 const STORAGE_KEY = 'recruiterCalendar_live_v1';
 
-// Right rail: persistent day panel stacked above ads
 function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -30,9 +29,8 @@ function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
 
 export default function RecruiterCalendarPage() {
   const greeting = getTimeGreeting();
-  const calendarActionsRef = useRef({ add: null, edit: null });
+  const calendarRef = useRef(null);
 
-  // Lifted state — shared between calendar grid and right rail panel
   const [selectedDate, setSelectedDate] = useState(null);
   const [dayEvents, setDayEvents] = useState([]);
 
@@ -41,16 +39,12 @@ export default function RecruiterCalendarPage() {
     setDayEvents(events || []);
   }, []);
 
-  const handleCalendarActionsReady = useCallback((actions) => {
-    calendarActionsRef.current = actions || { add: null, edit: null };
+  const handleAdd = useCallback((dateStr) => {
+    calendarRef.current?.openAdd?.(dateStr);
   }, []);
 
-  const handleAdd = useCallback((dateStr) => {
-    calendarActionsRef.current?.add?.(dateStr || selectedDate);
-  }, [selectedDate]);
-
   const handleEdit = useCallback((eventId) => {
-    calendarActionsRef.current?.edit?.(eventId);
+    calendarRef.current?.openEdit?.(eventId);
   }, []);
 
   const HeaderBox = (
@@ -81,12 +75,12 @@ export default function RecruiterCalendarPage() {
       >
         <div style={{ width: '100%' }}>
           <RecruiterCalendar
+            ref={calendarRef}
             title="Month View"
             storageKey={STORAGE_KEY}
             seed={[]}
             onDaySelect={handleDaySelect}
             selectedDate={selectedDate}
-            onRegisterActions={handleCalendarActionsReady}
           />
         </div>
       </RecruiterLayout>

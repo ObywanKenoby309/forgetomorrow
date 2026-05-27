@@ -3,6 +3,70 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const VIDEO_INVITEE_LIMIT = 5;
 
+const TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Anchorage',
+  'Pacific/Honolulu',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Australia/Sydney',
+];
+
+const TIMEZONE_LABELS = {
+  'America/New_York': 'Eastern (ET)',
+  'America/Chicago': 'Central (CT)',
+  'America/Denver': 'Mountain (MT)',
+  'America/Los_Angeles': 'Pacific (PT)',
+  'America/Anchorage': 'Alaska (AKT)',
+  'Pacific/Honolulu': 'Hawaii (HT)',
+  'Europe/London': 'London (GMT/BST)',
+  'Europe/Paris': 'Paris (CET/CEST)',
+  'Europe/Berlin': 'Berlin (CET/CEST)',
+  'Asia/Tokyo': 'Tokyo (JST)',
+  'Asia/Shanghai': 'Shanghai (CST)',
+  'Australia/Sydney': 'Sydney (AET)',
+};
+
+function getBrowserTimezone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
+}
+
+function getTimeZoneOffsetMs(date, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(date);
+
+  const values = {};
+  parts.forEach((part) => {
+    if (part.type !== 'literal') values[part.type] = part.value;
+  });
+
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+
+  return asUtc - date.getTime();
+}
+
+
 function normalizeContact(c) {
   const id = c?.contactUserId || c?.userId || c?.id;
   if (!id) return null;
@@ -93,8 +157,12 @@ function normalizeInitialExternalInvitees(initial) {
   return [];
 }
 
-function buildScheduledAt(date, time) {
-  return new Date(`${date}T${time || '09:00'}:00`).toISOString();
+function buildScheduledAt(date, time, timezone = getBrowserTimezone()) {
+  const [year, month, day] = String(date).split('-').map(Number);
+  const [hour, minute] = String(time || '09:00').split(':').map(Number);
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour || 0, minute || 0, 0));
+  const offsetMs = getTimeZoneOffsetMs(utcGuess, timezone);
+  return new Date(utcGuess.getTime() - offsetMs).toISOString();
 }
 
 export default function RecruiterCalendarEventForm({
@@ -153,6 +221,10 @@ export default function RecruiterCalendarEventForm({
       title: initial?.title || '',
       date: initial?.date || today,
       time: initial?.time || '09:00',
+      timezone:
+        initial?.timezone ||
+        initial?.foundryTimezone ||
+        getBrowserTimezone(),
       candidateType,
       type: initial?.type || typeChoices[0] || 'Interview',
       status: initial?.status || statusChoices[0] || 'Scheduled',
@@ -382,8 +454,8 @@ export default function RecruiterCalendarEventForm({
 
 
   const scheduleFoundryRoom = async ({ title, payloadInvitees }) => {
-    const scheduledAt = buildScheduledAt(form.date, form.time);
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
+    const timezone = form.timezone || getBrowserTimezone();
+    const scheduledAt = buildScheduledAt(form.date, form.time, timezone);
 
     const foundryInvitees = payloadInvitees.map((i) => {
       if (i.type === 'internal') {
@@ -673,6 +745,7 @@ ${roomNote}` : roomNote;
         internalInvitees,
         externalInvitees,
         invitees: payloadInvitees,
+        timezone: form.timezone,
         enableVideo: videoLimitActive,
         foundryRoomId: foundry?.roomId || null,
         foundryGuestToken: foundry?.guestToken || null,
@@ -1133,6 +1206,28 @@ ${roomNote}` : roomNote;
                 onChange={(e) => update('time', e.target.value)}
                 style={input}
               />
+            </div>
+          </div>
+
+
+          {/* Timezone */}
+          <div>
+            <label style={label}>Timezone</label>
+            <select
+              name="timezone"
+              value={form.timezone}
+              onChange={(e) => update('timezone', e.target.value)}
+              style={input}
+              disabled={busy}
+            >
+              {TIMEZONES.map((tz) => (
+                <option key={tz} value={tz}>
+                  {TIMEZONE_LABELS[tz] || tz}
+                </option>
+              ))}
+            </select>
+            <div style={{ fontSize: 11, color: '#90A4AE', marginTop: 4 }}>
+              All invitees will see this meeting time with timezone context.
             </div>
           </div>
 

@@ -609,6 +609,7 @@ model CoachingSession {
   clientId         String?
   coachingClientId String?
   startAt          DateTime
+  timezone 		   String? 		   @default("America/New_York")
   durationMin      Int             @default(60)
   type             String          @default("Strategy")
   status           String          @default("Scheduled")
@@ -1214,26 +1215,36 @@ model RecruiterCalendarItem {
   id              String   @id @default(cuid())
   ownerId         String
   scope           String   @default("team")
+
   date            DateTime
   time            String?
+
+  timezone        String?   @default("America/New_York")
+  scheduledAtUtc  DateTime?
+
   title           String
   type            String   @default("Interview")
   status          String   @default("Scheduled")
   notes           String?
+
   candidateType   String   @default("external")
   candidateUserId String?
   candidateName   String
+
   company         String?
   jobTitle        String?
   req             String?
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
   candidate       User?    @relation("UserRecruiterCalendarCandidate", fields: [candidateUserId], references: [id])
   owner           User     @relation("UserRecruiterCalendarOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
   @@index([date])
   @@index([scope])
+
   @@map("recruiter_calendar_items")
 }
 
@@ -1266,21 +1277,30 @@ model SnapshotSchedule {
 model SeekerCalendarItem {
   id           String   @id @default(cuid())
   userId       String
+
   date         DateTime
   time         String?
+
+  timezone        String?   @default("America/New_York")
+  scheduledAtUtc  DateTime?
+
   title        String
   type         String   @default("Interview")
   status       String   @default("Scheduled")
   notes        String?
+
   source       String   @default("personal")
   sourceItemId String?
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  user         User     @relation("UserSeekerCalendarItems", fields: [userId], references: [id], onDelete: Cascade)
+
+  user         User @relation("UserSeekerCalendarItems", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([date])
   @@index([source])
+
   @@map("seeker_calendar_items")
 }
 
