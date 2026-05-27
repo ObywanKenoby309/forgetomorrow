@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 export default function RecruiterCalendarEventForm({
   mode = 'add', // 'add' | 'edit'
-  initial = null, // { id?, title, date, time, candidateType, candidateUserId, candidateName, type, status, notes, scope/calendarScope }
+  initial = null, // { id?, title, date, time, candidateType, candidateUserId, candidateName, type, status, notes, scope/calendarScope, meetingMode/enableVideo }
   onClose,
   onSave,
   onDelete,
@@ -32,6 +32,16 @@ export default function RecruiterCalendarEventForm({
         ? rawScope
         : 'personal';
 
+    const rawMeetingMode =
+      initial?.meetingMode ||
+      initial?.communicationMode ||
+      (initial?.enableVideo ? 'audio_video' : null);
+
+    const meetingMode =
+      rawMeetingMode === 'audio_video' || rawMeetingMode === 'video'
+        ? 'audio_video'
+        : 'calendar_only';
+
     return {
       title: initial?.title || '',
       date: initial?.date || today,
@@ -46,6 +56,7 @@ export default function RecruiterCalendarEventForm({
       status: initial?.status || statusChoices[0] || 'Scheduled',
       notes: initial?.notes || '',
       calendarScope, // 'team' | 'personal'
+      meetingMode, // 'calendar_only' | 'audio_video'
     };
   });
 
@@ -189,6 +200,43 @@ export default function RecruiterCalendarEventForm({
     minWidth: 70,
   });
 
+  const meetingModeButton = (active) => ({
+    borderRadius: 12,
+    border: active ? '1px solid #FF7043' : '1px solid #CFD8DC',
+    background: active ? 'rgba(255,112,67,0.09)' : '#FFFFFF',
+    color: active ? '#C75B33' : '#455A64',
+    padding: '10px 12px',
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: saving ? 'not-allowed' : 'pointer',
+    textAlign: 'left',
+    fontFamily: 'inherit',
+    minHeight: 64,
+    opacity: saving ? 0.72 : 1,
+  });
+
+  const meetingModeTitle = {
+    display: 'block',
+    fontSize: 13,
+    fontWeight: 800,
+    marginBottom: 2,
+  };
+
+  const meetingModeHelper = {
+    display: 'block',
+    fontSize: 11,
+    color: '#78909C',
+    lineHeight: 1.35,
+    fontWeight: 500,
+  };
+
+  const sectionCard = {
+    border: '1px solid #E5E7EB',
+    borderRadius: 14,
+    padding: 12,
+    background: 'rgba(255,255,255,0.72)',
+  };
+
   // ───────────── Submit ─────────────
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -221,6 +269,7 @@ export default function RecruiterCalendarEventForm({
       ...form,
       title,
       candidateName: name,
+      enableVideo: form.meetingMode === 'audio_video',
     });
   };
 
@@ -250,10 +299,9 @@ export default function RecruiterCalendarEventForm({
           borderRadius: 16,
           width: '100%',
           maxWidth: 640,
-		  maxHeight: '85vh',
-		  overflowY: 'auto',
+          maxHeight: '85vh',
+          overflowY: 'auto',
           boxShadow: '0 24px 60px rgba(15,23,42,0.55)',
-          overflow: 'hidden',
           color: '#263238',
           border: '1px solid rgba(148,163,184,0.7)',
         }}
@@ -344,6 +392,42 @@ export default function RecruiterCalendarEventForm({
               style={input}
               placeholder="e.g., Phone Screen with Acme"
             />
+          </div>
+
+          {/* Meeting mode */}
+          <div style={sectionCard}>
+            <div style={{ ...label, marginBottom: 8 }}>Meeting Mode</div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 10,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => update('meetingMode', 'calendar_only')}
+                style={meetingModeButton(form.meetingMode === 'calendar_only')}
+                disabled={saving}
+              >
+                <span style={meetingModeTitle}>No Audio/Video</span>
+                <span style={meetingModeHelper}>
+                  Calendar invite only. Use this for tasks, reminders, phone calls, or in-person meetings.
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => update('meetingMode', 'audio_video')}
+                style={meetingModeButton(form.meetingMode === 'audio_video')}
+                disabled={saving}
+              >
+                <span style={meetingModeTitle}>Audio/Video</span>
+                <span style={meetingModeHelper}>
+                  Payload-ready for a ForgeMeeting room once backend wiring is enabled.
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Candidate type */}
