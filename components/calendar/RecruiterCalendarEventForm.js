@@ -1179,57 +1179,53 @@ ${roomNote}` : roomNote;
             </div>
           )}
 
-          {/* Date / Time */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 12,
-            }}
-          >
-            <div>
-              <label style={label}>Date</label>
-              <input
-                type="date"
-                name="date"
-                value={form.date}
-                onChange={(e) => update('date', e.target.value)}
-                style={input}
-              />
-            </div>
-            <div>
-              <label style={label}>Time</label>
-              <input
-                type="time"
-                name="time"
-                value={form.time}
-                onChange={(e) => update('time', e.target.value)}
-                style={input}
-              />
-            </div>
-          </div>
+{/* Date / Time / Timezone */}
+<div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr 1.2fr',
+    gap: 12,
+  }}
+>
+  <div>
+    <label style={label}>Date</label>
+    <input
+      type="date"
+      name="date"
+      value={form.date}
+      onChange={(e) => update('date', e.target.value)}
+      style={input}
+    />
+  </div>
 
+  <div>
+    <label style={label}>Time</label>
+    <input
+      type="time"
+      name="time"
+      value={form.time}
+      onChange={(e) => update('time', e.target.value)}
+      style={input}
+    />
+  </div>
 
-          {/* Timezone */}
-          <div>
-            <label style={label}>Timezone</label>
-            <select
-              name="timezone"
-              value={form.timezone}
-              onChange={(e) => update('timezone', e.target.value)}
-              style={input}
-              disabled={busy}
-            >
-              {TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>
-                  {TIMEZONE_LABELS[tz] || tz}
-                </option>
-              ))}
-            </select>
-            <div style={{ fontSize: 11, color: '#90A4AE', marginTop: 4 }}>
-              All invitees will see this meeting time with timezone context.
-            </div>
-          </div>
+  <div>
+    <label style={label}>Timezone</label>
+    <select
+      name="timezone"
+      value={form.timezone}
+      onChange={(e) => update('timezone', e.target.value)}
+      style={input}
+      disabled={busy}
+    >
+      {TIMEZONES.map((tz) => (
+        <option key={tz} value={tz}>
+          {TIMEZONE_LABELS[tz] || tz}
+        </option>
+      ))}
+    </select>
+  </div>
+</div>
 
           {/* Type / Status */}
           <div
