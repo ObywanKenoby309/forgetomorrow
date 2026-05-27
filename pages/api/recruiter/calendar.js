@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
+import { createNotification } from '@/lib/notifications/writer';
+import { sendFoundryInviteEmail } from '@/lib/foundry/email';
 
 function readCookie(req, name) {
   try {
@@ -42,6 +44,244 @@ function mapDbToEvent(item) {
     jobTitle: item.jobTitle || '',
     req: item.req || '',
   };
+}
+
+
+function getBaseUrl(req) {
+  const envUrl = process.env.NEXTAUTH_URL;
+  if (envUrl) return envUrl.replace(/\/$/, '');
+
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers.host;
+  return `${proto}://${host}`;
+}
+
+function formatFoundryDate(date, timezone) {
+  if (!date) return 'Time TBD';
+
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone || 'America/New_York',
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    }).format(new Date(date));
+  } catch {
+    return new Date(date).toLocaleString();
+  }
+}
+
+function getUserDisplayName(user, fallback = 'Participant') {
+  return (
+    user?.name ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
+    user?.email ||
+    fallback
+  );
+}
+
+async function mirrorFoundryInviteToPersonalCalendar({
+  item,
+  inviteeUserId,
+  hostName,
+  roomUrl,
+}) {
+  if (!inviteeUserId) return;
+
+  const existing = await prisma.seekerCalendarItem.findFirst({
+    where: {
+      source: 'recruiter',
+      sourceItemId: item.id,
+      userId: inviteeUserId,
+    },
+  });
+
+  const baseType = item.type || 'Interview';
+  const title = `${baseType} with ${hostName}: ${item.title}`;
+  const notesParts = [];
+
+  if (item.notes) notesParts.push(item.notes);
+  if (roomUrl) notesParts.push(`Join link: ${roomUrl}`);
+
+  const data = {
+    userId: inviteeUserId,
+    date: item.date,
+    time: item.time || '09:00',
+    title,
+    type: baseType,
+    status: item.status || 'Scheduled',
+    notes: notesParts.join('\n\n') || null,
+    source: 'recruiter',
+    sourceItemId: item.id,
+  };
+
+  if (existing) {
+    await prisma.seekerCalendarItem.update({
+      where: { id: existing.id },
+      data,
+    });
+  } else {
+    await prisma.seekerCalendarItem.create({ data });
+  }
+}
+
+async function dispatchRecruiterFoundryInvites({
+  req,
+  sessionUserId,
+  item,
+  foundryRoomId,
+}) {
+  if (!foundryRoomId || !item?.id) {
+    return { skipped: true, reason: 'Missing room or calendar item.' };
+  }
+
+  const room = await prisma.foundryRoom.findUnique({
+    where: { roomId: foundryRoomId },
+    include: {
+      invitees: true,
+      host: {
+        select: {
+          id: true,
+          name: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  if (!room) {
+    return { skipped: true, reason: 'Foundry room not found.' };
+  }
+
+  if (room.hostId !== sessionUserId) {
+    throw new Error('Only the Foundry host can send invites.');
+  }
+
+  const baseUrl = getBaseUrl(req);
+  const roomUrl = `${baseUrl}/foundry/${room.roomId}`;
+  const guestUrl = `${baseUrl}/foundry/join/${room.roomId}?code=${room.guestToken}`;
+  const timezone = room.timezone || 'America/New_York';
+  const dateStr = formatFoundryDate(room.scheduledAt, timezone);
+  const hostName = getUserDisplayName(room.host, 'Your host');
+
+  const results = { ft: [], external: [], skipped: [], errors: [] };
+
+  for (const invitee of room.invitees || []) {
+    if (invitee.status === 'SENT' || invitee.status === 'ACCEPTED' || invitee.status === 'DECLINED') {
+      results.skipped.push(invitee.id);
+      continue;
+    }
+
+    try {
+      if (invitee.userId) {
+        const inviteeUser = await prisma.user.findUnique({
+          where: { id: invitee.userId },
+          select: {
+            id: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
+        });
+
+        const inviteeName = getUserDisplayName(inviteeUser, invitee.name || 'Participant');
+
+        await createNotification({
+          userId: invitee.userId,
+          actorUserId: sessionUserId,
+          category: 'CALENDAR',
+          scope: inviteeUser?.role === 'SEEKER' ? 'SEEKER' : 'RECRUITER',
+          entityType: 'CALENDAR_ITEM',
+          entityId: item.id,
+          dedupeKey: `recruiter_foundry_invite_${item.id}_${room.roomId}_${invitee.userId}`,
+          title: `Meeting invite: ${item.title}`,
+          body: `${hostName} invited you to a ForgeTomorrow meeting on ${dateStr}`,
+          requiresAction: true,
+          metadata: {
+            calendarItemId: item.id,
+            roomId: room.roomId,
+            roomUrl,
+            scheduledAt: room.scheduledAt,
+            timezone,
+          },
+        });
+
+        await mirrorFoundryInviteToPersonalCalendar({
+          item,
+          inviteeUserId: invitee.userId,
+          hostName,
+          roomUrl,
+        });
+
+        try {
+          const { getOrCreateConversation } = await import('@/lib/signal');
+          const conv = await getOrCreateConversation(sessionUserId, invitee.userId);
+          if (conv) {
+            await prisma.message.create({
+              data: {
+                conversationId: conv.id,
+                senderId: sessionUserId,
+                content: `📅 I've sent you a ForgeTomorrow meeting invite for **${item.title}** on ${dateStr}.\n\nJoin here: ${roomUrl}`,
+              },
+            });
+          }
+        } catch {
+          // Signal is helpful but not required for invite delivery.
+        }
+
+        await prisma.foundryInvitee.update({
+          where: { id: invitee.id },
+          data: { status: 'SENT' },
+        });
+
+        results.ft.push(invitee.userId);
+      } else if (invitee.email) {
+        await sendFoundryInviteEmail({
+          to: invitee.email,
+          toName: invitee.name || invitee.email,
+          hostName,
+          sessionTitle: item.title,
+          dateStr,
+          timezone,
+          joinUrl: guestUrl,
+        });
+
+        await prisma.foundryInvitee.update({
+          where: { id: invitee.id },
+          data: { status: 'SENT' },
+        });
+
+        results.external.push(invitee.email);
+      }
+    } catch (err) {
+      console.error(`[recruiter/calendar] invite failed for ${invitee.id}:`, err);
+      results.errors.push(invitee.id);
+    }
+  }
+
+  const remainingPending = await prisma.foundryInvitee.count({
+    where: {
+      roomId: room.id,
+      status: 'PENDING',
+    },
+  });
+
+  if (remainingPending === 0) {
+    await prisma.foundryRoom.update({
+      where: { id: room.id },
+      data: { invitesSentAt: room.invitesSentAt || new Date() },
+    });
+  }
+
+  return results;
 }
 
 /**
@@ -201,7 +441,7 @@ export default async function handler(req, res) {
         prisma.seekerCalendarItem.findMany({
           where: {
             userId: effectiveUserId,
-            source: 'coach',
+            source: { in: ['coach', 'recruiter'] },
           },
           orderBy: { date: 'asc' },
         }),
@@ -250,6 +490,9 @@ export default async function handler(req, res) {
       candidateUserId,
       candidateName,
       scope,
+      calendarScope,
+      enableVideo,
+      foundryRoomId,
       company,
       jobTitle,
       req: reqCode, // avoid shadowing `req` object
@@ -263,8 +506,9 @@ export default async function handler(req, res) {
           .json({ error: 'Missing required fields: title, date' });
       }
 
+      const incomingScope = scope || calendarScope;
       const safeScope =
-        scope === 'personal' || scope === 'team' ? scope : 'team';
+        incomingScope === 'personal' || incomingScope === 'team' ? incomingScope : 'team';
 
       const safeCandidateType =
         candidateType === 'internal' || candidateType === 'external'
@@ -354,8 +598,18 @@ export default async function handler(req, res) {
         previousCandidateType,
       });
 
+      let inviteResults = null;
+      if (enableVideo && foundryRoomId) {
+        inviteResults = await dispatchRecruiterFoundryInvites({
+          req,
+          sessionUserId: realUserId,
+          item,
+          foundryRoomId,
+        });
+      }
+
       const event = mapDbToEvent(item);
-      return res.status(200).json({ event });
+      return res.status(200).json({ event, inviteResults });
     }
 
     // ───────────────── DELETE: remove item ────────────────

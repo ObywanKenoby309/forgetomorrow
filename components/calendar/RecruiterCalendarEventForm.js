@@ -93,6 +93,10 @@ function normalizeInitialExternalInvitees(initial) {
   return [];
 }
 
+function buildScheduledAt(date, time) {
+  return new Date(`${date}T${time || '09:00'}:00`).toISOString();
+}
+
 export default function RecruiterCalendarEventForm({
   mode = 'add', // 'add' | 'edit'
   initial = null, // { id?, title, date, time, candidateType, candidateUserId, candidateName, type, status, notes, scope/calendarScope, meetingMode/enableVideo }
@@ -105,6 +109,8 @@ export default function RecruiterCalendarEventForm({
 }) {
   const firstRef = useRef(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [foundryScheduling, setFoundryScheduling] = useState(false);
+  const busy = saving || foundryScheduling;
 
   const [internalInvitees, setInternalInvitees] = useState(() =>
     normalizeInitialInternalInvitees(initial)
@@ -372,6 +378,55 @@ export default function RecruiterCalendarEventForm({
     setExternalInvitees((prev) => prev.filter((_, i) => i !== index));
   };
 
+
+  const scheduleFoundryRoom = async ({ title, payloadInvitees }) => {
+    const scheduledAt = buildScheduledAt(form.date, form.time);
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
+
+    const foundryInvitees = payloadInvitees.map((i) => {
+      if (i.type === 'internal') {
+        return {
+          userId: i.userId,
+          name: i.name,
+        };
+      }
+
+      return {
+        email: i.email,
+        name: i.name || i.email,
+      };
+    });
+
+    const res = await fetch('/api/foundry/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        scheduledAt,
+        timezone,
+        invitees: foundryInvitees,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Could not schedule Foundry room.');
+    }
+
+    return {
+      roomId: data.roomId,
+      guestToken: data.guestToken,
+      joinUrl: data.roomId ? `/foundry/${data.roomId}` : '',
+      guestJoinUrl:
+        data.roomId && data.guestToken
+          ? `/foundry/join/${data.roomId}?code=${data.guestToken}`
+          : '',
+      scheduledAt,
+      timezone,
+    };
+  };
+
   // ───────────── Styles ─────────────
   const label = {
     fontSize: 12,
@@ -536,16 +591,16 @@ export default function RecruiterCalendarEventForm({
     color: '#C75B33',
     borderRadius: 10,
     padding: '8px 10px',
-    cursor: saving || inviteeLimitReached ? 'not-allowed' : 'pointer',
+    cursor: busy || inviteeLimitReached ? 'not-allowed' : 'pointer',
     fontSize: 12,
     fontWeight: 800,
     fontFamily: 'inherit',
     whiteSpace: 'nowrap',
-    opacity: saving || inviteeLimitReached ? 0.55 : 1,
+    opacity: busy || inviteeLimitReached ? 0.55 : 1,
   };
 
   // ───────────── Submit ─────────────
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const title = (form.title || '').trim();
@@ -573,6 +628,11 @@ export default function RecruiterCalendarEventForm({
       return;
     }
 
+    if (videoLimitActive && externalInvitees.some((i) => !i.email?.trim())) {
+      alert('External guests need an email address for Audio/Video invites.');
+      return;
+    }
+
     const payloadInvitees = [
       ...internalInvitees.map((i) => ({
         type: 'internal',
@@ -587,18 +647,44 @@ export default function RecruiterCalendarEventForm({
       })),
     ];
 
-    onSave?.({
-      ...form,
-      title,
-      candidateType: primaryInternal ? 'internal' : 'external',
-      candidateUserId: primaryInternal?.id || null,
-      candidateName: primaryName,
-      candidateEmail: primaryEmail,
-      internalInvitees,
-      externalInvitees,
-      invitees: payloadInvitees,
-      enableVideo: form.meetingMode === 'audio_video',
-    });
+    let foundry = null;
+    let finalNotes = form.notes || '';
+
+    try {
+      if (videoLimitActive) {
+        setFoundryScheduling(true);
+        foundry = await scheduleFoundryRoom({ title, payloadInvitees });
+        const roomNote = `Foundry room: ${foundry.joinUrl}`;
+        finalNotes = finalNotes.trim() ? `${finalNotes.trim()}
+
+${roomNote}` : roomNote;
+      }
+
+      await onSave?.({
+        ...form,
+        title,
+        notes: finalNotes,
+        candidateType: primaryInternal ? 'internal' : 'external',
+        candidateUserId: primaryInternal?.id || null,
+        candidateName: primaryName,
+        candidateEmail: primaryEmail,
+        internalInvitees,
+        externalInvitees,
+        invitees: payloadInvitees,
+        enableVideo: videoLimitActive,
+        foundryRoomId: foundry?.roomId || null,
+        foundryGuestToken: foundry?.guestToken || null,
+        foundryJoinUrl: foundry?.joinUrl || null,
+        foundryGuestJoinUrl: foundry?.guestJoinUrl || null,
+        foundryScheduledAt: foundry?.scheduledAt || null,
+        foundryTimezone: foundry?.timezone || null,
+      });
+    } catch (err) {
+      console.error('Recruiter calendar VC scheduling error:', err);
+      alert(err?.message || 'Could not schedule the Audio/Video meeting.');
+    } finally {
+      setFoundryScheduling(false);
+    }
   };
 
   // ───────────── Render ─────────────
@@ -682,7 +768,7 @@ export default function RecruiterCalendarEventForm({
                 type="button"
                 onClick={() => update('calendarScope', 'personal')}
                 style={calendarToggleButton(form.calendarScope === 'personal')}
-                disabled={saving}
+                disabled={busy}
               >
                 Personal (only me)
               </button>
@@ -690,7 +776,7 @@ export default function RecruiterCalendarEventForm({
                 type="button"
                 onClick={() => update('calendarScope', 'team')}
                 style={calendarToggleButton(form.calendarScope === 'team')}
-                disabled={saving}
+                disabled={busy}
               >
                 Team (shared)
               </button>
@@ -752,7 +838,7 @@ export default function RecruiterCalendarEventForm({
                 type="button"
                 onClick={() => update('meetingMode', 'calendar_only')}
                 style={meetingModeButton(form.meetingMode === 'calendar_only')}
-                disabled={saving}
+                disabled={busy}
               >
                 <span style={meetingModeTitle}>No Audio/Video</span>
                 <span style={meetingModeHelper}>
@@ -762,13 +848,19 @@ export default function RecruiterCalendarEventForm({
 
               <button
                 type="button"
-                onClick={() => update('meetingMode', 'audio_video')}
+                onClick={() => {
+                  if (totalInvitees > VIDEO_INVITEE_LIMIT) {
+                    alert(`Audio/Video meetings are limited to ${VIDEO_INVITEE_LIMIT} invitees.`);
+                    return;
+                  }
+                  update('meetingMode', 'audio_video');
+                }}
                 style={meetingModeButton(form.meetingMode === 'audio_video')}
-                disabled={saving}
+                disabled={busy}
               >
                 <span style={meetingModeTitle}>Audio/Video</span>
                 <span style={meetingModeHelper}>
-                  Payload-ready for a ForgeMeeting room. Limited to 5 invitees.
+                  Creates a scheduled ForgeMeeting room. Limited to 5 invitees.
                 </span>
               </button>
             </div>
@@ -823,7 +915,7 @@ export default function RecruiterCalendarEventForm({
                       onClick={() => removeInternalInvitee(i.id)}
                       style={chipRemove}
                       aria-label={`Remove ${i.name}`}
-                      disabled={saving}
+                      disabled={busy}
                     >
                       ×
                     </button>
@@ -838,7 +930,7 @@ export default function RecruiterCalendarEventForm({
                       onClick={() => removeExternalInvitee(index)}
                       style={chipRemove}
                       aria-label={`Remove ${i.name || i.email}`}
-                      disabled={saving}
+                      disabled={busy}
                     >
                       ×
                     </button>
@@ -870,7 +962,7 @@ export default function RecruiterCalendarEventForm({
                   type="button"
                   onClick={() => setCandidatePickerOpen((open) => !open)}
                   style={browseButton}
-                  disabled={saving}
+                  disabled={busy}
                 >
                   {candidatePickerOpen ? 'Hide list' : 'Browse'}
                 </button>
@@ -978,7 +1070,7 @@ export default function RecruiterCalendarEventForm({
                   onChange={(e) => setExternalName(e.target.value)}
                   style={input}
                   placeholder="Name"
-                  disabled={saving || inviteeLimitReached}
+                  disabled={busy || inviteeLimitReached}
                 />
                 <input
                   type="email"
@@ -992,13 +1084,13 @@ export default function RecruiterCalendarEventForm({
                   }}
                   style={input}
                   placeholder="email@example.com"
-                  disabled={saving || inviteeLimitReached}
+                  disabled={busy || inviteeLimitReached}
                 />
                 <button
                   type="button"
                   onClick={addExternalInvitee}
                   style={addSmallButton}
-                  disabled={saving || inviteeLimitReached}
+                  disabled={busy || inviteeLimitReached}
                 >
                   + Add
                 </button>
@@ -1114,7 +1206,7 @@ export default function RecruiterCalendarEventForm({
                 <button
                   type="button"
                   onClick={() => setConfirmingDelete(true)}
-                  disabled={saving}
+                  disabled={busy}
                   style={{
                     background: 'white',
                     color: '#B71C1C',
@@ -1142,7 +1234,7 @@ export default function RecruiterCalendarEventForm({
                   <button
                     type="button"
                     onClick={() => setConfirmingDelete(false)}
-                    disabled={saving}
+                    disabled={busy}
                     style={{
                       background: 'white',
                       border: '1px solid #ccc',
@@ -1157,7 +1249,7 @@ export default function RecruiterCalendarEventForm({
                   <button
                     type="button"
                     onClick={() => onDelete?.()}
-                    disabled={saving}
+                    disabled={busy}
                     style={{
                       background: '#E53935',
                       color: 'white',
@@ -1182,7 +1274,7 @@ export default function RecruiterCalendarEventForm({
                 <button
                   type="button"
                   onClick={onClose}
-                  disabled={saving}
+                  disabled={busy}
                   style={{
                     background: 'white',
                     border: '1px solid #CFD8DC',
@@ -1198,7 +1290,7 @@ export default function RecruiterCalendarEventForm({
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={busy}
                   style={{
                     background: '#FF7043',
                     color: 'white',
@@ -1212,7 +1304,9 @@ export default function RecruiterCalendarEventForm({
                     opacity: saving ? 0.7 : 1,
                   }}
                 >
-                  {saving
+                  {foundryScheduling
+                    ? 'Creating room…'
+                    : saving
                     ? 'Saving…'
                     : mode === 'edit'
                     ? 'Save Changes'
