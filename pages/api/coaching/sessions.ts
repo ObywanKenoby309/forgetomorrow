@@ -406,10 +406,17 @@ export default async function handler(
         clientType,
         clientUserId,
         clientName,
+        clientEmail,
         type,
         status,
         participants,
         notes,
+        enableVideo,
+        foundryRoomId,
+        foundryJoinUrl,
+        foundryGuestJoinUrl,
+        foundryScheduledAt,
+        foundryTimezone,
       } = (req.body || {}) as {
         date?: string;
         time?: string;
@@ -417,17 +424,24 @@ export default async function handler(
         clientType?: 'internal' | 'external';
         clientUserId?: string | null;
         clientName?: string;
+        clientEmail?: string;
         type?: string;
         status?: string;
         participants?: string;
         notes?: string;
+        enableVideo?: boolean;
+        foundryRoomId?: string | null;
+        foundryJoinUrl?: string | null;
+        foundryGuestJoinUrl?: string | null;
+        foundryScheduledAt?: string | null;
+        foundryTimezone?: string | null;
       };
 
       if (!date || !time) {
         return res.status(400).json({ error: 'Missing date or time' });
       }
 
-      const safeTimezone = timezone || 'America/New_York';
+      const safeTimezone = timezone || foundryTimezone || 'America/New_York';
       const startAt = toStartAt(String(date), String(time), safeTimezone);
 
       let clientId: string | null = null;
@@ -454,6 +468,15 @@ export default async function handler(
         clientId = null;
         const label = `Client (free text): ${freeText}`;
         storedNotes = [label, notes].filter(Boolean).join(' | ');
+      }
+
+      const foundryNoteParts = [
+        enableVideo && foundryJoinUrl ? `Foundry room: ${foundryJoinUrl}` : null,
+        enableVideo && foundryGuestJoinUrl ? `Guest join: ${foundryGuestJoinUrl}` : null,
+      ].filter(Boolean);
+
+      if (foundryNoteParts.length > 0) {
+        storedNotes = [storedNotes, ...foundryNoteParts].filter(Boolean).join(' | ');
       }
 
       const created = await prisma.coachingSession.create({
@@ -502,10 +525,17 @@ export default async function handler(
         clientType,
         clientUserId,
         clientName,
+        clientEmail,
         type,
         status,
         participants,
         notes,
+        enableVideo,
+        foundryRoomId,
+        foundryJoinUrl,
+        foundryGuestJoinUrl,
+        foundryScheduledAt,
+        foundryTimezone,
       } = (req.body || {}) as {
         id?: string;
         date?: string;
@@ -514,10 +544,17 @@ export default async function handler(
         clientType?: 'internal' | 'external';
         clientUserId?: string | null;
         clientName?: string;
+        clientEmail?: string;
         type?: string;
         status?: string;
         participants?: string;
         notes?: string;
+        enableVideo?: boolean;
+        foundryRoomId?: string | null;
+        foundryJoinUrl?: string | null;
+        foundryGuestJoinUrl?: string | null;
+        foundryScheduledAt?: string | null;
+        foundryTimezone?: string | null;
       };
 
       if (!id) {
@@ -541,7 +578,7 @@ export default async function handler(
       }
 
       const data: any = {};
-      const safeTimezone = timezone || existing.timezone || 'America/New_York';
+      const safeTimezone = timezone || foundryTimezone || existing.timezone || 'America/New_York';
 
       if (date && time) {
         data.startAt = toStartAt(String(date), String(time), safeTimezone);
@@ -572,6 +609,15 @@ export default async function handler(
         data.notes = [label, notes].filter(Boolean).join(' | ');
       } else if (typeof notes === 'string') {
         data.notes = notes;
+      }
+
+      const foundryNoteParts = [
+        enableVideo && foundryJoinUrl ? `Foundry room: ${foundryJoinUrl}` : null,
+        enableVideo && foundryGuestJoinUrl ? `Guest join: ${foundryGuestJoinUrl}` : null,
+      ].filter(Boolean);
+
+      if (foundryNoteParts.length > 0) {
+        data.notes = [data.notes || notes, ...foundryNoteParts].filter(Boolean).join(' | ');
       }
 
       if (typeof type === 'string') data.type = type;

@@ -8,6 +8,7 @@ import React, {
   useState,
 } from 'react';
 import CoachingCalendarEventForm from './CoachingCalendarEventForm';
+import { useRouter } from 'next/router';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEKDAYS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -599,6 +600,7 @@ const CoachingSessionsCalendarInterface = forwardRef(function CoachingSessionsCa
   ref
 ) {
   const isMobile = useIsMobile(768);
+  const router = useRouter();
 
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
   const [editorOpen, setEditorOpen] = useState(false);
@@ -638,6 +640,9 @@ const CoachingSessionsCalendarInterface = forwardRef(function CoachingSessionsCa
         clientType: 'external',
         clientUserId: null,
         clientName: '',
+        clientEmail: '',
+        meetingMode: 'calendar_only',
+        enableVideo: false,
         type: 'Strategy',
         status: 'Scheduled',
         notes: '',
@@ -661,7 +666,15 @@ const CoachingSessionsCalendarInterface = forwardRef(function CoachingSessionsCa
       setEditorInitial({
         date: s.date,
         time: s.time,
-        timezone: s.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
+        timezone: s.timezone || s.foundryTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
+        meetingMode: s.enableVideo ? 'audio_video' : 'calendar_only',
+        enableVideo: !!s.enableVideo,
+        foundryRoomId: s.foundryRoomId || null,
+        foundryGuestToken: s.foundryGuestToken || null,
+        foundryJoinUrl: s.foundryJoinUrl || null,
+        foundryGuestJoinUrl: s.foundryGuestJoinUrl || null,
+        foundryScheduledAt: s.foundryScheduledAt || null,
+        foundryTimezone: s.foundryTimezone || null,
         clientType,
         clientUserId,
         clientName: s.client || s.clientName || '',
@@ -712,6 +725,16 @@ const CoachingSessionsCalendarInterface = forwardRef(function CoachingSessionsCa
       date: form.date,
       time: form.time,
       timezone: form.timezone,
+      meetingMode: form.meetingMode,
+      enableVideo: !!form.enableVideo,
+      foundryRoomId: form.foundryRoomId || null,
+      foundryGuestToken: form.foundryGuestToken || null,
+      foundryJoinUrl: form.foundryJoinUrl || null,
+      foundryGuestJoinUrl: form.foundryGuestJoinUrl || null,
+      foundryScheduledAt: form.foundryScheduledAt || null,
+      foundryTimezone: form.foundryTimezone || null,
+      clientEmail: form.clientEmail || '',
+      invitees: form.invitees || [],
       clientType: form.clientType,
       clientUserId: form.clientType === 'internal' ? form.clientUserId : null,
       clientName: name,
@@ -928,7 +951,13 @@ const CoachingSessionsCalendarInterface = forwardRef(function CoachingSessionsCa
                 <button
                   key={v}
                   type="button"
-                  onClick={() => setCalView(v.toLowerCase())}
+                  onClick={() => {
+                    if (v === 'Sessions') {
+                      router.push('/dashboard/coaching/sessions');
+                      return;
+                    }
+                    setCalView(v.toLowerCase());
+                  }}
                   style={{
                     background: calView === v.toLowerCase() ? '#fff' : 'transparent',
                     border: calView === v.toLowerCase() ? '1px solid #E0E0E0' : '1px solid transparent',

@@ -1,6 +1,8 @@
 // components/calendar/CoachingCalendarEventForm.js
 import React, { useEffect, useRef, useState } from 'react';
 
+const VIDEO_INVITEE_LIMIT = 5;
+
 const TIMEZONES = [
   'America/New_York',
   'America/Chicago',
@@ -33,6 +35,47 @@ const TIMEZONE_LABELS = {
   'Australia/Sydney': 'Sydney (AET)',
 };
 
+function getBrowserTimezone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
+}
+
+function getTimeZoneOffsetMs(date, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(date);
+
+  const values = {};
+  parts.forEach((part) => {
+    if (part.type !== 'literal') values[part.type] = part.value;
+  });
+
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+
+  return asUtc - date.getTime();
+}
+
+function buildScheduledAt(date, time, timezone = getBrowserTimezone()) {
+  const [year, month, day] = String(date).split('-').map(Number);
+  const [hour, minute] = String(time || '09:00').split(':').map(Number);
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour || 0, minute || 0, 0));
+  const offsetMs = getTimeZoneOffsetMs(utcGuess, timezone);
+  return new Date(utcGuess.getTime() - offsetMs).toISOString();
+}
+
 export default function CoachingCalendarEventForm({
   mode = 'add',
   initial = null,
@@ -45,6 +88,8 @@ export default function CoachingCalendarEventForm({
 }) {
   const firstRef = useRef(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [foundryScheduling, setFoundryScheduling] = useState(false);
+  const busy = saving || foundryScheduling;
 
   const [form, setForm] = useState(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -61,11 +106,16 @@ export default function CoachingCalendarEventForm({
       time: initial?.time || '09:00',
       timezone:
         initial?.timezone ||
-        Intl.DateTimeFormat().resolvedOptions().timeZone ||
-        'America/New_York',
+        initial?.foundryTimezone ||
+        getBrowserTimezone(),
       clientType: initialClientType,
       clientUserId: initial?.clientUserId || null,
       clientName: initial?.clientName || initial?.client || initial?.title || '',
+      clientEmail: initial?.clientEmail || '',
+      meetingMode:
+        initial?.meetingMode === 'audio_video' || initial?.enableVideo
+          ? 'audio_video'
+          : 'calendar_only',
       type: initial?.type || typeChoices[0] || 'Strategy',
       status: initial?.status || statusChoices[0] || 'Scheduled',
       notes: initial?.notes || '',
@@ -103,6 +153,43 @@ export default function CoachingCalendarEventForm({
     color: '#263238',
     fontSize: 14,
     boxSizing: 'border-box',
+  };
+
+  const sectionCard = {
+    border: '1px solid #E5E7EB',
+    borderRadius: 14,
+    padding: 12,
+    background: 'rgba(255,255,255,0.72)',
+  };
+
+  const meetingModeButton = (active) => ({
+    borderRadius: 12,
+    border: active ? '1px solid #FF7043' : '1px solid #CFD8DC',
+    background: active ? 'rgba(255,112,67,0.09)' : '#FFFFFF',
+    color: active ? '#C75B33' : '#455A64',
+    padding: '10px 12px',
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: busy ? 'not-allowed' : 'pointer',
+    textAlign: 'left',
+    fontFamily: 'inherit',
+    minHeight: 64,
+    opacity: busy ? 0.72 : 1,
+  });
+
+  const meetingModeTitle = {
+    display: 'block',
+    fontSize: 13,
+    fontWeight: 800,
+    marginBottom: 2,
+  };
+
+  const meetingModeHelper = {
+    display: 'block',
+    fontSize: 11,
+    color: '#78909C',
+    lineHeight: 1.35,
+    fontWeight: 500,
   };
 
   const update = (key, value) =>
@@ -180,6 +267,7 @@ export default function CoachingCalendarEventForm({
       clientType: 'internal',
       clientUserId: c.id,
       clientName: display,
+      clientEmail: c.email || '',
     }));
     setClientSearchTerm(display);
     setClientResults([]);
@@ -191,13 +279,62 @@ export default function CoachingCalendarEventForm({
       ...f,
       clientUserId: null,
       clientName: '',
+      clientEmail: '',
     }));
     setClientSearchTerm('');
     setClientResults([]);
     setClientSearchError('');
   };
 
-  const handleSubmit = (e) => {
+  const scheduleFoundryRoom = async ({ title, payloadInvitees }) => {
+    const timezone = form.timezone || getBrowserTimezone();
+    const scheduledAt = buildScheduledAt(form.date, form.time, timezone);
+
+    const foundryInvitees = payloadInvitees.map((i) => {
+      if (i.type === 'internal') {
+        return {
+          userId: i.userId,
+          name: i.name,
+        };
+      }
+
+      return {
+        email: i.email,
+        name: i.name || i.email,
+      };
+    });
+
+    const res = await fetch('/api/foundry/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        scheduledAt,
+        timezone,
+        invitees: foundryInvitees,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Could not schedule Foundry room.');
+    }
+
+    return {
+      roomId: data.roomId,
+      guestToken: data.guestToken,
+      joinUrl: data.roomId ? `/foundry/${data.roomId}` : '',
+      guestJoinUrl:
+        data.roomId && data.guestToken
+          ? `/foundry/join/${data.roomId}?code=${data.guestToken}`
+          : '',
+      scheduledAt,
+      timezone,
+    };
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.date || !form.time) {
@@ -206,6 +343,7 @@ export default function CoachingCalendarEventForm({
     }
 
     const name = (form.clientName || '').trim();
+    const videoLimitActive = form.meetingMode === 'audio_video';
 
     if (form.clientType === 'internal') {
       if (!form.clientUserId) {
@@ -217,10 +355,72 @@ export default function CoachingCalendarEventForm({
       return;
     }
 
-    onSave?.({
-      ...form,
-      clientName: name,
-    });
+    if (videoLimitActive && form.clientType === 'external' && !form.clientEmail.trim()) {
+      alert('External clients need an email address for Audio/Video invites.');
+      return;
+    }
+
+    const payloadInvitees =
+      form.clientType === 'internal'
+        ? [
+            {
+              type: 'internal',
+              userId: form.clientUserId,
+              name,
+              email: form.clientEmail || '',
+            },
+          ]
+        : [
+            {
+              type: 'external',
+              name,
+              email: form.clientEmail.trim(),
+            },
+          ];
+
+    if (videoLimitActive && payloadInvitees.length > VIDEO_INVITEE_LIMIT) {
+      alert(`Audio/Video meetings are limited to ${VIDEO_INVITEE_LIMIT} invitees.`);
+      return;
+    }
+
+    let foundry = null;
+    let finalNotes = form.notes || '';
+
+    try {
+      if (videoLimitActive) {
+        setFoundryScheduling(true);
+        foundry = await scheduleFoundryRoom({
+          title: `Coaching session${name ? ` with ${name}` : ''}`,
+          payloadInvitees,
+        });
+
+        const roomNote = `Foundry room: ${foundry.joinUrl}`;
+        finalNotes = finalNotes.trim() ? `${finalNotes.trim()}
+
+${roomNote}` : roomNote;
+      }
+
+      await onSave?.({
+        ...form,
+        notes: finalNotes,
+        clientName: name,
+        participants: name,
+        clientEmail: form.clientEmail || '',
+        invitees: payloadInvitees,
+        enableVideo: videoLimitActive,
+        foundryRoomId: foundry?.roomId || null,
+        foundryGuestToken: foundry?.guestToken || null,
+        foundryJoinUrl: foundry?.joinUrl || null,
+        foundryGuestJoinUrl: foundry?.guestJoinUrl || null,
+        foundryScheduledAt: foundry?.scheduledAt || null,
+        foundryTimezone: foundry?.timezone || null,
+      });
+    } catch (err) {
+      console.error('Coaching calendar VC scheduling error:', err);
+      alert(err?.message || 'Could not schedule the Audio/Video meeting.');
+    } finally {
+      setFoundryScheduling(false);
+    }
   };
 
   return (
@@ -297,6 +497,57 @@ export default function CoachingCalendarEventForm({
             padding: '16px 20px 20px',
           }}
         >
+          <div style={sectionCard}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                gap: 12,
+                marginBottom: 8,
+              }}
+            >
+              <div style={{ ...label, marginBottom: 0 }}>Meeting Mode</div>
+              <div style={{ fontSize: 11, color: '#90A4AE', lineHeight: 1.45 }}>
+                {form.meetingMode === 'audio_video'
+                  ? `1/${VIDEO_INVITEE_LIMIT} video invitee`
+                  : 'Calendar-only session'}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 10,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => update('meetingMode', 'calendar_only')}
+                style={meetingModeButton(form.meetingMode === 'calendar_only')}
+                disabled={busy}
+              >
+                <span style={meetingModeTitle}>No Audio/Video</span>
+                <span style={meetingModeHelper}>
+                  Calendar session only. Use this for calls handled outside ForgeMeeting or in-person sessions.
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => update('meetingMode', 'audio_video')}
+                style={meetingModeButton(form.meetingMode === 'audio_video')}
+                disabled={busy}
+              >
+                <span style={meetingModeTitle}>Audio/Video</span>
+                <span style={meetingModeHelper}>
+                  Creates a scheduled ForgeMeeting room for this coaching session.
+                </span>
+              </button>
+            </div>
+          </div>
+
           <div>
             <div style={{ ...label, marginBottom: 4 }}>Client Type</div>
             <div style={{ display: 'flex', gap: 24, fontSize: 13 }}>
@@ -426,14 +677,32 @@ export default function CoachingCalendarEventForm({
           {form.clientType === 'external' && (
             <div>
               <label style={label}>Client Name</label>
-              <input
-                ref={firstRef}
-                type="text"
-                value={form.clientName}
-                onChange={(e) => update('clientName', e.target.value)}
-                style={input}
-                placeholder="e.g. John Doe (Acme Corp)"
-              />
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: form.meetingMode === 'audio_video' ? '1fr 1fr' : '1fr',
+                  gap: 12,
+                }}
+              >
+                <input
+                  ref={firstRef}
+                  type="text"
+                  value={form.clientName}
+                  onChange={(e) => update('clientName', e.target.value)}
+                  style={input}
+                  placeholder="e.g. John Doe (Acme Corp)"
+                />
+
+                {form.meetingMode === 'audio_video' && (
+                  <input
+                    type="email"
+                    value={form.clientEmail}
+                    onChange={(e) => update('clientEmail', e.target.value)}
+                    style={input}
+                    placeholder="client@email.com"
+                  />
+                )}
+              </div>
             </div>
           )}
 
@@ -473,7 +742,7 @@ export default function CoachingCalendarEventForm({
                 value={form.timezone}
                 onChange={(e) => update('timezone', e.target.value)}
                 style={input}
-                disabled={saving}
+                disabled={busy}
               >
                 {TIMEZONES.map((tz) => (
                   <option key={tz} value={tz}>
@@ -548,7 +817,7 @@ export default function CoachingCalendarEventForm({
                 <button
                   type="button"
                   onClick={() => setConfirmingDelete(true)}
-                  disabled={saving}
+                  disabled={busy}
                   style={{
                     background: 'white',
                     color: '#B71C1C',
@@ -568,7 +837,7 @@ export default function CoachingCalendarEventForm({
                   <button
                     type="button"
                     onClick={() => setConfirmingDelete(false)}
-                    disabled={saving}
+                    disabled={busy}
                     style={{
                       background: 'white',
                       border: '1px solid #ccc',
@@ -583,7 +852,7 @@ export default function CoachingCalendarEventForm({
                   <button
                     type="button"
                     onClick={() => onDelete?.()}
-                    disabled={saving}
+                    disabled={busy}
                     style={{
                       background: '#E53935',
                       color: 'white',
@@ -608,7 +877,7 @@ export default function CoachingCalendarEventForm({
                 <button
                   type="button"
                   onClick={onClose}
-                  disabled={saving}
+                  disabled={busy}
                   style={{
                     background: 'white',
                     border: '1px solid #CFD8DC',
@@ -624,21 +893,27 @@ export default function CoachingCalendarEventForm({
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={busy}
                   style={{
                     background: '#FF7043',
                     color: 'white',
                     border: 'none',
                     padding: '8px 14px',
                     borderRadius: 999,
-                    cursor: saving ? 'not-allowed' : 'pointer',
+                    cursor: busy ? 'not-allowed' : 'pointer',
                     fontWeight: 700,
                     fontSize: 14,
                     boxShadow: '0 4px 12px rgba(255,112,67,0.4)',
-                    opacity: saving ? 0.7 : 1,
+                    opacity: busy ? 0.7 : 1,
                   }}
                 >
-                  {saving ? 'Saving…' : mode === 'edit' ? 'Save Changes' : 'Save'}
+                  {foundryScheduling
+                    ? 'Creating room…'
+                    : saving
+                    ? 'Saving…'
+                    : mode === 'edit'
+                    ? 'Save Changes'
+                    : 'Save'}
                 </button>
               </div>
             )}

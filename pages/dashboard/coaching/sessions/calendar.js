@@ -44,6 +44,13 @@ function mapRowsToEvents(rows) {
       type: s.type || 'Strategy',
       status: s.status || 'Scheduled',
       notes: s.notes || '',
+      enableVideo: !!s.enableVideo || !!s.foundryRoomId || String(s.notes || '').includes('Foundry room:'),
+      foundryRoomId: s.foundryRoomId || null,
+      foundryGuestToken: s.foundryGuestToken || null,
+      foundryJoinUrl: s.foundryJoinUrl || null,
+      foundryGuestJoinUrl: s.foundryGuestJoinUrl || null,
+      foundryScheduledAt: s.foundryScheduledAt || null,
+      foundryTimezone: s.foundryTimezone || null,
       source: s.source || 'coach',
     };
   });
@@ -61,6 +68,7 @@ function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
         events={dayEvents}
         onAdd={onAdd}
         onEdit={onEdit}
+        context="coaching"
       />
     </div>
   );
