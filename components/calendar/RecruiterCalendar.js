@@ -841,6 +841,7 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
   const [saving, setSaving] = useState(false);
   const [modal, setModal] = useState({ open: false, mode: 'add', eventId: null, initial: null });
   const [dayOverlay, setDayOverlay] = useState({ open: false, date: null });
+  const [calView, setCalView] = React.useState('month');
 
   const TYPE_CHOICES = ['Interview', 'Screen', 'Sourcing', 'Offer', 'Task', 'Appointment'];
   const STATUS_CHOICES = ['Scheduled', 'Completed', 'Rescheduled', 'Cancelled'];
@@ -1224,8 +1225,6 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
     { label: 'Personal', color: '#FF7043' },
     { label: 'Shared', color: '#455A64' },
   ];
-
-  const [calView, setCalView] = React.useState('month');
 
   return (
     <>
