@@ -831,7 +831,7 @@ function DayAgendaOverlay({ date, events, viewScope, onClose, onAdd, onEdit }) {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed = [], storageKey }) {
+export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed = [], storageKey, onDaySelect, selectedDate: externalSelectedDate }) {
   const isMobile = useIsMobile(768);
 
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
@@ -1134,7 +1134,7 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
   const gridStyle = {
     display: 'grid',
     gridTemplateColumns: 'repeat(7,minmax(0,1fr))',
-    gridAutoRows: 'minmax(110px,1fr)',
+    gridAutoRows: 'minmax(76px,1fr)',
     gap: 6,
   };
 
@@ -1225,53 +1225,94 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
     { label: 'Shared', color: '#455A64' },
   ];
 
+  const [calView, setCalView] = React.useState('month');
+
   return (
     <>
-      {/* Top nav bar — above the card, matches Image 2 */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 8, gap: 12, flexWrap: 'wrap', padding: '4px 2px',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button type="button" style={todayBtn} onClick={() => setCursor(startOfMonth(new Date()))}>
-            Today
-          </button>
-          <button type="button" style={navBtn} onClick={() => setCursor((c) => addMonths(c, -1))} aria-label="Previous month">
-            ‹
-          </button>
-          <button type="button" style={navBtn} onClick={() => setCursor((c) => addMonths(c, 1))} aria-label="Next month">
-            ›
-          </button>
-          <span style={{ fontWeight: 800, fontSize: 15, color: '#112033', marginLeft: 4 }}>
-            {monthName}
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button type="button" style={addBtn} onClick={() => openAdd()}>
-            + Add Item
-          </button>
-        </div>
-      </div>
-
       <section style={shell}>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          {['personal', 'team'].map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setViewScope(s)}
-              style={{
-                ...scopeBtnBase,
-                border: viewScope === s ? `1px solid ${s === 'personal' ? '#FF7043' : '#1A4B8F'}` : scopeBtnBase.border,
-                background: viewScope === s ? `rgba(${s === 'personal' ? '255,112,67' : '26,75,143'},0.08)` : scopeBtnBase.background,
-                color: viewScope === s ? (s === 'personal' ? '#FF7043' : '#1A4B8F') : scopeBtnBase.color,
-              }}
-            >
-              {s === 'personal' ? 'Personal (me)' : 'Team (shared)'}
-            </button>
-          ))}
+        {/* Internal calendar header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
+          {/* Left: scope tabs */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {['personal', 'team'].map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setViewScope(s)}
+                style={{
+                  ...scopeBtnBase,
+                  border: viewScope === s ? `1px solid ${s === 'personal' ? '#FF7043' : '#1A4B8F'}` : scopeBtnBase.border,
+                  background: viewScope === s ? `rgba(${s === 'personal' ? '255,112,67' : '26,75,143'},0.08)` : scopeBtnBase.background,
+                  color: viewScope === s ? (s === 'personal' ? '#FF7043' : '#1A4B8F') : scopeBtnBase.color,
+                }}
+              >
+                {s === 'personal' ? 'Personal (me)' : 'Team (shared)'}
+              </button>
+            ))}
+          </div>
+
+          {/* Center: month nav */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button type="button" style={todayBtn} onClick={() => setCursor(startOfMonth(new Date()))}>Today</button>
+            <button type="button" style={navBtn} onClick={() => setCursor((c) => addMonths(c, -1))} aria-label="Previous month">‹</button>
+            <span style={{ fontWeight: 800, fontSize: 14, color: '#112033', minWidth: 110, textAlign: 'center' }}>{monthName}</span>
+            <button type="button" style={navBtn} onClick={() => setCursor((c) => addMonths(c, 1))} aria-label="Next month">›</button>
+          </div>
+
+          {/* Right: view toggle + add */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', background: '#F1F3F5', borderRadius: 8, padding: 2, gap: 2 }}>
+              {['Month', 'List'].map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setCalView(v.toLowerCase())}
+                  style={{
+                    background: calView === v.toLowerCase() ? '#fff' : 'transparent',
+                    border: calView === v.toLowerCase() ? '1px solid #E0E0E0' : '1px solid transparent',
+                    color: calView === v.toLowerCase() ? '#112033' : '#90A4AE',
+                    borderRadius: 6, padding: '3px 10px', cursor: 'pointer',
+                    fontSize: 12, fontWeight: 700,
+                    boxShadow: calView === v.toLowerCase() ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  }}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+            <button type="button" style={addBtn} onClick={() => openAdd()}>+ Add Item</button>
+          </div>
         </div>
 
+        {calView === 'list' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {scopedEvents.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 16px', color: '#90A4AE', fontSize: 13 }}>No events scheduled.</div>
+            ) : (
+              scopedEvents.map((e) => {
+                const { strip, pillBg, pillFg } = typeColors(e.type);
+                const titleText = e.title || (e.candidateName && e.type ? `${e.candidateName} – ${e.type}` : e.candidateName || e.type || 'Item');
+                return (
+                  <div key={e.id || `${e.date}-${e.time}`} style={{ display: 'grid', gridTemplateColumns: '4px 80px 1fr', border: '1px solid #E5E7EB', borderRadius: 10, overflow: 'hidden', background: '#fff', cursor: 'pointer' }} onClick={() => e.id && openEdit(e.id)}>
+                    <div style={{ background: strip }} />
+                    <div style={{ padding: '10px 10px', borderRight: '1px solid #EEF2F7', fontSize: 11, fontWeight: 700, color: '#455A64' }}>
+                      <div>{e.date}</div>
+                      <div style={{ color: '#90A4AE', fontWeight: 500 }}>{e.time || ''}</div>
+                    </div>
+                    <div style={{ padding: '10px 12px' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#112033', marginBottom: 4 }}>{titleText}</div>
+                      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 10, background: pillBg, color: pillFg, padding: '2px 6px', borderRadius: 999, fontWeight: 700 }}>{e.type}</span>
+                        <span style={{ fontSize: 10, background: e.scope === 'personal' ? 'rgba(255,112,67,0.10)' : '#ECEFF1', color: e.scope === 'personal' ? '#C75B33' : '#607D8B', padding: '2px 6px', borderRadius: 999, fontWeight: 700 }}>{e.scope === 'personal' ? 'Personal' : 'Team'}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        ) : (
+          <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', marginBottom: 4 }}>
           {WEEKDAYS.map((d) => (
             <div key={d} style={{ fontSize: 11, color: '#607D8B', textAlign: 'center', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -1288,7 +1329,7 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
             const extra = list.length - visible.length;
 
             return (
-              <div key={key} style={cell(inMonth, isToday)} onClick={() => openDayOverlay(key)}>
+              <div key={key} style={cell(inMonth, isToday)} onClick={() => { openDayOverlay(key); onDaySelect?.(key, eventsByDate[key] || []); }}>
                 <div
                   style={{
                     alignSelf: 'flex-end',
@@ -1396,18 +1437,9 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
             </div>
           ))}
         </div>
+          </>
+        )}
       </section>
-
-      {dayOverlay.open && (
-        <DayAgendaOverlay
-          date={dayOverlay.date}
-          events={overlayEvents}
-          viewScope={viewScope}
-          onClose={closeDayOverlay}
-          onAdd={openAddFromDayOverlay}
-          onEdit={openEditFromDayOverlay}
-        />
-      )}
 
       {modal.open && (
         <RecruiterCalendarEventForm

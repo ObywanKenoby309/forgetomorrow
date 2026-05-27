@@ -1,22 +1,52 @@
 // pages/recruiter/calendar.js
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { PlanProvider } from '@/context/PlanContext';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import RecruiterCalendar from '@/components/calendar/RecruiterCalendar';
 import RecruiterTitleCard from '@/components/recruiter/RecruiterTitleCard';
+import CalendarDayPanel from '@/components/calendar/CalendarDayPanel';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
-import FoundryCalendarButton from '@/components/foundry/FoundryCalendarButton';
 
 const STORAGE_KEY = 'recruiterCalendar_live_v1';
 
+// Right rail: day panel stacked above ads
+function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <CalendarDayPanel
+        selectedDate={selectedDate}
+        events={dayEvents}
+        onAdd={onAdd}
+        onEdit={onEdit}
+      />
+      <RightRailPlacementManager />
+    </div>
+  );
+}
+
 export default function RecruiterCalendarPage() {
   const greeting = getTimeGreeting();
+
+  // Lifted state — shared between calendar grid and right rail panel
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [dayEvents, setDayEvents] = useState([]);
+
+  const handleDaySelect = useCallback((dateStr, events) => {
+    setSelectedDate(dateStr);
+    setDayEvents(events || []);
+  }, []);
+
+  // These will be wired through RecruiterCalendar's openAdd/openEdit
+  // For now we pass no-ops — the calendar handles its own modal
+  const handleAdd = useCallback(() => {}, []);
+  const handleEdit = useCallback(() => {}, []);
 
   const HeaderBox = (
     <RecruiterTitleCard
       greeting={greeting}
       title="Recruiter Calendar"
-      subtitle="Block interviews, intakes, outreach blocks, and offer milestones - all in one place."
+      subtitle="Block interviews, intakes, outreach blocks, and offer milestones."
       compact
     />
   );
@@ -27,19 +57,24 @@ export default function RecruiterCalendarPage() {
         title="Recruiter Calendar | ForgeTomorrow"
         header={HeaderBox}
         headerCard={false}
-        right={null}
+        right={
+          <CalendarRightRail
+            selectedDate={selectedDate}
+            dayEvents={dayEvents}
+            onAdd={handleAdd}
+            onEdit={handleEdit}
+          />
+        }
+        rightVariant="light"
         activeNav="calendar"
       >
         <div style={{ width: '100%' }}>
-          {/* Foundry action row */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-            <FoundryCalendarButton />
-          </div>
-
           <RecruiterCalendar
             title="Month View"
             storageKey={STORAGE_KEY}
             seed={[]}
+            onDaySelect={handleDaySelect}
+            selectedDate={selectedDate}
           />
         </div>
       </RecruiterLayout>
