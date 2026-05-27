@@ -4,30 +4,87 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
-function toStartAt(date: string, time: string): Date {
-  // Simple local -> Date helper; backend stores as UTC
-  return new Date(`${date}T${time || '00:00'}:00`);
+function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(date);
+
+  const values: Record<string, string> = {};
+  parts.forEach((part) => {
+    if (part.type !== 'literal') values[part.type] = part.value;
+  });
+
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+
+  return asUtc - date.getTime();
 }
 
-function splitDateTime(d: Date) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return {
-    date: `${y}-${m}-${day}`,
-    time: `${hh}:${mm}`,
-  };
+function toStartAt(date: string, time: string, timezone?: string | null): Date {
+  const tz = timezone || 'America/New_York';
+  const [year, month, day] = String(date).split('-').map(Number);
+  const [hour, minute] = String(time || '00:00').split(':').map(Number);
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour || 0, minute || 0, 0));
+  const offsetMs = getTimeZoneOffsetMs(utcGuess, tz);
+  return new Date(utcGuess.getTime() - offsetMs);
 }
 
-// Normalize a CoachingSession row -> UI payload
+function splitDateTime(d: Date, timezone?: string | null) {
+  const tz = timezone || 'America/New_York';
+
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).formatToParts(d);
+
+    const values: Record<string, string> = {};
+    parts.forEach((part) => {
+      if (part.type !== 'literal') values[part.type] = part.value;
+    });
+
+    return {
+      date: `${values.year}-${values.month}-${values.day}`,
+      time: `${values.hour}:${values.minute}`,
+    };
+  } catch {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return {
+      date: `${y}-${m}-${day}`,
+      time: `${hh}:${mm}`,
+    };
+  }
+}
+
 function toSessionPayload(
   row: any,
   clientDisplay?: string | null,
   participants?: string | null
 ) {
-  const { date, time } = splitDateTime(row.startAt);
+  const timezone = row.timezone || 'America/New_York';
+  const { date, time } = splitDateTime(row.startAt, timezone);
   const clientId: string | null = row.clientId ?? null;
   const clientType: 'internal' | 'external' = clientId ? 'internal' : 'external';
 
@@ -35,6 +92,7 @@ function toSessionPayload(
     id: row.id as string,
     date,
     time,
+    timezone,
     client: clientDisplay ?? '',
     type: row.type as string,
     status: row.status as string,
@@ -45,17 +103,12 @@ function toSessionPayload(
   };
 }
 
-/**
- * Mirror a coaching session into the client's personal calendar (SeekerCalendarItem).
- * - Only for INTERNAL clients (clientId != null)
- * - source = 'coach'
- * - sourceItemId = session.id
- */
 async function syncCoachSessionToSeekerCalendar(opts: {
   sessionId: string;
   coachId: string;
   clientId: string | null;
   startAt: Date;
+  timezone: string;
   type: string;
   status: string;
   previousClientId?: string | null;
@@ -65,12 +118,12 @@ async function syncCoachSessionToSeekerCalendar(opts: {
     coachId,
     clientId,
     startAt,
+    timezone,
     type,
     status,
     previousClientId,
   } = opts;
 
-  // If the internal client changed, remove the old mirror
   if (previousClientId && previousClientId !== clientId) {
     await prisma.seekerCalendarItem.deleteMany({
       where: {
@@ -81,7 +134,6 @@ async function syncCoachSessionToSeekerCalendar(opts: {
     });
   }
 
-  // If there is no current internal client, ensure mirrors are gone
   if (!clientId) {
     await prisma.seekerCalendarItem.deleteMany({
       where: {
@@ -92,7 +144,6 @@ async function syncCoachSessionToSeekerCalendar(opts: {
     return;
   }
 
-  // Look up coach for display name
   const coach = await prisma.user.findUnique({
     where: { id: coachId },
     select: { name: true, firstName: true, lastName: true, email: true },
@@ -104,10 +155,9 @@ async function syncCoachSessionToSeekerCalendar(opts: {
     coach?.email ||
     'Coach';
 
-  const { time } = splitDateTime(startAt);
+  const { time } = splitDateTime(startAt, timezone);
   const title = `Coaching session with ${coachName}`;
 
-  // Find existing mirror (if any)
   const existing = await prisma.seekerCalendarItem.findFirst({
     where: {
       source: 'coach',
@@ -120,6 +170,8 @@ async function syncCoachSessionToSeekerCalendar(opts: {
     userId: clientId,
     date: startAt,
     time,
+    timezone,
+    scheduledAtUtc: startAt,
     title,
     type: type || 'Strategy',
     status: status || 'Scheduled',
@@ -144,15 +196,14 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Auth: require logged-in coach
   const session = await getServerSession(req, res, authOptions);
   if (!session?.user?.id) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
   const coachId = session.user.id as string;
 
   try {
-    // ───────────── GET: list sessions for this coach ─────────────
     if (req.method === 'GET') {
       const rows = await prisma.coachingSession.findMany({
         where: { coachId },
@@ -162,20 +213,18 @@ export default async function handler(
           coachId: true,
           clientId: true,
           startAt: true,
+          timezone: true,
           type: true,
           status: true,
           notes: true,
         },
       });
 
-      // Collect internal client IDs from this coach's sessions
       const clientIds = Array.from(
         new Set(
           rows
             .map((r) => r.clientId)
-            .filter(
-              (id): id is string => typeof id === 'string' && id.length > 0
-            )
+            .filter((id): id is string => typeof id === 'string' && id.length > 0)
         )
       );
 
@@ -209,7 +258,6 @@ export default async function handler(
         let display: string | null = null;
         let participants: string | null = null;
 
-        // Internal client: derive from User
         if (row.clientId) {
           const c = clientMap.get(row.clientId);
           if (c) {
@@ -222,10 +270,7 @@ export default async function handler(
           }
         }
 
-        // External: parse from notes if we stored it
         if (!display && row.notes && typeof row.notes === 'string') {
-          // notes may look like:
-          // "Client (free text): John Doe (john@example.com) | some notes..."
           const firstLine = row.notes.split('|')[0].trim();
           if (firstLine.startsWith('Client (free text):')) {
             const val = firstLine.replace(/^Client \(free text\):\s*/, '');
@@ -237,7 +282,6 @@ export default async function handler(
         return toSessionPayload(row, display, participants);
       });
 
-      // ───────────── Inbound recruiter invites (target is this coach) ─────────────
       const inboundMirrors = await prisma.seekerCalendarItem.findMany({
         where: {
           userId: coachId,
@@ -325,38 +369,26 @@ export default async function handler(
             recruiter?.email ||
             'Recruiter';
 
-          // Build a "fake" CoachingSession-like row so we can reuse toSessionPayload
-          const startAt = mirror.date;
-          const sessionRow = {
-            id: mirror.id,
-            coachId,
-            clientId: linked ? linked.ownerId : null,
-            startAt,
-            type: mirror.type || linked?.type || 'Strategy',
-            status: mirror.status || linked?.status || 'Scheduled',
-            notes: mirror.notes || '',
-          };
-
-          const { date, time } = splitDateTime(startAt);
-          const displayClient = recruiterName;
-          const participants = recruiterName;
+          const timezone = mirror.timezone || 'America/New_York';
+          const startAt = mirror.scheduledAtUtc || mirror.date;
+          const { date, time } = splitDateTime(startAt, timezone);
 
           return {
-            id: sessionRow.id as string,
+            id: mirror.id as string,
             date,
             time,
-            client: displayClient,
-            type: sessionRow.type as string,
-            status: sessionRow.status as string,
-            clientId: sessionRow.clientId,
-            clientType: sessionRow.clientId ? 'internal' : 'external',
-            notes: sessionRow.notes || '',
-            participants,
+            timezone,
+            client: recruiterName,
+            type: mirror.type || linked?.type || 'Strategy',
+            status: mirror.status || linked?.status || 'Scheduled',
+            clientId: linked ? linked.ownerId : null,
+            clientType: linked ? 'internal' : 'external',
+            notes: mirror.notes || '',
+            participants: recruiterName,
           };
         });
       }
 
-      // Merge own sessions + inbound recruiter invites
       const allSessions = [...ownSessions, ...inboundSessions].sort((a, b) => {
         const aKey = `${a.date}T${a.time || '00:00'}`;
         const bKey = `${b.date}T${b.time || '00:00'}`;
@@ -366,11 +398,11 @@ export default async function handler(
       return res.status(200).json({ sessions: allSessions });
     }
 
-    // ───────────── POST: create session ─────────────
     if (req.method === 'POST') {
       const {
         date,
         time,
+        timezone,
         clientType,
         clientUserId,
         clientName,
@@ -381,6 +413,7 @@ export default async function handler(
       } = (req.body || {}) as {
         date?: string;
         time?: string;
+        timezone?: string;
         clientType?: 'internal' | 'external';
         clientUserId?: string | null;
         clientName?: string;
@@ -394,16 +427,15 @@ export default async function handler(
         return res.status(400).json({ error: 'Missing date or time' });
       }
 
-      const startAt = toStartAt(String(date), String(time));
+      const safeTimezone = timezone || 'America/New_York';
+      const startAt = toStartAt(String(date), String(time), safeTimezone);
 
       let clientId: string | null = null;
       let storedNotes: string | undefined;
 
       if (clientType === 'internal') {
         if (!clientUserId) {
-          return res
-            .status(400)
-            .json({ error: 'Missing clientUserId for internal client' });
+          return res.status(400).json({ error: 'Missing clientUserId for internal client' });
         }
         clientId = String(clientUserId);
 
@@ -413,7 +445,6 @@ export default async function handler(
 
         storedNotes = [label, notes].filter(Boolean).join(' | ');
       } else {
-        // Default to external if not specified
         const freeText = (participants || clientName || '').trim();
         if (!freeText) {
           return res.status(400).json({
@@ -430,6 +461,7 @@ export default async function handler(
           coachId,
           clientId,
           startAt,
+          timezone: safeTimezone,
           durationMin: 60,
           type: type || 'Strategy',
           status: status || 'Scheduled',
@@ -437,12 +469,12 @@ export default async function handler(
         },
       });
 
-      // Mirror into client's personal calendar if internal
       await syncCoachSessionToSeekerCalendar({
         sessionId: created.id,
         coachId,
         clientId,
         startAt,
+        timezone: safeTimezone,
         type: created.type,
         status: created.status,
       });
@@ -456,17 +488,17 @@ export default async function handler(
         participantsOut = (participants || clientName || '').trim() || null;
       }
 
-      return res
-        .status(201)
-        .json({ session: toSessionPayload(created, displayName, participantsOut) });
+      return res.status(201).json({
+        session: toSessionPayload(created, displayName, participantsOut),
+      });
     }
 
-    // ───────────── PUT: update session ─────────────
     if (req.method === 'PUT') {
       const {
         id,
         date,
         time,
+        timezone,
         clientType,
         clientUserId,
         clientName,
@@ -478,6 +510,7 @@ export default async function handler(
         id?: string;
         date?: string;
         time?: string;
+        timezone?: string;
         clientType?: 'internal' | 'external';
         clientUserId?: string | null;
         clientName?: string;
@@ -491,13 +524,13 @@ export default async function handler(
         return res.status(400).json({ error: 'Missing id for update' });
       }
 
-      // Fetch existing to know prior client for mirror cleanup
       const existing = await prisma.coachingSession.findUnique({
         where: { id: String(id) },
         select: {
           coachId: true,
           clientId: true,
           startAt: true,
+          timezone: true,
           type: true,
           status: true,
         },
@@ -508,17 +541,19 @@ export default async function handler(
       }
 
       const data: any = {};
+      const safeTimezone = timezone || existing.timezone || 'America/New_York';
 
       if (date && time) {
-        data.startAt = toStartAt(String(date), String(time));
+        data.startAt = toStartAt(String(date), String(time), safeTimezone);
       }
 
-      // Handle client identity changes
+      if (typeof timezone === 'string') {
+        data.timezone = safeTimezone;
+      }
+
       if (clientType === 'internal') {
         if (!clientUserId) {
-          return res
-            .status(400)
-            .json({ error: 'Missing clientUserId for internal client' });
+          return res.status(400).json({ error: 'Missing clientUserId for internal client' });
         }
         data.clientId = String(clientUserId);
         const label = clientName
@@ -536,7 +571,6 @@ export default async function handler(
         const label = `Client (free text): ${freeText}`;
         data.notes = [label, notes].filter(Boolean).join(' | ');
       } else if (typeof notes === 'string') {
-        // If clientType is not being changed but we got notes, allow direct notes update.
         data.notes = notes;
       }
 
@@ -548,18 +582,17 @@ export default async function handler(
         data,
       });
 
-      // Mirror into client's personal calendar (or clean up if no internal client)
       await syncCoachSessionToSeekerCalendar({
         sessionId: updated.id,
         coachId,
         clientId: updated.clientId ?? null,
         startAt: updated.startAt,
+        timezone: updated.timezone || safeTimezone,
         type: updated.type,
         status: updated.status,
         previousClientId: existing.clientId ?? null,
       });
 
-      // Re-derive display and participants the same way as GET
       let displayName: string | null = null;
       let participantsOut: string | null = null;
 
@@ -575,12 +608,11 @@ export default async function handler(
         }
       }
 
-      return res
-        .status(200)
-        .json({ session: toSessionPayload(updated, displayName, participantsOut) });
+      return res.status(200).json({
+        session: toSessionPayload(updated, displayName, participantsOut),
+      });
     }
 
-    // ───────────── DELETE: delete session ─────────────
     if (req.method === 'DELETE') {
       const { id } = (req.body || {}) as { id?: string };
 
@@ -588,7 +620,6 @@ export default async function handler(
         return res.status(400).json({ error: 'Missing id' });
       }
 
-      // Clean up any mirrored seeker calendar entries
       await prisma.seekerCalendarItem.deleteMany({
         where: {
           source: 'coach',
@@ -603,7 +634,6 @@ export default async function handler(
       return res.status(200).json({ ok: true });
     }
 
-    // ───────────── Method not allowed ─────────────
     res.setHeader('Allow', 'GET,POST,PUT,DELETE');
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {

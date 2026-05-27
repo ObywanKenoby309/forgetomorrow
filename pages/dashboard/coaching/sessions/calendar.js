@@ -1,10 +1,11 @@
 // pages/dashboard/coaching/sessions/calendar.js
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingTitleCard from '@/components/coaching/CoachingTitleCard';
 import CoachingSessionsCalendarInterface from '@/components/calendar/CoachingSessionsCalendarInterface';
+import CalendarDayPanel from '@/components/calendar/CalendarDayPanel';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
-import FoundryCalendarButton from '@/components/foundry/FoundryCalendarButton';
 
 const API_URL = '/api/coaching/sessions';
 
@@ -12,6 +13,11 @@ function mapRowsToEvents(rows) {
   return rows.map((s) => {
     const date = s.date || s.sessionDate || null;
     const time = s.time || s.sessionTime || '09:00';
+    const timezone =
+      s.timezone ||
+      s.foundryTimezone ||
+      Intl.DateTimeFormat().resolvedOptions().timeZone ||
+      'America/New_York';
     const client = s.client || s.clientName || s.client_name || '';
 
     const clientUserId =
@@ -30,19 +36,42 @@ function mapRowsToEvents(rows) {
       id: s.id,
       date,
       time,
+      timezone,
       client,
+      title: client,
       clientType,
       clientUserId,
       type: s.type || 'Strategy',
       status: s.status || 'Scheduled',
       notes: s.notes || '',
+      source: s.source || 'coach',
     };
   });
+}
+
+function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', marginBottom: -24 }}>
+        <RightRailPlacementManager />
+      </div>
+
+      <CalendarDayPanel
+        selectedDate={selectedDate}
+        events={dayEvents}
+        onAdd={onAdd}
+        onEdit={onEdit}
+      />
+    </div>
+  );
 }
 
 export default function CoachingSessionsCalendarPage() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [dayEvents, setDayEvents] = useState([]);
+  const calendarRef = useRef(null);
 
   const loadSessions = useCallback(async () => {
     try {
@@ -55,18 +84,37 @@ export default function CoachingSessionsCalendarPage() {
       }
       const data = await res.json().catch(() => ({}));
       const rows = Array.isArray(data) ? data : data.sessions || [];
-      setSessions(mapRowsToEvents(rows));
+      const mapped = mapRowsToEvents(rows);
+      setSessions(mapped);
+
+      setDayEvents((current) => {
+        if (!selectedDate) return current;
+        return mapped.filter((event) => event.date === selectedDate);
+      });
     } catch (err) {
       console.error('Error loading sessions for calendar:', err);
       setSessions([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     loadSessions();
   }, [loadSessions]);
+
+  const handleDaySelect = useCallback((dateStr, events) => {
+    setSelectedDate(dateStr);
+    setDayEvents(events || []);
+  }, []);
+
+  const handleAdd = useCallback((dateStr) => {
+    calendarRef.current?.openAdd?.(dateStr);
+  }, []);
+
+  const handleEdit = useCallback((id) => {
+    calendarRef.current?.openEdit?.(id);
+  }, []);
 
   const greeting = getTimeGreeting();
 
@@ -85,19 +133,25 @@ export default function CoachingSessionsCalendarPage() {
       activeNav="calendar"
       header={HeaderBox}
       headerCard={false}
-      right={null}
+      right={
+        <CalendarRightRail
+          selectedDate={selectedDate}
+          dayEvents={dayEvents}
+          onAdd={handleAdd}
+          onEdit={handleEdit}
+        />
+      }
+      rightVariant="light"
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
       <div style={{ display: 'grid', gap: 24, width: '100%' }}>
-        {/* Foundry action row */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <FoundryCalendarButton onScheduled={loadSessions} />
-        </div>
-
         <CoachingSessionsCalendarInterface
+          ref={calendarRef}
           title={loading ? 'Sessions Calendar (loading…)' : 'Sessions Calendar'}
           events={sessions}
           onRefresh={loadSessions}
+          onDaySelect={handleDaySelect}
+          selectedDate={selectedDate}
         />
       </div>
     </CoachingLayout>

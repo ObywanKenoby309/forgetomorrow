@@ -1,15 +1,47 @@
 // components/calendar/CoachingCalendarEventForm.js
 import React, { useEffect, useRef, useState } from 'react';
 
+const TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Anchorage',
+  'Pacific/Honolulu',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Europe/Riga',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Australia/Sydney',
+];
+
+const TIMEZONE_LABELS = {
+  'America/New_York': 'Eastern (ET)',
+  'America/Chicago': 'Central (CT)',
+  'America/Denver': 'Mountain (MT)',
+  'America/Los_Angeles': 'Pacific (PT)',
+  'America/Anchorage': 'Alaska (AKT)',
+  'Pacific/Honolulu': 'Hawaii (HT)',
+  'Europe/London': 'London (GMT/BST)',
+  'Europe/Paris': 'Paris (CET/CEST)',
+  'Europe/Berlin': 'Berlin (CET/CEST)',
+  'Europe/Riga': 'Riga (EET/EEST)',
+  'Asia/Tokyo': 'Tokyo (JST)',
+  'Asia/Shanghai': 'Shanghai (CST)',
+  'Australia/Sydney': 'Sydney (AET)',
+};
+
 export default function CoachingCalendarEventForm({
-  mode = 'add',           // 'add' | 'edit'
-  initial = null,         // { date, time, clientType, clientUserId, clientName, type, status, notes }
+  mode = 'add',
+  initial = null,
   onClose,
   onSave,
   onDelete,
   typeChoices = [],
   statusChoices = [],
-  saving = false,         // passed from parent, default false
+  saving = false,
 }) {
   const firstRef = useRef(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -27,20 +59,19 @@ export default function CoachingCalendarEventForm({
     return {
       date: initial?.date || today,
       time: initial?.time || '09:00',
+      timezone:
+        initial?.timezone ||
+        Intl.DateTimeFormat().resolvedOptions().timeZone ||
+        'America/New_York',
       clientType: initialClientType,
       clientUserId: initial?.clientUserId || null,
-      clientName:
-        initial?.clientName ||
-        initial?.client ||
-        initial?.title ||
-        '',
+      clientName: initial?.clientName || initial?.client || initial?.title || '',
       type: initial?.type || typeChoices[0] || 'Strategy',
       status: initial?.status || statusChoices[0] || 'Scheduled',
       notes: initial?.notes || '',
     };
   });
 
-  // Contacts search state (for internal clients)
   const [clientSearchTerm, setClientSearchTerm] = useState(
     (initial?.clientType === 'internal' && (initial?.clientName || initial?.client)) || ''
   );
@@ -50,12 +81,11 @@ export default function CoachingCalendarEventForm({
 
   useEffect(() => {
     if (firstRef.current) firstRef.current.focus();
-    const onEsc = (e) => e.key === 'Escape' && onClose();
+    const onEsc = (e) => e.key === 'Escape' && onClose?.();
     document.addEventListener('keydown', onEsc);
     return () => document.removeEventListener('keydown', onEsc);
   }, [onClose]);
 
-  // Shared styles
   const label = {
     fontSize: 12,
     color: '#607D8B',
@@ -72,6 +102,7 @@ export default function CoachingCalendarEventForm({
     background: '#FFFFFF',
     color: '#263238',
     fontSize: 14,
+    boxSizing: 'border-box',
   };
 
   const update = (key, value) =>
@@ -80,7 +111,6 @@ export default function CoachingCalendarEventForm({
       [key]: value,
     }));
 
-  // Internal contacts search
   useEffect(() => {
     if (form.clientType !== 'internal') return;
 
@@ -99,10 +129,9 @@ export default function CoachingCalendarEventForm({
         setClientSearchLoading(true);
         setClientSearchError('');
 
-        const res = await fetch(
-          `/api/contacts/search?q=${encodeURIComponent(term)}`,
-          { signal: controller.signal }
-        );
+        const res = await fetch(`/api/contacts/search?q=${encodeURIComponent(term)}`, {
+          signal: controller.signal,
+        });
 
         if (!res.ok) {
           if (!active) return;
@@ -183,11 +212,9 @@ export default function CoachingCalendarEventForm({
         alert('Please select a Forge contact for this client.');
         return;
       }
-    } else {
-      if (!name) {
-        alert('Please enter a client name.');
-        return;
-      }
+    } else if (!name) {
+      alert('Please enter a client name.');
+      return;
     }
 
     onSave?.({
@@ -203,9 +230,13 @@ export default function CoachingCalendarEventForm({
         position: 'fixed',
         inset: 0,
         background: 'rgba(15,23,42,0.60)',
-        display: 'grid',
-        placeItems: 'center',
-        padding: 16,
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        paddingTop: 'clamp(88px, 12vh, 128px)',
+        paddingBottom: 40,
+        paddingLeft: 16,
+        paddingRight: 16,
         zIndex: 1000,
         backdropFilter: 'blur(4px)',
       }}
@@ -216,42 +247,41 @@ export default function CoachingCalendarEventForm({
           background: 'linear-gradient(135deg,#FFFFFF,#F9FAFB)',
           borderRadius: 16,
           width: '100%',
-          maxWidth: 520,
+          maxWidth: 700,
+          maxHeight: 'calc(100vh - 150px)',
+          overflowY: 'auto',
           boxShadow: '0 24px 60px rgba(15,23,42,0.55)',
-          overflow: 'hidden',
           color: '#263238',
           border: '1px solid rgba(148,163,184,0.7)',
         }}
       >
-        {/* Header */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '14px 18px',
+            padding: '14px 20px',
             borderBottom: '1px solid #E5E7EB',
+            gap: 16,
           }}
         >
-          <div>
-            <h3
-              style={{
-                margin: 0,
-                color: '#112033',
-                fontSize: 18,
-                fontWeight: 700,
-              }}
-            >
-              {mode === 'edit' ? 'Edit Session' : 'Add Session'}
-            </h3>
-          </div>
+          <h3
+            style={{
+              margin: 0,
+              color: '#112033',
+              fontSize: 18,
+              fontWeight: 700,
+            }}
+          >
+            {mode === 'edit' ? 'Edit Session' : 'Add Session'}
+          </h3>
+
           <div
             style={{
               fontSize: 11,
               letterSpacing: '0.14em',
               textTransform: 'uppercase',
               color: '#90A4AE',
-              marginRight: 8,
               fontWeight: 600,
             }}
           >
@@ -259,54 +289,16 @@ export default function CoachingCalendarEventForm({
           </div>
         </div>
 
-        {/* Body */}
         <form
           onSubmit={handleSubmit}
-          style={{ display: 'grid', gap: 14, padding: '16px 18px 18px' }}
+          style={{
+            display: 'grid',
+            gap: 14,
+            padding: '16px 20px 20px',
+          }}
         >
-          {/* Date / Time */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 12,
-            }}
-          >
-            <div>
-              <label style={label}>Date</label>
-              <input
-                ref={firstRef}
-                type="date"
-                name="date"
-                value={form.date}
-                onChange={(e) => update('date', e.target.value)}
-                style={input}
-              />
-            </div>
-            <div>
-              <label style={label}>Time</label>
-              <input
-                type="time"
-                name="time"
-                value={form.time}
-                onChange={(e) => update('time', e.target.value)}
-                style={input}
-              />
-            </div>
-          </div>
-
-          {/* Client type */}
           <div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'baseline',
-                marginBottom: 4,
-              }}
-            >
-              <span style={label}>Client Type</span>
-            </div>
+            <div style={{ ...label, marginBottom: 4 }}>Client Type</div>
             <div style={{ display: 'flex', gap: 24, fontSize: 13 }}>
               <label style={{ cursor: 'pointer', color: '#37474F' }}>
                 <input
@@ -324,6 +316,7 @@ export default function CoachingCalendarEventForm({
                 />
                 Forge user (from my contacts)
               </label>
+
               <label style={{ cursor: 'pointer', color: '#37474F' }}>
                 <input
                   type="radio"
@@ -338,22 +331,23 @@ export default function CoachingCalendarEventForm({
                   }}
                   style={{ marginRight: 6 }}
                 />
-                External client (not in Forge)
+                External client
               </label>
             </div>
           </div>
 
-          {/* Internal client search */}
           {form.clientType === 'internal' && (
             <div>
-              <div style={label}>Client (from your contacts)</div>
+              <div style={label}>Client Contact</div>
               <input
+                ref={firstRef}
                 type="text"
                 placeholder="Type a name, email, or headline…"
                 value={clientSearchTerm}
                 onChange={(e) => setClientSearchTerm(e.target.value)}
                 style={{ ...input, marginBottom: 4 }}
               />
+
               {form.clientUserId && (
                 <div
                   style={{
@@ -382,16 +376,10 @@ export default function CoachingCalendarEventForm({
                   </button>
                 </div>
               )}
-              {clientSearchLoading && (
-                <div style={{ fontSize: 12, color: '#90A4AE' }}>
-                  Searching…
-                </div>
-              )}
-              {clientSearchError && (
-                <div style={{ fontSize: 12, color: '#C62828' }}>
-                  {clientSearchError}
-                </div>
-              )}
+
+              {clientSearchLoading && <div style={{ fontSize: 12, color: '#90A4AE' }}>Searching…</div>}
+              {clientSearchError && <div style={{ fontSize: 12, color: '#C62828' }}>{clientSearchError}</div>}
+
               {clientResults.length > 0 && (
                 <ul
                   style={{
@@ -416,15 +404,8 @@ export default function CoachingCalendarEventForm({
                         borderBottom: '1px solid #F3F4F6',
                       }}
                     >
-                      <div style={{ fontWeight: 600, color: '#111827' }}>
-                        {r.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: '#6B7280',
-                        }}
-                      >
+                      <div style={{ fontWeight: 600, color: '#111827' }}>{r.name}</div>
+                      <div style={{ fontSize: 12, color: '#6B7280' }}>
                         {r.email}
                         {r.headline ? ` • ${r.headline}` : ''}
                       </div>
@@ -432,22 +413,21 @@ export default function CoachingCalendarEventForm({
                   ))}
                 </ul>
               )}
+
               {clientResults.length === 0 &&
                 clientSearchTerm.trim() &&
                 !clientSearchLoading &&
                 !clientSearchError && (
-                  <div style={{ fontSize: 12, color: '#9CA3AF' }}>
-                    No contacts matched that search.
-                  </div>
+                  <div style={{ fontSize: 12, color: '#9CA3AF' }}>No contacts matched that search.</div>
                 )}
             </div>
           )}
 
-          {/* External client name input */}
           {form.clientType === 'external' && (
             <div>
               <label style={label}>Client Name</label>
               <input
+                ref={firstRef}
                 type="text"
                 value={form.clientName}
                 onChange={(e) => update('clientName', e.target.value)}
@@ -457,7 +437,53 @@ export default function CoachingCalendarEventForm({
             </div>
           )}
 
-          {/* Type / Status */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1.2fr',
+              gap: 12,
+            }}
+          >
+            <div>
+              <label style={label}>Date</label>
+              <input
+                type="date"
+                name="date"
+                value={form.date}
+                onChange={(e) => update('date', e.target.value)}
+                style={input}
+              />
+            </div>
+
+            <div>
+              <label style={label}>Time</label>
+              <input
+                type="time"
+                name="time"
+                value={form.time}
+                onChange={(e) => update('time', e.target.value)}
+                style={input}
+              />
+            </div>
+
+            <div>
+              <label style={label}>Timezone</label>
+              <select
+                name="timezone"
+                value={form.timezone}
+                onChange={(e) => update('timezone', e.target.value)}
+                style={input}
+                disabled={saving}
+              >
+                {TIMEZONES.map((tz) => (
+                  <option key={tz} value={tz}>
+                    {TIMEZONE_LABELS[tz] || tz}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div
             style={{
               display: 'grid',
@@ -473,15 +499,14 @@ export default function CoachingCalendarEventForm({
                 onChange={(e) => update('type', e.target.value)}
                 style={input}
               >
-                {(typeChoices.length ? typeChoices : ['Strategy', 'Resume', 'Interview']).map(
-                  (t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  )
-                )}
+                {(typeChoices.length ? typeChoices : ['Strategy', 'Resume', 'Interview']).map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
               </select>
             </div>
+
             <div>
               <label style={label}>Status</label>
               <select
@@ -490,10 +515,7 @@ export default function CoachingCalendarEventForm({
                 onChange={(e) => update('status', e.target.value)}
                 style={input}
               >
-                {(statusChoices.length
-                  ? statusChoices
-                  : ['Scheduled', 'Completed', 'No-show']
-                ).map((s) => (
+                {(statusChoices.length ? statusChoices : ['Scheduled', 'Completed', 'No-show']).map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>
@@ -502,7 +524,6 @@ export default function CoachingCalendarEventForm({
             </div>
           </div>
 
-          {/* Notes */}
           <div>
             <label style={label}>Notes</label>
             <textarea
@@ -514,7 +535,6 @@ export default function CoachingCalendarEventForm({
             />
           </div>
 
-          {/* Footer */}
           <div
             style={{
               display: 'flex',
@@ -543,16 +563,8 @@ export default function CoachingCalendarEventForm({
                   Delete
                 </button>
               ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
-                >
-                  <span style={{ color: '#B71C1C', fontSize: 12 }}>
-                    Delete this session?
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ color: '#B71C1C', fontSize: 12 }}>Delete this session?</span>
                   <button
                     type="button"
                     onClick={() => setConfirmingDelete(false)}
@@ -619,7 +631,7 @@ export default function CoachingCalendarEventForm({
                     border: 'none',
                     padding: '8px 14px',
                     borderRadius: 999,
-                    cursor: 'pointer',
+                    cursor: saving ? 'not-allowed' : 'pointer',
                     fontWeight: 700,
                     fontSize: 14,
                     boxShadow: '0 4px 12px rgba(255,112,67,0.4)',
