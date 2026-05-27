@@ -1,5 +1,5 @@
 // components/calendar/RecruiterCalendarEventForm.js
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 export default function RecruiterCalendarEventForm({
   mode = 'add', // 'add' | 'edit'
@@ -75,6 +75,10 @@ export default function RecruiterCalendarEventForm({
   const [candidateResults, setCandidateResults] = useState([]);
   const [candidateSearchLoading, setCandidateSearchLoading] = useState(false);
   const [candidateSearchError, setCandidateSearchError] = useState('');
+  const [candidateContacts, setCandidateContacts] = useState([]);
+  const [candidateContactsLoading, setCandidateContactsLoading] = useState(false);
+  const [candidateContactsError, setCandidateContactsError] = useState('');
+  const [candidatePickerOpen, setCandidatePickerOpen] = useState(false);
 
   useEffect(() => {
     if (firstRef.current) firstRef.current.focus();
@@ -82,6 +86,72 @@ export default function RecruiterCalendarEventForm({
     document.addEventListener('keydown', onEsc);
     return () => document.removeEventListener('keydown', onEsc);
   }, [onClose]);
+
+  useEffect(() => {
+    if (form.candidateType !== 'internal') return;
+    if (!candidatePickerOpen && candidateContacts.length > 0) return;
+
+    let active = true;
+
+    async function loadContacts() {
+      try {
+        setCandidateContactsLoading(true);
+        setCandidateContactsError('');
+
+        const res = await fetch('/api/contacts/list');
+
+        if (!res.ok) {
+          if (!active) return;
+          setCandidateContacts([]);
+          setCandidateContactsError('Could not load contacts.');
+          return;
+        }
+
+        const data = await res.json().catch(() => ({}));
+        const rows = Array.isArray(data.contacts) ? data.contacts : [];
+
+        const deduped = new Map();
+
+        rows.forEach((c) => {
+          const id = c.contactUserId || c.userId || c.id;
+          if (!id || deduped.has(id)) return;
+
+          const name =
+            c.name ||
+            [c.firstName, c.lastName].filter(Boolean).join(' ') ||
+            c.email ||
+            'Unknown contact';
+
+          deduped.set(id, {
+            id,
+            name,
+            email: c.email || '',
+            headline: c.headline || c.title || '',
+            avatarUrl: c.avatarUrl || null,
+          });
+        });
+
+        if (active) {
+          setCandidateContacts(Array.from(deduped.values()));
+        }
+      } catch (err) {
+        if (!active) return;
+        console.error('Candidate contact list error', err);
+        setCandidateContacts([]);
+        setCandidateContactsError('Could not load contacts.');
+      } finally {
+        if (active) {
+          setCandidateContactsLoading(false);
+        }
+      }
+    }
+
+    loadContacts();
+
+    return () => {
+      active = false;
+    };
+  }, [form.candidateType, candidatePickerOpen, candidateContacts.length]);
 
   useEffect(() => {
     if (form.candidateType !== 'internal') return;
@@ -156,6 +226,7 @@ export default function RecruiterCalendarEventForm({
     setCandidateSearchTerm(display);
     setCandidateResults([]);
     setCandidateSearchError('');
+    setCandidatePickerOpen(false);
   };
 
   const clearSelectedCandidate = () => {
@@ -167,7 +238,30 @@ export default function RecruiterCalendarEventForm({
     setCandidateSearchTerm('');
     setCandidateResults([]);
     setCandidateSearchError('');
+    setCandidatePickerOpen(true);
   };
+
+  const visibleCandidateContacts = useMemo(() => {
+    const term = candidateSearchTerm.trim().toLowerCase();
+
+    const base =
+      candidateContacts.length > 0
+        ? candidateContacts
+        : candidateResults.map((r) => ({
+            id: r.id,
+            name: r.name || r.email || 'Unknown contact',
+            email: r.email || '',
+            headline: r.headline || '',
+            avatarUrl: r.avatarUrl || null,
+          }));
+
+    if (!term) return base;
+
+    return base.filter((c) => {
+      const haystack = `${c.name || ''} ${c.email || ''} ${c.headline || ''}`.toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [candidateContacts, candidateResults, candidateSearchTerm]);
 
   // ───────────── Styles ─────────────
   const label = {
@@ -237,6 +331,56 @@ export default function RecruiterCalendarEventForm({
     background: 'rgba(255,255,255,0.72)',
   };
 
+  const contactPickerCard = {
+    marginTop: 8,
+    border: '1px solid #E5E7EB',
+    borderRadius: 12,
+    background: '#FFFFFF',
+    maxHeight: 220,
+    overflowY: 'auto',
+    boxShadow: '0 10px 22px rgba(15,23,42,0.10)',
+  };
+
+  const contactPickerRow = (selected) => ({
+    width: '100%',
+    border: 'none',
+    borderBottom: '1px solid #F3F4F6',
+    background: selected ? 'rgba(255,112,67,0.08)' : '#FFFFFF',
+    padding: '9px 10px',
+    textAlign: 'left',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  });
+
+  const contactPickerName = {
+    fontWeight: 700,
+    color: '#111827',
+    fontSize: 13,
+  };
+
+  const contactPickerMeta = {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  };
+
+  const browseButton = {
+    border: '1px solid #CFD8DC',
+    background: '#FFFFFF',
+    color: '#455A64',
+    borderRadius: 10,
+    padding: '8px 10px',
+    cursor: 'pointer',
+    fontSize: 12,
+    fontWeight: 700,
+    fontFamily: 'inherit',
+    whiteSpace: 'nowrap',
+  };
+
   // ───────────── Submit ─────────────
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -284,7 +428,7 @@ export default function RecruiterCalendarEventForm({
         display: 'flex',
 		alignItems: 'flex-start',
 		justifyContent: 'center',
-		paddingTop: 'clamp(16px, 6vh, 60px)',
+		paddingTop: 'clamp(88px, 12vh, 128px)',
 		paddingBottom: 40,
 		paddingLeft: 16,
 		paddingRight: 16,
@@ -299,7 +443,7 @@ export default function RecruiterCalendarEventForm({
           borderRadius: 16,
           width: '100%',
           maxWidth: 640,
-          maxHeight: '85vh',
+          maxHeight: 'calc(100vh - 150px)',
           overflowY: 'auto',
           boxShadow: '0 24px 60px rgba(15,23,42,0.55)',
           color: '#263238',
@@ -469,17 +613,34 @@ export default function RecruiterCalendarEventForm({
             </div>
           </div>
 
-          {/* Internal candidate search */}
+          {/* Internal candidate picker */}
           {form.candidateType === 'internal' && (
             <div>
-              <div style={label}>Search Contacts</div>
-              <input
-                type="text"
-                placeholder="Search name or email..."
-                value={candidateSearchTerm}
-                onChange={(e) => setCandidateSearchTerm(e.target.value)}
-                style={{ ...input, marginBottom: 4 }}
-              />
+              <div style={label}>Candidate Contacts</div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="text"
+                  placeholder="Search or browse your contacts..."
+                  value={candidateSearchTerm}
+                  onFocus={() => setCandidatePickerOpen(true)}
+                  onChange={(e) => {
+                    setCandidateSearchTerm(e.target.value);
+                    setCandidatePickerOpen(true);
+                  }}
+                  style={{ ...input, marginBottom: 4 }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setCandidatePickerOpen((open) => !open)}
+                  style={browseButton}
+                  disabled={saving}
+                >
+                  {candidatePickerOpen ? 'Hide list' : 'Browse'}
+                </button>
+              </div>
+
               {form.candidateUserId && (
                 <div
                   style={{
@@ -510,64 +671,75 @@ export default function RecruiterCalendarEventForm({
                   </button>
                 </div>
               )}
-              {candidateSearchLoading && (
-                <div style={{ fontSize: 12, color: '#90A4AE' }}>
-                  Searching…
+
+              {candidatePickerOpen && (
+                <div style={contactPickerCard}>
+                  {candidateContactsLoading && (
+                    <div style={{ padding: '10px 12px', fontSize: 12, color: '#90A4AE' }}>
+                      Loading contacts…
+                    </div>
+                  )}
+
+                  {candidateContactsError && (
+                    <div style={{ padding: '10px 12px', fontSize: 12, color: '#C62828' }}>
+                      {candidateContactsError}
+                    </div>
+                  )}
+
+                  {!candidateContactsLoading &&
+                    !candidateContactsError &&
+                    visibleCandidateContacts.length === 0 && (
+                      <div style={{ padding: '10px 12px', fontSize: 12, color: '#9CA3AF' }}>
+                        No contacts matched that search.
+                      </div>
+                    )}
+
+                  {!candidateContactsLoading &&
+                    !candidateContactsError &&
+                    visibleCandidateContacts.map((r) => {
+                      const selected = form.candidateUserId === r.id;
+
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => selectCandidate(r)}
+                          style={contactPickerRow(selected)}
+                        >
+                          <div style={{ minWidth: 0 }}>
+                            <div style={contactPickerName}>
+                              {r.name || r.email || 'Unknown contact'}
+                            </div>
+                            {(r.email || r.headline) && (
+                              <div style={contactPickerMeta}>
+                                {r.email}
+                                {r.email && r.headline ? ' • ' : ''}
+                                {r.headline || ''}
+                              </div>
+                            )}
+                          </div>
+
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 800,
+                              color: selected ? '#FF7043' : '#90A4AE',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {selected ? 'Selected' : 'Select'}
+                          </span>
+                        </button>
+                      );
+                    })}
                 </div>
               )}
-              {candidateSearchError && (
-                <div style={{ fontSize: 12, color: '#C62828' }}>
-                  {candidateSearchError}
+
+              {!candidatePickerOpen && (
+                <div style={{ fontSize: 11, color: '#90A4AE', marginTop: 2 }}>
+                  Browse your full contact list or search by name, email, or headline.
                 </div>
               )}
-              {candidateResults.length > 0 && (
-                <ul
-                  style={{
-                    listStyle: 'none',
-                    margin: '4px 0 0',
-                    padding: 0,
-                    maxHeight: 160,
-                    overflowY: 'auto',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: 10,
-                    background: '#FFFFFF',
-                  }}
-                >
-                  {candidateResults.map((r) => (
-                    <li
-                      key={r.id}
-                      onClick={() => selectCandidate(r)}
-                      style={{
-                        padding: '7px 9px',
-                        fontSize: 13,
-                        cursor: 'pointer',
-                        borderBottom: '1px solid #F3F4F6',
-                      }}
-                    >
-                      <div style={{ fontWeight: 600, color: '#111827' }}>
-                        {r.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: '#6B7280',
-                        }}
-                      >
-                        {r.email}
-                        {r.headline ? ` • ${r.headline}` : ''}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {candidateResults.length === 0 &&
-                candidateSearchTerm.trim() &&
-                !candidateSearchLoading &&
-                !candidateSearchError && (
-                  <div style={{ fontSize: 12, color: '#9CA3AF' }}>
-                    No contacts matched that search.
-                  </div>
-                )}
             </div>
           )}
 
