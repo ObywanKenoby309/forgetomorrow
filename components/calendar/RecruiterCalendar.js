@@ -652,117 +652,92 @@ function MobileCalendar({ scopedEvents, viewScope, setViewScope, cursor, setCurs
   );
 }
 
-// ─── Desktop Day Agenda Overlay ───────────────────────────────────────────────
+// ─── Desktop Day Agenda Overlay — side panel ─────────────────────────────────
 function DayAgendaOverlay({ date, events, viewScope, onClose, onAdd, onEdit }) {
   if (!date) return null;
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 999,
-        background: 'rgba(15,23,42,0.55)',
-        backdropFilter: 'blur(4px)',
-        WebkitBackdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'center',
-        paddingTop: 'clamp(88px, 10vh, 120px)',
-        paddingLeft: 20,
-        paddingRight: 20,
-        paddingBottom: 40,
-      }}
-    >
+    <>
+      {/* Backdrop — clicking closes */}
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={onClose}
         style={{
-          width: '100%',
-          maxWidth: 760,
-          maxHeight: 'calc(100vh - 140px)',
-          overflow: 'hidden',
-          borderRadius: 18,
+          position: 'fixed',
+          inset: 0,
+          zIndex: 998,
+          background: 'rgba(15,23,42,0.18)',
+        }}
+      />
+
+      {/* Side panel */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: 340,
+          zIndex: 999,
           background: 'linear-gradient(135deg,#FFFFFF,#F8FAFC)',
-          border: '1px solid rgba(255,255,255,0.45)',
-          boxShadow: '0 28px 80px rgba(15,23,42,0.55)',
+          borderLeft: '1px solid #E0E4EE',
+          boxShadow: '-12px 0 40px rgba(15,23,42,0.12)',
           display: 'flex',
           flexDirection: 'column',
+          overflowY: 'auto',
         }}
       >
-        <div
-          style={{
-            padding: '18px 22px',
-            borderBottom: '1px solid #E5E7EB',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 16,
-            background: 'rgba(255,255,255,0.92)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            zIndex: 2,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#112033', marginBottom: 4 }}>{fmtLongDayLabel(date)}</div>
-            <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600 }}>
-              {events.length} scheduled event{events.length !== 1 ? 's' : ''}
+        {/* Header */}
+        <div style={{
+          padding: '20px 20px 14px',
+          borderBottom: '1px solid #E5E7EB',
+          position: 'sticky',
+          top: 0,
+          background: '#fff',
+          zIndex: 2,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#112033', marginBottom: 2 }}>{fmtLongDayLabel(date)}</div>
+              <div style={{ fontSize: 11, color: '#90A4AE', fontWeight: 600 }}>
+                {events.length > 0 ? `${events.length} event${events.length !== 1 ? 's' : ''}` : 'No events'}
+              </div>
             </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              onClick={() => onAdd(date)}
-              style={{
-                background: '#FF7043',
-                border: 'none',
-                color: 'white',
-                padding: '10px 16px',
-                borderRadius: 999,
-                cursor: 'pointer',
-                fontWeight: 800,
-                fontSize: 13,
-                boxShadow: '0 6px 16px rgba(255,112,67,0.35)',
-              }}
-            >
-              + Add Calendar Item
-            </button>
-
             <button
               type="button"
               onClick={onClose}
               style={{
-                background: 'white',
-                border: '1px solid #CFD8DC',
-                color: '#455A64',
-                padding: '10px 14px',
-                borderRadius: 12,
-                cursor: 'pointer',
-                fontWeight: 700,
-                fontSize: 13,
+                background: 'none', border: '1px solid #CFD8DC', color: '#78909C',
+                width: 28, height: 28, borderRadius: 8, cursor: 'pointer',
+                fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
-              Close
+              ×
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => onAdd(date)}
+            style={{
+              width: '100%',
+              background: '#FF7043', border: 'none', color: 'white',
+              padding: '9px 14px', borderRadius: 8, cursor: 'pointer',
+              fontWeight: 700, fontSize: 13,
+              boxShadow: '0 4px 12px rgba(255,112,67,0.30)',
+            }}
+          >
+            + Add Item
+          </button>
         </div>
 
-        <div style={{ overflowY: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Event list */}
+        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
           {events.length === 0 ? (
-            <div
-              style={{
-                padding: '28px 24px',
-                borderRadius: 16,
-                background: 'rgba(255,255,255,0.72)',
-                border: '1px solid #E5E7EB',
-                textAlign: 'center',
-                color: '#607D8B',
-                fontWeight: 600,
-              }}
-            >
-              No events scheduled for this day.
+            <div style={{ textAlign: 'center', padding: '32px 16px', color: '#90A4AE' }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>📅</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#607D8B', marginBottom: 4 }}>No more items for this day</div>
+              <div style={{ fontSize: 12 }}>Enjoy your free time!</div>
             </div>
           ) : (
             events.map((e) => {
@@ -773,78 +748,59 @@ function DayAgendaOverlay({ date, events, viewScope, onClose, onAdd, onEdit }) {
                   ? `${e.candidateName} – ${e.type}`
                   : e.candidateName || e.type || 'Item');
 
+              // Format time range — show end time if duration exists
+              const startTime = e.time || '09:00';
+              const [h, m] = startTime.split(':').map(Number);
+              const endH = h + 1;
+              const endTime = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+              const timeRange = `${startTime} – ${endTime}`;
+
               return (
                 <button
                   key={e.id || `${e.date}-${e.time}-${titleText}`}
                   type="button"
                   onClick={() => e.id && onEdit(e.id)}
                   style={{
-                    width: '100%',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: 16,
-                    background: 'rgba(255,255,255,0.85)',
-                    display: 'grid',
-                    gridTemplateColumns: '5px 90px 1fr',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    boxShadow: '0 4px 12px rgba(15,23,42,0.06)',
+                    width: '100%', border: '1px solid #E5E7EB', borderRadius: 12,
+                    background: 'white', overflow: 'hidden', cursor: 'pointer',
+                    textAlign: 'left', boxShadow: '0 2px 8px rgba(15,23,42,0.05)',
+                    position: 'relative',
                   }}
                 >
-                  <div style={{ background: strip }} />
+                  {/* Color strip top */}
+                  <div style={{ height: 3, background: strip, width: '100%' }} />
 
-                  <div
-                    style={{
-                      padding: '18px 14px',
-                      borderRight: '1px solid #EEF2F7',
-                      fontWeight: 800,
-                      color: '#112033',
-                      fontSize: 15,
-                    }}
-                  >
-                    {e.time || '09:00'}
-                  </div>
+                  <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {/* Time range */}
+                    <div style={{ fontSize: 11, color: '#90A4AE', fontWeight: 700 }}>{timeRange}</div>
 
-                  <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: '#112033' }}>{titleText}</div>
+                    {/* Title */}
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#112033', lineHeight: 1.3 }}>{titleText}</div>
 
-                    {(e.company || e.jobTitle || e.req) && (
-                      <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600 }}>{e.company || e.jobTitle || e.req}</div>
+                    {/* Subtitle */}
+                    {(e.candidateName && e.title) && (
+                      <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600 }}>{e.candidateName}</div>
+                    )}
+                    {(e.company || e.jobTitle) && (
+                      <div style={{ fontSize: 12, color: '#78909C' }}>{e.company || e.jobTitle}</div>
                     )}
 
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 11, background: pillBg, color: pillFg, padding: '3px 8px', borderRadius: 999, fontWeight: 700 }}>
+                    {/* Badges */}
+                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 2 }}>
+                      <span style={{ fontSize: 10, background: pillBg, color: pillFg, padding: '2px 7px', borderRadius: 999, fontWeight: 700 }}>
                         {e.type}
                       </span>
-
-                      <span
-                        style={{
-                          fontSize: 11,
-                          background: e.scope === 'personal' ? 'rgba(255,112,67,0.10)' : '#ECEFF1',
-                          color: e.scope === 'personal' ? '#C75B33' : '#607D8B',
-                          padding: '3px 8px',
-                          borderRadius: 999,
-                          fontWeight: 700,
-                        }}
-                      >
-                        {e.scope === 'personal' ? 'Personal' : 'Team'}
+                      <span style={{
+                        fontSize: 10,
+                        background: e.scope === 'personal' ? 'rgba(255,112,67,0.10)' : '#ECEFF1',
+                        color: e.scope === 'personal' ? '#C75B33' : '#607D8B',
+                        padding: '2px 7px', borderRadius: 999, fontWeight: 700,
+                      }}>
+                        {e.scope === 'personal' ? 'Personal' : 'Shared'}
                       </span>
-
                       {e.enableVideo && (
-                        <span style={{ fontSize: 11, background: 'rgba(26,75,143,0.10)', color: '#1A4B8F', padding: '3px 8px', borderRadius: 999, fontWeight: 700 }}>
-                          Audio/Video
-                        </span>
-                      )}
-
-                      {e.status && (
-                        <span style={{ fontSize: 11, background: '#F5F7F9', color: '#90A4AE', padding: '3px 8px', borderRadius: 999, fontWeight: 700 }}>
-                          {e.status}
-                        </span>
-                      )}
-
-                      {viewScope === 'team' && (
-                        <span style={{ fontSize: 11, background: 'rgba(26,75,143,0.08)', color: '#1A4B8F', padding: '3px 8px', borderRadius: 999, fontWeight: 700 }}>
-                          Shared view
+                        <span style={{ fontSize: 10, background: 'rgba(26,75,143,0.10)', color: '#1A4B8F', padding: '2px 7px', borderRadius: 999, fontWeight: 700 }}>
+                          🔨 Foundry
                         </span>
                       )}
                     </div>
@@ -854,8 +810,23 @@ function DayAgendaOverlay({ date, events, viewScope, onClose, onAdd, onEdit }) {
             })
           )}
         </div>
+
+        {/* Close button at bottom */}
+        <div style={{ padding: '12px 16px', borderTop: '1px solid #E5E7EB' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: '100%', background: 'none', border: '1px solid #CFD8DC',
+              color: '#455A64', padding: '9px', borderRadius: 8,
+              cursor: 'pointer', fontWeight: 700, fontSize: 13,
+            }}
+          >
+            Close
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -1244,34 +1215,46 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
     );
   }
 
+  const LEGEND = [
+    { label: 'Interview', color: '#1A4B8F' },
+    { label: 'Phone Screen', color: '#4CAF50' },
+    { label: 'Hiring Manager', color: '#FF9800' },
+    { label: 'Offer Review', color: '#FF7043' },
+    { label: 'Other', color: '#90A4AE' },
+    { label: 'Personal', color: '#FF7043' },
+    { label: 'Shared', color: '#455A64' },
+  ];
+
   return (
     <>
-      <section style={shell}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <div style={{ fontWeight: 800, fontSize: 18, color: '#112033' }}>{title}</div>
-            <div style={{ fontSize: 12, color: '#607D8B' }}>
-              {loading ? 'Loading calendar…' : `${monthName} · Plan interviews, screens, and hiring tasks at a glance.`}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <button type="button" style={navBtn} onClick={() => setCursor((c) => addMonths(c, -1))} aria-label="Previous month">
-              ◀
-            </button>
-            <button type="button" style={todayBtn} onClick={() => setCursor(startOfMonth(new Date()))}>
-              Today
-            </button>
-            <button type="button" style={navBtn} onClick={() => setCursor((c) => addMonths(c, 1))} aria-label="Next month">
-              ▶
-            </button>
-            <button type="button" style={addBtn} onClick={() => openAdd()}>
-              + Add Item
-            </button>
-          </div>
+      {/* Top nav bar — above the card, matches Image 2 */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 8, gap: 12, flexWrap: 'wrap', padding: '4px 2px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button type="button" style={todayBtn} onClick={() => setCursor(startOfMonth(new Date()))}>
+            Today
+          </button>
+          <button type="button" style={navBtn} onClick={() => setCursor((c) => addMonths(c, -1))} aria-label="Previous month">
+            ‹
+          </button>
+          <button type="button" style={navBtn} onClick={() => setCursor((c) => addMonths(c, 1))} aria-label="Next month">
+            ›
+          </button>
+          <span style={{ fontWeight: 800, fontSize: 15, color: '#112033', marginLeft: 4 }}>
+            {monthName}
+          </span>
         </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button type="button" style={addBtn} onClick={() => openAdd()}>
+            + Add Item
+          </button>
+        </div>
+      </div>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+      <section style={shell}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           {['personal', 'team'].map((s) => (
             <button
               key={s}
@@ -1403,6 +1386,15 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
               </div>
             );
           })}
+        </div>
+        {/* Legend */}
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px solid #E0E0E0' }}>
+          {LEGEND.map(({ label, color }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#607D8B', fontWeight: 600 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 3, background: color, flexShrink: 0 }} />
+              {label}
+            </div>
+          ))}
         </div>
       </section>
 
