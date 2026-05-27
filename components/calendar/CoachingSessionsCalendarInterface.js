@@ -637,7 +637,7 @@ const CoachingSessionsCalendarInterface = forwardRef(function CoachingSessionsCa
         date: dateKey || externalSelectedDate || todayStr,
         time: '09:00',
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
-        clientType: 'external',
+        clientType: 'internal',
         clientUserId: null,
         clientName: '',
         clientEmail: '',

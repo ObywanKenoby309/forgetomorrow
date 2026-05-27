@@ -1,5 +1,5 @@
 // components/calendar/CoachingCalendarEventForm.js
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const VIDEO_INVITEE_LIMIT = 5;
 
@@ -76,6 +76,25 @@ function buildScheduledAt(date, time, timezone = getBrowserTimezone()) {
   return new Date(utcGuess.getTime() - offsetMs).toISOString();
 }
 
+function normalizeContact(c) {
+  const id = c?.contactUserId || c?.userId || c?.id;
+  if (!id) return null;
+
+  const name =
+    c?.name ||
+    [c?.firstName, c?.lastName].filter(Boolean).join(' ') ||
+    c?.email ||
+    'Unknown contact';
+
+  return {
+    id,
+    name,
+    email: c?.email || '',
+    headline: c?.headline || c?.title || '',
+    avatarUrl: c?.avatarUrl || null,
+  };
+}
+
 export default function CoachingCalendarEventForm({
   mode = 'add',
   initial = null,
@@ -95,11 +114,13 @@ export default function CoachingCalendarEventForm({
     const today = new Date().toISOString().slice(0, 10);
 
     const initialClientType =
-      initial?.clientType === 'internal' || initial?.clientType === 'external'
+      mode === 'add'
+        ? 'internal'
+        : initial?.clientType === 'internal' || initial?.clientType === 'external'
         ? initial.clientType
         : initial?.clientUserId
         ? 'internal'
-        : 'external';
+        : 'internal';
 
     return {
       date: initial?.date || today,
@@ -128,6 +149,10 @@ export default function CoachingCalendarEventForm({
   const [clientResults, setClientResults] = useState([]);
   const [clientSearchLoading, setClientSearchLoading] = useState(false);
   const [clientSearchError, setClientSearchError] = useState('');
+  const [clientContacts, setClientContacts] = useState([]);
+  const [clientContactsLoading, setClientContactsLoading] = useState(false);
+  const [clientContactsError, setClientContactsError] = useState('');
+  const [clientPickerOpen, setClientPickerOpen] = useState(mode === 'add');
 
   useEffect(() => {
     if (firstRef.current) firstRef.current.focus();
@@ -192,11 +217,113 @@ export default function CoachingCalendarEventForm({
     fontWeight: 500,
   };
 
+  const browseButton = {
+    border: '1px solid #CFD8DC',
+    background: '#FFFFFF',
+    color: '#455A64',
+    borderRadius: 10,
+    padding: '8px 10px',
+    cursor: busy ? 'not-allowed' : 'pointer',
+    fontSize: 12,
+    fontWeight: 700,
+    fontFamily: 'inherit',
+    whiteSpace: 'nowrap',
+  };
+
+  const contactPickerCard = {
+    marginTop: 8,
+    border: '1px solid #E5E7EB',
+    borderRadius: 12,
+    background: '#FFFFFF',
+    maxHeight: 220,
+    overflowY: 'auto',
+    boxShadow: '0 10px 22px rgba(15,23,42,0.10)',
+  };
+
+  const contactPickerRow = (selected) => ({
+    width: '100%',
+    border: 'none',
+    borderBottom: '1px solid #F3F4F6',
+    background: selected ? 'rgba(255,112,67,0.08)' : '#FFFFFF',
+    padding: '9px 10px',
+    textAlign: 'left',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  });
+
+  const contactPickerName = {
+    fontWeight: 700,
+    color: '#111827',
+    fontSize: 13,
+  };
+
+  const contactPickerMeta = {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  };
+
   const update = (key, value) =>
     setForm((f) => ({
       ...f,
       [key]: value,
     }));
+
+  useEffect(() => {
+    if (form.clientType !== 'internal') return;
+    if (!clientPickerOpen && clientContacts.length > 0) return;
+
+    let active = true;
+
+    async function loadContacts() {
+      try {
+        setClientContactsLoading(true);
+        setClientContactsError('');
+
+        const res = await fetch('/api/contacts/list');
+
+        if (!res.ok) {
+          if (!active) return;
+          setClientContacts([]);
+          setClientContactsError('Could not load contacts.');
+          return;
+        }
+
+        const data = await res.json().catch(() => ({}));
+        const rows = Array.isArray(data.contacts) ? data.contacts : [];
+        const deduped = new Map();
+
+        rows.forEach((c) => {
+          const normalized = normalizeContact(c);
+          if (!normalized || deduped.has(normalized.id)) return;
+          deduped.set(normalized.id, normalized);
+        });
+
+        if (active) {
+          setClientContacts(Array.from(deduped.values()));
+        }
+      } catch (err) {
+        if (!active) return;
+        console.error('Client contact list error', err);
+        setClientContacts([]);
+        setClientContactsError('Could not load contacts.');
+      } finally {
+        if (active) {
+          setClientContactsLoading(false);
+        }
+      }
+    }
+
+    loadContacts();
+
+    return () => {
+      active = false;
+    };
+  }, [form.clientType, clientPickerOpen, clientContacts.length]);
 
   useEffect(() => {
     if (form.clientType !== 'internal') return;
@@ -260,16 +387,43 @@ export default function CoachingCalendarEventForm({
     };
   }, [clientSearchTerm, form.clientType]);
 
+  const visibleClientContacts = useMemo(() => {
+    const term = clientSearchTerm.trim().toLowerCase();
+    const merged = new Map();
+
+    clientContacts.forEach((c) => {
+      if (c?.id) merged.set(c.id, c);
+    });
+
+    clientResults.forEach((c) => {
+      const normalized = normalizeContact(c);
+      if (normalized?.id && !merged.has(normalized.id)) {
+        merged.set(normalized.id, normalized);
+      }
+    });
+
+    const base = Array.from(merged.values());
+
+    if (!term) return base;
+
+    return base.filter((c) => {
+      const haystack = `${c.name || ''} ${c.email || ''} ${c.headline || ''}`.toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [clientContacts, clientResults, clientSearchTerm]);
+
   const selectClient = (c) => {
-    const display = c.name || c.email;
+    const normalized = normalizeContact(c);
+    if (!normalized) return;
+
     setForm((f) => ({
       ...f,
       clientType: 'internal',
-      clientUserId: c.id,
-      clientName: display,
-      clientEmail: c.email || '',
+      clientUserId: normalized.id,
+      clientName: normalized.name,
+      clientEmail: normalized.email || '',
     }));
-    setClientSearchTerm(display);
+    setClientSearchTerm(normalized.name);
     setClientResults([]);
     setClientSearchError('');
   };
@@ -284,6 +438,7 @@ export default function CoachingCalendarEventForm({
     setClientSearchTerm('');
     setClientResults([]);
     setClientSearchError('');
+    setClientPickerOpen(true);
   };
 
   const scheduleFoundryRoom = async ({ title, payloadInvitees }) => {
@@ -562,6 +717,7 @@ ${roomNote}` : roomNote;
                     setClientSearchTerm(form.clientName || '');
                     setClientResults([]);
                     setClientSearchError('');
+                    setClientPickerOpen(true);
                   }}
                   style={{ marginRight: 6 }}
                 />
@@ -590,14 +746,30 @@ ${roomNote}` : roomNote;
           {form.clientType === 'internal' && (
             <div>
               <div style={label}>Client Contact</div>
-              <input
-                ref={firstRef}
-                type="text"
-                placeholder="Type a name, email, or headline…"
-                value={clientSearchTerm}
-                onChange={(e) => setClientSearchTerm(e.target.value)}
-                style={{ ...input, marginBottom: 4 }}
-              />
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  ref={firstRef}
+                  type="text"
+                  placeholder="Search or browse your contacts..."
+                  value={clientSearchTerm}
+                  onFocus={() => setClientPickerOpen(true)}
+                  onChange={(e) => {
+                    setClientSearchTerm(e.target.value);
+                    setClientPickerOpen(true);
+                  }}
+                  style={{ ...input, marginBottom: 4 }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setClientPickerOpen((open) => !open)}
+                  style={browseButton}
+                  disabled={busy}
+                >
+                  {clientPickerOpen ? 'Hide list' : 'Browse'}
+                </button>
+              </div>
 
               {form.clientUserId && (
                 <div
@@ -628,49 +800,86 @@ ${roomNote}` : roomNote;
                 </div>
               )}
 
-              {clientSearchLoading && <div style={{ fontSize: 12, color: '#90A4AE' }}>Searching…</div>}
-              {clientSearchError && <div style={{ fontSize: 12, color: '#C62828' }}>{clientSearchError}</div>}
+              {clientPickerOpen && (
+                <div style={contactPickerCard}>
+                  {clientContactsLoading && (
+                    <div style={{ padding: '10px 12px', fontSize: 12, color: '#90A4AE' }}>
+                      Loading contacts…
+                    </div>
+                  )}
 
-              {clientResults.length > 0 && (
-                <ul
-                  style={{
-                    listStyle: 'none',
-                    margin: '4px 0 0',
-                    padding: 0,
-                    maxHeight: 160,
-                    overflowY: 'auto',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: 10,
-                    background: '#FFFFFF',
-                  }}
-                >
-                  {clientResults.map((r) => (
-                    <li
-                      key={r.id}
-                      onClick={() => selectClient(r)}
-                      style={{
-                        padding: '7px 9px',
-                        fontSize: 13,
-                        cursor: 'pointer',
-                        borderBottom: '1px solid #F3F4F6',
-                      }}
-                    >
-                      <div style={{ fontWeight: 600, color: '#111827' }}>{r.name}</div>
-                      <div style={{ fontSize: 12, color: '#6B7280' }}>
-                        {r.email}
-                        {r.headline ? ` • ${r.headline}` : ''}
+                  {clientContactsError && (
+                    <div style={{ padding: '10px 12px', fontSize: 12, color: '#C62828' }}>
+                      {clientContactsError}
+                    </div>
+                  )}
+
+                  {clientSearchLoading && (
+                    <div style={{ padding: '10px 12px', fontSize: 12, color: '#90A4AE' }}>
+                      Searching…
+                    </div>
+                  )}
+
+                  {clientSearchError && (
+                    <div style={{ padding: '10px 12px', fontSize: 12, color: '#C62828' }}>
+                      {clientSearchError}
+                    </div>
+                  )}
+
+                  {!clientContactsLoading &&
+                    !clientContactsError &&
+                    visibleClientContacts.length === 0 && (
+                      <div style={{ padding: '10px 12px', fontSize: 12, color: '#9CA3AF' }}>
+                        No contacts matched that search.
                       </div>
-                    </li>
-                  ))}
-                </ul>
+                    )}
+
+                  {!clientContactsLoading &&
+                    !clientContactsError &&
+                    visibleClientContacts.map((r) => {
+                      const selected = form.clientUserId === r.id;
+
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => selectClient(r)}
+                          style={contactPickerRow(selected)}
+                        >
+                          <div style={{ minWidth: 0 }}>
+                            <div style={contactPickerName}>
+                              {r.name || r.email || 'Unknown contact'}
+                            </div>
+                            {(r.email || r.headline) && (
+                              <div style={contactPickerMeta}>
+                                {r.email}
+                                {r.email && r.headline ? ' • ' : ''}
+                                {r.headline || ''}
+                              </div>
+                            )}
+                          </div>
+
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 800,
+                              color: selected ? '#FF7043' : '#90A4AE',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {selected ? 'Selected' : 'Add'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                </div>
               )}
 
-              {clientResults.length === 0 &&
-                clientSearchTerm.trim() &&
-                !clientSearchLoading &&
-                !clientSearchError && (
-                  <div style={{ fontSize: 12, color: '#9CA3AF' }}>No contacts matched that search.</div>
-                )}
+              {!clientPickerOpen && (
+                <div style={{ fontSize: 11, color: '#90A4AE', marginTop: 2 }}>
+                  Browse your full contact list or search by name, email, or headline.
+                </div>
+              )}
             </div>
           )}
 
