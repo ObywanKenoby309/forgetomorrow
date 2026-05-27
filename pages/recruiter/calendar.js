@@ -13,8 +13,10 @@ const STORAGE_KEY = 'recruiterCalendar_live_v1';
 // Right rail: day panel stacked above ads
 function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-	  <RightRailPlacementManager />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', marginBottom: -24 }}>
+        <RightRailPlacementManager />
+      </div>
       <CalendarDayPanel
         selectedDate={selectedDate}
         events={dayEvents}
