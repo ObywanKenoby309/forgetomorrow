@@ -1,5 +1,5 @@
 // pages/recruiter/calendar.js
-import React, { useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { PlanProvider } from '@/context/PlanContext';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import RecruiterCalendar from '@/components/calendar/RecruiterCalendar';
@@ -10,25 +10,27 @@ import { getTimeGreeting } from '@/lib/dashboardGreeting';
 
 const STORAGE_KEY = 'recruiterCalendar_live_v1';
 
-// Right rail: day panel stacked above ads
+// Right rail: persistent day panel stacked above ads
 function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', marginBottom: -24 }}>
-        <RightRailPlacementManager />
-      </div>
       <CalendarDayPanel
         selectedDate={selectedDate}
         events={dayEvents}
         onAdd={onAdd}
         onEdit={onEdit}
       />
+
+      <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', marginBottom: -24 }}>
+        <RightRailPlacementManager />
+      </div>
     </div>
   );
 }
 
 export default function RecruiterCalendarPage() {
   const greeting = getTimeGreeting();
+  const calendarActionsRef = useRef({ add: null, edit: null });
 
   // Lifted state — shared between calendar grid and right rail panel
   const [selectedDate, setSelectedDate] = useState(null);
@@ -39,10 +41,17 @@ export default function RecruiterCalendarPage() {
     setDayEvents(events || []);
   }, []);
 
-  // These will be wired through RecruiterCalendar's openAdd/openEdit
-  // For now we pass no-ops — the calendar handles its own modal
-  const handleAdd = useCallback(() => {}, []);
-  const handleEdit = useCallback(() => {}, []);
+  const handleCalendarActionsReady = useCallback((actions) => {
+    calendarActionsRef.current = actions || { add: null, edit: null };
+  }, []);
+
+  const handleAdd = useCallback((dateStr) => {
+    calendarActionsRef.current?.add?.(dateStr || selectedDate);
+  }, [selectedDate]);
+
+  const handleEdit = useCallback((eventId) => {
+    calendarActionsRef.current?.edit?.(eventId);
+  }, []);
 
   const HeaderBox = (
     <RecruiterTitleCard
@@ -77,6 +86,7 @@ export default function RecruiterCalendarPage() {
             seed={[]}
             onDaySelect={handleDaySelect}
             selectedDate={selectedDate}
+            onRegisterActions={handleCalendarActionsReady}
           />
         </div>
       </RecruiterLayout>

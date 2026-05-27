@@ -652,186 +652,8 @@ function MobileCalendar({ scopedEvents, viewScope, setViewScope, cursor, setCurs
   );
 }
 
-// ─── Desktop Day Agenda Overlay — side panel ─────────────────────────────────
-function DayAgendaOverlay({ date, events, viewScope, onClose, onAdd, onEdit }) {
-  if (!date) return null;
-
-  return (
-    <>
-      {/* Backdrop — clicking closes */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 998,
-          background: 'rgba(15,23,42,0.18)',
-        }}
-      />
-
-      {/* Side panel */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: 340,
-          zIndex: 999,
-          background: 'linear-gradient(135deg,#FFFFFF,#F8FAFC)',
-          borderLeft: '1px solid #E0E4EE',
-          boxShadow: '-12px 0 40px rgba(15,23,42,0.12)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto',
-        }}
-      >
-        {/* Header */}
-        <div style={{
-          padding: '20px 20px 14px',
-          borderBottom: '1px solid #E5E7EB',
-          position: 'sticky',
-          top: 0,
-          background: '#fff',
-          zIndex: 2,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#112033', marginBottom: 2 }}>{fmtLongDayLabel(date)}</div>
-              <div style={{ fontSize: 11, color: '#90A4AE', fontWeight: 600 }}>
-                {events.length > 0 ? `${events.length} event${events.length !== 1 ? 's' : ''}` : 'No events'}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                background: 'none', border: '1px solid #CFD8DC', color: '#78909C',
-                width: 28, height: 28, borderRadius: 8, cursor: 'pointer',
-                fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              ×
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onAdd(date)}
-            style={{
-              width: '100%',
-              background: '#FF7043', border: 'none', color: 'white',
-              padding: '9px 14px', borderRadius: 8, cursor: 'pointer',
-              fontWeight: 700, fontSize: 13,
-              boxShadow: '0 4px 12px rgba(255,112,67,0.30)',
-            }}
-          >
-            + Add Item
-          </button>
-        </div>
-
-        {/* Event list */}
-        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-          {events.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '32px 16px', color: '#90A4AE' }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>📅</div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#607D8B', marginBottom: 4 }}>No more items for this day</div>
-              <div style={{ fontSize: 12 }}>Enjoy your free time!</div>
-            </div>
-          ) : (
-            events.map((e) => {
-              const { strip, pillBg, pillFg } = typeColors(e.type);
-              const titleText =
-                e.title ||
-                (e.candidateName && e.type
-                  ? `${e.candidateName} – ${e.type}`
-                  : e.candidateName || e.type || 'Item');
-
-              // Format time range — show end time if duration exists
-              const startTime = e.time || '09:00';
-              const [h, m] = startTime.split(':').map(Number);
-              const endH = h + 1;
-              const endTime = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-              const timeRange = `${startTime} – ${endTime}`;
-
-              return (
-                <button
-                  key={e.id || `${e.date}-${e.time}-${titleText}`}
-                  type="button"
-                  onClick={() => e.id && onEdit(e.id)}
-                  style={{
-                    width: '100%', border: '1px solid #E5E7EB', borderRadius: 12,
-                    background: 'white', overflow: 'hidden', cursor: 'pointer',
-                    textAlign: 'left', boxShadow: '0 2px 8px rgba(15,23,42,0.05)',
-                    position: 'relative',
-                  }}
-                >
-                  {/* Color strip top */}
-                  <div style={{ height: 3, background: strip, width: '100%' }} />
-
-                  <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {/* Time range */}
-                    <div style={{ fontSize: 11, color: '#90A4AE', fontWeight: 700 }}>{timeRange}</div>
-
-                    {/* Title */}
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#112033', lineHeight: 1.3 }}>{titleText}</div>
-
-                    {/* Subtitle */}
-                    {(e.candidateName && e.title) && (
-                      <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600 }}>{e.candidateName}</div>
-                    )}
-                    {(e.company || e.jobTitle) && (
-                      <div style={{ fontSize: 12, color: '#78909C' }}>{e.company || e.jobTitle}</div>
-                    )}
-
-                    {/* Badges */}
-                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 2 }}>
-                      <span style={{ fontSize: 10, background: pillBg, color: pillFg, padding: '2px 7px', borderRadius: 999, fontWeight: 700 }}>
-                        {e.type}
-                      </span>
-                      <span style={{
-                        fontSize: 10,
-                        background: e.scope === 'personal' ? 'rgba(255,112,67,0.10)' : '#ECEFF1',
-                        color: e.scope === 'personal' ? '#C75B33' : '#607D8B',
-                        padding: '2px 7px', borderRadius: 999, fontWeight: 700,
-                      }}>
-                        {e.scope === 'personal' ? 'Personal' : 'Shared'}
-                      </span>
-                      {e.enableVideo && (
-                        <span style={{ fontSize: 10, background: 'rgba(26,75,143,0.10)', color: '#1A4B8F', padding: '2px 7px', borderRadius: 999, fontWeight: 700 }}>
-                          🔨 Foundry
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
-
-        {/* Close button at bottom */}
-        <div style={{ padding: '12px 16px', borderTop: '1px solid #E5E7EB' }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              width: '100%', background: 'none', border: '1px solid #CFD8DC',
-              color: '#455A64', padding: '9px', borderRadius: 8,
-              cursor: 'pointer', fontWeight: 700, fontSize: 13,
-            }}
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
 // ─── Main export ──────────────────────────────────────────────────────────────
-export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed = [], storageKey, onDaySelect, selectedDate: externalSelectedDate }) {
+export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed = [], storageKey, onDaySelect, selectedDate: externalSelectedDate, onRegisterActions }) {
   const isMobile = useIsMobile(768);
 
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
@@ -840,7 +662,6 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [modal, setModal] = useState({ open: false, mode: 'add', eventId: null, initial: null });
-  const [dayOverlay, setDayOverlay] = useState({ open: false, date: null });
   const [calView, setCalView] = React.useState('month');
 
   const TYPE_CHOICES = ['Interview', 'Screen', 'Sourcing', 'Offer', 'Task', 'Appointment'];
@@ -903,10 +724,6 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
     return map;
   }, [scopedEvents]);
 
-  const overlayEvents = useMemo(() => {
-    if (!dayOverlay.date) return [];
-    return (eventsByDate[dayOverlay.date] || []).slice();
-  }, [dayOverlay.date, eventsByDate]);
 
   const openAdd = useCallback(
     (dateOverride = null) => {
@@ -954,29 +771,19 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
     [events]
   );
 
-  const openDayOverlay = useCallback((dateStr) => {
-    setDayOverlay({
-      open: true,
-      date: dateStr,
+
+
+  useEffect(() => {
+    onRegisterActions?.({
+      add: openAdd,
+      edit: openEdit,
     });
-  }, []);
+  }, [onRegisterActions, openAdd, openEdit]);
 
-  const closeDayOverlay = () => {
-    setDayOverlay({
-      open: false,
-      date: null,
-    });
-  };
-
-  const openAddFromDayOverlay = (dateStr) => {
-    closeDayOverlay();
-    openAdd(dateStr);
-  };
-
-  const openEditFromDayOverlay = (eventId) => {
-    closeDayOverlay();
-    openEdit(eventId);
-  };
+  useEffect(() => {
+    if (!externalSelectedDate) return;
+    onDaySelect?.(externalSelectedDate, eventsByDate[externalSelectedDate] || []);
+  }, [externalSelectedDate, eventsByDate, onDaySelect]);
 
   const closeModal = () => {
     setModal({ open: false, mode: 'add', eventId: null, initial: null });
@@ -1328,7 +1135,7 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
             const extra = list.length - visible.length;
 
             return (
-              <div key={key} style={cell(inMonth, isToday)} onClick={() => { openDayOverlay(key); onDaySelect?.(key, eventsByDate[key] || []); }}>
+              <div key={key} style={cell(inMonth, isToday)} onClick={() => onDaySelect?.(key, eventsByDate[key] || [])}>
                 <div
                   style={{
                     alignSelf: 'flex-end',
