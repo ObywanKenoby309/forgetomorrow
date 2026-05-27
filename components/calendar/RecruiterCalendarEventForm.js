@@ -126,9 +126,11 @@ export default function RecruiterCalendarEventForm({
     const today = new Date().toISOString().slice(0, 10);
 
     const candidateType =
-      initial?.candidateType === 'external'
-        ? 'external'
-        : 'internal';
+	  mode === 'add'
+		? 'internal'
+		: initial?.candidateType === 'external'
+		? 'external'
+		: 'internal';
 
     const rawScope =
       initial?.calendarScope || initial?.scope;
