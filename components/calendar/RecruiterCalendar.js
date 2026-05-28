@@ -178,11 +178,13 @@ function normalizeEvents(list) {
 
 // ─── SSR-safe mobile hook ─────────────────────────────────────────────────────
 function useIsMobile(bp = 768) {
-  const [val, setVal] = useState(null);
+  const [val, setVal] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < bp;
+  });
 
   useEffect(() => {
     const check = () => setVal(window.innerWidth < bp);
-    check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, [bp]);
@@ -859,14 +861,20 @@ const RecruiterCalendar = React.forwardRef(function RecruiterCalendar({ title = 
       const next = mode === 'edit'
         ? normalizeEvents(prev.map((e) => (e.id === normalized.id ? normalized : e)))
         : normalizeEvents([...prev, normalized]);
-
-      const activeDate = externalSelectedDate || normalized.date;
-      if (onDaySelect && activeDate) {
-        onDaySelect(activeDate, next.filter((e) => e.date === activeDate));
-      }
-
       return next;
     });
+
+    // Fire onDaySelect OUTSIDE setEvents to avoid cascading state updates
+    // Use setTimeout to let the setEvents re-render complete first
+    const activeDate = externalSelectedDate || normalized.date;
+    if (onDaySelect && activeDate) {
+      setTimeout(() => {
+        setEvents((current) => {
+          onDaySelect(activeDate, current.filter((e) => e.date === activeDate));
+          return current;
+        });
+      }, 0);
+    }
   };
 
   const handleSave = async (formData) => {
@@ -946,13 +954,16 @@ const RecruiterCalendar = React.forwardRef(function RecruiterCalendar({ title = 
         console.warn('Delete API error:', err);
       }
 
-      setEvents((prev) => {
-        const next = prev.filter((e) => e.id !== eventId);
-        if (onDaySelect && externalSelectedDate) {
-          onDaySelect(externalSelectedDate, next.filter((e) => e.date === externalSelectedDate));
-        }
-        return next;
-      });
+      setEvents((prev) => prev.filter((e) => e.id !== eventId));
+      // Fire onDaySelect after state settles
+      if (onDaySelect && externalSelectedDate) {
+        setTimeout(() => {
+          setEvents((current) => {
+            onDaySelect(externalSelectedDate, current.filter((e) => e.date === externalSelectedDate));
+            return current;
+          });
+        }, 0);
+      }
       closeModal();
     } finally {
       setSaving(false);
