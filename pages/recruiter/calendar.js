@@ -1,5 +1,4 @@
-// pages/recruiter/calendar.js
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { PlanProvider } from '@/context/PlanContext';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import RecruiterCalendar from '@/components/calendar/RecruiterCalendar';
@@ -10,13 +9,14 @@ import { getTimeGreeting } from '@/lib/dashboardGreeting';
 
 const STORAGE_KEY = 'recruiterCalendar_live_v1';
 
-function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
+// Memoized so RightRailPlacementManager's internal carousel interval
+// never triggers a re-render of the calendar above it
+const CalendarRightRail = memo(function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', marginBottom: -24 }}>
         <RightRailPlacementManager />
       </div>
-
       <CalendarDayPanel
         selectedDate={selectedDate}
         events={dayEvents}
@@ -25,11 +25,10 @@ function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
       />
     </div>
   );
-}
+});
 
 export default function RecruiterCalendarPage() {
   const greeting = getTimeGreeting();
-  const calendarRef = useRef(null);
 
   const [selectedDate, setSelectedDate] = useState(null);
   const [dayEvents, setDayEvents] = useState([]);
@@ -39,13 +38,9 @@ export default function RecruiterCalendarPage() {
     setDayEvents(events || []);
   }, []);
 
-  const handleAdd = useCallback((dateStr) => {
-    calendarRef.current?.openAdd?.(dateStr);
-  }, []);
-
-  const handleEdit = useCallback((eventId) => {
-    calendarRef.current?.openEdit?.(eventId);
-  }, []);
+  // These are no-ops at page level — RecruiterCalendar owns its own modal
+  const handleAdd = useCallback(() => {}, []);
+  const handleEdit = useCallback(() => {}, []);
 
   const HeaderBox = (
     <RecruiterTitleCard
@@ -75,7 +70,6 @@ export default function RecruiterCalendarPage() {
       >
         <div style={{ width: '100%' }}>
           <RecruiterCalendar
-            ref={calendarRef}
             title="Month View"
             storageKey={STORAGE_KEY}
             seed={[]}

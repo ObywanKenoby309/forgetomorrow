@@ -231,6 +231,7 @@ export default function RecruiterCalendarEventForm({
       notes: initial?.notes || '',
       calendarScope, // 'team' | 'personal'
       meetingMode, // 'calendar_only' | 'audio_video'
+      durationMinutes: initial?.durationMinutes || 60,
     };
   });
 
@@ -747,7 +748,6 @@ ${roomNote}` : roomNote;
         invitees: payloadInvitees,
         timezone: form.timezone,
         enableVideo: videoLimitActive,
-      durationMinutes: initial?.durationMinutes || 60,
         foundryRoomId: foundry?.roomId || null,
         foundryGuestToken: foundry?.guestToken || null,
         foundryJoinUrl: foundry?.joinUrl || null,
@@ -1275,8 +1275,8 @@ ${roomNote}` : roomNote;
           </div>
 
 
-          {/* Duration — only shown when video/Foundry is enabled */}
-          {(form.enableVideo || form.meetingMode === 'audio_video') && (
+          {/* Duration — only when Audio/Video is selected */}
+          {form.meetingMode === 'audio_video' && (
             <div>
               <label style={label}>Meeting duration</label>
               <div style={{ display: 'flex', gap: 8 }}>
