@@ -106,7 +106,9 @@ function isPublicFoundryGuestPath(pathname) {
     pathname.startsWith("/foundry/join/") ||
     pathname.startsWith("/foundry/guest/") ||
     pathname === "/api/foundry/guest-token" ||
-    pathname === "/api/foundry/resolve-code"
+    pathname === "/api/foundry/resolve-code" ||
+    pathname.startsWith("/api/foundry/room-status/") ||
+	pathname.startsWith('/api/foundry/room-status/')
   );
 }
 

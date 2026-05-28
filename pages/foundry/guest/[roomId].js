@@ -201,6 +201,31 @@ export default function GuestFoundryRoom({
     } catch {}
   }, [roomId, guestCode, serverError, enterRoom]);
 
+
+  // foundry room status watcher — external guest self-ejects when host ends room
+  useEffect(() => {
+    if (!ready || !roomId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/foundry/room-status/${roomId}`);
+        const data = await res.json().catch(() => ({}));
+
+        if (data.status === 'ENDED') {
+          clearInterval(interval);
+
+          if (callRef.current) {
+            await callRef.current.leave().catch(() => {});
+          }
+
+          setShowConversionBanner(true);
+        }
+      } catch {}
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [ready, roomId]);
+
   const requestGuestToken = async () => {
     const name = guestName.trim();
 

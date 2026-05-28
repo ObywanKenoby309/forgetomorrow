@@ -151,6 +151,31 @@ if (isHost) {
     clearTimeout(warnTimerRef.current);
   }, []);
 
+
+  // foundry room status watcher — internal participants/host self-eject when room is ended
+  useEffect(() => {
+    if (!roomId || loading) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/foundry/room-status/${roomId}`);
+        const data = await res.json().catch(() => ({}));
+
+        if (data.status === 'ENDED') {
+          clearInterval(interval);
+
+          if (callRef.current) {
+            await callRef.current.leave().catch(() => {});
+          }
+
+          router.push('/foundry');
+        }
+      } catch {}
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [roomId, loading, router]);
+
   const handleCallReady = useCallback((call) => {
     callRef.current = call;
     call.on('app-message', ({ data }) => {
