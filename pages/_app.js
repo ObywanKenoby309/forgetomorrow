@@ -148,6 +148,11 @@ function AppShell({ Component, pageProps }) {
 
   // Foundry routes are INTERNAL full-screen routes (no external header/footer)
   const isFoundryRoute = router.pathname.startsWith('/foundry');
+  
+  // Foundry routes are EXTERNAL full-screen routes (no external header/footer)
+  const isPublicFoundryGuestRoute =
+  router.pathname === '/foundry/join/[roomId]' ||
+  router.pathname === '/foundry/guest/[roomId]';
 
   // Job apply route should be treated as INTERNAL seeker-style page
   const isJobApplyRoute = router.pathname === '/job/[id]/apply';
@@ -316,7 +321,8 @@ function AppShell({ Component, pageProps }) {
   const shouldShowGlobalStriker = !isPublicEffective;
 
   // Client-side auth expiry redirect on protected routes only
-  const shouldGuardSession = !isPublicEffective;
+  const shouldGuardSession =
+  !isPublicEffective && !isPublicFoundryGuestRoute;
 
   return (
     <>
