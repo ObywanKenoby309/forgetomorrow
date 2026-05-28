@@ -65,22 +65,97 @@ export default async function handler(req, res) {
       }
     }
 
-    // Block guests until host has joined
+    const cleanGuestName = guestName.trim();
+
+    // Block guests until host has joined. Do not create Daily minutes yet.
     if (!room.hostJoinedAt) {
+      await prisma.foundryLobbyParticipant.upsert({
+        where: {
+          roomId_guestCode: {
+            roomId: room.id,
+            guestCode,
+          },
+        },
+        update: {
+          guestName: cleanGuestName,
+          status: 'WAITING',
+        },
+        create: {
+          roomId: room.id,
+          guestName: cleanGuestName,
+          guestCode,
+          status: 'WAITING',
+        },
+      }).catch(async () => {
+        await prisma.foundryLobbyParticipant.create({
+          data: {
+            roomId: room.id,
+            guestName: cleanGuestName,
+            guestCode,
+            status: 'WAITING',
+          },
+        }).catch(() => {});
+      });
+
       return res.status(403).json({
         error: 'WAITING_FOR_HOST',
         scheduledAt: room.scheduledAt?.toISOString() || null,
       });
     }
 
-    // Issue Daily token
+    // Guests must be admitted from the host lobby before receiving a Daily token.
+    const lobbyEntry = await prisma.foundryLobbyParticipant.findFirst({
+      where: {
+        roomId: room.id,
+        guestCode,
+        status: 'ADMITTED',
+      },
+      orderBy: { admittedAt: 'desc' },
+    });
+
+    if (!lobbyEntry) {
+      await prisma.foundryLobbyParticipant.upsert({
+        where: {
+          roomId_guestCode: {
+            roomId: room.id,
+            guestCode,
+          },
+        },
+        update: {
+          guestName: cleanGuestName,
+          status: 'WAITING',
+        },
+        create: {
+          roomId: room.id,
+          guestName: cleanGuestName,
+          guestCode,
+          status: 'WAITING',
+        },
+      }).catch(async () => {
+        await prisma.foundryLobbyParticipant.create({
+          data: {
+            roomId: room.id,
+            guestName: cleanGuestName,
+            guestCode,
+            status: 'WAITING',
+          },
+        }).catch(() => {});
+      });
+
+      return res.status(403).json({
+        error: 'WAITING_FOR_ADMISSION',
+        scheduledAt: room.scheduledAt?.toISOString() || null,
+      });
+    }
+
+    // Issue Daily token only after admission.
     const guestId = `guest_${nanoid(8)}`;
     const dailyRoomName = room.dailyRoomName || room.roomId;
 
     const token = await createDailyToken({
       roomId: dailyRoomName,
       userId: guestId,
-      userName: guestName.trim(),
+      userName: cleanGuestName,
       isOwner: false,
     });
 
@@ -95,7 +170,7 @@ export default async function handler(req, res) {
       roomUrl: dailyRoomUrl(dailyRoomName),
       dailyRoomName,
       guestId,
-      guestName: guestName.trim(),
+      guestName: cleanGuestName,
       scheduledEndAt,
     });
   } catch (err) {

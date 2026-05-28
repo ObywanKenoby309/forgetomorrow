@@ -1,6 +1,7 @@
 // components/foundry/FoundryRightPanel.js
 import { useState, useEffect } from 'react';
 import FoundrySignalPanel from './FoundrySignalPanel';
+import FoundryLobbyPanel from './FoundryLobbyPanel';
 
 const ORANGE = '#FF7043';
 
@@ -97,11 +98,22 @@ function initials(name) {
   return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
-function PeopleTab({ participants, isHost, onDmParticipant }) {
+function PeopleTab({ participants, isHost, onDmParticipant, roomId, coHostUserId, coHostName, onCoHostAssigned }) {
   const [query, setQuery] = useState('');
   const filtered = participants.filter(p => p.name?.toLowerCase().includes(query.toLowerCase()));
   return (
     <div>
+      {isHost && roomId && (
+        <FoundryLobbyPanel
+          roomId={roomId}
+          participants={participants}
+          coHostUserId={coHostUserId}
+          coHostName={coHostName}
+          isHost={isHost}
+          onCoHostAssigned={onCoHostAssigned}
+        />
+      )}
+
       <div style={S.searchBox}>
         <span style={{ color: '#555', fontSize: 13 }}>⌕</span>
         <input style={S.searchInput} placeholder="Search participants…" value={query} onChange={e => setQuery(e.target.value)} aria-label="Search participants" />
@@ -238,6 +250,7 @@ function NotesTab({ notes, onNotesChange }) {
 const TABS_LIST = ['People', 'Chat', 'Files', 'Notes'];
 
 export default function FoundryRightPanel({
+  roomId,
   participants = [],
   messages = [],
   sharedFiles = [],
@@ -251,6 +264,9 @@ export default function FoundryRightPanel({
   initialTab = 'People',
   currentUserId,
   currentUserRole,
+  coHostUserId,
+  coHostName,
+  onCoHostAssigned,
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [chatSub, setChatSub] = useState('meeting');
@@ -299,6 +315,10 @@ export default function FoundryRightPanel({
         <PeopleTab
           participants={participants}
           isHost={isHost}
+          roomId={roomId}
+          coHostUserId={coHostUserId}
+          coHostName={coHostName}
+          onCoHostAssigned={onCoHostAssigned}
           onDmParticipant={() => { setActiveTab('Chat'); setChatSub('dms'); }}
         />
       </div>

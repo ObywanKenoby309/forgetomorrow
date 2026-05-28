@@ -1498,6 +1498,7 @@ model FoundryLobbyParticipant {
   room FoundryRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user User?       @relation("FoundryLobbyParticipants", fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([roomId, guestCode], name: "roomId_guestCode")
   @@index([roomId, status])
   @@index([userId])
   @@map("foundry_lobby_participants")
