@@ -1217,6 +1217,8 @@ model RecruiterCalendarItem {
   scope           String   @default("team")
   date            DateTime
   time            String?
+  timezone       String?  @default("America/New_York")
+  scheduledAtUtc DateTime?
   title           String
   type            String   @default("Interview")
   status          String   @default("Scheduled")
@@ -1269,6 +1271,8 @@ model SeekerCalendarItem {
   userId       String
   date         DateTime
   time         String?
+  timezone       String?  @default("America/New_York")
+  scheduledAtUtc DateTime?
   title        String
   type         String   @default("Interview")
   status       String   @default("Scheduled")
