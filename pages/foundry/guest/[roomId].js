@@ -410,6 +410,7 @@ export default function GuestFoundryRoom({
           onCallReady={handleCallReady}
           onParticipantsChange={handleParticipantsChange}
           onInvite={() => {}}
+          onHostEnded={() => setShowConversionBanner(true)}
           guestToken={guestToken}
           guestRoomUrl={roomUrl}
         />

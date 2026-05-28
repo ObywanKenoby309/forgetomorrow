@@ -251,6 +251,7 @@ export default function FoundryVideoGrid({
   onCallReady, onParticipantsChange,
   onScreenShareChange,
   onRoomEmpty,
+  onHostEnded = null,
   onScheduledEnd = null,
   guestToken = null,
   guestRoomUrl = null,
@@ -410,6 +411,14 @@ export default function FoundryVideoGrid({
           if (!destroyed) {
             setJoinState('error');
             setErrorMsg(e?.errorMsg || 'Connection error');
+          }
+        });
+
+        // Fired on all participants when the room owner ends the meeting
+        call.on('meeting-ended', () => {
+          if (!destroyed) {
+            setJoinState('idle');
+            onHostEnded?.();
           }
         });
 

@@ -609,7 +609,6 @@ model CoachingSession {
   clientId         String?
   coachingClientId String?
   startAt          DateTime
-  timezone 		   String? 		   @default("America/New_York")
   durationMin      Int             @default(60)
   type             String          @default("Strategy")
   status           String          @default("Scheduled")
@@ -904,6 +903,8 @@ model User {
   contactCategoryAssignments   ContactCategoryAssignment[]
   conversationParticipants     ConversationParticipant[]      @relation("UserConversationParticipants")
   foundryRoomsHosted           FoundryRoom[]                  @relation("FoundryHost")
+  foundryCoHosting             FoundryRoom[]                  @relation("FoundryCoHost")
+  foundryLobbyParticipations   FoundryLobbyParticipant[]      @relation("FoundryLobbyParticipants")
   foundryParticipations        FoundryParticipant[]           @relation("FoundryParticipations")
   foundryNotes                 FoundryNote[]                  
   foundryInvitations 		   FoundryInvitee[] 			  @relation("FoundryInviteeUser")
@@ -1215,36 +1216,26 @@ model RecruiterCalendarItem {
   id              String   @id @default(cuid())
   ownerId         String
   scope           String   @default("team")
-
   date            DateTime
   time            String?
-
-  timezone        String?   @default("America/New_York")
-  scheduledAtUtc  DateTime?
-
   title           String
   type            String   @default("Interview")
   status          String   @default("Scheduled")
   notes           String?
-
   candidateType   String   @default("external")
   candidateUserId String?
   candidateName   String
-
   company         String?
   jobTitle        String?
   req             String?
-
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-
   candidate       User?    @relation("UserRecruiterCalendarCandidate", fields: [candidateUserId], references: [id])
   owner           User     @relation("UserRecruiterCalendarOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
   @@index([date])
   @@index([scope])
-
   @@map("recruiter_calendar_items")
 }
 
@@ -1277,30 +1268,21 @@ model SnapshotSchedule {
 model SeekerCalendarItem {
   id           String   @id @default(cuid())
   userId       String
-
   date         DateTime
   time         String?
-
-  timezone        String?   @default("America/New_York")
-  scheduledAtUtc  DateTime?
-
   title        String
   type         String   @default("Interview")
   status       String   @default("Scheduled")
   notes        String?
-
   source       String   @default("personal")
   sourceItemId String?
-
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-
-  user         User @relation("UserSeekerCalendarItems", fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation("UserSeekerCalendarItems", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([date])
   @@index([source])
-
   @@map("seeker_calendar_items")
 }
 
@@ -1395,33 +1377,36 @@ model Message {
 }
 
 model FoundryRoom {
-  id               String                @id @default(cuid())
-  roomId           String                @unique // short public ID (nanoid)
-  title            String
-  status           FoundryStatus         @default(ACTIVE)
-  hostId           String
-  dailyRoomName    String?
-  dailyRoomUrl     String?
-  startedAt        DateTime              @default(now())
-  endedAt          DateTime?
-  isRecording      Boolean               @default(false)
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-
-  scheduledAt      DateTime?
-  timezone         String?               @default("America/New_York")
-  guestToken       String?               @unique // short code for external join links
-  invitesSentAt    DateTime?
+  id             String               @id @default(cuid())
+  roomId         String               @unique          // short public ID (nanoid)
+  title          String
+  status         FoundryStatus        @default(ACTIVE)
+  hostId         String
+  dailyRoomName  String?
+  dailyRoomUrl   String?
+  startedAt      DateTime             @default(now())
+  endedAt        DateTime?
+  isRecording    Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  scheduledAt    DateTime?
+  timezone       String?    		  @default("America/New_York")
+  guestToken     String?    		  @unique   // short code for external join links
+  invitesSentAt  DateTime?
 
   hostJoinedAt     DateTime? // set when host issues first valid token
-  durationMinutes  Int                    @default(60) // scheduled duration for auto-end
+  durationMinutes  Int       @default(60) // scheduled duration for auto-end
+  roomOpenedAt     DateTime? // when host first admits someone
+  coHostUserId     String?   // assigned co-host (COACH or RECRUITER only)
 
-  invitees         FoundryInvitee[]
-  participants     FoundryParticipant[]
-  sharedFiles      FoundrySharedFile[]
-  notes            FoundryNote[]
+  invitees          FoundryInvitee[]
+  lobbyParticipants FoundryLobbyParticipant[]
 
-  host             User @relation("FoundryHost", fields: [hostId], references: [id])
+  host           User  @relation("FoundryHost", fields: [hostId], references: [id])
+  coHost         User? @relation("FoundryCoHost", fields: [coHostUserId], references: [id])
+  participants   FoundryParticipant[]
+  sharedFiles    FoundrySharedFile[]
+  notes          FoundryNote[]
 
   @@index([hostId])
   @@index([status])
@@ -1500,10 +1485,29 @@ model FoundryNote {
   @@map("foundry_notes")
 }
 
+model FoundryLobbyParticipant {
+  id         String   @id @default(cuid())
+  roomId     String
+  userId     String?  // null for external guests
+  guestName  String?  // display name for guests
+  guestCode  String?  // guest token used to join
+  status     String   @default("WAITING") // WAITING | ADMITTED | DECLINED
+  joinedAt   DateTime @default(now())
+  admittedAt DateTime?
+
+  room FoundryRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User?       @relation("FoundryLobbyParticipants", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, status])
+  @@index([userId])
+  @@map("foundry_lobby_participants")
+}
+
 enum FoundryStatus {
+  SCHEDULED
+  LOBBY
   ACTIVE
   ENDED
-  SCHEDULED
 }
 
 model UserBlock {
