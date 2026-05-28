@@ -415,44 +415,51 @@ export default function FoundrySchedulePanel({ contacts = [], onScheduled }) {
         />
       </div>
 
-      <div style={{ ...S.row, ...S.field }}>
-        <div style={{ flex: 1 }}>
-          <label style={S.label}>Date</label>
-          <input
-            type="date"
-            style={S.input}
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            min={new Date().toISOString().slice(0, 10)}
-            aria-label="Session date"
-          />
-        </div>
+      <div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr 1fr',
+    gap: 10,
+    marginBottom: 14,
+  }}
+>
+  <div>
+    <label style={S.label}>Date</label>
+    <input
+      type="date"
+      style={S.input}
+      value={date}
+      onChange={(e) => setDate(e.target.value)}
+      min={new Date().toISOString().slice(0, 10)}
+      aria-label="Session date"
+    />
+  </div>
 
-        <div style={{ flex: 1 }}>
-          <label style={S.label}>Time</label>
-          <input
-            type="time"
-            style={S.input}
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            aria-label="Session time"
-          />
-        </div>
-      </div>
+  <div>
+    <label style={S.label}>Time</label>
+    <input
+      type="time"
+      style={S.input}
+      value={time}
+      onChange={(e) => setTime(e.target.value)}
+      aria-label="Session time"
+    />
+  </div>
 
-      <div style={S.field}>
-        <label style={S.label}>Timezone</label>
-        <select
-          style={S.select}
-          value={timezone}
-          onChange={(e) => setTimezone(e.target.value)}
-          aria-label="Timezone"
-        >
-          {TIMEZONES.map((tz) => (
-            <option key={tz} value={tz}>{TIMEZONE_LABELS[tz] || tz}</option>
-          ))}
-        </select>
-      </div>
+  <div>
+    <label style={S.label}>Timezone</label>
+    <select
+      style={S.select}
+      value={timezone}
+      onChange={(e) => setTimezone(e.target.value)}
+      aria-label="Timezone"
+    >
+      {TIMEZONES.map((tz) => (
+        <option key={tz} value={tz}>{TIMEZONE_LABELS[tz] || tz}</option>
+      ))}
+    </select>
+  </div>
+</div>
 
       <hr style={S.divider} />
 

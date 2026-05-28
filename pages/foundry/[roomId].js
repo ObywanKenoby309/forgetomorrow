@@ -285,22 +285,34 @@ export default function FoundryRoom() {
         />
 
         {!sidebarHidden && (
-          <FoundryRightPanel
-            participants={participants}
-            messages={meetingMessages}
-            sharedFiles={sharedFiles}
-            forgeFiles={forgeFiles}
-            notes={notes}
-            onNotesChange={handleNotesChange}
-            onSend={handleSend}
-            onShare={handleShare}
-            onUpload={() => {}}
-            isHost={isHost}
-            initialTab={activePanel}
-            currentUserId={session?.user?.id}
-            currentUserRole={session?.user?.role}
-          />
-        )}
+  <FoundryRightPanel
+    roomId={roomId}
+    participants={participants}
+    messages={meetingMessages}
+    sharedFiles={sharedFiles}
+    forgeFiles={forgeFiles}
+    notes={notes}
+    onNotesChange={handleNotesChange}
+    onSend={handleSend}
+    onShare={handleShare}
+    onUpload={() => {}}
+    isHost={isHost}
+    initialTab={activePanel}
+    currentUserId={session?.user?.id}
+    currentUserRole={session?.user?.role}
+    coHostUserId={room?.coHostUserId}
+    coHostName={room?.coHost?.name}
+    onCoHostAssigned={(data) => {
+      setRoom((prev) => ({
+        ...prev,
+        coHostUserId: data?.coHostUserId || null,
+        coHost: data?.coHostName
+          ? { ...(prev?.coHost || {}), name: data.coHostName }
+          : prev?.coHost,
+      }));
+    }}
+  />
+)}
       </div>
 
       <FoundryBottomBar
