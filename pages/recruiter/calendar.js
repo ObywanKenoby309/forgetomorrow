@@ -1,5 +1,9 @@
-import React, { useState, useCallback, memo, useMemo, useRef } from 'react';
-import { PlanProvider } from '@/context/PlanContext';
+// pages/recruiter/calendar.js
+// Matches coach calendar pattern exactly — no PlanProvider, no memo complexity.
+// PlanProvider was causing router.replace + plan polling to re-render the whole
+// page tree every few seconds, causing the scroll freeze.
+
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import RecruiterCalendar from '@/components/calendar/RecruiterCalendar';
 import RecruiterTitleCard from '@/components/recruiter/RecruiterTitleCard';
@@ -9,19 +13,8 @@ import { getTimeGreeting } from '@/lib/dashboardGreeting';
 
 const STORAGE_KEY = 'recruiterCalendar_live_v1';
 
-// Memoized so RightRailPlacementManager's internal carousel interval
-// never triggers a re-render of the calendar above it
-// Custom equality — only re-render if date changes or event count/ids change
-function rightRailEqual(prev, next) {
-  if (prev.selectedDate !== next.selectedDate) return false;
-  if (prev.dayEvents.length !== next.dayEvents.length) return false;
-  for (let i = 0; i < prev.dayEvents.length; i++) {
-    if (prev.dayEvents[i]?.id !== next.dayEvents[i]?.id) return false;
-  }
-  return true;
-}
-
-const CalendarRightRail = memo(function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
+// Plain function — no memo needed since parent no longer re-renders on a timer
+function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', marginBottom: -24 }}>
@@ -35,69 +28,63 @@ const CalendarRightRail = memo(function CalendarRightRail({ selectedDate, dayEve
       />
     </div>
   );
-}, rightRailEqual);
+}
 
 export default function RecruiterCalendarPage() {
-  const greeting = getTimeGreeting();
-
   const [selectedDate, setSelectedDate] = useState(null);
   const [dayEvents, setDayEvents] = useState([]);
-  // Stable ref to track last events by date string — prevents memo busting
-  const dayEventsRef = useRef([]);
+  const calendarRef = useRef(null);
 
   const handleDaySelect = useCallback((dateStr, events) => {
     setSelectedDate(dateStr);
-    // Only update dayEvents if contents actually changed — prevents memo busting
-    const next = events || [];
-    const prev = dayEventsRef.current;
-    const changed = next.length !== prev.length ||
-      next.some((e, i) => e?.id !== prev[i]?.id || e?.time !== prev[i]?.time);
-    if (changed) {
-      dayEventsRef.current = next;
-      setDayEvents(next);
-    }
+    setDayEvents(events || []);
   }, []);
 
-  // These are no-ops at page level — RecruiterCalendar owns its own modal
-  const handleAdd = useCallback(() => {}, []);
-  const handleEdit = useCallback(() => {}, []);
+  const handleAdd = useCallback((dateStr) => {
+    calendarRef.current?.openAdd?.(dateStr);
+  }, []);
+
+  const handleEdit = useCallback((id) => {
+    calendarRef.current?.openEdit?.(id);
+  }, []);
+
+  const greeting = getTimeGreeting();
 
   const HeaderBox = (
     <RecruiterTitleCard
       greeting={greeting}
       title="Recruiter Calendar"
-      subtitle="Block interviews, intakes, outreach blocks, and offer milestones."
+      subtitle="Block interviews, intakes, outreach blocks, and offer milestones - all in one place."
       compact
     />
   );
 
   return (
-    <PlanProvider>
-      <RecruiterLayout
-        title="Recruiter Calendar | ForgeTomorrow"
-        header={HeaderBox}
-        headerCard={false}
-        right={
-          <CalendarRightRail
-            selectedDate={selectedDate}
-            dayEvents={dayEvents}
-            onAdd={handleAdd}
-            onEdit={handleEdit}
-          />
-        }
-        rightVariant="light"
-        activeNav="calendar"
-      >
-        <div style={{ width: '100%' }}>
-          <RecruiterCalendar
-            title="Month View"
-            storageKey={STORAGE_KEY}
-            seed={[]}
-            onDaySelect={handleDaySelect}
-            selectedDate={selectedDate}
-          />
-        </div>
-      </RecruiterLayout>
-    </PlanProvider>
+    <RecruiterLayout
+      title="Recruiter Calendar | ForgeTomorrow"
+      header={HeaderBox}
+      headerCard={false}
+      right={
+        <CalendarRightRail
+          selectedDate={selectedDate}
+          dayEvents={dayEvents}
+          onAdd={handleAdd}
+          onEdit={handleEdit}
+        />
+      }
+      rightVariant="light"
+      activeNav="calendar"
+    >
+      <div style={{ width: '100%' }}>
+        <RecruiterCalendar
+          ref={calendarRef}
+          title="Month View"
+          storageKey={STORAGE_KEY}
+          seed={[]}
+          onDaySelect={handleDaySelect}
+          selectedDate={selectedDate}
+        />
+      </div>
+    </RecruiterLayout>
   );
 }
