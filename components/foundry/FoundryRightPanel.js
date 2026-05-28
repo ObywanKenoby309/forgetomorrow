@@ -101,23 +101,120 @@ function initials(name) {
 function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, coHostUserId, coHostName, onCoHostAssigned }) {
   const [query, setQuery] = useState('');
   const [showInvite, setShowInvite] = useState(false);
-  const [copiedFt, setCopiedFt] = useState(false);
-  const [copiedGuest, setCopiedGuest] = useState(false);
+  const [inviteTab, setInviteTab] = useState('internal');
+  const [contacts, setContacts] = useState([]);
+  const [contactQuery, setContactQuery] = useState('');
+  const [externalName, setExternalName] = useState('');
+  const [externalEmail, setExternalEmail] = useState('');
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState('');
+  const [inviteError, setInviteError] = useState('');
+  const [meetingLinks, setMeetingLinks] = useState({ ftLink: '', guestLink: '', guestCode: guestToken || '' });
+  const [copied, setCopied] = useState('');
+
   const filtered = participants.filter(p => p.name?.toLowerCase().includes(query.toLowerCase()));
 
-  const ftLink = roomId && typeof window !== 'undefined'
+  const localFtLink = roomId && typeof window !== 'undefined'
     ? `${window.location.origin}/foundry/${roomId}`
     : '';
-  const guestLink = roomId && guestToken && typeof window !== 'undefined'
+  const localGuestLink = roomId && guestToken && typeof window !== 'undefined'
     ? `${window.location.origin}/foundry/join/${roomId}?code=${guestToken}`
     : '';
 
-  const copyFt = () => {
-    navigator.clipboard.writeText(ftLink).then(() => { setCopiedFt(true); setTimeout(() => setCopiedFt(false), 2000); });
+  const ftLink = meetingLinks.ftLink || localFtLink;
+  const guestLink = meetingLinks.guestLink || localGuestLink;
+  const guestCode = meetingLinks.guestCode || guestToken || '';
+
+  const copyText = (label, value) => {
+    if (!value) return;
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(label);
+      setTimeout(() => setCopied(''), 1800);
+    }).catch(() => {});
   };
-  const copyGuest = () => {
-    navigator.clipboard.writeText(guestLink).then(() => { setCopiedGuest(true); setTimeout(() => setCopiedGuest(false), 2000); });
+
+  const loadInviteOptions = async () => {
+    if (!roomId || !isHost) return;
+    try {
+      const res = await fetch(`/api/foundry/room/${roomId}/live-invite`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not load invite options');
+      setContacts(Array.isArray(data.contacts) ? data.contacts : []);
+      setMeetingLinks({
+        ftLink: data.ftLink || localFtLink,
+        guestLink: data.guestLink || localGuestLink,
+        guestCode: data.guestCode || guestToken || '',
+      });
+      setInviteError('');
+    } catch (err) {
+      setInviteError(String(err?.message || err || 'Could not load invite options'));
+    }
   };
+
+  useEffect(() => {
+    if (showInvite) loadInviteOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showInvite, roomId, isHost]);
+
+  const sendInternalInvite = async (contact) => {
+    if (!contact?.id || !roomId) return;
+    setInviteBusy(true);
+    setInviteError('');
+    setInviteMessage('');
+    try {
+      const res = await fetch(`/api/foundry/room/${roomId}/live-invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'internal', userId: contact.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not invite contact');
+      setInviteMessage(`${contact.name || 'Contact'} invited. They will see a calendar item, notification, and Signal message.`);
+      await loadInviteOptions();
+    } catch (err) {
+      setInviteError(String(err?.message || err || 'Could not invite contact'));
+    } finally {
+      setInviteBusy(false);
+    }
+  };
+
+  const sendExternalInvite = async () => {
+    if (!roomId || !externalEmail.trim()) {
+      setInviteError('Enter an external guest email.');
+      return;
+    }
+    setInviteBusy(true);
+    setInviteError('');
+    setInviteMessage('');
+    try {
+      const res = await fetch(`/api/foundry/room/${roomId}/live-invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'external', email: externalEmail.trim(), name: externalName.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not invite guest');
+      setInviteMessage(`${externalEmail.trim()} invited. Guest link is ready to copy if needed.`);
+      setExternalName('');
+      setExternalEmail('');
+      setMeetingLinks({
+        ftLink: data.ftLink || ftLink,
+        guestLink: data.guestLink || guestLink,
+        guestCode: data.guestCode || guestCode,
+      });
+      await loadInviteOptions();
+    } catch (err) {
+      setInviteError(String(err?.message || err || 'Could not invite guest'));
+    } finally {
+      setInviteBusy(false);
+    }
+  };
+
+  const visibleContacts = contacts.filter((c) => {
+    const q = contactQuery.trim().toLowerCase();
+    if (!q) return true;
+    return [c.name, c.email, c.headline, c.role].filter(Boolean).join(' ').toLowerCase().includes(q);
+  });
 
   return (
     <div>
@@ -137,66 +234,103 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, 
         <input style={S.searchInput} placeholder="Search participants…" value={query} onChange={e => setQuery(e.target.value)} aria-label="Search participants" />
       </div>
       <button style={S.inviteBtn} onClick={() => setShowInvite(v => !v)}>
-        <span>+</span> {showInvite ? 'Hide invite links' : 'Invite to Foundry'}
+        <span>+</span> {showInvite ? 'Close invite panel' : 'Invite to Foundry'}
       </button>
 
-      {showInvite && (
+      {showInvite && isHost && (
         <div style={{
           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 8, padding: '10px 12px', marginBottom: 10,
           display: 'flex', flexDirection: 'column', gap: 8,
         }}>
-          {ftLink && (
-            <div>
-              <div style={{ fontSize: 10, color: '#666', fontWeight: 600, marginBottom: 4 }}>
-                🔨 ForgeTomorrow users
-              </div>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <div style={{
-                  flex: 1, fontSize: 10, color: '#555', background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5,
-                  padding: '5px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{ftLink}</div>
-                <button onClick={copyFt} style={{
-                  background: copiedFt ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.1)', color: copiedFt ? '#4caf50' : '#aaa',
-                  borderRadius: 5, padding: '4px 8px', fontSize: 10, cursor: 'pointer',
-                  fontFamily: 'inherit', flexShrink: 0, fontWeight: 600,
-                }}>
-                  {copiedFt ? '✓ Copied' : 'Copy'}
-                </button>
-              </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button style={S.subBtn(inviteTab === 'internal')} onClick={() => setInviteTab('internal')}>Contacts</button>
+            <button style={S.subBtn(inviteTab === 'external')} onClick={() => setInviteTab('external')}>External</button>
+            <button style={S.subBtn(inviteTab === 'links')} onClick={() => setInviteTab('links')}>Links</button>
+          </div>
+
+          {inviteError && <div style={{ fontSize: 10, color: '#ef5350', lineHeight: 1.4 }}>{inviteError}</div>}
+          {inviteMessage && <div style={{ fontSize: 10, color: '#4caf50', lineHeight: 1.4 }}>{inviteMessage}</div>}
+
+          {inviteTab === 'internal' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              <input
+                style={{ ...S.searchInput, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '7px 8px' }}
+                placeholder="Search contacts to invite…"
+                value={contactQuery}
+                onChange={(e) => setContactQuery(e.target.value)}
+              />
+              {visibleContacts.length === 0 && (
+                <div style={{ fontSize: 10, color: '#444', lineHeight: 1.5 }}>
+                  No eligible contacts found. People already in the room, lobby, or invite list are hidden.
+                </div>
+              )}
+              {visibleContacts.slice(0, 8).map((c) => (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 6px', borderRadius: 6, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  {c.avatarUrl ? <img src={c.avatarUrl} alt={c.name} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ ...S.pav(), width: 24, height: 24, fontSize: 9 }}>{initials(c.name)}</div>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+                    <div style={{ fontSize: 9, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email || c.role || 'ForgeTomorrow contact'}</div>
+                  </div>
+                  <button disabled={inviteBusy} onClick={() => sendInternalInvite(c)} style={{ ...S.dmBtn, color: ORANGE, borderColor: 'rgba(255,112,67,0.25)' }}>
+                    Invite
+                  </button>
+                </div>
+              ))}
             </div>
           )}
-          {guestLink && (
-            <div>
-              <div style={{ fontSize: 10, color: '#666', fontWeight: 600, marginBottom: 4 }}>
-                🔗 External guests (no account needed)
-              </div>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <div style={{
-                  flex: 1, fontSize: 10, color: '#555', background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5,
-                  padding: '5px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{guestLink}</div>
-                <button onClick={copyGuest} style={{
-                  background: copiedGuest ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.1)', color: copiedGuest ? '#4caf50' : '#aaa',
-                  borderRadius: 5, padding: '4px 8px', fontSize: 10, cursor: 'pointer',
-                  fontFamily: 'inherit', flexShrink: 0, fontWeight: 600,
-                }}>
-                  {copiedGuest ? '✓ Copied' : 'Copy'}
-                </button>
-              </div>
+
+          {inviteTab === 'external' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              <input
+                style={{ ...S.searchInput, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '7px 8px' }}
+                placeholder="Guest name (optional)"
+                value={externalName}
+                onChange={(e) => setExternalName(e.target.value)}
+              />
+              <input
+                style={{ ...S.searchInput, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '7px 8px' }}
+                placeholder="guest@email.com"
+                value={externalEmail}
+                onChange={(e) => setExternalEmail(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendExternalInvite()}
+              />
+              <button disabled={inviteBusy} style={S.inviteBtn} onClick={sendExternalInvite}>
+                {inviteBusy ? 'Sending…' : '+ Email external guest'}
+              </button>
             </div>
           )}
-          {!guestLink && (
-            <div style={{ fontSize: 10, color: '#444', lineHeight: 1.5 }}>
-              Guest links are only available for scheduled Foundries. Start a new scheduled session to get a guest link.
+
+          {inviteTab === 'links' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div>
+                <div style={{ fontSize: 10, color: '#666', fontWeight: 600, marginBottom: 4 }}>ForgeTomorrow users</div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div style={{ flex: 1, fontSize: 10, color: '#555', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5, padding: '5px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ftLink || 'Unavailable'}</div>
+                  <button onClick={() => copyText('ft', ftLink)} style={S.dmBtn}>{copied === 'ft' ? '✓' : 'Copy'}</button>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: '#666', fontWeight: 600, marginBottom: 4 }}>External guests</div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div style={{ flex: 1, fontSize: 10, color: '#555', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5, padding: '5px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{guestLink || 'Unavailable'}</div>
+                  <button onClick={() => copyText('guest', guestLink)} style={S.dmBtn}>{copied === 'guest' ? '✓' : 'Copy'}</button>
+                </div>
+              </div>
+              {guestCode && (
+                <div>
+                  <div style={{ fontSize: 10, color: '#666', fontWeight: 600, marginBottom: 4 }}>Guest code</div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <div style={{ flex: 1, fontSize: 10, color: '#777', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5, padding: '5px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{guestCode}</div>
+                    <button onClick={() => copyText('code', guestCode)} style={S.dmBtn}>{copied === 'code' ? '✓' : 'Copy'}</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
+
       <div style={S.sectionLabel}>In this Foundry ({participants.length})</div>
       {filtered.map(p => (
         <div key={p.id} style={S.participantRow}>

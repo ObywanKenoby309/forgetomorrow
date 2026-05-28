@@ -27,6 +27,9 @@ export default async function handler(req, res) {
         host: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
+        coHost: {
+          select: { id: true, name: true, firstName: true, lastName: true },
+        },
         sharedFiles: {
           orderBy: { sharedAt: 'desc' },
         },
@@ -62,6 +65,14 @@ export default async function handler(req, res) {
         startedAt: room.startedAt,
         isRecording: room.isRecording,
         hostId: room.hostId,
+        guestToken: room.guestToken || null,
+        coHostUserId: room.coHostUserId || null,
+        coHost: room.coHost
+          ? {
+              id: room.coHost.id,
+              name: room.coHost.name || [room.coHost.firstName, room.coHost.lastName].filter(Boolean).join(' ') || 'Co-host',
+            }
+          : null,
         participants: room.participants.map(p => ({
           id: p.userId,
           name: [p.user.firstName, p.user.lastName].filter(Boolean).join(' ') || 'Unknown',

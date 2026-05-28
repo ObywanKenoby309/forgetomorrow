@@ -372,6 +372,7 @@ export default function FoundryRoom() {
             currentUserRole={session?.user?.role}
             coHostUserId={room?.coHostUserId}
             coHostName={room?.coHost?.name}
+            guestToken={room?.guestToken}
             onCoHostAssigned={(data) => {
               setRoom((prev) => ({
                 ...prev,
