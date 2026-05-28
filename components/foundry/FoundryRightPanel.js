@@ -179,36 +179,52 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, 
   };
 
   const sendExternalInvite = async () => {
-    if (!roomId || !externalEmail?.trim()) {
-      setInviteError('Enter an external guest email.');
-      return;
-    }
-    setInviteBusy(true);
-    setInviteError('');
-    setInviteMessage('');
-    try {
-      const res = await fetch(`/api/foundry/room/${roomId}/live-invite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'external', email: externalEmail.trim(), name: externalName.trim() }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Could not invite guest');
-      setInviteMessage(`${externalEmail.trim()} invited. Guest link is ready to copy if needed.`);
-      setExternalName('');
-      setExternalEmail('');
-      setMeetingLinks({
-        ftLink: data.ftLink || ftLink,
-        guestLink: data.guestLink || guestLink,
-        guestCode: data.guestCode || guestCode,
-      });
-      await loadInviteOptions();
-    } catch (err) {
-      setInviteError(String(err?.message || err || 'Could not invite guest'));
-    } finally {
-      setInviteBusy(false);
-    }
-  };
+  const cleanEmail = String(externalEmail || '').trim();
+  const cleanName = String(externalName || '').trim();
+
+  if (!roomId) {
+    setInviteError('Foundry room is not ready yet. Close and reopen the invite panel.');
+    return;
+  }
+
+  if (!cleanEmail) {
+    setInviteError('Enter an external guest email.');
+    return;
+  }
+
+  setInviteBusy(true);
+  setInviteError('');
+  setInviteMessage('');
+
+  try {
+    const res = await fetch(`/api/foundry/room/${roomId}/live-invite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'external',
+        email: cleanEmail,
+        name: cleanName,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Could not invite guest');
+
+    setInviteMessage(`${cleanEmail} invited. Guest link is ready to copy if needed.`);
+    setExternalName('');
+    setExternalEmail('');
+    setMeetingLinks({
+      ftLink: data.ftLink || ftLink,
+      guestLink: data.guestLink || guestLink,
+      guestCode: data.guestCode || guestCode,
+    });
+    await loadInviteOptions();
+  } catch (err) {
+    setInviteError(String(err?.message || err || 'Could not invite guest'));
+  } finally {
+    setInviteBusy(false);
+  }
+};
 
   const visibleContacts = contacts.filter((c) => {
     const q = contactQuery.trim().toLowerCase();
