@@ -7,30 +7,13 @@ import FoundryTopBar from '@/components/foundry/FoundryTopBar';
 import FoundryVideoGrid from '@/components/foundry/FoundryVideoGrid';
 import FoundryRightPanel from '@/components/foundry/FoundryRightPanel';
 import FoundryBottomBar from '@/components/foundry/FoundryBottomBar';
-import FoundryMobileLayout from '@/components/foundry/FoundryMobileLayout';
 
 const ORANGE = '#FF7043';
-
-// SSR-safe mobile detection — initializes synchronously on client
-// so the correct layout renders on first paint, not after a flash
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth < 768;
-  });
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-  return isMobile;
-}
 
 export default function FoundryRoom() {
   const router = useRouter();
   const { roomId } = router.query;
   const { data: session, status } = useSession();
-  const isMobile = useIsMobile();
 
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -69,11 +52,8 @@ export default function FoundryRoom() {
 
   const startTimeRef = useRef(Date.now());
 
-  // ── All hooks declared unconditionally above any early returns ─────────────
-
   const handleRoomEmpty = useCallback(async () => {
     if (callRef.current) await callRef.current.leave().catch(() => {});
-    try { await fetch(`/api/foundry/room/${roomId}/destroy-daily`, { method: 'POST' }); } catch {}
     try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
     router.push('/foundry');
   }, [roomId, router]);
@@ -83,12 +63,11 @@ export default function FoundryRoom() {
     clearTimeout(endTimerRef.current);
     clearTimeout(warnTimerRef.current);
     if (callRef.current) await callRef.current.leave().catch(() => {});
-    // destroy-daily ejects all participants immediately
-    try { await fetch(`/api/foundry/room/${roomId}/destroy-daily`, { method: 'POST' }); } catch {}
     try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
     router.push('/foundry');
   }, [roomId, router]);
 
+  // Auto-end: fired when scheduledEndAt is known
   const scheduleAutoEnd = useCallback((endIso, isHost) => {
     clearTimeout(endTimerRef.current);
     clearTimeout(warnTimerRef.current);
@@ -96,27 +75,29 @@ export default function FoundryRoom() {
     const endMs = new Date(endIso).getTime();
     const now = Date.now();
     const msUntilEnd = endMs - now;
-    if (msUntilEnd <= 0) return;
+    if (msUntilEnd <= 0) return; // already past end
 
+    // Warn 5 minutes before end
     const msUntilWarn = msUntilEnd - 5 * 60 * 1000;
     if (msUntilWarn > 0) {
       warnTimerRef.current = setTimeout(() => setShowEndWarning(true), msUntilWarn);
     } else {
-      setShowEndWarning(true);
+      setShowEndWarning(true); // already within warning window
     }
 
+    // Auto-end
     endTimerRef.current = setTimeout(async () => {
       setShowEndWarning(false);
       if (callRef.current) await callRef.current.leave().catch(() => {});
+      // Only host calls end API — prevents duplicate calls
       if (isHost) {
-        try { await fetch(`/api/foundry/room/${roomId}/destroy-daily`, { method: 'POST' }); } catch {}
         try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
       }
       router.push('/foundry');
     }, msUntilEnd);
   }, [roomId, router]);
 
-  // Load room
+  // Load room — token API now returns scheduledEndAt
   useEffect(() => {
     if (!roomId || status === 'loading') return;
     if (status === 'unauthenticated') { router.replace('/login'); return; }
@@ -153,23 +134,6 @@ export default function FoundryRoom() {
     clearTimeout(warnTimerRef.current);
   }, []);
 
-  // Room status watcher — kicks participants when host ends the room
-  useEffect(() => {
-    if (!roomId || loading) return;
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/foundry/room-status/${roomId}`);
-        const data = await res.json().catch(() => ({}));
-        if (data.status === 'ENDED') {
-          clearInterval(interval);
-          if (callRef.current) await callRef.current.leave().catch(() => {});
-          router.push('/foundry');
-        }
-      } catch {}
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [roomId, loading, router]);
-
   const handleCallReady = useCallback((call) => {
     callRef.current = call;
     call.on('app-message', ({ data }) => {
@@ -182,8 +146,9 @@ export default function FoundryRoom() {
     });
   }, []);
 
+  // Called by FoundryVideoGrid once it gets the token response (passes scheduledEndAt back)
   const handleScheduledEnd = useCallback((endIso, isHost) => {
-    if (!endIso || scheduledEndAt) return;
+    if (!endIso || scheduledEndAt) return; // only set once
     setScheduledEndAt(endIso);
     scheduleAutoEnd(endIso, isHost);
   }, [scheduledEndAt, scheduleAutoEnd]);
@@ -191,6 +156,8 @@ export default function FoundryRoom() {
   const handleParticipantsChange = useCallback((list) => {
     setParticipants(list.map(p => ({
       id: p.session_id, name: p.user_name || 'Guest',
+      userId: p.user_id || p.userData?.userId || null,
+      role: p.userData?.role || '',
       isHost: !!p.owner,
       micMuted: !p.tracks?.audio || p.tracks.audio.state === 'off',
       videoOff: !p.tracks?.video || p.tracks.video.state === 'off',
@@ -198,7 +165,9 @@ export default function FoundryRoom() {
     })));
   }, []);
 
-  const handleScreenShareChange = useCallback((sharing) => setIsScreenSharing(sharing), []);
+  const handleScreenShareChange = useCallback((sharing) => {
+    setIsScreenSharing(sharing);
+  }, []);
 
   const handleSend = useCallback((text) => {
     const me = session?.user;
@@ -214,6 +183,88 @@ export default function FoundryRoom() {
       } catch (err) { console.error('[foundry] sendAppMessage error:', err); }
     }
   }, [session]);
+
+
+  const sendFoundryControl = useCallback((action, targetSessionId = '*', payload = {}) => {
+    if (!callRef.current) return;
+    try {
+      callRef.current.sendAppMessage(
+        {
+          type: 'FOUNDRY_CONTROL',
+          action,
+          ...payload,
+        },
+        targetSessionId || '*'
+      );
+    } catch (err) {
+      console.error('[foundry] control send failed:', err);
+    }
+  }, []);
+
+  const handleMuteAll = useCallback(() => {
+    sendFoundryControl('MUTE_ALL', '*');
+  }, [sendFoundryControl]);
+
+  const handleMuteParticipant = useCallback((participant) => {
+    if (!participant?.id) return;
+    sendFoundryControl('MUTE', participant.id);
+  }, [sendFoundryControl]);
+
+  const handleStopParticipantShare = useCallback((participant) => {
+    if (!participant?.id) return;
+    sendFoundryControl('STOP_SCREEN_SHARE', participant.id);
+  }, [sendFoundryControl]);
+
+  const handleKickParticipant = useCallback(async (participant) => {
+    if (!participant?.id) return;
+    if (!confirm(`Remove ${participant.name || 'this participant'} from this Foundry?`)) return;
+
+    try {
+      await fetch(`/api/foundry/room/${roomId}/participant-action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'KICK',
+          targetSessionId: participant.id,
+          targetUserId: participant.userId || null,
+          targetName: participant.name || null,
+        }),
+      });
+    } catch {}
+
+    sendFoundryControl('KICK', participant.id, {
+      targetName: participant.name || null,
+    });
+  }, [roomId, sendFoundryControl]);
+
+  const handleBanParticipant = useCallback(async (participant) => {
+    if (!participant?.id) return;
+    if (!confirm(`Ban ${participant.name || 'this participant'} from rejoining this Foundry?`)) return;
+
+    try {
+      await fetch(`/api/foundry/room/${roomId}/participant-action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'BAN',
+          targetSessionId: participant.id,
+          targetUserId: participant.userId || null,
+          targetName: participant.name || null,
+        }),
+      });
+    } catch {}
+
+    sendFoundryControl('BAN', participant.id, {
+      targetName: participant.name || null,
+    });
+  }, [roomId, sendFoundryControl]);
+
+  const handleLockRoom = useCallback(() => {
+    // For now, lock is an in-room host signal. Lobby/token gating still controls actual admission.
+    sendFoundryControl('ROOM_LOCKED', '*');
+    alert('Foundry lock signal sent. New participants must remain in lobby until admitted.');
+  }, [sendFoundryControl]);
+
 
   const handleNotesChange = useCallback((val) => {
     setNotes(val);
@@ -280,7 +331,7 @@ export default function FoundryRoom() {
     setActivePanel(tab);
   };
 
-  // ── All hooks above — safe to early return here ────────────────────────────
+  // All hooks above — safe to early return here
   if (loading) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
       Opening Foundry…
@@ -289,43 +340,6 @@ export default function FoundryRoom() {
 
   const isHost = room?.hostId === session?.user?.id;
 
-  // ── Mobile layout ──────────────────────────────────────────────────────────
-  if (isMobile) {
-    return (
-      <FoundryMobileLayout
-        sessionTitle={room?.title || `Foundry · ${roomId}`}
-        startTime={startTimeRef.current}
-        isRecording={isRecording}
-        micMuted={micMuted}
-        camOff={camOff}
-        isScreenSharing={isScreenSharing}
-        onMicToggle={() => setMicMuted(v => !v)}
-        onCamToggle={() => setCamOff(v => !v)}
-        onShareScreen={handleShareScreen}
-        onRecordToggle={handleRecordToggle}
-        participants={participants}
-        messages={meetingMessages}
-        onSend={handleSend}
-        onEnd={handleEnd}
-        isHost={isHost}
-      >
-        <FoundryVideoGrid
-          roomId={roomId}
-          compact={true}
-          micMuted={micMuted}
-          camOff={camOff}
-          onCallReady={handleCallReady}
-          onParticipantsChange={handleParticipantsChange}
-          onScreenShareChange={handleScreenShareChange}
-          onInvite={() => {}}
-          onRoomEmpty={handleRoomEmpty}
-          onScheduledEnd={handleScheduledEnd}
-        />
-      </FoundryMobileLayout>
-    );
-  }
-
-  // ── Desktop layout ─────────────────────────────────────────────────────────
   return (
     <>
       <FoundryTopBar
@@ -356,7 +370,6 @@ export default function FoundryRoom() {
 
         {!sidebarHidden && (
           <FoundryRightPanel
-            roomId={roomId}
             participants={participants}
             messages={meetingMessages}
             sharedFiles={sharedFiles}
@@ -370,18 +383,6 @@ export default function FoundryRoom() {
             initialTab={activePanel}
             currentUserId={session?.user?.id}
             currentUserRole={session?.user?.role}
-            coHostUserId={room?.coHostUserId}
-            coHostName={room?.coHost?.name}
-            guestToken={room?.guestToken}
-            onCoHostAssigned={(data) => {
-              setRoom((prev) => ({
-                ...prev,
-                coHostUserId: data?.coHostUserId || null,
-                coHost: data?.coHostName
-                  ? { ...(prev?.coHost || {}), name: data.coHostName }
-                  : prev?.coHost,
-              }));
-            }}
           />
         )}
       </div>

@@ -228,6 +228,12 @@ export default function FoundryMobileLayout({
   // End
   onEnd,
   isHost,
+  onMuteAll,
+  onMuteParticipant,
+  onKickParticipant,
+  onBanParticipant,
+  onLockRoom,
+  onStopParticipantShare,
 }) {
   const [activeSheet, setActiveSheet] = useState(null); // null | 'chat' | 'people' | 'more'
   const [chatDraft, setChatDraft] = useState('');
@@ -342,13 +348,21 @@ export default function FoundryMobileLayout({
                   <div style={S.participantName}>{p.name}{p.local ? ' (You)' : ''}</div>
                   <div style={S.participantRole}>{p.isHost ? 'Host' : 'Participant'}</div>
                 </div>
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   <span style={{ fontSize: 14, color: p.micMuted ? '#ef5350' : '#4caf50' }}>
                     {p.micMuted ? '🔇' : '🎤'}
                   </span>
                   <span style={{ fontSize: 14, color: p.videoOff ? '#ef5350' : '#4caf50' }}>
                     {p.videoOff ? '📵' : '📹'}
                   </span>
+                  {isHost && !p.local && (
+                    <>
+                      <button style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#ddd', borderRadius: 6, fontSize: 11, padding: '4px 7px' }} onClick={() => onMuteParticipant?.(p)}>Mute</button>
+                      <button style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#ddd', borderRadius: 6, fontSize: 11, padding: '4px 7px' }} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>
+                      <button style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#ddd', borderRadius: 6, fontSize: 11, padding: '4px 7px' }} onClick={() => onKickParticipant?.(p)}>Kick</button>
+                      <button style={{ background: 'rgba(239,83,80,0.12)', border: '1px solid rgba(239,83,80,0.24)', color: '#ef9a9a', borderRadius: 6, fontSize: 11, padding: '4px 7px' }} onClick={() => onBanParticipant?.(p)}>Ban</button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -418,13 +432,23 @@ export default function FoundryMobileLayout({
               </button>
               <div style={S.moreSep} />
               {isHost && (
-                <button
-                  style={{ ...S.moreItem, color: '#ef5350' }}
-                  onClick={() => { closeSheet(); onEnd?.(); }}
-                >
-                  <span style={S.moreIcon}>📵</span>
-                  <span style={{ ...S.moreLabel, color: '#ef5350' }}>End Foundry for all</span>
-                </button>
+                <>
+                  <button style={S.moreItem} onClick={() => { onMuteAll?.(); closeSheet(); }}>
+                    <span style={S.moreIcon}>🔇</span>
+                    <span style={S.moreLabel}>Mute all</span>
+                  </button>
+                  <button style={S.moreItem} onClick={() => { onLockRoom?.(); closeSheet(); }}>
+                    <span style={S.moreIcon}>🔒</span>
+                    <span style={S.moreLabel}>Lock / unlock Foundry</span>
+                  </button>
+                  <button
+                    style={{ ...S.moreItem, color: '#ef5350' }}
+                    onClick={() => { closeSheet(); onEnd?.(); }}
+                  >
+                    <span style={S.moreIcon}>📵</span>
+                    <span style={{ ...S.moreLabel, color: '#ef5350' }}>End Foundry for all</span>
+                  </button>
+                </>
               )}
               {!isHost && (
                 <button

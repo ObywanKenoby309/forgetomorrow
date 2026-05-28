@@ -98,7 +98,7 @@ function initials(name) {
   return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
-function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, coHostUserId, coHostName, onCoHostAssigned }) {
+function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, coHostUserId, coHostName, onCoHostAssigned, isLocked, onMuteAll, onMuteParticipant, onKickParticipant, onBanParticipant, onLockRoom, onStopParticipantShare }) {
   const [query, setQuery] = useState('');
   const [showInvite, setShowInvite] = useState(false);
   const [inviteTab, setInviteTab] = useState('internal');
@@ -343,19 +343,27 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, 
             <div style={S.pName}>{p.name}</div>
             <div style={S.pRole}>{p.isHost ? 'Host' : 'Participant'}{p.local ? ' (You)' : ''}</div>
           </div>
-          <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <span style={{ fontSize: 11, color: p.micMuted ? '#ef5350' : '#4caf50' }}>{p.micMuted ? '🔇' : '🎤'}</span>
             <span style={{ fontSize: 11, color: p.videoOff ? '#ef5350' : '#4caf50' }}>{p.videoOff ? '📵' : '📹'}</span>
             {!p.local && <button style={S.dmBtn} onClick={() => onDmParticipant(p)}>DM</button>}
+            {isHost && !p.local && (
+              <>
+                <button style={S.dmBtn} onClick={() => onMuteParticipant?.(p)}>Mute</button>
+                <button style={S.dmBtn} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>
+                <button style={S.dmBtn} onClick={() => onKickParticipant?.(p)}>Kick</button>
+                <button style={{ ...S.dmBtn, color: '#ef5350', borderColor: 'rgba(239,83,80,0.25)' }} onClick={() => onBanParticipant?.(p)}>Ban</button>
+              </>
+            )}
           </div>
         </div>
       ))}
       {isHost && (
         <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={S.sectionLabel}>Host controls</div>
-          <button style={S.hcBtn}>🔇 Mute all</button>
-          <button style={S.hcBtn}>🔒 Lock Foundry</button>
-          <button style={S.hcBtn}>✕ Remove participant</button>
+          <button style={S.hcBtn} onClick={() => onMuteAll?.()}>🔇 Mute all</button>
+          <button style={S.hcBtn} onClick={() => onLockRoom?.()}>{isLocked ? '🔓 Unlock Foundry' : '🔒 Lock Foundry'}</button>
+          <button style={{ ...S.hcBtn, color: '#777' }}>Select a participant above to mute, stop share, kick, or ban.</button>
         </div>
       )}
     </div>
@@ -480,6 +488,13 @@ export default function FoundryRightPanel({
   coHostName,
   onCoHostAssigned,
   guestToken = null,
+  isLocked = false,
+  onMuteAll,
+  onMuteParticipant,
+  onKickParticipant,
+  onBanParticipant,
+  onLockRoom,
+  onStopParticipantShare,
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [chatSub, setChatSub] = useState('meeting');
@@ -533,6 +548,13 @@ export default function FoundryRightPanel({
           coHostUserId={coHostUserId}
           coHostName={coHostName}
           onCoHostAssigned={onCoHostAssigned}
+          isLocked={isLocked}
+          onMuteAll={onMuteAll}
+          onMuteParticipant={onMuteParticipant}
+          onKickParticipant={onKickParticipant}
+          onBanParticipant={onBanParticipant}
+          onLockRoom={onLockRoom}
+          onStopParticipantShare={onStopParticipantShare}
           onDmParticipant={() => { setActiveTab('Chat'); setChatSub('dms'); }}
         />
       </div>

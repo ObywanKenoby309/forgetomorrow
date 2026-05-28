@@ -26,7 +26,7 @@ export default async function handler(req, res) {
       select: {
         id: true, hostId: true, coHostUserId: true, status: true,
         dailyRoomName: true, scheduledAt: true, durationMinutes: true,
-        hostJoinedAt: true, roomOpenedAt: true,
+        hostJoinedAt: true, roomOpenedAt: true, isLocked: true,
       },
     });
 
@@ -36,7 +36,22 @@ export default async function handler(req, res) {
     const now = Date.now();
     const isHost = room.hostId === session.user.id;
     const isCoHost = room.coHostUserId === session.user.id;
-	const isInstantRoom = !room.scheduledAt;
+    const isInstantRoom = !room.scheduledAt;
+
+    if (!isHost && !isCoHost) {
+      const blockedLobbyEntry = await prisma.foundryLobbyParticipant.findFirst({
+        where: {
+          roomId: room.id,
+          userId: session.user.id,
+          status: { in: ['DECLINED', 'BANNED'] },
+        },
+        orderBy: { joinedAt: 'desc' },
+      });
+
+      if (blockedLobbyEntry) {
+        return res.status(403).json({ error: 'BANNED_FROM_ROOM' });
+      }
+    }
 
     // Time gating
     if (room.scheduledAt) {
@@ -110,9 +125,42 @@ export default async function handler(req, res) {
       });
     }
 
-// Instant rooms bypass lobby admission for authenticated FT users.
-// Host presence itself is the room activation signal.
+// Instant rooms normally allow authenticated FT users to join directly.
+// If the host/co-host locks the Foundry, non-hosts must be admitted through the lobby.
 if (isInstantRoom) {
+  if (room.isLocked) {
+    const admittedInstantEntry = await prisma.foundryLobbyParticipant.findFirst({
+      where: {
+        roomId: room.id,
+        userId: session.user.id,
+        status: 'ADMITTED',
+      },
+      orderBy: { admittedAt: 'desc' },
+    });
+
+    if (!admittedInstantEntry) {
+      await prisma.foundryLobbyParticipant.upsert({
+        where: {
+          roomId_userId: {
+            roomId: room.id,
+            userId: session.user.id,
+          },
+        },
+        update: {
+          status: 'WAITING',
+          joinedAt: new Date(),
+        },
+        create: {
+          roomId: room.id,
+          userId: session.user.id,
+          status: 'WAITING',
+        },
+      }).catch(() => {});
+
+      return res.status(403).json({ error: 'WAITING_FOR_ADMISSION' });
+    }
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: {
@@ -121,6 +169,7 @@ if (isInstantRoom) {
       lastName: true,
       email: true,
       avatarUrl: true,
+      role: true,
     },
   });
 
@@ -147,6 +196,7 @@ if (isInstantRoom) {
     userName,
     isOwner: false,
     instantRoom: true,
+    userRole: user?.role || null,
   });
 }
 

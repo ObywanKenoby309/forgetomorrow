@@ -1407,6 +1407,7 @@ model FoundryRoom {
   durationMinutes Int       @default(60) // scheduled duration for auto-end
   roomOpenedAt    DateTime? // when host first admits someone
   coHostUserId    String? // assigned co-host (COACH or RECRUITER only)
+  isLocked        Boolean   @default(false) // host/co-host lock: new entrants remain in lobby
 
   invitees          FoundryInvitee[]
   lobbyParticipants FoundryLobbyParticipant[]
@@ -1500,7 +1501,7 @@ model FoundryLobbyParticipant {
   userId     String? // null for external guests
   guestName  String? // display name for guests
   guestCode  String? // guest token used to join
-  status     String    @default("WAITING") // WAITING | ADMITTED | DECLINED
+  status     String    @default("WAITING") // WAITING | ADMITTED | DECLINED | BANNED
   joinedAt   DateTime  @default(now())
   admittedAt DateTime?
 

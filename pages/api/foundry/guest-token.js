@@ -67,6 +67,19 @@ export default async function handler(req, res) {
 
     const cleanGuestName = guestName.trim();
 
+    const blockedLobbyEntry = await prisma.foundryLobbyParticipant.findFirst({
+      where: {
+        roomId: room.id,
+        guestCode,
+        status: { in: ['DECLINED', 'BANNED'] },
+      },
+      orderBy: { joinedAt: 'desc' },
+    });
+
+    if (blockedLobbyEntry) {
+      return res.status(403).json({ error: 'BANNED_FROM_ROOM' });
+    }
+
     // Block guests until host has joined. Do not create Daily minutes yet.
     if (!room.hostJoinedAt) {
       await prisma.foundryLobbyParticipant.upsert({
