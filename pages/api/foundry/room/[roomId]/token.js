@@ -36,6 +36,7 @@ export default async function handler(req, res) {
     const now = Date.now();
     const isHost = room.hostId === session.user.id;
     const isCoHost = room.coHostUserId === session.user.id;
+	const isInstantRoom = !room.scheduledAt;
 
     // Time gating
     if (room.scheduledAt) {
@@ -108,6 +109,46 @@ export default async function handler(req, res) {
         scheduledEndAt,
       });
     }
+
+// Instant rooms bypass lobby admission for authenticated FT users.
+// Host presence itself is the room activation signal.
+if (isInstantRoom) {
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      name: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      avatarUrl: true,
+    },
+  });
+
+  const userName =
+    user?.name ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
+    user?.email ||
+    'Participant';
+
+  const dailyRoomName = room.dailyRoomName || resolvedRoomId;
+
+  const token = await createDailyToken({
+    roomId: dailyRoomName,
+    userId: session.user.id,
+    userName,
+    isOwner: false,
+    avatarUrl: user?.avatarUrl || null,
+  });
+
+  return res.status(200).json({
+    token,
+    roomUrl: dailyRoomUrl(dailyRoomName),
+    dailyRoomName,
+    userName,
+    isOwner: false,
+    instantRoom: true,
+  });
+}
 
     // Non-host FT users — must go through lobby
     // Check if they have an ADMITTED lobby entry

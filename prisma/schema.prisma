@@ -618,6 +618,8 @@ model CoachingSession {
   notes            String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
+  foundryJoinUrl   String?
+  enableVideo      Boolean         @default(false)
   client           User?           @relation("CoachSessionsClient", fields: [clientId], references: [id], onDelete: Cascade)
   coach            User            @relation("CoachSessionsCoach", fields: [coachId], references: [id], onDelete: Cascade)
   coachingClient   CoachingClient? @relation("ClientSessions", fields: [coachingClientId], references: [id])
@@ -1217,8 +1219,8 @@ model RecruiterCalendarItem {
   scope           String   @default("team")
   date            DateTime
   time            String?
-  timezone       String?  @default("America/New_York")
-  scheduledAtUtc DateTime?
+  timezone        String?  @default("America/New_York")
+  scheduledAtUtc  DateTime?
   title           String
   type            String   @default("Interview")
   status          String   @default("Scheduled")
@@ -1229,6 +1231,8 @@ model RecruiterCalendarItem {
   company         String?
   jobTitle        String?
   req             String?
+  foundryJoinUrl String?
+  enableVideo    Boolean @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   candidate       User?    @relation("UserRecruiterCalendarCandidate", fields: [candidateUserId], references: [id])
@@ -1267,21 +1271,23 @@ model SnapshotSchedule {
 }
 
 model SeekerCalendarItem {
-  id           String   @id @default(cuid())
-  userId       String
-  date         DateTime
-  time         String?
+  id             String   @id @default(cuid())
+  userId         String
+  date           DateTime
+  time           String?
   timezone       String?  @default("America/New_York")
   scheduledAtUtc DateTime?
-  title        String
-  type         String   @default("Interview")
-  status       String   @default("Scheduled")
-  notes        String?
-  source       String   @default("personal")
-  sourceItemId String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  user         User     @relation("UserSeekerCalendarItems", fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  type           String   @default("Interview")
+  status         String   @default("Scheduled")
+  notes          String?
+  source         String   @default("personal")
+  sourceItemId   String?
+  foundryJoinUrl String?
+  enableVideo    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation("UserSeekerCalendarItems", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([date])

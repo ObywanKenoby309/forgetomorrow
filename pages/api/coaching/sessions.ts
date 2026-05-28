@@ -112,6 +112,8 @@ async function syncCoachSessionToSeekerCalendar(opts: {
   type: string;
   status: string;
   previousClientId?: string | null;
+  foundryJoinUrl?: string | null;
+  enableVideo?: boolean;
 }) {
   const {
     sessionId,
@@ -122,6 +124,8 @@ async function syncCoachSessionToSeekerCalendar(opts: {
     type,
     status,
     previousClientId,
+	foundryJoinUrl,
+    enableVideo,
   } = opts;
 
   if (previousClientId && previousClientId !== clientId) {
@@ -167,18 +171,20 @@ async function syncCoachSessionToSeekerCalendar(opts: {
   });
 
   const baseData = {
-    userId: clientId,
-    date: startAt,
-    time,
-    timezone,
-    scheduledAtUtc: startAt,
-    title,
-    type: type || 'Strategy',
-    status: status || 'Scheduled',
-    notes: existing?.notes || '',
-    source: 'coach',
-    sourceItemId: sessionId,
-  };
+  userId: clientId,
+  date: startAt,
+  time,
+  timezone,
+  scheduledAtUtc: startAt,
+  title,
+  type: type || 'Strategy',
+  status: status || 'Scheduled',
+  notes: existing?.notes || '',
+  foundryJoinUrl: foundryJoinUrl || null,
+  enableVideo: !!enableVideo,
+  source: 'coach',
+  sourceItemId: sessionId,
+};
 
   if (existing) {
     await prisma.seekerCalendarItem.update({
@@ -487,6 +493,8 @@ export default async function handler(
           timezone: safeTimezone,
           durationMin: 60,
           type: type || 'Strategy',
+		  enableVideo: !!enableVideo,
+		  foundryJoinUrl: foundryJoinUrl || null,
           status: status || 'Scheduled',
           notes: storedNotes,
         },
@@ -500,6 +508,8 @@ export default async function handler(
         timezone: safeTimezone,
         type: created.type,
         status: created.status,
+		foundryJoinUrl: created.foundryJoinUrl || null,
+		enableVideo: created.enableVideo || false,
       });
 
       const displayName = (clientName || '').trim() || null;
@@ -570,6 +580,8 @@ export default async function handler(
           timezone: true,
           type: true,
           status: true,
+		  foundryJoinUrl: true,
+		  enableVideo: true,
         },
       });
 
@@ -622,6 +634,8 @@ export default async function handler(
 
       if (typeof type === 'string') data.type = type;
       if (typeof status === 'string') data.status = status;
+	  if (typeof enableVideo === 'boolean') data.enableVideo = enableVideo;
+	  if (foundryJoinUrl !== undefined) data.foundryJoinUrl = foundryJoinUrl || null;
 
       const updated = await prisma.coachingSession.update({
         where: { id: String(id) },
@@ -629,15 +643,17 @@ export default async function handler(
       });
 
       await syncCoachSessionToSeekerCalendar({
-        sessionId: updated.id,
-        coachId,
-        clientId: updated.clientId ?? null,
-        startAt: updated.startAt,
-        timezone: updated.timezone || safeTimezone,
-        type: updated.type,
-        status: updated.status,
-        previousClientId: existing.clientId ?? null,
-      });
+		sessionId: updated.id,
+		coachId,
+		clientId: updated.clientId ?? null,
+		startAt: updated.startAt,
+		timezone: updated.timezone || safeTimezone,
+		type: updated.type,
+		status: updated.status,
+		previousClientId: existing.clientId ?? null,
+		foundryJoinUrl: updated.foundryJoinUrl || null,
+		enableVideo: updated.enableVideo || false,
+	  });
 
       let displayName: string | null = null;
       let participantsOut: string | null = null;

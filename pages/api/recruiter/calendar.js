@@ -109,17 +109,19 @@ async function mirrorFoundryInviteToPersonalCalendar({
   if (roomUrl) notesParts.push(`Join link: ${roomUrl}`);
 
   const data = {
-    userId: inviteeUserId,
-    date: item.date,
-    time: item.time || '09:00',
-    title,
-    type: baseType,
-    status: item.status || 'Scheduled',
-    timezone: item.timezone || 'America/New_York',
-    notes: notesParts.join('\n\n') || null,
-    source: 'recruiter',
-    sourceItemId: item.id,
-  };
+  userId: inviteeUserId,
+  date: item.date,
+  time: item.time || '09:00',
+  title,
+  type: baseType,
+  status: item.status || 'Scheduled',
+  timezone: item.timezone || 'America/New_York',
+  notes: notesParts.join('\n\n') || null,
+  foundryJoinUrl: roomUrl || null,
+  enableVideo: true,
+  source: 'recruiter',
+  sourceItemId: item.id,
+};
 
   if (existing) {
     await prisma.seekerCalendarItem.update({
@@ -388,6 +390,8 @@ async function syncRecruiterItemToSeekerCalendar(item, opts = {}) {
     status: item.status || 'Scheduled',
     timezone: item.timezone || 'America/New_York',
     notes: existing?.notes || '',
+	foundryJoinUrl: existing?.foundryJoinUrl || null,
+	enableVideo: true,
     source: 'recruiter',
     sourceItemId: itemId,
   };
