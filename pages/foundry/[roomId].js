@@ -11,12 +11,15 @@ import FoundryMobileLayout from '@/components/foundry/FoundryMobileLayout';
 
 const ORANGE = '#FF7043';
 
-// SSR-safe mobile detection
+// SSR-safe mobile detection — initializes synchronously on client
+// so the correct layout renders on first paint, not after a flash
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  });
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
-    check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
