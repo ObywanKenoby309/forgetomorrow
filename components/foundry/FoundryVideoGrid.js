@@ -10,10 +10,17 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import DailyIframe from '@daily-co/daily-js';
 
 const S = {
-  area: { flex: 1, display: 'flex', flexDirection: 'column', padding: 10, gap: 8, minWidth: 0 },
+  area: {
+    flex: 1, display: 'flex', flexDirection: 'column',
+    padding: 10, gap: 8, minWidth: 0,
+    justifyContent: 'center', // center tiles vertically when there's extra space
+  },
   mainTile: {
-    flex: 1, borderRadius: 10, position: 'relative', overflow: 'hidden',
+    width: '100%',
+    aspectRatio: '16 / 9',       // industry standard camera ratio
+    borderRadius: 10, position: 'relative', overflow: 'hidden',
     background: '#070910', border: '1px solid rgba(255,255,255,0.06)',
+    flexShrink: 0,
   },
   inner: {
     width: '100%', height: '100%', display: 'flex',
@@ -76,9 +83,12 @@ const S = {
     width: '100%', height: '100%', objectFit: 'contain',
     position: 'absolute', inset: 0, borderRadius: 10, background: '#000',
   },
-  pipRow: { display: 'flex', gap: 7, height: 82, flexShrink: 0 },
+  pipRow: { display: 'flex', gap: 7, flexShrink: 0, alignItems: 'flex-start' },
   pip: {
-    flex: 1, borderRadius: 8, background: '#0a0c10',
+    width: 140,                  // fixed width
+    aspectRatio: '16 / 9',       // always 16:9
+    flexShrink: 0,
+    borderRadius: 8, background: '#0a0c10',
     border: '1px solid rgba(255,255,255,0.06)',
     position: 'relative', overflow: 'hidden',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -122,7 +132,7 @@ function ScreenShareTile({ track, sharerName, isLocal, onStopShare }) {
   }, [track]);
 
   return (
-    <div style={S.mainTile}>
+    <div style={{ ...S.mainTile, aspectRatio: '16 / 9' }}>
       <div style={S.inner}>
         <video ref={videoRef} style={S.screenEl} autoPlay muted playsInline />
         <div style={S.nameTag}>
@@ -476,7 +486,7 @@ export default function FoundryVideoGrid({
   const showScreen = showLocalScreen || showRemoteScreen;
 
   return (
-    <div style={S.area}>
+    <div style={{ ...S.area, overflowY: 'auto' }}>
       <div style={{ flex: 1, position: 'relative', display: 'flex', minHeight: 0 }}>
         {(joinState === 'idle' || joinState === 'fetching') && (
           <div style={{ ...S.mainTile, flex: 1 }}>
