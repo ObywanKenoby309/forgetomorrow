@@ -29,7 +29,7 @@ export default async function handler(req, res) {
 
   // ── POST: Create scheduled room ──────────────────────────────────────
   if (req.method === 'POST') {
-    const { title, scheduledAt, timezone, invitees } = req.body;
+    const { title, scheduledAt, timezone, invitees, durationMinutes } = req.body;
     // invitees: [{ userId, name } | { email, name }]
 
     if (!title?.trim()) return res.status(400).json({ error: 'Title is required' });
@@ -127,6 +127,7 @@ const nonContacts = ftInvitees.filter(
           hostId: session.user.id,
           status: 'SCHEDULED',
           scheduledAt: new Date(scheduledAt),
+        durationMinutes: durationMinutes === 30 ? 30 : 60, // only allow 30 or 60
           timezone: timezone || 'America/New_York',
           guestToken,
           dailyRoomName: dailyRoom.name,

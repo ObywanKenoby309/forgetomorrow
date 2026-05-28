@@ -191,6 +191,7 @@ export default function FoundrySchedulerModal({
 
   // State
   const [submitting, setSubmitting] = useState(false);
+  const [duration, setDuration] = useState(60); // 30 or 60 minutes
   const [sendingInvites, setSendingInvites] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null); // { roomId, guestToken }
@@ -234,7 +235,26 @@ export default function FoundrySchedulerModal({
     setSubmitting(true);
 
     try {
-      const scheduledAt = new Date(`${date}T${time}:00`).toISOString();
+      // Convert date+time in the selected timezone to a proper UTC ISO string.
+      // Using Intl to find the UTC offset for the chosen timezone at the chosen date,
+      // so "4:00pm Eastern" becomes the correct UTC equivalent — not browser-local time.
+      const naiveMs = new Date(`${date}T${time}:00`).getTime();
+      const tzOffsetMs = (() => {
+        try {
+          // Get what the clock reads in the target timezone for a known UTC time
+          const utcDate = new Date(naiveMs);
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+          }).formatToParts(utcDate);
+          const get = (type) => parseInt(parts.find(p => p.type === type)?.value || '0');
+          const tzMs = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute'), get('second'));
+          return naiveMs - tzMs;
+        } catch { return 0; }
+      })();
+      const scheduledAt = new Date(naiveMs + tzOffsetMs).toISOString();
+
       const invitees = [
         ...ftInvitees.map(i => ({ userId: i.id, name: i.name })),
         ...externalInvitees.map(i => ({ email: i.email, name: i.name })),
@@ -243,7 +263,7 @@ export default function FoundrySchedulerModal({
       const res = await fetch('/api/foundry/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), scheduledAt, timezone, invitees }),
+        body: JSON.stringify({ title: title.trim(), scheduledAt, timezone, invitees, durationMinutes: duration }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Could not schedule Foundry.'); return; }
@@ -376,6 +396,40 @@ export default function FoundrySchedulerModal({
                   <option key={tz} value={tz}>{TIMEZONE_LABELS[tz] || tz}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Duration picker */}
+            <div style={S.field}>
+              <label style={S.label}>Duration</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[
+                  { label: '30 min', value: 30, note: 'Quick session' },
+                  { label: '1 hour', value: 60, note: 'Full session' },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setDuration(opt.value)}
+                    style={{
+                      flex: 1, padding: '10px 8px', borderRadius: 8, cursor: 'pointer',
+                      fontFamily: 'inherit', transition: 'all 0.15s', border: 'none',
+                      outline: duration === opt.value ? '1.5px solid #FF7043' : dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)',
+                      background: duration === opt.value
+                        ? dark ? 'rgba(255,112,67,0.12)' : 'rgba(255,112,67,0.08)'
+                        : dark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.9)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                    }}
+                  >
+                    <span style={{ fontSize: 14, fontWeight: 800, color: duration === opt.value ? '#FF7043' : dark ? '#e0e0e0' : '#112033' }}>
+                      {opt.label}
+                    </span>
+                    <span style={{ fontSize: 10, color: dark ? '#666' : '#90A4AE' }}>{opt.note}</span>
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: 10, color: dark ? '#444' : '#B0BEC5', marginTop: 6, lineHeight: 1.5 }}>
+                Lobby opens 15 min early for prep. End time is fixed at scheduled time + duration.
+              </div>
             </div>
 
             <hr style={S.divider} />
