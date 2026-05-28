@@ -179,7 +179,7 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, 
   };
 
   const sendExternalInvite = async () => {
-    if (!roomId || !externalEmail.trim()) {
+    if (!roomId || !externalEmail?.trim()) {
       setInviteError('Enter an external guest email.');
       return;
     }
@@ -280,26 +280,54 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, 
             </div>
           )}
 
-          {inviteTab === 'external' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-              <input
-                style={{ ...S.searchInput, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '7px 8px' }}
-                placeholder="Guest name (optional)"
-                value={externalName}
-                onChange={(e) => setExternalName(e.target.value)}
-              />
-              <input
-                style={{ ...S.searchInput, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '7px 8px' }}
-                placeholder="guest@email.com"
-                value={externalEmail}
-                onChange={(e) => setExternalEmail(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendExternalInvite()}
-              />
-              <button disabled={inviteBusy} style={S.inviteBtn} onClick={sendExternalInvite}>
-                {inviteBusy ? 'Sending…' : '+ Email external guest'}
-              </button>
-            </div>
-          )}
+{inviteTab === 'external' && (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+    <input
+      style={{
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 6,
+        padding: '7px 8px',
+        color: '#ccc',
+        fontSize: 12,
+        fontFamily: 'inherit',
+        outline: 'none',
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+      placeholder="Guest name (optional)"
+      value={externalName}
+      onChange={(e) => setExternalName(e.target.value)}
+    />
+
+    <input
+      style={{
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 6,
+        padding: '7px 8px',
+        color: '#ccc',
+        fontSize: 12,
+        fontFamily: 'inherit',
+        outline: 'none',
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+      placeholder="guest@email.com"
+      value={externalEmail}
+      onChange={(e) => setExternalEmail(e.target.value)}
+      onKeyDown={(e) => e.key === 'Enter' && sendExternalInvite()}
+    />
+
+    <button
+      disabled={inviteBusy}
+      style={S.inviteBtn}
+      onClick={sendExternalInvite}
+    >
+      {inviteBusy ? 'Sending…' : '+ Email external guest'}
+    </button>
+  </div>
+)}
 
           {inviteTab === 'links' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
