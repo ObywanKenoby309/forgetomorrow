@@ -108,6 +108,16 @@ function fmtLongDayLabel(dateStr) {
   });
 }
 
+function getFoundryJoinUrl(event) {
+  return (
+    event?.foundryJoinUrl ||
+    event?.foundryGuestJoinUrl ||
+    event?.joinUrl ||
+    event?.meetingUrl ||
+    ''
+  );
+}
+
 export default function CalendarDayPanel({ selectedDate, events = [], onAdd, onEdit }) {
   const label = selectedDate ? fmtLongDayLabel(selectedDate) : 'Select a day';
 
@@ -194,6 +204,8 @@ export default function CalendarDayPanel({ selectedDate, events = [], onAdd, onE
 
         {events.map((e) => {
           const { strip, pillBg, pillFg } = typeColors(e.type);
+          const joinUrl = getFoundryJoinUrl(e);
+
           const titleText =
             e.title ||
             e.client ||
@@ -245,6 +257,29 @@ export default function CalendarDayPanel({ selectedDate, events = [], onAdd, onE
 
                 {e.candidateName && e.title && (
                   <div style={{ fontSize: 11, color: '#78909C', marginBottom: 4 }}>{e.candidateName}</div>
+                )}
+
+                {joinUrl && (
+                  <a
+                    href={joinUrl}
+                    onClick={(event) => event.stopPropagation()}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: 6,
+                      padding: '5px 9px',
+                      borderRadius: 999,
+                      background: '#1A4B8F',
+                      color: '#FFFFFF',
+                      fontSize: 11,
+                      fontWeight: 800,
+                      textDecoration: 'none',
+                      boxShadow: '0 3px 8px rgba(26,75,143,0.22)',
+                    }}
+                  >
+                    Join Meeting
+                  </a>
                 )}
 
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>

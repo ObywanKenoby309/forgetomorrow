@@ -282,6 +282,56 @@ const S = {
   buttonRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 },
 };
 
+
+function parseFoundryJoinInput(raw) {
+  const input = String(raw || '').trim();
+
+  try {
+    if (/^https?:\/\//i.test(input)) {
+      const url = new URL(input);
+      const path = url.pathname || '';
+
+      const joinMatch = path.match(/\/foundry\/join\/([^/]+)/);
+      if (joinMatch?.[1]) {
+        const code = url.searchParams.get('code') || '';
+        return {
+          roomId: decodeURIComponent(joinMatch[1]),
+          code,
+          guestJoinUrl: `/foundry/join/${decodeURIComponent(joinMatch[1])}${code ? `?code=${encodeURIComponent(code)}` : ''}`,
+        };
+      }
+
+      const guestMatch = path.match(/\/foundry\/guest\/([^/]+)/);
+      if (guestMatch?.[1]) {
+        return { roomId: decodeURIComponent(guestMatch[1]), guestJoinUrl: path + (url.search || '') };
+      }
+
+      const roomMatch = path.match(/\/foundry\/([^/?#]+)/);
+      if (roomMatch?.[1]) return { roomId: decodeURIComponent(roomMatch[1]) };
+    }
+  } catch {}
+
+  const trimmed = input.replace(/^#+/, '').trim();
+  if (trimmed.includes('/foundry/join/')) {
+    const after = trimmed.split('/foundry/join/')[1] || '';
+    const [roomPart, queryPart = ''] = after.split('?');
+    const params = new URLSearchParams(queryPart);
+    const code = params.get('code') || '';
+    return {
+      roomId: roomPart,
+      code,
+      guestJoinUrl: `/foundry/join/${roomPart}${code ? `?code=${encodeURIComponent(code)}` : ''}`,
+    };
+  }
+
+  if (trimmed.includes('/foundry/')) {
+    const roomId = trimmed.split('/foundry/')[1].split('?')[0].split('#')[0];
+    if (roomId) return { roomId };
+  }
+
+  return { code: trimmed };
+}
+
 function formatFoundryTime(value) {
   if (!value) return 'Time not set';
 
@@ -734,7 +784,7 @@ export default function FoundryLobbyWorkspace({
     }
   };
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     const raw = joinCode.trim();
 
     if (!raw) {
@@ -745,11 +795,44 @@ export default function FoundryLobbyWorkspace({
     setJoining(true);
     setErr('');
 
-    const roomId = raw.includes('/foundry/')
-      ? raw.split('/foundry/')[1].split('?')[0]
-      : raw;
+    try {
+      const parsed = parseFoundryJoinInput(raw);
 
-    onJoinRoom?.(roomId);
+      if (parsed.guestJoinUrl) {
+        window.location.href = parsed.guestJoinUrl;
+        return;
+      }
+
+      if (parsed.roomId) {
+        onJoinRoom?.(parsed.roomId);
+        return;
+      }
+
+      const res = await fetch('/api/foundry/resolve-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: parsed.code || raw }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data?.roomId) {
+        setErr(data.error || 'Could not find a Foundry for that code.');
+        setJoining(false);
+        return;
+      }
+
+      if (data.guestCode) {
+        window.location.href = `/foundry/join/${data.roomId}?code=${encodeURIComponent(data.guestCode)}`;
+        return;
+      }
+
+      onJoinRoom?.(data.roomId);
+    } catch (err) {
+      console.error('Foundry join lookup failed:', err);
+      setErr('Could not join Foundry. Please check the code or link.');
+      setJoining(false);
+    }
   };
 
   const handleScheduled = () => {
