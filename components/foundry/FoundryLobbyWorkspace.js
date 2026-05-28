@@ -408,7 +408,7 @@ function ModeCard({ mode, active, onClick }) {
   );
 }
 
-function StartPanel({ title, setTitle, creating, error, onCreate }) {
+function StartPanel({ title, setTitle, duration, setDuration, creating, error, onCreate }) {
   return (
     <div style={S.card}>
       <div style={S.panelHeader}>
@@ -429,6 +429,27 @@ function StartPanel({ title, setTitle, creating, error, onCreate }) {
         onKeyDown={(e) => e.key === 'Enter' && onCreate()}
         aria-label="Session title"
       />
+
+      <label style={{ ...S.label, marginTop: 2 }}>Duration</label>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        {[{ label: '30 min', value: 30, note: 'Quick session' }, { label: '1 hour', value: 60, note: 'Full session' }].map(opt => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setDuration(opt.value)}
+            style={{
+              flex: 1, padding: '10px 8px', borderRadius: 10, cursor: 'pointer',
+              fontFamily: 'inherit', transition: 'all 0.15s',
+              border: duration === opt.value ? '1.5px solid #FF7043' : '1px solid rgba(0,0,0,0.12)',
+              background: duration === opt.value ? 'rgba(255,112,67,0.08)' : 'rgba(255,255,255,0.8)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+            }}
+          >
+            <span style={{ fontSize: 14, fontWeight: 800, color: duration === opt.value ? '#FF7043' : '#334155' }}>{opt.label}</span>
+            <span style={{ fontSize: 10, color: '#90A4AE' }}>{opt.note}</span>
+          </button>
+        ))}
+      </div>
 
       <button style={{ ...S.primaryBtn, opacity: creating ? 0.7 : 1 }} onClick={onCreate} disabled={creating}>
         {creating ? 'Opening Foundry…' : 'Open Foundry Now'}
@@ -733,6 +754,7 @@ export default function FoundryLobbyWorkspace({
 }) {
   const [activeMode, setActiveMode] = useState(canHost ? 'start' : 'join');
   const [title, setTitle] = useState('');
+  const [duration, setDuration] = useState(60);
   const [joinCode, setJoinCode] = useState('');
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -767,7 +789,7 @@ export default function FoundryLobbyWorkspace({
       const res = await fetch('/api/foundry/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim() }),
+        body: JSON.stringify({ title: title.trim(), durationMinutes: duration }),
       });
 
       const data = await res.json();
@@ -842,7 +864,7 @@ export default function FoundryLobbyWorkspace({
 
   const renderPanel = () => {
     if (activeMode === 'start' && canHost) {
-      return <StartPanel title={title} setTitle={setTitle} creating={creating} error={err} onCreate={handleCreate} />;
+      return <StartPanel title={title} setTitle={setTitle} duration={duration} setDuration={setDuration} creating={creating} error={err} onCreate={handleCreate} />;
     }
 
     if (activeMode === 'schedule' && canHost) {

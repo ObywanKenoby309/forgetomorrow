@@ -140,6 +140,7 @@ export default function CoachingCalendarEventForm({
       type: initial?.type || typeChoices[0] || 'Strategy',
       status: initial?.status || statusChoices[0] || 'Scheduled',
       notes: initial?.notes || '',
+      durationMinutes: initial?.durationMinutes || 60,
     };
   });
 
@@ -563,6 +564,7 @@ ${roomNote}` : roomNote;
         clientEmail: form.clientEmail || '',
         invitees: payloadInvitees,
         enableVideo: videoLimitActive,
+      durationMinutes: initial?.durationMinutes || 60,
         foundryRoomId: foundry?.roomId || null,
         foundryGuestToken: foundry?.guestToken || null,
         foundryJoinUrl: foundry?.joinUrl || null,
@@ -1001,6 +1003,36 @@ ${roomNote}` : roomNote;
               </select>
             </div>
           </div>
+
+
+          {/* Duration — only shown when video/Foundry is enabled */}
+          {(form.enableVideo || form.meetingMode === 'audio_video') && (
+            <div>
+              <label style={label}>Meeting duration</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ label: '30 min', value: 30, note: 'Quick session' }, { label: '1 hour', value: 60, note: 'Full session' }].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => update('durationMinutes', opt.value)}
+                    style={{
+                      flex: 1, padding: '9px 8px', borderRadius: 10, cursor: 'pointer',
+                      fontFamily: 'inherit', transition: 'all 0.15s', border: 'none',
+                      outline: form.durationMinutes === opt.value ? '1.5px solid #FF7043' : '1px solid #DADCE0',
+                      background: form.durationMinutes === opt.value ? 'rgba(255,112,67,0.07)' : '#FFFFFF',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                    }}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 800, color: form.durationMinutes === opt.value ? '#FF7043' : '#334155' }}>{opt.label}</span>
+                    <span style={{ fontSize: 10, color: '#90A4AE' }}>{opt.note}</span>
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: 10, color: '#90A4AE', marginTop: 5 }}>
+                Lobby opens 15 min early. Meeting ends at scheduled time + duration.
+              </div>
+            </div>
+          )}
 
           <div>
             <label style={label}>Notes</label>
