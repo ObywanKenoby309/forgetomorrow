@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import SeekerCalendarEventForm from './SeekerCalendarEventForm';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -107,6 +108,11 @@ function useIsMobile(bp = 768) {
   }, [bp]);
 
   return val;
+}
+
+function ModalPortal({ children }) {
+  if (typeof document === 'undefined') return children;
+  return createPortal(children, document.body);
 }
 
 const SeekerCalendarInterface = forwardRef(function SeekerCalendarInterface(
@@ -465,14 +471,16 @@ const SeekerCalendarInterface = forwardRef(function SeekerCalendarInterface(
         </section>
 
         {editorOpen && (
-          <SeekerCalendarEventForm
-            mode={editorMode}
-            initial={editorInitial}
-            onClose={closeEditor}
-            onSave={saveItem}
-            onDelete={editorMode === 'edit' ? deleteItem : undefined}
-            saving={saving}
-          />
+          <ModalPortal>
+            <SeekerCalendarEventForm
+              mode={editorMode}
+              initial={editorInitial}
+              onClose={closeEditor}
+              onSave={saveItem}
+              onDelete={editorMode === 'edit' ? deleteItem : undefined}
+              saving={saving}
+            />
+          </ModalPortal>
         )}
       </>
     );
@@ -708,14 +716,16 @@ const SeekerCalendarInterface = forwardRef(function SeekerCalendarInterface(
       </section>
 
       {editorOpen && (
-        <SeekerCalendarEventForm
-          mode={editorMode}
-          initial={editorInitial}
-          onClose={closeEditor}
-          onSave={saveItem}
-          onDelete={editorMode === 'edit' ? deleteItem : undefined}
-          saving={saving}
-        />
+        <ModalPortal>
+          <SeekerCalendarEventForm
+            mode={editorMode}
+            initial={editorInitial}
+            onClose={closeEditor}
+            onSave={saveItem}
+            onDelete={editorMode === 'edit' ? deleteItem : undefined}
+            saving={saving}
+          />
+        </ModalPortal>
       )}
     </>
   );
