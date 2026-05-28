@@ -9,44 +9,44 @@ datasource db {
 }
 
 model Job {
-  id                  Int                      @id @default(autoincrement())
-  company             String
-  companyUrl          String?
-  title               String
-  worksite            String?
-  location            String
-  type                String?
-  compensation        String?
-  description         String
-  status              String                   @default("Draft")
-  urgent              Boolean                  @default(false)
-  viewsCount          BigInt                   @default(0)
-  applicationsCount   BigInt                   @default(0)
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  userId              String
-  accountKey          String?
-  url                 String?
-  salary              String?
-  tags                String?
-  source              String?
-  isTemplate          Boolean                  @default(false)
-  templateName        String?
-  additionalQuestions Json?
-  publishedAt         DateTime?                @db.Timestamptz(6)
-  publishedat         DateTime?                @db.Timestamptz(6)
-  externalId          String?                  @unique(map: "jobs_external_id_unique")
-  search_vector       Unsupported("tsvector")?
-  applications        Application[]
-  covers              Cover[]
-  interviews          Interview[]
-  views               JobView[]
-  organization        Organization?            @relation("OrganizationJobs", fields: [accountKey], references: [accountKey])
-  candidateGroups     CandidateGroup[]
-  user                User                     @relation(fields: [userId], references: [id])
-  offers              Offer[]
-  hireQualityRecords  HireQuality[]
-  pinnedBy            PinnedJob[]
+  id                    Int                       @id @default(autoincrement())
+  company               String
+  companyUrl            String?
+  title                 String
+  worksite              String?
+  location              String
+  type                  String?
+  compensation          String?
+  description           String
+  status                String                    @default("Draft")
+  urgent                Boolean                   @default(false)
+  viewsCount            BigInt                    @default(0)
+  applicationsCount     BigInt                    @default(0)
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  userId                String
+  accountKey            String?
+  url                   String?
+  salary                String?
+  tags                  String?
+  source                String?
+  isTemplate            Boolean                   @default(false)
+  templateName          String?
+  additionalQuestions   Json?
+  publishedAt           DateTime?                 @db.Timestamptz(6)
+  publishedat           DateTime?                 @db.Timestamptz(6)
+  externalId            String?                   @unique(map: "jobs_external_id_unique")
+  search_vector         Unsupported("tsvector")?
+  applications          Application[]
+  covers                Cover[]
+  interviews            Interview[]
+  views                 JobView[]
+  organization          Organization?             @relation("OrganizationJobs", fields: [accountKey], references: [accountKey])
+  candidateGroups       CandidateGroup[]
+  user                  User                      @relation(fields: [userId], references: [id])
+  offers                Offer[]
+  hireQualityRecords    HireQuality[]
+  pinnedBy              PinnedJob[]
   seekerRecommendations SeekerJobRecommendation[]
 
   @@index([accountKey])
@@ -544,21 +544,21 @@ model UserConsent {
 }
 
 model AppointmentRequest {
-  id           String   @id @default(cuid())
-  coachId      String
-  requesterId  String
-  spotlightId  String
-  preferredSlots Json   // array of ISO datetime strings, max 3
-  timezone     String
-  message      String?
-  status            String   @default("PENDING") // PENDING | CONFIRMED | DECLINED | RESCHEDULED
-  suggestedAt       DateTime?
-  coachNotes        String?
-  contactRequestId  String?  // links to the ContactRequest created alongside this booking
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  coach             User     @relation("AppointmentRequestsAsCoach",     fields: [coachId],     references: [id], onDelete: Cascade)
-  requester         User     @relation("AppointmentRequestsAsRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  id               String    @id @default(cuid())
+  coachId          String
+  requesterId      String
+  spotlightId      String
+  preferredSlots   Json // array of ISO datetime strings, max 3
+  timezone         String
+  message          String?
+  status           String    @default("PENDING") // PENDING | CONFIRMED | DECLINED | RESCHEDULED
+  suggestedAt      DateTime?
+  coachNotes       String?
+  contactRequestId String? // links to the ContactRequest created alongside this booking
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  coach            User      @relation("AppointmentRequestsAsCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  requester        User      @relation("AppointmentRequestsAsRequester", fields: [requesterId], references: [id], onDelete: Cascade)
 
   @@index([coachId])
   @@index([requesterId])
@@ -567,22 +567,22 @@ model AppointmentRequest {
 }
 
 model CoachingClient {
-  id                String             @id @default(cuid())
-  coachId           String
-  clientId          String?
-  status            String             @default("Active")
-  nextSession       DateTime?
-  lastContact       DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  email             String?
-  name              String
-  notes             String?
-  client            User?              @relation("CoachClientsClient", fields: [clientId], references: [id], onDelete: Cascade)
-  coach             User               @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
-  coachingDocuments CoachingDocument[] @relation("ClientDocuments")
-  coachingNotes     CoachingNote[]     @relation("ClientNotes")
-  sessions          CoachingSession[]  @relation("ClientSessions")
+  id                       String             @id @default(cuid())
+  coachId                  String
+  clientId                 String?
+  status                   String             @default("Active")
+  nextSession              DateTime?
+  lastContact              DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  email                    String?
+  name                     String
+  notes                    String?
+  client                   User?              @relation("CoachClientsClient", fields: [clientId], references: [id], onDelete: Cascade)
+  coach                    User               @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  coachingDocuments        CoachingDocument[] @relation("ClientDocuments")
+  coachingNotes            CoachingNote[]     @relation("ClientNotes")
+  sessions                 CoachingSession[]  @relation("ClientSessions")
   manualSummary            String?
   manualExperience         String?
   manualEducation          String?
@@ -591,12 +591,12 @@ model CoachingClient {
   manualPreferredWorkType  String?
   manualPreferredLocations String?
   manualWillingToRelocate  String?
-  targetCompanies         String?
-  strategyBackground      String?
-  strategyThemes          String?
-  strategyRoleLanes       String?
-  strategyNextStep        String?
-  strategyJson            Json?
+  targetCompanies          String?
+  strategyBackground       String?
+  strategyThemes           String?
+  strategyRoleLanes        String?
+  strategyNextStep         String?
+  strategyJson             Json?
 
   @@index([coachId])
   @@index([clientId])
@@ -609,6 +609,7 @@ model CoachingSession {
   clientId         String?
   coachingClientId String?
   startAt          DateTime
+  timezone         String?         @default("America/New_York")
   durationMin      Int             @default(60)
   type             String          @default("Strategy")
   status           String          @default("Scheduled")
@@ -731,22 +732,22 @@ model ContactRequest {
 }
 
 model Organization {
-  id                 String               @id @default(cuid())
-  name               String
-  status             OrganizationStatus   @default(PILOT)
-  accountKey         String               @unique
+  id                            String               @id @default(cuid())
+  name                          String
+  status                        OrganizationStatus   @default(PILOT)
+  accountKey                    String               @unique
   ownerUserId                   String?
   stalledCandidateThresholdDays Int?
   createdAt                     DateTime             @default(now())
   updatedAt                     DateTime             @updatedAt
-  externalCandidates ExternalCandidate[]  @relation("OrganizationExternalCandidates")
-  jobs               Job[]                @relation("OrganizationJobs")
-  members            OrganizationMember[] @relation("OrganizationMembers")
-  owner              User?                @relation("OrganizationOwner", fields: [ownerUserId], references: [id])
-  slaOverrides       SlaPolicy[]
-  talentPools        TalentPool[]         @relation("OrganizationTalentPools")
-  tickets            Ticket[]             @relation("OrgTickets")
-  users              User[]               @relation("OrganizationUsers")
+  externalCandidates            ExternalCandidate[]  @relation("OrganizationExternalCandidates")
+  jobs                          Job[]                @relation("OrganizationJobs")
+  members                       OrganizationMember[] @relation("OrganizationMembers")
+  owner                         User?                @relation("OrganizationOwner", fields: [ownerUserId], references: [id])
+  slaOverrides                  SlaPolicy[]
+  talentPools                   TalentPool[]         @relation("OrganizationTalentPools")
+  tickets                       Ticket[]             @relation("OrgTickets")
+  users                         User[]               @relation("OrganizationUsers")
 
   @@index([ownerUserId])
   @@map("organizations")
@@ -796,7 +797,6 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-
 model SeekerJobRecommendation {
   id        String   @id @default(cuid())
   userId    String
@@ -817,164 +817,163 @@ model SeekerJobRecommendation {
   @@map("seeker_job_recommendations")
 }
 
-
 model User {
-  id                           String                         @id @default(cuid())
-  email                        String                         @unique
-  aboutMe                      String?
-  accountKey                   String?
-  avatarUrl                    String?
-  bannerFocalY                 Int?
-  bannerHeight                 Int?
-  bannerMode                   String?
-  corporateBannerKey           String?
-  corporateBannerLocked        Boolean                        @default(false)
-  coverUrl                     String?
-  createdAt                    DateTime                       @default(now())
-  deletedAt                    DateTime?
-  emailVerificationExpiresAt   DateTime?
-  emailVerificationToken       String?                        @unique
-  emailVerified                Boolean                        @default(false)
-  firstName                    String?
-  headline                     String?
-  hobbiesJson                  Json?
-  image                        String?
-  isProfilePublic              Boolean                        @default(false)
-  languagesJson                Json?
-  lastName                     String?
-  location                     String?
-  mfaEnabled                   Boolean                        @default(false)
-  mfaSecret                    String?
-  name                         String?
-  newsletter                   Boolean                        @default(false)
-  passwordHash                 String?
-  plan                         Tier                           @default(FREE)
-  pronouns                     String?
-  skillsJson                   Json?
-  socialLinks                  Json?
-  certificationsJson           Json?
-  customSectionJson            Json?
-  projectsJson                 Json?
-  slug                         String?                        @unique
-  slugChangeCount              Int                            @default(0)
-  slugLastChangedAt            DateTime?
-  status                       String?
-  stripeCustomerId             String?                        @unique
-  stripeSubscriptionId         String?                        @unique
-  updatedAt                    DateTime                       @updatedAt
-  wallpaperUrl                 String?
-  workPreferences              Json?
-  role                         UserRole                       @default(SEEKER)
-  profileVisibility            ProfileVisibility              @default(PRIVATE)
-  educationJson                Json?
-  resumeAlignFreeUses          Int                            @default(0)
-  resumeAlignLastResetMonth    String?
-  jobAlignFreeUses        Int     @default(0)
-  jobAlignLastResetMonth  String?
-  interviewPrepFreeUses        Int                            @default(0)
-  interviewPrepLastResetMonth  String?
-  professionalOperatingProfile ProfessionalOperatingProfile?
-  department                   Department?
-  employee                     Boolean                        @default(false)
-  growthPivotFreeUses          Int                            @default(0)
-  careerRoadmaps               CareerRoadmap[]                @relation("UserCareerRoadmaps")
-  negotiations                 Negotiation[]                  @relation("UserNegotiations")
-  profileSnapshots             ProfileSnapshot[]              @relation("UserProfileSnapshots")
-  aiThreads                    AiThread[]
-  applicationPacketExports     ApplicationPacketExport[]      @relation("UserApplicationPacketExports")
-  applications                 Application[]
-  auditAsActor                 AuditLog[]                     @relation("AuditActor")
-  auditAsImpersonated          AuditLog[]                     @relation("AuditImpersonated")
-  candidates                   Candidate[]
-  appointmentRequestsAsCoach     AppointmentRequest[] @relation("AppointmentRequestsAsCoach")
-  appointmentRequestsAsRequester AppointmentRequest[] @relation("AppointmentRequestsAsRequester")
-  coachingClientsAsClient      CoachingClient[]               @relation("CoachClientsClient")
-  coachingClientsAsCoach       CoachingClient[]               @relation("CoachClientsCoach")
-  coachingCsatResponses        CoachingCsatResponse[]         @relation("UserCoachingCsatResponses")
-  coachingDocuments            CoachingDocument[]             @relation("CoachDocuments")
-  coachingNotes                CoachingNote[]                 @relation("CoachNotes")
-  coachingSessionsAsClient     CoachingSession[]              @relation("CoachSessionsClient")
-  coachingSessionsAsCoach      CoachingSession[]              @relation("CoachSessionsCoach")
-  contactRequestsSent          ContactRequest[]               @relation("UserContactRequestsFrom")
-  contactRequestsReceived      ContactRequest[]               @relation("UserContactRequestsTo")
-  contactsAsContact            Contact[]                      @relation("UserContactsAsContact")
-  contacts                     Contact[]                      @relation("UserContacts")
-  contactCategories            ContactCategory[]
-  contactCategoryAssignments   ContactCategoryAssignment[]
-  conversationParticipants     ConversationParticipant[]      @relation("UserConversationParticipants")
-  foundryRoomsHosted           FoundryRoom[]                  @relation("FoundryHost")
-  foundryCoHosting             FoundryRoom[]                  @relation("FoundryCoHost")
-  foundryLobbyParticipations   FoundryLobbyParticipant[]      @relation("FoundryLobbyParticipants")
-  foundryParticipations        FoundryParticipant[]           @relation("FoundryParticipations")
-  foundryNotes                 FoundryNote[]                  
-  foundryInvitations 		   FoundryInvitee[] 			  @relation("FoundryInviteeUser")
-  reportsReceived              ConversationReport[]           @relation("UserReportsAsReported")
-  reportsFiled                 ConversationReport[]           @relation("UserReportsAsReporter")
-  covers                       Cover[]
-  externalCandidatesCreated    ExternalCandidate[]            @relation("UserExternalCandidatesCreated")
-  feedPostViews                FeedPostView[]                 @relation("UserFeedPostViews")
-  groupMemberships             GroupMembership[]
-  ownedGroups                  Group[]
-  hearthSpotlights             HearthSpotlight?
-  interviews                   Interview[]
-  views                        JobView[]
-  jobs                         Job[]
-  messageReactions             MessageReaction[]              @relation("UserMessageReactions")
-  messages                     Message[]                      @relation("UserMessages")
-  newsletterSubscriptions      NewsletterSubscription[]
-  ownedNewsletters             Newsletter[]
-  notifications                Notification[]
-  offers                       Offer[]
-  organizationMemberships      OrganizationMember[]           @relation("UserOrganizationMembers")
-  ownedOrganizations           Organization[]                 @relation("OrganizationOwner")
-  pageFollows                  PageFollower[]
-  ownedPages                   Page[]
-  passwordResetTokens          PasswordResetToken[]
-  pinnedJobs                   PinnedJob[]
-  profileViewsReceived         ProfileView[]                  @relation("ProfileViewTarget")
-  profileViewsMade             ProfileView[]                  @relation("ProfileViewViewer")
-  queueMemberships             QueueAgent[]                   @relation("UserQueueAgents")
-  recruiterCalendarAsCandidate RecruiterCalendarItem[]        @relation("UserRecruiterCalendarCandidate")
-  recruiterCalendarOwnedItems  RecruiterCalendarItem[]        @relation("UserRecruiterCalendarOwner")
-  candidateAutomations         RecruiterCandidateAutomation[]
-  snapshotSchedules            SnapshotSchedule[]
-  recruiterCandidatesAsUser    RecruiterCandidate[]           @relation("RecruiterCandidateCandidate")
-  recruiterCandidatesOwned     RecruiterCandidate[]           @relation("RecruiterCandidateRecruiter")
-  candidateExplainRuns         RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsCandidate")
-  recruiterExplainRuns         RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsRecruiter")
-  resumes                      Resume[]
-  savedPosts                   SavedPost[]
-  scanLogs                     ScanLog[]
-  seekerCalendarItems          SeekerCalendarItem[]           @relation("UserSeekerCalendarItems")
-  seekerJobPreference          SeekerJobPreference?
-  seekerJobRecommendations     SeekerJobRecommendation[]
-  talentPoolEntriesAsCandidate TalentPoolEntry[]              @relation("TalentPoolEntryCandidate")
-  createdTalentPools           TalentPool[]                   @relation("UserCreatedTalentPools")
-  hireQualityRecords           HireQuality[]                  @relation("RecruiterHireQuality")
-  ticketAttachments            TicketAttachment[]             @relation("TicketAttachmentUploader")
-  ticketComments               TicketComment[]                @relation("TicketCommentAuthor")
-  ticketHistory                TicketHistory[]                @relation("TicketHistoryActor")
-  ticketsAssigned              Ticket[]                       @relation("TicketAssignedTo")
-  ticketsCreated               Ticket[]                       @relation("TicketCreatedBy")
-  ticketsRequested             Ticket[]                       @relation("TicketRequester")
-  blocksReceived               UserBlock[]                    @relation("UserBlocksAsBlocked")
-  blocksInitiated              UserBlock[]                    @relation("UserBlocksAsBlocker")
-  consents                     UserConsent[]
-  drafts                       UserDraft[]
-  staffRoles                   UserStaffRole[]
-  organization                 Organization?                  @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])
-  workflowRulesCreated         WorkflowRule[]                 @relation("WorkflowRuleCreator")
+  id                             String                         @id @default(cuid())
+  email                          String                         @unique
+  aboutMe                        String?
+  accountKey                     String?
+  avatarUrl                      String?
+  bannerFocalY                   Int?
+  bannerHeight                   Int?
+  bannerMode                     String?
+  corporateBannerKey             String?
+  corporateBannerLocked          Boolean                        @default(false)
+  coverUrl                       String?
+  createdAt                      DateTime                       @default(now())
+  deletedAt                      DateTime?
+  emailVerificationExpiresAt     DateTime?
+  emailVerificationToken         String?                        @unique
+  emailVerified                  Boolean                        @default(false)
+  firstName                      String?
+  headline                       String?
+  hobbiesJson                    Json?
+  image                          String?
+  isProfilePublic                Boolean                        @default(false)
+  languagesJson                  Json?
+  lastName                       String?
+  location                       String?
+  mfaEnabled                     Boolean                        @default(false)
+  mfaSecret                      String?
+  name                           String?
+  newsletter                     Boolean                        @default(false)
+  passwordHash                   String?
+  plan                           Tier                           @default(FREE)
+  pronouns                       String?
+  skillsJson                     Json?
+  socialLinks                    Json?
+  certificationsJson             Json?
+  customSectionJson              Json?
+  projectsJson                   Json?
+  slug                           String?                        @unique
+  slugChangeCount                Int                            @default(0)
+  slugLastChangedAt              DateTime?
+  status                         String?
+  stripeCustomerId               String?                        @unique
+  stripeSubscriptionId           String?                        @unique
+  updatedAt                      DateTime                       @updatedAt
+  wallpaperUrl                   String?
+  workPreferences                Json?
+  role                           UserRole                       @default(SEEKER)
+  profileVisibility              ProfileVisibility              @default(PRIVATE)
+  educationJson                  Json?
+  resumeAlignFreeUses            Int                            @default(0)
+  resumeAlignLastResetMonth      String?
+  jobAlignFreeUses               Int                            @default(0)
+  jobAlignLastResetMonth         String?
+  interviewPrepFreeUses          Int                            @default(0)
+  interviewPrepLastResetMonth    String?
+  professionalOperatingProfile   ProfessionalOperatingProfile?
+  department                     Department?
+  employee                       Boolean                        @default(false)
+  growthPivotFreeUses            Int                            @default(0)
+  careerRoadmaps                 CareerRoadmap[]                @relation("UserCareerRoadmaps")
+  negotiations                   Negotiation[]                  @relation("UserNegotiations")
+  profileSnapshots               ProfileSnapshot[]              @relation("UserProfileSnapshots")
+  aiThreads                      AiThread[]
+  applicationPacketExports       ApplicationPacketExport[]      @relation("UserApplicationPacketExports")
+  applications                   Application[]
+  auditAsActor                   AuditLog[]                     @relation("AuditActor")
+  auditAsImpersonated            AuditLog[]                     @relation("AuditImpersonated")
+  candidates                     Candidate[]
+  appointmentRequestsAsCoach     AppointmentRequest[]           @relation("AppointmentRequestsAsCoach")
+  appointmentRequestsAsRequester AppointmentRequest[]           @relation("AppointmentRequestsAsRequester")
+  coachingClientsAsClient        CoachingClient[]               @relation("CoachClientsClient")
+  coachingClientsAsCoach         CoachingClient[]               @relation("CoachClientsCoach")
+  coachingCsatResponses          CoachingCsatResponse[]         @relation("UserCoachingCsatResponses")
+  coachingDocuments              CoachingDocument[]             @relation("CoachDocuments")
+  coachingNotes                  CoachingNote[]                 @relation("CoachNotes")
+  coachingSessionsAsClient       CoachingSession[]              @relation("CoachSessionsClient")
+  coachingSessionsAsCoach        CoachingSession[]              @relation("CoachSessionsCoach")
+  contactRequestsSent            ContactRequest[]               @relation("UserContactRequestsFrom")
+  contactRequestsReceived        ContactRequest[]               @relation("UserContactRequestsTo")
+  contactsAsContact              Contact[]                      @relation("UserContactsAsContact")
+  contacts                       Contact[]                      @relation("UserContacts")
+  contactCategories              ContactCategory[]
+  contactCategoryAssignments     ContactCategoryAssignment[]
+  conversationParticipants       ConversationParticipant[]      @relation("UserConversationParticipants")
+  foundryRoomsHosted             FoundryRoom[]                  @relation("FoundryHost")
+  foundryCoHosting               FoundryRoom[]                  @relation("FoundryCoHost")
+  foundryLobbyParticipations     FoundryLobbyParticipant[]      @relation("FoundryLobbyParticipants")
+  foundryParticipations          FoundryParticipant[]           @relation("FoundryParticipations")
+  foundryNotes                   FoundryNote[]
+  foundryInvitations             FoundryInvitee[]               @relation("FoundryInviteeUser")
+  reportsReceived                ConversationReport[]           @relation("UserReportsAsReported")
+  reportsFiled                   ConversationReport[]           @relation("UserReportsAsReporter")
+  covers                         Cover[]
+  externalCandidatesCreated      ExternalCandidate[]            @relation("UserExternalCandidatesCreated")
+  feedPostViews                  FeedPostView[]                 @relation("UserFeedPostViews")
+  groupMemberships               GroupMembership[]
+  ownedGroups                    Group[]
+  hearthSpotlights               HearthSpotlight?
+  interviews                     Interview[]
+  views                          JobView[]
+  jobs                           Job[]
+  messageReactions               MessageReaction[]              @relation("UserMessageReactions")
+  messages                       Message[]                      @relation("UserMessages")
+  newsletterSubscriptions        NewsletterSubscription[]
+  ownedNewsletters               Newsletter[]
+  notifications                  Notification[]
+  offers                         Offer[]
+  organizationMemberships        OrganizationMember[]           @relation("UserOrganizationMembers")
+  ownedOrganizations             Organization[]                 @relation("OrganizationOwner")
+  pageFollows                    PageFollower[]
+  ownedPages                     Page[]
+  passwordResetTokens            PasswordResetToken[]
+  pinnedJobs                     PinnedJob[]
+  profileViewsReceived           ProfileView[]                  @relation("ProfileViewTarget")
+  profileViewsMade               ProfileView[]                  @relation("ProfileViewViewer")
+  queueMemberships               QueueAgent[]                   @relation("UserQueueAgents")
+  recruiterCalendarAsCandidate   RecruiterCalendarItem[]        @relation("UserRecruiterCalendarCandidate")
+  recruiterCalendarOwnedItems    RecruiterCalendarItem[]        @relation("UserRecruiterCalendarOwner")
+  candidateAutomations           RecruiterCandidateAutomation[]
+  snapshotSchedules              SnapshotSchedule[]
+  recruiterCandidatesAsUser      RecruiterCandidate[]           @relation("RecruiterCandidateCandidate")
+  recruiterCandidatesOwned       RecruiterCandidate[]           @relation("RecruiterCandidateRecruiter")
+  candidateExplainRuns           RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsCandidate")
+  recruiterExplainRuns           RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsRecruiter")
+  resumes                        Resume[]
+  savedPosts                     SavedPost[]
+  scanLogs                       ScanLog[]
+  seekerCalendarItems            SeekerCalendarItem[]           @relation("UserSeekerCalendarItems")
+  seekerJobPreference            SeekerJobPreference?
+  seekerJobRecommendations       SeekerJobRecommendation[]
+  talentPoolEntriesAsCandidate   TalentPoolEntry[]              @relation("TalentPoolEntryCandidate")
+  createdTalentPools             TalentPool[]                   @relation("UserCreatedTalentPools")
+  hireQualityRecords             HireQuality[]                  @relation("RecruiterHireQuality")
+  ticketAttachments              TicketAttachment[]             @relation("TicketAttachmentUploader")
+  ticketComments                 TicketComment[]                @relation("TicketCommentAuthor")
+  ticketHistory                  TicketHistory[]                @relation("TicketHistoryActor")
+  ticketsAssigned                Ticket[]                       @relation("TicketAssignedTo")
+  ticketsCreated                 Ticket[]                       @relation("TicketCreatedBy")
+  ticketsRequested               Ticket[]                       @relation("TicketRequester")
+  blocksReceived                 UserBlock[]                    @relation("UserBlocksAsBlocked")
+  blocksInitiated                UserBlock[]                    @relation("UserBlocksAsBlocker")
+  consents                       UserConsent[]
+  drafts                         UserDraft[]
+  staffRoles                     UserStaffRole[]
+  organization                   Organization?                  @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])
+  workflowRulesCreated           WorkflowRule[]                 @relation("WorkflowRuleCreator")
 
   @@map("users")
 }
 
 model ContactCategory {
-  id               String    @id @default(cuid())
-  accountKey       String                           // scope key — org key OR userId for personal
-  userId           String                           // creator (audit trail)
+  id               String   @id @default(cuid())
+  accountKey       String // scope key — org key OR userId for personal
+  userId           String // creator (audit trail)
   name             String
   parentCategoryId String?
-  createdAt        DateTime  @default(now())
+  createdAt        DateTime @default(now())
 
   user        User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
   parent      ContactCategory?            @relation("ContactCategoryHierarchy", fields: [parentCategoryId], references: [id], onDelete: SetNull)
@@ -989,8 +988,8 @@ model ContactCategory {
 
 model ContactCategoryAssignment {
   id         String  @id @default(cuid())
-  accountKey String                           // scope key — org key OR userId for personal
-  userId     String                           // who made the assignment (audit trail)
+  accountKey String // scope key — org key OR userId for personal
+  userId     String // who made the assignment (audit trail)
   contactId  String
   categoryId String?
 
@@ -1377,36 +1376,36 @@ model Message {
 }
 
 model FoundryRoom {
-  id             String               @id @default(cuid())
-  roomId         String               @unique          // short public ID (nanoid)
-  title          String
-  status         FoundryStatus        @default(ACTIVE)
-  hostId         String
-  dailyRoomName  String?
-  dailyRoomUrl   String?
-  startedAt      DateTime             @default(now())
-  endedAt        DateTime?
-  isRecording    Boolean              @default(false)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  scheduledAt    DateTime?
-  timezone       String?    		  @default("America/New_York")
-  guestToken     String?    		  @unique   // short code for external join links
-  invitesSentAt  DateTime?
+  id            String        @id @default(cuid())
+  roomId        String        @unique // short public ID (nanoid)
+  title         String
+  status        FoundryStatus @default(ACTIVE)
+  hostId        String
+  dailyRoomName String?
+  dailyRoomUrl  String?
+  startedAt     DateTime      @default(now())
+  endedAt       DateTime?
+  isRecording   Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  scheduledAt   DateTime?
+  timezone      String?       @default("America/New_York")
+  guestToken    String?       @unique // short code for external join links
+  invitesSentAt DateTime?
 
-  hostJoinedAt     DateTime? // set when host issues first valid token
-  durationMinutes  Int       @default(60) // scheduled duration for auto-end
-  roomOpenedAt     DateTime? // when host first admits someone
-  coHostUserId     String?   // assigned co-host (COACH or RECRUITER only)
+  hostJoinedAt    DateTime? // set when host issues first valid token
+  durationMinutes Int       @default(60) // scheduled duration for auto-end
+  roomOpenedAt    DateTime? // when host first admits someone
+  coHostUserId    String? // assigned co-host (COACH or RECRUITER only)
 
   invitees          FoundryInvitee[]
   lobbyParticipants FoundryLobbyParticipant[]
 
-  host           User  @relation("FoundryHost", fields: [hostId], references: [id])
-  coHost         User? @relation("FoundryCoHost", fields: [coHostUserId], references: [id])
-  participants   FoundryParticipant[]
-  sharedFiles    FoundrySharedFile[]
-  notes          FoundryNote[]
+  host         User                 @relation("FoundryHost", fields: [hostId], references: [id])
+  coHost       User?                @relation("FoundryCoHost", fields: [coHostUserId], references: [id])
+  participants FoundryParticipant[]
+  sharedFiles  FoundrySharedFile[]
+  notes        FoundryNote[]
 
   @@index([hostId])
   @@index([status])
@@ -1486,13 +1485,13 @@ model FoundryNote {
 }
 
 model FoundryLobbyParticipant {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   roomId     String
-  userId     String?  // null for external guests
-  guestName  String?  // display name for guests
-  guestCode  String?  // guest token used to join
-  status     String   @default("WAITING") // WAITING | ADMITTED | DECLINED
-  joinedAt   DateTime @default(now())
+  userId     String? // null for external guests
+  guestName  String? // display name for guests
+  guestCode  String? // guest token used to join
+  status     String    @default("WAITING") // WAITING | ADMITTED | DECLINED
+  joinedAt   DateTime  @default(now())
   admittedAt DateTime?
 
   room FoundryRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -2139,19 +2138,19 @@ model HireQuality {
 }
 
 model ToolFeedback {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  toolName        String   // "target_strategy"
-  entityId        String?  // clientId, userId, etc.
+  toolName String // "target_strategy"
+  entityId String? // clientId, userId, etc.
 
-  inputSnapshot   Json?
-  outputSnapshot  Json?
+  inputSnapshot  Json?
+  outputSnapshot Json?
 
-  feedbackScore   String   // "up" | "down"
-  feedbackType    String?  // "wrong_direction" | "too_generic" | "missed_insight"
+  feedbackScore   String // "up" | "down"
+  feedbackType    String? // "wrong_direction" | "too_generic" | "missed_insight"
   feedbackComment String?
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([toolName])
   @@index([entityId])
