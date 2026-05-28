@@ -54,8 +54,15 @@ export default function FoundryRoom() {
 
   const handleRoomEmpty = useCallback(async () => {
     if (callRef.current) await callRef.current.leave().catch(() => {});
-    try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
-    router.push('/foundry');
+
+try {
+  await fetch(`/api/foundry/room/${roomId}/destroy-daily`, {
+    method: 'POST',
+  });
+} catch {}
+
+try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
+router.push('/foundry');
   }, [roomId, router]);
 
   const handleEnd = useCallback(async () => {
@@ -89,10 +96,20 @@ export default function FoundryRoom() {
     endTimerRef.current = setTimeout(async () => {
       setShowEndWarning(false);
       if (callRef.current) await callRef.current.leave().catch(() => {});
-      // Only host calls end API — prevents duplicate calls
-      if (isHost) {
-        try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
-      }
+      // Only host force-destroys the Daily room + ends DB session
+if (isHost) {
+  try {
+    await fetch(`/api/foundry/room/${roomId}/destroy-daily`, {
+      method: 'POST',
+    });
+  } catch {}
+
+  try {
+    await fetch(`/api/foundry/room/${roomId}/end`, {
+      method: 'POST',
+    });
+  } catch {}
+}
       router.push('/foundry');
     }, msUntilEnd);
   }, [roomId, router]);
