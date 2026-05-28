@@ -251,6 +251,7 @@ export default function FoundryVideoGrid({
   onCallReady, onParticipantsChange,
   onScreenShareChange,
   onRoomEmpty,
+  onScheduledEnd = null,
   guestToken = null,
   guestRoomUrl = null,
 }) {
@@ -344,6 +345,9 @@ export default function FoundryVideoGrid({
           if (!res.ok) throw new Error(data.error || 'Could not get meeting token');
           token = data.token;
           roomUrl = data.roomUrl;
+          if (data.scheduledEndAt) {
+            onScheduledEnd?.(data.scheduledEndAt, !!data.isOwner);
+          }
         }
 
         if (destroyed) return;
@@ -428,7 +432,7 @@ export default function FoundryVideoGrid({
       if (call) { call.leave().catch(() => {}); call.destroy().catch(() => {}); }
       callRef.current = null;
     };
-  }, [roomId, guestToken, guestRoomUrl, updateParticipants, checkRoomEmpty, syncScreenShareState, onCallReady, onScreenShareChange]);
+  }, [roomId, guestToken, guestRoomUrl, updateParticipants, checkRoomEmpty, syncScreenShareState, onCallReady, onScreenShareChange, onScheduledEnd]);
 
   useEffect(() => {
     if (!callRef.current || joinState !== 'joined') return;

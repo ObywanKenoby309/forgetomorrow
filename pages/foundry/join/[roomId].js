@@ -1,12 +1,16 @@
 // pages/foundry/join/[roomId].js
 // Public guest join page — no ForgeTomorrow account required.
-// Validates the guest token, collects the guest's name, issues a Daily token.
+// Handles three pre-join states:
+//   ROOM_NOT_OPEN_YET  — too early, shows countdown
+//   WAITING_FOR_HOST   — in lobby window, polls until host joins
+//   Ready              — issues token, routes to guest room
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 
 const ORANGE = '#FF7043';
+const POLL_INTERVAL_MS = 12000; // poll every 12 seconds
 
 const S = {
   page: {
@@ -43,10 +47,27 @@ const S = {
     borderRadius: 8, padding: '11px 14px', fontSize: 13, fontWeight: 700,
     cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.15s',
   },
+  btnDisabled: {
+    width: '100%', background: 'rgba(255,112,67,0.3)', border: 'none', color: 'rgba(255,255,255,0.5)',
+    borderRadius: 8, padding: '11px 14px', fontSize: 13, fontWeight: 700,
+    cursor: 'not-allowed', fontFamily: 'inherit',
+  },
   error: { color: '#ef5350', fontSize: 11, marginBottom: 10 },
   divider: { borderTop: '1px solid rgba(255,255,255,0.06)', margin: '20px 0' },
   signupPrompt: { fontSize: 11, color: '#555', textAlign: 'center', lineHeight: 1.6 },
   signupLink: { color: ORANGE, textDecoration: 'none' },
+  waitingCard: {
+    background: 'rgba(255,112,67,0.05)', border: '1px solid rgba(255,112,67,0.15)',
+    borderRadius: 10, padding: '16px 18px', marginBottom: 18, textAlign: 'center',
+  },
+  waitingIcon: { fontSize: 28, marginBottom: 8 },
+  waitingTitle: { fontSize: 14, fontWeight: 700, color: '#ddd', marginBottom: 4 },
+  waitingMsg: { fontSize: 11, color: '#666', lineHeight: 1.6 },
+  pollDot: {
+    display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+    background: ORANGE, margin: '0 2px',
+    animation: 'foundryPulse 1.4s ease-in-out infinite',
+  },
 };
 
 export async function getServerSideProps({ params, query }) {
@@ -62,6 +83,7 @@ export async function getServerSideProps({ params, query }) {
       select: {
         id: true, roomId: true, title: true, status: true,
         guestToken: true, scheduledAt: true, timezone: true,
+        durationMinutes: true,
         host: { select: { firstName: true, lastName: true } },
       },
     });
@@ -79,6 +101,7 @@ export async function getServerSideProps({ params, query }) {
         hostName,
         status: room.status,
         scheduledAt: room.scheduledAt?.toISOString() || null,
+        durationMinutes: room.durationMinutes || 60,
         timezone: room.timezone || 'America/New_York',
         guestCode: code,
       },
@@ -90,12 +113,24 @@ export async function getServerSideProps({ params, query }) {
 }
 
 export default function GuestJoin({
-  roomId, title, hostName, status, scheduledAt, timezone, guestCode, error,
+  roomId, title, hostName, status, scheduledAt, durationMinutes,
+  timezone, guestCode, error,
 }) {
   const router = useRouter();
   const [name, setName] = useState('');
   const [joining, setJoining] = useState(false);
   const [err, setErr] = useState(error || '');
+
+  // Waiting room state
+  const [waitState, setWaitState] = useState(null); // null | 'TOO_EARLY' | 'WAITING_FOR_HOST'
+  const [opensAt, setOpensAt] = useState(null);
+  const pollRef = useRef(null);
+  const nameRef = useRef('');
+
+  useEffect(() => { nameRef.current = name; }, [name]);
+
+  // Clear polling on unmount
+  useEffect(() => () => clearInterval(pollRef.current), []);
 
   if (error) {
     return (
@@ -117,31 +152,129 @@ export default function GuestJoin({
       }).format(new Date(scheduledAt))
     : null;
 
-  const handleJoin = async () => {
-    if (!name.trim()) { setErr('Please enter your name.'); return; }
-    setJoining(true); setErr('');
+  const startPolling = (currentName) => {
+    clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      await attemptJoin(currentName, false);
+    }, POLL_INTERVAL_MS);
+  };
 
+  const attemptJoin = async (guestName, showErrors = true) => {
+    if (!guestName?.trim()) return;
     try {
       const res = await fetch('/api/foundry/guest-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, guestCode, guestName: name.trim() }),
+        body: JSON.stringify({ roomId, guestCode, guestName: guestName.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) { setErr(data.error || 'Could not join Foundry.'); setJoining(false); return; }
 
-      // Store guest name + token in sessionStorage so the room page can pick it up
-      sessionStorage.setItem('foundry_guest_name', name.trim());
-      sessionStorage.setItem('foundry_guest_token', data.token);
-      sessionStorage.setItem('foundry_guest_room_url', data.roomUrl);
+      if (res.ok) {
+        // Room is open — proceed
+        clearInterval(pollRef.current);
+        sessionStorage.setItem('foundry_guest_name', guestName.trim());
+        sessionStorage.setItem('foundry_guest_token', data.token);
+        sessionStorage.setItem('foundry_guest_room_url', data.roomUrl);
+        router.push(`/foundry/guest/${roomId}`);
+        return;
+      }
 
-      router.push(`/foundry/guest/${roomId}`);
+      if (data.error === 'ROOM_NOT_OPEN_YET') {
+        setWaitState('TOO_EARLY');
+        if (data.opensAt) setOpensAt(data.opensAt);
+        clearInterval(pollRef.current); // no point polling when it's too early
+        if (showErrors) setErr('');
+        return;
+      }
+
+      if (data.error === 'WAITING_FOR_HOST') {
+        setWaitState('WAITING_FOR_HOST');
+        if (showErrors) setErr('');
+        startPolling(guestName);
+        return;
+      }
+
+      if (data.error === 'ROOM_ENDED') {
+        clearInterval(pollRef.current);
+        setErr('This Foundry has ended.');
+        setWaitState(null);
+        return;
+      }
+
+      if (showErrors) setErr(data.error || 'Could not join Foundry.');
     } catch {
-      setErr('Network error. Please try again.');
+      if (showErrors) setErr('Network error. Please try again.');
+    } finally {
       setJoining(false);
     }
   };
 
+  const handleJoin = async () => {
+    if (!name.trim()) { setErr('Please enter your name.'); return; }
+    setJoining(true);
+    setErr('');
+    await attemptJoin(name.trim(), true);
+  };
+
+  // Waiting room — too early
+  if (waitState === 'TOO_EARLY') {
+    const opensDate = opensAt ? new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone, hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+    }).format(new Date(opensAt)) : '15 minutes before the scheduled start';
+
+    return (
+      <div style={S.page}>
+        <style>{`@keyframes foundryPulse { 0%,100%{opacity:1} 50%{opacity:0.2} }`}</style>
+        <div style={S.card}>
+          <div style={S.badge}>🔨 Foundry</div>
+          <div style={S.sessionCard}>
+            <div style={S.sessionTitle}>{title}</div>
+            <div style={S.sessionMeta}>Hosted by {hostName}{dateStr && <><br />{dateStr}</>}</div>
+          </div>
+          <div style={S.waitingCard}>
+            <div style={S.waitingIcon}>🕐</div>
+            <div style={S.waitingTitle}>Too early to join</div>
+            <div style={S.waitingMsg}>
+              This Foundry opens at <strong style={{ color: ORANGE }}>{opensDate}</strong>.
+              <br />Check back 15 minutes before the scheduled start.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Waiting room — waiting for host
+  if (waitState === 'WAITING_FOR_HOST') {
+    return (
+      <div style={S.page}>
+        <style>{`@keyframes foundryPulse { 0%,100%{opacity:1} 50%{opacity:0.2} }`}</style>
+        <div style={S.card}>
+          <div style={S.badge}>🔨 Foundry</div>
+          <div style={S.sessionCard}>
+            <div style={S.sessionTitle}>{title}</div>
+            <div style={S.sessionMeta}>Hosted by {hostName}{dateStr && <><br />{dateStr}</>}</div>
+          </div>
+          <div style={S.waitingCard}>
+            <div style={S.waitingIcon}>⏳</div>
+            <div style={S.waitingTitle}>Waiting for {hostName} to start</div>
+            <div style={S.waitingMsg}>
+              You'll be admitted automatically once the host opens the Foundry.
+              <br /><br />
+              <span style={S.pollDot} />
+              <span style={{ ...S.pollDot, animationDelay: '0.2s' }} />
+              <span style={{ ...S.pollDot, animationDelay: '0.4s' }} />
+            </div>
+          </div>
+          <div style={{ fontSize: 10, color: '#333', textAlign: 'center' }}>
+            Checking every 12 seconds…
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default — name entry form
   return (
     <>
       <Head>
@@ -174,11 +307,11 @@ export default function GuestJoin({
             aria-label="Your name"
           />
           <button
-            style={{ ...S.btn, opacity: joining ? 0.7 : 1 }}
+            style={joining ? S.btnDisabled : S.btn}
             onClick={handleJoin}
             disabled={joining}
           >
-            {joining ? 'Joining Foundry…' : 'Join Foundry'}
+            {joining ? 'Checking…' : 'Join Foundry'}
           </button>
 
           <div style={S.divider} />

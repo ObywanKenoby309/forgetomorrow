@@ -1395,28 +1395,33 @@ model Message {
 }
 
 model FoundryRoom {
-  id             String               @id @default(cuid())
-  roomId         String               @unique          // short public ID (nanoid)
-  title          String
-  status         FoundryStatus        @default(ACTIVE)
-  hostId         String
-  dailyRoomName  String?
-  dailyRoomUrl   String?
-  startedAt      DateTime             @default(now())
-  endedAt        DateTime?
-  isRecording    Boolean              @default(false)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  scheduledAt    DateTime?
-  timezone       String?    		  @default("America/New_York")
-  guestToken     String?    		  @unique   // short code for external join links
-  invitesSentAt  DateTime?
-  invitees       FoundryInvitee[]
+  id               String                @id @default(cuid())
+  roomId           String                @unique // short public ID (nanoid)
+  title            String
+  status           FoundryStatus         @default(ACTIVE)
+  hostId           String
+  dailyRoomName    String?
+  dailyRoomUrl     String?
+  startedAt        DateTime              @default(now())
+  endedAt          DateTime?
+  isRecording      Boolean               @default(false)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
-  host           User                 @relation("FoundryHost", fields: [hostId], references: [id])
-  participants   FoundryParticipant[]
-  sharedFiles    FoundrySharedFile[]
-  notes          FoundryNote[]
+  scheduledAt      DateTime?
+  timezone         String?               @default("America/New_York")
+  guestToken       String?               @unique // short code for external join links
+  invitesSentAt    DateTime?
+
+  hostJoinedAt     DateTime? // set when host issues first valid token
+  durationMinutes  Int                    @default(60) // scheduled duration for auto-end
+
+  invitees         FoundryInvitee[]
+  participants     FoundryParticipant[]
+  sharedFiles      FoundrySharedFile[]
+  notes            FoundryNote[]
+
+  host             User @relation("FoundryHost", fields: [hostId], references: [id])
 
   @@index([hostId])
   @@index([status])

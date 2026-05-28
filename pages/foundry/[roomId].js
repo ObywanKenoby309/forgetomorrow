@@ -34,6 +34,12 @@ export default function FoundryRoom() {
   const [showEdgeToast, setShowEdgeToast] = useState(false);
   const edgeToastShownRef = useRef(false);
 
+  // Auto-end timer
+  const [scheduledEndAt, setScheduledEndAt] = useState(null);
+  const [showEndWarning, setShowEndWarning] = useState(false);
+  const endTimerRef = useRef(null);
+  const warnTimerRef = useRef(null);
+
   const callRef = useRef(null);
   const saveTimer = useRef(null);
 
@@ -46,7 +52,52 @@ export default function FoundryRoom() {
 
   const startTimeRef = useRef(Date.now());
 
-  // Load room
+  const handleRoomEmpty = useCallback(async () => {
+    if (callRef.current) await callRef.current.leave().catch(() => {});
+    try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
+    router.push('/foundry');
+  }, [roomId, router]);
+
+  const handleEnd = useCallback(async () => {
+    if (!confirm('End this Foundry session for everyone?')) return;
+    clearTimeout(endTimerRef.current);
+    clearTimeout(warnTimerRef.current);
+    if (callRef.current) await callRef.current.leave().catch(() => {});
+    try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
+    router.push('/foundry');
+  }, [roomId, router]);
+
+  // Auto-end: fired when scheduledEndAt is known
+  const scheduleAutoEnd = useCallback((endIso, isHost) => {
+    clearTimeout(endTimerRef.current);
+    clearTimeout(warnTimerRef.current);
+
+    const endMs = new Date(endIso).getTime();
+    const now = Date.now();
+    const msUntilEnd = endMs - now;
+    if (msUntilEnd <= 0) return; // already past end
+
+    // Warn 5 minutes before end
+    const msUntilWarn = msUntilEnd - 5 * 60 * 1000;
+    if (msUntilWarn > 0) {
+      warnTimerRef.current = setTimeout(() => setShowEndWarning(true), msUntilWarn);
+    } else {
+      setShowEndWarning(true); // already within warning window
+    }
+
+    // Auto-end
+    endTimerRef.current = setTimeout(async () => {
+      setShowEndWarning(false);
+      if (callRef.current) await callRef.current.leave().catch(() => {});
+      // Only host calls end API — prevents duplicate calls
+      if (isHost) {
+        try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
+      }
+      router.push('/foundry');
+    }, msUntilEnd);
+  }, [roomId, router]);
+
+  // Load room — token API now returns scheduledEndAt
   useEffect(() => {
     if (!roomId || status === 'loading') return;
     if (status === 'unauthenticated') { router.replace('/login'); return; }
@@ -58,7 +109,7 @@ export default function FoundryRoom() {
           setRoom(data.room);
           setNotes(data.room.notes || '');
           setSharedFiles(data.room.sharedFiles || []);
-          startTimeRef.current = new Date(data.room.startedAt).getTime();
+          startTimeRef.current = new Date(data.room.startedAt || Date.now()).getTime();
         }
         setLoading(false);
       })
@@ -69,8 +120,7 @@ export default function FoundryRoom() {
       .then(data => {
         if (data.resumes) {
           setForgeFiles(data.resumes.map(r => ({
-            name: r.name,
-            type: 'Resume',
+            name: r.name, type: 'Resume',
             ago: new Date(r.updatedAt).toLocaleDateString(),
           })));
         }
@@ -78,34 +128,41 @@ export default function FoundryRoom() {
       .catch(() => {});
   }, [roomId, status, router]);
 
+  // Cleanup timers on unmount
+  useEffect(() => () => {
+    clearTimeout(endTimerRef.current);
+    clearTimeout(warnTimerRef.current);
+  }, []);
+
   const handleCallReady = useCallback((call) => {
     callRef.current = call;
     call.on('app-message', ({ data }) => {
       if (data?.type === 'MEETING_CHAT') {
         setMeetingMessages(prev => [...prev, {
-          sender: data.senderName,
-          text: data.text,
-          time: data.time,
-          color: data.color || '#5C6BC0',
-          avatarUrl: data.avatarUrl || null,
+          sender: data.senderName, text: data.text, time: data.time,
+          color: data.color || '#5C6BC0', avatarUrl: data.avatarUrl || null,
         }]);
       }
     });
   }, []);
 
+  // Called by FoundryVideoGrid once it gets the token response (passes scheduledEndAt back)
+  const handleScheduledEnd = useCallback((endIso, isHost) => {
+    if (!endIso || scheduledEndAt) return; // only set once
+    setScheduledEndAt(endIso);
+    scheduleAutoEnd(endIso, isHost);
+  }, [scheduledEndAt, scheduleAutoEnd]);
+
   const handleParticipantsChange = useCallback((list) => {
     setParticipants(list.map(p => ({
-      id: p.session_id,
-      name: p.user_name || 'Guest',
+      id: p.session_id, name: p.user_name || 'Guest',
       isHost: !!p.owner,
       micMuted: !p.tracks?.audio || p.tracks.audio.state === 'off',
       videoOff: !p.tracks?.video || p.tracks.video.state === 'off',
-      local: p.local,
-      avatarUrl: p.userData?.avatarUrl || null,
+      local: p.local, avatarUrl: p.userData?.avatarUrl || null,
     })));
   }, []);
 
-  // Screen share change from VideoGrid
   const handleScreenShareChange = useCallback((sharing) => {
     setIsScreenSharing(sharing);
   }, []);
@@ -121,9 +178,7 @@ export default function FoundryRoom() {
           type: 'MEETING_CHAT', senderName: me?.name || 'Host',
           text, time: now, color: '#FF7043', avatarUrl: me?.avatarUrl || null,
         }, '*');
-      } catch (err) {
-        console.error('[foundry] sendAppMessage error:', err);
-      }
+      } catch (err) { console.error('[foundry] sendAppMessage error:', err); }
     }
   }, [session]);
 
@@ -133,8 +188,7 @@ export default function FoundryRoom() {
     saveTimer.current = setTimeout(() => {
       if (!roomId) return;
       fetch(`/api/foundry/room/${roomId}/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: val }),
       }).catch(() => {});
     }, 1500);
@@ -147,38 +201,26 @@ export default function FoundryRoom() {
       return [...prev, { name: file.name, sharedBy: session?.user?.name || 'You', ago: 'Just now' }];
     });
     fetch(`/api/foundry/room/${roomId}/share-file`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fileName: file.name, source: 'FORGE' }),
     }).catch(() => {});
   }, [roomId, session]);
 
-  // Screen share — toggle on/off, include audio, show Edge recommendation once
   const handleShareScreen = useCallback(async () => {
     if (!callRef.current) return;
-
-    // If already sharing — stop
     if (isScreenSharing) {
-      try {
-        await callRef.current.stopScreenShare();
-      } catch {}
+      try { await callRef.current.stopScreenShare(); } catch {}
       setIsScreenSharing(false);
       return;
     }
-
-    // Show Edge recommendation toast once per session
     if (!edgeToastShownRef.current) {
       edgeToastShownRef.current = true;
       setShowEdgeToast(true);
       setTimeout(() => setShowEdgeToast(false), 6000);
     }
-
     try {
       await callRef.current.startScreenShare({
-        displayMediaOptions: {
-          video: true,
-          audio: true, // request system audio — user must check the box in browser picker
-        },
+        displayMediaOptions: { video: true, audio: true },
       });
     } catch (err) {
       if (err.name !== 'AbortError' && err.message !== 'AbortError') {
@@ -197,24 +239,8 @@ export default function FoundryRoom() {
         await callRef.current.startRecording();
         setIsRecording(true);
       }
-    } catch (err) {
-      console.error('[foundry] recording:', err);
-    }
+    } catch (err) { console.error('[foundry] recording:', err); }
   }, [isRecording]);
-
-  const handleEnd = useCallback(async () => {
-    if (!confirm('End this Foundry session for everyone?')) return;
-    if (callRef.current) await callRef.current.leave().catch(() => {});
-    try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
-    router.push('/foundry');
-  }, [roomId, router]);
-
-  // Auto-end when all participants leave
-  const handleRoomEmpty = useCallback(async () => {
-    if (callRef.current) await callRef.current.leave().catch(() => {});
-    try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
-    router.push('/foundry');
-  }, [roomId, router]);
 
   const togglePanel = (tab) => {
     if (sidebarHidden) setSidebarHidden(false);
@@ -227,6 +253,8 @@ export default function FoundryRoom() {
       Opening Foundry…
     </div>
   );
+
+  const isHost = room?.hostId === session?.user?.id;
 
   return (
     <>
@@ -253,6 +281,7 @@ export default function FoundryRoom() {
           onScreenShareChange={handleScreenShareChange}
           onInvite={() => togglePanel('People')}
           onRoomEmpty={handleRoomEmpty}
+          onScheduledEnd={handleScheduledEnd}
         />
 
         {!sidebarHidden && (
@@ -266,7 +295,7 @@ export default function FoundryRoom() {
             onSend={handleSend}
             onShare={handleShare}
             onUpload={() => {}}
-            isHost={room?.hostId === session?.user?.id}
+            isHost={isHost}
             initialTab={activePanel}
             currentUserId={session?.user?.id}
             currentUserRole={session?.user?.role}
@@ -293,12 +322,38 @@ export default function FoundryRoom() {
         onEnd={handleEnd}
       />
 
-      {/* Edge recommendation toast — shows once when screen share is first triggered */}
-      {showEdgeToast && (
+      {/* 5-minute end warning */}
+      {showEndWarning && (
         <div style={{
           position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-          background: '#141720', border: '1px solid rgba(255,255,255,0.12)',
+          background: '#1a0a00', border: '1px solid rgba(255,112,67,0.4)',
           borderRadius: 10, padding: '12px 18px', zIndex: 9999,
+          maxWidth: 340, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: ORANGE, marginBottom: 4 }}>
+                ⏰ Foundry ending in 5 minutes
+              </div>
+              <div style={{ fontSize: 11, color: '#888', lineHeight: 1.6 }}>
+                The scheduled session time is almost up. The room will close automatically.
+              </div>
+            </div>
+            <button
+              onClick={() => setShowEndWarning(false)}
+              style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 16, flexShrink: 0, padding: 0 }}
+            >×</button>
+          </div>
+        </div>
+      )}
+
+      {/* Edge toast */}
+      {showEdgeToast && (
+        <div style={{
+          position: 'fixed', bottom: showEndWarning ? 160 : 80, left: '50%', transform: 'translateX(-50%)',
+          background: '#141720', border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: 10, padding: '12px 18px', zIndex: 9998,
           maxWidth: 360, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
           fontFamily: "'DM Sans', sans-serif",
         }}>
@@ -308,7 +363,7 @@ export default function FoundryRoom() {
                 💡 For best audio sharing experience
               </div>
               <div style={{ fontSize: 11, color: '#888', lineHeight: 1.6 }}>
-                PC users are recommended to use <strong style={{ color: '#FF7043' }}>Microsoft Edge</strong> for screen sharing. Edge supports system audio from all sources. In Chrome, audio sharing works for browser tabs only.
+                PC users are recommended to use <strong style={{ color: ORANGE }}>Microsoft Edge</strong> for screen sharing. Edge supports system audio from all sources. In Chrome, audio sharing works for browser tabs only.
               </div>
             </div>
             <button
