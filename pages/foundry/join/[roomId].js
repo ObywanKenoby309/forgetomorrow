@@ -122,7 +122,7 @@ export default function GuestJoin({
   const [err, setErr] = useState(error || '');
 
   // Waiting room state
-  const [waitState, setWaitState] = useState(null); // null | 'TOO_EARLY' | 'WAITING_FOR_HOST'
+  const [waitState, setWaitState] = useState(null); // null | 'TOO_EARLY' | 'WAITING_FOR_HOST' | 'WAITING_FOR_ADMISSION'
   const [opensAt, setOpensAt] = useState(null);
   const pollRef = useRef(null);
   const nameRef = useRef('');
@@ -193,6 +193,13 @@ export default function GuestJoin({
         startPolling(guestName);
         return;
       }
+	  
+	  if (data.error === 'WAITING_FOR_ADMISSION') {
+		setWaitState('WAITING_FOR_ADMISSION');
+		if (showErrors) setErr('');
+		startPolling(guestName);
+		return;
+	  }
 
       if (data.error === 'ROOM_ENDED') {
         clearInterval(pollRef.current);
