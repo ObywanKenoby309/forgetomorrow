@@ -248,6 +248,7 @@ export default function FoundrySchedulePanel({ contacts = [], onScheduled }) {
   const [externalName, setExternalName] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
+  const [duration, setDuration] = useState(60);
   const [sendingInvites, setSendingInvites] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
@@ -300,7 +301,23 @@ export default function FoundrySchedulePanel({ contacts = [], onScheduled }) {
     setSubmitting(true);
 
     try {
-      const scheduledAt = new Date(`${date}T${time}:00`).toISOString();
+      // Correct timezone conversion — browser local time ≠ selected timezone
+      const naiveMs = new Date(`${date}T${time}:00`).getTime();
+      const tzOffsetMs = (() => {
+        try {
+          const utcDate = new Date(naiveMs);
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+          }).formatToParts(utcDate);
+          const get = (type) => parseInt(parts.find(p => p.type === type)?.value || '0');
+          const tzMs = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute'), get('second'));
+          return naiveMs - tzMs;
+        } catch { return 0; }
+      })();
+      const scheduledAt = new Date(naiveMs + tzOffsetMs).toISOString();
+
       const invitees = [
         ...ftInvitees.map((i) => ({ userId: i.id, name: i.name })),
         ...externalInvitees.map((i) => ({ email: i.email, name: i.name })),
@@ -309,7 +326,7 @@ export default function FoundrySchedulePanel({ contacts = [], onScheduled }) {
       const res = await fetch('/api/foundry/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), scheduledAt, timezone, invitees }),
+        body: JSON.stringify({ title: title.trim(), scheduledAt, timezone, invitees, durationMinutes: duration }),
       });
 
       const data = await res.json();
@@ -460,6 +477,38 @@ export default function FoundrySchedulePanel({ contacts = [], onScheduled }) {
     </select>
   </div>
 </div>
+
+      {/* Duration picker — video cap: max 1 hour */}
+      <div style={S.field}>
+        <label style={S.label}>Duration</label>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[
+            { label: '15 min', value: 15 },
+            { label: '30 min', value: 30 },
+            { label: '45 min', value: 45 },
+            { label: '1 hour', value: 60 },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setDuration(opt.value)}
+              style={{
+                flex: 1, padding: '9px 6px', borderRadius: 8, cursor: 'pointer',
+                fontFamily: 'inherit', transition: 'all 0.15s', border: 'none',
+                outline: duration === opt.value ? '1.5px solid #FF7043' : '1px solid rgba(255,255,255,0.1)',
+                background: duration === opt.value ? 'rgba(255,112,67,0.12)' : 'rgba(255,255,255,0.04)',
+              }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 800, color: duration === opt.value ? '#FF7043' : '#e0e0e0' }}>
+                {opt.label}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 10, color: '#555', marginTop: 5, lineHeight: 1.5 }}>
+          Foundry video meetings are capped at 1 hour. Lobby opens 15 min early for prep.
+        </div>
+      </div>
 
       <hr style={S.divider} />
 

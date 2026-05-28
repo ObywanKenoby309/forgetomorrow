@@ -398,37 +398,37 @@ export default function FoundrySchedulerModal({
               </select>
             </div>
 
-            {/* Duration picker */}
+            {/* Duration picker — video cap: max 1 hour */}
             <div style={S.field}>
               <label style={S.label}>Duration</label>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {[
-                  { label: '30 min', value: 30, note: 'Quick session' },
-                  { label: '1 hour', value: 60, note: 'Full session' },
+                  { label: '15 min', value: 15 },
+                  { label: '30 min', value: 30 },
+                  { label: '45 min', value: 45 },
+                  { label: '1 hour', value: 60 },
                 ].map(opt => (
                   <button
                     key={opt.value}
                     type="button"
                     onClick={() => setDuration(opt.value)}
                     style={{
-                      flex: 1, padding: '10px 8px', borderRadius: 8, cursor: 'pointer',
+                      flex: 1, padding: '9px 6px', borderRadius: 8, cursor: 'pointer',
                       fontFamily: 'inherit', transition: 'all 0.15s', border: 'none',
                       outline: duration === opt.value ? '1.5px solid #FF7043' : dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)',
                       background: duration === opt.value
                         ? dark ? 'rgba(255,112,67,0.12)' : 'rgba(255,112,67,0.08)'
                         : dark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.9)',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                     }}
                   >
-                    <span style={{ fontSize: 14, fontWeight: 800, color: duration === opt.value ? '#FF7043' : dark ? '#e0e0e0' : '#112033' }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: duration === opt.value ? '#FF7043' : dark ? '#e0e0e0' : '#112033' }}>
                       {opt.label}
                     </span>
-                    <span style={{ fontSize: 10, color: dark ? '#666' : '#90A4AE' }}>{opt.note}</span>
                   </button>
                 ))}
               </div>
               <div style={{ fontSize: 10, color: dark ? '#444' : '#B0BEC5', marginTop: 6, lineHeight: 1.5 }}>
-                Lobby opens 15 min early for prep. End time is fixed at scheduled time + duration.
+                Foundry video meetings are capped at 1 hour. Lobby opens 15 min early for prep.
               </div>
             </div>
 

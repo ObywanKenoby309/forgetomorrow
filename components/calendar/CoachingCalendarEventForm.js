@@ -155,6 +155,14 @@ export default function CoachingCalendarEventForm({
   const [clientContactsError, setClientContactsError] = useState('');
   const [clientPickerOpen, setClientPickerOpen] = useState(mode === 'add');
 
+
+  // Reset duration to max 60 min when switching to video — cost control
+  useEffect(() => {
+    if (form.meetingMode === 'audio_video' && form.durationMinutes > 60) {
+      update('durationMinutes', 60);
+    }
+  }, [form.meetingMode]);
+
   useEffect(() => {
     if (firstRef.current) firstRef.current.focus();
     const onEsc = (e) => e.key === 'Escape' && onClose?.();
@@ -1004,34 +1012,43 @@ ${roomNote}` : roomNote;
           </div>
 
 
-          {/* Duration — only when Audio/Video is selected */}
-          {form.meetingMode === 'audio_video' && (
-            <div>
-              <label style={label}>Meeting duration</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[{ label: '30 min', value: 30, note: 'Quick session' }, { label: '1 hour', value: 60, note: 'Full session' }].map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => update('durationMinutes', opt.value)}
-                    style={{
-                      flex: 1, padding: '9px 8px', borderRadius: 10, cursor: 'pointer',
-                      fontFamily: 'inherit', transition: 'all 0.15s', border: 'none',
-                      outline: form.durationMinutes === opt.value ? '1.5px solid #FF7043' : '1px solid #DADCE0',
-                      background: form.durationMinutes === opt.value ? 'rgba(255,112,67,0.07)' : '#FFFFFF',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                    }}
-                  >
-                    <span style={{ fontSize: 13, fontWeight: 800, color: form.durationMinutes === opt.value ? '#FF7043' : '#334155' }}>{opt.label}</span>
-                    <span style={{ fontSize: 10, color: '#90A4AE' }}>{opt.note}</span>
-                  </button>
-                ))}
+              {/* Duration */}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={label}>Duration</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {[
+                    { label: '15 min', value: 15 },
+                    { label: '30 min', value: 30 },
+                    { label: '45 min', value: 45 },
+                    { label: '1 hour', value: 60 },
+                    { label: '90 min', value: 90 },
+                    { label: '2 hours', value: 120 },
+                  ]
+                    .filter(opt => form.meetingMode === 'audio_video' ? opt.value <= 60 : true)
+                    .map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => update('durationMinutes', opt.value)}
+                      style={{
+                        padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                        fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
+                        transition: 'all 0.15s', border: 'none',
+                        outline: form.durationMinutes === opt.value ? '1.5px solid #FF7043' : '1px solid #DADCE0',
+                        background: form.durationMinutes === opt.value ? 'rgba(255,112,67,0.08)' : '#FFFFFF',
+                        color: form.durationMinutes === opt.value ? '#FF7043' : '#546E7A',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {form.meetingMode === 'audio_video' && (
+                  <div style={{ fontSize: 10, color: '#90A4AE', marginTop: 4 }}>
+                    Video meetings are limited to 1 hour max.
+                  </div>
+                )}
               </div>
-              <div style={{ fontSize: 10, color: '#90A4AE', marginTop: 5 }}>
-                Lobby opens 15 min early. Meeting ends at scheduled time + duration.
-              </div>
-            </div>
-          )}
 
           <div>
             <label style={label}>Notes</label>
