@@ -102,7 +102,12 @@ function isFoundryPath(pathname) {
 }
 
 function isPublicFoundryGuestPath(pathname) {
-  return pathname.startsWith("/foundry/join/") || pathname === "/api/foundry/guest-token";
+  return (
+    pathname.startsWith("/foundry/join/") ||
+    pathname.startsWith("/foundry/guest/") ||
+    pathname === "/api/foundry/guest-token" ||
+    pathname === "/api/foundry/resolve-code"
+  );
 }
 
 async function hasValidNextAuthSession(req) {

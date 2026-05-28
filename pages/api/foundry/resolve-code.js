@@ -1,39 +1,68 @@
 // pages/api/foundry/resolve-code.js
-// Resolves a Foundry room id or external guest code from the lobby Join field.
+// Public helper for Foundry join form. Accepts a room ID or guest invite code
+// and returns the correct route without requiring a ForgeTomorrow account.
 
 import prisma from '@/lib/prisma';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const raw = String(req.body?.code || '').trim();
-  if (!raw) return res.status(400).json({ error: 'Code is required.' });
+  const rawCode = String(req.body?.code || '').trim();
 
-  const code = raw.replace(/^#+/, '').trim();
+  if (!rawCode) {
+    return res.status(400).json({ error: 'Foundry code or invite link is required.' });
+  }
+
+  const code = rawCode
+    .replace(/^https?:\/\/[^/]+/i, '')
+    .replace(/^\/foundry\/join\//, '')
+    .replace(/^\/foundry\//, '')
+    .split('?')[0]
+    .trim();
+
+  const queryCode = rawCode.includes('code=')
+    ? new URL(rawCode, 'https://forgetomorrow.local').searchParams.get('code')
+    : null;
+
+  const candidates = [queryCode, code, rawCode].filter(Boolean);
 
   try {
-    const roomById = await prisma.foundryRoom.findUnique({
-      where: { roomId: code },
-      select: { roomId: true, status: true },
+    const room = await prisma.foundryRoom.findFirst({
+      where: {
+        OR: [
+          { roomId: { in: candidates } },
+          { guestToken: { in: candidates } },
+        ],
+      },
+      select: {
+        roomId: true,
+        guestToken: true,
+        status: true,
+      },
     });
 
-    if (roomById) {
-      if (roomById.status === 'ENDED') return res.status(410).json({ error: 'This Foundry has ended.' });
-      return res.status(200).json({ roomId: roomById.roomId, type: 'room' });
+    if (!room) {
+      return res.status(404).json({ error: 'Foundry not found. Check the code or invite link.' });
     }
 
-    const roomByGuestCode = await prisma.foundryRoom.findFirst({
-      where: { guestToken: code },
-      select: { roomId: true, status: true, guestToken: true },
-    });
+    if (room.status === 'ENDED') {
+      return res.status(410).json({ error: 'This Foundry has already ended.' });
+    }
 
-    if (!roomByGuestCode) return res.status(404).json({ error: 'Foundry not found for that code.' });
-    if (roomByGuestCode.status === 'ENDED') return res.status(410).json({ error: 'This Foundry has ended.' });
+    const matchedGuestCode = candidates.find((value) => value === room.guestToken);
+
+    if (matchedGuestCode) {
+      return res.status(200).json({
+        kind: 'guest',
+        roomId: room.roomId,
+        joinUrl: `/foundry/join/${room.roomId}?code=${room.guestToken}`,
+      });
+    }
 
     return res.status(200).json({
-      roomId: roomByGuestCode.roomId,
-      guestCode: roomByGuestCode.guestToken,
-      type: 'guest',
+      kind: 'room',
+      roomId: room.roomId,
+      joinUrl: `/foundry/${room.roomId}`,
     });
   } catch (err) {
     console.error('[foundry/resolve-code]', err);
