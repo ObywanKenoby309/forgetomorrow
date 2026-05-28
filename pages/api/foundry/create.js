@@ -13,7 +13,6 @@ export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
   if (!session?.user?.id) return res.status(401).json({ error: 'Not authenticated' });
 
-  // Role gate — seekers cannot host a Foundry
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { role: true },
@@ -23,16 +22,15 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Only coaches and recruiters can open a Foundry.' });
   }
 
-  const { title } = req.body;
+  const { title, durationMinutes } = req.body;
   if (!title?.trim()) return res.status(400).json({ error: 'Title is required' });
 
   try {
     const roomId = nanoid(10);
+    const guestToken = nanoid(16); // always generate — any meeting can be shared
 
-    // Create the Daily room first
     const dailyRoom = await createDailyRoom(roomId);
 
-    // Then create the Foundry DB record, storing the Daily room name
     const room = await prisma.foundryRoom.create({
       data: {
         roomId,
@@ -40,12 +38,13 @@ export default async function handler(req, res) {
         hostId: session.user.id,
         status: 'ACTIVE',
         startedAt: new Date(),
-        dailyRoomName: dailyRoom.name,  // store Daily's room name
-        dailyRoomUrl: dailyRoom.url,    // store full Daily URL
+        dailyRoomName: dailyRoom.name,
+        dailyRoomUrl: dailyRoom.url,
+        guestToken,
+        durationMinutes: durationMinutes === 30 ? 30 : 60,
       },
     });
 
-    // Auto-join host as participant
     await prisma.foundryParticipant.create({
       data: {
         roomId: room.id,
@@ -55,7 +54,7 @@ export default async function handler(req, res) {
       },
     });
 
-    return res.status(200).json({ roomId });
+    return res.status(200).json({ roomId, guestToken });
   } catch (err) {
     console.error('[foundry/create]', err);
     return res.status(500).json({ error: 'Could not create Foundry room' });

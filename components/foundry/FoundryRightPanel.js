@@ -98,9 +98,27 @@ function initials(name) {
   return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
-function PeopleTab({ participants, isHost, onDmParticipant, roomId, coHostUserId, coHostName, onCoHostAssigned }) {
+function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, coHostUserId, coHostName, onCoHostAssigned }) {
   const [query, setQuery] = useState('');
+  const [showInvite, setShowInvite] = useState(false);
+  const [copiedFt, setCopiedFt] = useState(false);
+  const [copiedGuest, setCopiedGuest] = useState(false);
   const filtered = participants.filter(p => p.name?.toLowerCase().includes(query.toLowerCase()));
+
+  const ftLink = roomId && typeof window !== 'undefined'
+    ? `${window.location.origin}/foundry/${roomId}`
+    : '';
+  const guestLink = roomId && guestToken && typeof window !== 'undefined'
+    ? `${window.location.origin}/foundry/join/${roomId}?code=${guestToken}`
+    : '';
+
+  const copyFt = () => {
+    navigator.clipboard.writeText(ftLink).then(() => { setCopiedFt(true); setTimeout(() => setCopiedFt(false), 2000); });
+  };
+  const copyGuest = () => {
+    navigator.clipboard.writeText(guestLink).then(() => { setCopiedGuest(true); setTimeout(() => setCopiedGuest(false), 2000); });
+  };
+
   return (
     <div>
       {isHost && roomId && (
@@ -118,7 +136,67 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, coHostUserId
         <span style={{ color: '#555', fontSize: 13 }}>⌕</span>
         <input style={S.searchInput} placeholder="Search participants…" value={query} onChange={e => setQuery(e.target.value)} aria-label="Search participants" />
       </div>
-      <button style={S.inviteBtn}><span>+</span> Invite to Foundry</button>
+      <button style={S.inviteBtn} onClick={() => setShowInvite(v => !v)}>
+        <span>+</span> {showInvite ? 'Hide invite links' : 'Invite to Foundry'}
+      </button>
+
+      {showInvite && (
+        <div style={{
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 8, padding: '10px 12px', marginBottom: 10,
+          display: 'flex', flexDirection: 'column', gap: 8,
+        }}>
+          {ftLink && (
+            <div>
+              <div style={{ fontSize: 10, color: '#666', fontWeight: 600, marginBottom: 4 }}>
+                🔨 ForgeTomorrow users
+              </div>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{
+                  flex: 1, fontSize: 10, color: '#555', background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5,
+                  padding: '5px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{ftLink}</div>
+                <button onClick={copyFt} style={{
+                  background: copiedFt ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.07)',
+                  border: '1px solid rgba(255,255,255,0.1)', color: copiedFt ? '#4caf50' : '#aaa',
+                  borderRadius: 5, padding: '4px 8px', fontSize: 10, cursor: 'pointer',
+                  fontFamily: 'inherit', flexShrink: 0, fontWeight: 600,
+                }}>
+                  {copiedFt ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          )}
+          {guestLink && (
+            <div>
+              <div style={{ fontSize: 10, color: '#666', fontWeight: 600, marginBottom: 4 }}>
+                🔗 External guests (no account needed)
+              </div>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{
+                  flex: 1, fontSize: 10, color: '#555', background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5,
+                  padding: '5px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{guestLink}</div>
+                <button onClick={copyGuest} style={{
+                  background: copiedGuest ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.07)',
+                  border: '1px solid rgba(255,255,255,0.1)', color: copiedGuest ? '#4caf50' : '#aaa',
+                  borderRadius: 5, padding: '4px 8px', fontSize: 10, cursor: 'pointer',
+                  fontFamily: 'inherit', flexShrink: 0, fontWeight: 600,
+                }}>
+                  {copiedGuest ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          )}
+          {!guestLink && (
+            <div style={{ fontSize: 10, color: '#444', lineHeight: 1.5 }}>
+              Guest links are only available for scheduled Foundries. Start a new scheduled session to get a guest link.
+            </div>
+          )}
+        </div>
+      )}
       <div style={S.sectionLabel}>In this Foundry ({participants.length})</div>
       {filtered.map(p => (
         <div key={p.id} style={S.participantRow}>
@@ -267,6 +345,7 @@ export default function FoundryRightPanel({
   coHostUserId,
   coHostName,
   onCoHostAssigned,
+  guestToken = null,
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [chatSub, setChatSub] = useState('meeting');
@@ -316,6 +395,7 @@ export default function FoundryRightPanel({
           participants={participants}
           isHost={isHost}
           roomId={roomId}
+          guestToken={guestToken}
           coHostUserId={coHostUserId}
           coHostName={coHostName}
           onCoHostAssigned={onCoHostAssigned}
