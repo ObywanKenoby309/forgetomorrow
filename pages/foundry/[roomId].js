@@ -160,8 +160,9 @@ export default function FoundryRoom() {
       fetch('/api/anvil/identity').then(r => r.json()).catch(() => ({})),
       fetch('/api/anvil/onboarding-growth/list').then(r => r.json()).catch(() => ({})),
       fetch('/api/offer-negotiation/list').then(r => r.json()).catch(() => ({})),
+      fetch('/api/apply/application-packets/list').then(r => r.json()).catch(() => ({})),
     ])
-      .then(([resumeData, coverData, identityData, roadmapData, negotiationData]) => {
+      .then(([resumeData, coverData, identityData, roadmapData, negotiationData, packetData]) => {
         const resumeItems = Array.isArray(resumeData.resumes)
           ? resumeData.resumes.map(r => ({
               id: r.id,
@@ -212,7 +213,24 @@ export default function FoundryRoom() {
             }))
           : [];
 
-        setForgeFiles([...resumeItems, ...coverItems, ...identityProfile, ...roadmapItems, ...negotiationItems]);
+        const applicationPacketItems = Array.isArray(packetData.packets)
+          ? packetData.packets.map(p => ({
+              id: p.applicationId || p.id,
+              name: p.name || 'Application Packet',
+              type: 'Application Packet',
+              sourceType: 'APPLICATION_PACKET',
+              ago: new Date(p.updatedAt || p.submittedAt || Date.now()).toLocaleDateString(),
+            }))
+          : [];
+
+        setForgeFiles([
+          ...resumeItems,
+          ...coverItems,
+          ...identityProfile,
+          ...roadmapItems,
+          ...negotiationItems,
+          ...applicationPacketItems,
+        ]);
       })
       .catch(() => {});
   }, [roomId, status, router]);
@@ -498,6 +516,30 @@ export default function FoundryRoom() {
         broadcastFilesUpdated();
         return;
       }
+
+      if ((file.sourceType === 'APPLICATION_PACKET' || file.type === 'Application Packet') && file.id) {
+        const exportRes = await fetch('/api/apply/application-packets/export-foundry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ applicationId: file.id, roomId }),
+        });
+
+        const exportData = await exportRes.json().catch(() => ({}));
+        if (!exportRes.ok) throw new Error(exportData.error || 'Could not export Application Packet for Foundry');
+
+        if (exportData.file) {
+          setSharedFiles(prev => {
+            if (prev.find(f => f.id === exportData.file.id || f.name === exportData.file.name)) return prev;
+            return [exportData.file, ...prev];
+          });
+        } else {
+          await loadSharedFiles();
+        }
+
+        broadcastFilesUpdated();
+        return;
+      }
+
 
       const fileName = file.name || file.fileName || 'Shared file';
       const fileUrl = file.url || file.fileUrl || null;
