@@ -157,8 +157,9 @@ export default function FoundryRoom() {
     Promise.all([
       fetch('/api/resume/list').then(r => r.json()).catch(() => ({})),
       fetch('/api/cover/list').then(r => r.json()).catch(() => ({})),
+      fetch('/api/anvil/identity').then(r => r.json()).catch(() => ({})),
     ])
-      .then(([resumeData, coverData]) => {
+      .then(([resumeData, coverData, identityData]) => {
         const resumeItems = Array.isArray(resumeData.resumes)
           ? resumeData.resumes.map(r => ({
               id: r.id,
@@ -179,7 +180,17 @@ export default function FoundryRoom() {
             }))
           : [];
 
-        setForgeFiles([...resumeItems, ...coverItems]);
+        const identityProfile = identityData?.profile?.snapshotJson
+          ? [{
+              id: identityData.profile.id || 'professional-operating-profile',
+              name: identityData.profile.snapshotJson.operatingStyle || 'Professional Operating Profile',
+              type: 'Professional Operating Profile',
+              sourceType: 'POP',
+              ago: new Date(identityData.profile.updatedAt || Date.now()).toLocaleDateString(),
+            }]
+          : [];
+
+        setForgeFiles([...resumeItems, ...coverItems, ...identityProfile]);
       })
       .catch(() => {});
   }, [roomId, status, router]);
@@ -383,6 +394,29 @@ export default function FoundryRoom() {
 
         const exportData = await exportRes.json().catch(() => ({}));
         if (!exportRes.ok) throw new Error(exportData.error || 'Could not export cover letter for Foundry');
+
+        if (exportData.file) {
+          setSharedFiles(prev => {
+            if (prev.find(f => f.id === exportData.file.id || f.name === exportData.file.name)) return prev;
+            return [exportData.file, ...prev];
+          });
+        } else {
+          await loadSharedFiles();
+        }
+
+        broadcastFilesUpdated();
+        return;
+      }
+
+      if ((file.sourceType === 'POP' || file.type === 'Professional Operating Profile') && file.id) {
+        const exportRes = await fetch('/api/anvil/identity/export-foundry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId }),
+        });
+
+        const exportData = await exportRes.json().catch(() => ({}));
+        if (!exportRes.ok) throw new Error(exportData.error || 'Could not export Professional Operating Profile for Foundry');
 
         if (exportData.file) {
           setSharedFiles(prev => {
