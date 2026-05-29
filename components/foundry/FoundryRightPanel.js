@@ -435,7 +435,7 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, onRemoveFile, is
       : file.downloadUrl;
     const a = document.createElement('a');
     a.href = url;
-    a.target = '_blank';
+    a.download = file.name || 'download';
     a.rel = 'noopener noreferrer';
     document.body.appendChild(a);
     a.click();

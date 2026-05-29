@@ -1,22 +1,12 @@
 // pages/api/files/download.js
-// Verifies the requester has access to a shared file, then redirects
-// to a short-lived signed URL from Supabase Storage.
-//
-// GET /api/files/download?fileId=xxx
-// GET /api/files/download?fileId=xxx&guestCode=xxx  (for guests in a Foundry)
-//
-// Access rules:
-//   - FT authenticated user who is in the same Foundry as the file
-//   - Guest with valid guestCode for the Foundry room the file was shared in
-//   - The user who originally uploaded the file (owner always has access)
-//   - Host or co-host of the Foundry room
+// Verifies access then streams the file directly from Supabase Storage.
+// Streaming keeps the URL same-origin so the browser's download attribute works —
+// the file saves without opening a new tab, same as Teams/Drive behavior.
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import prisma from '@/lib/prisma';
-import { getSignedUrl } from '@/lib/storage';
-
-const SIGNED_URL_EXPIRY = 60 * 60; // 1 hour
+import { supabaseAdmin, BUCKET } from '@/lib/storage';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -43,18 +33,15 @@ export default async function handler(req, res) {
     if (!file) return res.status(404).json({ error: 'File not found' });
     if (!file.fileUrl) return res.status(404).json({ error: 'No file stored for this entry' });
 
+    // ── Access control ─────────────────────────────────────────────────────
     const session = await getServerSession(req, res, authOptions).catch(() => null);
     const userId = session?.user?.id || null;
-
     let hasAccess = false;
 
     if (userId) {
-      // File owner always has access
       if (file.sharedById === userId) hasAccess = true;
-      // Host or co-host
       if (file.room?.hostId === userId) hasAccess = true;
       if (file.room?.coHostUserId === userId) hasAccess = true;
-      // Any FT participant in an active or recently ended room
       if (!hasAccess && file.room) {
         const participant = await prisma.foundryParticipant.findFirst({
           where: { roomId: file.room.id, userId },
@@ -63,24 +50,68 @@ export default async function handler(req, res) {
       }
     }
 
-    // Guest access via guestCode
-    if (!hasAccess && guestCode && file.room?.guestToken === guestCode) {
-      hasAccess = true;
+// Guest access
+if (!hasAccess && guestCode && file.room?.guestToken === String(guestCode)) {
+  hasAccess = true;
+}
+
+console.log('[files/download-debug]', {
+  fileId,
+  guestCode,
+  roomGuestToken: file.room?.guestToken,
+  userId,
+  hasAccessBeforeGuestCheck: hasAccess,
+});
+
+if (!hasAccess) {
+  return res.status(403).json({ error: 'You do not have access to this file' });
+}
+
+    // ── Stream file from Supabase Storage ──────────────────────────────────
+    const { data, error } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .download(file.fileUrl);
+
+    if (error || !data) {
+      console.error('[files/download] storage error:', error);
+      return res.status(500).json({ error: 'Could not retrieve file' });
     }
 
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'You do not have access to this file' });
-    }
+    // Convert Blob to Buffer
+    const buffer = Buffer.from(await data.arrayBuffer());
 
-    // file.fileUrl is the Supabase Storage path (e.g. userId/foundry/roomId/filename.pdf)
-    // Generate a signed URL that expires in 1 hour
-    const signedUrl = await getSignedUrl(file.fileUrl, SIGNED_URL_EXPIRY);
+    // Determine content type from file extension
+    const ext = file.fileUrl.split('.').pop()?.toLowerCase() || '';
+    const mimeMap = {
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      xls: 'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ppt: 'application/vnd.ms-powerpoint',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      txt: 'text/plain',
+      csv: 'text/csv',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      webp: 'image/webp',
+    };
+    const contentType = mimeMap[ext] || 'application/octet-stream';
 
-    // Redirect to the signed URL — browser handles the download
-    return res.redirect(302, signedUrl);
+    // Safe filename for Content-Disposition
+    const safeFileName = encodeURIComponent(file.fileName || 'download');
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFileName}"; filename*=UTF-8''${safeFileName}`);
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Cache-Control', 'private, no-cache');
+
+    return res.status(200).send(buffer);
 
   } catch (err) {
     console.error('[files/download]', err);
-    return res.status(500).json({ error: 'Could not generate download link' });
+    return res.status(500).json({ error: 'Could not download file' });
   }
 }
