@@ -377,38 +377,51 @@ export default function FoundryRoom() {
 
   const handleUpload = useCallback(async (file) => {
     if (!file || !roomId) return;
-
-    const maxBytes = 5 * 1024 * 1024;
-    if (file.size > maxBytes) {
-      alert('For tonight, Foundry upload supports files up to 5MB. Larger storage wiring comes next.');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Maximum file size is 10MB.');
       return;
     }
 
     try {
-      const fileUrl = await new Promise((resolve, reject) => {
+      // Step 1: Read as base64 and upload to Supabase Storage
+      const fileBase64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result || ''));
         reader.onerror = () => reject(new Error('Could not read file'));
         reader.readAsDataURL(file);
       });
 
-      const res = await fetch(`/api/foundry/room/${roomId}/share-file`, {
+      const uploadRes = await fetch('/api/files/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fileName: file.name,
-          fileUrl,
+          fileBase64,
+          mimeType: file.type || 'application/octet-stream',
+          context: 'foundry',
+          roomId,
+        }),
+      });
+      const uploadData = await uploadRes.json().catch(() => ({}));
+      if (!uploadRes.ok) throw new Error(uploadData.error || 'Could not upload file');
+
+      // Step 2: Register in Foundry shared files
+      const shareRes = await fetch(`/api/foundry/room/${roomId}/share-file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: uploadData.fileName || file.name,
+          storagePath: uploadData.storagePath,
           source: 'COMPUTER',
         }),
       });
+      const shareData = await shareRes.json().catch(() => ({}));
+      if (!shareRes.ok) throw new Error(shareData.error || 'Could not share file');
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Could not upload file');
-
-      if (data.file) {
+      if (shareData.file) {
         setSharedFiles(prev => {
-          if (prev.find(f => f.id === data.file.id || f.name === data.file.name)) return prev;
-          return [data.file, ...prev];
+          if (prev.find(f => f.id === shareData.file.id)) return prev;
+          return [shareData.file, ...prev];
         });
       } else {
         await loadSharedFiles();

@@ -109,7 +109,9 @@ function isPublicFoundryGuestPath(pathname) {
     pathname === "/api/foundry/resolve-code" ||
     pathname.startsWith("/api/foundry/room-status/") ||
     // Share-file GET is public — guests need to see shared files without auth
-    pathname.match(/^\/api\/foundry\/room\/[^/]+\/share-file$/) !== null
+    pathname.match(/^\/api\/foundry\/room\/[^\/]+\/share-file$/) !== null ||
+    // File download — access control handled inside the endpoint
+    pathname === "/api/files/download" 
   );
 }
 

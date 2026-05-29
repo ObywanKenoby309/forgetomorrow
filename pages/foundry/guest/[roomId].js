@@ -518,6 +518,7 @@ const handleCallReady = useCallback((call) => {
             onShare={() => {}}
             onUpload={() => {}}
             isHost={false}
+            guestCode={guestCode}
             initialTab={activePanel}
           />
         )}

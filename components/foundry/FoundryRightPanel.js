@@ -414,7 +414,7 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, 
   );
 }
 
-function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, onRemoveFile, isHost = false }) {
+function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, onRemoveFile, isHost = false, guestCode = null }) {
   const fileInputRef = useRef(null);
 
   const handleComputerClick = () => {
@@ -428,35 +428,13 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, onRemoveFile, is
     event.target.value = '';
   };
 
-  const openSharedFile = (file) => {
-    if (!file?.url) return; // no URL — nothing to open
-
-    if (file.url.startsWith('data:')) {
-      // Base64 computer upload — convert to Blob and trigger download
-      try {
-        const [header, data] = file.url.split(',');
-        const mime = header.split(':')[1].split(';')[0];
-        const bytes = atob(data);
-        const buf = new Uint8Array(bytes.length);
-        for (let i = 0; i < bytes.length; i++) buf[i] = bytes.charCodeAt(i);
-        const blob = new Blob([buf], { type: mime });
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = file.name || 'download';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-      } catch {
-        window.open(file.url, '_blank', 'noopener,noreferrer');
-      }
-      return;
-    }
-
-    // Real URL — open in new tab, meeting stays open
+  const openSharedFile = (file, guestCode) => {
+    if (!file?.downloadUrl) return;
+    const url = guestCode
+      ? `${file.downloadUrl}&guestCode=${encodeURIComponent(guestCode)}`
+      : file.downloadUrl;
     const a = document.createElement('a');
-    a.href = file.url;
+    a.href = url;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     document.body.appendChild(a);
@@ -486,14 +464,14 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, onRemoveFile, is
           <div style={{ ...S.emptyDrop, cursor: 'default' }}>Nothing shared yet. Share from Your Forge or Computer.</div>
         ) : (
           sharedFiles.map((f, i) => (
-            <div key={f.id || `${f.name}-${i}`} style={{ ...S.fi, cursor: f.url ? 'pointer' : 'default' }}>
-              <span style={{ fontSize: 16 }} onClick={() => openSharedFile(f)}>📄</span>
-              <div style={{ flex: 1, minWidth: 0 }} onClick={() => openSharedFile(f)}>
+            <div key={f.id || `${f.name}-${i}`} style={{ ...S.fi, cursor: f.hasFile ? 'pointer' : 'default' }}>
+              <span style={{ fontSize: 16 }} onClick={() => openSharedFile(f, guestCode)}>📄</span>
+              <div style={{ flex: 1, minWidth: 0 }} onClick={() => openSharedFile(f, guestCode)}>
                 <div style={S.fname}>{f.name}</div>
                 <div style={S.fmeta}>{f.sharedBy || 'Unknown'} · {f.ago || 'just now'}<span style={S.liveBadge}>live</span></div>
               </div>
-              {f.url && (
-                <span style={{ fontSize: 12, color: '#777', cursor: 'pointer' }} onClick={() => openSharedFile(f)}>↗</span>
+              {f.hasFile && (
+                <span style={{ fontSize: 12, color: '#777', cursor: 'pointer' }} onClick={() => openSharedFile(f, guestCode)}>↗</span>
               )}
               {isHost && f.id && (
                 <button
@@ -598,6 +576,7 @@ export default function FoundryRightPanel({
   coHostName,
   onCoHostAssigned,
   guestToken = null,
+  guestCode = null,
   isLocked = false,
   onMuteAll,
   onMuteParticipant,
@@ -737,6 +716,7 @@ export default function FoundryRightPanel({
           onUpload={onUpload}
           onRemoveFile={onRemoveFile}
           isHost={isHost}
+          guestCode={guestCode}
         />
       </div>
 

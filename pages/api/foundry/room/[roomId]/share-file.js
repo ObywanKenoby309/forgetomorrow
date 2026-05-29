@@ -14,7 +14,8 @@ function normalizeFile(file) {
   return {
     id: file.id,
     name: file.fileName,
-    url: file.fileUrl,
+    downloadUrl: `/api/files/download?fileId=${file.id}`,
+    hasFile: !!file.fileUrl,
     sharedBy: file.sharedByName || 'Unknown',
     ago: relativeTime(file.sharedAt),
     source: file.source || 'COMPUTER',
@@ -51,7 +52,7 @@ export default async function handler(req, res) {
     const session = await getServerSession(req, res, authOptions);
     if (!session?.user?.id) return res.status(401).end();
 
-    const { fileName, fileUrl, source } = req.body || {};
+    const { fileName, fileUrl, storagePath, source } = req.body || {};
     if (!fileName) return res.status(400).json({ error: 'fileName required' });
 
     try {
@@ -77,7 +78,7 @@ export default async function handler(req, res) {
           sharedById: session.user.id,
           sharedByName,
           fileName,
-          fileUrl: fileUrl || null,
+          fileUrl: storagePath || fileUrl || null, // storagePath from new upload API, fileUrl for legacy
           source: source || 'COMPUTER',
           sharedAt: new Date(),
         },
@@ -112,6 +113,16 @@ export default async function handler(req, res) {
 
       if (!isOwner && !isHost && !isCoHost) {
         return res.status(403).json({ error: 'Only the host or file owner can remove files' });
+      }
+
+      // Clean up from Supabase Storage if stored there
+      if (file.fileUrl && !file.fileUrl.startsWith('data:') && !file.fileUrl.startsWith('http')) {
+        try {
+          const { deleteFile } = await import('@/lib/storage');
+          await deleteFile(file.fileUrl);
+        } catch (storageErr) {
+          console.error('[share-file DELETE] storage cleanup:', storageErr);
+        }
       }
 
       await prisma.foundrySharedFile.delete({ where: { id: fileId } });
