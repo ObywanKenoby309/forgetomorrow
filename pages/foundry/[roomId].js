@@ -173,6 +173,14 @@ export default function FoundryRoom() {
     clearTimeout(warnTimerRef.current);
   }, []);
 
+  // Poll shared files every 5 seconds so all participants stay in sync
+  // regardless of whether Daily app-messages are received
+  useEffect(() => {
+    if (!roomId || loading) return;
+    const interval = setInterval(loadSharedFiles, 5000);
+    return () => clearInterval(interval);
+  }, [roomId, loading, loadSharedFiles]);
+
   const handleCallReady = useCallback((call) => {
     callRef.current = call;
     call.on('app-message', ({ data }) => {
