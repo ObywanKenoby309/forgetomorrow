@@ -52,15 +52,34 @@ export default function FoundryRoom() {
 
   const startTimeRef = useRef(Date.now());
 
-  const handleRoomEmpty = useCallback(async () => {
-  /*
-  if (callRef.current) await callRef.current.leave().catch(() => {});
-  try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
-  router.push('/foundry');
-  */
+  const loadSharedFiles = useCallback(async () => {
+    if (!roomId) return;
+    try {
+      const res = await fetch(`/api/foundry/room/${roomId}/share-file`);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(data.files)) {
+        setSharedFiles(data.files);
+      }
+    } catch {}
+  }, [roomId]);
 
-  console.log('[Foundry] handleRoomEmpty fired (disabled)');
-}, [roomId, router]);
+  const broadcastFilesUpdated = useCallback(() => {
+    if (!callRef.current) return;
+    try {
+      callRef.current.sendAppMessage({ type: 'FOUNDRY_FILES_UPDATED' }, '*');
+    } catch {}
+  }, []);
+
+
+  const handleRoomEmpty = useCallback(async () => {
+    /*
+    if (callRef.current) await callRef.current.leave().catch(() => {});
+    try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
+    router.push('/foundry');
+    */
+
+    console.log('[Foundry] handleRoomEmpty fired (disabled)');
+  }, [roomId, router]);
 
   const handleEnd = useCallback(async () => {
     if (!confirm('End this Foundry session for everyone?')) return;
@@ -132,27 +151,6 @@ export default function FoundryRoom() {
       .catch(() => {});
   }, [roomId, status, router]);
 
-useEffect(() => {
-  if (!roomId || loading) return;
-
-  const loadFiles = async () => {
-    try {
-      const res = await fetch(`/api/foundry/room/${roomId}`);
-      const data = await res.json();
-
-      if (data?.room?.sharedFiles) {
-        setSharedFiles(data.room.sharedFiles);
-      }
-    } catch {}
-  };
-
-  loadFiles();
-
-  const interval = setInterval(loadFiles, 5000);
-
-  return () => clearInterval(interval);
-}, [roomId, loading]);
-
   // Cleanup timers on unmount
   useEffect(() => () => {
     clearTimeout(endTimerRef.current);
@@ -168,8 +166,12 @@ useEffect(() => {
           color: data.color || '#5C6BC0', avatarUrl: data.avatarUrl || null,
         }]);
       }
+
+      if (data?.type === 'FOUNDRY_FILES_UPDATED') {
+        loadSharedFiles();
+      }
     });
-  }, []);
+  }, [loadSharedFiles]);
 
   // Called by FoundryVideoGrid once it gets the token response (passes scheduledEndAt back)
   const handleScheduledEnd = useCallback((endIso, isHost) => {
@@ -186,6 +188,7 @@ useEffect(() => {
       isHost: !!p.owner,
       micMuted: !p.tracks?.audio || p.tracks.audio.state === 'off',
       videoOff: !p.tracks?.video || p.tracks.video.state === 'off',
+      isScreenSharing: !!p.tracks?.screenVideo?.persistentTrack && p.tracks?.screenVideo?.state !== 'off' && p.tracks?.screenVideo?.state !== 'blocked',
       local: p.local, avatarUrl: p.userData?.avatarUrl || null,
     })));
   }, []);
@@ -303,17 +306,81 @@ useEffect(() => {
     }, 1500);
   }, [roomId]);
 
-  const handleShare = useCallback((file) => {
-    if (!file) return;
-    setSharedFiles(prev => {
-      if (prev.find(f => f.name === file.name)) return prev;
-      return [...prev, { name: file.name, sharedBy: session?.user?.name || 'You', ago: 'Just now' }];
-    });
-    fetch(`/api/foundry/room/${roomId}/share-file`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileName: file.name, source: 'FORGE' }),
-    }).catch(() => {});
-  }, [roomId, session]);
+  const handleShare = useCallback(async (file) => {
+    if (!file || !roomId) return;
+
+    const fileName = file.name || file.fileName || 'Shared file';
+    const fileUrl = file.url || file.fileUrl || null;
+
+    try {
+      const res = await fetch(`/api/foundry/room/${roomId}/share-file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName, fileUrl, source: 'FORGE' }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not share file');
+
+      if (data.file) {
+        setSharedFiles(prev => {
+          if (prev.find(f => f.id === data.file.id || f.name === data.file.name)) return prev;
+          return [data.file, ...prev];
+        });
+      } else {
+        await loadSharedFiles();
+      }
+
+      broadcastFilesUpdated();
+    } catch (err) {
+      alert(String(err?.message || err || 'Could not share file'));
+    }
+  }, [roomId, loadSharedFiles, broadcastFilesUpdated]);
+
+  const handleUpload = useCallback(async (file) => {
+    if (!file || !roomId) return;
+
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      alert('For tonight, Foundry upload supports files up to 5MB. Larger storage wiring comes next.');
+      return;
+    }
+
+    try {
+      const fileUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Could not read file'));
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch(`/api/foundry/room/${roomId}/share-file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileUrl,
+          source: 'COMPUTER',
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not upload file');
+
+      if (data.file) {
+        setSharedFiles(prev => {
+          if (prev.find(f => f.id === data.file.id || f.name === data.file.name)) return prev;
+          return [data.file, ...prev];
+        });
+      } else {
+        await loadSharedFiles();
+      }
+
+      broadcastFilesUpdated();
+    } catch (err) {
+      alert(String(err?.message || err || 'Could not upload file'));
+    }
+  }, [roomId, loadSharedFiles, broadcastFilesUpdated]);
 
   const handleShareScreen = useCallback(async () => {
     if (!callRef.current) return;
@@ -389,37 +456,26 @@ useEffect(() => {
           onParticipantsChange={handleParticipantsChange}
           onScreenShareChange={handleScreenShareChange}
           onInvite={() => togglePanel('People')}
-          onRoomEmpty={() => {}}
+          onRoomEmpty={handleRoomEmpty}
           onScheduledEnd={handleScheduledEnd}
         />
 
         {!sidebarHidden && (
           <FoundryRightPanel
-  roomId={roomId}
-  participants={participants}
-  messages={meetingMessages}
-  sharedFiles={sharedFiles}
-  forgeFiles={forgeFiles}
-  notes={notes}
-  onNotesChange={handleNotesChange}
-  onSend={handleSend}
-  onShare={handleShare}
-  onUpload={() => {}}
-  isHost={isHost}
-  initialTab={activePanel}
-  currentUserId={session?.user?.id}
-  currentUserRole={session?.user?.role}
-  coHostUserId={room?.coHostUserId}
-  coHostName={room?.coHost?.name}
-  guestToken={room?.guestToken}
-  isLocked={!!room?.isLocked}
-  onMuteAll={handleMuteAll}
-  onMuteParticipant={handleMuteParticipant}
-  onKickParticipant={handleKickParticipant}
-  onBanParticipant={handleBanParticipant}
-  onLockRoom={handleLockRoom}
-  onStopParticipantShare={handleStopParticipantShare}
-/>
+            participants={participants}
+            messages={meetingMessages}
+            sharedFiles={sharedFiles}
+            forgeFiles={forgeFiles}
+            notes={notes}
+            onNotesChange={handleNotesChange}
+            onSend={handleSend}
+            onShare={handleShare}
+            onUpload={handleUpload}
+            isHost={isHost}
+            initialTab={activePanel}
+            currentUserId={session?.user?.id}
+            currentUserRole={session?.user?.role}
+          />
         )}
       </div>
 

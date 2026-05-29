@@ -232,12 +232,12 @@ export default function GuestFoundryRoom({
 
   const loadFiles = async () => {
     try {
-      const res = await fetch(`/api/foundry/room/${roomId}`);
-      const data = await res.json();
+      const res = await fetch(`/api/foundry/room/${roomId}/share-file`);
+	  const data = await res.json();
 
-      if (data?.room?.sharedFiles) {
-        setSharedFiles(data.room.sharedFiles);
-      }
+	  if (Array.isArray(data.files)) {
+		setSharedFiles(data.files);
+	  }
     } catch {}
   };
 
@@ -302,9 +302,22 @@ export default function GuestFoundryRoom({
     setShowConversionBanner(true);
   }, []);
 
-  const handleCallReady = useCallback((call) => {
-    callRef.current = call;
-  }, []);
+const handleCallReady = useCallback((call) => {
+  callRef.current = call;
+
+  call.on('app-message', ({ data }) => {
+    if (data?.type === 'FOUNDRY_FILES_UPDATED') {
+      fetch(`/api/foundry/room/${roomId}/share-file`)
+        .then((res) => res.json())
+        .then((payload) => {
+          if (Array.isArray(payload.files)) {
+            setSharedFiles(payload.files);
+          }
+        })
+        .catch(() => {});
+    }
+  });
+}, [roomId]);
 
   const handleParticipantsChange = useCallback((list) => {
     setParticipants(
