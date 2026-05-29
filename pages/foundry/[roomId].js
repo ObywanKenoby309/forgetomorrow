@@ -154,18 +154,32 @@ export default function FoundryRoom() {
       })
       .catch(() => setLoading(false));
 
-    fetch('/api/resume/list')
-      .then(r => r.json())
-      .then(data => {
-        if (data.resumes) {
-          setForgeFiles(data.resumes.map(r => ({
-            id: r.id,
-            name: r.name,
-            type: 'Resume',
-            sourceType: 'RESUME',
-            ago: new Date(r.updatedAt).toLocaleDateString(),
-          })));
-        }
+    Promise.all([
+      fetch('/api/resume/list').then(r => r.json()).catch(() => ({})),
+      fetch('/api/cover/list').then(r => r.json()).catch(() => ({})),
+    ])
+      .then(([resumeData, coverData]) => {
+        const resumeItems = Array.isArray(resumeData.resumes)
+          ? resumeData.resumes.map(r => ({
+              id: r.id,
+              name: r.name,
+              type: 'Resume',
+              sourceType: 'RESUME',
+              ago: new Date(r.updatedAt).toLocaleDateString(),
+            }))
+          : [];
+
+        const coverItems = Array.isArray(coverData.covers)
+          ? coverData.covers.map(c => ({
+              id: c.id,
+              name: c.name,
+              type: 'Cover Letter',
+              sourceType: 'COVER',
+              ago: new Date(c.updatedAt || c.createdAt || Date.now()).toLocaleDateString(),
+            }))
+          : [];
+
+        setForgeFiles([...resumeItems, ...coverItems]);
       })
       .catch(() => {});
   }, [roomId, status, router]);
@@ -346,6 +360,29 @@ export default function FoundryRoom() {
 
         const exportData = await exportRes.json().catch(() => ({}));
         if (!exportRes.ok) throw new Error(exportData.error || 'Could not export resume for Foundry');
+
+        if (exportData.file) {
+          setSharedFiles(prev => {
+            if (prev.find(f => f.id === exportData.file.id || f.name === exportData.file.name)) return prev;
+            return [exportData.file, ...prev];
+          });
+        } else {
+          await loadSharedFiles();
+        }
+
+        broadcastFilesUpdated();
+        return;
+      }
+
+      if ((file.sourceType === 'COVER' || file.type === 'Cover Letter') && file.id) {
+        const exportRes = await fetch('/api/cover/export-foundry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coverId: file.id, roomId }),
+        });
+
+        const exportData = await exportRes.json().catch(() => ({}));
+        if (!exportRes.ok) throw new Error(exportData.error || 'Could not export cover letter for Foundry');
 
         if (exportData.file) {
           setSharedFiles(prev => {
