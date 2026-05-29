@@ -430,7 +430,41 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, isHost = false }
 
   const openSharedFile = (file) => {
     if (!file?.url) return;
-    window.open(file.url, '_blank', 'noopener,noreferrer');
+
+    if (file.url.startsWith('data:')) {
+      // Base64 — convert to Blob and download
+      try {
+        const [header, data] = file.url.split(',');
+        const mime = header.split(':')[1].split(';')[0];
+        const bytes = atob(data);
+        const buf = new Uint8Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) buf[i] = bytes.charCodeAt(i);
+        const blob = new Blob([buf], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = file.name || 'download';
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+      } catch {
+        window.open(file.url, '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
+
+    // Real URL — open in new tab without navigating away
+    // Use <a> element so mobile browsers treat it as a user-initiated navigation
+    const a = document.createElement('a');
+    a.href = file.url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.download = file.name || '';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (
