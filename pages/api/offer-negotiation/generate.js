@@ -4,6 +4,7 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
+import prisma from '@/lib/prisma';
 import OpenAI from 'openai';
 import { evaluateSignals } from '@/lib/forge/evidenceEngine';
 import { classifyRisk } from '@/lib/forge/riskEngine';
@@ -259,8 +260,29 @@ Return JSON:
       return res.status(500).json({ error: 'Failed to parse AI response' });
     }
 
+    let negotiation = null;
+    try {
+      negotiation = await prisma.negotiation.create({
+        data: {
+          userId: session.user.id,
+          input: {
+            formData,
+            resumeConnected: !!(evidence.summary),
+            evidenceBand: evidence.leverageBand || null,
+            evidenceScore: evidence.score || 0,
+          },
+          result: parsed,
+        },
+        select: { id: true, createdAt: true },
+      });
+    } catch (saveErr) {
+      console.error('[offer-negotiation/generate] Failed to save negotiation report:', saveErr?.message || saveErr);
+    }
+
     return res.status(200).json({
       plan: parsed,
+      negotiationId: negotiation?.id || null,
+      savedAt: negotiation?.createdAt || null,
       resumeConnected: !!(evidence.summary),
       evidenceBand: evidence.leverageBand || null,
     });

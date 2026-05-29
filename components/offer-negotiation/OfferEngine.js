@@ -502,7 +502,7 @@ const RESULT_TABS = [
   { id: 'plan', label: 'Plan' },
 ];
 
-function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange }) {
+function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange, onSaveStrategy }) {
   const [_tab, _setTab] = useState('decision');
   const tab = mobileActiveTab || _tab;
   const setTab = onMobileTabChange || _setTab;
@@ -525,12 +525,14 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
     });
   };
 
-  const saveStrategy = () => {
+  const saveStrategy = async () => {
     try {
-      sessionStorage.setItem('ft_negotiation_plan', JSON.stringify({ plan, form, savedAt: new Date().toISOString() }));
+      if (onSaveStrategy) await onSaveStrategy();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch {}
+    } catch (err) {
+      alert(String(err?.message || err || 'Could not save negotiation report'));
+    }
   };
 
   // Action bar
@@ -859,7 +861,7 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
 }
 
 // ─── Right panel — context accumulator / results cockpit ─────────────────────
-function RightPanel({ step, plan, loading, error, insights, onReset, form, mobileActiveTab, onMobileTabChange }) {
+function RightPanel({ step, plan, loading, error, insights, onReset, form, mobileActiveTab, onMobileTabChange, onSaveStrategy }) {
   if (loading) {
     return (
       <div style={{ ...GLASS, padding: '32px 16px', textAlign: 'center' }}>
@@ -877,7 +879,7 @@ function RightPanel({ step, plan, loading, error, insights, onReset, form, mobil
   }
 
   if (plan) {
-    return <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}><ResultCockpit plan={plan} form={form} onReset={onReset} mobileActiveTab={mobileActiveTab} onMobileTabChange={onMobileTabChange} /></div>;
+    return <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}><ResultCockpit plan={plan} form={form} onReset={onReset} mobileActiveTab={mobileActiveTab} onMobileTabChange={onMobileTabChange} onSaveStrategy={onSaveStrategy} /></div>;
   }
 
   return (
@@ -955,6 +957,7 @@ export default function OfferEngine() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(INITIAL_FORM);
   const [plan, setPlan] = useState(null);
+  const [negotiationId, setNegotiationId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [animating, setAnimating] = useState(false);
@@ -1054,6 +1057,7 @@ export default function OfferEngine() {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Failed to generate plan');
       setPlan(json?.plan || null);
+      setNegotiationId(json?.negotiationId || null);
     } catch (e) {
       setError(String(e?.message || 'Something went wrong. Please try again.'));
     } finally {
@@ -1061,7 +1065,28 @@ export default function OfferEngine() {
     }
   };
 
-  const handleReset = () => { setPlan(null); setForm(INITIAL_FORM); setStep(1); setError(''); setInsights([]); };
+  const persistNegotiation = useCallback(async () => {
+    if (!plan) return null;
+
+    const res = await fetch('/api/offer-negotiation/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        negotiationId,
+        formData: form,
+        plan,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || 'Could not save negotiation report');
+
+    const savedId = data?.negotiation?.id || negotiationId || null;
+    if (savedId) setNegotiationId(savedId);
+    return savedId;
+  }, [form, negotiationId, plan]);
+
+  const handleReset = () => { setPlan(null); setNegotiationId(null); setForm(INITIAL_FORM); setStep(1); setError(''); setInsights([]); };
 
   const meta = STEP_META[step - 1];
   const icons = ['🎯', '💼', '⚡', '🎖'];
@@ -1129,7 +1154,7 @@ export default function OfferEngine() {
 
           {/* Action row */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-            <button type="button" onClick={() => { try { sessionStorage.setItem('ft_negotiation_plan', JSON.stringify({ plan, form, savedAt: new Date().toISOString() })); } catch {} }}
+            <button type="button" onClick={() => persistNegotiation().catch((err) => alert(String(err?.message || err || 'Could not save negotiation report')))}
               style={{ flex: 1, padding: '9px 8px', borderRadius: 10, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(255,255,255,0.85)', color: SLATE, border: '1px solid rgba(0,0,0,0.12)' }}>
               💾 Save
             </button>
@@ -1156,7 +1181,7 @@ export default function OfferEngine() {
                 <style>{`@keyframes pulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1)}}`}</style>
               </div>
             ) : (
-              <RightPanel step={step} plan={plan} loading={false} error={error} insights={insights} onReset={handleReset} form={form} mobileActiveTab={mobileTab} onMobileTabChange={setMobileTab} />
+              <RightPanel step={step} plan={plan} loading={false} error={error} insights={insights} onReset={handleReset} form={form} mobileActiveTab={mobileTab} onMobileTabChange={setMobileTab} onSaveStrategy={persistNegotiation} />
             )}
           </div>
 
@@ -1306,7 +1331,7 @@ export default function OfferEngine() {
           <InputSummaryDesktop />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} />
+          <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} onSaveStrategy={persistNegotiation} />
         </div>
       </div>
     );
@@ -1372,7 +1397,7 @@ export default function OfferEngine() {
 
       {/* RIGHT: Context accumulator */}
       <div style={{ position: 'sticky', top: 16, alignSelf: 'start' }}>
-        <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} />
+        <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} onSaveStrategy={persistNegotiation} />
       </div>
     </div>
   );

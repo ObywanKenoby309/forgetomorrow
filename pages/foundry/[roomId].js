@@ -159,8 +159,9 @@ export default function FoundryRoom() {
       fetch('/api/cover/list').then(r => r.json()).catch(() => ({})),
       fetch('/api/anvil/identity').then(r => r.json()).catch(() => ({})),
       fetch('/api/anvil/onboarding-growth/list').then(r => r.json()).catch(() => ({})),
+      fetch('/api/offer-negotiation/list').then(r => r.json()).catch(() => ({})),
     ])
-      .then(([resumeData, coverData, identityData, roadmapData]) => {
+      .then(([resumeData, coverData, identityData, roadmapData, negotiationData]) => {
         const resumeItems = Array.isArray(resumeData.resumes)
           ? resumeData.resumes.map(r => ({
               id: r.id,
@@ -201,7 +202,17 @@ export default function FoundryRoom() {
             }))
           : [];
 
-        setForgeFiles([...resumeItems, ...coverItems, ...identityProfile, ...roadmapItems]);
+        const negotiationItems = Array.isArray(negotiationData.negotiations)
+          ? negotiationData.negotiations.map(n => ({
+              id: n.id,
+              name: n.name || 'Offer & Negotiation Brief',
+              type: 'Offer & Negotiation Brief',
+              sourceType: 'NEGOTIATION',
+              ago: new Date(n.updatedAt || n.createdAt || Date.now()).toLocaleDateString(),
+            }))
+          : [];
+
+        setForgeFiles([...resumeItems, ...coverItems, ...identityProfile, ...roadmapItems, ...negotiationItems]);
       })
       .catch(() => {});
   }, [roomId, status, router]);
@@ -451,6 +462,29 @@ export default function FoundryRoom() {
 
         const exportData = await exportRes.json().catch(() => ({}));
         if (!exportRes.ok) throw new Error(exportData.error || 'Could not export Growth & Pivot Roadmap for Foundry');
+
+        if (exportData.file) {
+          setSharedFiles(prev => {
+            if (prev.find(f => f.id === exportData.file.id || f.name === exportData.file.name)) return prev;
+            return [exportData.file, ...prev];
+          });
+        } else {
+          await loadSharedFiles();
+        }
+
+        broadcastFilesUpdated();
+        return;
+      }
+
+      if ((file.sourceType === 'NEGOTIATION' || file.type === 'Offer & Negotiation Brief') && file.id) {
+        const exportRes = await fetch('/api/offer-negotiation/export-foundry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ negotiationId: file.id, roomId }),
+        });
+
+        const exportData = await exportRes.json().catch(() => ({}));
+        if (!exportRes.ok) throw new Error(exportData.error || 'Could not export Offer & Negotiation Brief for Foundry');
 
         if (exportData.file) {
           setSharedFiles(prev => {
