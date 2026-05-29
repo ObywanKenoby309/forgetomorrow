@@ -10,11 +10,13 @@ function relativeTime(date) {
   return `${Math.floor(diff / 3600)}h ago`;
 }
 
-function normalizeFile(file) {
+function normalizeFile(file, guestCode = '') {
   return {
     id: file.id,
     name: file.fileName,
-    downloadUrl: `/api/files/download?fileId=${file.id}`,
+    downloadUrl: guestCode
+	  ? `/api/files/download?fileId=${file.id}&guestCode=${encodeURIComponent(guestCode)}`
+	  : `/api/files/download?fileId=${file.id}`,
     hasFile: !!file.fileUrl,
     sharedBy: file.sharedByName || 'Unknown',
     ago: relativeTime(file.sharedAt),
@@ -40,7 +42,8 @@ export default async function handler(req, res) {
         where: { roomId: room.id },
         orderBy: { sharedAt: 'desc' },
       });
-      return res.status(200).json({ files: sharedFiles.map(normalizeFile) });
+      const guestCode = typeof req.query.guestCode === 'string' ? req.query.guestCode : '';
+	  return res.status(200).json({ files: sharedFiles.map((file) => normalizeFile(file, guestCode)) });
     } catch (err) {
       console.error('[foundry/share-file GET]', err);
       return res.status(500).json({ error: 'Could not load shared files' });

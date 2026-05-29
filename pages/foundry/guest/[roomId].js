@@ -246,7 +246,7 @@ export default function GuestFoundryRoom({
 
     const loadFiles = async () => {
       try {
-        const res = await fetch(`/api/foundry/room/${roomId}/share-file`);
+        const res = await fetch(`/api/foundry/room/${roomId}/share-file?guestCode=${encodeURIComponent(effectiveGuestCode)}`)
         const data = await res.json();
 
         if (Array.isArray(data.files)) {
