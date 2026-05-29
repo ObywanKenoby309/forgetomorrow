@@ -11,12 +11,14 @@ export default async function handler(req, res) {
   const { roomId } = req.query;
 
   try {
-    const room = await prisma.foundryRoom.findUnique({ where: { roomId } });
+    const room = await prisma.foundryRoom.findUnique({ where: { roomId }, select: { id: true, hostId: true, coHostUserId: true } });
     if (!room) return res.status(404).end();
 
-    // Only host can end
-    if (room.hostId !== session.user.id) {
-      return res.status(403).json({ error: 'Only the host can end this Foundry.' });
+    // Host or co-host can end
+    const isHost = room.hostId === session.user.id;
+    const isCoHost = room.coHostUserId === session.user.id;
+    if (!isHost && !isCoHost) {
+      return res.status(403).json({ error: 'Only the host or co-host can end this Foundry.' });
     }
 
     await prisma.$transaction([

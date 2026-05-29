@@ -374,6 +374,9 @@ export default async function handler(req, res) {
         dateStr,
         timezone: room.timezone || 'America/New_York',
         joinUrl: guestLink,
+        guestCode: guestToken || null,
+        durationMinutes: room.durationMinutes || 60,
+        isExternalGuest: true,
       });
 
       return res.status(200).json({ ok: true, type: 'external', ftLink, guestLink, guestCode: guestToken });
