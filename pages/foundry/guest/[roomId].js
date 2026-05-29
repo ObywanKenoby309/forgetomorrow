@@ -170,6 +170,7 @@ export default function GuestFoundryRoom({
   const callRef = useRef(null);
   const [participants, setParticipants] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [sharedFiles, setSharedFiles] = useState([]);
   const startTimeRef = useRef(Date.now());
 
   const enterRoom = useCallback((name, token, url) => {
@@ -225,6 +226,27 @@ export default function GuestFoundryRoom({
 
     return () => clearInterval(interval);
   }, [ready, roomId]);
+  
+  useEffect(() => {
+  if (!ready || !roomId) return;
+
+  const loadFiles = async () => {
+    try {
+      const res = await fetch(`/api/foundry/room/${roomId}`);
+      const data = await res.json();
+
+      if (data?.room?.sharedFiles) {
+        setSharedFiles(data.room.sharedFiles);
+      }
+    } catch {}
+  };
+
+  loadFiles();
+
+  const interval = setInterval(loadFiles, 5000);
+
+  return () => clearInterval(interval);
+}, [ready, roomId]);
 
   const requestGuestToken = async () => {
     const name = guestName.trim();
@@ -445,7 +467,7 @@ export default function GuestFoundryRoom({
             participants={participants}
             messages={messages}
             dms={[]}
-            sharedFiles={[]}
+            sharedFiles={sharedFiles}
             forgeFiles={[]}
             notes=""
             onNotesChange={() => {}}

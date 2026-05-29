@@ -53,10 +53,14 @@ export default function FoundryRoom() {
   const startTimeRef = useRef(Date.now());
 
   const handleRoomEmpty = useCallback(async () => {
-    if (callRef.current) await callRef.current.leave().catch(() => {});
-    try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
-    router.push('/foundry');
-  }, [roomId, router]);
+  /*
+  if (callRef.current) await callRef.current.leave().catch(() => {});
+  try { await fetch(`/api/foundry/room/${roomId}/end`, { method: 'POST' }); } catch {}
+  router.push('/foundry');
+  */
+
+  console.log('[Foundry] handleRoomEmpty fired (disabled)');
+}, [roomId, router]);
 
   const handleEnd = useCallback(async () => {
     if (!confirm('End this Foundry session for everyone?')) return;
@@ -127,6 +131,27 @@ export default function FoundryRoom() {
       })
       .catch(() => {});
   }, [roomId, status, router]);
+
+useEffect(() => {
+  if (!roomId || loading) return;
+
+  const loadFiles = async () => {
+    try {
+      const res = await fetch(`/api/foundry/room/${roomId}`);
+      const data = await res.json();
+
+      if (data?.room?.sharedFiles) {
+        setSharedFiles(data.room.sharedFiles);
+      }
+    } catch {}
+  };
+
+  loadFiles();
+
+  const interval = setInterval(loadFiles, 5000);
+
+  return () => clearInterval(interval);
+}, [roomId, loading]);
 
   // Cleanup timers on unmount
   useEffect(() => () => {
@@ -364,7 +389,7 @@ export default function FoundryRoom() {
           onParticipantsChange={handleParticipantsChange}
           onScreenShareChange={handleScreenShareChange}
           onInvite={() => togglePanel('People')}
-          onRoomEmpty={handleRoomEmpty}
+          onRoomEmpty={() => {}}
           onScheduledEnd={handleScheduledEnd}
         />
 
