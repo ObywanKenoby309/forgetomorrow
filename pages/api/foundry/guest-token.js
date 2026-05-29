@@ -35,7 +35,20 @@ export default async function handler(req, res) {
 
     if (!room) return res.status(404).json({ error: 'Foundry not found' });
     if (room.status === 'ENDED') return res.status(410).json({ error: 'ROOM_ENDED' });
-    if (room.guestToken !== guestCode) return res.status(403).json({ error: 'Invalid invite code' });
+
+    // If room has no guestToken yet (created before the token-on-create fix),
+    // accept the provided code and save it now so future calls work too.
+    if (!room.guestToken) {
+      await prisma.foundryRoom.update({
+        where: { id: room.id },
+        data: { guestToken: guestCode },
+      }).catch(() => {});
+      room.guestToken = guestCode;
+    }
+
+    if (room.guestToken !== guestCode) {
+      return res.status(403).json({ error: 'Invalid invite code' });
+    }
 
     const now = Date.now();
 
