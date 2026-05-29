@@ -153,6 +153,7 @@ export default function GuestFoundryRoom({
   const [ready, setReady] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestToken, setGuestToken] = useState('');
+  const [guestAccessCode, setGuestAccessCode] = useState(guestCode || '');
   const [roomUrl, setRoomUrl] = useState('');
   const [error, setError] = useState(serverError || '');
   const [joining, setJoining] = useState(false);
@@ -173,6 +174,11 @@ export default function GuestFoundryRoom({
   const [sharedFiles, setSharedFiles] = useState([]);
   const startTimeRef = useRef(Date.now());
 
+  const effectiveGuestCode =
+    guestAccessCode ||
+    guestCode ||
+    (typeof router.query.code === 'string' ? router.query.code : '');
+
   const enterRoom = useCallback((name, token, url) => {
     if (!name || !token || !url) return false;
     setGuestName(name);
@@ -187,6 +193,15 @@ export default function GuestFoundryRoom({
     if (!roomId) return;
 
     try {
+      const routeCode = typeof router.query.code === 'string' ? router.query.code : '';
+      const storedGuestCode = sessionStorage.getItem('foundry_guest_code') || '';
+      const nextGuestCode = guestCode || routeCode || storedGuestCode || '';
+
+      if (nextGuestCode) {
+        setGuestAccessCode(nextGuestCode);
+        sessionStorage.setItem('foundry_guest_code', nextGuestCode);
+      }
+
       const storedName = sessionStorage.getItem('foundry_guest_name') || '';
       const storedToken = sessionStorage.getItem('foundry_guest_token') || '';
       const storedUrl = sessionStorage.getItem('foundry_guest_room_url') || '';
@@ -196,12 +211,11 @@ export default function GuestFoundryRoom({
         return;
       }
 
-      if (storedName && guestCode && !serverError) {
+      if (storedName && nextGuestCode && !serverError) {
         setGuestName(storedName);
       }
     } catch {}
-  }, [roomId, guestCode, serverError, enterRoom]);
-
+  }, [roomId, guestCode, router.query.code, serverError, enterRoom]);
 
   // foundry room status watcher — external guest self-ejects when host ends room
   useEffect(() => {
@@ -226,32 +240,33 @@ export default function GuestFoundryRoom({
 
     return () => clearInterval(interval);
   }, [ready, roomId]);
-  
+
   useEffect(() => {
-  if (!ready || !roomId) return;
+    if (!ready || !roomId) return;
 
-  const loadFiles = async () => {
-    try {
-      const res = await fetch(`/api/foundry/room/${roomId}/share-file`);
-	  const data = await res.json();
+    const loadFiles = async () => {
+      try {
+        const res = await fetch(`/api/foundry/room/${roomId}/share-file`);
+        const data = await res.json();
 
-	  if (Array.isArray(data.files)) {
-		setSharedFiles(data.files);
-	  }
-    } catch {}
-  };
+        if (Array.isArray(data.files)) {
+          setSharedFiles(data.files);
+        }
+      } catch {}
+    };
 
-  loadFiles();
+    loadFiles();
 
-  const interval = setInterval(loadFiles, 5000);
+    const interval = setInterval(loadFiles, 5000);
 
-  return () => clearInterval(interval);
-}, [ready, roomId]);
+    return () => clearInterval(interval);
+  }, [ready, roomId]);
 
   const requestGuestToken = async () => {
     const name = guestName.trim();
+    const codeToUse = effectiveGuestCode;
 
-    if (!guestCode) {
+    if (!codeToUse) {
       setError('Invalid guest session. Please use your invite link again.');
       return;
     }
@@ -268,7 +283,7 @@ export default function GuestFoundryRoom({
       const res = await fetch('/api/foundry/guest-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, guestCode, guestName: name }),
+        body: JSON.stringify({ roomId, guestCode: codeToUse, guestName: name }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -284,8 +299,10 @@ export default function GuestFoundryRoom({
         sessionStorage.setItem('foundry_guest_token', data.token);
         sessionStorage.setItem('foundry_guest_room_url', data.roomUrl);
         sessionStorage.setItem('foundry_guest_room_id', roomId);
+        sessionStorage.setItem('foundry_guest_code', codeToUse);
       } catch {}
 
+      setGuestAccessCode(codeToUse);
       enterRoom(name, data.token, data.roomUrl);
     } catch (err) {
       console.error('[foundry guest room] token request failed:', err);
@@ -302,32 +319,32 @@ export default function GuestFoundryRoom({
     setShowConversionBanner(true);
   }, []);
 
-const handleCallReady = useCallback((call) => {
-  callRef.current = call;
+  const handleCallReady = useCallback((call) => {
+    callRef.current = call;
 
-  call.on('app-message', ({ data }) => {
-    if (data?.type === 'FOUNDRY_FILES_UPDATED') {
-      fetch(`/api/foundry/room/${roomId}/share-file`)
-        .then((res) => res.json())
-        .then((payload) => {
-          if (Array.isArray(payload.files)) {
-            setSharedFiles(payload.files);
-          }
-        })
-        .catch(() => {});
-    }
-    if (data?.type === 'MEETING_CHAT') {
-      const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-      setMessages(prev => [...prev, {
-        sender: data.senderName || 'Participant',
-        text: data.text,
-        time: data.time || now,
-        color: data.color || '#5C6BC0',
-        avatarUrl: data.avatarUrl || null,
-      }]);
-    }
-  });
-}, [roomId]);
+    call.on('app-message', ({ data }) => {
+      if (data?.type === 'FOUNDRY_FILES_UPDATED') {
+        fetch(`/api/foundry/room/${roomId}/share-file`)
+          .then((res) => res.json())
+          .then((payload) => {
+            if (Array.isArray(payload.files)) {
+              setSharedFiles(payload.files);
+            }
+          })
+          .catch(() => {});
+      }
+      if (data?.type === 'MEETING_CHAT') {
+        const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+        setMessages(prev => [...prev, {
+          sender: data.senderName || 'Participant',
+          text: data.text,
+          time: data.time || now,
+          color: data.color || '#5C6BC0',
+          avatarUrl: data.avatarUrl || null,
+        }]);
+      }
+    });
+  }, [roomId]);
 
   const handleParticipantsChange = useCallback((list) => {
     setParticipants(
@@ -382,8 +399,8 @@ const handleCallReady = useCallback((call) => {
   };
 
   const goBackToInvite = () => {
-    if (guestCode) {
-      router.replace(`/foundry/join/${roomId}?code=${encodeURIComponent(guestCode)}`);
+    if (effectiveGuestCode) {
+      router.replace(`/foundry/join/${roomId}?code=${encodeURIComponent(effectiveGuestCode)}`);
       return;
     }
     router.replace('/foundry');
@@ -444,7 +461,7 @@ const handleCallReady = useCallback((call) => {
                 </a>
               </div>
             )}
-            {!serverError && guestCode ? (
+            {!serverError && effectiveGuestCode ? (
               <>
                 <label style={S.label}>Your name</label>
                 <input
@@ -518,7 +535,7 @@ const handleCallReady = useCallback((call) => {
             onShare={() => {}}
             onUpload={() => {}}
             isHost={false}
-            guestCode={guestCode || router.query.code || ''}
+            guestCode={effectiveGuestCode}
             initialTab={activePanel}
           />
         )}
