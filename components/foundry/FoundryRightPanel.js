@@ -430,9 +430,16 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, onRemoveFile, is
 
   const openSharedFile = (file, guestCode) => {
     if (!file?.downloadUrl) return;
-    const url = guestCode
-      ? `${file.downloadUrl}&guestCode=${encodeURIComponent(guestCode)}`
-      : file.downloadUrl;
+    const storedGuestCode =
+  typeof window !== 'undefined'
+    ? sessionStorage.getItem('foundry_guest_code') || ''
+    : '';
+
+const effectiveGuestCode = guestCode || storedGuestCode;
+
+const url = effectiveGuestCode
+  ? `${file.downloadUrl}&guestCode=${encodeURIComponent(effectiveGuestCode)}`
+  : file.downloadUrl;
     const a = document.createElement('a');
     a.href = url;
     a.download = file.name || 'download';
