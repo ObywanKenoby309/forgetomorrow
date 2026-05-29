@@ -414,7 +414,7 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, 
   );
 }
 
-function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload }) {
+function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, isHost = false }) {
   const fileInputRef = useRef(null);
 
   const handleComputerClick = () => {
@@ -449,7 +449,7 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload }) {
             <span style={S.fshlabel}>Shared</span>
             <span style={S.fshcount}>{sharedFiles.length} {sharedFiles.length === 1 ? 'file' : 'files'}</span>
           </div>
-          {isHost && <button style={S.addF(false)} onClick={handleComputerClick}>+ Add</button>}
+          <button style={S.addF(false)} onClick={handleComputerClick}>+ Add</button>
         </div>
         {sharedFiles.length === 0 ? (
           <div style={{ ...S.emptyDrop, cursor: 'default' }}>Nothing shared yet. Share from Your Forge or Computer.</div>
@@ -694,6 +694,7 @@ export default function FoundryRightPanel({
           forgeFiles={forgeFiles}
           onShare={onShare}
           onUpload={onUpload}
+          isHost={isHost}
         />
       </div>
 
