@@ -414,7 +414,7 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, 
   );
 }
 
-function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, isHost = false }) {
+function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, onRemoveFile, isHost = false }) {
   const fileInputRef = useRef(null);
 
   const handleComputerClick = () => {
@@ -429,10 +429,10 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, isHost = false }
   };
 
   const openSharedFile = (file) => {
-    if (!file?.url) return;
+    if (!file?.url) return; // no URL — nothing to open
 
     if (file.url.startsWith('data:')) {
-      // Base64 — convert to Blob and download
+      // Base64 computer upload — convert to Blob and trigger download
       try {
         const [header, data] = file.url.split(',');
         const mime = header.split(':')[1].split(';')[0];
@@ -444,7 +444,6 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, isHost = false }
         const a = document.createElement('a');
         a.href = blobUrl;
         a.download = file.name || 'download';
-        a.target = '_blank';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -455,13 +454,11 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, isHost = false }
       return;
     }
 
-    // Real URL — open in new tab without navigating away
-    // Use <a> element so mobile browsers treat it as a user-initiated navigation
+    // Real URL — open in new tab, meeting stays open
     const a = document.createElement('a');
     a.href = file.url;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
-    a.download = file.name || '';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -483,19 +480,28 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, isHost = false }
             <span style={S.fshlabel}>Shared</span>
             <span style={S.fshcount}>{sharedFiles.length} {sharedFiles.length === 1 ? 'file' : 'files'}</span>
           </div>
-          <button style={S.addF(false)} onClick={handleComputerClick}>+ Add</button>
+          {isHost && <button style={S.addF(false)} onClick={handleComputerClick}>+ Add</button>}
         </div>
         {sharedFiles.length === 0 ? (
           <div style={{ ...S.emptyDrop, cursor: 'default' }}>Nothing shared yet. Share from Your Forge or Computer.</div>
         ) : (
           sharedFiles.map((f, i) => (
-            <div key={f.id || `${f.name}-${i}`} style={S.fi} onClick={() => openSharedFile(f)}>
-              <span style={{ fontSize: 16 }}>📄</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
+            <div key={f.id || `${f.name}-${i}`} style={{ ...S.fi, cursor: f.url ? 'pointer' : 'default' }}>
+              <span style={{ fontSize: 16 }} onClick={() => openSharedFile(f)}>📄</span>
+              <div style={{ flex: 1, minWidth: 0 }} onClick={() => openSharedFile(f)}>
                 <div style={S.fname}>{f.name}</div>
                 <div style={S.fmeta}>{f.sharedBy || 'Unknown'} · {f.ago || 'just now'}<span style={S.liveBadge}>live</span></div>
               </div>
-              <span style={{ fontSize: 12, color: f.url ? '#777' : '#333' }}>{f.url ? '↗' : '—'}</span>
+              {f.url && (
+                <span style={{ fontSize: 12, color: '#777', cursor: 'pointer' }} onClick={() => openSharedFile(f)}>↗</span>
+              )}
+              {isHost && f.id && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onRemoveFile?.(f); }}
+                  style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 14, padding: '0 2px', lineHeight: 1 }}
+                  title="Remove file"
+                >×</button>
+              )}
             </div>
           ))
         )}
@@ -583,6 +589,7 @@ export default function FoundryRightPanel({
   onSend,
   onShare,
   onUpload,
+  onRemoveFile,
   isHost = false,
   initialTab = 'People',
   currentUserId,
@@ -728,6 +735,7 @@ export default function FoundryRightPanel({
           forgeFiles={forgeFiles}
           onShare={onShare}
           onUpload={onUpload}
+          onRemoveFile={onRemoveFile}
           isHost={isHost}
         />
       </div>

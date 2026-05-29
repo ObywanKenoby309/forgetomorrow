@@ -95,4 +95,36 @@ export default async function handler(req, res) {
     console.error('[foundry/share-file POST]', err);
     return res.status(500).json({ error: 'Could not share file' });
   }
+
+  if (req.method === 'DELETE') {
+    const session2 = await getServerSession(req, res, authOptions);
+    if (!session2?.user?.id) return res.status(401).end();
+
+    const { fileId } = req.body || {};
+    if (!fileId) return res.status(400).json({ error: 'fileId required' });
+
+    try {
+      const file = await prisma.foundrySharedFile.findUnique({
+        where: { id: fileId },
+        select: { id: true, sharedById: true, roomId: true,
+          room: { select: { hostId: true, coHostUserId: true } } },
+      });
+
+      if (!file) return res.status(404).json({ error: 'File not found' });
+
+      const isOwner = file.sharedById === session2.user.id;
+      const isHost = file.room?.hostId === session2.user.id;
+      const isCoHost = file.room?.coHostUserId === session2.user.id;
+
+      if (!isOwner && !isHost && !isCoHost) {
+        return res.status(403).json({ error: 'Only the host or file owner can remove files' });
+      }
+
+      await prisma.foundrySharedFile.delete({ where: { id: fileId } });
+      return res.status(200).json({ ok: true, fileId });
+    } catch (err) {
+      console.error('[foundry/share-file DELETE]', err);
+      return res.status(500).json({ error: 'Could not remove file' });
+    }
+  }
 }

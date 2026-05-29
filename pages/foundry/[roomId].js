@@ -361,6 +361,20 @@ export default function FoundryRoom() {
     }
   }, [roomId, loadSharedFiles, broadcastFilesUpdated]);
 
+  const handleRemoveFile = useCallback(async (file) => {
+    if (!file?.id || !roomId) return;
+    try {
+      const res = await fetch(`/api/foundry/room/${roomId}/share-file`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId: file.id }),
+      });
+      if (!res.ok) return;
+      setSharedFiles(prev => prev.filter(f => f.id !== file.id));
+      broadcastFilesUpdated();
+    } catch {}
+  }, [roomId, broadcastFilesUpdated]);
+
   const handleUpload = useCallback(async (file) => {
     if (!file || !roomId) return;
 
@@ -533,6 +547,7 @@ export default function FoundryRoom() {
             onSend={handleSend}
             onShare={handleShare}
             onUpload={handleUpload}
+            onRemoveFile={handleRemoveFile}
             isHost={isHost}
             isCoHost={room?.coHostUserId === session?.user?.id}
             initialTab={activePanel}
