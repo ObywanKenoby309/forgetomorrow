@@ -449,7 +449,7 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload }) {
             <span style={S.fshlabel}>Shared</span>
             <span style={S.fshcount}>{sharedFiles.length} {sharedFiles.length === 1 ? 'file' : 'files'}</span>
           </div>
-          <button style={S.addF(false)} onClick={handleComputerClick}>+ Add</button>
+          {isHost && <button style={S.addF(false)} onClick={handleComputerClick}>+ Add</button>}
         </div>
         {sharedFiles.length === 0 ? (
           <div style={{ ...S.emptyDrop, cursor: 'default' }}>Nothing shared yet. Share from Your Forge or Computer.</div>

@@ -32,17 +32,18 @@ export default async function handler(req, res) {
     try {
       const room = await prisma.foundryRoom.findUnique({
         where: { roomId: resolvedRoomId },
-        select: {
-          id: true,
-          status: true,
-          sharedFiles: { orderBy: { sharedAt: 'desc' } },
-        },
+        select: { id: true, status: true },
       });
 
       if (!room) return res.status(404).json({ error: 'Foundry not found' });
       if (room.status === 'ENDED') return res.status(410).json({ error: 'Session has ended' });
 
-      return res.status(200).json({ files: room.sharedFiles.map(normalizeFile) });
+      const sharedFiles = await prisma.foundrySharedFile.findMany({
+        where: { roomId: room.id },
+        orderBy: { sharedAt: 'desc' },
+      });
+
+      return res.status(200).json({ files: sharedFiles.map(normalizeFile) });
     } catch (err) {
       console.error('[foundry/share-file GET]', err);
       return res.status(500).json({ error: 'Could not load shared files' });
