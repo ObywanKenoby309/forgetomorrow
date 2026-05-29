@@ -159,7 +159,10 @@ export default function FoundryRoom() {
       .then(data => {
         if (data.resumes) {
           setForgeFiles(data.resumes.map(r => ({
-            name: r.name, type: 'Resume',
+            id: r.id,
+            name: r.name,
+            type: 'Resume',
+            sourceType: 'RESUME',
             ago: new Date(r.updatedAt).toLocaleDateString(),
           })));
         }
@@ -333,10 +336,33 @@ export default function FoundryRoom() {
   const handleShare = useCallback(async (file) => {
     if (!file || !roomId) return;
 
-    const fileName = file.name || file.fileName || 'Shared file';
-    const fileUrl = file.url || file.fileUrl || null;
-
     try {
+      if ((file.sourceType === 'RESUME' || file.type === 'Resume') && file.id) {
+        const exportRes = await fetch('/api/resume/export-foundry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resumeId: file.id, roomId }),
+        });
+
+        const exportData = await exportRes.json().catch(() => ({}));
+        if (!exportRes.ok) throw new Error(exportData.error || 'Could not export resume for Foundry');
+
+        if (exportData.file) {
+          setSharedFiles(prev => {
+            if (prev.find(f => f.id === exportData.file.id || f.name === exportData.file.name)) return prev;
+            return [exportData.file, ...prev];
+          });
+        } else {
+          await loadSharedFiles();
+        }
+
+        broadcastFilesUpdated();
+        return;
+      }
+
+      const fileName = file.name || file.fileName || 'Shared file';
+      const fileUrl = file.url || file.fileUrl || null;
+
       const res = await fetch(`/api/foundry/room/${roomId}/share-file`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
