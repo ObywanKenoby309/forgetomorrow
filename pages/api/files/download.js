@@ -50,14 +50,22 @@ export default async function handler(req, res) {
       }
     }
 
-    // Guest access
-    if (!hasAccess && guestCode && file.room?.guestToken === String(guestCode)) {
-      hasAccess = true;
-    }
+// Guest access
+if (!hasAccess && guestCode && file.room?.guestToken === String(guestCode)) {
+  hasAccess = true;
+}
 
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'You do not have access to this file' });
-    }
+console.log('[files/download-debug]', {
+  fileId,
+  guestCode,
+  roomGuestToken: file.room?.guestToken,
+  userId,
+  hasAccessBeforeGuestCheck: hasAccess,
+});
+
+if (!hasAccess) {
+  return res.status(403).json({ error: 'You do not have access to this file' });
+}
 
     // ── Stream file from Supabase Storage ──────────────────────────────────
     const { data, error } = await supabaseAdmin.storage
