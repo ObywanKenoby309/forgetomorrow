@@ -316,6 +316,16 @@ const handleCallReady = useCallback((call) => {
         })
         .catch(() => {});
     }
+    if (data?.type === 'MEETING_CHAT') {
+      const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      setMessages(prev => [...prev, {
+        sender: data.senderName || 'Participant',
+        text: data.text,
+        time: data.time || now,
+        color: data.color || '#5C6BC0',
+        avatarUrl: data.avatarUrl || null,
+      }]);
+    }
   });
 }, [roomId]);
 
@@ -391,6 +401,15 @@ const handleCallReady = useCallback((call) => {
       }).format(new Date(scheduledAt))
     : null;
 
+  // Detect Gmail/in-app browser — they block blob downloads and Daily permissions
+  const isInAppBrowser = typeof navigator !== 'undefined' && (
+    /GSA\//.test(navigator.userAgent) ||        // Gmail iOS
+    /\[FB/.test(navigator.userAgent) ||          // Facebook
+    /Instagram/.test(navigator.userAgent) ||
+    /FBAN|FBAV/.test(navigator.userAgent) ||
+    (!/Chrome/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && /Mobile/.test(navigator.userAgent) && /AppleWebKit/.test(navigator.userAgent))
+  );
+
   if (showConversionBanner) {
     return (
       <div style={S.page}>
@@ -416,6 +435,15 @@ const handleCallReady = useCallback((call) => {
 
             {error && <div style={S.error}>{error}</div>}
 
+            {isInAppBrowser && (
+              <div style={{ background: 'rgba(255,112,67,0.08)', border: '1px solid rgba(255,112,67,0.2)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 11, color: '#FF7043', lineHeight: 1.6 }}>
+                ⚠️ You're viewing this in an in-app browser. For the best experience — including file downloads and camera access — open this link in Chrome or Safari.
+                <br />
+                <a href={typeof window !== 'undefined' ? window.location.href : ''} target="_blank" rel="noopener noreferrer" style={{ color: '#FF7043', fontWeight: 700 }}>
+                  Open in browser →
+                </a>
+              </div>
+            )}
             {!serverError && guestCode ? (
               <>
                 <label style={S.label}>Your name</label>
