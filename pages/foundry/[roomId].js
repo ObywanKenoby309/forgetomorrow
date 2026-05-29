@@ -158,8 +158,9 @@ export default function FoundryRoom() {
       fetch('/api/resume/list').then(r => r.json()).catch(() => ({})),
       fetch('/api/cover/list').then(r => r.json()).catch(() => ({})),
       fetch('/api/anvil/identity').then(r => r.json()).catch(() => ({})),
+      fetch('/api/anvil/onboarding-growth/list').then(r => r.json()).catch(() => ({})),
     ])
-      .then(([resumeData, coverData, identityData]) => {
+      .then(([resumeData, coverData, identityData, roadmapData]) => {
         const resumeItems = Array.isArray(resumeData.resumes)
           ? resumeData.resumes.map(r => ({
               id: r.id,
@@ -190,7 +191,17 @@ export default function FoundryRoom() {
             }]
           : [];
 
-        setForgeFiles([...resumeItems, ...coverItems, ...identityProfile]);
+        const roadmapItems = Array.isArray(roadmapData.roadmaps)
+          ? roadmapData.roadmaps.map(r => ({
+              id: r.id,
+              name: r.name || 'Growth & Pivot Roadmap',
+              type: 'Growth & Pivot Roadmap',
+              sourceType: 'ROADMAP',
+              ago: new Date(r.updatedAt || r.createdAt || Date.now()).toLocaleDateString(),
+            }))
+          : [];
+
+        setForgeFiles([...resumeItems, ...coverItems, ...identityProfile, ...roadmapItems]);
       })
       .catch(() => {});
   }, [roomId, status, router]);
@@ -417,6 +428,29 @@ export default function FoundryRoom() {
 
         const exportData = await exportRes.json().catch(() => ({}));
         if (!exportRes.ok) throw new Error(exportData.error || 'Could not export Professional Operating Profile for Foundry');
+
+        if (exportData.file) {
+          setSharedFiles(prev => {
+            if (prev.find(f => f.id === exportData.file.id || f.name === exportData.file.name)) return prev;
+            return [exportData.file, ...prev];
+          });
+        } else {
+          await loadSharedFiles();
+        }
+
+        broadcastFilesUpdated();
+        return;
+      }
+
+      if ((file.sourceType === 'ROADMAP' || file.type === 'Growth & Pivot Roadmap') && file.id) {
+        const exportRes = await fetch('/api/anvil/onboarding-growth/export-foundry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roadmapId: file.id, roomId }),
+        });
+
+        const exportData = await exportRes.json().catch(() => ({}));
+        if (!exportRes.ok) throw new Error(exportData.error || 'Could not export Growth & Pivot Roadmap for Foundry');
 
         if (exportData.file) {
           setSharedFiles(prev => {
