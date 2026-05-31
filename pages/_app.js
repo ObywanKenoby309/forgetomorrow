@@ -168,6 +168,7 @@ function AppShell({ Component, pageProps }) {
     router.pathname.startsWith('/apply') ||
     router.pathname.startsWith('/hearth') ||
     router.pathname.startsWith('/offer-negotiation') ||
+    router.pathname === '/dashboard/forge-vault' ||
     isJobApplyRoute ||
     [
       '/the-hearth',

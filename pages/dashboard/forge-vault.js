@@ -3,7 +3,7 @@
 // Seeker-chrome only. Reads from existing list endpoints. No new DB models.
 // Two deliverable files: forge-vault.js (this) + pages/api/vault/documents.js
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
@@ -275,7 +275,7 @@ function FoundryShareButton() {
           borderRadius: 8,
           border: '1px solid rgba(0,0,0,0.10)',
           background: 'rgba(0,0,0,0.04)',
-          color: '#90A4AE',
+          color: '#455A64',
           fontSize: 11,
           fontWeight: 700,
           cursor: 'not-allowed',
@@ -330,7 +330,7 @@ function DownloadButton({ doc }) {
         padding: '5px 10px', borderRadius: 8,
         border: '1px solid rgba(0,0,0,0.08)',
         background: 'rgba(0,0,0,0.04)',
-        color: '#B0BEC5', fontSize: 11, fontWeight: 700, cursor: 'not-allowed',
+        color: '#607D8B', fontSize: 11, fontWeight: 700, cursor: 'not-allowed',
       }}>
         ↓ Download
       </button>
@@ -397,7 +397,7 @@ function VaultRow({ doc, isMobile }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
             <TypeBadge type={doc.type} label={doc.typeLabel} />
             {doc.subtitle && (
-              <span style={{ fontSize: 11, color: '#78909C', fontWeight: 600 }}>{doc.subtitle}</span>
+              <span style={{ fontSize: 11, color: '#546E7A', fontWeight: 600 }}>{doc.subtitle}</span>
             )}
           </div>
         </div>
@@ -408,7 +408,7 @@ function VaultRow({ doc, isMobile }) {
         flexShrink: 0,
         width: isMobile ? 'auto' : 110,
         fontSize: 11,
-        color: '#90A4AE',
+        color: '#455A64',
         fontWeight: 600,
         paddingLeft: isMobile ? 46 : 0,
       }}>
@@ -428,11 +428,68 @@ function VaultRow({ doc, isMobile }) {
   );
 }
 
+// ─── FilterBar ────────────────────────────────────────────────────────────────
+function FilterBar({ searchTerm, setSearchTerm, sortMode, setSortMode, typeFilter, setTypeFilter }) {
+  const inputStyle = {
+    width: '100%',
+    border: '1px solid rgba(0,0,0,0.12)',
+    borderRadius: 10,
+    background: 'rgba(255,255,255,0.88)',
+    padding: '8px 10px',
+    fontSize: 12,
+    fontWeight: 650,
+    color: '#263238',
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(220px, 1fr) 180px 180px',
+        gap: 8,
+        padding: '10px 14px',
+        borderBottom: '1px solid rgba(0,0,0,0.07)',
+        background: 'rgba(255,255,255,0.30)',
+      }}
+    >
+      <input
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        placeholder="Search documents, companies, titles..."
+        style={inputStyle}
+      />
+
+      <select
+        value={typeFilter}
+        onChange={(e) => setTypeFilter(e.target.value)}
+        style={inputStyle}
+      >
+        {TABS.map((tab) => (
+          <option key={tab.key} value={tab.key}>{tab.label}</option>
+        ))}
+      </select>
+
+      <select
+        value={sortMode}
+        onChange={(e) => setSortMode(e.target.value)}
+        style={inputStyle}
+      >
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+        <option value="name">Name A-Z</option>
+        <option value="type">Type A-Z</option>
+      </select>
+    </div>
+  );
+}
+
 // ─── VaultTable ───────────────────────────────────────────────────────────────
 function VaultTable({ docs, loading, isMobile }) {
   if (loading) {
     return (
-      <div style={{ padding: '32px 0', textAlign: 'center', color: '#90A4AE', fontSize: 14 }}>
+      <div style={{ padding: '32px 0', textAlign: 'center', color: '#455A64', fontSize: 14 }}>
         Loading your documents…
       </div>
     );
@@ -442,10 +499,10 @@ function VaultTable({ docs, loading, isMobile }) {
     return (
       <div style={{ padding: '40px 0', textAlign: 'center' }}>
         <div style={{ fontSize: 32, marginBottom: 10 }}>📭</div>
-        <div style={{ fontSize: 14, color: '#78909C', fontWeight: 600 }}>
+        <div style={{ fontSize: 14, color: '#546E7A', fontWeight: 600 }}>
           No documents here yet.
         </div>
-        <div style={{ fontSize: 12, color: '#B0BEC5', marginTop: 4 }}>
+        <div style={{ fontSize: 12, color: '#607D8B', marginTop: 4 }}>
           Documents will appear here as you create them across ForgeTomorrow.
         </div>
       </div>
@@ -459,7 +516,7 @@ function VaultTable({ docs, loading, isMobile }) {
         <div style={{
           display: 'flex', alignItems: 'center',
           padding: '6px 14px',
-          fontSize: 10, fontWeight: 800, color: '#90A4AE',
+          fontSize: 10, fontWeight: 800, color: '#455A64',
           letterSpacing: '0.06em', textTransform: 'uppercase',
         }}>
           <div style={{ flex: 1 }}>Document</div>
@@ -475,7 +532,7 @@ function VaultTable({ docs, loading, isMobile }) {
 }
 
 // ─── TabBar ───────────────────────────────────────────────────────────────────
-function TabBar({ activeTab, setActiveTab, counts }) {
+function TabBar({ activeTab, setActiveTab, setTypeFilter, counts }) {
   return (
     <div style={{
       display: 'flex', flexWrap: 'wrap', gap: 6,
@@ -488,7 +545,7 @@ function TabBar({ activeTab, setActiveTab, counts }) {
         return (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => { setActiveTab(tab.key); setTypeFilter(tab.key); }}
             style={{
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '6px 12px',
@@ -496,7 +553,7 @@ function TabBar({ activeTab, setActiveTab, counts }) {
               border: 'none',
               borderBottom: isActive ? '2px solid #FF7043' : '2px solid transparent',
               background: isActive ? 'rgba(255,112,67,0.08)' : 'transparent',
-              color: isActive ? '#FF7043' : '#78909C',
+              color: isActive ? '#FF7043' : '#546E7A',
               fontSize: 12,
               fontWeight: isActive ? 800 : 600,
               cursor: 'pointer',
@@ -530,6 +587,9 @@ export default function ForgeVaultPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortMode, setSortMode] = useState('newest');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -608,9 +668,43 @@ export default function ForgeVaultPage() {
   }, []);
 
   // ── Filtered view ─────────────────────────────────────────────────────────
-  const filtered = activeTab === 'all'
-    ? docs
-    : docs.filter((d) => d.type === activeTab);
+  const filtered = useMemo(() => {
+    const effectiveType = typeFilter !== 'all' ? typeFilter : activeTab;
+    const q = searchTerm.trim().toLowerCase();
+
+    const rows = docs.filter((d) => {
+      if (effectiveType !== 'all' && d.type !== effectiveType) return false;
+
+      if (!q) return true;
+      const haystack = [
+        d.name,
+        d.subtitle,
+        d.typeLabel,
+        d.raw?.title,
+        d.raw?.company,
+        d.raw?.jobTitle,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(q);
+    });
+
+    return [...rows].sort((a, b) => {
+      if (sortMode === 'oldest') {
+        return (a.date ? new Date(a.date).getTime() : 0) - (b.date ? new Date(b.date).getTime() : 0);
+      }
+      if (sortMode === 'name') {
+        return String(a.name || '').localeCompare(String(b.name || ''));
+      }
+      if (sortMode === 'type') {
+        return String(a.typeLabel || '').localeCompare(String(b.typeLabel || ''));
+      }
+
+      return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
+    });
+  }, [activeTab, docs, searchTerm, sortMode, typeFilter]);
 
   // ── Tab counts ─────────────────────────────────────────────────────────────
   const counts = {};
@@ -657,7 +751,7 @@ export default function ForgeVaultPage() {
               return (
                 <button
                   key={key}
-                  onClick={() => setActiveTab(key)}
+                  onClick={() => { setActiveTab(key); setTypeFilter(key); }}
                   style={{
                     ...GLASS,
                     padding: '12px 14px',
@@ -680,7 +774,7 @@ export default function ForgeVaultPage() {
                   }}>
                     {c}
                   </div>
-                  <div style={{ fontSize: 11, color: '#78909C', fontWeight: 700, marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: '#546E7A', fontWeight: 700, marginTop: 2 }}>
                     {label}
                   </div>
                 </button>
@@ -703,13 +797,23 @@ export default function ForgeVaultPage() {
             }}>
               Document Archive
             </h2>
-            <div style={{ fontSize: 12, color: '#90A4AE', fontWeight: 600 }}>
+            <div style={{ fontSize: 12, color: '#455A64', fontWeight: 600 }}>
               {loading ? '—' : `${filtered.length} document${filtered.length !== 1 ? 's' : ''}`}
             </div>
           </div>
 
           {/* Tabs */}
-          <TabBar activeTab={activeTab} setActiveTab={setActiveTab} counts={counts} />
+          <TabBar activeTab={activeTab} setActiveTab={setActiveTab} setTypeFilter={setTypeFilter} counts={counts} />
+
+          {/* Filters */}
+          <FilterBar
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            sortMode={sortMode}
+            setSortMode={setSortMode}
+            typeFilter={typeFilter}
+            setTypeFilter={(next) => { setTypeFilter(next); setActiveTab(next); }}
+          />
 
           {/* Table */}
           <div style={{ padding: '12px 14px 14px 14px' }}>
@@ -750,7 +854,7 @@ export default function ForgeVaultPage() {
             <div style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>
               Share to Foundry — Coming Soon
             </div>
-            <div style={{ fontSize: 11, color: '#78909C', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: '#546E7A', marginTop: 2 }}>
               Share any document directly into a live Foundry coaching or review session. Available in an upcoming release.
             </div>
           </div>

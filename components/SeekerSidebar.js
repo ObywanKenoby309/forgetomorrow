@@ -225,6 +225,12 @@ export default function SeekerSidebar({
         active={active === 'anvil' || active === 'roadmap'}
       />
 
+	  <NavItem
+		href="/dashboard/forge-vault"
+		label="ForgeVault"
+		active={active === 'vault'}
+	  />
+
       <SectionLabel>Resources</SectionLabel>
       <NavItem href="/the-hearth" label="The Hearth" active={active === 'the-hearth'} />
 

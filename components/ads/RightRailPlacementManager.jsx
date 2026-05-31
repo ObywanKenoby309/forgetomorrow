@@ -368,9 +368,10 @@ export default function RightRailPlacementManager({
     const path = router?.asPath || router?.pathname || '/';
 
     // Global platform search is a shared discovery surface for all tiers.
-    // Keep this here so /search can receive a right-rail house ad even if
+    // ForgeVault uses the same house-ad rail until a dedicated ad surface is added.
+    // Keep this here so these routes can receive a right-rail house ad even if
     // surfaceMap has not been expanded yet.
-    if (String(path || '').startsWith('/search')) {
+    if (String(path || '').startsWith('/search') || String(path || '').startsWith('/dashboard/forge-vault')) {
       return {
         surfaceId: 'platform_search',
         segment: 'seeker',
