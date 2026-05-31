@@ -663,23 +663,46 @@ ${modeRequirements}
     }
 
     // ── Save to DB ────────────────────────────────────────────────────────
-    let created = null;
+    // Growth & Pivot is a current-state professional artifact, not a versioned history.
+    // Keep one roadmap per user: first generation creates it; later generations overwrite it.
+    let savedRoadmap = null;
+    let createdNewRoadmap = false;
+
     try {
-      created = await prisma.careerRoadmap.create({
-        data: {
-          userId: user.id,
-          data: parsed,
-          isPro: isPaidTier(user.plan),
-        },
+      const existingRoadmap = await prisma.careerRoadmap.findFirst({
+        where: { userId: user.id },
+        orderBy: { updatedAt: 'desc' },
         select: { id: true },
       });
+
+      if (existingRoadmap?.id) {
+        savedRoadmap = await prisma.careerRoadmap.update({
+          where: { id: existingRoadmap.id },
+          data: {
+            data: parsed,
+            isPro: isPaidTier(user.plan),
+          },
+          select: { id: true },
+        });
+      } else {
+        savedRoadmap = await prisma.careerRoadmap.create({
+          data: {
+            userId: user.id,
+            data: parsed,
+            isPro: isPaidTier(user.plan),
+          },
+          select: { id: true },
+        });
+        createdNewRoadmap = true;
+      }
     } catch (e) {
       console.error('[anvil/onboarding-growth/generate] Failed to save CareerRoadmap:', e?.message || e);
     }
 
-    // ── Increment FREE usage counter AFTER successful generation ─────────
-    // Only increments for FREE users, only after the plan is actually saved.
-    if (!isPaidTier(user.plan) && created?.id) {
+    // ── Increment FREE usage counter AFTER successful first generation ────
+    // Only increments for FREE users when a new roadmap is created.
+    // Re-generating/updating the existing roadmap should not burn another lifetime use.
+    if (!isPaidTier(user.plan) && createdNewRoadmap && savedRoadmap?.id) {
       try {
         await prisma.user.update({
           where: { id: user.id },
@@ -691,7 +714,7 @@ ${modeRequirements}
       }
     }
 
-    const planId = created?.id || null;
+    const planId = savedRoadmap?.id || null;
 
     if (!planId) {
       return res.status(200).json({ plan: parsed, planId: null, roadmapId: null });

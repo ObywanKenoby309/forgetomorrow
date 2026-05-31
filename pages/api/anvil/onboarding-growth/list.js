@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     const roadmaps = await prisma.careerRoadmap.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: 'desc' },
-      take: 10,
+      take: 1,
       select: {
         id: true,
         data: true,
