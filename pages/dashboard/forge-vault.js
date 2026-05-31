@@ -43,6 +43,7 @@ const TABS = [
   { key: 'negotiation',   label: 'Offer Negotiation',          icon: '🤝' },
   { key: 'packet',        label: 'Application Packets',        icon: '📦' },
   { key: 'strategy',      label: 'Target Strategy',            icon: '🏹' },
+  { key: 'candidateReview', label: 'Candidate Review Packets',   icon: '🧾' },
 ];
 
 // ─── Type badge colors ────────────────────────────────────────────────────────
@@ -55,6 +56,7 @@ const TYPE_COLORS = {
   negotiation: { bg: 'rgba(255,193,7,0.12)',  color: '#E65100' },
   packet:      { bg: 'rgba(96,125,139,0.10)', color: '#37474F' },
   strategy:    { bg: 'rgba(103,58,183,0.10)', color: '#4527A0' },
+  candidateReview: { bg: 'rgba(255,112,67,0.12)', color: '#BF360C' },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -238,6 +240,27 @@ function normalizeStrategies(strategies = []) {
     exportFoundryEndpoint: s.shareEndpoint || '/api/coaching/clients/strategy/export-foundry',
     exportFoundryPayload: s.sharePayload || { clientId: s.id },
   }));
+}
+
+function normalizeCandidateReviewPackets(packets = []) {
+  return packets.map((p) => {
+    const candidateName = safeText(p.candidateName, 'Candidate');
+    const downloadUrl = p.packetUrl || (p.candidateUserId ? `/api/recruiter/candidates/${p.candidateUserId}/review-packet` : null);
+
+    return {
+      id: `candidate-review-${p.id}`,
+      type: 'candidateReview',
+      typeLabel: 'Candidate Review Packet',
+      name: safeText(p.title, `${candidateName} · Candidate Review Packet`),
+      subtitle: candidateName,
+      date: p.updatedAt || p.createdAt,
+      downloadUrl,
+      hasPdf: true,
+      raw: p,
+      exportFoundryEndpoint: p.candidateUserId ? `/api/recruiter/candidates/${p.candidateUserId}/review-packet` : null,
+      exportFoundryPayload: {},
+    };
+  });
 }
 
 // ─── TypeBadge ────────────────────────────────────────────────────────────────
@@ -624,7 +647,7 @@ export default function ForgeVaultPage() {
         negotiationData,
         packetData,
         strategyData,
-        vaultData,       // aggregator for interview prep + POP (see api/vault/documents.js)
+        vaultData,       // aggregator for interview prep + POP + recruiter review packets (see api/vault/documents.js)
       ] = await Promise.all([
         safeGet('/api/resume/list'),
         safeGet('/api/cover/list'),
@@ -646,6 +669,7 @@ export default function ForgeVaultPage() {
         ...normalizeNegotiations(negotiationData?.negotiations || []),
         ...normalizePackets(packetData?.packets || []),
         ...normalizeStrategies(strategyData?.strategies || []),
+        ...normalizeCandidateReviewPackets(vaultData?.recruiterReviewPackets || []),
       ];
 
       // Sort by date descending

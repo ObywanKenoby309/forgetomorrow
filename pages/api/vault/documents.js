@@ -3,6 +3,7 @@
 // standalone list endpoints:
 //   - interviewPreps  (SeekerInterviewPrep, joined through Application)
 //   - professionalProfile (ProfessionalOperatingProfile, one per user)
+//   - recruiterReviewPackets (RecruiterCandidateReviewPacket, recruiter-created candidate packets)
 //
 // All other types (resume, cover, roadmap, negotiation, packet, strategy)
 // are fetched client-side from their existing dedicated list endpoints.
@@ -41,7 +42,7 @@ export default async function handler(req, res) {
 
     const userId = session.user.id;
 
-    const [rawPreps, rawProfile] = await Promise.all([
+    const [rawPreps, rawProfile, rawRecruiterPackets] = await Promise.all([
       // Interview prep: pull through applications so we can surface job context
       prisma.seekerInterviewPrep.findMany({
         where: {
@@ -76,6 +77,28 @@ export default async function handler(req, res) {
           snapshotJson: true,
           updatedAt: true,
           createdAt: true,
+        },
+      }),
+
+      // Recruiter Candidate Review Packets — recruiter-owned packet exports
+      prisma.recruiterCandidateReviewPacket.findMany({
+        where: { recruiterUserId: userId },
+        orderBy: { updatedAt: 'desc' },
+        take: 50,
+        select: {
+          id: true,
+          candidateUserId: true,
+          candidateName: true,
+          candidateEmail: true,
+          candidateSlug: true,
+          resumeId: true,
+          resumeUrl: true,
+          title: true,
+          packetUrl: true,
+          format: true,
+          snapshotJson: true,
+          createdAt: true,
+          updatedAt: true,
         },
       }),
     ]);
@@ -113,9 +136,32 @@ export default async function handler(req, res) {
         }
       : null;
 
+    // ── Normalize recruiter review packets ─────────────────────────────────
+    const recruiterReviewPackets = rawRecruiterPackets.map((packet) => {
+      const snapshot = safeJsonParse(packet.snapshotJson);
+      const candidateName = safe(packet.candidateName, snapshot?.candidate?.name || 'Candidate');
+
+      return {
+        id: packet.id,
+        candidateUserId: packet.candidateUserId,
+        candidateName,
+        candidateEmail: packet.candidateEmail || null,
+        candidateSlug: packet.candidateSlug || null,
+        resumeId: packet.resumeId || null,
+        resumeUrl: packet.resumeUrl || null,
+        title: safe(packet.title, `${candidateName} · Candidate Review Packet`),
+        packetUrl: packet.packetUrl || null,
+        format: packet.format || 'pdf',
+        createdAt: packet.createdAt,
+        updatedAt: packet.updatedAt,
+        snapshotJson: snapshot,
+      };
+    });
+
     return res.status(200).json({
       interviewPreps,
       professionalProfile,
+      recruiterReviewPackets,
     });
   } catch (err) {
     console.error('[api/vault/documents]', err);
