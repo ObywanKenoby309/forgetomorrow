@@ -478,6 +478,9 @@ export default function CandidateProfileModal({
   const [tagsLocal, setTagsLocal] = useState([]);
   const [savingSkills, setSavingSkills] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [saveMenuOpen, setSaveMenuOpen] = useState(false);
+  const [savingPacket, setSavingPacket] = useState(false);
+  const [savePacketMessage, setSavePacketMessage] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -507,6 +510,8 @@ export default function CandidateProfileModal({
 
     const incomingTags = candidate?.tags ?? candidate?.tagsJson ?? candidate?.tagsJSON;
     setTagsLocal(toSafeArray(incomingTags));
+    setSaveMenuOpen(false);
+    setSavePacketMessage("");
   }, [open, candidate]);
 
   // ── Striker context injection ────────────────────────────────────────────────
@@ -630,6 +635,46 @@ export default function CandidateProfileModal({
     candidate?.resumeId && candidate?.slug
       ? `/api/resume/public-download?resumeId=${encodeURIComponent(candidate.resumeId)}&slug=${encodeURIComponent(candidate.slug)}`
       : "";
+
+  const reviewPacketHref = candidate?.id
+    ? `/api/recruiter/candidates/${encodeURIComponent(candidate.id)}/review-packet`
+    : "";
+
+  async function handleSaveReviewPacketToVault() {
+    if (!candidate?.id || savingPacket) return;
+
+    setSavingPacket(true);
+    setSavePacketMessage("");
+    setSaveMenuOpen(false);
+
+    try {
+      const res = await fetch(reviewPacketHref, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "vault" }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Could not save review packet.");
+      }
+
+      setSavePacketMessage("Saved to ForgeVault.");
+    } catch (err) {
+      console.error("[CandidateProfileModal] save review packet failed", err);
+      setSavePacketMessage(err?.message || "Could not save to ForgeVault.");
+    } finally {
+      setSavingPacket(false);
+    }
+  }
+
+  function handleSaveReviewPacketToComputer() {
+    if (!reviewPacketHref) return;
+    setSaveMenuOpen(false);
+    window.open(reviewPacketHref, "_blank", "noopener");
+  }
 
   const preferredLocationList = toSafeArray(candidate?.preferredLocations);
   const workStatusFmt = formatWorkStatus(candidate?.workStatus);
@@ -788,14 +833,42 @@ export default function CandidateProfileModal({
 
           <div className="flex items-center gap-2 shrink-0">
             {candidate?.id && (
-              <a
-                href={`/api/recruiter/candidates/${encodeURIComponent(candidate.id)}/review-packet`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-xl border border-orange-300/35 bg-orange-500/15 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-orange-500/20 transition"
-              >
-                Download review packet
-              </a>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setSaveMenuOpen((v) => !v)}
+                  disabled={savingPacket}
+                  className="rounded-xl border border-orange-300/35 bg-orange-500/15 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-orange-500/20 transition disabled:opacity-60"
+                  title={savePacketMessage || "Save candidate review packet"}
+                >
+                  {savingPacket ? "Saving…" : "Save ▾"}
+                </button>
+
+                {saveMenuOpen && (
+                  <div className="absolute right-0 top-[calc(100%+8px)] z-[10040] w-44 overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-900 shadow-xl">
+                    <button
+                      type="button"
+                      onClick={handleSaveReviewPacketToVault}
+                      className="block w-full px-3 py-2 text-left text-xs font-bold hover:bg-orange-50"
+                    >
+                      To ForgeVault
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveReviewPacketToComputer}
+                      className="block w-full border-t border-slate-100 px-3 py-2 text-left text-xs font-bold hover:bg-orange-50"
+                    >
+                      To Computer
+                    </button>
+                  </div>
+                )}
+
+                {savePacketMessage && (
+                  <div className="absolute right-0 top-[calc(100%+8px)] z-[10030] mt-12 w-48 rounded-lg border border-white/20 bg-slate-950/95 px-3 py-2 text-[11px] font-semibold text-white shadow-xl">
+                    {savePacketMessage}
+                  </div>
+                )}
+              </div>
             )}
             {resumeDownloadHref && (
               <a

@@ -1,7 +1,8 @@
 // pages/api/recruiter/candidates/[id]/review-packet.js
 // Exports the full recruiter CandidateProfileModal readout as a controlled PDF packet.
-// GET  = downloads the packet directly.
-// POST = renders the same packet, stores it in Supabase Storage, and shares it into a Foundry room.
+// GET  = downloads the packet directly to the local computer.
+// POST action="vault" = saves/updates the ForgeVault snapshot record.
+// POST with roomId = renders the same packet, stores it in Supabase Storage, and shares it into a Foundry room.
 
 import React from "react";
 import prisma from "@/lib/prisma";
@@ -726,8 +727,35 @@ function CandidateReviewPacketPDF({ packet }) {
   );
 }
 
+function streamToBuffer(stream) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    stream.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    stream.on("end", () => resolve(Buffer.concat(chunks)));
+    stream.on("error", reject);
+  });
+}
+
 async function renderPacketBuffer(packet) {
-  return pdf(<CandidateReviewPacketPDF packet={packet} />).toBuffer();
+  const output = await pdf(<CandidateReviewPacketPDF packet={packet} />).toBuffer();
+
+  if (Buffer.isBuffer(output)) {
+    return output;
+  }
+
+  if (output instanceof Uint8Array) {
+    return Buffer.from(output);
+  }
+
+  if (output && typeof output.arrayBuffer === "function") {
+    return Buffer.from(await output.arrayBuffer());
+  }
+
+  if (output && typeof output.on === "function") {
+    return streamToBuffer(output);
+  }
+
+  throw new Error("PDF renderer did not return a valid buffer");
 }
 
 async function saveReviewPacketRecord({ packet, packetUrl = null, fileName = null }) {
@@ -800,34 +828,51 @@ export default async function handler(req, res) {
     if (!candidateId) return res.status(400).json({ error: "Candidate id is required" });
 
     const packet = await loadCandidatePacketData({ req, session, candidateId });
-    const pdfBuffer = await renderPacketBuffer(packet);
     const fileBase = safeFileBaseName(`${packet.candidate.name || "candidate"}_review_packet`);
     const fileName = `${fileBase}.pdf`;
 
     if (req.method === "GET") {
-      let savedPath = null;
-      try {
-        const storagePath = `${session.user.id}/recruiter/candidate-review-${candidateId}-${Date.now()}-${nanoid(8)}.pdf`;
-        savedPath = await uploadFile({
-          buffer: pdfBuffer,
-          path: storagePath,
-          contentType: "application/pdf",
-        });
-      } catch (saveErr) {
-        console.error("[candidate-review-packet] storage save failed on GET", saveErr);
+      const pdfBuffer = await renderPacketBuffer(packet);
+
+      if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
+        return res.status(500).json({ error: "Could not render candidate review packet PDF" });
       }
 
-      await saveReviewPacketRecord({ packet, packetUrl: savedPath, fileName });
-
       res.setHeader("Content-Type", "application/pdf");
-	  res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
-	  res.setHeader("Cache-Control", "private, no-cache");
-	  return res.status(200).send(pdfBuffer);
+      res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+      res.setHeader("Content-Length", String(pdfBuffer.length));
+      res.setHeader("Cache-Control", "private, no-cache");
+      return res.status(200).send(pdfBuffer);
     }
 
-    const { roomId } = req.body || {};
+    const { action, roomId } = req.body || {};
+
+    if (String(action || "").trim().toLowerCase() === "vault") {
+      const saved = await saveReviewPacketRecord({ packet, packetUrl: null, fileName });
+      if (!saved?.id) {
+        return res.status(500).json({ error: "Could not save candidate review packet to ForgeVault" });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        packet: {
+          id: saved.id,
+          title: saved.title,
+          candidateName: saved.candidateName,
+          candidateUserId: saved.candidateUserId,
+          updatedAt: saved.updatedAt,
+        },
+      });
+    }
+
     const resolvedRoomId = String(roomId || "").trim();
     if (!resolvedRoomId) return res.status(400).json({ error: "roomId required" });
+
+    const pdfBuffer = await renderPacketBuffer(packet);
+
+    if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
+      return res.status(500).json({ error: "Could not render candidate review packet PDF" });
+    }
 
     const room = await prisma.foundryRoom.findUnique({
       where: { roomId: resolvedRoomId },
@@ -859,8 +904,6 @@ export default async function handler(req, res) {
       path: storagePath,
       contentType: "application/pdf",
     });
-
-    await saveReviewPacketRecord({ packet, packetUrl: savedPath, fileName });
 
     const sharedFile = await prisma.foundrySharedFile.create({
       data: {
