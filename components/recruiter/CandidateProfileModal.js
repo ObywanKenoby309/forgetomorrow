@@ -787,6 +787,16 @@ export default function CandidateProfileModal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {candidate?.id && (
+              <a
+                href={`/api/recruiter/candidates/${encodeURIComponent(candidate.id)}/review-packet`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl border border-orange-300/35 bg-orange-500/15 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-orange-500/20 transition"
+              >
+                Download review packet
+              </a>
+            )}
             {resumeDownloadHref && (
               <a
                 href={resumeDownloadHref}
