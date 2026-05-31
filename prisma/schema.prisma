@@ -943,6 +943,7 @@ model User {
   recruiterCandidatesOwned       RecruiterCandidate[]           @relation("RecruiterCandidateRecruiter")
   candidateExplainRuns           RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsCandidate")
   recruiterExplainRuns           RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsRecruiter")
+  recruiterReviewPacketsCreated  RecruiterCandidateReviewPacket[] @relation("RecruiterReviewPacketsCreated")
   resumes                        Resume[]
   savedPosts                     SavedPost[]
   scanLogs                       ScanLog[]
@@ -1122,6 +1123,35 @@ model ExternalCandidate {
   @@index([accountKey])
   @@index([createdByUserId])
   @@map("external_candidates")
+}
+
+model RecruiterCandidateReviewPacket {
+  id              String   @id @default(cuid())
+
+  recruiterUserId String
+  candidateUserId String?
+  organizationId  String?
+
+  candidateName   String?
+  candidateEmail  String?
+  candidateSlug   String?
+  resumeId        Int?
+  resumeUrl       String?
+
+  title           String   @default("Candidate Review Packet")
+  packetUrl       String?
+  format          String   @default("pdf")
+  snapshotJson    Json?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  recruiterUser   User     @relation("RecruiterReviewPacketsCreated", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+
+  @@index([recruiterUserId])
+  @@index([candidateUserId])
+  @@index([organizationId])
+  @@index([createdAt])
 }
 
 model TalentPool {
