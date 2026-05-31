@@ -20,10 +20,11 @@ function fmtBriefDate(iso) {
   } catch { return ''; }
 }
 
-export default function CommandBrief({ clientName, generatedAt, strategyBrief, onEditInputs, onFeedback }) {
+export default function CommandBrief({ clientId, clientName, generatedAt, strategyBrief, onEditInputs, onFeedback }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [reasoningOpen, setReasoningOpen] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(null);
+  const [sharing, setSharing] = useState(false);
 
   if (!strategyBrief) return null;
   const b = strategyBrief;
@@ -41,6 +42,43 @@ export default function CommandBrief({ clientName, generatedAt, strategyBrief, o
     setFeedbackSent('down');
   };
 
+  const downloadPdf = () => {
+    if (!clientId) {
+      alert('Missing client id for export.');
+      return;
+    }
+    window.open(`/api/coaching/clients/strategy/export-foundry?clientId=${encodeURIComponent(clientId)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const shareToFoundry = async () => {
+    if (!clientId) {
+      alert('Missing client id for Foundry sharing.');
+      return;
+    }
+
+    const roomId = prompt('Enter the active Foundry room code to share this Command Brief:');
+    if (!roomId?.trim()) return;
+
+    setSharing(true);
+    try {
+      const res = await fetch('/api/coaching/clients/strategy/export-foundry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, roomId: roomId.trim() }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Could not share Command Brief to Foundry.');
+
+      alert('Command Brief shared to Foundry.');
+    } catch (err) {
+      alert(err?.message || 'Could not share Command Brief to Foundry.');
+    } finally {
+      setSharing(false);
+    }
+  };
+
+
   return (
     <div className="w-full space-y-4">
 
@@ -53,9 +91,27 @@ export default function CommandBrief({ clientName, generatedAt, strategyBrief, o
             <div className="text-[11px] text-slate-400 mt-0.5">Generated {fmtBriefDate(generatedAt)}</div>
           ) : null}
         </div>
-        <button type="button" onClick={onEditInputs} className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition">
-          ← Edit Inputs
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={downloadPdf}
+            disabled={exporting}
+            className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition disabled:opacity-60"
+          >
+            {exporting ? 'Exporting…' : 'Download PDF'}
+          </button>
+          <button
+            type="button"
+            onClick={shareToFoundry}
+            disabled={sharing}
+            className="self-start sm:self-auto rounded-xl border border-[#FF7043] bg-[rgba(255,112,67,0.10)] px-3 py-1.5 text-[12px] font-semibold text-[#FF7043] hover:bg-[rgba(255,112,67,0.16)] shadow-sm transition disabled:opacity-60"
+          >
+            {sharing ? 'Sharing…' : 'Share to Foundry'}
+          </button>
+          <button type="button" onClick={onEditInputs} className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition">
+            ← Edit Inputs
+          </button>
+        </div>
       </div>
 
       {/* Tab bar */}

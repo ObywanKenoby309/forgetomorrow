@@ -413,6 +413,7 @@ export default function ClientProfileUpdatePage() {
                 strategyView === 'results' && form.strategyBrief ? (
                   // ── Brief mode — full width Command Brief ──
                   <CommandBrief
+                    clientId={client.id}
                     clientName={client.name}
                     generatedAt={form.strategyBrief?.generatedAt || client.updatedAt}
                     strategyBrief={form.strategyBrief}
