@@ -1,7 +1,8 @@
 // pages/api/recruiter/candidates/[id]/review-packet.js
 // Exports the full recruiter CandidateProfileModal readout as a controlled PDF packet.
-// GET  = downloads the packet directly.
-// POST = renders the same packet, stores it in Supabase Storage, and shares it into a Foundry room.
+// GET  = downloads the packet directly to the local computer.
+// POST action="vault" = saves/updates the ForgeVault snapshot record.
+// POST with roomId = renders the same packet, stores it in Supabase Storage, and shares it into a Foundry room.
 
 import React from "react";
 import prisma from "@/lib/prisma";
@@ -475,9 +476,9 @@ async function loadCandidatePacketData({ req, session, candidateId }) {
 
 const styles = StyleSheet.create({
   page: {
-    padding: 34,
+    padding: 30,
     fontFamily: "Helvetica",
-    fontSize: 10,
+    fontSize: 9.5,
     color: "#111827",
     lineHeight: 1.35,
   },
@@ -486,11 +487,11 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     padding: 16,
     borderRadius: 10,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   eyebrow: {
     fontSize: 8,
-    letterSpacing: 1.3,
+    letterSpacing: 1.25,
     color: "#FF7043",
     textTransform: "uppercase",
     marginBottom: 4,
@@ -503,19 +504,48 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: "#D1D5DB",
-    fontSize: 10,
+    fontSize: 9,
   },
   section: {
     border: "1px solid #E5E7EB",
     borderRadius: 10,
+    padding: 10,
+    marginBottom: 9,
+  },
+  darkSection: {
+    backgroundColor: "#111827",
+    color: "#ffffff",
+    borderRadius: 10,
     padding: 12,
-    marginBottom: 10,
+    marginBottom: 9,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: 700,
     color: "#111827",
     marginBottom: 7,
+  },
+  darkSectionTitle: {
+    fontSize: 11.5,
+    fontWeight: 700,
+    color: "#ffffff",
+    marginBottom: 7,
+  },
+  microLabel: {
+    color: "#6B7280",
+    fontSize: 7,
+    textTransform: "uppercase",
+    letterSpacing: 0.55,
+    marginBottom: 2,
+    fontWeight: 700,
+  },
+  orangeMicroLabel: {
+    color: "#FF7043",
+    fontSize: 7,
+    textTransform: "uppercase",
+    letterSpacing: 0.75,
+    marginBottom: 2,
+    fontWeight: 700,
   },
   row: {
     flexDirection: "row",
@@ -528,24 +558,30 @@ const styles = StyleSheet.create({
     border: "1px solid #E5E7EB",
     borderRadius: 8,
     padding: 8,
-    marginBottom: 6,
+    marginBottom: 7,
     backgroundColor: "#F9FAFB",
   },
-  metricLabel: {
-    color: "#6B7280",
-    fontSize: 7,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 2,
-    fontWeight: 700,
+  darkMetric: {
+    border: "1px solid #374151",
+    borderRadius: 8,
+    padding: 8,
+    backgroundColor: "#1F2937",
   },
   metricValue: {
     fontSize: 11,
     fontWeight: 700,
     color: "#111827",
   },
+  darkMetricValue: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#ffffff",
+  },
   muted: {
     color: "#4B5563",
+  },
+  darkMuted: {
+    color: "#D1D5DB",
   },
   small: {
     fontSize: 8,
@@ -566,17 +602,64 @@ const styles = StyleSheet.create({
     marginRight: 4,
     marginBottom: 4,
   },
+  goodPill: {
+    border: "1px solid #A7F3D0",
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    backgroundColor: "#ECFDF5",
+    color: "#065F46",
+    fontSize: 8,
+    marginRight: 4,
+    marginBottom: 4,
+  },
+  warnPill: {
+    border: "1px solid #FDE68A",
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    backgroundColor: "#FFFBEB",
+    color: "#92400E",
+    fontSize: 8,
+    marginRight: 4,
+    marginBottom: 4,
+  },
+  riskPill: {
+    border: "1px solid #FECACA",
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    backgroundColor: "#FEF2F2",
+    color: "#991B1B",
+    fontSize: 8,
+    marginRight: 4,
+    marginBottom: 4,
+  },
+  card: {
+    border: "1px solid #E5E7EB",
+    borderRadius: 9,
+    padding: 8,
+    marginBottom: 7,
+    backgroundColor: "#FFFFFF",
+  },
+  softCard: {
+    border: "1px solid #E5E7EB",
+    borderRadius: 9,
+    padding: 8,
+    marginBottom: 7,
+    backgroundColor: "#F9FAFB",
+  },
   bullet: {
     marginBottom: 3,
   },
   footer: {
     position: "absolute",
-    bottom: 18,
-    left: 34,
-    right: 34,
+    bottom: 16,
+    left: 30,
+    right: 30,
     borderTop: "1px solid #E5E7EB",
-    paddingTop: 8,
-    fontSize: 8,
+    paddingTop: 7,
+    fontSize: 7.5,
     color: "#6B7280",
   },
 });
@@ -595,13 +678,14 @@ const List = ({ items = [], max = 8 }) => {
   );
 };
 
-const PillList = ({ items = [], max = 16 }) => {
+const PillList = ({ items = [], max = 16, tone = "neutral" }) => {
   const arr = asArray(items).slice(0, max);
   if (!arr.length) return <Text style={styles.muted}>Not listed.</Text>;
+  const pillStyle = tone === "good" ? styles.goodPill : tone === "warn" ? styles.warnPill : tone === "risk" ? styles.riskPill : styles.pill;
   return (
     <View style={styles.pillWrap}>
       {arr.map((item, index) => (
-        <Text key={`${String(item).slice(0, 16)}-${index}`} style={styles.pill}>
+        <Text key={`${String(item).slice(0, 16)}-${index}`} style={pillStyle}>
           {String(item)}
         </Text>
       ))}
@@ -609,198 +693,56 @@ const PillList = ({ items = [], max = 16 }) => {
   );
 };
 
-
-function formatCertItem(cert) {
-  if (!cert) return "";
-  if (typeof cert === "string") return cert;
-  if (typeof cert === "number" || typeof cert === "boolean") return String(cert);
-
-  if (typeof cert === "object") {
-    const name =
-      cert.name ||
-      cert.title ||
-      cert.certification ||
-      cert.credential ||
-      cert.label ||
-      "";
-    const issuer =
-      cert.issuer ||
-      cert.provider ||
-      cert.organization ||
-      cert.authority ||
-      "";
-    const date =
-      cert.date ||
-      cert.year ||
-      cert.issuedAt ||
-      cert.issueDate ||
-      cert.completedAt ||
-      "";
-
-    return [name, issuer, date].filter(Boolean).join(" — ");
-  }
-
-  return String(cert || "");
+function statusLabel(status) {
+  if (status === "direct") return "Proven";
+  if (status === "adjacent") return "Validation";
+  return "Review";
 }
 
-function formatGenericItem(item) {
-  if (!item) return "";
-  if (typeof item === "string") return item;
-  if (typeof item === "number" || typeof item === "boolean") return String(item);
-  if (typeof item === "object") {
-    return (
-      item.title ||
-      item.name ||
-      item.label ||
-      item.summary ||
-      item.description ||
-      item.projectName ||
-      JSON.stringify(item)
-    );
-  }
-  return String(item || "");
+function statusPillStyle(status) {
+  if (status === "direct") return styles.goodPill;
+  if (status === "adjacent") return styles.warnPill;
+  return styles.riskPill;
 }
 
-function capabilityClustersForPacket(skills = []) {
-  const list = asArray(skills).map((s) => String(s || "").trim()).filter(Boolean);
+function signalCopy(sig) {
+  if (!sig) return "Review this signal during recruiter evaluation.";
+  if (sig.recruiterInterpretation) return sig.recruiterInterpretation;
+  if (sig.key === "portfolio" && sig.status === "missing") {
+    return "Structured project proof is not yet visible. Resume history and interview examples should be used to validate execution depth.";
+  }
+  if (sig.key === "credentials") {
+    return "Professional credibility is supported through operational execution, structured support experience, education, training, or documented execution.";
+  }
+  return `${sig.label || sig.key || "Signal"} is available for recruiter review.`;
+}
+
+function capabilityClusters(skills = []) {
+  const list = dedupeCaseInsensitive(asArray(skills).map((s) => String(s || "").trim()).filter(Boolean));
   const lower = (s) => s.toLowerCase();
-
   const clusters = [
-    {
-      label: "Support Operations",
-      match: (s) => /service|support|itil|ticket|knowledge|documentation|sme|troubleshoot|customer/i.test(s),
-    },
-    {
-      label: "Endpoint & Device Operations",
-      match: (s) => /sccm|intune|jamf|imaging|workstation|desktop|endpoint|mac os|windows|ubuntu|linux/i.test(s),
-    },
-    {
-      label: "Identity & Access",
-      match: (s) => /active directory|entra|okta|access|identity|azure ad|global protect|vpn/i.test(s),
-    },
-    {
-      label: "Network & Infrastructure",
-      match: (s) => /cisco|meraki|router|switch|firewall|network|global protect/i.test(s),
-    },
-    {
-      label: "Security / Analysis",
-      match: (s) => /kali|security|analytics|bi|data|research|compliance|usability/i.test(s),
-    },
+    { label: "Endpoint & Device Operations", match: (s) => /sccm|intune|jamf|imaging|workstation|desktop|endpoint|mac os|windows|ubuntu|linux/i.test(s) },
+    { label: "Identity & Access", match: (s) => /active directory|entra|okta|access|identity|azure ad|global protect|vpn/i.test(s) },
+    { label: "Network & Infrastructure", match: (s) => /cisco|meraki|router|switch|firewall|network|global protect/i.test(s) },
+    { label: "Support Operations", match: (s) => /service|support|itil|ticket|knowledge|documentation|sme|troubleshoot|customer/i.test(s) },
+    { label: "Security / Analysis", match: (s) => /kali|security|analytics|bi|data|research|compliance|user research|usability/i.test(s) },
   ];
 
   const assigned = clusters
-    .map((cluster) => ({
-      label: cluster.label,
-      items: list.filter((s) => cluster.match(s)).slice(0, 8),
-    }))
+    .map((cluster) => ({ label: cluster.label, items: list.filter((s) => cluster.match(s)).slice(0, 8) }))
     .filter((cluster) => cluster.items.length);
 
   const assignedItems = new Set(assigned.flatMap((c) => c.items.map((i) => lower(i))));
-  const remaining = list.filter((s) => !assignedItems.has(lower(s))).slice(0, 14);
-
+  const remaining = list.filter((s) => !assignedItems.has(lower(s))).slice(0, 10);
   if (remaining.length) assigned.push({ label: "Additional Signals", items: remaining });
-
   return assigned.slice(0, 6);
 }
 
-const PacketMetric = ({ label, value }) => (
-  <View
-    style={{
-      flex: 1,
-      minHeight: 48,
-      border: "1px solid #E5E7EB",
-      borderRadius: 9,
-      padding: 8,
-      backgroundColor: "#F9FAFB",
-      justifyContent: "center",
-      alignItems: "center",
-      textAlign: "center",
-    }}
-  >
-    <Text style={{ color: "#6B7280", fontSize: 7, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 3, fontWeight: 700 }}>
-      {label}
-    </Text>
-    <Text style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{value || "—"}</Text>
-  </View>
-);
-
-const PortfolioMetric = ({ label, value }) => (
-  <View
-    style={{
-      flex: 1,
-      minHeight: 54,
-      border: "1px solid #D1D5DB",
-      borderRadius: 10,
-      padding: 8,
-      backgroundColor: "#FFFFFF",
-      justifyContent: "center",
-      alignItems: "center",
-      textAlign: "center",
-    }}
-  >
-    <Text style={{ color: "#6B7280", fontSize: 7, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 4, fontWeight: 700 }}>
-      {label}
-    </Text>
-    <Text style={{ fontSize: 16, fontWeight: 700, color: "#FF7043" }}>{value || "—"}</Text>
-  </View>
-);
-
-const SignalCard = ({ signal }) => {
-  if (!signal) return null;
-
-  const status =
-    signal.status === "direct"
-      ? "Proven"
-      : signal.status === "adjacent"
-      ? "Validate"
-      : "Review";
-
-  const evidence = asArray(signal.evidenceDetected || signal.evidence || signal.proof || []).slice(0, 4);
-
-  return (
-    <View style={{ border: "1px solid #E5E7EB", borderRadius: 10, padding: 10, marginBottom: 8, backgroundColor: "#FFFFFF" }} wrap={false}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 10, fontWeight: 700, color: "#111827" }}>
-            {String(signal.label || signal.key || "Signal").replace(" Signal", "")}
-          </Text>
-          <Text style={{ marginTop: 3, fontSize: 8.5, color: "#4B5563" }}>
-            {signal.recruiterInterpretation || signal.interpretation || signal.summary || "Recruiter-visible signal available for review."}
-          </Text>
-        </View>
-        <View style={{ border: "1px solid #E5E7EB", borderRadius: 999, paddingVertical: 3, paddingHorizontal: 7, alignSelf: "flex-start" }}>
-          <Text style={{ fontSize: 7, fontWeight: 700, textTransform: "uppercase", color: "#111827" }}>{status}</Text>
-        </View>
-      </View>
-
-      {evidence.length ? (
-        <View style={{ marginTop: 7, backgroundColor: "#F9FAFB", borderRadius: 8, padding: 7 }}>
-          <Text style={{ fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#6B7280", marginBottom: 3 }}>
-            Evidence
-          </Text>
-          <List items={evidence} max={4} />
-        </View>
-      ) : null}
-    </View>
-  );
-};
-
-const ClusterList = ({ clusters = [] }) => {
-  if (!clusters.length) return <Text style={styles.muted}>No capability clusters available yet.</Text>;
-
-  return (
-    <View>
-      {clusters.map((cluster, index) => (
-        <View key={`${cluster.label}-${index}`} style={{ border: "1px solid #E5E7EB", borderRadius: 9, padding: 8, backgroundColor: "#F9FAFB", marginBottom: 7 }}>
-          <Text style={{ fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, color: "#6B7280", marginBottom: 5 }}>
-            {cluster.label}
-          </Text>
-          <PillList items={cluster.items} max={10} />
-        </View>
-      ))}
-    </View>
-  );
-};
+function formatEducation(edu) {
+  if (!edu || typeof edu !== "object") return "Education";
+  const degree = [edu.degree, edu.field].filter(Boolean).join(" in ") || "Degree";
+  return `${degree}${edu.school ? ` — ${edu.school}` : ""}`;
+}
 
 function CandidateReviewPacketPDF({ packet }) {
   const { candidate, intelligence } = packet;
@@ -808,25 +750,18 @@ function CandidateReviewPacketPDF({ packet }) {
   const proven = signals.filter((s) => s.status === "direct");
   const validation = signals.filter((s) => s.status === "adjacent");
   const review = signals.filter((s) => s.status === "missing");
+  const validationAreas = [...review, ...validation];
   const score = typeof intelligence.score === "number" ? `${intelligence.score}%` : "Review";
-
-  const headline =
-    typeof intelligence.score === "number" && intelligence.score >= 75
-      ? "Strong recruiter-visible portfolio signal."
-      : typeof intelligence.score === "number" && intelligence.score >= 50
-      ? "Usable portfolio signal with validation areas."
-      : "Portfolio signal requires deeper recruiter review.";
-
-  const validationAreas = [...validation, ...review];
-  const clusters = capabilityClustersForPacket(candidate.skills);
-  const certifications = asArray(candidate.certifications).map(formatCertItem).filter(Boolean);
-  const languages = asArray(candidate.languages).map(formatGenericItem).filter(Boolean);
+  const clusters = capabilityClusters(candidate.skills);
   const projects = asArray(candidate.projects);
-  const recruiterSkills = asArray(candidate.recruiterSkills).length ? asArray(candidate.recruiterSkills) : asArray(candidate.skills);
+  const languages = asArray(candidate.languages);
+  const certifications = asArray(candidate.certifications);
+  const recruiterSkills = asArray(candidate.recruiterSkills);
+  const roleSignalList = asArray(intelligence.roleSignals);
+  const focus = asArray(intelligence.inference?.validationFocus);
 
   return (
     <Document title={`${candidate.name || "Candidate"} Review Packet`}>
-      {/* Narrative / decision context */}
       <Page size="LETTER" style={styles.page} wrap>
         <View style={styles.header}>
           <Text style={styles.eyebrow}>ForgeTomorrow Candidate Review Packet</Text>
@@ -836,11 +771,23 @@ function CandidateReviewPacketPDF({ packet }) {
           </Text>
         </View>
 
-        <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
-          <PacketMetric label="Professional Signal" value={score} />
-          <PacketMetric label="Execution Visibility" value={projects.length ? "Strong" : intelligence.roleSignals?.length ? "Moderate" : "Limited"} />
-          <PacketMetric label="Validation Risk" value={review.length || validation.length ? "Review" : "Low"} />
-          <PacketMetric label="Resume Access" value={candidate.resumeId ? "Available" : "Missing"} />
+        <View style={styles.row}>
+          <View style={styles.metric}>
+            <Text style={styles.microLabel}>Professional Signal</Text>
+            <Text style={styles.metricValue}>{score}</Text>
+          </View>
+          <View style={styles.metric}>
+            <Text style={styles.microLabel}>Execution Visibility</Text>
+            <Text style={styles.metricValue}>{projects.length || roleSignalList.length >= 4 ? "Strong" : roleSignalList.length ? "Moderate" : "Limited"}</Text>
+          </View>
+          <View style={styles.metric}>
+            <Text style={styles.microLabel}>Validation Risk</Text>
+            <Text style={styles.metricValue}>{review.length || validation.length ? "Review" : "Low"}</Text>
+          </View>
+          <View style={styles.metric}>
+            <Text style={styles.microLabel}>Resume Access</Text>
+            <Text style={styles.metricValue}>{candidate.resumeId ? "Available" : "Missing"}</Text>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -848,19 +795,61 @@ function CandidateReviewPacketPDF({ packet }) {
           <Text>{formatMaybe(candidate.summary, "No professional summary provided. Review primary resume and recruiter-entered signals for additional context.")}</Text>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.eyebrow}>Portfolio Intelligence</Text>
-          <Text style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{headline}</Text>
-          <Text style={{ fontSize: 9, color: "#4B5563", marginBottom: 10 }}>
-            Recruiter-facing interpretation from ForgeTomorrow&apos;s shared portfolio signal engine.
+        <View style={styles.darkSection}>
+          <Text style={styles.orangeMicroLabel}>Portfolio Intelligence</Text>
+          <Text style={styles.darkSectionTitle}>
+            {typeof intelligence.score === "number" && intelligence.score >= 75
+              ? "Strong recruiter-visible portfolio signal."
+              : typeof intelligence.score === "number" && intelligence.score >= 50
+              ? "Usable portfolio signal with validation areas."
+              : "Portfolio signal requires deeper recruiter review."}
           </Text>
-
-          <View style={{ flexDirection: "row", gap: 8, justifyContent: "center", alignItems: "center" }}>
-            <PortfolioMetric label="Signal Confidence" value={score} />
-            <PortfolioMetric label="Proven" value={String(proven.length)} />
-            <PortfolioMetric label="Validate" value={String(validation.length)} />
-            <PortfolioMetric label="Review" value={String(review.length)} />
+          <Text style={styles.darkMuted}>Recruiter-facing interpretation from ForgeTomorrow's shared portfolio signal engine.</Text>
+          <View style={[styles.row, { marginTop: 8 }]}>
+            <View style={styles.darkMetric}>
+              <Text style={styles.orangeMicroLabel}>Signal Confidence</Text>
+              <Text style={styles.darkMetricValue}>{score}</Text>
+            </View>
+            <View style={styles.darkMetric}>
+              <Text style={styles.orangeMicroLabel}>Proven</Text>
+              <Text style={styles.darkMetricValue}>{proven.length}</Text>
+            </View>
+            <View style={styles.darkMetric}>
+              <Text style={styles.orangeMicroLabel}>Validate</Text>
+              <Text style={styles.darkMetricValue}>{validation.length}</Text>
+            </View>
+            <View style={styles.darkMetric}>
+              <Text style={styles.orangeMicroLabel}>Review</Text>
+              <Text style={styles.darkMetricValue}>{review.length}</Text>
+            </View>
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Portfolio Review Cards</Text>
+          {signals.length ? (
+            signals.slice(0, 10).map((sig, index) => (
+              <View key={`${sig.key || sig.label}-${index}`} style={styles.softCard}>
+                <View style={styles.row}>
+                  <View style={styles.col}>
+                    <Text style={{ fontWeight: 700 }}>{String(sig.label || sig.key || "Signal").replace(" Signal", "")}</Text>
+                    <Text style={styles.muted}>{signalCopy(sig)}</Text>
+                  </View>
+                  <View style={{ width: 72 }}>
+                    <Text style={statusPillStyle(sig.status)}>{statusLabel(sig.status)}</Text>
+                  </View>
+                </View>
+                {asArray(sig.evidenceDetected).length ? (
+                  <View style={{ marginTop: 5 }}>
+                    <Text style={styles.microLabel}>Evidence</Text>
+                    <List items={sig.evidenceDetected} max={4} />
+                  </View>
+                ) : null}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.muted}>No portfolio signal cards available.</Text>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -868,7 +857,7 @@ function CandidateReviewPacketPDF({ packet }) {
           <Text style={{ marginBottom: 6 }}>
             {formatMaybe(intelligence.inference?.overallConclusion, "Review the candidate profile, resume evidence, and validation areas before advancing.")}
           </Text>
-          <List items={intelligence.inference?.validationFocus || []} max={5} />
+          <List items={focus} max={6} />
         </View>
 
         <View style={styles.row}>
@@ -879,14 +868,10 @@ function CandidateReviewPacketPDF({ packet }) {
           <View style={[styles.section, styles.col]}>
             <Text style={styles.sectionTitle}>Recruiter Validation Areas</Text>
             {validationAreas.length ? (
-              validationAreas.slice(0, 6).map((sig, index) => (
-                <View key={`${sig.key || sig.label}-${index}`} style={{ marginBottom: 6 }}>
-                  <Text style={{ fontWeight: 700 }}>{String(sig.label || sig.key || "Validation Area").replace(" Signal", "")}</Text>
-                  <Text style={styles.small}>
-                    {sig.key === "portfolio"
-                      ? "Ask for one concrete project, work sample, implementation example, or measurable outcome."
-                      : sig.missingValidation?.[0] || sig.recruiterInterpretation || "Validate during recruiter review."}
-                  </Text>
+              validationAreas.slice(0, 8).map((sig, index) => (
+                <View key={`${sig.key || sig.label}-validation-${index}`} style={{ marginBottom: 5 }}>
+                  <Text style={{ fontWeight: 700 }}>{String(sig.label || sig.key || "Signal").replace(" Signal", "")}</Text>
+                  <Text style={styles.muted}>{sig.key === "portfolio" ? "Ask for one concrete project, work sample, implementation example, or measurable outcome." : signalCopy(sig)}</Text>
                 </View>
               ))
             ) : (
@@ -900,7 +885,6 @@ function CandidateReviewPacketPDF({ packet }) {
         </Text>
       </Page>
 
-      {/* Proof / evidence context */}
       <Page size="LETTER" style={styles.page} wrap>
         <View style={styles.header}>
           <Text style={styles.eyebrow}>Candidate Review Packet Continued</Text>
@@ -909,57 +893,53 @@ function CandidateReviewPacketPDF({ packet }) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Portfolio Review Cards</Text>
-          {signals.length ? (
-            signals.map((signal, index) => (
-              <SignalCard key={`${signal.key || signal.label || "signal"}-${index}`} signal={signal} />
+          <Text style={styles.sectionTitle}>Capability Clusters</Text>
+          {clusters.length ? (
+            clusters.map((cluster) => (
+              <View key={cluster.label} style={styles.softCard}>
+                <Text style={styles.microLabel}>{cluster.label}</Text>
+                <PillList items={cluster.items} max={10} />
+              </View>
             ))
           ) : (
-            <Text style={styles.muted}>No portfolio review signals available.</Text>
+            <Text style={styles.muted}>No capability clusters available yet.</Text>
           )}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Capability Clusters</Text>
-          <ClusterList clusters={clusters} />
-        </View>
-
-        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Capability & Execution Signals</Text>
-          <PillList items={candidate.skills} max={24} />
+          <PillList items={candidate.skills} max={28} tone="good" />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Execution Proof / {projects.length ? "Project Evidence" : "Limited Project Evidence"}</Text>
+          <Text style={styles.sectionTitle}>{projects.length ? "Execution Proof / Projects" : "Execution Proof / Limited Project Evidence"}</Text>
           {projects.length ? (
             projects.slice(0, 6).map((project, index) => {
               const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || `Project ${index + 1}`;
               const desc = typeof project === "string" ? "" : project?.description || project?.summary || project?.details || "";
               return (
-                <View key={`${title}-${index}`} style={{ marginBottom: 7 }}>
+                <View key={`${title}-${index}`} style={styles.softCard}>
                   <Text style={{ fontWeight: 700 }}>{title}</Text>
-                  {desc ? <Text style={styles.small}>{desc}</Text> : null}
+                  {desc ? <Text style={styles.muted}>{desc}</Text> : null}
                 </View>
               );
             })
           ) : (
-            <Text style={styles.muted}>
-              No structured project entries are listed yet. Resume history and operational experience currently carry execution proof; validate project ownership, outcomes, and measurable impact during recruiter review.
-            </Text>
+            <Text style={styles.muted}>No structured project entries are listed yet. Resume history and operational experience currently carry execution proof; validate project ownership, outcomes, and measurable impact during recruiter review.</Text>
           )}
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Career Path & Operational Signals</Text>
           {candidate.experience.length ? (
-            candidate.experience.slice(0, 5).map((exp, index) => (
-              <View key={`${exp.title}-${index}`} style={{ marginBottom: 8 }} wrap={false}>
+            candidate.experience.slice(0, 6).map((exp, index) => (
+              <View key={`${exp.title}-${index}`} style={styles.card}>
                 <Text style={{ fontWeight: 700 }}>
                   {formatMaybe(exp.title, "Role")} — {formatMaybe(exp.company, "Company")}
                 </Text>
                 <Text style={styles.small}>{formatMaybe(exp.range, "Dates not listed")}</Text>
-                <PillList items={roleSignals(exp)} max={5} />
-                <List items={exp.highlights} max={4} />
+                <PillList items={roleSignals(exp)} max={6} />
+                <List items={exp.highlights} max={5} />
               </View>
             ))
           ) : (
@@ -977,18 +957,13 @@ function CandidateReviewPacketPDF({ packet }) {
           </View>
           <View style={[styles.section, styles.col]}>
             <Text style={styles.sectionTitle}>Education / Credentials</Text>
-            {candidate.education.length ? (
-              candidate.education.slice(0, 5).map((edu, index) => (
-                <Text key={`${edu.school}-${index}`} style={styles.bullet}>
-                  • {[edu.degree, edu.field].filter(Boolean).join(" in ") || "Degree"}{edu.school ? ` — ${edu.school}` : ""}
-                </Text>
-              ))
-            ) : (
-              <Text style={styles.muted}>No education listed.</Text>
-            )}
-
-            <Text style={[styles.eyebrow, { marginTop: 8 }]}>Certifications</Text>
-            <List items={certifications} max={6} />
+            {candidate.education.length ? <List items={candidate.education.map(formatEducation)} max={6} /> : <Text style={styles.muted}>No education listed.</Text>}
+            {certifications.length ? (
+              <View style={{ marginTop: 6 }}>
+                <Text style={styles.microLabel}>Certifications</Text>
+                <List items={certifications} max={6} />
+              </View>
+            ) : null}
           </View>
         </View>
 
@@ -999,9 +974,7 @@ function CandidateReviewPacketPDF({ packet }) {
           </View>
           <View style={[styles.section, styles.col]}>
             <Text style={styles.sectionTitle}>Engagement / Journey</Text>
-            <Text style={styles.muted}>
-              No journey replay data is included in this export yet. This section will populate from job views, applications, and message activity when available.
-            </Text>
+            <Text style={styles.muted}>No journey replay data is included in this export yet. This section will populate from job views, applications, and message activity when available.</Text>
           </View>
         </View>
 
@@ -1009,14 +982,14 @@ function CandidateReviewPacketPDF({ packet }) {
           <Text style={styles.sectionTitle}>Recruiter Utilities Snapshot</Text>
           <View style={styles.row}>
             <View style={styles.col}>
-              <Text style={styles.eyebrow}>Recruiter Skills</Text>
-              <PillList items={recruiterSkills} max={24} />
+              <Text style={styles.microLabel}>Recruiter Skills</Text>
+              <PillList items={recruiterSkills.length ? recruiterSkills : candidate.skills} max={28} />
             </View>
             <View style={styles.col}>
-              <Text style={styles.eyebrow}>Tags</Text>
-              <Text>{candidate.tags.length ? candidate.tags.join(", ") : "Not listed."}</Text>
-              <Text style={[styles.eyebrow, { marginTop: 8 }]}>Private Team Notes</Text>
-              <Text>{formatMaybe(candidate.notes, "No recruiter notes saved.")}</Text>
+              <Text style={styles.microLabel}>Tags</Text>
+              <PillList items={candidate.tags} max={12} />
+              <Text style={[styles.microLabel, { marginTop: 8 }]}>Private Team Notes</Text>
+              <Text style={styles.muted}>{formatMaybe(candidate.notes, "No recruiter notes saved.")}</Text>
             </View>
           </View>
         </View>
@@ -1029,4 +1002,200 @@ function CandidateReviewPacketPDF({ packet }) {
   );
 }
 
+function streamToBuffer(stream) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    stream.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    stream.on("end", () => resolve(Buffer.concat(chunks)));
+    stream.on("error", reject);
+  });
+}
 
+async function renderPacketBuffer(packet) {
+  const output = await pdf(<CandidateReviewPacketPDF packet={packet} />).toBuffer();
+
+  if (Buffer.isBuffer(output)) {
+    return output;
+  }
+
+  if (output instanceof Uint8Array) {
+    return Buffer.from(output);
+  }
+
+  if (output && typeof output.arrayBuffer === "function") {
+    return Buffer.from(await output.arrayBuffer());
+  }
+
+  if (output && typeof output.on === "function") {
+    return streamToBuffer(output);
+  }
+
+  throw new Error("PDF renderer did not return a valid buffer");
+}
+
+async function saveReviewPacketRecord({ packet, packetUrl = null, fileName = null }) {
+  try {
+    const recruiterUserId = packet?.recruiter?.id || null;
+    const candidateUserId = packet?.candidate?.id || packet?.candidate?.userId || null;
+
+    if (!recruiterUserId) return null;
+
+    const snapshotJson = {
+      candidate: packet?.candidate || null,
+      intelligence: packet?.intelligence || null,
+      fileName: fileName || null,
+      generatedAt: new Date().toISOString(),
+    };
+
+    const existing = candidateUserId
+      ? await prisma.recruiterCandidateReviewPacket.findFirst({
+          where: { recruiterUserId, candidateUserId },
+          orderBy: { updatedAt: "desc" },
+          select: { id: true },
+        })
+      : null;
+
+    const data = {
+      recruiterUserId,
+      candidateUserId,
+      organizationId: packet?.recruiter?.accountKey || null,
+      candidateName: packet?.candidate?.name || null,
+      candidateEmail: packet?.candidate?.email || null,
+      candidateSlug: packet?.candidate?.slug || null,
+      resumeId: packet?.candidate?.resumeId || null,
+      resumeUrl:
+        packet?.candidate?.resumeId && packet?.candidate?.slug
+          ? `/api/resume/public-download?resumeId=${encodeURIComponent(packet.candidate.resumeId)}&slug=${encodeURIComponent(packet.candidate.slug)}`
+          : null,
+      title: `${packet?.candidate?.name || "Candidate"} · Candidate Review Packet`,
+      packetUrl,
+      format: "pdf",
+      snapshotJson,
+    };
+
+    if (existing?.id) {
+      return await prisma.recruiterCandidateReviewPacket.update({
+        where: { id: existing.id },
+        data,
+      });
+    }
+
+    return await prisma.recruiterCandidateReviewPacket.create({ data });
+  } catch (err) {
+    console.error("[candidate-review-packet] save record failed", err);
+    return null;
+  }
+}
+
+export default async function handler(req, res) {
+  if (req.method !== "GET" && req.method !== "POST") {
+    res.setHeader("Allow", ["GET", "POST"]);
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  try {
+    const session = await getServerSession(req, res, authOptions);
+    if (!session?.user?.id && !session?.user?.email) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const candidateId = String(req.query?.id || "").trim();
+    if (!candidateId) return res.status(400).json({ error: "Candidate id is required" });
+
+    const packet = await loadCandidatePacketData({ req, session, candidateId });
+    const fileBase = safeFileBaseName(`${packet.candidate.name || "candidate"}_review_packet`);
+    const fileName = `${fileBase}.pdf`;
+
+    if (req.method === "GET") {
+      const pdfBuffer = await renderPacketBuffer(packet);
+
+      if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
+        return res.status(500).json({ error: "Could not render candidate review packet PDF" });
+      }
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+      res.setHeader("Content-Length", String(pdfBuffer.length));
+      res.setHeader("Cache-Control", "private, no-cache");
+      return res.status(200).send(pdfBuffer);
+    }
+
+    const { action, roomId } = req.body || {};
+
+    if (String(action || "").trim().toLowerCase() === "vault") {
+      const saved = await saveReviewPacketRecord({ packet, packetUrl: null, fileName });
+      if (!saved?.id) {
+        return res.status(500).json({ error: "Could not save candidate review packet to ForgeVault" });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        packet: {
+          id: saved.id,
+          title: saved.title,
+          candidateName: saved.candidateName,
+          candidateUserId: saved.candidateUserId,
+          updatedAt: saved.updatedAt,
+        },
+      });
+    }
+
+    const resolvedRoomId = String(roomId || "").trim();
+    if (!resolvedRoomId) return res.status(400).json({ error: "roomId required" });
+
+    const pdfBuffer = await renderPacketBuffer(packet);
+
+    if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
+      return res.status(500).json({ error: "Could not render candidate review packet PDF" });
+    }
+
+    const room = await prisma.foundryRoom.findUnique({
+      where: { roomId: resolvedRoomId },
+      select: { id: true, status: true, hostId: true, coHostUserId: true },
+    });
+
+    if (!room) return res.status(404).json({ error: "Foundry not found" });
+    if (room.status === "ENDED") return res.status(410).json({ error: "Session has ended" });
+
+    const isHost = room.hostId === session.user.id;
+    const isCoHost = room.coHostUserId === session.user.id;
+    let isParticipant = false;
+
+    if (!isHost && !isCoHost) {
+      const participant = await prisma.foundryParticipant.findFirst({
+        where: { roomId: room.id, userId: session.user.id },
+        select: { id: true },
+      });
+      isParticipant = !!participant;
+    }
+
+    if (!isHost && !isCoHost && !isParticipant) {
+      return res.status(403).json({ error: "You are not a participant in this Foundry" });
+    }
+
+    const storagePath = `${session.user.id}/foundry/${resolvedRoomId}/candidate-review-${candidateId}-${Date.now()}-${nanoid(8)}.pdf`;
+    const savedPath = await uploadFile({
+      buffer: pdfBuffer,
+      path: storagePath,
+      contentType: "application/pdf",
+    });
+
+    const sharedFile = await prisma.foundrySharedFile.create({
+      data: {
+        roomId: room.id,
+        sharedById: session.user.id,
+        sharedByName: packet.recruiter.name || packet.recruiter.email || "Recruiter",
+        fileName,
+        fileUrl: savedPath,
+        source: "FORGE",
+        sharedAt: new Date(),
+      },
+    });
+
+    return res.status(200).json({ file: normalizeFile(sharedFile) });
+  } catch (err) {
+    const statusCode = err?.statusCode || 500;
+    console.error("[api/recruiter/candidates/[id]/review-packet]", err);
+    return res.status(statusCode).json({ error: err?.message || "Could not build candidate review packet" });
+  }
+}
