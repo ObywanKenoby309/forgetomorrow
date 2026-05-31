@@ -476,9 +476,9 @@ async function loadCandidatePacketData({ req, session, candidateId }) {
 
 const styles = StyleSheet.create({
   page: {
-    padding: 34,
+    padding: 30,
     fontFamily: "Helvetica",
-    fontSize: 10,
+    fontSize: 9.5,
     color: "#111827",
     lineHeight: 1.35,
   },
@@ -487,11 +487,11 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     padding: 16,
     borderRadius: 10,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   eyebrow: {
     fontSize: 8,
-    letterSpacing: 1.3,
+    letterSpacing: 1.25,
     color: "#FF7043",
     textTransform: "uppercase",
     marginBottom: 4,
@@ -504,19 +504,48 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: "#D1D5DB",
-    fontSize: 10,
+    fontSize: 9,
   },
   section: {
     border: "1px solid #E5E7EB",
     borderRadius: 10,
+    padding: 10,
+    marginBottom: 9,
+  },
+  darkSection: {
+    backgroundColor: "#111827",
+    color: "#ffffff",
+    borderRadius: 10,
     padding: 12,
-    marginBottom: 10,
+    marginBottom: 9,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: 700,
     color: "#111827",
     marginBottom: 7,
+  },
+  darkSectionTitle: {
+    fontSize: 11.5,
+    fontWeight: 700,
+    color: "#ffffff",
+    marginBottom: 7,
+  },
+  microLabel: {
+    color: "#6B7280",
+    fontSize: 7,
+    textTransform: "uppercase",
+    letterSpacing: 0.55,
+    marginBottom: 2,
+    fontWeight: 700,
+  },
+  orangeMicroLabel: {
+    color: "#FF7043",
+    fontSize: 7,
+    textTransform: "uppercase",
+    letterSpacing: 0.75,
+    marginBottom: 2,
+    fontWeight: 700,
   },
   row: {
     flexDirection: "row",
@@ -529,24 +558,30 @@ const styles = StyleSheet.create({
     border: "1px solid #E5E7EB",
     borderRadius: 8,
     padding: 8,
-    marginBottom: 6,
+    marginBottom: 7,
     backgroundColor: "#F9FAFB",
   },
-  metricLabel: {
-    color: "#6B7280",
-    fontSize: 7,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 2,
-    fontWeight: 700,
+  darkMetric: {
+    border: "1px solid #374151",
+    borderRadius: 8,
+    padding: 8,
+    backgroundColor: "#1F2937",
   },
   metricValue: {
     fontSize: 11,
     fontWeight: 700,
     color: "#111827",
   },
+  darkMetricValue: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#ffffff",
+  },
   muted: {
     color: "#4B5563",
+  },
+  darkMuted: {
+    color: "#D1D5DB",
   },
   small: {
     fontSize: 8,
@@ -567,17 +602,64 @@ const styles = StyleSheet.create({
     marginRight: 4,
     marginBottom: 4,
   },
+  goodPill: {
+    border: "1px solid #A7F3D0",
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    backgroundColor: "#ECFDF5",
+    color: "#065F46",
+    fontSize: 8,
+    marginRight: 4,
+    marginBottom: 4,
+  },
+  warnPill: {
+    border: "1px solid #FDE68A",
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    backgroundColor: "#FFFBEB",
+    color: "#92400E",
+    fontSize: 8,
+    marginRight: 4,
+    marginBottom: 4,
+  },
+  riskPill: {
+    border: "1px solid #FECACA",
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    backgroundColor: "#FEF2F2",
+    color: "#991B1B",
+    fontSize: 8,
+    marginRight: 4,
+    marginBottom: 4,
+  },
+  card: {
+    border: "1px solid #E5E7EB",
+    borderRadius: 9,
+    padding: 8,
+    marginBottom: 7,
+    backgroundColor: "#FFFFFF",
+  },
+  softCard: {
+    border: "1px solid #E5E7EB",
+    borderRadius: 9,
+    padding: 8,
+    marginBottom: 7,
+    backgroundColor: "#F9FAFB",
+  },
   bullet: {
     marginBottom: 3,
   },
   footer: {
     position: "absolute",
-    bottom: 18,
-    left: 34,
-    right: 34,
+    bottom: 16,
+    left: 30,
+    right: 30,
     borderTop: "1px solid #E5E7EB",
-    paddingTop: 8,
-    fontSize: 8,
+    paddingTop: 7,
+    fontSize: 7.5,
     color: "#6B7280",
   },
 });
@@ -596,13 +678,14 @@ const List = ({ items = [], max = 8 }) => {
   );
 };
 
-const PillList = ({ items = [], max = 16 }) => {
+const PillList = ({ items = [], max = 16, tone = "neutral" }) => {
   const arr = asArray(items).slice(0, max);
   if (!arr.length) return <Text style={styles.muted}>Not listed.</Text>;
+  const pillStyle = tone === "good" ? styles.goodPill : tone === "warn" ? styles.warnPill : tone === "risk" ? styles.riskPill : styles.pill;
   return (
     <View style={styles.pillWrap}>
       {arr.map((item, index) => (
-        <Text key={`${String(item).slice(0, 16)}-${index}`} style={styles.pill}>
+        <Text key={`${String(item).slice(0, 16)}-${index}`} style={pillStyle}>
           {String(item)}
         </Text>
       ))}
@@ -610,12 +693,72 @@ const PillList = ({ items = [], max = 16 }) => {
   );
 };
 
+function statusLabel(status) {
+  if (status === "direct") return "Proven";
+  if (status === "adjacent") return "Validation";
+  return "Review";
+}
+
+function statusPillStyle(status) {
+  if (status === "direct") return styles.goodPill;
+  if (status === "adjacent") return styles.warnPill;
+  return styles.riskPill;
+}
+
+function signalCopy(sig) {
+  if (!sig) return "Review this signal during recruiter evaluation.";
+  if (sig.recruiterInterpretation) return sig.recruiterInterpretation;
+  if (sig.key === "portfolio" && sig.status === "missing") {
+    return "Structured project proof is not yet visible. Resume history and interview examples should be used to validate execution depth.";
+  }
+  if (sig.key === "credentials") {
+    return "Professional credibility is supported through operational execution, structured support experience, education, training, or documented execution.";
+  }
+  return `${sig.label || sig.key || "Signal"} is available for recruiter review.`;
+}
+
+function capabilityClusters(skills = []) {
+  const list = dedupeCaseInsensitive(asArray(skills).map((s) => String(s || "").trim()).filter(Boolean));
+  const lower = (s) => s.toLowerCase();
+  const clusters = [
+    { label: "Endpoint & Device Operations", match: (s) => /sccm|intune|jamf|imaging|workstation|desktop|endpoint|mac os|windows|ubuntu|linux/i.test(s) },
+    { label: "Identity & Access", match: (s) => /active directory|entra|okta|access|identity|azure ad|global protect|vpn/i.test(s) },
+    { label: "Network & Infrastructure", match: (s) => /cisco|meraki|router|switch|firewall|network|global protect/i.test(s) },
+    { label: "Support Operations", match: (s) => /service|support|itil|ticket|knowledge|documentation|sme|troubleshoot|customer/i.test(s) },
+    { label: "Security / Analysis", match: (s) => /kali|security|analytics|bi|data|research|compliance|user research|usability/i.test(s) },
+  ];
+
+  const assigned = clusters
+    .map((cluster) => ({ label: cluster.label, items: list.filter((s) => cluster.match(s)).slice(0, 8) }))
+    .filter((cluster) => cluster.items.length);
+
+  const assignedItems = new Set(assigned.flatMap((c) => c.items.map((i) => lower(i))));
+  const remaining = list.filter((s) => !assignedItems.has(lower(s))).slice(0, 10);
+  if (remaining.length) assigned.push({ label: "Additional Signals", items: remaining });
+  return assigned.slice(0, 6);
+}
+
+function formatEducation(edu) {
+  if (!edu || typeof edu !== "object") return "Education";
+  const degree = [edu.degree, edu.field].filter(Boolean).join(" in ") || "Degree";
+  return `${degree}${edu.school ? ` — ${edu.school}` : ""}`;
+}
+
 function CandidateReviewPacketPDF({ packet }) {
   const { candidate, intelligence } = packet;
-  const proven = asArray(intelligence.signals).filter((s) => s.status === "direct");
-  const validation = asArray(intelligence.signals).filter((s) => s.status === "adjacent");
-  const review = asArray(intelligence.signals).filter((s) => s.status === "missing");
+  const signals = asArray(intelligence.signals);
+  const proven = signals.filter((s) => s.status === "direct");
+  const validation = signals.filter((s) => s.status === "adjacent");
+  const review = signals.filter((s) => s.status === "missing");
+  const validationAreas = [...review, ...validation];
   const score = typeof intelligence.score === "number" ? `${intelligence.score}%` : "Review";
+  const clusters = capabilityClusters(candidate.skills);
+  const projects = asArray(candidate.projects);
+  const languages = asArray(candidate.languages);
+  const certifications = asArray(candidate.certifications);
+  const recruiterSkills = asArray(candidate.recruiterSkills);
+  const roleSignalList = asArray(intelligence.roleSignals);
+  const focus = asArray(intelligence.inference?.validationFocus);
 
   return (
     <Document title={`${candidate.name || "Candidate"} Review Packet`}>
@@ -630,16 +773,20 @@ function CandidateReviewPacketPDF({ packet }) {
 
         <View style={styles.row}>
           <View style={styles.metric}>
-            <Text style={styles.metricLabel}>Professional Signal</Text>
+            <Text style={styles.microLabel}>Professional Signal</Text>
             <Text style={styles.metricValue}>{score}</Text>
           </View>
           <View style={styles.metric}>
-            <Text style={styles.metricLabel}>Resume Access</Text>
-            <Text style={styles.metricValue}>{candidate.resumeId ? "Available" : "Missing"}</Text>
+            <Text style={styles.microLabel}>Execution Visibility</Text>
+            <Text style={styles.metricValue}>{projects.length || roleSignalList.length >= 4 ? "Strong" : roleSignalList.length ? "Moderate" : "Limited"}</Text>
           </View>
           <View style={styles.metric}>
-            <Text style={styles.metricLabel}>Validation Risk</Text>
+            <Text style={styles.microLabel}>Validation Risk</Text>
             <Text style={styles.metricValue}>{review.length || validation.length ? "Review" : "Low"}</Text>
+          </View>
+          <View style={styles.metric}>
+            <Text style={styles.microLabel}>Resume Access</Text>
+            <Text style={styles.metricValue}>{candidate.resumeId ? "Available" : "Missing"}</Text>
           </View>
         </View>
 
@@ -648,41 +795,151 @@ function CandidateReviewPacketPDF({ packet }) {
           <Text>{formatMaybe(candidate.summary, "No professional summary provided. Review primary resume and recruiter-entered signals for additional context.")}</Text>
         </View>
 
+        <View style={styles.darkSection}>
+          <Text style={styles.orangeMicroLabel}>Portfolio Intelligence</Text>
+          <Text style={styles.darkSectionTitle}>
+            {typeof intelligence.score === "number" && intelligence.score >= 75
+              ? "Strong recruiter-visible portfolio signal."
+              : typeof intelligence.score === "number" && intelligence.score >= 50
+              ? "Usable portfolio signal with validation areas."
+              : "Portfolio signal requires deeper recruiter review."}
+          </Text>
+          <Text style={styles.darkMuted}>Recruiter-facing interpretation from ForgeTomorrow's shared portfolio signal engine.</Text>
+          <View style={[styles.row, { marginTop: 8 }]}>
+            <View style={styles.darkMetric}>
+              <Text style={styles.orangeMicroLabel}>Signal Confidence</Text>
+              <Text style={styles.darkMetricValue}>{score}</Text>
+            </View>
+            <View style={styles.darkMetric}>
+              <Text style={styles.orangeMicroLabel}>Proven</Text>
+              <Text style={styles.darkMetricValue}>{proven.length}</Text>
+            </View>
+            <View style={styles.darkMetric}>
+              <Text style={styles.orangeMicroLabel}>Validate</Text>
+              <Text style={styles.darkMetricValue}>{validation.length}</Text>
+            </View>
+            <View style={styles.darkMetric}>
+              <Text style={styles.orangeMicroLabel}>Review</Text>
+              <Text style={styles.darkMetricValue}>{review.length}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Portfolio Review Cards</Text>
+          {signals.length ? (
+            signals.slice(0, 10).map((sig, index) => (
+              <View key={`${sig.key || sig.label}-${index}`} style={styles.softCard}>
+                <View style={styles.row}>
+                  <View style={styles.col}>
+                    <Text style={{ fontWeight: 700 }}>{String(sig.label || sig.key || "Signal").replace(" Signal", "")}</Text>
+                    <Text style={styles.muted}>{signalCopy(sig)}</Text>
+                  </View>
+                  <View style={{ width: 72 }}>
+                    <Text style={statusPillStyle(sig.status)}>{statusLabel(sig.status)}</Text>
+                  </View>
+                </View>
+                {asArray(sig.evidenceDetected).length ? (
+                  <View style={{ marginTop: 5 }}>
+                    <Text style={styles.microLabel}>Evidence</Text>
+                    <List items={sig.evidenceDetected} max={4} />
+                  </View>
+                ) : null}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.muted}>No portfolio signal cards available.</Text>
+          )}
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recruiter Interpretation & Interview Focus</Text>
           <Text style={{ marginBottom: 6 }}>
             {formatMaybe(intelligence.inference?.overallConclusion, "Review the candidate profile, resume evidence, and validation areas before advancing.")}
           </Text>
-          <List items={intelligence.inference?.validationFocus || []} max={5} />
+          <List items={focus} max={6} />
         </View>
 
         <View style={styles.row}>
           <View style={[styles.section, styles.col]}>
             <Text style={styles.sectionTitle}>Demonstrated / Proven Signals</Text>
-            <List items={proven.map((s) => s.label || s.key)} max={8} />
+            <List items={proven.map((s) => s.label || s.key)} max={10} />
           </View>
           <View style={[styles.section, styles.col]}>
-            <Text style={styles.sectionTitle}>Validation Areas</Text>
-            <List items={[...validation, ...review].map((s) => s.label || s.key)} max={8} />
+            <Text style={styles.sectionTitle}>Recruiter Validation Areas</Text>
+            {validationAreas.length ? (
+              validationAreas.slice(0, 8).map((sig, index) => (
+                <View key={`${sig.key || sig.label}-validation-${index}`} style={{ marginBottom: 5 }}>
+                  <Text style={{ fontWeight: 700 }}>{String(sig.label || sig.key || "Signal").replace(" Signal", "")}</Text>
+                  <Text style={styles.muted}>{sig.key === "portfolio" ? "Ask for one concrete project, work sample, implementation example, or measurable outcome." : signalCopy(sig)}</Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.muted}>No major validation concerns detected from current visible evidence.</Text>
+            )}
           </View>
+        </View>
+
+        <Text style={styles.footer} fixed>
+          Decision-support export only. ForgeTomorrow provides evidence-backed recruiter review context; recruiters and hiring teams control all final decisions.
+        </Text>
+      </Page>
+
+      <Page size="LETTER" style={styles.page} wrap>
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>Candidate Review Packet Continued</Text>
+          <Text style={styles.title}>Evidence, Capability & Readiness</Text>
+          <Text style={styles.subtitle}>{candidate.name || "Candidate"}</Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Capability Clusters</Text>
+          {clusters.length ? (
+            clusters.map((cluster) => (
+              <View key={cluster.label} style={styles.softCard}>
+                <Text style={styles.microLabel}>{cluster.label}</Text>
+                <PillList items={cluster.items} max={10} />
+              </View>
+            ))
+          ) : (
+            <Text style={styles.muted}>No capability clusters available yet.</Text>
+          )}
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Capability & Execution Signals</Text>
-          <PillList items={candidate.skills} max={18} />
+          <PillList items={candidate.skills} max={28} tone="good" />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{projects.length ? "Execution Proof / Projects" : "Execution Proof / Limited Project Evidence"}</Text>
+          {projects.length ? (
+            projects.slice(0, 6).map((project, index) => {
+              const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || `Project ${index + 1}`;
+              const desc = typeof project === "string" ? "" : project?.description || project?.summary || project?.details || "";
+              return (
+                <View key={`${title}-${index}`} style={styles.softCard}>
+                  <Text style={{ fontWeight: 700 }}>{title}</Text>
+                  {desc ? <Text style={styles.muted}>{desc}</Text> : null}
+                </View>
+              );
+            })
+          ) : (
+            <Text style={styles.muted}>No structured project entries are listed yet. Resume history and operational experience currently carry execution proof; validate project ownership, outcomes, and measurable impact during recruiter review.</Text>
+          )}
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Career Path & Operational Signals</Text>
           {candidate.experience.length ? (
-            candidate.experience.slice(0, 5).map((exp, index) => (
-              <View key={`${exp.title}-${index}`} style={{ marginBottom: 8 }}>
+            candidate.experience.slice(0, 6).map((exp, index) => (
+              <View key={`${exp.title}-${index}`} style={styles.card}>
                 <Text style={{ fontWeight: 700 }}>
                   {formatMaybe(exp.title, "Role")} — {formatMaybe(exp.company, "Company")}
                 </Text>
                 <Text style={styles.small}>{formatMaybe(exp.range, "Dates not listed")}</Text>
-                <PillList items={roleSignals(exp)} max={5} />
-                <List items={exp.highlights} max={4} />
+                <PillList items={roleSignals(exp)} max={6} />
+                <List items={exp.highlights} max={5} />
               </View>
             ))
           ) : (
@@ -700,23 +957,41 @@ function CandidateReviewPacketPDF({ packet }) {
           </View>
           <View style={[styles.section, styles.col]}>
             <Text style={styles.sectionTitle}>Education / Credentials</Text>
-            {candidate.education.length ? (
-              candidate.education.slice(0, 4).map((edu, index) => (
-                <Text key={`${edu.school}-${index}`} style={styles.bullet}>
-                  • {[edu.degree, edu.field].filter(Boolean).join(" in ") || "Degree"}{edu.school ? ` — ${edu.school}` : ""}
-                </Text>
-              ))
-            ) : (
-              <Text style={styles.muted}>No education listed.</Text>
-            )}
+            {candidate.education.length ? <List items={candidate.education.map(formatEducation)} max={6} /> : <Text style={styles.muted}>No education listed.</Text>}
+            {certifications.length ? (
+              <View style={{ marginTop: 6 }}>
+                <Text style={styles.microLabel}>Certifications</Text>
+                <List items={certifications} max={6} />
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={[styles.section, styles.col]}>
+            <Text style={styles.sectionTitle}>Languages</Text>
+            <PillList items={languages} max={10} />
+          </View>
+          <View style={[styles.section, styles.col]}>
+            <Text style={styles.sectionTitle}>Engagement / Journey</Text>
+            <Text style={styles.muted}>No journey replay data is included in this export yet. This section will populate from job views, applications, and message activity when available.</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recruiter Notes & Controls Context</Text>
-          <Text>Pipeline stage: {formatMaybe(candidate.pipelineStage)}</Text>
-          <Text>Tags: {candidate.tags.length ? candidate.tags.join(", ") : "None"}</Text>
-          <Text>Private team notes: {formatMaybe(candidate.notes, "No recruiter notes saved.")}</Text>
+          <Text style={styles.sectionTitle}>Recruiter Utilities Snapshot</Text>
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Text style={styles.microLabel}>Recruiter Skills</Text>
+              <PillList items={recruiterSkills.length ? recruiterSkills : candidate.skills} max={28} />
+            </View>
+            <View style={styles.col}>
+              <Text style={styles.microLabel}>Tags</Text>
+              <PillList items={candidate.tags} max={12} />
+              <Text style={[styles.microLabel, { marginTop: 8 }]}>Private Team Notes</Text>
+              <Text style={styles.muted}>{formatMaybe(candidate.notes, "No recruiter notes saved.")}</Text>
+            </View>
+          </View>
         </View>
 
         <Text style={styles.footer} fixed>
