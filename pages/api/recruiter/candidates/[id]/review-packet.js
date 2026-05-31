@@ -903,9 +903,29 @@ export default async function handler(req, res) {
 	  return res.status(200).send(pdfBuffer);
     }
 
-    const { roomId } = req.body || {};
-    const resolvedRoomId = String(roomId || "").trim();
-    if (!resolvedRoomId) return res.status(400).json({ error: "roomId required" });
+    const { action, roomId } = req.body || {};
+
+if (String(action || "").trim().toLowerCase() === "vault") {
+  const saved = await saveReviewPacketRecord({ packet, packetUrl: null, fileName });
+
+  if (!saved?.id) {
+    return res.status(500).json({ error: "Could not save candidate review packet to ForgeVault" });
+  }
+
+  return res.status(200).json({
+    ok: true,
+    packet: {
+      id: saved.id,
+      title: saved.title,
+      candidateName: saved.candidateName,
+      candidateUserId: saved.candidateUserId,
+      updatedAt: saved.updatedAt,
+    },
+  });
+}
+
+const resolvedRoomId = String(roomId || "").trim();
+if (!resolvedRoomId) return res.status(400).json({ error: "roomId required" });
 
     const room = await prisma.foundryRoom.findUnique({
       where: { roomId: resolvedRoomId },
