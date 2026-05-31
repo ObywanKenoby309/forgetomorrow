@@ -795,61 +795,36 @@ function CandidateReviewPacketPDF({ packet }) {
           <Text>{formatMaybe(candidate.summary, "No professional summary provided. Review primary resume and recruiter-entered signals for additional context.")}</Text>
         </View>
 
-        <View style={styles.darkSection}>
-          <Text style={styles.orangeMicroLabel}>Portfolio Intelligence</Text>
-          <Text style={styles.darkSectionTitle}>
+        <View style={styles.section}>
+          <Text style={[styles.orangeMicroLabel, { textAlign: "center" }]}>Portfolio Intelligence</Text>
+          <Text style={[styles.sectionTitle, { textAlign: "center", fontSize: 13 }]}>
             {typeof intelligence.score === "number" && intelligence.score >= 75
               ? "Strong recruiter-visible portfolio signal."
               : typeof intelligence.score === "number" && intelligence.score >= 50
               ? "Usable portfolio signal with validation areas."
               : "Portfolio signal requires deeper recruiter review."}
           </Text>
-          <Text style={styles.darkMuted}>Recruiter-facing interpretation from ForgeTomorrow's shared portfolio signal engine.</Text>
-          <View style={[styles.row, { marginTop: 8 }]}>
-            <View style={styles.darkMetric}>
-              <Text style={styles.orangeMicroLabel}>Signal Confidence</Text>
-              <Text style={styles.darkMetricValue}>{score}</Text>
+          <Text style={[styles.muted, { textAlign: "center", marginBottom: 10 }]}>
+            Recruiter-facing interpretation from ForgeTomorrow's shared portfolio signal engine.
+          </Text>
+          <View style={{ flexDirection: "row", gap: 8, justifyContent: "center", alignItems: "stretch" }}>
+            <View style={[styles.metric, { flex: 1, alignItems: "center", textAlign: "center", marginBottom: 0 }]}>
+              <Text style={[styles.microLabel, { textAlign: "center" }]}>Signal Confidence</Text>
+              <Text style={[styles.metricValue, { color: "#FF7043", fontSize: 14 }]}>{score}</Text>
             </View>
-            <View style={styles.darkMetric}>
-              <Text style={styles.orangeMicroLabel}>Proven</Text>
-              <Text style={styles.darkMetricValue}>{proven.length}</Text>
+            <View style={[styles.metric, { flex: 1, alignItems: "center", textAlign: "center", marginBottom: 0 }]}>
+              <Text style={[styles.microLabel, { textAlign: "center" }]}>Proven</Text>
+              <Text style={[styles.metricValue, { color: "#FF7043", fontSize: 14 }]}>{proven.length}</Text>
             </View>
-            <View style={styles.darkMetric}>
-              <Text style={styles.orangeMicroLabel}>Validate</Text>
-              <Text style={styles.darkMetricValue}>{validation.length}</Text>
+            <View style={[styles.metric, { flex: 1, alignItems: "center", textAlign: "center", marginBottom: 0 }]}>
+              <Text style={[styles.microLabel, { textAlign: "center" }]}>Validate</Text>
+              <Text style={[styles.metricValue, { color: "#FF7043", fontSize: 14 }]}>{validation.length}</Text>
             </View>
-            <View style={styles.darkMetric}>
-              <Text style={styles.orangeMicroLabel}>Review</Text>
-              <Text style={styles.darkMetricValue}>{review.length}</Text>
+            <View style={[styles.metric, { flex: 1, alignItems: "center", textAlign: "center", marginBottom: 0 }]}>
+              <Text style={[styles.microLabel, { textAlign: "center" }]}>Review</Text>
+              <Text style={[styles.metricValue, { color: "#FF7043", fontSize: 14 }]}>{review.length}</Text>
             </View>
           </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Portfolio Review Cards</Text>
-          {signals.length ? (
-            signals.slice(0, 10).map((sig, index) => (
-              <View key={`${sig.key || sig.label}-${index}`} style={styles.softCard}>
-                <View style={styles.row}>
-                  <View style={styles.col}>
-                    <Text style={{ fontWeight: 700 }}>{String(sig.label || sig.key || "Signal").replace(" Signal", "")}</Text>
-                    <Text style={styles.muted}>{signalCopy(sig)}</Text>
-                  </View>
-                  <View style={{ width: 72 }}>
-                    <Text style={statusPillStyle(sig.status)}>{statusLabel(sig.status)}</Text>
-                  </View>
-                </View>
-                {asArray(sig.evidenceDetected).length ? (
-                  <View style={{ marginTop: 5 }}>
-                    <Text style={styles.microLabel}>Evidence</Text>
-                    <List items={sig.evidenceDetected} max={4} />
-                  </View>
-                ) : null}
-              </View>
-            ))
-          ) : (
-            <Text style={styles.muted}>No portfolio signal cards available.</Text>
-          )}
         </View>
 
         <View style={styles.section}>
@@ -890,6 +865,33 @@ function CandidateReviewPacketPDF({ packet }) {
           <Text style={styles.eyebrow}>Candidate Review Packet Continued</Text>
           <Text style={styles.title}>Evidence, Capability & Readiness</Text>
           <Text style={styles.subtitle}>{candidate.name || "Candidate"}</Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Portfolio Review Cards</Text>
+          {signals.length ? (
+            signals.slice(0, 10).map((sig, index) => (
+              <View key={`${sig.key || sig.label}-${index}`} style={styles.softCard}>
+                <View style={styles.row}>
+                  <View style={styles.col}>
+                    <Text style={{ fontWeight: 700 }}>{String(sig.label || sig.key || "Signal").replace(" Signal", "")}</Text>
+                    <Text style={styles.muted}>{signalCopy(sig)}</Text>
+                  </View>
+                  <View style={{ width: 72 }}>
+                    <Text style={statusPillStyle(sig.status)}>{statusLabel(sig.status)}</Text>
+                  </View>
+                </View>
+                {asArray(sig.evidenceDetected).length ? (
+                  <View style={{ marginTop: 5 }}>
+                    <Text style={styles.microLabel}>Evidence</Text>
+                    <List items={sig.evidenceDetected} max={4} />
+                  </View>
+                ) : null}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.muted}>No portfolio signal cards available.</Text>
+          )}
         </View>
 
         <View style={styles.section}>
