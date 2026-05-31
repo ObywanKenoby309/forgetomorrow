@@ -730,6 +730,60 @@ async function renderPacketBuffer(packet) {
   return pdf(<CandidateReviewPacketPDF packet={packet} />).toBuffer();
 }
 
+async function saveReviewPacketRecord({ packet, packetUrl = null, fileName = null }) {
+  try {
+    const recruiterUserId = packet?.recruiter?.id || null;
+    const candidateUserId = packet?.candidate?.id || packet?.candidate?.userId || null;
+
+    if (!recruiterUserId) return null;
+
+    const snapshotJson = {
+      candidate: packet?.candidate || null,
+      intelligence: packet?.intelligence || null,
+      fileName: fileName || null,
+      generatedAt: new Date().toISOString(),
+    };
+
+    const existing = candidateUserId
+      ? await prisma.recruiterCandidateReviewPacket.findFirst({
+          where: { recruiterUserId, candidateUserId },
+          orderBy: { updatedAt: "desc" },
+          select: { id: true },
+        })
+      : null;
+
+    const data = {
+      recruiterUserId,
+      candidateUserId,
+      organizationId: packet?.recruiter?.accountKey || null,
+      candidateName: packet?.candidate?.name || null,
+      candidateEmail: packet?.candidate?.email || null,
+      candidateSlug: packet?.candidate?.slug || null,
+      resumeId: packet?.candidate?.resumeId || null,
+      resumeUrl:
+        packet?.candidate?.resumeId && packet?.candidate?.slug
+          ? `/api/resume/public-download?resumeId=${encodeURIComponent(packet.candidate.resumeId)}&slug=${encodeURIComponent(packet.candidate.slug)}`
+          : null,
+      title: `${packet?.candidate?.name || "Candidate"} · Candidate Review Packet`,
+      packetUrl,
+      format: "pdf",
+      snapshotJson,
+    };
+
+    if (existing?.id) {
+      return await prisma.recruiterCandidateReviewPacket.update({
+        where: { id: existing.id },
+        data,
+      });
+    }
+
+    return await prisma.recruiterCandidateReviewPacket.create({ data });
+  } catch (err) {
+    console.error("[candidate-review-packet] save record failed", err);
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET" && req.method !== "POST") {
     res.setHeader("Allow", ["GET", "POST"]);
@@ -751,6 +805,20 @@ export default async function handler(req, res) {
     const fileName = `${fileBase}.pdf`;
 
     if (req.method === "GET") {
+      let savedPath = null;
+      try {
+        const storagePath = `${session.user.id}/recruiter/candidate-review-${candidateId}-${Date.now()}-${nanoid(8)}.pdf`;
+        savedPath = await uploadFile({
+          buffer: pdfBuffer,
+          path: storagePath,
+          contentType: "application/pdf",
+        });
+      } catch (saveErr) {
+        console.error("[candidate-review-packet] storage save failed on GET", saveErr);
+      }
+
+      await saveReviewPacketRecord({ packet, packetUrl: savedPath, fileName });
+
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
       res.setHeader("Content-Length", pdfBuffer.length);
@@ -792,6 +860,8 @@ export default async function handler(req, res) {
       path: storagePath,
       contentType: "application/pdf",
     });
+
+    await saveReviewPacketRecord({ packet, packetUrl: savedPath, fileName });
 
     const sharedFile = await prisma.foundrySharedFile.create({
       data: {
