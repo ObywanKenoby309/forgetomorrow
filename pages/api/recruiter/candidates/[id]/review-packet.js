@@ -820,10 +820,9 @@ export default async function handler(req, res) {
       await saveReviewPacketRecord({ packet, packetUrl: savedPath, fileName });
 
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
-      res.setHeader("Content-Length", pdfBuffer.length);
-      res.setHeader("Cache-Control", "private, no-cache");
-      return res.status(200).send(pdfBuffer);
+	  res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+	  res.setHeader("Cache-Control", "private, no-cache");
+	  return res.status(200).send(pdfBuffer);
     }
 
     const { roomId } = req.body || {};
