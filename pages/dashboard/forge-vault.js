@@ -8,6 +8,7 @@ import Head from 'next/head';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const GLASS = {
@@ -721,6 +722,8 @@ export default function ForgeVaultPage() {
     { key: 'negotiation', label: 'Briefs',     icon: '🤝' },
   ];
 
+  const greeting = getTimeGreeting();
+
   return (
     <>
       <Head>
@@ -732,8 +735,9 @@ export default function ForgeVaultPage() {
         activeNav="vault"
         header={
           <SeekerTitleCard
+            greeting={greeting}
             title="ForgeVault"
-            description="Your complete document archive — every artifact ForgeTomorrow has built for you, in one place."
+            subtitle="Your complete document archive — resumes, cover letters, roadmaps, briefs, strategies, and professional outputs in one searchable place."
           />
         }
         right={<RightRailPlacementManager slot="right_rail_1" />}
