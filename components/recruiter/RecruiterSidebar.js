@@ -279,6 +279,12 @@ export default function RecruiterSidebar({
         active={active === 'anvil' || active === 'roadmap'}
       />
 
+	  <NavItem
+		href={`/dashboard/forge-vault?chrome=${chromeRecruiter}`}
+		label="ForgeVault"
+		active={active === 'vault'}
+	  />
+
       <SectionLabel>Resources</SectionLabel>
       <NavItem
         href={`/the-hearth?chrome=${chromeRecruiter}`}

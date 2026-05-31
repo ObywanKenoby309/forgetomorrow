@@ -267,6 +267,12 @@ export default function CoachingSidebar({
         active={active === 'anvil' || active === 'roadmap'}
       />
 
+	  <NavItem
+		href="/dashboard/forge-vault?chrome=coach"
+		label="ForgeVault"
+		active={active === 'vault'}
+	  />
+
       <SectionLabel>Resources</SectionLabel>
 
       <NavItem
