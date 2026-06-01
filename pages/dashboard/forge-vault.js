@@ -34,16 +34,17 @@ const GAP = 12;
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [
-  { key: 'all',           label: 'All Documents',              icon: '🗂️' },
-  { key: 'resume',        label: 'Resumes',                    icon: '📄' },
-  { key: 'cover',         label: 'Cover Letters',              icon: '✉️' },
-  { key: 'interview',     label: 'Interview Prep',             icon: '🎯' },
-  { key: 'profile',       label: 'Operating Profile',          icon: '🧠' },
-  { key: 'roadmap',       label: 'Growth & Pivot Roadmap',     icon: '🗺️' },
-  { key: 'negotiation',   label: 'Offer Negotiation',          icon: '🤝' },
-  { key: 'packet',        label: 'Application Packets',        icon: '📦' },
-  { key: 'strategy',      label: 'Target Strategy',            icon: '🏹' },
+  { key: 'all',             label: 'All Documents',              icon: '🗂️' },
+  { key: 'resume',          label: 'Resumes',                    icon: '📄' },
+  { key: 'cover',           label: 'Cover Letters',              icon: '✉️' },
+  { key: 'interview',       label: 'Interview Prep',             icon: '🎯' },
+  { key: 'profile',         label: 'Operating Profile',          icon: '🧠' },
+  { key: 'roadmap',         label: 'Growth & Pivot Roadmap',     icon: '🗺️' },
+  { key: 'negotiation',     label: 'Offer Negotiation',          icon: '🤝' },
+  { key: 'packet',          label: 'Application Packets',        icon: '📦' },
+  { key: 'strategy',        label: 'Target Strategy',            icon: '🏹' },
   { key: 'candidateReview', label: 'Candidate Review Packets',   icon: '🧾' },
+  { key: 'resumeRole',      label: 'Resume vs Role Analysis',    icon: '📊' },
 ];
 
 // ─── Type badge colors ────────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ const TYPE_COLORS = {
   packet:      { bg: 'rgba(96,125,139,0.10)', color: '#37474F' },
   strategy:    { bg: 'rgba(103,58,183,0.10)', color: '#4527A0' },
   candidateReview: { bg: 'rgba(255,112,67,0.12)', color: '#BF360C' },
+  resumeRole: { bg: 'rgba(76,175,80,0.12)', color: '#2E7D32', },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -261,6 +263,25 @@ function normalizeCandidateReviewPackets(packets = []) {
       exportFoundryPayload: {},
     };
   });
+}
+
+function normalizeResumeRoleAnalyses(analyses = []) {
+  return analyses.map((a) => ({
+    id: `resume-role-${a.id}`,
+    type: 'resumeRole',
+    typeLabel: 'Resume vs Role Analysis',
+    name: a.title || 'Resume vs Role Analysis',
+    subtitle: a.candidateName || null,
+    date: a.updatedAt || a.createdAt,
+    downloadFn: () => {
+      downloadJson(
+        `resume_role_analysis_${a.id}.json`,
+        a.result || a
+      );
+    },
+    hasPdf: false,
+    raw: a,
+  }));
 }
 
 // ─── TypeBadge ────────────────────────────────────────────────────────────────
@@ -670,6 +691,7 @@ export default function ForgeVaultPage() {
         ...normalizePackets(packetData?.packets || []),
         ...normalizeStrategies(strategyData?.strategies || []),
         ...normalizeCandidateReviewPackets(vaultData?.recruiterReviewPackets || []),
+		...normalizeResumeRoleAnalyses(vaultData?.resumeRoleAnalyses || []),
       ];
 
       // Sort by date descending
