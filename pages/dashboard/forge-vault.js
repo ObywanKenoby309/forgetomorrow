@@ -320,23 +320,44 @@ function DownloadButton({ doc }) {
   );
 }
 
-// ─── ShareModal ───────────────────────────────────────────────────────────────
-function ShareModal({ doc, onClose }) {
+// ─── SharePanel — slide-in right rail ────────────────────────────────────────
+// Shows who a doc is shared with, lets sender add recipients and revoke access.
+function SharePanel({ doc, onClose }) {
+  const [tab, setTab] = useState('sharedWith'); // 'sharedWith' | 'add'
+  const [shares, setShares] = useState([]);
+  const [loadingShares, setLoadingShares] = useState(true);
   const [contacts, setContacts] = useState([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [selectedContact, setSelectedContact] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState(null);
+  const [sendError, setSendError] = useState(null);
+  const [revoking, setRevoking] = useState(null); // shareId being revoked
+  const [removingAll, setRemovingAll] = useState(false);
+
+  const sp = doc.sharePayload || {};
+
+  // Build query params for shares list
+  const sharesQuery = sp.vaultUploadId
+    ? `uploadId=${sp.vaultUploadId}`
+    : `docType=${sp.forgeDocType}&docId=${sp.forgeDocId}`;
+
+  const loadShares = useCallback(() => {
+    setLoadingShares(true);
+    fetch(`/api/vault/shares/list?${sharesQuery}`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { setShares(data?.shares || []); setLoadingShares(false); })
+      .catch(() => setLoadingShares(false));
+  }, [sharesQuery]);
+
+  useEffect(() => { loadShares(); }, [loadShares]);
 
   useEffect(() => {
     fetch('/api/contacts/list', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const list = data?.contacts || data?.members || [];
-        // Deduplicate — Contact table is bidirectional so each connection
-        // can appear twice. Unique by the contact's user ID.
         const seen = new Set();
         const deduped = list.filter(c => {
           const id = c.userId || c.contactUserId || c.id;
@@ -352,12 +373,12 @@ function ShareModal({ doc, onClose }) {
 
   const handleSend = async () => {
     if (!selectedContact || sending) return;
-    setSending(true); setError(null);
+    setSending(true); setSendError(null);
     try {
       const payload = {
         toUserId: selectedContact,
         message: message.trim() || undefined,
-        ...(doc.sharePayload || {}),
+        ...sp,
       };
       const res = await fetch('/api/vault/share', {
         method: 'POST',
@@ -365,110 +386,274 @@ function ShareModal({ doc, onClose }) {
         credentials: 'include',
         body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || 'Share failed');
-      }
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Share failed'); }
       setSent(true);
-      setTimeout(onClose, 1500);
-    } catch (e) {
-      setError(e.message || 'Share failed');
-    } finally {
-      setSending(false);
-    }
+      setSelectedContact(''); setMessage('');
+      setTimeout(() => { setSent(false); setTab('sharedWith'); loadShares(); }, 1200);
+    } catch (e) { setSendError(e.message || 'Share failed'); }
+    finally { setSending(false); }
+  };
+
+  const handleRevoke = async (shareId) => {
+    if (revoking) return;
+    setRevoking(shareId);
+    try {
+      await fetch('/api/vault/shares/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ shareId }),
+      });
+      setShares(prev => prev.filter(s => s.id !== shareId));
+    } catch {}
+    finally { setRevoking(null); }
+  };
+
+  const handleRemoveAll = async () => {
+    if (!confirm('Remove access for everyone? This cannot be undone.')) return;
+    setRemovingAll(true);
+    try {
+      const body = sp.vaultUploadId
+        ? { revokeAll: true, uploadId: sp.vaultUploadId }
+        : { revokeAll: true, docType: sp.forgeDocType, docId: sp.forgeDocId };
+      await fetch('/api/vault/shares/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      });
+      setShares([]);
+    } catch {}
+    finally { setRemovingAll(false); }
+  };
+
+  const ROLE_BADGE = {
+    SEEKER: { bg: 'rgba(255,112,67,0.10)', color: '#993C1D' },
+    COACH: { bg: 'rgba(33,150,243,0.10)', color: '#185FA5' },
+    RECRUITER: { bg: 'rgba(96,125,139,0.10)', color: '#37474F' },
+  };
+
+  const panelStyle = {
+    position: 'fixed', top: 0, right: 0, bottom: 0,
+    width: 'min(380px, 96vw)', zIndex: 99999,
+    background: 'rgba(255,255,255,0.97)',
+    backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+    boxShadow: '-8px 0 32px rgba(0,0,0,0.18)',
+    borderLeft: '1px solid rgba(0,0,0,0.08)',
+    display: 'flex', flexDirection: 'column',
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 99999,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <div onClick={onClose} style={{
-        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)',
-      }} />
-      <div style={{
-        position: 'relative', zIndex: 1,
-        width: 'min(440px, 92vw)',
-        borderRadius: 16,
-        border: '1px solid rgba(255,255,255,0.22)',
-        background: 'rgba(255,255,255,0.96)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.20)',
-        padding: 20,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#112033' }}>Share Document</div>
-          <button onClick={onClose} style={{ border: 'none', background: 'transparent', fontSize: 20, cursor: 'pointer', color: '#90A4AE', lineHeight: 1 }}>×</button>
-        </div>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 99998 }}>
+      {/* Backdrop */}
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.30)' }} />
 
-        <div style={{ fontSize: 12, color: '#546E7A', marginBottom: 14, padding: '8px 10px', background: 'rgba(0,0,0,0.04)', borderRadius: 8 }}>
-          <strong style={{ color: '#112033' }}>{doc.name}</strong>
-        </div>
-
-        {sent ? (
-          <div style={{ padding: '20px 0', textAlign: 'center', color: '#2E7D32', fontWeight: 700, fontSize: 14 }}>
-            ✓ Shared successfully
+      {/* Panel */}
+      <div style={panelStyle}>
+        {/* Header */}
+        <div style={{ padding: '18px 18px 12px', borderBottom: '1px solid rgba(0,0,0,0.07)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 900, color: '#112033', lineHeight: 1.2 }}>Sharing</div>
+              <div style={{ fontSize: 11, color: '#78909C', marginTop: 3, fontWeight: 600,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280 }}>
+                {doc.name}
+              </div>
+            </div>
+            <button onClick={onClose} style={{
+              border: 'none', background: 'transparent', fontSize: 22,
+              cursor: 'pointer', color: '#90A4AE', lineHeight: 1, flexShrink: 0, padding: 2,
+            }}>×</button>
           </div>
-        ) : (
-          <>
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#78909C', marginBottom: 5 }}>Share with</div>
-              {loadingContacts ? (
-                <div style={{ fontSize: 12, color: '#90A4AE', padding: '8px 0' }}>Loading contacts…</div>
-              ) : contacts.length === 0 ? (
-                <div style={{ fontSize: 12, color: '#90A4AE', padding: '8px 0' }}>No contacts yet. Connect with someone first.</div>
+
+          {/* Tab switcher */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+            {[
+              { key: 'sharedWith', label: `Shared with${shares.length ? ` (${shares.length})` : ''}` },
+              { key: 'add', label: '+ Add recipient' },
+            ].map(t => (
+              <button key={t.key} onClick={() => setTab(t.key)} style={{
+                fontSize: 12, fontWeight: tab === t.key ? 800 : 600,
+                padding: '5px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                background: tab === t.key ? '#FF7043' : 'rgba(0,0,0,0.06)',
+                color: tab === t.key ? '#fff' : '#546E7A',
+                transition: 'all 120ms ease',
+              }}>{t.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Body — scrollable */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 18px' }}>
+
+          {/* ── Shared With tab ── */}
+          {tab === 'sharedWith' && (
+            <>
+              {loadingShares ? (
+                <div style={{ color: '#90A4AE', fontSize: 13, paddingTop: 20, textAlign: 'center' }}>Loading…</div>
+              ) : shares.length === 0 ? (
+                <div style={{ paddingTop: 30, textAlign: 'center' }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>🔒</div>
+                  <div style={{ fontSize: 13, color: '#546E7A', fontWeight: 700 }}>Not shared yet</div>
+                  <div style={{ fontSize: 11, color: '#90A4AE', marginTop: 4 }}>Only you can see this document.</div>
+                  <button onClick={() => setTab('add')} style={{
+                    marginTop: 14, fontSize: 12, fontWeight: 800, padding: '8px 18px',
+                    borderRadius: 8, border: 'none', background: '#FF7043', color: '#fff', cursor: 'pointer',
+                  }}>+ Share with someone</button>
+                </div>
               ) : (
-                <select
-                  value={selectedContact}
-                  onChange={e => setSelectedContact(e.target.value)}
-                  style={{
-                    width: '100%', fontSize: 13, padding: '8px 10px', borderRadius: 8,
-                    border: '1px solid rgba(0,0,0,0.14)', background: '#fff',
-                    color: '#112033', outline: 'none',
-                  }}
-                >
-                  <option value="">Select a contact…</option>
-                  {contacts.map(c => {
-                    const name = c.name || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || 'Contact';
-                    const id = c.userId || c.contactUserId || c.id;
-                    return <option key={id} value={id}>{name}</option>;
+                <>
+                  {shares.map(s => {
+                    const rb = ROLE_BADGE[s.role?.toUpperCase()] || { bg: 'rgba(0,0,0,0.06)', color: '#546E7A' };
+                    return (
+                      <div key={s.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 0', borderBottom: '1px solid rgba(0,0,0,0.05)',
+                      }}>
+                        {/* Avatar */}
+                        <div style={{
+                          width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                          background: rb.bg, display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', fontSize: 13, fontWeight: 800, color: rb.color,
+                        }}>
+                          {s.name.charAt(0).toUpperCase()}
+                        </div>
+
+                        {/* Name + meta */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#112033',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {s.name}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2, flexWrap: 'wrap' }}>
+                            {s.role && (
+                              <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px',
+                                borderRadius: 999, background: rb.bg, color: rb.color, textTransform: 'uppercase' }}>
+                                {s.role}
+                              </span>
+                            )}
+                            <span style={{ fontSize: 10, color: '#90A4AE' }}>
+                              {s.origin === 'foundry' ? '⚡ Foundry · ' : ''}{formatDate(s.createdAt)}
+                            </span>
+                            {s.hasRead
+                              ? <span style={{ fontSize: 10, color: '#4CAF50' }}>✓ Viewed</span>
+                              : <span style={{ fontSize: 10, color: '#FF7043' }}>● Unread</span>
+                            }
+                          </div>
+                          {s.message && (
+                            <div style={{ fontSize: 10, color: '#78909C', marginTop: 2, fontStyle: 'italic' }}>
+                              "{s.message}"
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Revoke */}
+                        <button
+                          onClick={() => handleRevoke(s.id)}
+                          disabled={revoking === s.id}
+                          style={{
+                            fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6,
+                            border: '1px solid rgba(229,57,53,0.25)', background: 'transparent',
+                            color: '#E53935', cursor: revoking === s.id ? 'wait' : 'pointer',
+                            flexShrink: 0, whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {revoking === s.id ? '…' : 'Revoke'}
+                        </button>
+                      </div>
+                    );
                   })}
-                </select>
+                </>
               )}
-            </div>
+            </>
+          )}
 
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#78909C', marginBottom: 5 }}>Message (optional)</div>
-              <textarea
-                value={message}
-                onChange={e => setMessage(e.target.value)}
-                placeholder="Add a note…"
-                rows={2}
-                style={{
-                  width: '100%', fontSize: 12, padding: '8px 10px', borderRadius: 8,
-                  border: '1px solid rgba(0,0,0,0.14)', background: '#fff',
-                  color: '#112033', outline: 'none', resize: 'vertical', boxSizing: 'border-box',
-                }}
-              />
-            </div>
+          {/* ── Add recipient tab ── */}
+          {tab === 'add' && (
+            <>
+              {sent ? (
+                <div style={{ paddingTop: 30, textAlign: 'center' }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>✓</div>
+                  <div style={{ fontSize: 14, color: '#2E7D32', fontWeight: 800 }}>Shared!</div>
+                  <div style={{ fontSize: 12, color: '#78909C', marginTop: 4 }}>A PDF copy is being prepared.</div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#78909C', marginBottom: 6 }}>Share with</div>
+                    {loadingContacts ? (
+                      <div style={{ fontSize: 12, color: '#90A4AE' }}>Loading contacts…</div>
+                    ) : contacts.length === 0 ? (
+                      <div style={{ fontSize: 12, color: '#90A4AE' }}>No contacts yet. Connect with someone first.</div>
+                    ) : (
+                      <select value={selectedContact} onChange={e => setSelectedContact(e.target.value)} style={{
+                        width: '100%', fontSize: 13, padding: '9px 10px', borderRadius: 8,
+                        border: '1px solid rgba(0,0,0,0.14)', background: '#fff', color: '#112033', outline: 'none',
+                      }}>
+                        <option value="">Select a contact…</option>
+                        {contacts.map(c => {
+                          const name = c.name || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || 'Contact';
+                          const id = c.userId || c.contactUserId || c.id;
+                          const role = c.role ? ` · ${c.role.charAt(0) + c.role.slice(1).toLowerCase()}` : '';
+                          return <option key={id} value={id}>{name}{role}</option>;
+                        })}
+                      </select>
+                    )}
+                  </div>
 
-            {error && <div style={{ fontSize: 11, color: '#E53935', marginBottom: 10, fontWeight: 600 }}>{error}</div>}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#78909C', marginBottom: 6 }}>Message (optional)</div>
+                    <textarea value={message} onChange={e => setMessage(e.target.value)}
+                      placeholder="Add a note…" rows={3}
+                      style={{
+                        width: '100%', fontSize: 12, padding: '9px 10px', borderRadius: 8,
+                        border: '1px solid rgba(0,0,0,0.14)', background: '#fff',
+                        color: '#112033', outline: 'none', resize: 'vertical', boxSizing: 'border-box',
+                      }} />
+                  </div>
 
-            <button
-              onClick={handleSend}
-              disabled={!selectedContact || sending || contacts.length === 0}
-              style={{
-                width: '100%', padding: '10px', borderRadius: 8,
-                border: 'none', fontSize: 13, fontWeight: 800, cursor: selectedContact ? 'pointer' : 'not-allowed',
-                background: selectedContact ? '#FF7043' : 'rgba(0,0,0,0.08)',
-                color: selectedContact ? '#fff' : '#90A4AE',
-                transition: 'all 150ms ease',
-              }}
-            >
-              {sending ? 'Sending…' : 'Share'}
+                  {/* PDF note */}
+                  <div style={{
+                    fontSize: 11, color: '#78909C', marginBottom: 14, padding: '8px 10px',
+                    background: 'rgba(255,112,67,0.05)', borderRadius: 8, borderLeft: '3px solid rgba(255,112,67,0.40)',
+                  }}>
+                    Recipient receives a <strong>view-only PDF</strong>. They cannot edit or regenerate the document.
+                  </div>
+
+                  {sendError && (
+                    <div style={{ fontSize: 11, color: '#E53935', marginBottom: 10, fontWeight: 600,
+                      padding: '6px 10px', background: 'rgba(229,57,53,0.06)', borderRadius: 8 }}>
+                      {sendError}
+                    </div>
+                  )}
+
+                  <button onClick={handleSend} disabled={!selectedContact || sending || contacts.length === 0} style={{
+                    width: '100%', padding: '11px', borderRadius: 8, border: 'none',
+                    fontSize: 13, fontWeight: 800,
+                    cursor: selectedContact && !sending ? 'pointer' : 'not-allowed',
+                    background: selectedContact && !sending ? '#FF7043' : 'rgba(0,0,0,0.08)',
+                    color: selectedContact && !sending ? '#fff' : '#90A4AE',
+                    transition: 'all 150ms ease',
+                  }}>
+                    {sending ? 'Preparing PDF & sending…' : 'Share'}
+                  </button>
+                </>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer — Remove All */}
+        {tab === 'sharedWith' && shares.length > 0 && (
+          <div style={{ padding: '12px 18px', borderTop: '1px solid rgba(0,0,0,0.07)' }}>
+            <button onClick={handleRemoveAll} disabled={removingAll} style={{
+              width: '100%', padding: '9px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+              border: '1px solid rgba(229,57,53,0.25)', background: 'transparent',
+              color: '#E53935', cursor: removingAll ? 'wait' : 'pointer', transition: 'all 150ms',
+            }}>
+              {removingAll ? 'Removing…' : 'Remove All Access'}
             </button>
-          </>
+          </div>
         )}
       </div>
     </div>
@@ -478,7 +663,9 @@ function ShareModal({ doc, onClose }) {
 // ─── VaultRow (Forge Documents) ───────────────────────────────────────────────
 function VaultRow({ doc, isMobile, showWorkspace }) {
   const meta = TYPE_META[doc.type] || { bg: 'rgba(0,0,0,0.05)', color: '#546E7A' };
-  const [shareOpen, setShareOpen] = useState(false);
+
+  const meta = TYPE_META[doc.type] || { bg: 'rgba(0,0,0,0.05)', color: '#546E7A' };
+  const [panelOpen, setPanelOpen] = useState(false);
 
   return (
     <>
@@ -548,7 +735,7 @@ function VaultRow({ doc, isMobile, showWorkspace }) {
             display: 'flex', alignItems: 'center',
           }}>
             <button
-              onClick={() => setShareOpen(true)}
+              onClick={() => setPanelOpen(true)}
               style={{
                 fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
                 border: '1px solid rgba(0,0,0,0.12)', background: 'transparent',
@@ -563,7 +750,7 @@ function VaultRow({ doc, isMobile, showWorkspace }) {
           </div>
         )}
       </div>
-      {shareOpen && <ShareModal doc={doc} onClose={() => setShareOpen(false)} />}
+      {panelOpen && <SharePanel doc={doc} onClose={() => setPanelOpen(false)} />}
     </>
   );
 }
@@ -870,7 +1057,7 @@ function UploadedDocumentsTab({ isMobile }) {
                 fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
                 border: '1px solid rgba(0,0,0,0.12)', background: 'transparent',
                 color: '#546E7A', cursor: 'pointer', whiteSpace: 'nowrap',
-              }}>+ Share</button>
+              }}>⇧ Share</button>
               <button onClick={() => handleDelete(u.id)} style={{
                 fontSize: 11, fontWeight: 700, padding: '5px 8px', borderRadius: 8,
                 border: '1px solid rgba(229,57,53,0.20)', background: 'transparent',
@@ -880,7 +1067,7 @@ function UploadedDocumentsTab({ isMobile }) {
           </div>
         ))
       )}
-      {shareDoc && <ShareModal doc={shareDoc} onClose={() => setShareDoc(null)} />}
+      {shareDoc && <SharePanel doc={shareDoc} onClose={() => setShareDoc(null)} />}
     </div>
   );
 }
