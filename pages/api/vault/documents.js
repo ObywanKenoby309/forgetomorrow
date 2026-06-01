@@ -42,7 +42,7 @@ export default async function handler(req, res) {
 
     const userId = session.user.id;
 
-    const [rawPreps, rawProfile, rawRecruiterPackets] = await Promise.all([
+    const [rawPreps, rawProfile, rawRecruiterPackets, rawResumeRoleAnalyses] = await Promise.all([
       // Interview prep: pull through applications so we can surface job context
       prisma.seekerInterviewPrep.findMany({
         where: {
@@ -81,7 +81,7 @@ export default async function handler(req, res) {
       }),
 
       // Recruiter Candidate Review Packets — recruiter-owned packet exports
-      prisma.recruiterCandidateReviewPacket.findMany({
+            prisma.recruiterCandidateReviewPacket.findMany({
         where: { recruiterUserId: userId },
         orderBy: { updatedAt: 'desc' },
         take: 50,
@@ -97,6 +97,28 @@ export default async function handler(req, res) {
           packetUrl: true,
           format: true,
           snapshotJson: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+
+      prisma.recruiterExplainRun.findMany({
+        where: {
+          recruiterUserId: userId,
+          vaultSaved: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 50,
+        select: {
+          id: true,
+          vaultTitle: true,
+          externalName: true,
+          externalEmail: true,
+          score: true,
+          summary: true,
+          result: true,
+          jobDescription: true,
+          resumeText: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -158,11 +180,34 @@ export default async function handler(req, res) {
       };
     });
 
+const resumeRoleAnalyses = rawResumeRoleAnalyses.map((analysis) => {
+  const result = safeJsonParse(analysis.result);
+
+  const title =
+    safe(analysis.vaultTitle, '') ||
+    `${safe(analysis.externalName, 'Candidate')} · Resume vs Role Analysis`;
+
+  return {
+    id: analysis.id,
+    title,
+    candidateName: analysis.externalName || null,
+    candidateEmail: analysis.externalEmail || null,
+    score: analysis.score,
+    summary: analysis.summary || result?.summary || null,
+    result,
+    jobDescription: analysis.jobDescription || '',
+    resumeText: analysis.resumeText || '',
+    createdAt: analysis.createdAt,
+    updatedAt: analysis.updatedAt,
+  };
+});
+
     return res.status(200).json({
-      interviewPreps,
-      professionalProfile,
-      recruiterReviewPackets,
-    });
+  interviewPreps,
+  professionalProfile,
+  recruiterReviewPackets,
+  resumeRoleAnalyses,
+});
   } catch (err) {
     console.error('[api/vault/documents]', err);
     return res.status(500).json({ error: 'Could not load vault documents' });
