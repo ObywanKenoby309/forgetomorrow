@@ -663,8 +663,6 @@ function SharePanel({ doc, onClose }) {
 // ─── VaultRow (Forge Documents) ───────────────────────────────────────────────
 function VaultRow({ doc, isMobile, showWorkspace }) {
   const meta = TYPE_META[doc.type] || { bg: 'rgba(0,0,0,0.05)', color: '#546E7A' };
-
-  const meta = TYPE_META[doc.type] || { bg: 'rgba(0,0,0,0.05)', color: '#546E7A' };
   const [panelOpen, setPanelOpen] = useState(false);
 
   return (
