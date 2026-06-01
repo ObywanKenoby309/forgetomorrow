@@ -966,6 +966,9 @@ model User {
   staffRoles                     UserStaffRole[]
   organization                   Organization?                  @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])
   workflowRulesCreated           WorkflowRule[]                 @relation("WorkflowRuleCreator")
+  vaultUploads                   VaultUpload[]                  @relation("UserVaultUploads")
+  vaultSharesSent                VaultShare[]                   @relation("VaultSharesSent")
+  vaultSharesReceived            VaultShare[]                   @relation("VaultSharesReceived")
 
   @@map("users")
 }
@@ -2061,6 +2064,7 @@ enum NotificationCategory {
   JOB
   CALENDAR
   FEEDBACK
+  VAULT
 }
 
 enum NotificationScope {
@@ -2081,6 +2085,7 @@ enum NotificationEntityType {
   CALENDAR_ITEM
   COACHING_SESSION
   APPOINTMENT_REQUEST
+  VAULT_SHARE
 }
 
 enum AiBuddyMode {
@@ -2200,4 +2205,50 @@ model ToolFeedback {
 
   @@index([toolName])
   @@index([entityId])
+}
+
+model VaultUpload {
+  id            String   @id @default(cuid())
+  userId        String
+  fileName      String
+  fileType      String
+  fileSizeBytes Int
+  storagePath   String
+  downloadUrl   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user   User         @relation("UserVaultUploads", fields: [userId], references: [id], onDelete: Cascade)
+  shares VaultShare[] @relation("VaultUploadShares")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("vault_uploads")
+}
+
+model VaultShare {
+  id              String    @id @default(cuid())
+  fromUserId      String
+  toUserId        String
+  vaultUploadId   String?
+  forgeDocType    String?
+  forgeDocId      String?
+  foundryRoomId   String?
+  foundryRoomSlug String?
+  fileName        String
+  storagePath     String?
+  downloadUrl     String?
+  message         String?
+  readAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  fromUser    User         @relation("VaultSharesSent",     fields: [fromUserId],    references: [id], onDelete: Cascade)
+  toUser      User         @relation("VaultSharesReceived", fields: [toUserId],      references: [id], onDelete: Cascade)
+  vaultUpload VaultUpload? @relation("VaultUploadShares",   fields: [vaultUploadId], references: [id], onDelete: SetNull)
+
+  @@index([toUserId, readAt])
+  @@index([fromUserId])
+  @@index([foundryRoomId])
+  @@index([createdAt])
+  @@map("vault_shares")
 }

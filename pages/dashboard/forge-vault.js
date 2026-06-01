@@ -1,9 +1,9 @@
 // pages/dashboard/forge-vault.js
 // ForgeVault — professional document workspace.
-// Workflow-oriented: View + Category dropdowns replace flat tab system.
-// No new DB models. No architecture changes. Reads existing list endpoints.
+// Three tabs: Forge Documents | Uploaded Documents | Shared With Me
+// View + Category dropdowns within Forge Documents tab.
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
@@ -23,6 +23,7 @@ const ORANGE_HEADING_LIFT = {
   textShadow: '0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)',
   fontWeight: 900,
 };
+const GAP = 12;
 
 // ─── Workspace + category config ──────────────────────────────────────────────
 const WORKSPACE_CONFIG = {
@@ -51,7 +52,6 @@ const WORKSPACE_CONFIG = {
   },
 };
 
-// ─── Type display config ──────────────────────────────────────────────────────
 const TYPE_META = {
   resume:          { label: 'Resume',                  bg: 'rgba(255,112,67,0.10)',  color: '#993C1D' },
   cover:           { label: 'Cover letter',             bg: 'rgba(33,150,243,0.10)',  color: '#185FA5' },
@@ -66,22 +66,20 @@ const TYPE_META = {
 };
 
 const TYPE_CATEGORY = {
-  resume:          'seeking',
-  cover:           'seeking',
-  interview:       'seeking',
-  packet:          'seeking',
-  profile:         'career',
-  roadmap:         'career',
-  negotiation:     'career',
-  strategy:        'coaching',
-  candidateReview: 'candidates',
-  resumeRole:      'intelligence',
+  resume: 'seeking', cover: 'seeking', interview: 'seeking', packet: 'seeking',
+  profile: 'career', roadmap: 'career', negotiation: 'career',
+  strategy: 'coaching', candidateReview: 'candidates', resumeRole: 'intelligence',
 };
 
 const WORKSPACE_BADGE = {
   seeker:    { bg: 'rgba(255,112,67,0.10)',  color: '#993C1D',  label: 'Seeker'    },
   coach:     { bg: 'rgba(33,150,243,0.10)',  color: '#185FA5',  label: 'Coach'     },
   recruiter: { bg: 'rgba(96,125,139,0.10)', color: '#37474F',  label: 'Recruiter' },
+};
+
+const CATEGORY_LABELS = {
+  seeking: 'Seeking', career: 'Career', coaching: 'Coaching',
+  candidates: 'Candidate packages', intelligence: 'Candidate intelligence',
 };
 
 const TYPE_ICON = {
@@ -96,6 +94,13 @@ function formatDate(raw) {
   try {
     return new Date(raw).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   } catch { return '—'; }
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function safeText(v, fallback = '') {
@@ -122,22 +127,18 @@ function downloadJson(filename, obj) {
 function normalizeResumes(resumes = []) {
   return resumes.map((r) => ({
     id: `resume-${r.id}`, type: 'resume', workspace: 'seeker', category: 'seeking',
-    typeLabel: TYPE_META.resume.label,
-    name: safeText(r.name, 'Untitled Resume'),
-    subtitle: r.isPrimary ? '★ Primary' : null,
-    date: r.updatedAt,
-    downloadUrl: `/api/resume/download?id=${r.id}`,
-    hasPdf: false, raw: r,
+    typeLabel: TYPE_META.resume.label, name: safeText(r.name, 'Untitled Resume'),
+    subtitle: r.isPrimary ? '★ Primary' : null, date: r.updatedAt,
+    downloadUrl: `/api/resume/download?id=${r.id}`, hasPdf: false, raw: r,
+    sharePayload: { forgeDocType: 'resume', forgeDocId: String(r.id), fileName: safeText(r.name, 'Resume'), downloadUrl: `/api/resume/download?id=${r.id}` },
   }));
 }
 
 function normalizeCovers(covers = []) {
   return covers.map((c) => ({
     id: `cover-${c.id}`, type: 'cover', workspace: 'seeker', category: 'seeking',
-    typeLabel: TYPE_META.cover.label,
-    name: safeText(c.name, 'Untitled Cover Letter'),
-    subtitle: c.isPrimary ? '★ Primary' : null,
-    date: c.updatedAt,
+    typeLabel: TYPE_META.cover.label, name: safeText(c.name, 'Untitled Cover Letter'),
+    subtitle: c.isPrimary ? '★ Primary' : null, date: c.updatedAt,
     downloadFn: async () => {
       const res = await fetch(`/api/cover/download?id=${c.id}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Download failed');
@@ -146,6 +147,7 @@ function normalizeCovers(covers = []) {
       downloadText(`${safeText(c.name, 'cover_letter').replace(/[^a-z0-9_-]+/gi, '_')}.txt`, content);
     },
     hasPdf: false, raw: c,
+    sharePayload: { forgeDocType: 'cover', forgeDocId: String(c.id), fileName: safeText(c.name, 'Cover Letter') },
   }));
 }
 
@@ -154,10 +156,10 @@ function normalizeInterviewPreps(preps = []) {
     id: `interview-${p.id}`, type: 'interview', workspace: 'seeker', category: 'seeking',
     typeLabel: TYPE_META.interview.label,
     name: safeText(p.name, `Interview Prep · App #${p.applicationId}`),
-    subtitle: p.jobTitle ? `for ${p.jobTitle}` : null,
-    date: p.generatedAt,
+    subtitle: p.jobTitle ? `for ${p.jobTitle}` : null, date: p.generatedAt,
     downloadFn: () => downloadJson(`interview_prep_${p.applicationId}.json`, p.result || p),
     hasPdf: false, raw: p,
+    sharePayload: { forgeDocType: 'interview', forgeDocId: p.id, fileName: safeText(p.name, 'Interview Prep') },
   }));
 }
 
@@ -165,73 +167,66 @@ function normalizeProfile(profile) {
   if (!profile) return [];
   return [{
     id: 'profile-pop', type: 'profile', workspace: 'seeker', category: 'career',
-    typeLabel: TYPE_META.profile.label,
-    name: 'Professional Operating Profile', subtitle: null,
+    typeLabel: TYPE_META.profile.label, name: 'Professional Operating Profile', subtitle: null,
     date: profile.updatedAt,
     downloadFn: () => downloadJson('professional_operating_profile.json', profile.snapshotJson || profile),
     hasPdf: false, raw: profile,
+    sharePayload: { forgeDocType: 'profile', forgeDocId: profile.id, fileName: 'Professional Operating Profile' },
   }];
 }
 
 function normalizeRoadmaps(roadmaps = []) {
   return roadmaps.map((r) => ({
     id: `roadmap-${r.id}`, type: 'roadmap', workspace: 'seeker', category: 'career',
-    typeLabel: TYPE_META.roadmap.label,
-    name: safeText(r.name, 'Growth & Pivot Roadmap'),
-    subtitle: safeText(r.title, null),
-    date: r.createdAt,
+    typeLabel: TYPE_META.roadmap.label, name: safeText(r.name, 'Growth & Pivot Roadmap'),
+    subtitle: safeText(r.title, null), date: r.createdAt,
     downloadFn: () => downloadJson(`growth_pivot_roadmap_${r.id}.json`, r.raw || r),
     hasPdf: false, raw: r,
+    sharePayload: { forgeDocType: 'roadmap', forgeDocId: r.id, fileName: safeText(r.name, 'Growth & Pivot Roadmap') },
   }));
 }
 
 function normalizeNegotiations(negotiations = []) {
   return negotiations.map((n) => ({
     id: `negotiation-${n.id}`, type: 'negotiation', workspace: 'seeker', category: 'career',
-    typeLabel: TYPE_META.negotiation.label,
-    name: safeText(n.name, 'Offer & Negotiation Brief'), subtitle: null,
-    date: n.createdAt,
+    typeLabel: TYPE_META.negotiation.label, name: safeText(n.name, 'Offer & Negotiation Brief'),
+    subtitle: null, date: n.createdAt,
     downloadFn: () => downloadJson(`negotiation_brief_${n.id}.json`, n.raw || n),
     hasPdf: n.hasPdf || false, raw: n,
+    sharePayload: { forgeDocType: 'negotiation', forgeDocId: n.id, fileName: safeText(n.name, 'Negotiation Brief') },
   }));
 }
 
 function normalizePackets(packets = []) {
   return packets.map((p) => ({
     id: `packet-${p.id}`, type: 'packet', workspace: 'seeker', category: 'seeking',
-    typeLabel: TYPE_META.packet.label,
-    name: safeText(p.name, 'Application Packet'),
-    subtitle: [p.company, p.title].filter(Boolean).join(' · ') || null,
-    date: p.updatedAt,
-    downloadUrl: p.latestExport?.url || null,
-    hasPdf: Boolean(p.latestExport?.url), raw: p,
+    typeLabel: TYPE_META.packet.label, name: safeText(p.name, 'Application Packet'),
+    subtitle: [p.company, p.title].filter(Boolean).join(' · ') || null, date: p.updatedAt,
+    downloadUrl: p.latestExport?.url || null, hasPdf: Boolean(p.latestExport?.url), raw: p,
+    sharePayload: { forgeDocType: 'packet', forgeDocId: String(p.id), fileName: safeText(p.name, 'Application Packet'), downloadUrl: p.latestExport?.url || null },
   }));
 }
 
 function normalizeStrategies(strategies = []) {
   return strategies.map((s) => ({
     id: `strategy-${s.id}`, type: 'strategy', workspace: 'coach', category: 'coaching',
-    typeLabel: TYPE_META.strategy.label,
-    name: safeText(s.title, 'Target Strategy'),
+    typeLabel: TYPE_META.strategy.label, name: safeText(s.title, 'Target Strategy'),
     subtitle: s.summary ? s.summary.slice(0, 72) + (s.summary.length > 72 ? '…' : '') : null,
-    date: s.updatedAt,
-    downloadUrl: s.downloadUrl || null,
-    hasPdf: false, raw: s,
+    date: s.updatedAt, downloadUrl: s.downloadUrl || null, hasPdf: false, raw: s,
+    sharePayload: { forgeDocType: 'strategy', forgeDocId: s.id, fileName: safeText(s.title, 'Target Strategy'), downloadUrl: s.downloadUrl || null },
   }));
 }
 
 function normalizeCandidateReviewPackets(packets = []) {
   return packets.map((p) => {
     const candidateName = safeText(p.candidateName, 'Candidate');
-    const downloadUrl = p.packetUrl || (p.candidateUserId
-      ? `/api/recruiter/candidates/${p.candidateUserId}/review-packet` : null);
+    const downloadUrl = p.packetUrl || (p.candidateUserId ? `/api/recruiter/candidates/${p.candidateUserId}/review-packet` : null);
     return {
       id: `candidate-review-${p.id}`, type: 'candidateReview', workspace: 'recruiter', category: 'candidates',
       typeLabel: TYPE_META.candidateReview.label,
       name: safeText(p.title, `${candidateName} · Candidate Review Packet`),
-      subtitle: candidateName,
-      date: p.updatedAt || p.createdAt,
-      downloadUrl, hasPdf: true, raw: p,
+      subtitle: candidateName, date: p.updatedAt || p.createdAt, downloadUrl, hasPdf: true, raw: p,
+      sharePayload: { forgeDocType: 'candidateReview', forgeDocId: p.id, fileName: safeText(p.title, 'Candidate Review Packet'), downloadUrl },
     };
   });
 }
@@ -239,22 +234,21 @@ function normalizeCandidateReviewPackets(packets = []) {
 function normalizeResumeRoleAnalyses(analyses = []) {
   return analyses.map((a) => ({
     id: `resume-role-${a.id}`, type: 'resumeRole', workspace: 'recruiter', category: 'intelligence',
-    typeLabel: TYPE_META.resumeRole.label,
-    name: a.title || 'Resume vs Role Analysis',
-    subtitle: a.candidateName || null,
-    date: a.updatedAt || a.createdAt,
+    typeLabel: TYPE_META.resumeRole.label, name: a.title || 'Resume vs Role Analysis',
+    subtitle: a.candidateName || null, date: a.updatedAt || a.createdAt,
     downloadFn: () => downloadJson(`resume_role_analysis_${a.id}.json`, a.result || a),
     hasPdf: false, raw: a,
+    sharePayload: { forgeDocType: 'resumeRole', forgeDocId: a.id, fileName: a.title || 'Resume vs Role Analysis' },
   }));
 }
 
-// ─── WorkspaceBadge ───────────────────────────────────────────────────────────
+// ─── Shared UI components ──────────────────────────────────────────────────────
 function WorkspaceBadge({ workspace }) {
   const wb = WORKSPACE_BADGE[workspace] || { bg: 'rgba(0,0,0,0.06)', color: '#546E7A', label: workspace };
   return (
     <span style={{
-      display: 'inline-block', fontSize: 10, fontWeight: 700,
-      padding: '2px 7px', borderRadius: 999,
+      display: 'inline-block', alignSelf: 'flex-start', width: 'fit-content',
+      fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
       background: wb.bg, color: wb.color, whiteSpace: 'nowrap',
     }}>
       {wb.label}
@@ -262,7 +256,6 @@ function WorkspaceBadge({ workspace }) {
   );
 }
 
-// ─── TypeLabel ────────────────────────────────────────────────────────────────
 function TypeLabel({ type }) {
   const meta = TYPE_META[type] || { label: type, color: '#546E7A' };
   return (
@@ -272,22 +265,13 @@ function TypeLabel({ type }) {
   );
 }
 
-// ─── CategoryLabel ────────────────────────────────────────────────────────────
-const CATEGORY_LABELS = {
-  seeking:      'Seeking',
-  career:       'Career',
-  coaching:     'Coaching',
-  candidates:   'Candidate packages',
-  intelligence: 'Candidate intelligence',
-};
-
 function CategoryLabel({ type, workspace }) {
   const category = TYPE_CATEGORY[type];
   const label = CATEGORY_LABELS[category] || category || '';
   const wb = WORKSPACE_BADGE[workspace] || { color: '#546E7A' };
   if (!label) return null;
   return (
-    <span style={{ fontSize: 10, fontWeight: 600, color: wb.color, whiteSpace: 'nowrap' }}>
+    <span style={{ fontSize: 10, fontWeight: 600, color: wb.color, whiteSpace: 'nowrap', alignSelf: 'flex-start', width: 'fit-content' }}>
       {label}
     </span>
   );
@@ -311,29 +295,23 @@ function DownloadButton({ doc }) {
   }, [doc, busy]);
 
   const canDownload = Boolean(doc.downloadUrl || doc.downloadFn);
-
   if (!canDownload) {
     return (
       <button disabled style={{
         padding: '5px 10px', borderRadius: 8,
-        border: '1px solid rgba(0,0,0,0.08)',
-        background: 'transparent', color: '#B0BEC5',
-        fontSize: 11, fontWeight: 700, cursor: 'not-allowed',
+        border: '1px solid rgba(0,0,0,0.08)', background: 'transparent',
+        color: '#B0BEC5', fontSize: 11, fontWeight: 700, cursor: 'not-allowed',
       }}>↓ Download</button>
     );
   }
-
   return (
     <div>
       <button onClick={handle} disabled={busy} title={err || 'Download document'} style={{
-        display: 'flex', alignItems: 'center', gap: 4,
-        padding: '5px 10px', borderRadius: 8,
+        display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8,
         border: '1px solid rgba(255,112,67,0.30)',
         background: busy ? 'rgba(255,112,67,0.06)' : 'rgba(255,112,67,0.08)',
-        color: err ? '#E53935' : '#FF7043',
-        fontSize: 11, fontWeight: 700,
-        cursor: busy ? 'wait' : 'pointer',
-        transition: 'all 150ms ease', whiteSpace: 'nowrap',
+        color: err ? '#E53935' : '#FF7043', fontSize: 11, fontWeight: 700,
+        cursor: busy ? 'wait' : 'pointer', transition: 'all 150ms ease', whiteSpace: 'nowrap',
       }}>
         {busy ? '…' : '↓'} {busy ? 'Downloading' : 'Download'}
       </button>
@@ -342,96 +320,242 @@ function DownloadButton({ doc }) {
   );
 }
 
-// ─── VaultRow ─────────────────────────────────────────────────────────────────
+// ─── ShareModal ───────────────────────────────────────────────────────────────
+function ShareModal({ doc, onClose }) {
+  const [contacts, setContacts] = useState([]);
+  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [selectedContact, setSelectedContact] = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/contacts/list', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const list = data?.contacts || data?.members || [];
+        setContacts(list);
+        setLoadingContacts(false);
+      })
+      .catch(() => setLoadingContacts(false));
+  }, []);
+
+  const handleSend = async () => {
+    if (!selectedContact || sending) return;
+    setSending(true); setError(null);
+    try {
+      const payload = {
+        toUserId: selectedContact,
+        message: message.trim() || undefined,
+        ...(doc.sharePayload || {}),
+      };
+      const res = await fetch('/api/vault/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Share failed');
+      }
+      setSent(true);
+      setTimeout(onClose, 1500);
+    } catch (e) {
+      setError(e.message || 'Share failed');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 99999,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div onClick={onClose} style={{
+        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)',
+      }} />
+      <div style={{
+        position: 'relative', zIndex: 1,
+        width: 'min(440px, 92vw)',
+        borderRadius: 16,
+        border: '1px solid rgba(255,255,255,0.22)',
+        background: 'rgba(255,255,255,0.96)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.20)',
+        padding: 20,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#112033' }}>Share Document</div>
+          <button onClick={onClose} style={{ border: 'none', background: 'transparent', fontSize: 20, cursor: 'pointer', color: '#90A4AE', lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ fontSize: 12, color: '#546E7A', marginBottom: 14, padding: '8px 10px', background: 'rgba(0,0,0,0.04)', borderRadius: 8 }}>
+          <strong style={{ color: '#112033' }}>{doc.name}</strong>
+        </div>
+
+        {sent ? (
+          <div style={{ padding: '20px 0', textAlign: 'center', color: '#2E7D32', fontWeight: 700, fontSize: 14 }}>
+            ✓ Shared successfully
+          </div>
+        ) : (
+          <>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#78909C', marginBottom: 5 }}>Share with</div>
+              {loadingContacts ? (
+                <div style={{ fontSize: 12, color: '#90A4AE', padding: '8px 0' }}>Loading contacts…</div>
+              ) : contacts.length === 0 ? (
+                <div style={{ fontSize: 12, color: '#90A4AE', padding: '8px 0' }}>No contacts yet. Connect with someone first.</div>
+              ) : (
+                <select
+                  value={selectedContact}
+                  onChange={e => setSelectedContact(e.target.value)}
+                  style={{
+                    width: '100%', fontSize: 13, padding: '8px 10px', borderRadius: 8,
+                    border: '1px solid rgba(0,0,0,0.14)', background: '#fff',
+                    color: '#112033', outline: 'none',
+                  }}
+                >
+                  <option value="">Select a contact…</option>
+                  {contacts.map(c => {
+                    const name = c.name || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || 'Contact';
+                    const id = c.userId || c.contactUserId || c.id;
+                    return <option key={id} value={id}>{name}</option>;
+                  })}
+                </select>
+              )}
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#78909C', marginBottom: 5 }}>Message (optional)</div>
+              <textarea
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+                placeholder="Add a note…"
+                rows={2}
+                style={{
+                  width: '100%', fontSize: 12, padding: '8px 10px', borderRadius: 8,
+                  border: '1px solid rgba(0,0,0,0.14)', background: '#fff',
+                  color: '#112033', outline: 'none', resize: 'vertical', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {error && <div style={{ fontSize: 11, color: '#E53935', marginBottom: 10, fontWeight: 600 }}>{error}</div>}
+
+            <button
+              onClick={handleSend}
+              disabled={!selectedContact || sending || contacts.length === 0}
+              style={{
+                width: '100%', padding: '10px', borderRadius: 8,
+                border: 'none', fontSize: 13, fontWeight: 800, cursor: selectedContact ? 'pointer' : 'not-allowed',
+                background: selectedContact ? '#FF7043' : 'rgba(0,0,0,0.08)',
+                color: selectedContact ? '#fff' : '#90A4AE',
+                transition: 'all 150ms ease',
+              }}
+            >
+              {sending ? 'Sending…' : 'Share'}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── VaultRow (Forge Documents) ───────────────────────────────────────────────
 function VaultRow({ doc, isMobile, showWorkspace }) {
   const meta = TYPE_META[doc.type] || { bg: 'rgba(0,0,0,0.05)', color: '#546E7A' };
+  const [shareOpen, setShareOpen] = useState(false);
+
   return (
-    <div
-      style={{
-        display: 'flex', alignItems: isMobile ? 'flex-start' : 'center',
-        flexDirection: isMobile ? 'column' : 'row',
-        gap: isMobile ? 10 : 0,
-        padding: '11px 14px',
-        borderBottom: '1px solid rgba(0,0,0,0.05)',
-        transition: 'background 120ms ease',
-      }}
-      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.55)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-    >
-      {/* Icon + name */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 34, height: 34, borderRadius: 8, flexShrink: 0,
-          background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <span style={{ fontSize: 15, lineHeight: 1 }}>{TYPE_ICON[doc.type] || '📄'}</span>
-        </div>
-        <div style={{ minWidth: 0 }}>
+    <>
+      <div
+        style={{
+          display: 'flex', alignItems: isMobile ? 'flex-start' : 'center',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? 10 : 0, padding: '11px 14px',
+          borderBottom: '1px solid rgba(0,0,0,0.05)', transition: 'background 120ms ease',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.55)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            fontSize: 13, fontWeight: 800, color: '#112033',
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            maxWidth: isMobile ? '75vw' : 300,
+            width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+            background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {doc.name}
+            <span style={{ fontSize: 15, lineHeight: 1 }}>{TYPE_ICON[doc.type] || '📄'}</span>
           </div>
-          {doc.subtitle && (
-            <div style={{ fontSize: 11, color: '#78909C', fontWeight: 600, marginTop: 1 }}>
-              {doc.subtitle}
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              fontSize: 13, fontWeight: 800, color: '#112033',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              maxWidth: isMobile ? '75vw' : 300,
+            }}>
+              {doc.name}
             </div>
-          )}
+            {doc.subtitle && (
+              <div style={{ fontSize: 11, color: '#78909C', fontWeight: 600, marginTop: 1 }}>
+                {doc.subtitle}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Workspace / Type — context-aware */}
-      <div style={{
-        flexShrink: 0, width: isMobile ? 'auto' : 150,
-        paddingLeft: isMobile ? 44 : 0,
-        display: 'flex', flexDirection: 'column', gap: 3,
-      }}>
-        {showWorkspace
-          ? <WorkspaceBadge workspace={doc.workspace} />
-          : <CategoryLabel type={doc.type} workspace={doc.workspace} />
-        }
-        <TypeLabel type={doc.type} />
-      </div>
-
-      {/* Date */}
-      <div style={{
-        flexShrink: 0, width: isMobile ? 'auto' : 100,
-        paddingLeft: isMobile ? 44 : 0,
-        fontSize: 11, color: '#546E7A', fontWeight: 600,
-      }}>
-        {formatDate(doc.date)}
-      </div>
-
-      {/* Actions */}
-      <div style={{
-        flexShrink: 0, width: isMobile ? 'auto' : 110,
-        paddingLeft: isMobile ? 44 : 12,
-        display: 'flex', alignItems: 'center',
-      }}>
-        <DownloadButton doc={doc} />
-      </div>
-
-      {/* Share With */}
-      {!isMobile && (
         <div style={{
-          flexShrink: 0, width: 110,
-          paddingLeft: 12,
-          display: 'flex', alignItems: 'center',
+          flexShrink: 0, width: isMobile ? 'auto' : 150,
+          paddingLeft: isMobile ? 44 : 0,
+          display: 'flex', flexDirection: 'column', gap: 3,
         }}>
-          <button disabled style={{
-            fontSize: 11, fontWeight: 700,
-            padding: '5px 10px', borderRadius: 8,
-            border: '1px solid rgba(0,0,0,0.10)',
-            background: 'transparent', color: '#B0BEC5',
-            cursor: 'not-allowed', whiteSpace: 'nowrap',
-          }}>
-            + Share
-          </button>
+          {showWorkspace
+            ? <WorkspaceBadge workspace={doc.workspace} />
+            : <CategoryLabel type={doc.type} workspace={doc.workspace} />
+          }
+          <TypeLabel type={doc.type} />
         </div>
-      )}
-    </div>
+
+        <div style={{
+          flexShrink: 0, width: isMobile ? 'auto' : 100,
+          paddingLeft: isMobile ? 44 : 0,
+          fontSize: 11, color: '#546E7A', fontWeight: 600,
+        }}>
+          {formatDate(doc.date)}
+        </div>
+
+        <div style={{
+          flexShrink: 0, width: isMobile ? 'auto' : 110,
+          paddingLeft: isMobile ? 44 : 12, display: 'flex', alignItems: 'center',
+        }}>
+          <DownloadButton doc={doc} />
+        </div>
+
+        {!isMobile && (
+          <div style={{
+            flexShrink: 0, width: 110, paddingLeft: 12,
+            display: 'flex', alignItems: 'center',
+          }}>
+            <button
+              onClick={() => setShareOpen(true)}
+              style={{
+                fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
+                border: '1px solid rgba(0,0,0,0.12)', background: 'transparent',
+                color: '#546E7A', cursor: 'pointer', whiteSpace: 'nowrap',
+                transition: 'all 120ms ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,112,67,0.08)'; e.currentTarget.style.color = '#FF7043'; e.currentTarget.style.borderColor = 'rgba(255,112,67,0.30)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#546E7A'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; }}
+            >
+              + Share
+            </button>
+          </div>
+        )}
+      </div>
+      {shareOpen && <ShareModal doc={doc} onClose={() => setShareOpen(false)} />}
+    </>
   );
 }
 
@@ -441,14 +565,14 @@ function SectionDivider({ workspace }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 8,
-      padding: '8px 14px 6px 14px',
-      background: 'rgba(255,255,255,0.30)',
+      padding: '8px 14px 6px 14px', background: 'rgba(255,255,255,0.30)',
       borderBottom: '1px solid rgba(0,0,0,0.05)',
     }}>
       <span style={{
         fontSize: 10, fontWeight: 800, letterSpacing: '0.06em',
         textTransform: 'uppercase', color: wb.color,
         background: wb.bg, padding: '2px 8px', borderRadius: 999,
+        alignSelf: 'flex-start', width: 'fit-content',
       }}>
         {wb.label} workspace
       </span>
@@ -457,43 +581,35 @@ function SectionDivider({ workspace }) {
 }
 
 // ─── ColumnHeader ─────────────────────────────────────────────────────────────
-function ColumnHeader({ viewFilter }) {
+function ColumnHeader({ viewFilter, showShare = true }) {
   const typeColLabel = viewFilter === 'all' ? 'Workspace / Type' : 'Type';
   return (
     <div style={{
-      display: 'flex', alignItems: 'center',
-      padding: '6px 14px',
+      display: 'flex', alignItems: 'center', padding: '6px 14px',
       fontSize: 10, fontWeight: 800, color: '#90A4AE',
       letterSpacing: '0.06em', textTransform: 'uppercase',
-      background: 'rgba(255,255,255,0.30)',
-      borderBottom: '1px solid rgba(0,0,0,0.05)',
+      background: 'rgba(255,255,255,0.30)', borderBottom: '1px solid rgba(0,0,0,0.05)',
     }}>
       <div style={{ flex: 1 }}>Document</div>
       <div style={{ width: 150 }}>{typeColLabel}</div>
       <div style={{ width: 100 }}>Updated</div>
       <div style={{ width: 110, paddingLeft: 12 }}>Actions</div>
-      <div style={{ width: 110, paddingLeft: 12 }}>Share With</div>
+      {showShare && <div style={{ width: 110, paddingLeft: 12 }}>Share With</div>}
     </div>
   );
 }
 
-// ─── VaultTable ───────────────────────────────────────────────────────────────
-function VaultTable({ docs, loading, isMobile, viewFilter }) {
+// ─── ForgeDocumentsTable ──────────────────────────────────────────────────────
+function ForgeDocumentsTable({ docs, loading, isMobile, viewFilter }) {
   if (loading) {
-    return (
-      <div style={{ padding: '36px 0', textAlign: 'center', color: '#90A4AE', fontSize: 13 }}>
-        Loading your documents…
-      </div>
-    );
+    return <div style={{ padding: '36px 0', textAlign: 'center', color: '#90A4AE', fontSize: 13 }}>Loading your documents…</div>;
   }
   if (!docs.length) {
     return (
       <div style={{ padding: '44px 0', textAlign: 'center' }}>
         <div style={{ fontSize: 30, marginBottom: 10 }}>📭</div>
         <div style={{ fontSize: 14, color: '#546E7A', fontWeight: 700 }}>No documents here yet.</div>
-        <div style={{ fontSize: 12, color: '#90A4AE', marginTop: 4 }}>
-          Documents appear here as you create them across ForgeTomorrow.
-        </div>
+        <div style={{ fontSize: 12, color: '#90A4AE', marginTop: 4 }}>Documents appear here as you create them across ForgeTomorrow.</div>
       </div>
     );
   }
@@ -505,16 +621,14 @@ function VaultTable({ docs, loading, isMobile, viewFilter }) {
     return (
       <div>
         {!isMobile && <ColumnHeader viewFilter={viewFilter} />}
-        {docs.map((doc) => (
-          <VaultRow key={doc.id} doc={doc} isMobile={isMobile} showWorkspace={showWorkspaceBadge} />
-        ))}
+        {docs.map(doc => <VaultRow key={doc.id} doc={doc} isMobile={isMobile} showWorkspace={showWorkspaceBadge} />)}
       </div>
     );
   }
 
   const WS_ORDER = ['seeker', 'coach', 'recruiter'];
   const grouped = {};
-  docs.forEach((d) => {
+  docs.forEach(d => {
     if (!grouped[d.workspace]) grouped[d.workspace] = [];
     grouped[d.workspace].push(d);
   });
@@ -522,12 +636,10 @@ function VaultTable({ docs, loading, isMobile, viewFilter }) {
   return (
     <div>
       {!isMobile && <ColumnHeader viewFilter={viewFilter} />}
-      {WS_ORDER.filter(ws => grouped[ws]?.length).map((ws) => (
+      {WS_ORDER.filter(ws => grouped[ws]?.length).map(ws => (
         <React.Fragment key={ws}>
           <SectionDivider workspace={ws} />
-          {grouped[ws].map((doc) => (
-            <VaultRow key={doc.id} doc={doc} isMobile={isMobile} showWorkspace={true} />
-          ))}
+          {grouped[ws].map(doc => <VaultRow key={doc.id} doc={doc} isMobile={isMobile} showWorkspace={true} />)}
         </React.Fragment>
       ))}
     </div>
@@ -535,11 +647,7 @@ function VaultTable({ docs, loading, isMobile, viewFilter }) {
 }
 
 // ─── ControlsBar ──────────────────────────────────────────────────────────────
-function ControlsBar({
-  viewFilter, setViewFilter, catFilter, setCatFilter,
-  searchTerm, setSearchTerm, sortMode, setSortMode,
-  availableWorkspaces,
-}) {
+function ControlsBar({ viewFilter, setViewFilter, catFilter, setCatFilter, searchTerm, setSearchTerm, sortMode, setSortMode, availableWorkspaces }) {
   const catOptions = useMemo(() => {
     if (viewFilter === 'all') return [{ value: 'all', label: 'All documents' }];
     const ws = WORKSPACE_CONFIG[viewFilter];
@@ -547,61 +655,47 @@ function ControlsBar({
     return Object.entries(ws.categories).map(([k, v]) => ({ value: k, label: v.label }));
   }, [viewFilter]);
 
-  const handleViewChange = (e) => { setViewFilter(e.target.value); setCatFilter('all'); };
+  const handleViewChange = e => { setViewFilter(e.target.value); setCatFilter('all'); };
 
   const selectStyle = {
-    fontSize: 12, fontWeight: 600,
-    padding: '7px 10px', borderRadius: 8,
-    border: '1px solid rgba(0,0,0,0.12)',
-    background: 'rgba(255,255,255,0.88)',
+    fontSize: 12, fontWeight: 600, padding: '7px 10px', borderRadius: 8,
+    border: '1px solid rgba(0,0,0,0.12)', background: 'rgba(255,255,255,0.88)',
     color: '#263238', outline: 'none', cursor: 'pointer',
   };
   const labelStyle = { fontSize: 11, fontWeight: 700, color: '#78909C', whiteSpace: 'nowrap' };
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', flexWrap: 'wrap',
-      gap: 8, padding: '12px 14px',
-      borderBottom: '1px solid rgba(0,0,0,0.07)',
+      display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8,
+      padding: '12px 14px', borderBottom: '1px solid rgba(0,0,0,0.07)',
       background: 'rgba(255,255,255,0.30)',
     }}>
       <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 160 }}>
-        <span style={{
-          position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)',
-          fontSize: 13, color: '#90A4AE', pointerEvents: 'none',
-        }}>🔍</span>
-        <input
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+        <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#90A4AE', pointerEvents: 'none' }}>🔍</span>
+        <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
           placeholder="Search documents, companies, titles…"
-          style={{ ...selectStyle, width: '100%', paddingLeft: 28, fontWeight: 500 }}
-        />
+          style={{ ...selectStyle, width: '100%', paddingLeft: 28, fontWeight: 500 }} />
       </div>
-
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
         <span style={labelStyle}>View</span>
         <select value={viewFilter} onChange={handleViewChange} style={selectStyle}>
           <option value="all">All</option>
-          {availableWorkspaces.map((ws) => (
+          {availableWorkspaces.map(ws => (
             <option key={ws} value={ws}>{WORKSPACE_CONFIG[ws]?.label || ws}</option>
           ))}
         </select>
       </div>
-
       {viewFilter !== 'all' && catOptions.length > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={labelStyle}>Category</span>
-          <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} style={selectStyle}>
-            {catOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
+          <select value={catFilter} onChange={e => setCatFilter(e.target.value)} style={selectStyle}>
+            {catOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
       )}
-
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
         <span style={labelStyle}>Sort</span>
-        <select value={sortMode} onChange={(e) => setSortMode(e.target.value)} style={selectStyle}>
+        <select value={sortMode} onChange={e => setSortMode(e.target.value)} style={selectStyle}>
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
           <option value="name">Name A–Z</option>
@@ -612,16 +706,319 @@ function ControlsBar({
   );
 }
 
+// ─── UploadedDocumentsTab ─────────────────────────────────────────────────────
+function UploadedDocumentsTab({ isMobile }) {
+  const [uploads, setUploads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [shareDoc, setShareDoc] = useState(null);
+  const fileRef = useRef(null);
+
+  const loadUploads = useCallback(async () => {
+    try {
+      const res = await fetch('/api/vault/uploads/list', { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      setUploads(data.uploads || []);
+    } catch { /* silent */ } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { loadUploads(); }, [loadUploads]);
+
+  const handleFiles = useCallback(async (files) => {
+    const file = files[0];
+    if (!file) return;
+
+    const allowed = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
+    if (!allowed.includes(file.type)) {
+      setUploadError('Only PDF and DOCX files are allowed.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('File must be under 10MB.');
+      return;
+    }
+
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/vault/upload', { method: 'POST', credentials: 'include', body: formData });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Upload failed');
+      }
+      await loadUploads();
+    } catch (e) {
+      setUploadError(e.message || 'Upload failed');
+    } finally { setUploading(false); }
+  }, [loadUploads]);
+
+  const handleDelete = useCallback(async (id) => {
+    if (!confirm('Delete this file?')) return;
+    try {
+      await fetch(`/api/vault/uploads/${id}`, { method: 'DELETE', credentials: 'include' });
+      setUploads(prev => prev.filter(u => u.id !== id));
+    } catch { /* silent */ }
+  }, []);
+
+  const dropZoneStyle = {
+    border: `2px dashed ${dragOver ? '#FF7043' : 'rgba(0,0,0,0.15)'}`,
+    borderRadius: 12, padding: '28px 20px', textAlign: 'center',
+    background: dragOver ? 'rgba(255,112,67,0.05)' : 'rgba(255,255,255,0.40)',
+    cursor: 'pointer', transition: 'all 150ms ease', marginBottom: 16,
+  };
+
+  return (
+    <div style={{ padding: '14px' }}>
+      {/* Drop zone */}
+      <div
+        style={dropZoneStyle}
+        onClick={() => fileRef.current?.click()}
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={e => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+      >
+        <div style={{ fontSize: 28, marginBottom: 8 }}>📁</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#112033', marginBottom: 4 }}>
+          {uploading ? 'Uploading…' : 'Drop a file or click to upload'}
+        </div>
+        <div style={{ fontSize: 11, color: '#90A4AE' }}>PDF or DOCX only · 10MB max</div>
+        <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }}
+          onChange={e => handleFiles(e.target.files)} />
+      </div>
+
+      {uploadError && (
+        <div style={{ fontSize: 12, color: '#E53935', fontWeight: 600, marginBottom: 12, padding: '8px 10px', background: 'rgba(229,57,53,0.06)', borderRadius: 8 }}>
+          {uploadError}
+        </div>
+      )}
+
+      {/* Column header */}
+      {!isMobile && !loading && uploads.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', padding: '6px 0',
+          fontSize: 10, fontWeight: 800, color: '#90A4AE',
+          letterSpacing: '0.06em', textTransform: 'uppercase',
+          borderBottom: '1px solid rgba(0,0,0,0.05)', marginBottom: 4,
+        }}>
+          <div style={{ flex: 1 }}>File</div>
+          <div style={{ width: 70 }}>Size</div>
+          <div style={{ width: 100 }}>Uploaded</div>
+          <div style={{ width: 180, paddingLeft: 12 }}>Actions</div>
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ padding: '24px 0', textAlign: 'center', color: '#90A4AE', fontSize: 13 }}>Loading…</div>
+      ) : uploads.length === 0 ? (
+        <div style={{ padding: '24px 0', textAlign: 'center', color: '#90A4AE', fontSize: 13 }}>No uploads yet.</div>
+      ) : (
+        uploads.map(u => (
+          <div key={u.id}
+            style={{
+              display: 'flex', alignItems: isMobile ? 'flex-start' : 'center',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? 8 : 0, padding: '10px 0',
+              borderBottom: '1px solid rgba(0,0,0,0.05)', transition: 'background 120ms',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.55)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 7, flexShrink: 0,
+                background: u.fileType === 'pdf' ? 'rgba(229,57,53,0.10)' : 'rgba(33,150,243,0.10)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
+              }}>
+                {u.fileType === 'pdf' ? '📕' : '📘'}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#112033', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: isMobile ? '70vw' : 320 }}>
+                  {u.fileName}
+                </div>
+                <div style={{ fontSize: 10, color: '#90A4AE', marginTop: 1, textTransform: 'uppercase', fontWeight: 600 }}>
+                  {u.fileType}
+                </div>
+              </div>
+            </div>
+            <div style={{ flexShrink: 0, width: isMobile ? 'auto' : 70, fontSize: 11, color: '#90A4AE' }}>
+              {formatBytes(u.fileSizeBytes)}
+            </div>
+            <div style={{ flexShrink: 0, width: isMobile ? 'auto' : 100, fontSize: 11, color: '#546E7A', fontWeight: 600 }}>
+              {formatDate(u.createdAt)}
+            </div>
+            <div style={{ flexShrink: 0, width: isMobile ? 'auto' : 180, paddingLeft: isMobile ? 0 : 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button onClick={() => window.open(u.downloadUrl, '_blank', 'noopener')} style={{
+                fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
+                border: '1px solid rgba(255,112,67,0.30)', background: 'rgba(255,112,67,0.08)',
+                color: '#FF7043', cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>↓ Download</button>
+              <button onClick={() => setShareDoc({ name: u.fileName, sharePayload: { vaultUploadId: u.id, fileName: u.fileName, downloadUrl: u.downloadUrl } })} style={{
+                fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
+                border: '1px solid rgba(0,0,0,0.12)', background: 'transparent',
+                color: '#546E7A', cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>+ Share</button>
+              <button onClick={() => handleDelete(u.id)} style={{
+                fontSize: 11, fontWeight: 700, padding: '5px 8px', borderRadius: 8,
+                border: '1px solid rgba(229,57,53,0.20)', background: 'transparent',
+                color: '#E53935', cursor: 'pointer',
+              }}>✕</button>
+            </div>
+          </div>
+        ))
+      )}
+      {shareDoc && <ShareModal doc={shareDoc} onClose={() => setShareDoc(null)} />}
+    </div>
+  );
+}
+
+// ─── SharedWithMeTab ──────────────────────────────────────────────────────────
+function SharedWithMeTab({ isMobile }) {
+  const [shares, setShares] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    fetch('/api/vault/shared-with-me', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) { setShares(data.shares || []); setUnreadCount(data.unreadCount || 0); }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const markRead = useCallback(async (shareId) => {
+    try {
+      await fetch('/api/vault/shared-with-me/mark-read', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shareId }),
+      });
+      setShares(prev => prev.map(s => s.id === shareId ? { ...s, isUnread: false, readAt: new Date().toISOString() } : s));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch { /* silent */ }
+  }, []);
+
+  if (loading) return <div style={{ padding: '36px 0', textAlign: 'center', color: '#90A4AE', fontSize: 13 }}>Loading…</div>;
+
+  if (!shares.length) {
+    return (
+      <div style={{ padding: '44px 0', textAlign: 'center' }}>
+        <div style={{ fontSize: 30, marginBottom: 10 }}>📬</div>
+        <div style={{ fontSize: 14, color: '#546E7A', fontWeight: 700 }}>Nothing shared with you yet.</div>
+        <div style={{ fontSize: 12, color: '#90A4AE', marginTop: 4 }}>Documents shared by contacts or Foundry participants will appear here.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: '0 14px 14px' }}>
+      {!isMobile && (
+        <div style={{
+          display: 'flex', alignItems: 'center', padding: '8px 0',
+          fontSize: 10, fontWeight: 800, color: '#90A4AE',
+          letterSpacing: '0.06em', textTransform: 'uppercase',
+          borderBottom: '1px solid rgba(0,0,0,0.05)', marginBottom: 4,
+        }}>
+          <div style={{ flex: 1 }}>Document</div>
+          <div style={{ width: 120 }}>From</div>
+          <div style={{ width: 80 }}>Origin</div>
+          <div style={{ width: 100 }}>Received</div>
+          <div style={{ width: 110, paddingLeft: 12 }}>Actions</div>
+        </div>
+      )}
+
+      {shares.map(s => (
+        <div key={s.id}
+          style={{
+            display: 'flex', alignItems: isMobile ? 'flex-start' : 'center',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? 8 : 0, padding: '11px 0',
+            borderBottom: '1px solid rgba(0,0,0,0.05)',
+            background: s.isUnread ? 'rgba(255,112,67,0.04)' : 'transparent',
+            transition: 'background 120ms',
+          }}
+        >
+          {/* File info */}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+            {s.isUnread && (
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF7043', flexShrink: 0 }} />
+            )}
+            <div style={{ minWidth: 0 }}>
+              <div style={{
+                fontSize: 13, fontWeight: s.isUnread ? 800 : 700, color: '#112033',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                maxWidth: isMobile ? '70vw' : 280,
+              }}>
+                {s.fileName}
+              </div>
+              {s.message && (
+                <div style={{ fontSize: 11, color: '#78909C', marginTop: 2, fontStyle: 'italic' }}>
+                  "{s.message}"
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* From */}
+          <div style={{ flexShrink: 0, width: isMobile ? 'auto' : 120 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{s.from.name}</div>
+            {s.from.role && <div style={{ fontSize: 10, color: '#90A4AE', textTransform: 'capitalize' }}>{s.from.role.toLowerCase()}</div>}
+          </div>
+
+          {/* Origin */}
+          <div style={{ flexShrink: 0, width: isMobile ? 'auto' : 80 }}>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
+              background: s.origin === 'foundry' ? 'rgba(103,58,183,0.10)' : 'rgba(33,150,243,0.10)',
+              color: s.origin === 'foundry' ? '#4527A0' : '#185FA5',
+            }}>
+              {s.origin === 'foundry' ? 'Foundry' : 'Direct'}
+            </span>
+          </div>
+
+          {/* Date */}
+          <div style={{ flexShrink: 0, width: isMobile ? 'auto' : 100, fontSize: 11, color: '#546E7A', fontWeight: 600 }}>
+            {formatDate(s.createdAt)}
+          </div>
+
+          {/* Actions */}
+          <div style={{ flexShrink: 0, width: isMobile ? 'auto' : 110, paddingLeft: isMobile ? 0 : 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {s.downloadUrl ? (
+              <button
+                onClick={() => { window.open(s.downloadUrl, '_blank', 'noopener'); if (s.isUnread) markRead(s.id); }}
+                style={{
+                  fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
+                  border: '1px solid rgba(255,112,67,0.30)', background: 'rgba(255,112,67,0.08)',
+                  color: '#FF7043', cursor: 'pointer', whiteSpace: 'nowrap',
+                }}
+              >↓ Open</button>
+            ) : (
+              <span style={{ fontSize: 11, color: '#B0BEC5' }}>No file</span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function ForgeVaultPage() {
-  const [docs, setDocs]             = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortMode, setSortMode]     = useState('newest');
-  const [viewFilter, setViewFilter] = useState('all');
-  const [catFilter, setCatFilter]   = useState('all');
-  const [isMobile, setIsMobile]     = useState(false);
+  const [activeTab, setActiveTab]       = useState('forge');    // 'forge' | 'uploads' | 'shared'
+  const [docs, setDocs]                 = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState(null);
+  const [searchTerm, setSearchTerm]     = useState('');
+  const [sortMode, setSortMode]         = useState('newest');
+  const [viewFilter, setViewFilter]     = useState('all');
+  const [catFilter, setCatFilter]       = useState('all');
+  const [isMobile, setIsMobile]         = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -630,10 +1027,10 @@ export default function ForgeVaultPage() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  // Load forge docs
   useEffect(() => {
     let alive = true;
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
 
     async function safeGet(url) {
       try {
@@ -644,10 +1041,7 @@ export default function ForgeVaultPage() {
     }
 
     async function loadAll() {
-      const [
-        resumeData, coverData, roadmapData, negotiationData,
-        packetData, strategyData, vaultData,
-      ] = await Promise.all([
+      const [resumeData, coverData, roadmapData, negotiationData, packetData, strategyData, vaultData] = await Promise.all([
         safeGet('/api/resume/list'),
         safeGet('/api/cover/list'),
         safeGet('/api/anvil/onboarding-growth/list'),
@@ -692,13 +1086,13 @@ export default function ForgeVaultPage() {
   }, []);
 
   const availableWorkspaces = useMemo(() => {
-    const ws = new Set(docs.map((d) => d.workspace));
-    return ['seeker', 'coach', 'recruiter'].filter((w) => ws.has(w));
+    const ws = new Set(docs.map(d => d.workspace));
+    return ['seeker', 'coach', 'recruiter'].filter(w => ws.has(w));
   }, [docs]);
 
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    let rows = docs.filter((d) => {
+    let rows = docs.filter(d => {
       if (viewFilter !== 'all' && d.workspace !== viewFilter) return false;
       if (catFilter !== 'all' && d.category !== catFilter) return false;
       if (q) {
@@ -721,11 +1115,25 @@ export default function ForgeVaultPage() {
 
   const greeting = getTimeGreeting();
 
+  const TAB_CONFIG = [
+    { key: 'forge',   label: 'Forge Documents',    icon: '⚒️'  },
+    { key: 'uploads', label: 'Uploaded Documents',  icon: '📁'  },
+    { key: 'shared',  label: 'Shared With Me',      icon: '📬'  },
+  ];
+
+  const tabStyle = (key) => ({
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: '10px 16px', border: 'none', borderRadius: '10px 10px 0 0',
+    cursor: 'pointer', fontSize: 13, fontWeight: activeTab === key ? 800 : 600,
+    color: activeTab === key ? '#FF7043' : '#546E7A',
+    background: activeTab === key ? 'rgba(255,112,67,0.08)' : 'transparent',
+    borderBottom: activeTab === key ? '2px solid #FF7043' : '2px solid transparent',
+    transition: 'all 150ms ease', whiteSpace: 'nowrap',
+  });
+
   return (
     <>
-      <Head>
-        <title>ForgeVault — ForgeTomorrow</title>
-      </Head>
+      <Head><title>ForgeVault — ForgeTomorrow</title></Head>
 
       <SeekerLayout
         title="ForgeVault — ForgeTomorrow"
@@ -741,46 +1149,62 @@ export default function ForgeVaultPage() {
         rightVariant="light"
       >
         <section style={{ ...GLASS, overflow: 'hidden' }}>
+          {/* Heading */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '14px 14px 0 14px',
           }}>
-            <h2 style={{
-              margin: 0, fontSize: 18, color: '#FF7043',
-              lineHeight: 1.25, letterSpacing: '-0.01em',
-              ...ORANGE_HEADING_LIFT,
-            }}>
+            <h2 style={{ margin: 0, fontSize: 18, color: '#FF7043', lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>
               Document Archive
             </h2>
             <div style={{ fontSize: 12, color: '#546E7A', fontWeight: 600 }}>
-              {loading ? '—' : `${filtered.length} document${filtered.length !== 1 ? 's' : ''}`}
+              {activeTab === 'forge' && !loading ? `${filtered.length} document${filtered.length !== 1 ? 's' : ''}` : ''}
             </div>
           </div>
 
-          <ControlsBar
-            viewFilter={viewFilter} setViewFilter={setViewFilter}
-            catFilter={catFilter} setCatFilter={setCatFilter}
-            searchTerm={searchTerm} setSearchTerm={setSearchTerm}
-            sortMode={sortMode} setSortMode={setSortMode}
-            availableWorkspaces={availableWorkspaces}
-          />
-
-          <div>
-            {error ? (
-              <div style={{ padding: '24px 14px', textAlign: 'center', color: '#E53935', fontSize: 13, fontWeight: 600 }}>
-                {error}
-                <button onClick={() => window.location.reload()} style={{
-                  display: 'block', margin: '10px auto 0', padding: '6px 14px', borderRadius: 8,
-                  border: '1px solid rgba(229,57,53,0.30)', background: 'rgba(229,57,53,0.06)',
-                  color: '#E53935', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                }}>
-                  Retry
-                </button>
-              </div>
-            ) : (
-              <VaultTable docs={filtered} loading={loading} isMobile={isMobile} viewFilter={viewFilter} />
-            )}
+          {/* Tab bar */}
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: 4,
+            padding: '10px 14px 0 14px',
+            borderBottom: '1px solid rgba(0,0,0,0.07)',
+          }}>
+            {TAB_CONFIG.map(tab => (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={tabStyle(tab.key)}>
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </div>
+
+          {/* Tab content */}
+          {activeTab === 'forge' && (
+            <>
+              <ControlsBar
+                viewFilter={viewFilter} setViewFilter={setViewFilter}
+                catFilter={catFilter} setCatFilter={setCatFilter}
+                searchTerm={searchTerm} setSearchTerm={setSearchTerm}
+                sortMode={sortMode} setSortMode={setSortMode}
+                availableWorkspaces={availableWorkspaces}
+              />
+              <div>
+                {error ? (
+                  <div style={{ padding: '24px 14px', textAlign: 'center', color: '#E53935', fontSize: 13, fontWeight: 600 }}>
+                    {error}
+                    <button onClick={() => window.location.reload()} style={{
+                      display: 'block', margin: '10px auto 0', padding: '6px 14px', borderRadius: 8,
+                      border: '1px solid rgba(229,57,53,0.30)', background: 'rgba(229,57,53,0.06)',
+                      color: '#E53935', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    }}>Retry</button>
+                  </div>
+                ) : (
+                  <ForgeDocumentsTable docs={filtered} loading={loading} isMobile={isMobile} viewFilter={viewFilter} />
+                )}
+              </div>
+            </>
+          )}
+
+          {activeTab === 'uploads' && <UploadedDocumentsTab isMobile={isMobile} />}
+          {activeTab === 'shared'  && <SharedWithMeTab isMobile={isMobile} />}
         </section>
       </SeekerLayout>
     </>
