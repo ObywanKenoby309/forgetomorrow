@@ -1,7 +1,7 @@
 // pages/dashboard/forge-vault.js
-// ForgeVault — unified document hub for all ForgeTomorrow-generated artifacts.
-// Seeker-chrome only. Reads from existing list endpoints. No new DB models.
-// Two deliverable files: forge-vault.js (this) + pages/api/vault/documents.js
+// ForgeVault — professional document workspace.
+// Workflow-oriented: View + Category dropdowns replace flat tab system.
+// No new DB models. No architecture changes. Reads existing list endpoints.
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Head from 'next/head';
@@ -19,58 +19,70 @@ const GLASS = {
   backdropFilter: 'blur(10px)',
   WebkitBackdropFilter: 'blur(10px)',
 };
-const WHITE_CARD = {
-  background: 'rgba(255,255,255,0.92)',
-  border: '1px solid rgba(0,0,0,0.08)',
-  borderRadius: 12,
-  boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-  boxSizing: 'border-box',
-};
 const ORANGE_HEADING_LIFT = {
   textShadow: '0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)',
   fontWeight: 900,
 };
-const GAP = 12;
 
-// ─── Tab config ───────────────────────────────────────────────────────────────
-const TABS = [
-  { key: 'all',             label: 'All Documents',              icon: '🗂️' },
-  { key: 'resume',          label: 'Resumes',                    icon: '📄' },
-  { key: 'cover',           label: 'Cover Letters',              icon: '✉️' },
-  { key: 'interview',       label: 'Interview Prep',             icon: '🎯' },
-  { key: 'profile',         label: 'Operating Profile',          icon: '🧠' },
-  { key: 'roadmap',         label: 'Growth & Pivot Roadmap',     icon: '🗺️' },
-  { key: 'negotiation',     label: 'Offer Negotiation',          icon: '🤝' },
-  { key: 'packet',          label: 'Application Packets',        icon: '📦' },
-  { key: 'strategy',        label: 'Target Strategy',            icon: '🏹' },
-  { key: 'candidateReview', label: 'Candidate Review Packets',   icon: '🧾' },
-  { key: 'resumeRole',      label: 'Resume vs Role Analysis',    icon: '📊' },
-];
+// ─── Workspace + category config ──────────────────────────────────────────────
+const WORKSPACE_CONFIG = {
+  seeker: {
+    label: 'Seeker',
+    categories: {
+      all:     { label: 'All seeker documents' },
+      seeking: { label: 'Seeking' },
+      career:  { label: 'Career' },
+    },
+  },
+  coach: {
+    label: 'Coach',
+    categories: {
+      all:      { label: 'All coaching documents' },
+      coaching: { label: 'Coaching' },
+    },
+  },
+  recruiter: {
+    label: 'Recruiter',
+    categories: {
+      all:          { label: 'All recruiter documents' },
+      candidates:   { label: 'Candidate packages' },
+      intelligence: { label: 'Candidate intelligence' },
+    },
+  },
+};
 
-// ─── Type badge colors ────────────────────────────────────────────────────────
-const TYPE_COLORS = {
-  resume:      { bg: 'rgba(255,112,67,0.10)', color: '#E64A19' },
-  cover:       { bg: 'rgba(33,150,243,0.10)', color: '#1565C0' },
-  interview:   { bg: 'rgba(76,175,80,0.10)',  color: '#2E7D32' },
-  profile:     { bg: 'rgba(156,39,176,0.10)', color: '#6A1B9A' },
-  roadmap:     { bg: 'rgba(0,188,212,0.10)',  color: '#006064' },
-  negotiation: { bg: 'rgba(255,193,7,0.12)',  color: '#E65100' },
-  packet:      { bg: 'rgba(96,125,139,0.10)', color: '#37474F' },
-  strategy:    { bg: 'rgba(103,58,183,0.10)', color: '#4527A0' },
-  candidateReview: { bg: 'rgba(255,112,67,0.12)', color: '#BF360C' },
-  resumeRole: { bg: 'rgba(76,175,80,0.12)', color: '#2E7D32', },
+// ─── Type display config ──────────────────────────────────────────────────────
+const TYPE_META = {
+  resume:          { label: 'Resume',                  bg: 'rgba(255,112,67,0.10)',  color: '#993C1D' },
+  cover:           { label: 'Cover letter',             bg: 'rgba(33,150,243,0.10)',  color: '#185FA5' },
+  interview:       { label: 'Interview prep',           bg: 'rgba(76,175,80,0.10)',   color: '#27500A' },
+  profile:         { label: 'Operating profile',        bg: 'rgba(156,39,176,0.10)',  color: '#6A1B9A' },
+  roadmap:         { label: 'Roadmap',                  bg: 'rgba(0,188,212,0.10)',   color: '#006064' },
+  negotiation:     { label: 'Negotiation brief',        bg: 'rgba(255,193,7,0.12)',   color: '#633806' },
+  packet:          { label: 'Application packet',       bg: 'rgba(96,125,139,0.10)', color: '#37474F' },
+  strategy:        { label: 'Target strategy',          bg: 'rgba(33,150,243,0.10)',  color: '#185FA5' },
+  candidateReview: { label: 'Candidate review packet',  bg: 'rgba(255,112,67,0.12)', color: '#7A2A0E' },
+  resumeRole:      { label: 'Resume vs role analysis',  bg: 'rgba(76,175,80,0.12)',   color: '#2E7D32' },
+};
+
+const WORKSPACE_BADGE = {
+  seeker:    { bg: 'rgba(255,112,67,0.10)',  color: '#993C1D',  label: 'Seeker'    },
+  coach:     { bg: 'rgba(33,150,243,0.10)',  color: '#185FA5',  label: 'Coach'     },
+  recruiter: { bg: 'rgba(96,125,139,0.10)', color: '#37474F',  label: 'Recruiter' },
+};
+
+const TYPE_ICON = {
+  resume: '📄', cover: '✉️', interview: '🎯', profile: '🧠',
+  roadmap: '🗺️', negotiation: '🤝', packet: '📦',
+  strategy: '🏹', candidateReview: '🧾', resumeRole: '📊',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatDate(raw) {
   if (!raw) return '—';
   try {
-    return new Date(raw).toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-    });
-  } catch {
-    return '—';
-  }
+    return new Date(raw).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return '—'; }
 }
 
 function safeText(v, fallback = '') {
@@ -83,34 +95,26 @@ function downloadText(filename, content) {
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 500);
-  } catch (e) {
-    console.error('[ForgeVault] downloadText error', e);
-  }
+  } catch (e) { console.error('[ForgeVault] downloadText error', e); }
 }
 
 function downloadJson(filename, obj) {
   downloadText(filename, JSON.stringify(obj, null, 2));
 }
 
-// ─── Normalizers — transform each API response into unified VaultDoc shape ────
-// VaultDoc: { id, type, name, subtitle?, date, downloadUrl?, downloadFn?, hasPdf, raw }
-
+// ─── Normalizers ──────────────────────────────────────────────────────────────
 function normalizeResumes(resumes = []) {
   return resumes.map((r) => ({
-    id: `resume-${r.id}`,
-    type: 'resume',
-    typeLabel: 'Resume',
+    id: `resume-${r.id}`, type: 'resume', workspace: 'seeker', category: 'seeking',
+    typeLabel: TYPE_META.resume.label,
     name: safeText(r.name, 'Untitled Resume'),
     subtitle: r.isPrimary ? '★ Primary' : null,
     date: r.updatedAt,
     downloadUrl: `/api/resume/download?id=${r.id}`,
-    hasPdf: false,
-    raw: r,
+    hasPdf: false, raw: r,
     exportFoundryEndpoint: '/api/resume/export-foundry',
     exportFoundryPayload: { resumeId: r.id },
   }));
@@ -118,9 +122,8 @@ function normalizeResumes(resumes = []) {
 
 function normalizeCovers(covers = []) {
   return covers.map((c) => ({
-    id: `cover-${c.id}`,
-    type: 'cover',
-    typeLabel: 'Cover Letter',
+    id: `cover-${c.id}`, type: 'cover', workspace: 'seeker', category: 'seeking',
+    typeLabel: TYPE_META.cover.label,
     name: safeText(c.name, 'Untitled Cover Letter'),
     subtitle: c.isPrimary ? '★ Primary' : null,
     date: c.updatedAt,
@@ -129,11 +132,9 @@ function normalizeCovers(covers = []) {
       if (!res.ok) throw new Error('Download failed');
       const data = await res.json();
       const content = safeText(data?.cover?.content, JSON.stringify(data?.cover || {}, null, 2));
-      const filename = `${safeText(c.name, 'cover_letter').replace(/[^a-z0-9_-]+/gi, '_')}.txt`;
-      downloadText(filename, content);
+      downloadText(`${safeText(c.name, 'cover_letter').replace(/[^a-z0-9_-]+/gi, '_')}.txt`, content);
     },
-    hasPdf: false,
-    raw: c,
+    hasPdf: false, raw: c,
     exportFoundryEndpoint: '/api/cover/export-foundry',
     exportFoundryPayload: { coverId: c.id },
   }));
@@ -141,17 +142,13 @@ function normalizeCovers(covers = []) {
 
 function normalizeInterviewPreps(preps = []) {
   return preps.map((p) => ({
-    id: `interview-${p.id}`,
-    type: 'interview',
-    typeLabel: 'Interview Prep',
+    id: `interview-${p.id}`, type: 'interview', workspace: 'seeker', category: 'seeking',
+    typeLabel: TYPE_META.interview.label,
     name: safeText(p.name, `Interview Prep · App #${p.applicationId}`),
     subtitle: p.jobTitle ? `for ${p.jobTitle}` : null,
     date: p.generatedAt,
-    downloadFn: () => {
-      downloadJson(`interview_prep_${p.applicationId}.json`, p.result || p);
-    },
-    hasPdf: false,
-    raw: p,
+    downloadFn: () => downloadJson(`interview_prep_${p.applicationId}.json`, p.result || p),
+    hasPdf: false, raw: p,
     exportFoundryEndpoint: `/api/seeker/applications/${p.applicationId}/interview-prep-export-foundry`,
     exportFoundryPayload: {},
   }));
@@ -160,17 +157,12 @@ function normalizeInterviewPreps(preps = []) {
 function normalizeProfile(profile) {
   if (!profile) return [];
   return [{
-    id: 'profile-pop',
-    type: 'profile',
-    typeLabel: 'Professional Operating Profile',
-    name: 'Professional Operating Profile',
-    subtitle: null,
+    id: 'profile-pop', type: 'profile', workspace: 'seeker', category: 'career',
+    typeLabel: TYPE_META.profile.label,
+    name: 'Professional Operating Profile', subtitle: null,
     date: profile.updatedAt,
-    downloadFn: () => {
-      downloadJson('professional_operating_profile.json', profile.snapshotJson || profile);
-    },
-    hasPdf: false,
-    raw: profile,
+    downloadFn: () => downloadJson('professional_operating_profile.json', profile.snapshotJson || profile),
+    hasPdf: false, raw: profile,
     exportFoundryEndpoint: '/api/anvil/identity/export-foundry',
     exportFoundryPayload: {},
   }];
@@ -178,17 +170,13 @@ function normalizeProfile(profile) {
 
 function normalizeRoadmaps(roadmaps = []) {
   return roadmaps.map((r) => ({
-    id: `roadmap-${r.id}`,
-    type: 'roadmap',
-    typeLabel: 'Growth & Pivot Roadmap',
+    id: `roadmap-${r.id}`, type: 'roadmap', workspace: 'seeker', category: 'career',
+    typeLabel: TYPE_META.roadmap.label,
     name: safeText(r.name, 'Growth & Pivot Roadmap'),
     subtitle: safeText(r.title, null),
     date: r.createdAt,
-    downloadFn: () => {
-      downloadJson(`growth_pivot_roadmap_${r.id}.json`, r.raw || r);
-    },
-    hasPdf: false,
-    raw: r,
+    downloadFn: () => downloadJson(`growth_pivot_roadmap_${r.id}.json`, r.raw || r),
+    hasPdf: false, raw: r,
     exportFoundryEndpoint: '/api/anvil/onboarding-growth/export-foundry',
     exportFoundryPayload: { roadmapId: r.id },
   }));
@@ -196,17 +184,12 @@ function normalizeRoadmaps(roadmaps = []) {
 
 function normalizeNegotiations(negotiations = []) {
   return negotiations.map((n) => ({
-    id: `negotiation-${n.id}`,
-    type: 'negotiation',
-    typeLabel: 'Offer & Negotiation Brief',
-    name: safeText(n.name, 'Offer & Negotiation Brief'),
-    subtitle: null,
+    id: `negotiation-${n.id}`, type: 'negotiation', workspace: 'seeker', category: 'career',
+    typeLabel: TYPE_META.negotiation.label,
+    name: safeText(n.name, 'Offer & Negotiation Brief'), subtitle: null,
     date: n.createdAt,
-    downloadFn: () => {
-      downloadJson(`negotiation_brief_${n.id}.json`, n.raw || n);
-    },
-    hasPdf: n.hasPdf || false,
-    raw: n,
+    downloadFn: () => downloadJson(`negotiation_brief_${n.id}.json`, n.raw || n),
+    hasPdf: n.hasPdf || false, raw: n,
     exportFoundryEndpoint: '/api/offer-negotiation/export-foundry',
     exportFoundryPayload: { negotiationId: n.id },
   }));
@@ -214,15 +197,13 @@ function normalizeNegotiations(negotiations = []) {
 
 function normalizePackets(packets = []) {
   return packets.map((p) => ({
-    id: `packet-${p.id}`,
-    type: 'packet',
-    typeLabel: 'Application Packet',
+    id: `packet-${p.id}`, type: 'packet', workspace: 'seeker', category: 'seeking',
+    typeLabel: TYPE_META.packet.label,
     name: safeText(p.name, 'Application Packet'),
     subtitle: [p.company, p.title].filter(Boolean).join(' · ') || null,
     date: p.updatedAt,
     downloadUrl: p.latestExport?.url || null,
-    hasPdf: Boolean(p.latestExport?.url),
-    raw: p,
+    hasPdf: Boolean(p.latestExport?.url), raw: p,
     exportFoundryEndpoint: '/api/apply/application-packets/export-foundry',
     exportFoundryPayload: { applicationId: p.applicationId },
   }));
@@ -230,15 +211,13 @@ function normalizePackets(packets = []) {
 
 function normalizeStrategies(strategies = []) {
   return strategies.map((s) => ({
-    id: `strategy-${s.id}`,
-    type: 'strategy',
-    typeLabel: 'Target Strategy',
+    id: `strategy-${s.id}`, type: 'strategy', workspace: 'coach', category: 'coaching',
+    typeLabel: TYPE_META.strategy.label,
     name: safeText(s.title, 'Target Strategy'),
     subtitle: s.summary ? s.summary.slice(0, 72) + (s.summary.length > 72 ? '…' : '') : null,
     date: s.updatedAt,
     downloadUrl: s.downloadUrl || null,
-    hasPdf: false,
-    raw: s,
+    hasPdf: false, raw: s,
     exportFoundryEndpoint: s.shareEndpoint || '/api/coaching/clients/strategy/export-foundry',
     exportFoundryPayload: s.sharePayload || { clientId: s.id },
   }));
@@ -247,18 +226,15 @@ function normalizeStrategies(strategies = []) {
 function normalizeCandidateReviewPackets(packets = []) {
   return packets.map((p) => {
     const candidateName = safeText(p.candidateName, 'Candidate');
-    const downloadUrl = p.packetUrl || (p.candidateUserId ? `/api/recruiter/candidates/${p.candidateUserId}/review-packet` : null);
-
+    const downloadUrl = p.packetUrl || (p.candidateUserId
+      ? `/api/recruiter/candidates/${p.candidateUserId}/review-packet` : null);
     return {
-      id: `candidate-review-${p.id}`,
-      type: 'candidateReview',
-      typeLabel: 'Candidate Review Packet',
+      id: `candidate-review-${p.id}`, type: 'candidateReview', workspace: 'recruiter', category: 'candidates',
+      typeLabel: TYPE_META.candidateReview.label,
       name: safeText(p.title, `${candidateName} · Candidate Review Packet`),
       subtitle: candidateName,
       date: p.updatedAt || p.createdAt,
-      downloadUrl,
-      hasPdf: true,
-      raw: p,
+      downloadUrl, hasPdf: true, raw: p,
       exportFoundryEndpoint: p.candidateUserId ? `/api/recruiter/candidates/${p.candidateUserId}/review-packet` : null,
       exportFoundryPayload: {},
     };
@@ -267,80 +243,58 @@ function normalizeCandidateReviewPackets(packets = []) {
 
 function normalizeResumeRoleAnalyses(analyses = []) {
   return analyses.map((a) => ({
-    id: `resume-role-${a.id}`,
-    type: 'resumeRole',
-    typeLabel: 'Resume vs Role Analysis',
+    id: `resume-role-${a.id}`, type: 'resumeRole', workspace: 'recruiter', category: 'intelligence',
+    typeLabel: TYPE_META.resumeRole.label,
     name: a.title || 'Resume vs Role Analysis',
     subtitle: a.candidateName || null,
     date: a.updatedAt || a.createdAt,
-    downloadFn: () => {
-      downloadJson(
-        `resume_role_analysis_${a.id}.json`,
-        a.result || a
-      );
-    },
-    hasPdf: false,
-    raw: a,
+    downloadFn: () => downloadJson(`resume_role_analysis_${a.id}.json`, a.result || a),
+    hasPdf: false, raw: a,
+    exportFoundryEndpoint: null, exportFoundryPayload: {},
   }));
 }
 
-// ─── TypeBadge ────────────────────────────────────────────────────────────────
-function TypeBadge({ type, label }) {
-  const colors = TYPE_COLORS[type] || { bg: 'rgba(0,0,0,0.06)', color: '#546E7A' };
+// ─── WorkspaceBadge ───────────────────────────────────────────────────────────
+function WorkspaceBadge({ workspace }) {
+  const wb = WORKSPACE_BADGE[workspace] || { bg: 'rgba(0,0,0,0.06)', color: '#546E7A', label: workspace };
   return (
     <span style={{
-      display: 'inline-block',
-      fontSize: 10,
-      fontWeight: 800,
-      letterSpacing: '0.04em',
-      textTransform: 'uppercase',
-      padding: '2px 7px',
-      borderRadius: 999,
-      background: colors.bg,
-      color: colors.color,
-      whiteSpace: 'nowrap',
+      display: 'inline-block', fontSize: 10, fontWeight: 700,
+      padding: '2px 7px', borderRadius: 999,
+      background: wb.bg, color: wb.color, whiteSpace: 'nowrap',
     }}>
-      {label}
+      {wb.label}
     </span>
   );
 }
 
-// ─── FoundryShareButton (placeholder) ────────────────────────────────────────
+// ─── TypeLabel ────────────────────────────────────────────────────────────────
+function TypeLabel({ type }) {
+  const meta = TYPE_META[type] || { label: type, color: '#546E7A' };
+  return (
+    <span style={{ fontSize: 10, fontWeight: 600, color: meta.color, whiteSpace: 'nowrap' }}>
+      {meta.label}
+    </span>
+  );
+}
+
+// ─── FoundryShareButton ───────────────────────────────────────────────────────
 function FoundryShareButton() {
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <button
-        disabled
-        title="Share to Foundry — Coming Soon"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-          padding: '5px 10px',
-          borderRadius: 8,
-          border: '1px solid rgba(0,0,0,0.10)',
-          background: 'rgba(0,0,0,0.04)',
-          color: '#455A64',
-          fontSize: 11,
-          fontWeight: 700,
-          cursor: 'not-allowed',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        <span style={{ fontSize: 13 }}>⚡</span> Foundry
-        <span style={{
-          fontSize: 9,
-          fontWeight: 800,
-          background: 'rgba(255,112,67,0.15)',
-          color: '#FF7043',
-          borderRadius: 999,
-          padding: '1px 5px',
-          marginLeft: 2,
-        }}>
-          SOON
-        </span>
-      </button>
-    </div>
+    <button disabled title="Share to Foundry — Coming Soon" style={{
+      display: 'flex', alignItems: 'center', gap: 4,
+      padding: '5px 10px', borderRadius: 8,
+      border: '1px solid rgba(0,0,0,0.10)',
+      background: 'transparent', color: '#90A4AE',
+      fontSize: 11, fontWeight: 700, cursor: 'not-allowed', whiteSpace: 'nowrap',
+    }}>
+      ⚡ Foundry
+      <span style={{
+        fontSize: 9, fontWeight: 800,
+        background: 'rgba(255,112,67,0.12)', color: '#FF7043',
+        borderRadius: 999, padding: '1px 5px', marginLeft: 2,
+      }}>SOON</span>
+    </button>
   );
 }
 
@@ -351,20 +305,14 @@ function DownloadButton({ doc }) {
 
   const handle = useCallback(async () => {
     if (busy) return;
-    setErr(null);
-    setBusy(true);
+    setErr(null); setBusy(true);
     try {
-      if (doc.downloadUrl) {
-        window.open(doc.downloadUrl, '_blank', 'noopener');
-      } else if (doc.downloadFn) {
-        await doc.downloadFn();
-      }
+      if (doc.downloadUrl) window.open(doc.downloadUrl, '_blank', 'noopener');
+      else if (doc.downloadFn) await doc.downloadFn();
     } catch (e) {
       setErr('Download failed');
       console.error('[ForgeVault] download error', e);
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   }, [doc, busy]);
 
   const canDownload = Boolean(doc.downloadUrl || doc.downloadFn);
@@ -374,31 +322,24 @@ function DownloadButton({ doc }) {
       <button disabled style={{
         padding: '5px 10px', borderRadius: 8,
         border: '1px solid rgba(0,0,0,0.08)',
-        background: 'rgba(0,0,0,0.04)',
-        color: '#607D8B', fontSize: 11, fontWeight: 700, cursor: 'not-allowed',
-      }}>
-        ↓ Download
-      </button>
+        background: 'transparent', color: '#B0BEC5',
+        fontSize: 11, fontWeight: 700, cursor: 'not-allowed',
+      }}>↓ Download</button>
     );
   }
 
   return (
     <div>
-      <button
-        onClick={handle}
-        disabled={busy}
-        title={err || 'Download document'}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 4,
-          padding: '5px 10px', borderRadius: 8,
-          border: '1px solid rgba(255,112,67,0.30)',
-          background: busy ? 'rgba(255,112,67,0.06)' : 'rgba(255,112,67,0.08)',
-          color: err ? '#E53935' : '#FF7043',
-          fontSize: 11, fontWeight: 700, cursor: busy ? 'wait' : 'pointer',
-          transition: 'all 150ms ease',
-          whiteSpace: 'nowrap',
-        }}
-      >
+      <button onClick={handle} disabled={busy} title={err || 'Download document'} style={{
+        display: 'flex', alignItems: 'center', gap: 4,
+        padding: '5px 10px', borderRadius: 8,
+        border: '1px solid rgba(255,112,67,0.30)',
+        background: busy ? 'rgba(255,112,67,0.06)' : 'rgba(255,112,67,0.08)',
+        color: err ? '#E53935' : '#FF7043',
+        fontSize: 11, fontWeight: 700,
+        cursor: busy ? 'wait' : 'pointer',
+        transition: 'all 150ms ease', whiteSpace: 'nowrap',
+      }}>
         {busy ? '…' : '↓'} {busy ? 'Downloading' : 'Download'}
       </button>
       {err && <div style={{ fontSize: 10, color: '#E53935', marginTop: 2 }}>{err}</div>}
@@ -407,64 +348,68 @@ function DownloadButton({ doc }) {
 }
 
 // ─── VaultRow ─────────────────────────────────────────────────────────────────
-function VaultRow({ doc, isMobile }) {
+function VaultRow({ doc, isMobile, showWorkspace }) {
+  const meta = TYPE_META[doc.type] || { bg: 'rgba(0,0,0,0.05)', color: '#546E7A' };
   return (
-    <div style={{
-      ...WHITE_CARD,
-      display: 'flex',
-      alignItems: isMobile ? 'flex-start' : 'center',
-      flexDirection: isMobile ? 'column' : 'row',
-      gap: isMobile ? 10 : 0,
-      padding: '12px 14px',
-      borderBottom: '1px solid rgba(0,0,0,0.05)',
-    }}>
-      {/* Left: type icon + name */}
-      <div style={{
-        flex: 1, minWidth: 0,
-        display: 'flex', alignItems: 'flex-start', gap: 10,
-      }}>
+    <div
+      style={{
+        display: 'flex', alignItems: isMobile ? 'flex-start' : 'center',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? 10 : 0,
+        padding: '11px 14px',
+        borderBottom: '1px solid rgba(0,0,0,0.05)',
+        transition: 'background 120ms ease',
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.55)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    >
+      {/* Icon + name */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{
-          width: 36, height: 36, borderRadius: 9, flexShrink: 0,
-          background: (TYPE_COLORS[doc.type] || {}).bg || 'rgba(0,0,0,0.05)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 16,
+          width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+          background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {TABS.find(t => t.key === doc.type)?.icon || '📄'}
+          <span style={{ fontSize: 15, lineHeight: 1 }}>{TYPE_ICON[doc.type] || '📄'}</span>
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{
             fontSize: 13, fontWeight: 800, color: '#112033',
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            maxWidth: isMobile ? '80vw' : 340,
+            maxWidth: isMobile ? '75vw' : 300,
           }}>
             {doc.name}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
-            <TypeBadge type={doc.type} label={doc.typeLabel} />
-            {doc.subtitle && (
-              <span style={{ fontSize: 11, color: '#546E7A', fontWeight: 600 }}>{doc.subtitle}</span>
-            )}
-          </div>
+          {doc.subtitle && (
+            <div style={{ fontSize: 11, color: '#78909C', fontWeight: 600, marginTop: 1 }}>
+              {doc.subtitle}
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Workspace + type */}
+      <div style={{
+        flexShrink: 0, width: isMobile ? 'auto' : 150,
+        paddingLeft: isMobile ? 44 : 0,
+        display: 'flex', flexDirection: 'column', gap: 3,
+      }}>
+        {showWorkspace && <WorkspaceBadge workspace={doc.workspace} />}
+        <TypeLabel type={doc.type} />
       </div>
 
       {/* Date */}
       <div style={{
-        flexShrink: 0,
-        width: isMobile ? 'auto' : 110,
-        fontSize: 11,
-        color: '#455A64',
-        fontWeight: 600,
-        paddingLeft: isMobile ? 46 : 0,
+        flexShrink: 0, width: isMobile ? 'auto' : 100,
+        paddingLeft: isMobile ? 44 : 0,
+        fontSize: 11, color: '#90A4AE', fontWeight: 600,
       }}>
         {formatDate(doc.date)}
       </div>
 
       {/* Actions */}
       <div style={{
-        flexShrink: 0,
-        display: 'flex', alignItems: 'center', gap: 6,
-        paddingLeft: isMobile ? 46 : 12,
+        flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
+        paddingLeft: isMobile ? 44 : 12,
       }}>
         <DownloadButton doc={doc} />
         <FoundryShareButton />
@@ -473,169 +418,192 @@ function VaultRow({ doc, isMobile }) {
   );
 }
 
-// ─── FilterBar ────────────────────────────────────────────────────────────────
-function FilterBar({ searchTerm, setSearchTerm, sortMode, setSortMode, typeFilter, setTypeFilter }) {
-  const inputStyle = {
-    width: '100%',
-    border: '1px solid rgba(0,0,0,0.12)',
-    borderRadius: 10,
-    background: 'rgba(255,255,255,0.88)',
-    padding: '8px 10px',
-    fontSize: 12,
-    fontWeight: 650,
-    color: '#263238',
-    outline: 'none',
-    boxSizing: 'border-box',
-  };
-
+// ─── SectionDivider ───────────────────────────────────────────────────────────
+function SectionDivider({ workspace }) {
+  const wb = WORKSPACE_BADGE[workspace] || { label: workspace, bg: 'rgba(0,0,0,0.04)', color: '#546E7A' };
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(220px, 1fr) 180px 180px',
-        gap: 8,
-        padding: '10px 14px',
-        borderBottom: '1px solid rgba(0,0,0,0.07)',
-        background: 'rgba(255,255,255,0.30)',
-      }}
-    >
-      <input
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        placeholder="Search documents, companies, titles..."
-        style={inputStyle}
-      />
-
-      <select
-        value={typeFilter}
-        onChange={(e) => setTypeFilter(e.target.value)}
-        style={inputStyle}
-      >
-        {TABS.map((tab) => (
-          <option key={tab.key} value={tab.key}>{tab.label}</option>
-        ))}
-      </select>
-
-      <select
-        value={sortMode}
-        onChange={(e) => setSortMode(e.target.value)}
-        style={inputStyle}
-      >
-        <option value="newest">Newest first</option>
-        <option value="oldest">Oldest first</option>
-        <option value="name">Name A-Z</option>
-        <option value="type">Type A-Z</option>
-      </select>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '8px 14px 6px 14px',
+      background: 'rgba(255,255,255,0.30)',
+      borderBottom: '1px solid rgba(0,0,0,0.05)',
+    }}>
+      <span style={{
+        fontSize: 10, fontWeight: 800, letterSpacing: '0.06em',
+        textTransform: 'uppercase', color: wb.color,
+        background: wb.bg, padding: '2px 8px', borderRadius: 999,
+      }}>
+        {wb.label} workspace
+      </span>
     </div>
   );
 }
 
 // ─── VaultTable ───────────────────────────────────────────────────────────────
-function VaultTable({ docs, loading, isMobile }) {
+const COLUMN_HEADER = (
+  <div style={{
+    display: 'flex', alignItems: 'center',
+    padding: '6px 14px',
+    fontSize: 10, fontWeight: 800, color: '#90A4AE',
+    letterSpacing: '0.06em', textTransform: 'uppercase',
+    background: 'rgba(255,255,255,0.30)',
+    borderBottom: '1px solid rgba(0,0,0,0.05)',
+  }}>
+    <div style={{ flex: 1 }}>Document</div>
+    <div style={{ width: 150 }}>Workspace / Type</div>
+    <div style={{ width: 100 }}>Updated</div>
+    <div style={{ width: 170, paddingLeft: 12 }}>Actions</div>
+  </div>
+);
+
+function VaultTable({ docs, loading, isMobile, viewFilter }) {
   if (loading) {
     return (
-      <div style={{ padding: '32px 0', textAlign: 'center', color: '#455A64', fontSize: 14 }}>
+      <div style={{ padding: '36px 0', textAlign: 'center', color: '#90A4AE', fontSize: 13 }}>
         Loading your documents…
       </div>
     );
   }
-
   if (!docs.length) {
     return (
-      <div style={{ padding: '40px 0', textAlign: 'center' }}>
-        <div style={{ fontSize: 32, marginBottom: 10 }}>📭</div>
-        <div style={{ fontSize: 14, color: '#546E7A', fontWeight: 600 }}>
-          No documents here yet.
-        </div>
-        <div style={{ fontSize: 12, color: '#607D8B', marginTop: 4 }}>
-          Documents will appear here as you create them across ForgeTomorrow.
+      <div style={{ padding: '44px 0', textAlign: 'center' }}>
+        <div style={{ fontSize: 30, marginBottom: 10 }}>📭</div>
+        <div style={{ fontSize: 14, color: '#546E7A', fontWeight: 700 }}>No documents here yet.</div>
+        <div style={{ fontSize: 12, color: '#90A4AE', marginTop: 4 }}>
+          Documents appear here as you create them across ForgeTomorrow.
         </div>
       </div>
     );
   }
 
+  const showDividers = viewFilter === 'all';
+  const showWorkspaceBadge = viewFilter === 'all';
+
+  if (!showDividers) {
+    return (
+      <div>
+        {!isMobile && COLUMN_HEADER}
+        {docs.map((doc) => (
+          <VaultRow key={doc.id} doc={doc} isMobile={isMobile} showWorkspace={showWorkspaceBadge} />
+        ))}
+      </div>
+    );
+  }
+
+  const WS_ORDER = ['seeker', 'coach', 'recruiter'];
+  const grouped = {};
+  docs.forEach((d) => {
+    if (!grouped[d.workspace]) grouped[d.workspace] = [];
+    grouped[d.workspace].push(d);
+  });
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {/* Header row — desktop only */}
-      {!isMobile && (
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          padding: '6px 14px',
-          fontSize: 10, fontWeight: 800, color: '#455A64',
-          letterSpacing: '0.06em', textTransform: 'uppercase',
-        }}>
-          <div style={{ flex: 1 }}>Document</div>
-          <div style={{ width: 110 }}>Last Updated</div>
-          <div style={{ width: 160, paddingLeft: 12 }}>Actions</div>
-        </div>
-      )}
-      {docs.map((doc) => (
-        <VaultRow key={doc.id} doc={doc} isMobile={isMobile} />
+    <div>
+      {!isMobile && COLUMN_HEADER}
+      {WS_ORDER.filter(ws => grouped[ws]?.length).map((ws) => (
+        <React.Fragment key={ws}>
+          <SectionDivider workspace={ws} />
+          {grouped[ws].map((doc) => (
+            <VaultRow key={doc.id} doc={doc} isMobile={isMobile} showWorkspace={true} />
+          ))}
+        </React.Fragment>
       ))}
     </div>
   );
 }
 
-// ─── TabBar ───────────────────────────────────────────────────────────────────
-function TabBar({ activeTab, setActiveTab, setTypeFilter, counts }) {
+// ─── ControlsBar ──────────────────────────────────────────────────────────────
+function ControlsBar({
+  viewFilter, setViewFilter, catFilter, setCatFilter,
+  searchTerm, setSearchTerm, sortMode, setSortMode,
+  availableWorkspaces,
+}) {
+  const catOptions = useMemo(() => {
+    if (viewFilter === 'all') return [{ value: 'all', label: 'All documents' }];
+    const ws = WORKSPACE_CONFIG[viewFilter];
+    if (!ws) return [{ value: 'all', label: 'All documents' }];
+    return Object.entries(ws.categories).map(([k, v]) => ({ value: k, label: v.label }));
+  }, [viewFilter]);
+
+  const handleViewChange = (e) => { setViewFilter(e.target.value); setCatFilter('all'); };
+
+  const selectStyle = {
+    fontSize: 12, fontWeight: 600,
+    padding: '7px 10px', borderRadius: 8,
+    border: '1px solid rgba(0,0,0,0.12)',
+    background: 'rgba(255,255,255,0.88)',
+    color: '#263238', outline: 'none', cursor: 'pointer',
+  };
+  const labelStyle = { fontSize: 11, fontWeight: 700, color: '#78909C', whiteSpace: 'nowrap' };
+
   return (
     <div style={{
-      display: 'flex', flexWrap: 'wrap', gap: 6,
-      padding: '10px 14px 0 14px',
+      display: 'flex', alignItems: 'center', flexWrap: 'wrap',
+      gap: 8, padding: '12px 14px',
       borderBottom: '1px solid rgba(0,0,0,0.07)',
+      background: 'rgba(255,255,255,0.30)',
     }}>
-      {TABS.map((tab) => {
-        const count = counts[tab.key] ?? 0;
-        const isActive = activeTab === tab.key;
-        return (
-          <button
-            key={tab.key}
-            onClick={() => { setActiveTab(tab.key); setTypeFilter(tab.key); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '6px 12px',
-              borderRadius: '8px 8px 0 0',
-              border: 'none',
-              borderBottom: isActive ? '2px solid #FF7043' : '2px solid transparent',
-              background: isActive ? 'rgba(255,112,67,0.08)' : 'transparent',
-              color: isActive ? '#FF7043' : '#546E7A',
-              fontSize: 12,
-              fontWeight: isActive ? 800 : 600,
-              cursor: 'pointer',
-              transition: 'all 150ms ease',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span>{tab.icon}</span>
-            <span>{tab.label}</span>
-            {count > 0 && (
-              <span style={{
-                fontSize: 10, fontWeight: 800,
-                background: isActive ? '#FF7043' : 'rgba(0,0,0,0.10)',
-                color: isActive ? '#fff' : '#546E7A',
-                borderRadius: 999, padding: '1px 5px', minWidth: 16,
-                textAlign: 'center',
-              }}>
-                {count}
-              </span>
-            )}
-          </button>
-        );
-      })}
+      {/* Search */}
+      <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 160 }}>
+        <span style={{
+          position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)',
+          fontSize: 13, color: '#90A4AE', pointerEvents: 'none',
+        }}>🔍</span>
+        <input
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search documents, companies, titles…"
+          style={{ ...selectStyle, width: '100%', paddingLeft: 28, fontWeight: 500 }}
+        />
+      </div>
+
+      {/* View */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span style={labelStyle}>View</span>
+        <select value={viewFilter} onChange={handleViewChange} style={selectStyle}>
+          <option value="all">All</option>
+          {availableWorkspaces.map((ws) => (
+            <option key={ws} value={ws}>{WORKSPACE_CONFIG[ws]?.label || ws}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Category — only when a specific view is selected and has subcategories */}
+      {viewFilter !== 'all' && catOptions.length > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={labelStyle}>Category</span>
+          <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} style={selectStyle}>
+            {catOptions.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Sort */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span style={labelStyle}>Sort</span>
+        <select value={sortMode} onChange={(e) => setSortMode(e.target.value)} style={selectStyle}>
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="name">Name A–Z</option>
+          <option value="type">Type A–Z</option>
+        </select>
+      </div>
     </div>
   );
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function ForgeVaultPage() {
-  const [docs, setDocs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortMode, setSortMode] = useState('newest');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [isMobile, setIsMobile] = useState(false);
+  const [docs, setDocs]               = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
+  const [searchTerm, setSearchTerm]   = useState('');
+  const [sortMode, setSortMode]       = useState('newest');
+  const [viewFilter, setViewFilter]   = useState('all');
+  const [catFilter, setCatFilter]     = useState('all');
+  const [isMobile, setIsMobile]       = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -655,20 +623,13 @@ export default function ForgeVaultPage() {
         const res = await fetch(url, { credentials: 'include' });
         if (!res.ok) return null;
         return await res.json();
-      } catch {
-        return null;
-      }
+      } catch { return null; }
     }
 
     async function loadAll() {
       const [
-        resumeData,
-        coverData,
-        roadmapData,
-        negotiationData,
-        packetData,
-        strategyData,
-        vaultData,       // aggregator for interview prep + POP + recruiter review packets (see api/vault/documents.js)
+        resumeData, coverData, roadmapData, negotiationData,
+        packetData, strategyData, vaultData,
       ] = await Promise.all([
         safeGet('/api/resume/list'),
         safeGet('/api/cover/list'),
@@ -691,10 +652,9 @@ export default function ForgeVaultPage() {
         ...normalizePackets(packetData?.packets || []),
         ...normalizeStrategies(strategyData?.strategies || []),
         ...normalizeCandidateReviewPackets(vaultData?.recruiterReviewPackets || []),
-		...normalizeResumeRoleAnalyses(vaultData?.resumeRoleAnalyses || []),
+        ...normalizeResumeRoleAnalyses(vaultData?.resumeRoleAnalyses || []),
       ];
 
-      // Sort by date descending
       all.sort((a, b) => {
         const da = a.date ? new Date(a.date).getTime() : 0;
         const db = b.date ? new Date(b.date).getTime() : 0;
@@ -714,59 +674,35 @@ export default function ForgeVaultPage() {
     return () => { alive = false; };
   }, []);
 
-  // ── Filtered view ─────────────────────────────────────────────────────────
+  // ── Derive which workspaces actually have data ─────────────────────────────
+  const availableWorkspaces = useMemo(() => {
+    const ws = new Set(docs.map((d) => d.workspace));
+    return ['seeker', 'coach', 'recruiter'].filter((w) => ws.has(w));
+  }, [docs]);
+
+  // ── Filter + sort ─────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    const effectiveType = typeFilter !== 'all' ? typeFilter : activeTab;
     const q = searchTerm.trim().toLowerCase();
-
-    const rows = docs.filter((d) => {
-      if (effectiveType !== 'all' && d.type !== effectiveType) return false;
-
-      if (!q) return true;
-      const haystack = [
-        d.name,
-        d.subtitle,
-        d.typeLabel,
-        d.raw?.title,
-        d.raw?.company,
-        d.raw?.jobTitle,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      return haystack.includes(q);
+    let rows = docs.filter((d) => {
+      if (viewFilter !== 'all' && d.workspace !== viewFilter) return false;
+      if (catFilter !== 'all' && d.category !== catFilter) return false;
+      if (q) {
+        const haystack = [d.name, d.subtitle, d.typeLabel, d.raw?.title, d.raw?.company, d.raw?.jobTitle]
+          .filter(Boolean).join(' ').toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
     });
 
-    return [...rows].sort((a, b) => {
-      if (sortMode === 'oldest') {
-        return (a.date ? new Date(a.date).getTime() : 0) - (b.date ? new Date(b.date).getTime() : 0);
-      }
-      if (sortMode === 'name') {
-        return String(a.name || '').localeCompare(String(b.name || ''));
-      }
-      if (sortMode === 'type') {
-        return String(a.typeLabel || '').localeCompare(String(b.typeLabel || ''));
-      }
-
-      return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
+    rows.sort((a, b) => {
+      if (sortMode === 'oldest') return (a.date ? new Date(a.date) : 0) - (b.date ? new Date(b.date) : 0);
+      if (sortMode === 'name')   return String(a.name || '').localeCompare(String(b.name || ''));
+      if (sortMode === 'type')   return String(a.typeLabel || '').localeCompare(String(b.typeLabel || ''));
+      return (b.date ? new Date(b.date) : 0) - (a.date ? new Date(a.date) : 0);
     });
-  }, [activeTab, docs, searchTerm, sortMode, typeFilter]);
 
-  // ── Tab counts ─────────────────────────────────────────────────────────────
-  const counts = {};
-  counts.all = docs.length;
-  TABS.slice(1).forEach((tab) => {
-    counts[tab.key] = docs.filter((d) => d.type === tab.key).length;
-  });
-
-  // ── KPI strip ─────────────────────────────────────────────────────────────
-  const kpiTypes = [
-    { key: 'resume',      label: 'Resumes',    icon: '📄' },
-    { key: 'cover',       label: 'Covers',     icon: '✉️' },
-    { key: 'interview',   label: 'Prep Docs',  icon: '🎯' },
-    { key: 'negotiation', label: 'Briefs',     icon: '🤝' },
-  ];
+    return rows;
+  }, [docs, viewFilter, catFilter, searchTerm, sortMode]);
 
   const greeting = getTimeGreeting();
 
@@ -783,59 +719,16 @@ export default function ForgeVaultPage() {
           <SeekerTitleCard
             greeting={greeting}
             title="ForgeVault"
-            subtitle="Your complete document archive — resumes, cover letters, roadmaps, briefs, strategies, and professional outputs in one searchable place."
+            subtitle="Your professional document workspace — every artifact ForgeTomorrow has built for you, organized by workflow."
           />
         }
         right={<RightRailPlacementManager slot="right_rail_1" />}
         rightVariant="light"
       >
-        {/* ── KPI strip ─────────────────────────────────────────────── */}
-        {!loading && docs.length > 0 && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${kpiTypes.length}, 1fr)`,
-            gap: GAP,
-          }}>
-            {kpiTypes.map(({ key, label, icon }) => {
-              const c = counts[key] || 0;
-              return (
-                <button
-                  key={key}
-                  onClick={() => { setActiveTab(key); setTypeFilter(key); }}
-                  style={{
-                    ...GLASS,
-                    padding: '12px 14px',
-                    border: activeTab === key
-                      ? '1px solid rgba(255,112,67,0.40)'
-                      : GLASS.border,
-                    background: activeTab === key
-                      ? 'rgba(255,112,67,0.06)'
-                      : GLASS.background,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 150ms ease',
-                  }}
-                >
-                  <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
-                  <div style={{
-                    fontSize: 22, fontWeight: 900,
-                    color: activeTab === key ? '#FF7043' : '#112033',
-                    lineHeight: 1,
-                  }}>
-                    {c}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#546E7A', fontWeight: 700, marginTop: 2 }}>
-                    {label}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* ── Main vault card ────────────────────────────────────────── */}
+        {/* ── Main vault card ─────────────────────────────────────────── */}
         <section style={{ ...GLASS, overflow: 'hidden' }}>
-          {/* Section heading */}
+
+          {/* Heading */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '14px 14px 0 14px',
@@ -847,65 +740,51 @@ export default function ForgeVaultPage() {
             }}>
               Document Archive
             </h2>
-            <div style={{ fontSize: 12, color: '#455A64', fontWeight: 600 }}>
+            <div style={{ fontSize: 12, color: '#546E7A', fontWeight: 600 }}>
               {loading ? '—' : `${filtered.length} document${filtered.length !== 1 ? 's' : ''}`}
             </div>
           </div>
 
-          {/* Tabs */}
-          <TabBar activeTab={activeTab} setActiveTab={setActiveTab} setTypeFilter={setTypeFilter} counts={counts} />
-
-          {/* Filters */}
-          <FilterBar
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            sortMode={sortMode}
-            setSortMode={setSortMode}
-            typeFilter={typeFilter}
-            setTypeFilter={(next) => { setTypeFilter(next); setActiveTab(next); }}
+          {/* Controls */}
+          <ControlsBar
+            viewFilter={viewFilter} setViewFilter={setViewFilter}
+            catFilter={catFilter} setCatFilter={setCatFilter}
+            searchTerm={searchTerm} setSearchTerm={setSearchTerm}
+            sortMode={sortMode} setSortMode={setSortMode}
+            availableWorkspaces={availableWorkspaces}
           />
 
           {/* Table */}
-          <div style={{ padding: '12px 14px 14px 14px' }}>
+          <div>
             {error ? (
-              <div style={{
-                padding: '20px 0', textAlign: 'center',
-                color: '#E53935', fontSize: 13, fontWeight: 600,
-              }}>
+              <div style={{ padding: '24px 14px', textAlign: 'center', color: '#E53935', fontSize: 13, fontWeight: 600 }}>
                 {error}
-                <button
-                  onClick={() => window.location.reload()}
-                  style={{
-                    display: 'block', margin: '10px auto 0',
-                    padding: '6px 14px', borderRadius: 8,
-                    border: '1px solid rgba(229,57,53,0.30)',
-                    background: 'rgba(229,57,53,0.06)',
-                    color: '#E53935', fontSize: 12, fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
+                <button onClick={() => window.location.reload()} style={{
+                  display: 'block', margin: '10px auto 0', padding: '6px 14px', borderRadius: 8,
+                  border: '1px solid rgba(229,57,53,0.30)', background: 'rgba(229,57,53,0.06)',
+                  color: '#E53935', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                }}>
                   Retry
                 </button>
               </div>
             ) : (
-              <VaultTable docs={filtered} loading={loading} isMobile={isMobile} />
+              <VaultTable docs={filtered} loading={loading} isMobile={isMobile} viewFilter={viewFilter} />
             )}
           </div>
         </section>
 
-        {/* ── Foundry callout ────────────────────────────────────────── */}
+        {/* ── Foundry callout ─────────────────────────────────────────── */}
         <div style={{
-          ...GLASS,
-          padding: '12px 16px',
+          ...GLASS, padding: '12px 16px',
           display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
         }}>
-          <div style={{ fontSize: 22 }}>⚡</div>
+          <div style={{ fontSize: 20 }}>⚡</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>
               Share to Foundry — Coming Soon
             </div>
             <div style={{ fontSize: 11, color: '#546E7A', marginTop: 2 }}>
-              Share any document directly into a live Foundry coaching or review session. Available in an upcoming release.
+              Send any document directly into a live Foundry coaching or review session.
             </div>
           </div>
           <span style={{
