@@ -128,8 +128,6 @@ function normalizeResumes(resumes = []) {
     date: r.updatedAt,
     downloadUrl: `/api/resume/download?id=${r.id}`,
     hasPdf: false, raw: r,
-    exportFoundryEndpoint: '/api/resume/export-foundry',
-    exportFoundryPayload: { resumeId: r.id },
   }));
 }
 
@@ -148,8 +146,6 @@ function normalizeCovers(covers = []) {
       downloadText(`${safeText(c.name, 'cover_letter').replace(/[^a-z0-9_-]+/gi, '_')}.txt`, content);
     },
     hasPdf: false, raw: c,
-    exportFoundryEndpoint: '/api/cover/export-foundry',
-    exportFoundryPayload: { coverId: c.id },
   }));
 }
 
@@ -162,8 +158,6 @@ function normalizeInterviewPreps(preps = []) {
     date: p.generatedAt,
     downloadFn: () => downloadJson(`interview_prep_${p.applicationId}.json`, p.result || p),
     hasPdf: false, raw: p,
-    exportFoundryEndpoint: `/api/seeker/applications/${p.applicationId}/interview-prep-export-foundry`,
-    exportFoundryPayload: {},
   }));
 }
 
@@ -176,8 +170,6 @@ function normalizeProfile(profile) {
     date: profile.updatedAt,
     downloadFn: () => downloadJson('professional_operating_profile.json', profile.snapshotJson || profile),
     hasPdf: false, raw: profile,
-    exportFoundryEndpoint: '/api/anvil/identity/export-foundry',
-    exportFoundryPayload: {},
   }];
 }
 
@@ -190,8 +182,6 @@ function normalizeRoadmaps(roadmaps = []) {
     date: r.createdAt,
     downloadFn: () => downloadJson(`growth_pivot_roadmap_${r.id}.json`, r.raw || r),
     hasPdf: false, raw: r,
-    exportFoundryEndpoint: '/api/anvil/onboarding-growth/export-foundry',
-    exportFoundryPayload: { roadmapId: r.id },
   }));
 }
 
@@ -203,8 +193,6 @@ function normalizeNegotiations(negotiations = []) {
     date: n.createdAt,
     downloadFn: () => downloadJson(`negotiation_brief_${n.id}.json`, n.raw || n),
     hasPdf: n.hasPdf || false, raw: n,
-    exportFoundryEndpoint: '/api/offer-negotiation/export-foundry',
-    exportFoundryPayload: { negotiationId: n.id },
   }));
 }
 
@@ -217,8 +205,6 @@ function normalizePackets(packets = []) {
     date: p.updatedAt,
     downloadUrl: p.latestExport?.url || null,
     hasPdf: Boolean(p.latestExport?.url), raw: p,
-    exportFoundryEndpoint: '/api/apply/application-packets/export-foundry',
-    exportFoundryPayload: { applicationId: p.applicationId },
   }));
 }
 
@@ -231,8 +217,6 @@ function normalizeStrategies(strategies = []) {
     date: s.updatedAt,
     downloadUrl: s.downloadUrl || null,
     hasPdf: false, raw: s,
-    exportFoundryEndpoint: s.shareEndpoint || '/api/coaching/clients/strategy/export-foundry',
-    exportFoundryPayload: s.sharePayload || { clientId: s.id },
   }));
 }
 
@@ -248,8 +232,6 @@ function normalizeCandidateReviewPackets(packets = []) {
       subtitle: candidateName,
       date: p.updatedAt || p.createdAt,
       downloadUrl, hasPdf: true, raw: p,
-      exportFoundryEndpoint: p.candidateUserId ? `/api/recruiter/candidates/${p.candidateUserId}/review-packet` : null,
-      exportFoundryPayload: {},
     };
   });
 }
@@ -263,7 +245,6 @@ function normalizeResumeRoleAnalyses(analyses = []) {
     date: a.updatedAt || a.createdAt,
     downloadFn: () => downloadJson(`resume_role_analysis_${a.id}.json`, a.result || a),
     hasPdf: false, raw: a,
-    exportFoundryEndpoint: null, exportFoundryPayload: {},
   }));
 }
 
@@ -312,23 +293,24 @@ function CategoryLabel({ type, workspace }) {
   );
 }
 
-// ─── FoundryShareButton ───────────────────────────────────────────────────────
-function FoundryShareButton() {
+// ─── CategoryLabel ────────────────────────────────────────────────────────────
+const CATEGORY_LABELS = {
+  seeking:      'Seeking',
+  career:       'Career',
+  coaching:     'Coaching',
+  candidates:   'Candidate packages',
+  intelligence: 'Candidate intelligence',
+};
+
+function CategoryLabel({ type, workspace }) {
+  const category = TYPE_CATEGORY[type];
+  const label = CATEGORY_LABELS[category] || category || '';
+  const wb = WORKSPACE_BADGE[workspace] || { color: '#546E7A' };
+  if (!label) return null;
   return (
-    <button disabled title="Share to Foundry — Coming Soon" style={{
-      display: 'flex', alignItems: 'center', gap: 4,
-      padding: '5px 10px', borderRadius: 8,
-      border: '1px solid rgba(0,0,0,0.10)',
-      background: 'transparent', color: '#90A4AE',
-      fontSize: 11, fontWeight: 700, cursor: 'not-allowed', whiteSpace: 'nowrap',
-    }}>
-      ⚡ Foundry
-      <span style={{
-        fontSize: 9, fontWeight: 800,
-        background: 'rgba(255,112,67,0.12)', color: '#FF7043',
-        borderRadius: 999, padding: '1px 5px', marginLeft: 2,
-      }}>SOON</span>
-    </button>
+    <span style={{ fontSize: 10, fontWeight: 600, color: wb.color, whiteSpace: 'nowrap' }}>
+      {label}
+    </span>
   );
 }
 
@@ -445,11 +427,11 @@ function VaultRow({ doc, isMobile, showWorkspace }) {
 
       {/* Actions */}
       <div style={{
-        flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
+        flexShrink: 0, width: isMobile ? 'auto' : 110,
         paddingLeft: isMobile ? 44 : 12,
+        display: 'flex', alignItems: 'center',
       }}>
         <DownloadButton doc={doc} />
-        <FoundryShareButton />
       </div>
     </div>
   );
@@ -813,28 +795,7 @@ export default function ForgeVaultPage() {
           </div>
         </section>
 
-        {/* ── Foundry callout ─────────────────────────────────────────── */}
-        <div style={{
-          ...GLASS, padding: '12px 16px',
-          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-        }}>
-          <div style={{ fontSize: 20 }}>⚡</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>
-              Share to Foundry — Coming Soon
-            </div>
-            <div style={{ fontSize: 11, color: '#546E7A', marginTop: 2 }}>
-              Send any document directly into a live Foundry coaching or review session.
-            </div>
-          </div>
-          <span style={{
-            fontSize: 10, fontWeight: 800,
-            background: 'rgba(255,112,67,0.15)', color: '#FF7043',
-            borderRadius: 999, padding: '3px 9px',
-          }}>
-            COMING SOON
-          </span>
-        </div>
+
       </SeekerLayout>
     </>
   );
