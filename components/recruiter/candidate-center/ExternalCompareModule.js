@@ -344,6 +344,7 @@ export default function ExternalCompareModule() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
+  const [explainRunId, setExplainRunId] = useState(null);
 
   // ── Striker context injection ────────────────────────────────────────────────
   // Writes window.__FT_CONTEXT__ when an external compare result is available.
@@ -430,6 +431,7 @@ export default function ExternalCompareModule() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Analysis failed");
       setResult(data);
+	  setExplainRunId(data?.explainRunId || null);
     } catch (err) {
       console.error("[ExternalCompare]", err);
       setError(err?.message || "Analysis failed. Please try again.");
@@ -439,6 +441,7 @@ export default function ExternalCompareModule() {
   }
 
   function handleReset() {
+	setExplainRunId(null);
     setResult(null);
     setError(null);
   }

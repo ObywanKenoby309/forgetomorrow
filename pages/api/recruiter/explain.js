@@ -88,22 +88,22 @@ async function bestEffortPersistRun({
   if (!prisma || !prisma.recruiterExplainRun) return;
 
   try {
-    await prisma.recruiterExplainRun.create({
-      data: {
-        recruiterUserId,
-        accountKey: accountKey || "UNKNOWN",
-        jobId: jobId || null,
-        applicationId: applicationId || null,
-        candidateUserId: candidateUserId || null,
-        externalName: externalName || null,
-        externalEmail: externalEmail || null,
-        jobDescription: jobDescriptionText || "",
-        resumeText,
-        score: typeof result?.score === "number" ? result.score : null,
-        summary: result?.summary || null,
-        result,
-      },
-    });
+    return await prisma.recruiterExplainRun.create({
+  data: {
+    recruiterUserId,
+    accountKey: accountKey || "UNKNOWN",
+    jobId: jobId || null,
+    applicationId: applicationId || null,
+    candidateUserId: candidateUserId || null,
+    externalName: externalName || null,
+    externalEmail: externalEmail || null,
+    jobDescription: jobDescriptionText || "",
+    resumeText,
+    score: typeof result?.score === "number" ? result.score : null,
+    summary: result?.summary || null,
+    result,
+  },
+});
   } catch (error) {
     console.error("[RecruiterExplain] persist failed (safe to ignore pre-migration):", error);
   }
@@ -159,7 +159,7 @@ export default async function handler(req, res) {
     buildExplain(normalizedResumeText, normalizedJobDescription)
   );
 
-  await bestEffortPersistRun({
+  const savedRun = await bestEffortPersistRun({
     recruiterUserId,
     accountKey,
     jobDescriptionText: normalizedJobDescription,
@@ -172,5 +172,8 @@ export default async function handler(req, res) {
     externalEmail: externalEmail ?? null,
   });
 
-  return res.status(200).json(result);
+  return res.status(200).json({
+  ...result,
+  explainRunId: savedRun?.id || null,
+});
 }

@@ -1235,6 +1235,10 @@ model RecruiterExplainRun {
   externalEmail   String?
   score           Int?
   summary         String?
+  vaultSaved 	  Boolean  @default(false)
+  vaultTitle 	  String?
+  pdfUrl     	  String?
+  updatedAt  	  DateTime @updatedAt
 
   @@index([recruiterUserId])
   @@index([candidateUserId])
