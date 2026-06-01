@@ -399,7 +399,7 @@ function VaultRow({ doc, isMobile, showWorkspace }) {
       <div style={{
         flexShrink: 0, width: isMobile ? 'auto' : 100,
         paddingLeft: isMobile ? 44 : 0,
-        fontSize: 11, color: '#90A4AE', fontWeight: 600,
+        fontSize: 11, color: '#546E7A', fontWeight: 600,
       }}>
         {formatDate(doc.date)}
       </div>
@@ -412,6 +412,25 @@ function VaultRow({ doc, isMobile, showWorkspace }) {
       }}>
         <DownloadButton doc={doc} />
       </div>
+
+      {/* Share With */}
+      {!isMobile && (
+        <div style={{
+          flexShrink: 0, width: 110,
+          paddingLeft: 12,
+          display: 'flex', alignItems: 'center',
+        }}>
+          <button disabled style={{
+            fontSize: 11, fontWeight: 700,
+            padding: '5px 10px', borderRadius: 8,
+            border: '1px solid rgba(0,0,0,0.10)',
+            background: 'transparent', color: '#B0BEC5',
+            cursor: 'not-allowed', whiteSpace: 'nowrap',
+          }}>
+            + Share
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -453,6 +472,7 @@ function ColumnHeader({ viewFilter }) {
       <div style={{ width: 150 }}>{typeColLabel}</div>
       <div style={{ width: 100 }}>Updated</div>
       <div style={{ width: 110, paddingLeft: 12 }}>Actions</div>
+      <div style={{ width: 110, paddingLeft: 12 }}>Share With</div>
     </div>
   );
 }
