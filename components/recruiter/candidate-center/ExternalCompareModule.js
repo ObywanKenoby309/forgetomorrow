@@ -168,8 +168,45 @@ async function handleSaveToVault() {
               </div>
             )}
           </div>
+
         </div>
-        onClick={onReset}
+
+        <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={handleSaveToVault}
+            disabled={savingToVault}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.20)",
+              background: "rgba(255,112,67,0.22)",
+              color: "white",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: savingToVault ? "default" : "pointer",
+            }}
+          >
+            {savingToVault ? "Saving..." : "Save to ForgeVault"}
+          </button>
+
+          <button
+            type="button"
+            onClick={onReset}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.20)",
+              background: "rgba(255,255,255,0.10)",
+              color: "rgba(255,255,255,0.70)",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            New Analysis
+          </button>
+        </div>
       </div>
 
       {/* Strengths + Gaps */}
