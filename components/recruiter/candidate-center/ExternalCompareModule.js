@@ -62,11 +62,12 @@ function SignalChip({ text, type }) {
   );
 }
 
-function ResultPanel({ data, resumeText, onReset, onBuildProfile }) {
+function ResultPanel({ data, resumeText, explainRunId, onReset, onBuildProfile }) {
   const [buildLoading, setBuildLoading] = useState(false);
   const [buildResult, setBuildResult] = useState(null);
   const [buildError, setBuildError] = useState(null);
   const [showQuestions, setShowQuestions] = useState(false);
+  const [savingToVault, setSavingToVault] = useState(false);
 
   const score = data?.score ?? null;
   const summary = data?.summary || data?.match?.summary || "";
@@ -80,6 +81,39 @@ function ResultPanel({ data, resumeText, onReset, onBuildProfile }) {
   const interview = data?.interviewQuestions || null;
   const scoreColor =
     score >= 75 ? "#16A34A" : score >= 50 ? ORANGE : "#DC2626";
+
+async function handleSaveToVault() {
+  if (!explainRunId) {
+    alert("Analysis ID not found.");
+    return;
+  }
+
+  try {
+    setSavingToVault(true);
+
+    const res = await fetch(
+      `/api/recruiter/explain/${encodeURIComponent(explainRunId)}/save`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const json = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(json?.error || "Could not save analysis");
+    }
+
+    alert("Resume vs Role Analysis saved to ForgeVault.");
+  } catch (err) {
+    alert(err?.message || "Could not save analysis.");
+  } finally {
+    setSavingToVault(false);
+  }
+}
 
   async function handleBuildProfile() {
     setBuildLoading(true);
@@ -135,18 +169,7 @@ function ResultPanel({ data, resumeText, onReset, onBuildProfile }) {
             )}
           </div>
         </div>
-        <button
-          onClick={onReset}
-          style={{
-            padding: "8px 16px", borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.20)",
-            background: "rgba(255,255,255,0.10)",
-            color: "rgba(255,255,255,0.70)", fontSize: 12,
-            fontWeight: 700, cursor: "pointer", flexShrink: 0,
-          }}
-        >
-          New Analysis
-        </button>
+        onClick={onReset}
       </div>
 
       {/* Strengths + Gaps */}
@@ -452,6 +475,7 @@ export default function ExternalCompareModule() {
         <ResultPanel
           data={result}
           resumeText={resumeText}
+		  explainRunId={explainRunId}
           onReset={handleReset}
         />
       </div>
