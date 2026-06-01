@@ -335,7 +335,16 @@ function ShareModal({ doc, onClose }) {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const list = data?.contacts || data?.members || [];
-        setContacts(list);
+        // Deduplicate — Contact table is bidirectional so each connection
+        // can appear twice. Unique by the contact's user ID.
+        const seen = new Set();
+        const deduped = list.filter(c => {
+          const id = c.userId || c.contactUserId || c.id;
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
+        setContacts(deduped);
         setLoadingContacts(false);
       })
       .catch(() => setLoadingContacts(false));
