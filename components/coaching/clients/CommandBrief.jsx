@@ -25,6 +25,7 @@ export default function CommandBrief({ clientId, clientName, generatedAt, strate
   const [reasoningOpen, setReasoningOpen] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(null);
   const [sharing, setSharing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   if (!strategyBrief) return null;
   const b = strategyBrief;
@@ -43,12 +44,20 @@ export default function CommandBrief({ clientId, clientName, generatedAt, strate
   };
 
   const downloadPdf = () => {
-    if (!clientId) {
-      alert('Missing client id for export.');
-      return;
-    }
-    window.open(`/api/coaching/clients/strategy/export-foundry?clientId=${encodeURIComponent(clientId)}`, '_blank', 'noopener,noreferrer');
-  };
+  if (!clientId) {
+    alert('Missing client id for export.');
+    return;
+  }
+
+  setExporting(true);
+  window.open(
+    `/api/coaching/clients/strategy/export-foundry?clientId=${encodeURIComponent(clientId)}`,
+    '_blank',
+    'noopener,noreferrer'
+  );
+
+  setTimeout(() => setExporting(false), 1200);
+};
 
   const shareToFoundry = async () => {
     if (!clientId) {
