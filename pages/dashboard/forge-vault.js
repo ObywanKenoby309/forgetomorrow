@@ -65,6 +65,19 @@ const TYPE_META = {
   resumeRole:      { label: 'Resume vs role analysis',  bg: 'rgba(76,175,80,0.12)',   color: '#2E7D32' },
 };
 
+const TYPE_CATEGORY = {
+  resume:          'seeking',
+  cover:           'seeking',
+  interview:       'seeking',
+  packet:          'seeking',
+  profile:         'career',
+  roadmap:         'career',
+  negotiation:     'career',
+  strategy:        'coaching',
+  candidateReview: 'candidates',
+  resumeRole:      'intelligence',
+};
+
 const WORKSPACE_BADGE = {
   seeker:    { bg: 'rgba(255,112,67,0.10)',  color: '#993C1D',  label: 'Seeker'    },
   coach:     { bg: 'rgba(33,150,243,0.10)',  color: '#185FA5',  label: 'Coach'     },
@@ -115,6 +128,8 @@ function normalizeResumes(resumes = []) {
     date: r.updatedAt,
     downloadUrl: `/api/resume/download?id=${r.id}`,
     hasPdf: false, raw: r,
+    exportFoundryEndpoint: '/api/resume/export-foundry',
+    exportFoundryPayload: { resumeId: r.id },
   }));
 }
 
@@ -133,6 +148,8 @@ function normalizeCovers(covers = []) {
       downloadText(`${safeText(c.name, 'cover_letter').replace(/[^a-z0-9_-]+/gi, '_')}.txt`, content);
     },
     hasPdf: false, raw: c,
+    exportFoundryEndpoint: '/api/cover/export-foundry',
+    exportFoundryPayload: { coverId: c.id },
   }));
 }
 
@@ -145,6 +162,8 @@ function normalizeInterviewPreps(preps = []) {
     date: p.generatedAt,
     downloadFn: () => downloadJson(`interview_prep_${p.applicationId}.json`, p.result || p),
     hasPdf: false, raw: p,
+    exportFoundryEndpoint: `/api/seeker/applications/${p.applicationId}/interview-prep-export-foundry`,
+    exportFoundryPayload: {},
   }));
 }
 
@@ -157,6 +176,8 @@ function normalizeProfile(profile) {
     date: profile.updatedAt,
     downloadFn: () => downloadJson('professional_operating_profile.json', profile.snapshotJson || profile),
     hasPdf: false, raw: profile,
+    exportFoundryEndpoint: '/api/anvil/identity/export-foundry',
+    exportFoundryPayload: {},
   }];
 }
 
@@ -169,6 +190,8 @@ function normalizeRoadmaps(roadmaps = []) {
     date: r.createdAt,
     downloadFn: () => downloadJson(`growth_pivot_roadmap_${r.id}.json`, r.raw || r),
     hasPdf: false, raw: r,
+    exportFoundryEndpoint: '/api/anvil/onboarding-growth/export-foundry',
+    exportFoundryPayload: { roadmapId: r.id },
   }));
 }
 
@@ -180,6 +203,8 @@ function normalizeNegotiations(negotiations = []) {
     date: n.createdAt,
     downloadFn: () => downloadJson(`negotiation_brief_${n.id}.json`, n.raw || n),
     hasPdf: n.hasPdf || false, raw: n,
+    exportFoundryEndpoint: '/api/offer-negotiation/export-foundry',
+    exportFoundryPayload: { negotiationId: n.id },
   }));
 }
 
@@ -192,6 +217,8 @@ function normalizePackets(packets = []) {
     date: p.updatedAt,
     downloadUrl: p.latestExport?.url || null,
     hasPdf: Boolean(p.latestExport?.url), raw: p,
+    exportFoundryEndpoint: '/api/apply/application-packets/export-foundry',
+    exportFoundryPayload: { applicationId: p.applicationId },
   }));
 }
 
@@ -204,6 +231,8 @@ function normalizeStrategies(strategies = []) {
     date: s.updatedAt,
     downloadUrl: s.downloadUrl || null,
     hasPdf: false, raw: s,
+    exportFoundryEndpoint: s.shareEndpoint || '/api/coaching/clients/strategy/export-foundry',
+    exportFoundryPayload: s.sharePayload || { clientId: s.id },
   }));
 }
 
@@ -219,6 +248,8 @@ function normalizeCandidateReviewPackets(packets = []) {
       subtitle: candidateName,
       date: p.updatedAt || p.createdAt,
       downloadUrl, hasPdf: true, raw: p,
+      exportFoundryEndpoint: p.candidateUserId ? `/api/recruiter/candidates/${p.candidateUserId}/review-packet` : null,
+      exportFoundryPayload: {},
     };
   });
 }
@@ -232,6 +263,7 @@ function normalizeResumeRoleAnalyses(analyses = []) {
     date: a.updatedAt || a.createdAt,
     downloadFn: () => downloadJson(`resume_role_analysis_${a.id}.json`, a.result || a),
     hasPdf: false, raw: a,
+    exportFoundryEndpoint: null, exportFoundryPayload: {},
   }));
 }
 
@@ -259,7 +291,46 @@ function TypeLabel({ type }) {
   );
 }
 
+// ─── CategoryLabel — shown in specific-workspace views instead of workspace badge ─
+const CATEGORY_LABELS = {
+  seeking:      'Seeking',
+  career:       'Career',
+  coaching:     'Coaching',
+  candidates:   'Candidate packages',
+  intelligence: 'Candidate intelligence',
+};
 
+function CategoryLabel({ type, workspace }) {
+  const category = TYPE_CATEGORY[type];
+  const label = CATEGORY_LABELS[category] || category || '';
+  const wb = WORKSPACE_BADGE[workspace] || { color: '#546E7A' };
+  if (!label) return null;
+  return (
+    <span style={{ fontSize: 10, fontWeight: 600, color: wb.color, whiteSpace: 'nowrap' }}>
+      {label}
+    </span>
+  );
+}
+
+// ─── FoundryShareButton ───────────────────────────────────────────────────────
+function FoundryShareButton() {
+  return (
+    <button disabled title="Share to Foundry — Coming Soon" style={{
+      display: 'flex', alignItems: 'center', gap: 4,
+      padding: '5px 10px', borderRadius: 8,
+      border: '1px solid rgba(0,0,0,0.10)',
+      background: 'transparent', color: '#90A4AE',
+      fontSize: 11, fontWeight: 700, cursor: 'not-allowed', whiteSpace: 'nowrap',
+    }}>
+      ⚡ Foundry
+      <span style={{
+        fontSize: 9, fontWeight: 800,
+        background: 'rgba(255,112,67,0.12)', color: '#FF7043',
+        borderRadius: 999, padding: '1px 5px', marginLeft: 2,
+      }}>SOON</span>
+    </button>
+  );
+}
 
 // ─── DownloadButton ───────────────────────────────────────────────────────────
 function DownloadButton({ doc }) {
@@ -350,13 +421,16 @@ function VaultRow({ doc, isMobile, showWorkspace }) {
         </div>
       </div>
 
-      {/* Workspace + type */}
+      {/* Workspace / Type — context-aware */}
       <div style={{
         flexShrink: 0, width: isMobile ? 'auto' : 150,
         paddingLeft: isMobile ? 44 : 0,
         display: 'flex', flexDirection: 'column', gap: 3,
       }}>
-        {showWorkspace && <WorkspaceBadge workspace={doc.workspace} />}
+        {showWorkspace
+          ? <WorkspaceBadge workspace={doc.workspace} />
+          : <CategoryLabel type={doc.type} workspace={doc.workspace} />
+        }
         <TypeLabel type={doc.type} />
       </div>
 
@@ -371,11 +445,11 @@ function VaultRow({ doc, isMobile, showWorkspace }) {
 
       {/* Actions */}
       <div style={{
-        flexShrink: 0, width: isMobile ? 'auto' : 110,
+        flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
         paddingLeft: isMobile ? 44 : 12,
-        display: 'flex', alignItems: 'center',
       }}>
         <DownloadButton doc={doc} />
+        <FoundryShareButton />
       </div>
     </div>
   );
@@ -403,21 +477,24 @@ function SectionDivider({ workspace }) {
 }
 
 // ─── VaultTable ───────────────────────────────────────────────────────────────
-const COLUMN_HEADER = (
-  <div style={{
-    display: 'flex', alignItems: 'center',
-    padding: '6px 14px',
-    fontSize: 10, fontWeight: 800, color: '#90A4AE',
-    letterSpacing: '0.06em', textTransform: 'uppercase',
-    background: 'rgba(255,255,255,0.30)',
-    borderBottom: '1px solid rgba(0,0,0,0.05)',
-  }}>
-    <div style={{ flex: 1 }}>Document</div>
-    <div style={{ width: 150 }}>Workspace / Type</div>
-    <div style={{ width: 100 }}>Updated</div>
-    <div style={{ width: 110, paddingLeft: 12 }}>Actions</div>
-  </div>
-);
+function ColumnHeader({ viewFilter }) {
+  const typeColLabel = viewFilter === 'all' ? 'Workspace / Type' : 'Type';
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center',
+      padding: '6px 14px',
+      fontSize: 10, fontWeight: 800, color: '#90A4AE',
+      letterSpacing: '0.06em', textTransform: 'uppercase',
+      background: 'rgba(255,255,255,0.30)',
+      borderBottom: '1px solid rgba(0,0,0,0.05)',
+    }}>
+      <div style={{ flex: 1 }}>Document</div>
+      <div style={{ width: 150 }}>{typeColLabel}</div>
+      <div style={{ width: 100 }}>Updated</div>
+      <div style={{ width: 110, paddingLeft: 12 }}>Actions</div>
+    </div>
+  );
+}
 
 function VaultTable({ docs, loading, isMobile, viewFilter }) {
   if (loading) {
@@ -445,7 +522,7 @@ function VaultTable({ docs, loading, isMobile, viewFilter }) {
   if (!showDividers) {
     return (
       <div>
-        {!isMobile && COLUMN_HEADER}
+        {!isMobile && <ColumnHeader viewFilter={viewFilter} />}
         {docs.map((doc) => (
           <VaultRow key={doc.id} doc={doc} isMobile={isMobile} showWorkspace={showWorkspaceBadge} />
         ))}
@@ -462,7 +539,7 @@ function VaultTable({ docs, loading, isMobile, viewFilter }) {
 
   return (
     <div>
-      {!isMobile && COLUMN_HEADER}
+      {!isMobile && <ColumnHeader viewFilter={viewFilter} />}
       {WS_ORDER.filter(ws => grouped[ws]?.length).map((ws) => (
         <React.Fragment key={ws}>
           <SectionDivider workspace={ws} />
@@ -736,7 +813,28 @@ export default function ForgeVaultPage() {
           </div>
         </section>
 
-
+        {/* ── Foundry callout ─────────────────────────────────────────── */}
+        <div style={{
+          ...GLASS, padding: '12px 16px',
+          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+        }}>
+          <div style={{ fontSize: 20 }}>⚡</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>
+              Share to Foundry — Coming Soon
+            </div>
+            <div style={{ fontSize: 11, color: '#546E7A', marginTop: 2 }}>
+              Send any document directly into a live Foundry coaching or review session.
+            </div>
+          </div>
+          <span style={{
+            fontSize: 10, fontWeight: 800,
+            background: 'rgba(255,112,67,0.15)', color: '#FF7043',
+            borderRadius: 999, padding: '3px 9px',
+          }}>
+            COMING SOON
+          </span>
+        </div>
       </SeekerLayout>
     </>
   );
