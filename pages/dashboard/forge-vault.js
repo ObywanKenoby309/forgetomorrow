@@ -272,27 +272,6 @@ function TypeLabel({ type }) {
   );
 }
 
-// ─── CategoryLabel — shown in specific-workspace views instead of workspace badge ─
-const CATEGORY_LABELS = {
-  seeking:      'Seeking',
-  career:       'Career',
-  coaching:     'Coaching',
-  candidates:   'Candidate packages',
-  intelligence: 'Candidate intelligence',
-};
-
-function CategoryLabel({ type, workspace }) {
-  const category = TYPE_CATEGORY[type];
-  const label = CATEGORY_LABELS[category] || category || '';
-  const wb = WORKSPACE_BADGE[workspace] || { color: '#546E7A' };
-  if (!label) return null;
-  return (
-    <span style={{ fontSize: 10, fontWeight: 600, color: wb.color, whiteSpace: 'nowrap' }}>
-      {label}
-    </span>
-  );
-}
-
 // ─── CategoryLabel ────────────────────────────────────────────────────────────
 const CATEGORY_LABELS = {
   seeking:      'Seeking',
@@ -458,7 +437,7 @@ function SectionDivider({ workspace }) {
   );
 }
 
-// ─── VaultTable ───────────────────────────────────────────────────────────────
+// ─── ColumnHeader ─────────────────────────────────────────────────────────────
 function ColumnHeader({ viewFilter }) {
   const typeColLabel = viewFilter === 'all' ? 'Workspace / Type' : 'Type';
   return (
@@ -478,6 +457,7 @@ function ColumnHeader({ viewFilter }) {
   );
 }
 
+// ─── VaultTable ───────────────────────────────────────────────────────────────
 function VaultTable({ docs, loading, isMobile, viewFilter }) {
   if (loading) {
     return (
@@ -565,7 +545,6 @@ function ControlsBar({
       borderBottom: '1px solid rgba(0,0,0,0.07)',
       background: 'rgba(255,255,255,0.30)',
     }}>
-      {/* Search */}
       <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 160 }}>
         <span style={{
           position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)',
@@ -579,7 +558,6 @@ function ControlsBar({
         />
       </div>
 
-      {/* View */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
         <span style={labelStyle}>View</span>
         <select value={viewFilter} onChange={handleViewChange} style={selectStyle}>
@@ -590,7 +568,6 @@ function ControlsBar({
         </select>
       </div>
 
-      {/* Category — only when a specific view is selected and has subcategories */}
       {viewFilter !== 'all' && catOptions.length > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={labelStyle}>Category</span>
@@ -602,7 +579,6 @@ function ControlsBar({
         </div>
       )}
 
-      {/* Sort */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
         <span style={labelStyle}>Sort</span>
         <select value={sortMode} onChange={(e) => setSortMode(e.target.value)} style={selectStyle}>
@@ -618,14 +594,14 @@ function ControlsBar({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function ForgeVaultPage() {
-  const [docs, setDocs]               = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState(null);
-  const [searchTerm, setSearchTerm]   = useState('');
-  const [sortMode, setSortMode]       = useState('newest');
-  const [viewFilter, setViewFilter]   = useState('all');
-  const [catFilter, setCatFilter]     = useState('all');
-  const [isMobile, setIsMobile]       = useState(false);
+  const [docs, setDocs]             = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortMode, setSortMode]     = useState('newest');
+  const [viewFilter, setViewFilter] = useState('all');
+  const [catFilter, setCatFilter]   = useState('all');
+  const [isMobile, setIsMobile]     = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -634,7 +610,6 @@ export default function ForgeVaultPage() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // ── Fetch all artifact lists in parallel ──────────────────────────────────
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -696,13 +671,11 @@ export default function ForgeVaultPage() {
     return () => { alive = false; };
   }, []);
 
-  // ── Derive which workspaces actually have data ─────────────────────────────
   const availableWorkspaces = useMemo(() => {
     const ws = new Set(docs.map((d) => d.workspace));
     return ['seeker', 'coach', 'recruiter'].filter((w) => ws.has(w));
   }, [docs]);
 
-  // ── Filter + sort ─────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     let rows = docs.filter((d) => {
@@ -747,10 +720,7 @@ export default function ForgeVaultPage() {
         right={<RightRailPlacementManager slot="right_rail_1" />}
         rightVariant="light"
       >
-        {/* ── Main vault card ─────────────────────────────────────────── */}
         <section style={{ ...GLASS, overflow: 'hidden' }}>
-
-          {/* Heading */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '14px 14px 0 14px',
@@ -767,7 +737,6 @@ export default function ForgeVaultPage() {
             </div>
           </div>
 
-          {/* Controls */}
           <ControlsBar
             viewFilter={viewFilter} setViewFilter={setViewFilter}
             catFilter={catFilter} setCatFilter={setCatFilter}
@@ -776,7 +745,6 @@ export default function ForgeVaultPage() {
             availableWorkspaces={availableWorkspaces}
           />
 
-          {/* Table */}
           <div>
             {error ? (
               <div style={{ padding: '24px 14px', textAlign: 'center', color: '#E53935', fontSize: 13, fontWeight: 600 }}>
@@ -794,8 +762,6 @@ export default function ForgeVaultPage() {
             )}
           </div>
         </section>
-
-
       </SeekerLayout>
     </>
   );
