@@ -212,8 +212,8 @@ function normalizeStrategies(strategies = []) {
     id: `strategy-${s.id}`, type: 'strategy', workspace: 'coach', category: 'coaching',
     typeLabel: TYPE_META.strategy.label, name: safeText(s.title, 'Target Strategy'),
     subtitle: s.summary ? s.summary.slice(0, 72) + (s.summary.length > 72 ? '…' : '') : null,
-    date: s.updatedAt, downloadUrl: s.downloadUrl || null, hasPdf: false, raw: s,
-    sharePayload: { forgeDocType: 'strategy', forgeDocId: s.id, fileName: safeText(s.title, 'Target Strategy'), downloadUrl: s.downloadUrl || null },
+    date: s.updatedAt, downloadUrl: null, hasPdf: false, raw: s,
+    sharePayload: { forgeDocType: 'strategy', forgeDocId: s.id, fileName: safeText(s.title, 'Target Strategy') },
   }));
 }
 
