@@ -307,6 +307,7 @@ export default function FoundryMobileLayout({
 }) {
   const [activeSheet, setActiveSheet] = useState(null);
   const [chatDraft, setChatDraft] = useState('');
+  const [dmDraft, setDmDraft] = useState('');
   const [notesDraft, setNotesDraft] = useState('');
   const [notesSaveState, setNotesSaveState] = useState('idle');
   const [copiedLink, setCopiedLink] = useState('');
@@ -602,30 +603,41 @@ export default function FoundryMobileLayout({
 
     <div style={S.chatInputRow}>
       <input
-        style={S.chatInput}
-        placeholder={`Message ${selectedDmParticipant?.name || ''}`}
-        onKeyDown={(e) => {
-          if (
-            e.key === 'Enter' &&
-            e.target.value.trim() &&
-            selectedDmParticipant
-          ) {
-            onSendDm?.(
-              selectedDmParticipant,
-              e.target.value.trim()
-            );
+  style={S.chatInput}
+  placeholder={`Message ${selectedDmParticipant?.name || ''}`}
+  value={dmDraft}
+  onChange={(e) => setDmDraft(e.target.value)}
+  onKeyDown={(e) => {
+    if (
+      e.key === 'Enter' &&
+      dmDraft.trim() &&
+      selectedDmParticipant
+    ) {
+      onSendDm?.(
+        selectedDmParticipant,
+        dmDraft.trim()
+      );
 
-            e.target.value = '';
-          }
-        }}
-      />
+      setDmDraft('');
+    }
+  }}
+/>
 
       <button
-        style={S.chatSendBtn}
-        onClick={() => {}}
-      >
-        →
-      </button>
+  style={S.chatSendBtn}
+  onClick={() => {
+    if (!dmDraft.trim() || !selectedDmParticipant) return;
+
+    onSendDm?.(
+      selectedDmParticipant,
+      dmDraft.trim()
+    );
+
+    setDmDraft('');
+  }}
+>
+  →
+</button>
     </div>
   </div>
 )}
