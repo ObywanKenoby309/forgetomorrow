@@ -69,6 +69,8 @@ export default function FoundryRoom() {
   // Live data
   const [participants, setParticipants] = useState([]);
   const [meetingMessages, setMeetingMessages] = useState([]);
+  const [sessionDms, setSessionDms] = useState([]);
+  const [selectedDmParticipant, setSelectedDmParticipant] = useState(null);
   const [sharedFiles, setSharedFiles] = useState([]);
   const [forgeFiles, setForgeFiles] = useState([]);
   const [notes, setNotes] = useState('');
@@ -262,22 +264,38 @@ export default function FoundryRoom() {
     return () => clearInterval(interval);
   }, [roomId, loading, loadSharedFiles]);
 
-  const handleCallReady = useCallback((call) => {
-    callRef.current = call;
-    setCallObject(call);
-    call.on('app-message', ({ data }) => {
-      if (data?.type === 'MEETING_CHAT') {
-        setMeetingMessages(prev => [...prev, {
-          sender: data.senderName, text: data.text, time: data.time,
-          color: data.color || '#5C6BC0', avatarUrl: data.avatarUrl || null,
-        }]);
-      }
+const handleCallReady = useCallback((call) => {
+  callRef.current = call;
+  setCallObject(call);
 
-      if (data?.type === 'FOUNDRY_FILES_UPDATED') {
-        loadSharedFiles();
-      }
-    });
-  }, [loadSharedFiles]);
+  call.on('app-message', ({ data }) => {
+    if (data?.type === 'MEETING_CHAT') {
+      setMeetingMessages(prev => [...prev, {
+        sender: data.senderName,
+        text: data.text,
+        time: data.time,
+        color: data.color || '#5C6BC0',
+        avatarUrl: data.avatarUrl || null,
+      }]);
+    }
+
+    if (data?.type === 'FOUNDRY_DM') {
+      const local = call.participants()?.local;
+      const localSessionId = local?.session_id;
+
+      if (!localSessionId) return;
+      if (data.toSessionId !== localSessionId && data.fromSessionId !== localSessionId) return;
+
+      setSessionDms(prev =>
+        prev.some(m => m.id === data.id) ? prev : [...prev, data]
+      );
+    }
+
+    if (data?.type === 'FOUNDRY_FILES_UPDATED') {
+      loadSharedFiles();
+    }
+  });
+}, [loadSharedFiles]);
 
   // Called by FoundryVideoGrid once it gets the token response (passes scheduledEndAt back)
   const handleScheduledEnd = useCallback((endIso, isHost) => {
@@ -318,22 +336,56 @@ export default function FoundryRoom() {
     }
   }, [session]);
 
+const handleSendDm = useCallback((target, text) => {
+  if (!callRef.current || !target?.id || !text?.trim()) return;
 
-  const sendFoundryControl = useCallback((action, targetSessionId = '*', payload = {}) => {
-    if (!callRef.current) return;
-    try {
-      callRef.current.sendAppMessage(
-        {
-          type: 'FOUNDRY_CONTROL',
-          action,
-          ...payload,
-        },
-        targetSessionId || '*'
-      );
-    } catch (err) {
-      console.error('[foundry] control send failed:', err);
-    }
-  }, []);
+  const local = callRef.current.participants()?.local;
+  if (!local?.session_id) return;
+
+  const now = new Date().toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const msg = {
+    id: `dm_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    type: 'FOUNDRY_DM',
+    fromSessionId: local.session_id,
+    toSessionId: target.id,
+    fromName: local.user_name || session?.user?.name || 'You',
+    toName: target.name || 'Participant',
+    text: text.trim(),
+    time: now,
+    color: '#FF7043',
+  };
+
+  setSessionDms(prev => [...prev, msg]);
+
+  try {
+    callRef.current.sendAppMessage(msg, '*');
+  } catch {}
+}, [session]);
+
+const sendFoundryControl = useCallback((action, targetSessionId = '*', payload = {}) => {
+  if (!callRef.current) return;
+
+  const resolvedTargetSessionId = targetSessionId || '*';
+
+  try {
+    callRef.current.sendAppMessage(
+      {
+        type: 'FOUNDRY_CONTROL',
+        action,
+        targetSessionId: resolvedTargetSessionId,
+        ...payload,
+      },
+      '*'
+    );
+  } catch (err) {
+    console.error('[foundry] control send failed:', err);
+  }
+}, []);
 
   const handleMuteAll = useCallback(() => {
     sendFoundryControl('MUTE_ALL', '*');
@@ -627,6 +679,10 @@ export default function FoundryRoom() {
         onRecordToggle={handleRecordToggle}
         participants={participants}
         messages={meetingMessages}
+		sessionDms={sessionDms}
+		selectedDmParticipant={selectedDmParticipant}
+		onSelectDmParticipant={setSelectedDmParticipant}
+		onSendDm={handleSendDm}
         onSend={handleSend}
         onEnd={handleEnd}
         isHost={isHost}
@@ -702,6 +758,10 @@ export default function FoundryRoom() {
             guestToken={room?.guestToken || null}
             participants={participants}
             messages={meetingMessages}
+			sessionDms={sessionDms}
+			selectedDmParticipant={selectedDmParticipant}
+			onSelectDmParticipant={setSelectedDmParticipant}
+			onSendDm={handleSendDm}
             sharedFiles={sharedFiles}
             forgeFiles={forgeFiles}
             notes={notes}

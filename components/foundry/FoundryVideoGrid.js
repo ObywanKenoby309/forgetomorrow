@@ -497,32 +497,39 @@ const checkRoomEmpty = useCallback((current) => {
           if (destroyed || data?.type !== 'FOUNDRY_CONTROL') return;
 
           const localParticipant = callRef.current?.participants()?.local;
-          const localIsOwner = !!localParticipant?.owner;
+		  const localIsOwner = !!localParticipant?.owner;
+		  const localSessionId = localParticipant?.session_id;
+		  const targetSessionId = data?.targetSessionId || '*';
+		  const isTargetedAtMe = targetSessionId === '*' || targetSessionId === localSessionId;
 
           try {
-            if (data.action === 'MUTE') {
-              await callRef.current?.setLocalAudio(false);
-            }
+            if (data.action === 'MUTE' && isTargetedAtMe) {
+  await callRef.current?.setLocalAudio(false);
+}
 
-            if (data.action === 'MUTE_ALL' && !localIsOwner) {
-              await callRef.current?.setLocalAudio(false);
-            }
+if (data.action === 'MUTE_ALL' && !localIsOwner) {
+  await callRef.current?.setLocalAudio(false);
+}
 
-            if (data.action === 'STOP_SCREEN_SHARE') {
-              await callRef.current?.stopScreenShare?.();
-              setScreenTrack(null);
-              setIsLocalSharing(false);
-              onScreenShareChange?.(false);
-            }
+if (data.action === 'STOP_CAMERA' && isTargetedAtMe) {
+  await callRef.current?.setLocalVideo(false);
+}
 
-            if (data.action === 'KICK' || data.action === 'BAN') {
-              roomEndedRef.current = true;
-              await callRef.current?.leave().catch(() => {});
-              await callRef.current?.destroy().catch(() => {});
-              callRef.current = null;
-              setJoinState('idle');
-              onHostEnded?.();
-            }
+if (data.action === 'STOP_SCREEN_SHARE' && isTargetedAtMe) {
+  await callRef.current?.stopScreenShare?.();
+  setScreenTrack(null);
+  setIsLocalSharing(false);
+  onScreenShareChange?.(false);
+}
+
+if ((data.action === 'KICK' || data.action === 'BAN') && isTargetedAtMe) {
+  roomEndedRef.current = true;
+  await callRef.current?.leave().catch(() => {});
+  await callRef.current?.destroy().catch(() => {});
+  callRef.current = null;
+  setJoinState('idle');
+  onHostEnded?.();
+}
           } catch (err) {
             console.error('[foundry] control message failed:', err);
           }

@@ -190,6 +190,8 @@ export default function GuestFoundryRoom({
   const callRef = useRef(null);
   const [participants, setParticipants] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [sessionDms, setSessionDms] = useState([]);
+  const [selectedDmParticipant, setSelectedDmParticipant] = useState(null);
   const [sharedFiles, setSharedFiles] = useState([]);
   const startTimeRef = useRef(Date.now());
 
@@ -361,6 +363,17 @@ export default function GuestFoundryRoom({
           })
           .catch(() => {});
       }
+	  if (data?.type === 'FOUNDRY_DM') {
+  const local = call.participants()?.local;
+  const localSessionId = local?.session_id;
+
+  if (!localSessionId) return;
+  if (data.toSessionId !== localSessionId && data.fromSessionId !== localSessionId) return;
+
+  setSessionDms(prev =>
+    prev.some(m => m.id === data.id) ? prev : [...prev, data]
+  );
+}
       if (data?.type === 'MEETING_CHAT') {
         const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
         setMessages(prev => [...prev, {
@@ -421,6 +434,37 @@ export default function GuestFoundryRoom({
     }
   }, [guestName]);
 
+const handleSendDm = useCallback((target, text) => {
+  if (!callRef.current || !target?.id || !text?.trim()) return;
+
+  const local = callRef.current.participants()?.local;
+  if (!local?.session_id) return;
+
+  const now = new Date().toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const msg = {
+    id: `dm_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    type: 'FOUNDRY_DM',
+    fromSessionId: local.session_id,
+    toSessionId: target.id,
+    fromName: local.user_name || guestName || 'Guest',
+    toName: target.name || 'Participant',
+    text: text.trim(),
+    time: now,
+    color: '#888',
+  };
+
+  setSessionDms(prev => [...prev, msg]);
+
+  try {
+    callRef.current.sendAppMessage(msg, '*');
+  } catch {}
+}, [guestName]);
+
   const togglePanel = (tab) => {
     if (sidebarHidden) setSidebarHidden(false);
     setActivePanel(tab);
@@ -445,6 +489,20 @@ export default function GuestFoundryRoom({
         timeZoneName: 'short',
       }).format(new Date(scheduledAt))
     : null;
+
+const openInChrome = () => {
+  if (typeof window === 'undefined') return;
+
+  const currentUrl = window.location.href;
+  const url = new URL(currentUrl);
+
+  const chromeIntent =
+  `intent://${url.host}${url.pathname}${url.search}${url.hash}` +
+    `#Intent;scheme=https;package=com.android.chrome;` +
+    `S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
+
+  window.location.href = chromeIntent;
+};
 
   // Detect Gmail/in-app browser — they block blob downloads and Daily permissions
   const isInAppBrowser = typeof navigator !== 'undefined' && (
@@ -482,11 +540,27 @@ export default function GuestFoundryRoom({
 
             {isInAppBrowser && (
               <div style={{ background: 'rgba(255,112,67,0.08)', border: '1px solid rgba(255,112,67,0.2)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 11, color: '#FF7043', lineHeight: 1.6 }}>
-                ⚠️ You're viewing this in an in-app browser. For the best experience — including file downloads and camera access — open this link in Chrome or Safari.
+                ⚠️ You're viewing this in an in-app browser. For the best experience — including file downloads and camera access — open this Foundry in Chrome for camera, microphone, screen sharing and file access.
                 <br />
-                <a href={typeof window !== 'undefined' ? window.location.href : ''} target="_blank" rel="noopener noreferrer" style={{ color: '#FF7043', fontWeight: 700 }}>
-                  Open in browser →
-                </a>
+                <button
+  type="button"
+  onClick={openInChrome}
+  style={{
+    marginTop: 8,
+    width: '100%',
+    background: ORANGE,
+    border: 'none',
+    color: '#fff',
+    borderRadius: 8,
+    padding: '10px 12px',
+    fontSize: 12,
+    fontWeight: 800,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+  }}
+>
+  Open in Chrome
+</button>
               </div>
             )}
             {!serverError && effectiveGuestCode ? (
@@ -542,6 +616,10 @@ export default function GuestFoundryRoom({
         onRecordToggle={null}
         participants={participants}
         messages={messages}
+		sessionDms={sessionDms}
+		selectedDmParticipant={selectedDmParticipant}
+		onSelectDmParticipant={setSelectedDmParticipant}
+		onSendDm={handleSendDm}
         onSend={handleSend}
         onEnd={handleEnd}
         isHost={false}
@@ -609,6 +687,10 @@ export default function GuestFoundryRoom({
             participants={participants}
             messages={messages}
             dms={[]}
+			sessionDms={sessionDms}
+			selectedDmParticipant={selectedDmParticipant}
+			onSelectDmParticipant={setSelectedDmParticipant}
+			onSendDm={handleSendDm}
             sharedFiles={sharedFiles}
             forgeFiles={[]}
             notes=""

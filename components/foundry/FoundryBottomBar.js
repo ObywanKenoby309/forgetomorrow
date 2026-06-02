@@ -28,9 +28,22 @@ const S = {
 };
 
 export default function FoundryBottomBar({
-  micMuted, camOff, isRecording, chatOpen, filesOpen, peopleOpen,
-  onMicToggle, onCamToggle, onShareScreen, onChatToggle, onFilesToggle,
-  onPeopleToggle, onRecordToggle, onMore, onEnd,
+  micMuted,
+  camOff,
+  isRecording,
+  isScreenSharing,
+  chatOpen,
+  filesOpen,
+  peopleOpen,
+  onMicToggle,
+  onCamToggle,
+  onShareScreen,
+  onChatToggle,
+  onFilesToggle,
+  onPeopleToggle,
+  onRecordToggle,
+  onMore,
+  onEnd,
 }) {
   return (
     <div style={S.bar}>
@@ -61,10 +74,18 @@ export default function FoundryBottomBar({
 
       {/* Group 2 — Collaboration */}
       <div style={S.group}>
-        <button style={S.btn(false, false)} onClick={onShareScreen} aria-label="Share screen">
-          <span style={S.btnIcon}>📺</span>
-          <span style={S.btnLabel}>Share</span>
-        </button>
+        <button
+  style={S.btn(isScreenSharing, isScreenSharing)}
+  onClick={onShareScreen}
+  aria-label={isScreenSharing ? 'Stop screen sharing' : 'Share screen'}
+>
+  <span style={S.btnIcon}>
+    {isScreenSharing ? '⏹' : '📺'}
+  </span>
+  <span style={S.btnLabel}>
+    {isScreenSharing ? 'Stop Share' : 'Share'}
+  </span>
+</button>
         <button style={S.btn(chatOpen, false)} onClick={onChatToggle} aria-label="Toggle chat">
           <span style={S.btnIcon}>💬</span>
           <span style={S.btnLabel}>Chat</span>
