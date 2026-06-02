@@ -36,12 +36,19 @@ function resolveScopeFromChrome(chrome) {
 }
 function safeText(v) { return typeof v === 'string' ? v : v == null ? '' : String(v); }
 function pickSeekerBucket(n) {
+  const category = safeText(n?.category).toUpperCase();
+  const entityType = safeText(n?.entityType).toUpperCase();
   const title = safeText(n?.title).toLowerCase();
   const body = safeText(n?.body).toLowerCase();
   const meta = n?.metadata || {};
   const metaStr = safeText(meta?.type || meta?.event || meta?.kind || '').toLowerCase();
   const haystack = `${title} ${body} ${metaStr}`;
-  if (haystack.includes('calendar') || haystack.includes('invite') || haystack.includes('schedule') || haystack.includes('resched') || haystack.includes('interview')) return 'calendar';
+
+  // Vault shares — own bucket so they're never mixed with messages
+  if (category === 'VAULT' || entityType === 'VAULT_SHARE' ||
+      haystack.includes('shared a document') || haystack.includes('shared with you')) return 'shared';
+
+  if (haystack.includes('calendar') || haystack.includes('invite') || haystack.includes('schedule') || haystack.includes('resched') || haystack.includes('interview') || haystack.includes('foundry')) return 'calendar';
   if (haystack.includes('apply') || haystack.includes('application') || haystack.includes('submitted') || haystack.includes('status') || haystack.includes('pipeline') || haystack.includes('stage')) return 'applications';
   if (haystack.includes('job') || haystack.includes('posting') || haystack.includes('role') || haystack.includes('match') || haystack.includes('recommend')) return 'jobs';
   if (haystack.includes('message') || haystack.includes('inbox') || haystack.includes('dm') || haystack.includes('signal') || haystack.includes('chat')) return 'messages';
@@ -256,7 +263,7 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) 
   }, [scope]);
 
   const buckets = useMemo(() => {
-    const b = { messages: [], jobs: [], applications: [], calendar: [] };
+    const b = { messages: [], jobs: [], applications: [], calendar: [], shared: [] };
     for (const n of Array.isArray(items) ? items : []) {
       const k = pickSeekerBucket(n);
       if (!b[k]) continue;
@@ -267,14 +274,16 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) 
       jobs: b.jobs.slice(0, 3),
       applications: b.applications.slice(0, 3),
       calendar: b.calendar.slice(0, 3),
+      shared: b.shared.slice(0, 3),
     };
   }, [items]);
 
   const tiles = [
-    { key: 'messages',     title: 'New Messages',        emptyText: 'No unread items.',        href: withChrome(`/action-center?scope=${scope}`), icon: '💬', items: buckets.messages     },
-    { key: 'applications', title: 'Application Updates', emptyText: 'No application updates.', href: withChrome(`/action-center?scope=${scope}`), icon: '📋', items: buckets.applications },
-    { key: 'calendar',     title: 'Interview Invites',   emptyText: 'No calendar updates.',    href: withChrome(`/action-center?scope=${scope}`), icon: '📅', items: buckets.calendar     },
-    { key: 'jobs',         title: 'Job Matches',         emptyText: 'No new job updates.',     href: withChrome(`/action-center?scope=${scope}`), icon: '🎯', items: buckets.jobs         },
+    { key: 'messages',     title: 'New Messages',        emptyText: 'No unread items.',        href: withChrome(`/action-center?scope=${scope}&tab=SOCIAL`),       icon: '💬', items: buckets.messages     },
+    { key: 'applications', title: 'Application Updates', emptyText: 'No application updates.', href: withChrome(`/action-center?scope=${scope}&tab=APPLICATIONS`),  icon: '📋', items: buckets.applications },
+    { key: 'calendar',     title: 'Interview Invites',   emptyText: 'No calendar updates.',    href: withChrome(`/action-center?scope=${scope}&tab=CALENDAR`),     icon: '📅', items: buckets.calendar     },
+    { key: 'jobs',         title: 'Job Matches',         emptyText: 'No new job updates.',     href: withChrome(`/action-center?scope=${scope}&tab=JOBS`),         icon: '🎯', items: buckets.jobs         },
+    { key: 'shared',       title: 'Shared With Me',      emptyText: 'No shared documents.',    href: withChrome(`/action-center?scope=${scope}&tab=SHARED`),       icon: '📬', items: buckets.shared       },
   ];
 
   const sortedTiles = [...tiles].sort((a, b) => (b.items.length > 0 ? 1 : 0) - (a.items.length > 0 ? 1 : 0));
@@ -367,10 +376,11 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) 
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <ActionTile title="New Messages"        emptyText="No unread items."        items={buckets.messages}     href={`/action-center?scope=${scope}`} withChrome={withChrome} style={glassStyle} />
-          <ActionTile title="Job Updates"         emptyText="No new job updates."     items={buckets.jobs}         href={`/action-center?scope=${scope}`} withChrome={withChrome} style={glassStyle} />
-          <ActionTile title="Application Updates" emptyText="No application updates." items={buckets.applications} href={`/action-center?scope=${scope}`} withChrome={withChrome} style={glassStyle} />
-          <ActionTile title="Calendar Updates"    emptyText="No calendar updates."    items={buckets.calendar}     href={`/action-center?scope=${scope}`} withChrome={withChrome} style={glassStyle} />
+          <ActionTile title="New Messages"        emptyText="No unread items."        items={buckets.messages}     href={`/action-center?scope=${scope}&tab=SOCIAL`}       withChrome={withChrome} style={glassStyle} />
+          <ActionTile title="Job Updates"         emptyText="No new job updates."     items={buckets.jobs}         href={`/action-center?scope=${scope}&tab=JOBS`}         withChrome={withChrome} style={glassStyle} />
+          <ActionTile title="Application Updates" emptyText="No application updates." items={buckets.applications} href={`/action-center?scope=${scope}&tab=APPLICATIONS`}  withChrome={withChrome} style={glassStyle} />
+          <ActionTile title="Calendar Updates"    emptyText="No calendar updates."    items={buckets.calendar}     href={`/action-center?scope=${scope}&tab=CALENDAR`}     withChrome={withChrome} style={glassStyle} />
+          <ActionTile title="Shared With Me"      emptyText="No shared documents."    items={buckets.shared}       href={`/action-center?scope=${scope}&tab=SHARED`}       withChrome={withChrome} style={glassStyle} />
         </div>
       )}
     </section>

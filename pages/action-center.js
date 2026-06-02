@@ -72,35 +72,68 @@ function withChrome(href, chrome) {
 }
 
 function actionHrefForNotification(n, scope, chrome) {
-  // Messaging notifications -> open the correct messaging page and target the conversation
-  if (
-    n?.category === "MESSAGING" &&
-    n?.entityType === "CONVERSATION" &&
-    n?.entityId
-  ) {
-    const convoId = String(n.entityId);
+  const category = String(n?.category || "").toUpperCase();
+  const entityType = String(n?.entityType || "").toUpperCase();
+  const entityId = n?.entityId ? String(n.entityId) : "";
+  const meta = n?.metadata || {};
 
-    // ✅ Use the suite's messaging pages (consistent with your routing)
-    if (scope === "RECRUITER") {
-      return withChrome(
-        `/recruiter/messaging?c=${encodeURIComponent(convoId)}`,
-        chrome || "recruiter-smb"
-      );
-    }
-    if (scope === "COACH") {
-      return withChrome(
-        `/coaching/messaging?c=${encodeURIComponent(convoId)}`,
-        chrome || "coach"
-      );
-    }
-
-    // SEEKER
-    return withChrome(`/seeker/messages?c=${encodeURIComponent(convoId)}`, chrome);
+  // ── MESSAGING → open the right messaging surface ──────────────────────────
+  if (category === "MESSAGING" && entityType === "CONVERSATION" && entityId) {
+    if (scope === "RECRUITER") return withChrome(`/recruiter/messaging?c=${encodeURIComponent(entityId)}`, chrome || "recruiter-smb");
+    if (scope === "COACH")     return withChrome(`/coaching/messaging?c=${encodeURIComponent(entityId)}`, chrome || "coach");
+    return withChrome(`/seeker/messages?c=${encodeURIComponent(entityId)}`, chrome);
   }
 
-  // Fallback by scope
-  if (scope === "RECRUITER") return withChrome("/recruiter/dashboard", chrome);
-  if (scope === "COACH") return withChrome("/coaching-dashboard", chrome);
+  // ── APPLICATION → recruiter sees the application pipeline, seeker sees their apps ──
+  if (category === "APPLICATION") {
+    if (scope === "RECRUITER") {
+      const jobId = meta?.jobId;
+      if (jobId) return withChrome(`/recruiter/job-postings/${jobId}/applications`, chrome || "recruiter-smb");
+      return withChrome("/recruiter/dashboard", chrome || "recruiter-smb");
+    }
+    // SEEKER — status change, go to their applications board
+    return withChrome("/seeker/applications", chrome);
+  }
+
+  // ── CALENDAR / FOUNDRY INVITE → open the Foundry room or calendar ─────────
+  if (category === "CALENDAR") {
+    if (entityType === "CALENDAR_ITEM" && entityId) {
+      // entityId for Foundry invites is the roomId (short slug)
+      const isFoundry = String(meta?.type || meta?.kind || "").toLowerCase().includes("foundry") ||
+        String(n?.title || "").toLowerCase().includes("foundry");
+      if (isFoundry) return `/foundry/${entityId}`;
+    }
+    if (scope === "SEEKER")    return withChrome("/seeker/calendar", chrome);
+    if (scope === "COACH")     return withChrome("/coaching/calendar", chrome || "coach");
+    if (scope === "RECRUITER") return withChrome("/recruiter/calendar", chrome || "recruiter-smb");
+    return withChrome("/seeker/calendar", chrome);
+  }
+
+  // ── VAULT_SHARE → open ForgeVault Shared With Me tab ─────────────────────
+  if (category === "VAULT" || entityType === "VAULT_SHARE") {
+    return "/dashboard/forge-vault?tab=shared";
+  }
+
+  // ── PIPELINE (stalled candidates, recruiter) ──────────────────────────────
+  if (category === "PIPELINE" || category === "CRM") {
+    if (scope === "RECRUITER") return withChrome("/recruiter/dashboard", chrome || "recruiter-smb");
+  }
+
+  // ── JOB ───────────────────────────────────────────────────────────────────
+  if (category === "JOB") {
+    if (entityId) return `/jobs/${entityId}`;
+    return withChrome("/jobs", chrome);
+  }
+
+  // ── FEEDBACK ─────────────────────────────────────────────────────────────
+  if (category === "FEEDBACK") {
+    if (scope === "COACH") return withChrome("/coaching-dashboard?tab=feedback", chrome || "coach");
+    return withChrome("/seeker-dashboard", chrome);
+  }
+
+  // ── Fallback by scope ─────────────────────────────────────────────────────
+  if (scope === "RECRUITER") return withChrome("/recruiter/dashboard", chrome || "recruiter-smb");
+  if (scope === "COACH")     return withChrome("/coaching-dashboard", chrome || "coach");
   return withChrome("/seeker-dashboard", chrome);
 }
 
@@ -119,9 +152,10 @@ const SEEKER_TABS = [
   { key: "ALL", label: "All" },
   { key: "SOCIAL", label: "Social" },
   { key: "JOBS", label: "Jobs" },
+  { key: "APPLICATIONS", label: "Applications" },
   { key: "CALENDAR", label: "Calendar" },
+  { key: "SHARED", label: "Shared With Me" },
   { key: "ACTIVITY", label: "Activity" },
-  { key: "SUPPORT", label: "Support" },
 ];
 
 function safeText(v) {
@@ -219,6 +253,51 @@ function recruiterTabMatches(n, tabKey) {
   return false;
 }
 
+function seekerTabMatches(n, tabKey) {
+  if (!n) return false;
+  if (tabKey === "ALL") return true;
+
+  const category = String(n?.category || "").toUpperCase();
+  const entityType = String(n?.entityType || "").toUpperCase();
+  const meta = n?.metadata || {};
+  const text = `${String(n?.title || "").toLowerCase()} ${String(n?.body || "").toLowerCase()}`;
+
+  if (tabKey === "SOCIAL") {
+    return category === "MESSAGING" || entityType === "CONVERSATION";
+  }
+
+  if (tabKey === "JOBS") {
+    return category === "JOB" ||
+      text.includes("job") || text.includes("match") || text.includes("recommend");
+  }
+
+  if (tabKey === "APPLICATIONS") {
+    return category === "APPLICATION" ||
+      entityType === "APPLICATION" ||
+      text.includes("application") || text.includes("status") ||
+      text.includes("applied") || text.includes("interviewing") || text.includes("offer");
+  }
+
+  if (tabKey === "CALENDAR") {
+    return category === "CALENDAR" ||
+      entityType === "CALENDAR_ITEM" ||
+      text.includes("calendar") || text.includes("interview") ||
+      text.includes("schedule") || text.includes("foundry");
+  }
+
+  if (tabKey === "SHARED") {
+    return category === "VAULT" || entityType === "VAULT_SHARE" ||
+      text.includes("shared a document") || text.includes("shared with you");
+  }
+
+  if (tabKey === "ACTIVITY") {
+    return category === "PIPELINE" || category === "FEEDBACK" ||
+      text.includes("profile") || text.includes("view") || text.includes("activity");
+  }
+
+  return false;
+}
+
 function byCreatedDesc(a, b) {
   const ta = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
   const tb = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -249,10 +328,11 @@ export default function ActionCenterPage() {
   // ✅ recruiter active tab (supports deep linking)
   const [activeRecruiterTab, setActiveRecruiterTab] = useState("ALL");
 
-  // ✅ Sync tab from URL when recruiter scope
+  // Sync tab from URL — works for all scopes
   useEffect(() => {
-    if (scope !== "RECRUITER") return;
-    const valid = new Set(RECRUITER_TABS.map((t) => t.key));
+    const tabs = scope === "RECRUITER" ? RECRUITER_TABS : scope === "SEEKER" ? SEEKER_TABS : [];
+    if (!tabs.length) return;
+    const valid = new Set(tabs.map((t) => t.key));
     const next = valid.has(tabFromQueryRaw) ? tabFromQueryRaw : "ALL";
     if (next !== activeRecruiterTab) setActiveRecruiterTab(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -352,22 +432,24 @@ export default function ActionCenterPage() {
   };
 
   const recruiterTabCounts = useMemo(() => {
-    if (scope !== "RECRUITER") return {};
     const counts = {};
-    for (const t of RECRUITER_TABS) counts[t.key] = 0;
-
+    const tabs = scope === "RECRUITER" ? RECRUITER_TABS : scope === "SEEKER" ? SEEKER_TABS : [];
+    const matchFn = scope === "RECRUITER" ? recruiterTabMatches : seekerTabMatches;
+    for (const t of tabs) counts[t.key] = 0;
     for (const n of Array.isArray(items) ? items : []) {
-      for (const t of RECRUITER_TABS) {
-        if (recruiterTabMatches(n, t.key)) counts[t.key] = (counts[t.key] || 0) + 1;
+      for (const t of tabs) {
+        if (matchFn(n, t.key)) counts[t.key] = (counts[t.key] || 0) + 1;
       }
     }
     return counts;
   }, [scope, items]);
 
   const filteredByTab = useMemo(() => {
-    if (scope !== "RECRUITER") return items;
     const tab = String(activeRecruiterTab || "ALL").toUpperCase();
-    return (Array.isArray(items) ? items : []).filter((n) => recruiterTabMatches(n, tab));
+    const list = Array.isArray(items) ? items : [];
+    if (scope === "RECRUITER") return list.filter((n) => recruiterTabMatches(n, tab));
+    if (scope === "SEEKER")    return list.filter((n) => seekerTabMatches(n, tab));
+    return list;
   }, [scope, items, activeRecruiterTab]);
 
   // ✅ Needs Attention = unread only + chronological
@@ -454,7 +536,7 @@ export default function ActionCenterPage() {
       {scope === "RECRUITER" || scope === "SEEKER" ? (
   <FrostPanel className="p-3">
     <div className="flex flex-wrap gap-2 justify-start">
-      {(scope === "RECRUITER" ? RECRUITER_TABS : SEEKER_TABS).map((t) => {
+      {(scope === "RECRUITER" ? RECRUITER_TABS : scope === "SEEKER" ? SEEKER_TABS : []).map((t) => {
               const isActive = activeRecruiterTab === t.key;
               const count = Number(recruiterTabCounts?.[t.key] || 0);
 
