@@ -303,23 +303,27 @@ export default function FoundryMobileLayout({
 }) {
   const [activeSheet, setActiveSheet] = useState(null);
   const [chatDraft, setChatDraft] = useState('');
-  const [notesDraft, setNotesDraft] = useState(notes || '');
+  const [notesDraft, setNotesDraft] = useState('');
   const [notesSaveState, setNotesSaveState] = useState('idle');
   const [copiedLink, setCopiedLink] = useState('');
   const [unreadChat, setUnreadChat] = useState(0);
-  const messagesEndRef = useRef(null);
+  // Safe defaults — prevent null/undefined crashes on any prop
+  const safeMessages = messages || [];
+  const safeParticipants = participants || [];
+  const safeSharedFiles = sharedFiles || [];
+  const safeForgeFiles = forgeFiles || [];
+  const safeNotes = notes || '';
   const notesSaveTimer = useRef(null);
   const fileInputRef = useRef(null);
 
   // Track unread chat messages
   const prevMsgCount = useRef(0);
   useEffect(() => {
-    if (!messages) return;
-    if (activeSheet !== 'chat' && messages.length > prevMsgCount.current) {
-      setUnreadChat(v => v + (messages.length - prevMsgCount.current));
+    if (activeSheet !== 'chat' && safeMessages.length > prevMsgCount.current) {
+      setUnreadChat(v => v + (safeMessages.length - prevMsgCount.current));
     }
-    prevMsgCount.current = messages.length;
-  }, [messages, activeSheet]);
+    prevMsgCount.current = safeMessages.length;
+  }, [safeMessages, activeSheet]);
 
   // Clear unread when chat opens
   useEffect(() => {
@@ -331,10 +335,10 @@ export default function FoundryMobileLayout({
     if (activeSheet === 'chat') {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, activeSheet]);
+  }, [safeMessages, activeSheet]);
 
   // Sync notes from parent
-  useEffect(() => { setNotesDraft(notes || ''); }, [notes]);
+  useEffect(() => { setNotesDraft(safeNotes); }, [safeNotes]);
 
   const closeSheet = useCallback(() => setActiveSheet(null), []);
 
@@ -430,13 +434,13 @@ export default function FoundryMobileLayout({
         <button style={S.ctrlBtn(activeSheet === 'files', false)} onClick={() => setActiveSheet(activeSheet === 'files' ? null : 'files')}>
           <span style={S.ctrlIcon}>📁</span>
           <span style={S.ctrlLabel}>Files</span>
-          {(sharedFiles?.length > 0) && <span style={S.badge}>{sharedFiles.length > 9 ? '9+' : sharedFiles.length}</span>}
+          {(safeSharedFiles.length > 0) && <span style={S.badge}>{safeSharedFiles.length > 9 ? '9+' : safeSharedFiles.length}</span>}
         </button>
 
         {/* People */}
         <button style={S.ctrlBtn(activeSheet === 'people', false)} onClick={() => setActiveSheet(activeSheet === 'people' ? null : 'people')}>
           <span style={S.ctrlIcon}>👥</span>
-          <span style={S.ctrlLabel}>People{participants?.length > 0 ? ` (${participants.length})` : ''}</span>
+          <span style={S.ctrlLabel}>People{safeParticipants.length > 0 ? ` (${safeParticipants.length})` : ''}</span>
         </button>
 
         {/* More */}
@@ -454,7 +458,7 @@ export default function FoundryMobileLayout({
         <div style={S.sheet}>
           <div style={S.sheetHandle}><div style={S.sheetHandleBar} /></div>
           <div style={S.sheetHeader}>
-            <span style={S.sheetTitle}>In this Foundry ({participants?.length || 0})</span>
+            <span style={S.sheetTitle}>In this Foundry ({safeParticipants.length})</span>
             <button style={S.sheetClose} onClick={closeSheet}>×</button>
           </div>
           <div style={S.sheetBody}>
@@ -468,7 +472,7 @@ export default function FoundryMobileLayout({
                 </button>
               </div>
             )}
-            {(participants || []).map(p => (
+            {safeParticipants.map(p => (
               <div key={p.id} style={S.participantRow}>
                 {p.avatarUrl
                   ? <img src={p.avatarUrl} alt={p.name} style={{ ...S.participantAvatar, objectFit: 'cover' }} />
@@ -506,12 +510,12 @@ export default function FoundryMobileLayout({
           </div>
           <div style={{ ...S.sheetBody, paddingBottom: 0 }}>
             <div style={S.chatMessages}>
-              {(messages || []).length === 0 ? (
+              {safeMessages.length === 0 ? (
                 <div style={{ textAlign: 'center', color: '#444', fontSize: 12, padding: '20px 0' }}>
                   Chat is visible to everyone in this Foundry. Messages disappear when the session ends.
                 </div>
               ) : (
-                (messages || []).map((msg, i) => (
+                safeMessages.map((msg, i) => (
                   <div key={i} style={S.chatMsg}>
                     {msg.avatarUrl
                       ? <img src={msg.avatarUrl} alt={msg.sender} style={{ ...S.chatAvatar, objectFit: 'cover' }} />
@@ -559,16 +563,16 @@ export default function FoundryMobileLayout({
                 <div style={S.filesSectionTitle}>
                   <span style={{ color: '#4caf50' }}>⊞</span>
                   Shared in session
-                  <span style={S.filesSectionCount}>{(sharedFiles || []).length}</span>
+                  <span style={S.filesSectionCount}>{safeSharedFiles.length}</span>
                 </div>
                 {isHost && (
                   <button style={S.copyBtn} onClick={() => fileInputRef.current?.click()}>+ Add</button>
                 )}
               </div>
-              {(sharedFiles || []).length === 0 ? (
+              {safeSharedFiles.length === 0 ? (
                 <div style={S.emptyFiles}>Nothing shared yet. Share from Your Forge below.</div>
               ) : (
-                (sharedFiles || []).map((f, i) => (
+                safeSharedFiles.map((f, i) => (
                   <div key={f.id || i} style={S.fileRow} onClick={() => openSharedFile(f)}>
                     <span style={{ fontSize: 20 }}>📄</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -601,10 +605,10 @@ export default function FoundryMobileLayout({
                     </div>
                     <button style={{ ...S.copyBtn, background: 'rgba(255,112,67,0.12)', borderColor: 'rgba(255,112,67,0.25)' }} onClick={() => onShare?.()}>↗ Share</button>
                   </div>
-                  {(forgeFiles || []).length === 0 ? (
+                  {safeForgeFiles.length === 0 ? (
                     <div style={{ fontSize: 11, color: '#3a3a3a', padding: '8px 0' }}>No documents in your Forge yet.</div>
                   ) : (
-                    (forgeFiles || []).slice(0, 8).map((f, i) => (
+                    safeForgeFiles.slice(0, 8).map((f, i) => (
                       <div key={i} style={S.fileRow} onClick={() => onShare?.(f)}>
                         <span style={{ fontSize: 18 }}>📋</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
