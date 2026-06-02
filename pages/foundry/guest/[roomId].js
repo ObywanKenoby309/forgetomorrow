@@ -10,6 +10,8 @@ import FoundryTopBar from '@/components/foundry/FoundryTopBar';
 import FoundryVideoGrid from '@/components/foundry/FoundryVideoGrid';
 import FoundryRightPanel from '@/components/foundry/FoundryRightPanel';
 import FoundryBottomBar from '@/components/foundry/FoundryBottomBar';
+import FoundryMobileLayout from '@/components/foundry/FoundryMobileLayout';
+import { useEffect, useState as useStateMobile } from 'react';
 import GuestConversionBanner from '@/components/foundry/GuestConversionBanner';
 
 const ORANGE = '#FF7043';
@@ -151,6 +153,13 @@ export default function GuestFoundryRoom({
   const router = useRouter();
 
   const [ready, setReady] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
   const [guestName, setGuestName] = useState('');
   const [guestToken, setGuestToken] = useState('');
   const [guestAccessCode, setGuestAccessCode] = useState(guestCode || '');
@@ -497,6 +506,59 @@ export default function GuestFoundryRoom({
           </div>
         </div>
       </>
+    );
+  }
+
+  if (ready && isMobile) {
+    return (
+      <FoundryMobileLayout
+        sessionTitle={title || `Foundry · ${roomId}`}
+        startTime={startTimeRef.current}
+        isRecording={false}
+        roomId={roomId}
+        micMuted={micMuted}
+        camOff={camOff}
+        isScreenSharing={isScreenSharing}
+        onMicToggle={() => setMicMuted(v => !v)}
+        onCamToggle={() => setCamOff(v => !v)}
+        onShareScreen={async () => {
+          if (!callRef.current) return;
+          try {
+            if (isScreenSharing) { await callRef.current.stopScreenShare(); }
+            else { await callRef.current.startScreenShare(); }
+          } catch {}
+        }}
+        onRecordToggle={null}
+        participants={participants}
+        messages={messages}
+        onSend={handleSend}
+        onEnd={handleEnd}
+        isHost={false}
+        isGuest={true}
+        guestCode={effectiveGuestCode}
+        sharedFiles={sharedFiles}
+        forgeFiles={[]}
+        onShare={null}
+        onUpload={null}
+        onRemoveFile={null}
+        notes=""
+        onNotesChange={null}
+      >
+        <FoundryVideoGrid
+          roomId={roomId}
+          compact={true}
+          micMuted={micMuted}
+          camOff={camOff}
+          onCallReady={handleCallReady}
+          onParticipantsChange={handleParticipantsChange}
+          onScreenShareChange={handleScreenShareChange}
+          onInvite={() => {}}
+          onHostEnded={() => setShowConversionBanner(true)}
+          onRoomEmpty={handleRoomEmpty}
+          guestToken={guestToken}
+          guestRoomUrl={roomUrl}
+        />
+      </FoundryMobileLayout>
     );
   }
 

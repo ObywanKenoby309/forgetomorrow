@@ -19,7 +19,8 @@ const S = {
   },
   card: {
     background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: 14, padding: '36px 32px', maxWidth: 400, width: '100%',
+    borderRadius: 14, padding: 'clamp(20px, 5vw, 36px) clamp(16px, 5vw, 32px)',
+    maxWidth: 420, width: '100%', boxSizing: 'border-box',
   },
   badge: {
     display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -118,6 +119,14 @@ export default function GuestJoin({
 }) {
   const router = useRouter();
   const [name, setName] = useState('');
+
+  const isInAppBrowser = typeof navigator !== 'undefined' && (
+    /GSA\//.test(navigator.userAgent) ||
+    /\[FB/.test(navigator.userAgent) ||
+    /Instagram/.test(navigator.userAgent) ||
+    /FBAN|FBAV/.test(navigator.userAgent) ||
+    (!/Chrome/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && /Mobile/.test(navigator.userAgent) && /AppleWebKit/.test(navigator.userAgent))
+  );
   const [joining, setJoining] = useState(false);
   const [err, setErr] = useState(error || '');
 
@@ -233,7 +242,10 @@ export default function GuestJoin({
       <div style={S.page}>
         <style>{`@keyframes foundryPulse { 0%,100%{opacity:1} 50%{opacity:0.2} }`}</style>
         <div style={S.card}>
-          <div style={S.badge}>🔨 Foundry</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,112,67,0.15)', border: '1px solid rgba(255,112,67,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🔨</div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: ORANGE, letterSpacing: '0.04em' }}>ForgeTomorrow Foundry</span>
+          </div>
           <div style={S.sessionCard}>
             <div style={S.sessionTitle}>{title}</div>
             <div style={S.sessionMeta}>Hosted by {hostName}{dateStr && <><br />{dateStr}</>}</div>
@@ -257,7 +269,10 @@ export default function GuestJoin({
       <div style={S.page}>
         <style>{`@keyframes foundryPulse { 0%,100%{opacity:1} 50%{opacity:0.2} }`}</style>
         <div style={S.card}>
-          <div style={S.badge}>🔨 Foundry</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,112,67,0.15)', border: '1px solid rgba(255,112,67,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🔨</div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: ORANGE, letterSpacing: '0.04em' }}>ForgeTomorrow Foundry</span>
+          </div>
           <div style={S.sessionCard}>
             <div style={S.sessionTitle}>{title}</div>
             <div style={S.sessionMeta}>Hosted by {hostName}{dateStr && <><br />{dateStr}</>}</div>
@@ -289,9 +304,24 @@ export default function GuestJoin({
       </Head>
       <div style={S.page}>
         <div style={S.card}>
-          <div style={S.badge}>🔨 Foundry</div>
+          {/* ForgeTomorrow branding */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,112,67,0.15)', border: '1px solid rgba(255,112,67,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🔨</div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: ORANGE, letterSpacing: '0.04em' }}>ForgeTomorrow Foundry</span>
+          </div>
           <h1 style={S.heading}>You're invited</h1>
           <p style={S.sub}>{hostName} invited you to join a Foundry session.</p>
+
+          {/* In-app browser warning — Gmail/Facebook/Instagram block camera access */}
+          {isInAppBrowser && (
+            <div style={{ background: 'rgba(255,112,67,0.08)', border: '1px solid rgba(255,112,67,0.2)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, fontSize: 11, color: '#FF7043', lineHeight: 1.6 }}>
+              ⚠️ You're viewing this in an in-app browser. For camera and microphone access, open this link in Chrome or Safari.
+              <br />
+              <a href={typeof window !== 'undefined' ? window.location.href : ''} target="_blank" rel="noopener noreferrer" style={{ color: '#FF7043', fontWeight: 700 }}>
+                Open in browser →
+              </a>
+            </div>
+          )}
 
           <div style={S.sessionCard}>
             <div style={S.sessionTitle}>{title}</div>

@@ -228,6 +228,12 @@ const S = {
     gap: 16,
     alignItems: 'start',
   },
+  deviceGridMobile: {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gap: 16,
+    alignItems: 'start',
+  },
   devicePreview: {
     borderRadius: 14,
     background: '#0b0d11',
@@ -487,7 +493,7 @@ function JoinPanel({ joinCode, setJoinCode, joining, error, onJoin }) {
   );
 }
 
-function DeviceTestPanel() {
+function DeviceTestPanel({ isMobile = false }) {
   const videoRef = useRef(null);
   const screenRef = useRef(null);
   const streamRef = useRef(null);
@@ -677,7 +683,7 @@ function DeviceTestPanel() {
 
       {deviceError && <div style={S.error}>{deviceError}</div>}
 
-      <div style={S.deviceGrid}>
+      <div style={isMobile ? S.deviceGridMobile : S.deviceGrid}>
         <div>
           <div style={S.devicePreview}>
             <video ref={videoRef} style={S.deviceVideo} autoPlay muted playsInline />
@@ -751,6 +757,7 @@ export default function FoundryLobbyWorkspace({
   todayRooms = [],
   onRefresh,
   onJoinRoom,
+  isMobile = false,
 }) {
   const [activeMode, setActiveMode] = useState(canHost ? 'start' : 'join');
   const [title, setTitle] = useState('');
@@ -883,7 +890,7 @@ export default function FoundryLobbyWorkspace({
     }
 
     if (activeMode === 'devices') {
-      return <DeviceTestPanel />;
+      return <DeviceTestPanel isMobile={isMobile} />;
     }
 
     return <JoinPanel joinCode={joinCode} setJoinCode={setJoinCode} joining={joining} error={err} onJoin={handleJoin} />;

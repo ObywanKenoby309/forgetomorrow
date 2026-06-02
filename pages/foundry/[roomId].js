@@ -613,6 +613,7 @@ export default function FoundryRoom() {
         sessionTitle={room?.title || `Foundry · ${roomId}`}
         startTime={startTimeRef.current}
         isRecording={isRecording}
+        roomId={roomId}
         micMuted={micMuted}
         camOff={camOff}
         isScreenSharing={isScreenSharing}
@@ -625,6 +626,21 @@ export default function FoundryRoom() {
         onSend={handleSend}
         onEnd={handleEnd}
         isHost={isHost}
+        onMuteAll={handleMuteAll}
+        onMuteParticipant={handleMuteParticipant}
+        onKickParticipant={handleKickParticipant}
+        onBanParticipant={handleBanParticipant}
+        onLockRoom={handleLockRoom}
+        onStopParticipantShare={handleStopParticipantShare}
+        sharedFiles={sharedFiles}
+        forgeFiles={forgeFiles}
+        onShare={handleShare}
+        onUpload={handleUpload}
+        onRemoveFile={handleRemoveFile}
+        notes={notes}
+        onNotesChange={handleNotesChange}
+        guestCode={null}
+        isGuest={false}
       >
         <FoundryVideoGrid
           roomId={roomId}

@@ -26,6 +26,14 @@ export default function FoundryLobby() {
   const [contacts, setContacts] = useState([]);
   const [recentRooms, setRecentRooms] = useState([]);
   const [todayRooms, setTodayRooms] = useState([]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const userRole = String(session?.user?.role || '').toUpperCase();
   const canHost = CAN_HOST.includes(userRole);
@@ -110,7 +118,7 @@ setContacts(Array.from(deduped.values()));
       <SeekerLayout
         title="Foundries | ForgeTomorrow"
         activeNav="foundry"
-        right={
+        right={isMobile ? null : (
           <div style={S.rightStack}>
             <RightRailPlacementManager />
             <FoundryRightRail
@@ -119,7 +127,7 @@ setContacts(Array.from(deduped.values()));
               onOpenRoom={(roomId) => router.push(`/foundry/${roomId}`)}
             />
           </div>
-        }
+        )}
         rightVariant="light"
         header={
           <SeekerTitleCard
@@ -130,12 +138,21 @@ setContacts(Array.from(deduped.values()));
         }
       >
         <div style={S.wrapper}>
+          {/* Recent rooms — show inline on mobile since right rail is hidden */}
+          {isMobile && recentRooms.length > 0 && (
+            <FoundryRightRail
+              recentRooms={recentRooms}
+              canHost={canHost}
+              onOpenRoom={(roomId) => router.push(`/foundry/${roomId}`)}
+            />
+          )}
           <FoundryLobbyWorkspace
             canHost={canHost}
             contacts={contacts}
             todayRooms={todayRooms}
             onRefresh={refreshFoundryData}
             onJoinRoom={(roomId) => router.push(`/foundry/${roomId}`)}
+            isMobile={isMobile}
           />
         </div>
       </SeekerLayout>
