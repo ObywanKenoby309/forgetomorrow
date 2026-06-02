@@ -277,42 +277,258 @@ async function renderNegotiation(docId, userId) {
   return { pdfBuffer, fileName: `negotiation_brief${company ? `_${company.replace(/[^a-z0-9]+/gi, '_')}` : ''}.pdf` };
 }
 
+// ─── Strategy PDF — full layout matching the coach's view ────────────────────
+const stratStyles = StyleSheet.create({
+  page: { fontFamily: 'Helvetica', fontSize: 11, padding: 48, color: '#1f2937', lineHeight: 1.55 },
+  footer: { position: 'absolute', bottom: 28, left: 48, right: 48, fontSize: 9, color: '#9ca3af', textAlign: 'center' },
+  // Header block
+  headerWrap: { marginBottom: 22, paddingBottom: 16, borderBottom: '1.5px solid #FF7043' },
+  clientName: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: '#FF7043', marginBottom: 4 },
+  positioning: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#112033', lineHeight: 1.4, marginBottom: 10 },
+  // Warning blocks
+  warningWrap: { backgroundColor: '#FFF8F0', border: '1px solid #FFD0B0', borderRadius: 4, padding: '8 10', marginBottom: 8 },
+  warningLabel: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#E65100', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 },
+  warningText: { fontSize: 10, color: '#7C3500' },
+  gapWrap: { backgroundColor: '#FFFBEA', border: '1px solid #FFE082', borderRadius: 4, padding: '8 10', marginBottom: 16 },
+  gapLabel: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#E65100', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 },
+  gapText: { fontSize: 10, color: '#5D4037' },
+  // Section
+  section: { marginBottom: 16 },
+  sectionTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 6 },
+  // Bullets
+  bulletRow: { flexDirection: 'row', marginBottom: 5 },
+  bulletDot: { width: 10, fontSize: 11, color: '#FF7043', fontFamily: 'Helvetica-Bold' },
+  bulletText: { flex: 1, fontSize: 11, color: '#374151' },
+  // Numbered
+  numRow: { flexDirection: 'row', marginBottom: 6 },
+  numDot: { width: 18, fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#FF7043' },
+  numText: { flex: 1, fontSize: 11, color: '#374151' },
+  // Company pill rows
+  companyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 2 },
+  companyPill: { border: '1px solid #FFD0B0', borderRadius: 12, padding: '3 8', marginRight: 5, marginBottom: 4 },
+  companyText: { fontSize: 10, color: '#993C1D' },
+  // KV table
+  kvRow: { flexDirection: 'row', marginBottom: 4 },
+  kvKey: { width: 16, fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#FF7043' },
+  kvVal: { flex: 1, fontSize: 11, color: '#374151' },
+  // Card for target company
+  card: { border: '1px solid #e5e7eb', borderRadius: 4, padding: '8 10', marginBottom: 6 },
+  cardName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#112033', marginBottom: 2 },
+  cardReason: { fontSize: 10, color: '#6b7280' },
+  cardStretch: { border: '1px solid #FFD0B0', borderRadius: 4, padding: '8 10', marginBottom: 6 },
+});
+
+function StrategyPDF({ clientName, s, targetCompanies }) {
+  const safeHarbors = safeArr(s.safeHarborTargets);
+  const stretches = safeArr(s.stretchTargets);
+  const roleLanes = safeArr(s.roleLanes);
+  const themes = safeArr(s.themes);
+  const reasoning = safeArr(s.reasoning);
+  const narrativeGaps = safeArr(s.narrativeGaps);
+  const transferability = safeArr(s.transferabilitySignals);
+  const executionPlan = safeArr(s.executionPlan);
+
+  // Parse targetCompanies string into array
+  const companyList = targetCompanies
+    ? targetCompanies.split(/[,\n]/).map(c => c.trim()).filter(Boolean)
+    : [];
+
+  return (
+    <Document>
+      <Page size="LETTER" style={stratStyles.page}>
+        {/* Header */}
+        <View style={stratStyles.headerWrap}>
+          <Text style={stratStyles.clientName}>{clientName} — Target Strategy</Text>
+          {s.positioningInsight ? (
+            <Text style={stratStyles.positioning}>{s.positioningInsight}</Text>
+          ) : null}
+
+          {/* Market warning */}
+          {s.marketPositionWarning ? (
+            <View style={stratStyles.warningWrap}>
+              <Text style={stratStyles.warningLabel}>Market Reality — How they&apos;re being seen right now</Text>
+              <Text style={stratStyles.warningText}>{s.marketPositionWarning}</Text>
+            </View>
+          ) : null}
+
+          {/* Hidden signal gap */}
+          {s.hiddenSignalGap ? (
+            <View style={stratStyles.gapWrap}>
+              <Text style={stratStyles.gapLabel}>⚠ Hidden Signal Gap Detected</Text>
+              <Text style={stratStyles.gapText}>{s.hiddenSignalGap}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {/* Why this strategy / Reasoning */}
+        {reasoning.length > 0 ? (
+          <View style={stratStyles.section}>
+            <Text style={stratStyles.sectionTitle}>Why this strategy</Text>
+            {reasoning.map((r, i) => (
+              <View key={i} style={stratStyles.numRow}>
+                <Text style={stratStyles.numDot}>{i + 1}.</Text>
+                <Text style={stratStyles.numText}>{safe(r)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Role Lanes */}
+        {roleLanes.length > 0 ? (
+          <View style={stratStyles.section}>
+            <Text style={stratStyles.sectionTitle}>Target Role Lanes</Text>
+            {roleLanes.map((r, i) => (
+              <View key={i} style={stratStyles.bulletRow}>
+                <Text style={stratStyles.bulletDot}>•</Text>
+                <Text style={stratStyles.bulletText}>{safe(r)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Target companies */}
+        {companyList.length > 0 ? (
+          <View style={stratStyles.section}>
+            <Text style={stratStyles.sectionTitle}>Target Companies</Text>
+            <View style={stratStyles.companyRow}>
+              {companyList.map((c, i) => (
+                <View key={i} style={stratStyles.companyPill}>
+                  <Text style={stratStyles.companyText}>{c}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {/* Strategic themes */}
+        {themes.length > 0 ? (
+          <View style={stratStyles.section}>
+            <Text style={stratStyles.sectionTitle}>Sector Alignment</Text>
+            {themes.map((t, i) => (
+              <View key={i} style={stratStyles.bulletRow}>
+                <Text style={stratStyles.bulletDot}>•</Text>
+                <Text style={stratStyles.bulletText}>{safe(t)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Safe harbor targets */}
+        {safeHarbors.length > 0 ? (
+          <View style={stratStyles.section}>
+            <Text style={stratStyles.sectionTitle}>Safe Harbor Targets</Text>
+            {safeHarbors.map((c, i) => (
+              <View key={i} style={stratStyles.card}>
+                <Text style={stratStyles.cardName}>{safe(c.name)}</Text>
+                <Text style={stratStyles.cardReason}>{safe(c.reason)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Stretch targets */}
+        {stretches.length > 0 ? (
+          <View style={stratStyles.section}>
+            <Text style={stratStyles.sectionTitle}>Stretch Targets</Text>
+            {stretches.map((c, i) => (
+              <View key={i} style={stratStyles.cardStretch}>
+                <Text style={stratStyles.cardName}>{safe(c.name)}</Text>
+                <Text style={stratStyles.cardReason}>{safe(c.reason)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Transferability signals */}
+        {transferability.length > 0 ? (
+          <View style={stratStyles.section}>
+            <Text style={stratStyles.sectionTitle}>Transferability Signals</Text>
+            {transferability.map((t, i) => (
+              <View key={i} style={stratStyles.bulletRow}>
+                <Text style={stratStyles.bulletDot}>•</Text>
+                <Text style={stratStyles.bulletText}>{safe(t)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Narrative gaps */}
+        {narrativeGaps.length > 0 ? (
+          <View style={stratStyles.section}>
+            <Text style={stratStyles.sectionTitle}>Narrative Gaps to Address</Text>
+            {narrativeGaps.map((g, i) => (
+              <View key={i} style={stratStyles.bulletRow}>
+                <Text style={stratStyles.bulletDot}>•</Text>
+                <Text style={stratStyles.bulletText}>{safe(g)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Session focus */}
+        {s.sessionFocus ? (
+          <View style={stratStyles.section}>
+            <Text style={stratStyles.sectionTitle}>Session Focus</Text>
+            <Text style={{ fontSize: 11, color: '#374151' }}>{s.sessionFocus}</Text>
+          </View>
+        ) : null}
+
+        {/* Execution plan */}
+        {executionPlan.length > 0 ? (
+          <View style={stratStyles.section}>
+            <Text style={stratStyles.sectionTitle}>Execution Plan</Text>
+            {executionPlan.map((step, i) => (
+              <View key={i} style={stratStyles.numRow}>
+                <Text style={stratStyles.numDot}>{i + 1}.</Text>
+                <Text style={stratStyles.numText}>{safe(step)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Immediate next step */}
+        {s.nextStep ? (
+          <View style={stratStyles.section}>
+            <Text style={stratStyles.sectionTitle}>Immediate Next Step</Text>
+            <Text style={{ fontSize: 11, color: '#374151' }}>{s.nextStep}</Text>
+          </View>
+        ) : null}
+
+        <Text style={stratStyles.footer}>Shared via ForgeTomorrow — View only</Text>
+      </Page>
+    </Document>
+  );
+}
+
 async function renderStrategy(docId, userId) {
   const client = await prisma.coachingClient.findFirst({
     where: { id: String(docId), coachId: userId },
-    select: { name: true, strategyJson: true, targetCompanies: true, strategyNextStep: true },
+    select: {
+      name: true,
+      strategyJson: true,
+      targetCompanies: true,
+      strategyNextStep: true,
+      strategyThemes: true,
+      strategyRoleLanes: true,
+    },
   });
   if (!client) throw new Error('Strategy not found');
 
   const strategy = safeJsonParse(client.strategyJson) || {};
-  const sections = [];
-
-  if (strategy.positioningInsight || client.strategyNextStep) {
-    sections.push({ heading: 'Positioning', text: safe(strategy.positioningInsight || client.strategyNextStep) });
-  }
-  if (safeArr(strategy.roleLanes || strategy.targetRoles).length) {
-    sections.push({ heading: 'Target Role Lanes', bullets: safeArr(strategy.roleLanes || strategy.targetRoles).map(r => safe(r.title || r.role || r)) });
-  }
-  if (client.targetCompanies) {
-    sections.push({ heading: 'Target Companies', text: safe(client.targetCompanies) });
-  }
-  if (safeArr(strategy.themes).length) {
-    sections.push({ heading: 'Strategic Themes', bullets: safeArr(strategy.themes).map(t => safe(t.theme || t)) });
-  }
-  if (strategy.nextStep) {
-    sections.push({ heading: 'Immediate Next Step', text: safe(strategy.nextStep) });
-  }
-
-  if (!sections.length) sections.push({ text: 'Target Strategy on file.' });
+  const clientName = safe(client.name, 'Client');
 
   const pdfBuffer = await pdf(
-    <GenericPDF
-      title={`${safe(client.name, 'Client')} — Target Strategy`}
-      sections={sections}
+    <StrategyPDF
+      clientName={clientName}
+      s={strategy}
+      targetCompanies={client.targetCompanies || ''}
     />
   ).toBuffer();
 
-  return { pdfBuffer, fileName: `target_strategy_${safe(client.name, 'client').replace(/[^a-z0-9]+/gi, '_')}.pdf` };
+  return {
+    pdfBuffer,
+    fileName: `target_strategy_${clientName.replace(/[^a-z0-9]+/gi, '_')}.pdf`,
+  };
 }
 
 async function renderInterviewPrep(docId, userId) {

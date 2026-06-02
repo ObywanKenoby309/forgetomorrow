@@ -51,9 +51,6 @@ export default async function handler(req, res) {
           updatedAt: client.updatedAt,
           targetCompanies: client.targetCompanies || '',
           summary: strategy.positioningInsight || client.strategyNextStep || strategy.nextStep || '',
-          downloadUrl: `/api/coaching/clients/strategy/export-foundry?clientId=${encodeURIComponent(client.id)}`,
-          shareEndpoint: '/api/coaching/clients/strategy/export-foundry',
-          sharePayload: { clientId: client.id },
         };
       });
 
