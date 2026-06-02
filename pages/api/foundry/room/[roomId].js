@@ -1,6 +1,7 @@
 // pages/api/foundry/room/[roomId].js
 // GET  → returns room + participants
 // Middleware enforces auth before this runs.
+// Dead space to push deployment to vercel
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
