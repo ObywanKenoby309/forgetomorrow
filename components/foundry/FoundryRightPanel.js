@@ -572,6 +572,10 @@ export default function FoundryRightPanel({
   roomId,
   participants = [],
   messages = [],
+  sessionDms = [],
+  selectedDmParticipant = null,
+  onSelectDmParticipant,
+  onSendDm,
   sharedFiles = [],
   forgeFiles = [],
   notes = '',
@@ -600,6 +604,7 @@ export default function FoundryRightPanel({
   const [activeTab, setActiveTab] = useState(initialTab);
   const [chatSub, setChatSub] = useState('meeting');
   const [draft, setDraft] = useState('');
+  const [guestDmParticipant, setGuestDmParticipant] = useState(null);
 
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab);
@@ -656,7 +661,16 @@ export default function FoundryRightPanel({
           onBanParticipant={onBanParticipant}
           onLockRoom={onLockRoom}
           onStopParticipantShare={onStopParticipantShare}
-          onDmParticipant={() => { setActiveTab('Chat'); setChatSub('dms'); }}
+          onDmParticipant={(participant) => {
+  if (!participant?.userId) {
+    setGuestDmParticipant(participant);
+  } else {
+    onSelectDmParticipant?.(participant);
+  }
+
+  setActiveTab('Chat');
+  setChatSub('dms');
+}}
         />
       </div>
 
@@ -711,11 +725,77 @@ export default function FoundryRightPanel({
         {/* Signal DMs — always mounted, hidden when not active */}
         {/* KEY FIX: FoundrySignalPanel is always in the tree so its hooks never change count */}
         <div style={{ display: chatSub === 'dms' ? 'flex' : 'none', flex: 1, minHeight: 0, flexDirection: 'column' }}>
-          <FoundrySignalPanel
-            currentUserId={currentUserId}
-            currentUserRole={currentUserRole}
-            foundryParticipants={participants.filter(p => !p.local)}
-          />
+          {guestDmParticipant ? (
+  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{
+      paddingBottom: 10,
+      borderBottom: '1px solid rgba(255,255,255,0.06)',
+      marginBottom: 8,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+    }}>
+      <button
+        style={S.dmBtn}
+        onClick={() => setGuestDmParticipant(null)}
+      >
+        ←
+      </button>
+
+      <div>
+        <div style={{ fontSize: 12, color: '#ccc', fontWeight: 600 }}>
+          {guestDmParticipant.name}
+        </div>
+        <div style={{ fontSize: 10, color: '#666' }}>
+          External Guest
+        </div>
+      </div>
+    </div>
+
+    <div style={{ flex: 1, overflowY: 'auto' }}>
+      {sessionDms
+        .filter(dm =>
+          dm.fromSessionId === guestDmParticipant.id ||
+          dm.toSessionId === guestDmParticipant.id
+        )
+        .map(dm => (
+          <div key={dm.id} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 10, color: '#666' }}>
+              {dm.fromName}
+            </div>
+            <div style={{
+              background: 'rgba(255,255,255,0.05)',
+              borderRadius: 6,
+              padding: 8,
+              color: '#ccc',
+              fontSize: 11,
+            }}>
+              {dm.text}
+            </div>
+          </div>
+        ))}
+    </div>
+
+    <div style={S.chatIn}>
+      <input
+        style={S.chatInEl}
+        placeholder={`Message ${guestDmParticipant.name}...`}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && e.target.value.trim()) {
+            onSendDm?.(guestDmParticipant, e.target.value.trim());
+            e.target.value = '';
+          }
+        }}
+      />
+    </div>
+  </div>
+) : (
+  <FoundrySignalPanel
+    currentUserId={currentUserId}
+    currentUserRole={currentUserRole}
+    foundryParticipants={participants.filter(p => !p.local)}
+  />
+)}
         </div>
       </div>
 

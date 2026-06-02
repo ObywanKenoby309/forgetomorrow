@@ -282,6 +282,10 @@ export default function FoundryMobileLayout({
   // Panels — Chat
   messages,
   onSend,
+  sessionDms,
+  selectedDmParticipant,
+  onSelectDmParticipant,
+  onSendDm,
 
   // Panels — Files
   sharedFiles,
@@ -487,13 +491,26 @@ export default function FoundryMobileLayout({
                   <span style={{ fontSize: 14, color: p.micMuted ? '#ef5350' : '#4caf50' }}>{p.micMuted ? '🔇' : '🎤'}</span>
                   <span style={{ fontSize: 14, color: p.videoOff ? '#ef5350' : '#4caf50' }}>{p.videoOff ? '📵' : '📹'}</span>
                   {isHost && !p.local && (
-                    <>
-                      <button style={S.hostCtrlBtn} onClick={() => onMuteParticipant?.(p)}>Mute</button>
-                      <button style={S.hostCtrlBtn} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>
-                      <button style={S.hostCtrlBtn} onClick={() => onKickParticipant?.(p)}>Kick</button>
-                      <button style={S.banBtn} onClick={() => onBanParticipant?.(p)}>Ban</button>
-                    </>
-                  )}
+  <>
+    <button
+      style={S.hostCtrlBtn}
+      onClick={() => {
+        onSelectDmParticipant?.(p);
+        setActiveSheet('dm');
+      }}
+    >
+      DM
+    </button>
+
+    <button style={S.hostCtrlBtn} onClick={() => onMuteParticipant?.(p)}>Mute</button>
+
+    <button style={S.hostCtrlBtn} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>
+
+    <button style={S.hostCtrlBtn} onClick={() => onKickParticipant?.(p)}>Kick</button>
+
+    <button style={S.banBtn} onClick={() => onBanParticipant?.(p)}>Ban</button>
+  </>
+)}
                 </div>
               </div>
             ))}
@@ -546,6 +563,72 @@ export default function FoundryMobileLayout({
           </div>
         </div>
       )}
+
+{activeSheet === 'dm' && (
+  <div style={{ ...S.sheet, maxHeight: '82vh' }}>
+    <div style={S.sheetHandle}><div style={S.sheetHandleBar} /></div>
+
+    <div style={S.sheetHeader}>
+      <span style={S.sheetTitle}>
+        DM · {selectedDmParticipant?.name || 'Participant'}
+      </span>
+
+      <button
+        style={S.sheetClose}
+        onClick={closeSheet}
+      >
+        ×
+      </button>
+    </div>
+
+    <div style={{ ...S.sheetBody, paddingBottom: 0 }}>
+      <div style={S.chatMessages}>
+        {(sessionDms || [])
+          .filter(dm =>
+            dm.fromSessionId === selectedDmParticipant?.id ||
+            dm.toSessionId === selectedDmParticipant?.id
+          )
+          .map(dm => (
+            <div key={dm.id} style={S.chatMsg}>
+              <div>
+                <span style={S.chatSender}>{dm.fromName}</span>
+                <span style={S.chatTime}>{dm.time}</span>
+                <div style={S.chatText}>{dm.text}</div>
+              </div>
+            </div>
+          ))}
+      </div>
+    </div>
+
+    <div style={S.chatInputRow}>
+      <input
+        style={S.chatInput}
+        placeholder={`Message ${selectedDmParticipant?.name || ''}`}
+        onKeyDown={(e) => {
+          if (
+            e.key === 'Enter' &&
+            e.target.value.trim() &&
+            selectedDmParticipant
+          ) {
+            onSendDm?.(
+              selectedDmParticipant,
+              e.target.value.trim()
+            );
+
+            e.target.value = '';
+          }
+        }}
+      />
+
+      <button
+        style={S.chatSendBtn}
+        onClick={() => {}}
+      >
+        →
+      </button>
+    </div>
+  </div>
+)}
 
       {/* ── FILES SHEET ───────────────────────────────────────────────── */}
       {activeSheet === 'files' && (
