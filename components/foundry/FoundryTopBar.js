@@ -1,5 +1,5 @@
 // components/foundry/FoundryTopBar.js
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 const S = {
   bar: {
@@ -50,9 +50,53 @@ const S = {
   },
   dDivider: { border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '4px 0' },
   settingsBtn: {
-    background: 'none', border: 'none', color: '#555', cursor: 'pointer',
+    background: 'none', border: 'none', color: '#777', cursor: 'pointer',
     fontSize: 15, padding: 5, borderRadius: 6, display: 'flex', alignItems: 'center',
     transition: 'all 0.15s',
+  },
+  overlay: {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 9998,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18,
+    fontFamily: "'DM Sans', sans-serif",
+  },
+  modal: {
+    width: 'min(520px, 96vw)', background: '#11141c', border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: 14, boxShadow: '0 18px 60px rgba(0,0,0,0.55)', overflow: 'hidden', color: '#eee',
+  },
+  modalHead: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)',
+  },
+  modalTitle: { fontSize: 15, fontWeight: 700, color: '#f3f3f3' },
+  closeBtn: { background: 'none', border: 'none', color: '#888', fontSize: 20, cursor: 'pointer' },
+  modalBody: { padding: 16, display: 'grid', gap: 12 },
+  label: { fontSize: 11, color: '#aaa', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' },
+  select: {
+    width: '100%', background: '#090b11', border: '1px solid rgba(255,255,255,0.12)',
+    color: '#eee', borderRadius: 9, padding: '10px 11px', fontSize: 13,
+    fontFamily: "'DM Sans', sans-serif",
+  },
+  note: {
+    background: 'rgba(255,112,67,0.08)', border: '1px solid rgba(255,112,67,0.2)',
+    borderRadius: 10, padding: 10, color: '#c9c9c9', fontSize: 12, lineHeight: 1.5,
+  },
+  error: {
+    background: 'rgba(198,40,40,0.12)', border: '1px solid rgba(198,40,40,0.28)',
+    borderRadius: 9, padding: 10, color: '#ffcdd2', fontSize: 12,
+  },
+  modalFoot: {
+    display: 'flex', justifyContent: 'flex-end', gap: 8,
+    padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.08)',
+  },
+  secondaryBtn: {
+    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+    color: '#ddd', borderRadius: 8, padding: '9px 12px', cursor: 'pointer',
+    fontSize: 12, fontWeight: 700, fontFamily: "'DM Sans', sans-serif",
+  },
+  primaryBtn: {
+    background: '#FF7043', border: 'none', color: '#111', borderRadius: 8,
+    padding: '9px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 800,
+    fontFamily: "'DM Sans', sans-serif",
   },
 };
 
@@ -63,18 +107,91 @@ const VIEW_OPTIONS = [
   { id: 'presentation', label: 'Presentation view', icon: '▤' },
 ];
 
-const INTERFACE_OPTIONS = [
-  { id: 'sidebar', label: 'Hide sidebar', icon: '◫' },
-  { id: 'compact', label: 'Compact view', icon: '⊟' },
-];
-
 export default function FoundryTopBar({
   sessionTitle, isRecording, startTime, activeView, onViewChange,
   sidebarHidden, onToggleSidebar, compact, onToggleCompact,
+  callObject = null,
 }) {
   const [open, setOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [devices, setDevices] = useState([]);
+  const [cameraId, setCameraId] = useState('');
+  const [micId, setMicId] = useState('');
+  const [speakerId, setSpeakerId] = useState('');
+  const [deviceError, setDeviceError] = useState('');
+  const [savingDevices, setSavingDevices] = useState(false);
   const ref = useRef(null);
+
+  const cameras = devices.filter((d) => d.kind === 'videoinput');
+  const microphones = devices.filter((d) => d.kind === 'audioinput');
+  const speakers = devices.filter((d) => d.kind === 'audiooutput');
+
+  const loadDevices = useCallback(async () => {
+    setDeviceError('');
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) {
+      setDeviceError('Device settings are not available in this browser.');
+      return;
+    }
+
+    try {
+      const list = await navigator.mediaDevices.enumerateDevices();
+      setDevices(list);
+
+      const firstCamera = list.find((d) => d.kind === 'videoinput');
+      const firstMic = list.find((d) => d.kind === 'audioinput');
+      const firstSpeaker = list.find((d) => d.kind === 'audiooutput');
+
+      setCameraId((prev) => prev || firstCamera?.deviceId || '');
+      setMicId((prev) => prev || firstMic?.deviceId || '');
+      setSpeakerId((prev) => prev || firstSpeaker?.deviceId || '');
+    } catch (err) {
+      setDeviceError(err?.message || 'Could not load camera and microphone devices.');
+    }
+  }, []);
+
+  const openSettings = useCallback(() => {
+    setOpen(false);
+    setSettingsOpen(true);
+    loadDevices();
+  }, [loadDevices]);
+
+  const applyDeviceSettings = useCallback(async () => {
+    setSavingDevices(true);
+    setDeviceError('');
+
+    try {
+      if (!callObject) {
+        throw new Error('Foundry video is still connecting. Try again in a moment.');
+      }
+
+      if (callObject.setInputDevicesAsync) {
+        await callObject.setInputDevicesAsync({
+          audioDeviceId: micId || undefined,
+          videoDeviceId: cameraId || undefined,
+        });
+      } else if (callObject.setInputDevices) {
+        await callObject.setInputDevices({
+          audioDeviceId: micId || undefined,
+          videoDeviceId: cameraId || undefined,
+        });
+      }
+
+      if (speakerId) {
+        if (callObject.setOutputDeviceAsync) {
+          await callObject.setOutputDeviceAsync(speakerId);
+        } else if (callObject.setOutputDevice) {
+          await callObject.setOutputDevice(speakerId);
+        }
+      }
+
+      setSettingsOpen(false);
+    } catch (err) {
+      setDeviceError(err?.message || 'Could not apply device settings.');
+    } finally {
+      setSavingDevices(false);
+    }
+  }, [callObject, cameraId, micId, speakerId]);
 
   // Live timer
   useEffect(() => {
@@ -139,7 +256,7 @@ export default function FoundryTopBar({
           style={S.settingsBtn}
           aria-label="Foundry settings"
           title="Settings"
-          onClick={() => {}}
+          onClick={openSettings}
         >
           ⚙
         </button>
@@ -186,6 +303,68 @@ export default function FoundryTopBar({
           </div>
         )}
       </div>
+
+      {settingsOpen && (
+        <div style={S.overlay} role="dialog" aria-modal="true" aria-label="Foundry device settings">
+          <div style={S.modal}>
+            <div style={S.modalHead}>
+              <div style={S.modalTitle}>Foundry Settings</div>
+              <button type="button" style={S.closeBtn} onClick={() => setSettingsOpen(false)} aria-label="Close settings">×</button>
+            </div>
+
+            <div style={S.modalBody}>
+              {deviceError && <div style={S.error}>{deviceError}</div>}
+
+              <div>
+                <div style={S.label}>Camera</div>
+                <select style={S.select} value={cameraId} onChange={(e) => setCameraId(e.target.value)}>
+                  {cameras.length === 0 ? <option value="">Default camera</option> : null}
+                  {cameras.map((device, index) => (
+                    <option key={device.deviceId || `camera-${index}`} value={device.deviceId}>
+                      {device.label || `Camera ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <div style={S.label}>Microphone</div>
+                <select style={S.select} value={micId} onChange={(e) => setMicId(e.target.value)}>
+                  {microphones.length === 0 ? <option value="">Default microphone</option> : null}
+                  {microphones.map((device, index) => (
+                    <option key={device.deviceId || `mic-${index}`} value={device.deviceId}>
+                      {device.label || `Microphone ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <div style={S.label}>Speaker</div>
+                <select style={S.select} value={speakerId} onChange={(e) => setSpeakerId(e.target.value)}>
+                  {speakers.length === 0 ? <option value="">Default speaker</option> : null}
+                  {speakers.map((device, index) => (
+                    <option key={device.deviceId || `speaker-${index}`} value={device.deviceId}>
+                      {device.label || `Speaker ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={S.note}>
+                Backgrounds belong here next. The safe production path is to add Daily video processing/virtual-background support after device settings are stable, not fake it through the People panel.
+              </div>
+            </div>
+
+            <div style={S.modalFoot}>
+              <button type="button" style={S.secondaryBtn} onClick={loadDevices}>Refresh devices</button>
+              <button type="button" style={S.primaryBtn} onClick={applyDeviceSettings} disabled={savingDevices}>
+                {savingDevices ? 'Applying…' : 'Apply settings'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes foundryPulse { 0%,100%{opacity:1} 50%{opacity:0.2} }

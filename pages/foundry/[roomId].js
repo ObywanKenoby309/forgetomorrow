@@ -646,6 +646,7 @@ export default function FoundryRoom() {
         onToggleSidebar={() => setSidebarHidden(v => !v)}
         compact={compact}
         onToggleCompact={() => setCompact(v => !v)}
+        callObject={callRef.current}
       />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
