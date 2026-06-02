@@ -154,10 +154,20 @@ export default function GuestFoundryRoom({
   const [ready, setReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
+    const check = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      // Stay in mobile layout if width < 1024 OR if it's a phone in landscape
+      // (height < 500 is a strong signal of landscape phone)
+      setIsMobile(w < 1024 || h < 500);
+    };
     check();
     window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    window.addEventListener('orientationchange', check);
+    return () => {
+      window.removeEventListener('resize', check);
+      window.removeEventListener('orientationchange', check);
+    };
   }, []);
   const [guestName, setGuestName] = useState('');
   const [guestToken, setGuestToken] = useState('');
@@ -250,14 +260,17 @@ export default function GuestFoundryRoom({
     return () => clearInterval(interval);
   }, [ready, roomId]);
 
+  const effectiveGuestCodeRef = useRef(effectiveGuestCode);
+  useEffect(() => { effectiveGuestCodeRef.current = effectiveGuestCode; }, [effectiveGuestCode]);
+
   useEffect(() => {
     if (!ready || !roomId) return;
 
     const loadFiles = async () => {
+      const code = effectiveGuestCodeRef.current;
       try {
-        const res = await fetch(`/api/foundry/room/${roomId}/share-file?guestCode=${encodeURIComponent(effectiveGuestCode)}`)
+        const res = await fetch(`/api/foundry/room/${roomId}/share-file${code ? `?guestCode=${encodeURIComponent(code)}` : ''}`);
         const data = await res.json();
-
         if (Array.isArray(data.files)) {
           setSharedFiles(data.files);
         }
@@ -265,9 +278,7 @@ export default function GuestFoundryRoom({
     };
 
     loadFiles();
-
     const interval = setInterval(loadFiles, 5000);
-
     return () => clearInterval(interval);
   }, [ready, roomId]);
 
