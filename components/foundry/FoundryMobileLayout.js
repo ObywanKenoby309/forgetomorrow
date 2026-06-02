@@ -315,6 +315,7 @@ export default function FoundryMobileLayout({
   const safeNotes = notes || '';
   const notesSaveTimer = useRef(null);
   const fileInputRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
   // Track unread chat messages
   const prevMsgCount = useRef(0);
