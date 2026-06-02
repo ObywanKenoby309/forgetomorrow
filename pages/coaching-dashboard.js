@@ -41,10 +41,15 @@ function getStatusStyles(status) {
 }
 function safeText(v) { return typeof v==='string' ? v : v==null ? '' : String(v); }
 function pickActionBucket(n) {
+  const category = safeText(n?.category).toUpperCase();
+  const entityType = safeText(n?.entityType).toUpperCase();
   const haystack = `${safeText(n?.title)} ${safeText(n?.body)} ${safeText(n?.metadata?.type||n?.metadata?.event||n?.metadata?.kind||'')}`.toLowerCase();
+  // Vault shares — own bucket so they're never mixed with messages
+  if (category === 'VAULT' || entityType === 'VAULT_SHARE' ||
+      haystack.includes('shared a document') || haystack.includes('shared with you')) return 'shared';
   if (haystack.includes('feedback')||haystack.includes('csat')||haystack.includes('rating')||haystack.includes('survey')) return 'feedback';
   if (haystack.includes('session request')||haystack.includes('appointment')||haystack.includes('booking')||haystack.includes('book')) return 'requests';
-  if (haystack.includes('calendar')||haystack.includes('invite')||haystack.includes('session')||haystack.includes('resched')||haystack.includes('schedule')) return 'calendar';
+  if (haystack.includes('calendar')||haystack.includes('invite')||haystack.includes('session')||haystack.includes('resched')||haystack.includes('schedule')||haystack.includes('foundry')) return 'calendar';
   if (haystack.includes('message')||haystack.includes('inbox')||haystack.includes('dm')||haystack.includes('signal')) return 'messages';
   return 'messages';
 }
@@ -410,7 +415,7 @@ export default function CoachingDashboardPage() {
   const totalResponses = csat.length;
 
   const actionBuckets = useMemo(() => {
-    const b = { messages:[], feedback:[], calendar:[], clients:[], requests:[] };
+    const b = { messages:[], feedback:[], calendar:[], clients:[], requests:[], shared:[] };
     for (const n of Array.isArray(actionItems) ? actionItems : []) {
       const k = pickActionBucket(n);
       if (b[k]) b[k].push(n);
@@ -420,7 +425,8 @@ export default function CoachingDashboardPage() {
       feedback:b.feedback.slice(0,3),
       calendar:b.calendar.slice(0,3),
       clients:b.clients.slice(0,3),
-      requests:b.requests.slice(0,3)
+      requests:b.requests.slice(0,3),
+      shared:b.shared.slice(0,3),
     };
   }, [actionItems]);
 
@@ -432,11 +438,12 @@ export default function CoachingDashboardPage() {
   ];
 
   const mobileTiles = [
-    { key:'messages', title:'New Messages',     emptyText:'No unread coach inbox items.', href:'/action-center?scope=COACH&chrome=coach',          icon:'💬', items:actionBuckets.messages },
-    { key:'requests', title:'Session Requests', emptyText:'No pending session requests.',  href:'/dashboard/coaching/client-hub-update?tab=requests', icon:'📋', items:actionBuckets.requests },
-    { key:'calendar', title:'Session Updates',  emptyText:'No calendar updates.',          href:'/dashboard/coaching/sessions',                       icon:'📅', items:actionBuckets.calendar },
-    { key:'feedback', title:'New Feedback',     emptyText:'No new feedback yet.',          href:'/dashboard/coaching/feedback',                       icon:'⭐', items:actionBuckets.feedback },
-    { key:'clients',  title:'Client Updates',   emptyText:'No new client activity.',       href:'/dashboard/coaching/clients',                        icon:'👤', items:actionBuckets.clients },
+    { key:'messages', title:'New Messages',     emptyText:'No unread coach inbox items.', href:'/action-center?scope=COACH&chrome=coach&tab=SOCIAL',   icon:'💬', items:actionBuckets.messages },
+    { key:'requests', title:'Session Requests', emptyText:'No pending session requests.',  href:'/dashboard/coaching/client-hub-update?tab=requests',    icon:'📋', items:actionBuckets.requests },
+    { key:'calendar', title:'Session Updates',  emptyText:'No calendar updates.',          href:'/action-center?scope=COACH&chrome=coach&tab=CALENDAR',  icon:'📅', items:actionBuckets.calendar },
+    { key:'feedback', title:'New Feedback',     emptyText:'No new feedback yet.',          href:'/dashboard/coaching/feedback',                          icon:'⭐', items:actionBuckets.feedback },
+    { key:'clients',  title:'Client Updates',   emptyText:'No new client activity.',       href:'/dashboard/coaching/clients',                           icon:'👤', items:actionBuckets.clients },
+    { key:'shared',   title:'Shared With Me',   emptyText:'No shared documents.',          href:'/action-center?scope=COACH&chrome=coach&tab=SHARED',   icon:'📬', items:actionBuckets.shared  },
   ];
 
   const sortedMobileTiles = [...mobileTiles].sort((a,b) => (b.items.length > 0 ? 1 : 0) - (a.items.length > 0 ? 1 : 0));
@@ -762,11 +769,12 @@ export default function CoachingDashboardPage() {
                 <div style={{ color:'#90A4AE' }}>Loading updates…</div>
               ) : (
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(5,minmax(0,1fr))', gap:12 }}>
-                  <ActionLiteCard title="New Messages"     items={actionBuckets.messages} emptyText="No unread coach inbox items." href="/action-center?scope=COACH&chrome=coach" />
+                  <ActionLiteCard title="New Messages"     items={actionBuckets.messages} emptyText="No unread coach inbox items." href="/action-center?scope=COACH&chrome=coach&tab=SOCIAL" />
                   <ActionLiteCard title="Session Requests" items={actionBuckets.requests} emptyText="No pending session requests."  href="/dashboard/coaching/client-hub-update?tab=requests" />
                   <ActionLiteCard title="New Feedback"     items={actionBuckets.feedback} emptyText="No new feedback yet."          href="/dashboard/coaching/feedback" />
-                  <ActionLiteCard title="Calendar Updates" items={actionBuckets.calendar} emptyText="No calendar updates."         href="/dashboard/coaching/sessions" />
+                  <ActionLiteCard title="Calendar Updates" items={actionBuckets.calendar} emptyText="No calendar updates."         href="/action-center?scope=COACH&chrome=coach&tab=CALENDAR" />
                   <ActionLiteCard title="Client Updates"   items={actionBuckets.clients}  emptyText="No new client activity."      href="/dashboard/coaching/clients" />
+                  <ActionLiteCard title="Shared With Me"   items={actionBuckets.shared}   emptyText="No shared documents."         href="/action-center?scope=COACH&chrome=coach&tab=SHARED" />
                 </div>
               )}
             </div>

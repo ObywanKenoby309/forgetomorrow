@@ -158,6 +158,15 @@ const SEEKER_TABS = [
   { key: "ACTIVITY", label: "Activity" },
 ];
 
+const COACH_TABS = [
+  { key: "ALL", label: "All" },
+  { key: "SOCIAL", label: "Messages" },
+  { key: "CALENDAR", label: "Calendar" },
+  { key: "FEEDBACK", label: "Feedback" },
+  { key: "SHARED", label: "Shared With Me" },
+  { key: "ACTIVITY", label: "Activity" },
+];
+
 function safeText(v) {
   return typeof v === "string" ? v : v == null ? "" : String(v);
 }
@@ -250,6 +259,37 @@ function recruiterTabMatches(n, tabKey) {
     );
   }
 
+  return false;
+}
+
+function coachTabMatches(n, tabKey) {
+  if (!n) return false;
+  if (tabKey === "ALL") return true;
+
+  const category = String(n?.category || "").toUpperCase();
+  const entityType = String(n?.entityType || "").toUpperCase();
+  const text = `${String(n?.title || "").toLowerCase()} ${String(n?.body || "").toLowerCase()}`;
+
+  if (tabKey === "SOCIAL") {
+    return category === "MESSAGING" || entityType === "CONVERSATION";
+  }
+  if (tabKey === "CALENDAR") {
+    return category === "CALENDAR" || entityType === "CALENDAR_ITEM" ||
+      text.includes("calendar") || text.includes("session") ||
+      text.includes("schedule") || text.includes("foundry") || text.includes("invite");
+  }
+  if (tabKey === "FEEDBACK") {
+    return category === "FEEDBACK" ||
+      text.includes("feedback") || text.includes("csat") || text.includes("rating");
+  }
+  if (tabKey === "SHARED") {
+    return category === "VAULT" || entityType === "VAULT_SHARE" ||
+      text.includes("shared a document") || text.includes("shared with you");
+  }
+  if (tabKey === "ACTIVITY") {
+    return category === "PIPELINE" || category === "APPLICATION" ||
+      text.includes("client") || text.includes("request") || text.includes("booking");
+  }
   return false;
 }
 
@@ -433,8 +473,8 @@ export default function ActionCenterPage() {
 
   const recruiterTabCounts = useMemo(() => {
     const counts = {};
-    const tabs = scope === "RECRUITER" ? RECRUITER_TABS : scope === "SEEKER" ? SEEKER_TABS : [];
-    const matchFn = scope === "RECRUITER" ? recruiterTabMatches : seekerTabMatches;
+    const tabs = scope === "RECRUITER" ? RECRUITER_TABS : scope === "SEEKER" ? SEEKER_TABS : scope === "COACH" ? COACH_TABS : [];
+    const matchFn = scope === "RECRUITER" ? recruiterTabMatches : scope === "COACH" ? coachTabMatches : seekerTabMatches;
     for (const t of tabs) counts[t.key] = 0;
     for (const n of Array.isArray(items) ? items : []) {
       for (const t of tabs) {
@@ -449,6 +489,7 @@ export default function ActionCenterPage() {
     const list = Array.isArray(items) ? items : [];
     if (scope === "RECRUITER") return list.filter((n) => recruiterTabMatches(n, tab));
     if (scope === "SEEKER")    return list.filter((n) => seekerTabMatches(n, tab));
+    if (scope === "COACH")     return list.filter((n) => coachTabMatches(n, tab));
     return list;
   }, [scope, items, activeRecruiterTab]);
 
@@ -533,10 +574,10 @@ export default function ActionCenterPage() {
   const Content = (
     <div className="grid gap-4">
       {/* Recruiter Tabs (below header) */}
-      {scope === "RECRUITER" || scope === "SEEKER" ? (
+      {scope === "RECRUITER" || scope === "SEEKER" || scope === "COACH" ? (
   <FrostPanel className="p-3">
     <div className="flex flex-wrap gap-2 justify-start">
-      {(scope === "RECRUITER" ? RECRUITER_TABS : scope === "SEEKER" ? SEEKER_TABS : []).map((t) => {
+      {(scope === "RECRUITER" ? RECRUITER_TABS : scope === "SEEKER" ? SEEKER_TABS : scope === "COACH" ? COACH_TABS : []).map((t) => {
               const isActive = activeRecruiterTab === t.key;
               const count = Number(recruiterTabCounts?.[t.key] || 0);
 
@@ -585,7 +626,7 @@ export default function ActionCenterPage() {
       ) : null}
 
       {/* Recruiter: true two-column */}
-      {scope === "RECRUITER" || scope === "SEEKER" ? (
+      {scope === "RECRUITER" || scope === "SEEKER" || scope === "COACH" ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Needs Attention */}
           <FrostPanel className="p-4 bg-white/80">

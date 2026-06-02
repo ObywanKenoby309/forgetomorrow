@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
@@ -1204,6 +1205,7 @@ function SharedWithMeTab({ isMobile }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function ForgeVaultPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab]       = useState('forge');    // 'forge' | 'uploads' | 'shared'
   const [docs, setDocs]                 = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -1220,6 +1222,14 @@ export default function ForgeVaultPage() {
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  // Sync ?tab= URL param to activeTab on load
+  useEffect(() => {
+    const t = String(router.query.tab || '').toLowerCase();
+    if (t === 'shared') setActiveTab('shared');
+    else if (t === 'uploads') setActiveTab('uploads');
+    else if (t === 'forge') setActiveTab('forge');
+  }, [router.query.tab]);
 
   // Load forge docs
   useEffect(() => {
