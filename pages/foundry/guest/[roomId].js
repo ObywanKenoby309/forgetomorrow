@@ -11,7 +11,6 @@ import FoundryVideoGrid from '@/components/foundry/FoundryVideoGrid';
 import FoundryRightPanel from '@/components/foundry/FoundryRightPanel';
 import FoundryBottomBar from '@/components/foundry/FoundryBottomBar';
 import FoundryMobileLayout from '@/components/foundry/FoundryMobileLayout';
-import { useEffect, useState as useStateMobile } from 'react';
 import GuestConversionBanner from '@/components/foundry/GuestConversionBanner';
 
 const ORANGE = '#FF7043';
