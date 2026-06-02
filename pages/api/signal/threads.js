@@ -18,6 +18,13 @@ export default async function handler(req, res) {
 
     const userId = session.user.id;
 
+    // Accept channel from query param — defaults to 'seeker' for Signal inbox.
+    // Recruiter and coach inboxes use /api/messages?channel=X (separate endpoint).
+    // This param allows Foundry and future surfaces to request a specific channel.
+    const channelParam = String(req.query?.channel || 'seeker').toLowerCase().trim();
+    const validChannels = new Set(['seeker', 'recruiter', 'coach']);
+    const channel = validChannels.has(channelParam) ? channelParam : 'seeker';
+
     // ✅ My participant rows (includes lastReadAt)
     const participants = await prisma.conversationParticipant.findMany({
       where: { userId },
@@ -32,7 +39,7 @@ export default async function handler(req, res) {
 
     // ✅ Conversations sorted newest first (cheap fields only)
     const conversations = await prisma.conversation.findMany({
-      where: { id: { in: conversationIds }, channel: 'seeker' },
+      where: { id: { in: conversationIds }, channel },
       orderBy: { updatedAt: 'desc' },
       select: {
         id: true,

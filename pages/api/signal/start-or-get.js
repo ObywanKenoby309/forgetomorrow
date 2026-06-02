@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     }
 
     const userId = session.user.id;
-    const { toUserId, channel = 'seeker' } = req.body || {};
+    const { toUserId } = req.body || {};
 
     if (!toUserId || typeof toUserId !== 'string') {
       return res.status(400).json({ error: 'Missing toUserId' });
@@ -28,24 +28,54 @@ export default async function handler(req, res) {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 0. Load target user (for role + display)
+    // 0. Load sender + target user (for role + display)
     // ─────────────────────────────────────────────────────────────
-    const target = await prisma.user.findUnique({
-      where: { id: toUserId },
-      select: {
-        id: true,
-        name: true,
-        firstName: true,
-        lastName: true,
-        avatarUrl: true,
-        headline: true,
-        role: true, // enum UserRole (e.g. SEEKER / COACH / RECRUITER / ADMIN)
-      },
-    });
+    const [sender, target] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: toUserId },
+        select: {
+          id: true,
+          name: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+          headline: true,
+          role: true,
+        },
+      }),
+    ]);
 
     if (!target) {
       return res.status(404).json({ error: 'Member not found.' });
     }
+
+    // Derive channel from roles — highest-privilege role wins.
+    // This ensures notifications land in the correct action center
+    // regardless of which surface initiated the conversation.
+    function roleToRank(role) {
+      const r = String(role || '').toUpperCase();
+      if (r === 'RECRUITER' || r === 'ADMIN' || r === 'OWNER') return 3;
+      if (r === 'COACH') return 2;
+      return 1; // SEEKER or unknown
+    }
+    function roleToChannel(role) {
+      const r = String(role || '').toUpperCase();
+      if (r === 'RECRUITER' || r === 'ADMIN' || r === 'OWNER') return 'recruiter';
+      if (r === 'COACH') return 'coach';
+      return 'seeker';
+    }
+    const senderRank = roleToRank(sender?.role);
+    const targetRank = roleToRank(target.role);
+    // Channel is set by the highest-privilege participant so the notification
+    // scopes correctly for whoever needs to act (e.g. recruiter receiving a
+    // seeker message should see it in their RECRUITER action center)
+    const channel = senderRank >= targetRank
+      ? roleToChannel(sender?.role)
+      : roleToChannel(target.role);
 
     const targetRole = target.role;
     const otherName =

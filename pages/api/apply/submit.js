@@ -203,7 +203,11 @@ export default async function handler(req, res) {
     });
 
     const recruiterUserIds = [
-      ...new Set(orgMembers.map((m) => String(m.userId || '')).filter(Boolean)),
+      ...new Set([
+        // Always include the job poster — covers solo recruiters with no org
+        jobPosterId,
+        ...orgMembers.map((m) => String(m.userId || '')),
+      ].filter(Boolean)),
     ];
 
     // ── Step 5: Ensure canonical job-poster-owned contact for this seeker ─────
