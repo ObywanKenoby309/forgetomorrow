@@ -320,22 +320,25 @@ export default function FoundryVideoGrid({
     return current;
   }, [syncScreenShareState]);
 
-  const checkRoomEmpty = useCallback((current) => {
-    if (roomEndedRef.current) return;
-    const all = Object.values(current || {});
-    const remoteCount = all.filter(p => !p.local).length;
-    if (remoteCount === 0 && all.length > 0) {
-      setTimeout(() => {
-        if (!callRef.current || roomEndedRef.current) return;
-        const fresh = callRef.current.participants();
-        const stillEmpty = Object.values(fresh).filter(p => !p.local).length === 0;
-        if (stillEmpty) {
-          roomEndedRef.current = true;
-          onRoomEmpty?.();
-        }
-      }, 3000);
-    }
-  }, [onRoomEmpty]);
+const checkRoomEmpty = useCallback((current) => {
+  if (roomEndedRef.current) return;
+
+  const totalCount = Object.values(current || {}).length;
+
+  if (totalCount === 0) {
+    setTimeout(() => {
+      if (!callRef.current || roomEndedRef.current) return;
+
+      const fresh = callRef.current.participants();
+      const stillEmpty = Object.values(fresh || {}).length === 0;
+
+      if (stillEmpty) {
+        roomEndedRef.current = true;
+        onRoomEmpty?.();
+      }
+    }, 3000);
+  }
+}, [onRoomEmpty]);
 
   useEffect(() => {
     if (!roomId) return;

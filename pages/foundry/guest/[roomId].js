@@ -319,6 +319,14 @@ export default function GuestFoundryRoom({
     setShowConversionBanner(true);
   }, []);
 
+  const handleScreenShareChange = useCallback((sharing) => {
+    setIsScreenSharing(sharing);
+  }, []);
+
+  const handleRoomEmpty = useCallback(() => {
+    setShowConversionBanner(true);
+  }, []);
+
   const handleCallReady = useCallback((call) => {
     callRef.current = call;
 
@@ -516,6 +524,8 @@ export default function GuestFoundryRoom({
           onParticipantsChange={handleParticipantsChange}
           onInvite={() => {}}
           onHostEnded={() => setShowConversionBanner(true)}
+          onScreenShareChange={handleScreenShareChange}
+          onRoomEmpty={handleRoomEmpty}
           guestToken={guestToken}
           guestRoomUrl={roomUrl}
         />
@@ -550,7 +560,13 @@ export default function GuestFoundryRoom({
         peopleOpen={activePanel === 'People' && !sidebarHidden}
         onMicToggle={() => setMicMuted((v) => !v)}
         onCamToggle={() => setCamOff((v) => !v)}
-        onShareScreen={() => {}}
+        onShareScreen={async () => {
+          if (!callRef.current) return;
+          try {
+            if (isScreenSharing) { await callRef.current.stopScreenShare(); }
+            else { await callRef.current.startScreenShare(); }
+          } catch {}
+        }}
         onChatToggle={() => togglePanel('Chat')}
         onFilesToggle={() => togglePanel('Files')}
         onPeopleToggle={() => togglePanel('People')}

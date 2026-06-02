@@ -431,22 +431,15 @@ function FilesTab({ sharedFiles, forgeFiles, onShare, onUpload, onRemoveFile, is
   const openSharedFile = (file, guestCode) => {
     if (!file?.downloadUrl) return;
     const storedGuestCode =
-  typeof window !== 'undefined'
-    ? sessionStorage.getItem('foundry_guest_code') || ''
-    : '';
-
-const effectiveGuestCode = guestCode || storedGuestCode;
-
-const url = effectiveGuestCode
-  ? `${file.downloadUrl}&guestCode=${encodeURIComponent(effectiveGuestCode)}`
-  : file.downloadUrl;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name || 'download';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+      typeof window !== 'undefined'
+        ? sessionStorage.getItem('foundry_guest_code') || ''
+        : '';
+    const effectiveGuestCode = guestCode || storedGuestCode;
+    const url = effectiveGuestCode
+      ? `${file.downloadUrl}&guestCode=${encodeURIComponent(effectiveGuestCode)}`
+      : file.downloadUrl;
+    // Open in new tab — PDFs are view-only and cross-origin download won't work
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -534,6 +527,16 @@ const url = effectiveGuestCode
 }
 
 function NotesTab({ notes, onNotesChange }) {
+  const [saveState, setSaveState] = useState('idle'); // 'idle' | 'saving' | 'saved'
+  const saveTimerRef = useRef(null);
+
+  const handleChange = (e) => {
+    setSaveState('saving');
+    clearTimeout(saveTimerRef.current);
+    onNotesChange(e.target.value);
+    saveTimerRef.current = setTimeout(() => setSaveState('saved'), 1800);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <div style={S.sticky}>
@@ -544,12 +547,14 @@ function NotesTab({ notes, onNotesChange }) {
         <textarea
           style={S.noteArea}
           value={notes}
-          onChange={e => onNotesChange(e.target.value)}
+          onChange={handleChange}
           placeholder="Quick notes, action items, reminders…"
           aria-label="Session notes"
         />
       </div>
-      <div style={S.noteSaved}>💾 Auto-saved</div>
+      <div style={S.noteSaved}>
+        {saveState === 'saving' ? '⏳ Saving…' : saveState === 'saved' ? '✓ Saved' : '💾 Notes auto-save'}
+      </div>
       <div style={S.aiTeaser}>
         <span style={{ fontSize: 18, color: 'rgba(255,112,67,0.35)', flexShrink: 0 }}>🧠</span>
         <div>
