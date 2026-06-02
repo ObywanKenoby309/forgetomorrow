@@ -1,5 +1,5 @@
 // components/foundry/FoundryTopBar.js
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 const S = {
   bar: {
@@ -80,6 +80,11 @@ const S = {
     background: 'rgba(255,112,67,0.08)', border: '1px solid rgba(255,112,67,0.2)',
     borderRadius: 10, padding: 10, color: '#c9c9c9', fontSize: 12, lineHeight: 1.5,
   },
+  checkboxRow: {
+    display: 'flex', alignItems: 'center', gap: 8,
+    color: '#c9c9c9', fontSize: 12, lineHeight: 1.5,
+  },
+  checkbox: { width: 14, height: 14, accentColor: '#FF7043', cursor: 'pointer' },
   error: {
     background: 'rgba(198,40,40,0.12)', border: '1px solid rgba(198,40,40,0.28)',
     borderRadius: 9, padding: 10, color: '#ffcdd2', fontSize: 12,
@@ -107,10 +112,84 @@ const VIEW_OPTIONS = [
   { id: 'presentation', label: 'Presentation view', icon: '▤' },
 ];
 
+
+const FOUNDER_USER_ID = 'cmivpwcf90009bvz0xnck0acv';
+const FOUNDER_EMAIL = 'eric.james@forgetomorrow.com';
+
+const PUBLIC_BACKGROUND_OPTIONS = [
+  { id: 'none', label: 'None', type: 'none' },
+  { id: 'blur', label: 'Blur', type: 'blur' },
+  { id: 'forge-office', label: 'Forge Office', type: 'image', src: '/backgrounds/foundry/forge-office.jpg' },
+  { id: 'coaching-library', label: 'Coaching Library', type: 'image', src: '/backgrounds/foundry/coaching-library.jpg' },
+  { id: 'coaching-strategy-room', label: 'Coaching Strategy Room', type: 'image', src: '/backgrounds/foundry/coaching-strategy-room.jpg' },
+  { id: 'forge-floor', label: 'Forge Floor', type: 'image', src: '/backgrounds/foundry/forge-floor.jpg' },
+  { id: 'neutral-professional', label: 'Neutral Professional', type: 'image', src: '/backgrounds/foundry/neutral-professional.jpg' },
+];
+
+const FOUNDER_BACKGROUND_OPTION = {
+  id: 'founder-office',
+  label: 'Founder Office',
+  type: 'image',
+  src: '/backgrounds/foundry/founder-office.jpg',
+};
+
+function isFounderSession(user) {
+  return user?.id === FOUNDER_USER_ID || String(user?.email || '').toLowerCase() === FOUNDER_EMAIL;
+}
+
+function backgroundSource(path) {
+  if (!path) return '';
+  if (typeof window === 'undefined') return path;
+  return `${window.location.origin}${path}`;
+}
+
+function backgroundOptionsFor(isFounder) {
+  return isFounder ? [...PUBLIC_BACKGROUND_OPTIONS, FOUNDER_BACKGROUND_OPTION] : PUBLIC_BACKGROUND_OPTIONS;
+}
+
+async function applyFoundryBackground(callObject, backgroundId, options) {
+  if (!callObject?.updateInputSettings) return;
+
+  const background = options.find((opt) => opt.id === backgroundId) || PUBLIC_BACKGROUND_OPTIONS[0];
+
+  if (background.type === 'blur') {
+    await callObject.updateInputSettings({
+      video: {
+        processor: {
+          type: 'background-blur',
+          config: { strength: 1 },
+        },
+      },
+    });
+    return;
+  }
+
+  if (background.type === 'image' && background.src) {
+    await callObject.updateInputSettings({
+      video: {
+        processor: {
+          type: 'background-image',
+          config: { source: backgroundSource(background.src) },
+        },
+      },
+    });
+    return;
+  }
+
+  await callObject.updateInputSettings({
+    video: {
+      processor: { type: 'none' },
+    },
+  });
+}
+
 export default function FoundryTopBar({
   sessionTitle, isRecording, startTime, activeView, onViewChange,
   sidebarHidden, onToggleSidebar, compact, onToggleCompact,
   callObject = null,
+  selectedBackground = 'none',
+  onBackgroundChange,
+  isFounder = false,
 }) {
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -121,11 +200,14 @@ export default function FoundryTopBar({
   const [speakerId, setSpeakerId] = useState('');
   const [deviceError, setDeviceError] = useState('');
   const [savingDevices, setSavingDevices] = useState(false);
+  const [backgroundError, setBackgroundError] = useState('');
+  const [rememberBackground, setRememberBackground] = useState(false);
   const ref = useRef(null);
 
   const cameras = devices.filter((d) => d.kind === 'videoinput');
   const microphones = devices.filter((d) => d.kind === 'audioinput');
   const speakers = devices.filter((d) => d.kind === 'audiooutput');
+  const availableBackgroundOptions = useMemo(() => backgroundOptionsFor(isFounder), [isFounder]);
 
   const loadDevices = useCallback(async () => {
     setDeviceError('');
@@ -153,8 +235,37 @@ export default function FoundryTopBar({
   const openSettings = useCallback(() => {
     setOpen(false);
     setSettingsOpen(true);
+    setBackgroundError('');
     loadDevices();
   }, [loadDevices]);
+
+
+  const handleBackgroundSelect = useCallback((backgroundId) => {
+    setBackgroundError('');
+    const allowed = availableBackgroundOptions.some((opt) => opt.id === backgroundId);
+    const safeBackground = allowed ? backgroundId : 'none';
+    onBackgroundChange?.(safeBackground);
+  }, [availableBackgroundOptions, onBackgroundChange]);
+
+  const saveBackgroundPreference = useCallback(async (backgroundId) => {
+    const res = await fetch('/api/foundry/background', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ background: backgroundId }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Could not save background preference.');
+    return data;
+  }, []);
+
+  useEffect(() => {
+    if (!callObject) return;
+    applyFoundryBackground(callObject, selectedBackground, availableBackgroundOptions).catch((err) => {
+      console.error('[foundry] background apply failed:', err);
+      setBackgroundError(err?.message || 'Could not apply background.');
+    });
+  }, [callObject, selectedBackground, availableBackgroundOptions]);
 
   const applyDeviceSettings = useCallback(async () => {
     setSavingDevices(true);
@@ -185,13 +296,19 @@ export default function FoundryTopBar({
         }
       }
 
+      await applyFoundryBackground(callObject, selectedBackground, availableBackgroundOptions);
+
+      if (rememberBackground) {
+        await saveBackgroundPreference(selectedBackground);
+      }
+
       setSettingsOpen(false);
     } catch (err) {
       setDeviceError(err?.message || 'Could not apply device settings.');
     } finally {
       setSavingDevices(false);
     }
-  }, [callObject, cameraId, micId, speakerId]);
+  }, [callObject, cameraId, micId, speakerId, selectedBackground, availableBackgroundOptions, rememberBackground, saveBackgroundPreference]);
 
   // Live timer
   useEffect(() => {
@@ -314,6 +431,7 @@ export default function FoundryTopBar({
 
             <div style={S.modalBody}>
               {deviceError && <div style={S.error}>{deviceError}</div>}
+              {backgroundError && <div style={S.error}>{backgroundError}</div>}
 
               <div>
                 <div style={S.label}>Camera</div>
@@ -351,8 +469,27 @@ export default function FoundryTopBar({
                 </select>
               </div>
 
+              <div>
+                <div style={S.label}>Background</div>
+                <select style={S.select} value={selectedBackground} onChange={(e) => handleBackgroundSelect(e.target.value)}>
+                  {availableBackgroundOptions.map((background) => (
+                    <option key={background.id} value={background.id}>{background.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <label style={S.checkboxRow}>
+                <input
+                  type="checkbox"
+                  style={S.checkbox}
+                  checked={rememberBackground}
+                  onChange={(e) => setRememberBackground(e.target.checked)}
+                />
+                Remember this background for future Foundries
+              </label>
+
               <div style={S.note}>
-                Backgrounds belong here next. The safe production path is to add Daily video processing/virtual-background support after device settings are stable, not fake it through the People panel.
+                Background effects apply to your local camera only. Blur and image replacement depend on Daily video processing support in the participant's browser.
               </div>
             </div>
 

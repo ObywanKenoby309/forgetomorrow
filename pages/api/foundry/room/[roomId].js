@@ -6,6 +6,14 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import prisma from '@/lib/prisma';
 
+const FOUNDER_USER_ID = 'cmivpwcf90009bvz0xnck0acv';
+const FOUNDER_EMAIL = 'eric.james@forgetomorrow.com';
+
+function isFounderUser(user) {
+  return user?.id === FOUNDER_USER_ID || String(user?.email || '').toLowerCase() === FOUNDER_EMAIL;
+}
+
+
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
   if (!session?.user?.id) return res.status(401).json({ error: 'Not authenticated' });
@@ -42,6 +50,11 @@ export default async function handler(req, res) {
 
     if (!room) return res.status(404).json({ error: 'Foundry not found' });
     if (room.status === 'ENDED') return res.status(410).json({ error: 'This Foundry has ended' });
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, email: true, foundryBackground: true },
+    });
 
     // Auto-join if not already a participant
     const alreadyIn = room.participants.find(p => p.userId === session.user.id);
@@ -89,6 +102,8 @@ export default async function handler(req, res) {
           ago: relativeTime(f.sharedAt),
         })),
         notes: room.notes[0]?.content || '',
+        currentUserFoundryBackground: currentUser?.foundryBackground || 'none',
+        currentUserIsFounder: isFounderUser(currentUser),
       },
     });
   } catch (err) {

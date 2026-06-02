@@ -38,6 +38,11 @@ export default function FoundryRoom() {
   const [isRecording, setIsRecording] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
 
+  // Background state
+  const [callObject, setCallObject] = useState(null);
+  const [selectedBackground, setSelectedBackground] = useState('none');
+  const [isFounder, setIsFounder] = useState(false);
+
   // View state
   const [activeView, setActiveView] = useState('grid');
   const [sidebarHidden, setSidebarHidden] = useState(false);
@@ -148,6 +153,8 @@ export default function FoundryRoom() {
           setRoom(data.room);
           setNotes(data.room.notes || '');
           setSharedFiles(data.room.sharedFiles || []);
+          setSelectedBackground(data.room.currentUserFoundryBackground || session?.user?.foundryBackground || 'none');
+          setIsFounder(!!data.room.currentUserIsFounder);
           startTimeRef.current = new Date(data.room.startedAt || Date.now()).getTime();
         }
         setLoading(false);
@@ -253,6 +260,7 @@ export default function FoundryRoom() {
 
   const handleCallReady = useCallback((call) => {
     callRef.current = call;
+    setCallObject(call);
     call.on('app-message', ({ data }) => {
       if (data?.type === 'MEETING_CHAT') {
         setMeetingMessages(prev => [...prev, {
@@ -629,6 +637,7 @@ export default function FoundryRoom() {
           onInvite={() => {}}
           onRoomEmpty={handleRoomEmpty}
           onScheduledEnd={handleScheduledEnd}
+          initialBackground={selectedBackground}
         />
       </FoundryMobileLayout>
     );
@@ -646,7 +655,10 @@ export default function FoundryRoom() {
         onToggleSidebar={() => setSidebarHidden(v => !v)}
         compact={compact}
         onToggleCompact={() => setCompact(v => !v)}
-        callObject={callRef.current}
+        callObject={callObject}
+        selectedBackground={selectedBackground}
+        onBackgroundChange={setSelectedBackground}
+        isFounder={isFounder}
       />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -661,6 +673,7 @@ export default function FoundryRoom() {
           onInvite={() => togglePanel('People')}
           onRoomEmpty={handleRoomEmpty}
           onScheduledEnd={handleScheduledEnd}
+          initialBackground={selectedBackground}
         />
 
         {!sidebarHidden && (

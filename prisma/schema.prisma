@@ -880,6 +880,7 @@ model User {
   stripeSubscriptionId           String?                        @unique
   updatedAt                      DateTime                       @updatedAt
   wallpaperUrl                   String?
+  foundryBackground 			 String?
   workPreferences                Json?
   role                           UserRole                       @default(SEEKER)
   profileVisibility              ProfileVisibility              @default(PRIVATE)

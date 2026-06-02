@@ -117,6 +117,58 @@ const S = {
   },
 };
 
+
+const BACKGROUND_IMAGES = {
+  'forge-office': '/backgrounds/foundry/forge-office.jpg',
+  'coaching-library': '/backgrounds/foundry/coaching-library.jpg',
+  'coaching-strategy-room': '/backgrounds/foundry/coaching-strategy-room.jpg',
+  'forge-floor': '/backgrounds/foundry/forge-floor.jpg',
+  'neutral-professional': '/backgrounds/foundry/neutral-professional.jpg',
+  'founder-office': '/backgrounds/foundry/founder-office.jpg',
+};
+
+function backgroundSource(path) {
+  if (!path) return '';
+  if (typeof window === 'undefined') return path;
+  return `${window.location.origin}${path}`;
+}
+
+async function applyFoundryBackground(callObject, background) {
+  if (!callObject?.updateInputSettings) return;
+
+  const safeBackground = background || 'none';
+
+  if (safeBackground === 'blur') {
+    await callObject.updateInputSettings({
+      video: {
+        processor: {
+          type: 'background-blur',
+          config: { strength: 1 },
+        },
+      },
+    });
+    return;
+  }
+
+  if (safeBackground !== 'none' && BACKGROUND_IMAGES[safeBackground]) {
+    await callObject.updateInputSettings({
+      video: {
+        processor: {
+          type: 'background-image',
+          config: { source: backgroundSource(BACKGROUND_IMAGES[safeBackground]) },
+        },
+      },
+    });
+    return;
+  }
+
+  await callObject.updateInputSettings({
+    video: {
+      processor: { type: 'none' },
+    },
+  });
+}
+
 function initials(name) {
   return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
@@ -265,6 +317,7 @@ export default function FoundryVideoGrid({
   onScheduledEnd = null,
   guestToken = null,
   guestRoomUrl = null,
+  initialBackground = 'none',
 }) {
   const callRef = useRef(null);
   const [participants, setParticipants] = useState({});
@@ -417,6 +470,9 @@ const checkRoomEmpty = useCallback((current) => {
             setJoinState('joined');
             updateParticipants();
             onCallReady?.(call);
+            applyFoundryBackground(call, initialBackground).catch((err) => {
+              console.error('[foundry] initial background failed:', err);
+            });
           }
         });
 
@@ -502,6 +558,13 @@ const checkRoomEmpty = useCallback((current) => {
     if (!callRef.current || joinState !== 'joined') return;
     callRef.current.setLocalVideo(!camOff);
   }, [camOff, joinState]);
+
+  useEffect(() => {
+    if (!callRef.current || joinState !== 'joined') return;
+    applyFoundryBackground(callRef.current, initialBackground).catch((err) => {
+      console.error('[foundry] background update failed:', err);
+    });
+  }, [initialBackground, joinState]);
 
   useEffect(() => {
     onParticipantsChange?.(Object.values(participants));
