@@ -154,82 +154,84 @@ export default function FoundryRoom() {
       })
       .catch(() => setLoading(false));
 
+    // Load forge files from Vault — single source of truth
     Promise.all([
       fetch('/api/resume/list').then(r => r.json()).catch(() => ({})),
       fetch('/api/cover/list').then(r => r.json()).catch(() => ({})),
-      fetch('/api/anvil/identity').then(r => r.json()).catch(() => ({})),
+      fetch('/api/vault/documents').then(r => r.json()).catch(() => ({})),
       fetch('/api/anvil/onboarding-growth/list').then(r => r.json()).catch(() => ({})),
       fetch('/api/offer-negotiation/list').then(r => r.json()).catch(() => ({})),
       fetch('/api/apply/application-packets/list').then(r => r.json()).catch(() => ({})),
+      fetch('/api/coaching/clients/strategy/list').then(r => r.json()).catch(() => ({})),
     ])
-      .then(([resumeData, coverData, identityData, roadmapData, negotiationData, packetData]) => {
+      .then(([resumeData, coverData, vaultData, roadmapData, negotiationData, packetData, strategyData]) => {
+        const ago = (date) => date ? new Date(date).toLocaleDateString() : 'Unknown';
+
         const resumeItems = Array.isArray(resumeData.resumes)
           ? resumeData.resumes.map(r => ({
-              id: r.id,
-              name: r.name,
-              type: 'Resume',
-              sourceType: 'RESUME',
-              ago: new Date(r.updatedAt).toLocaleDateString(),
-            }))
-          : [];
+              id: r.id, name: r.name, type: 'Resume',
+              docType: 'resume', ago: ago(r.updatedAt),
+            })) : [];
 
         const coverItems = Array.isArray(coverData.covers)
           ? coverData.covers.map(c => ({
-              id: c.id,
-              name: c.name,
-              type: 'Cover Letter',
-              sourceType: 'COVER',
-              ago: new Date(c.updatedAt || c.createdAt || Date.now()).toLocaleDateString(),
-            }))
-          : [];
+              id: c.id, name: c.name, type: 'Cover Letter',
+              docType: 'cover', ago: ago(c.updatedAt || c.createdAt),
+            })) : [];
 
-        const identityProfile = identityData?.profile?.snapshotJson
+        const profileItem = vaultData?.professionalProfile
           ? [{
-              id: identityData.profile.id || 'professional-operating-profile',
-              name: identityData.profile.snapshotJson.operatingStyle || 'Professional Operating Profile',
+              id: vaultData.professionalProfile.id,
+              name: 'Professional Operating Profile',
               type: 'Professional Operating Profile',
-              sourceType: 'POP',
-              ago: new Date(identityData.profile.updatedAt || Date.now()).toLocaleDateString(),
-            }]
-          : [];
+              docType: 'profile',
+              ago: ago(vaultData.professionalProfile.updatedAt),
+            }] : [];
+
+        const prepItems = Array.isArray(vaultData?.interviewPreps)
+          ? vaultData.interviewPreps.map(p => ({
+              id: p.id, name: p.name || `Interview Prep · App #${p.applicationId}`,
+              type: 'Interview Prep', docType: 'interview',
+              ago: ago(p.generatedAt),
+            })) : [];
 
         const roadmapItems = Array.isArray(roadmapData.roadmaps)
           ? roadmapData.roadmaps.map(r => ({
-              id: r.id,
-              name: r.name || 'Growth & Pivot Roadmap',
-              type: 'Growth & Pivot Roadmap',
-              sourceType: 'ROADMAP',
-              ago: new Date(r.updatedAt || r.createdAt || Date.now()).toLocaleDateString(),
-            }))
-          : [];
+              id: r.id, name: r.name || 'Growth & Pivot Roadmap',
+              type: 'Growth & Pivot Roadmap', docType: 'roadmap',
+              ago: ago(r.updatedAt || r.createdAt),
+            })) : [];
 
         const negotiationItems = Array.isArray(negotiationData.negotiations)
           ? negotiationData.negotiations.map(n => ({
-              id: n.id,
-              name: n.name || 'Offer & Negotiation Brief',
-              type: 'Offer & Negotiation Brief',
-              sourceType: 'NEGOTIATION',
-              ago: new Date(n.updatedAt || n.createdAt || Date.now()).toLocaleDateString(),
-            }))
-          : [];
+              id: n.id, name: n.name || 'Offer & Negotiation Brief',
+              type: 'Offer & Negotiation Brief', docType: 'negotiation',
+              ago: ago(n.updatedAt || n.createdAt),
+            })) : [];
 
-        const applicationPacketItems = Array.isArray(packetData.packets)
+        const packetItems = Array.isArray(packetData.packets)
           ? packetData.packets.map(p => ({
-              id: p.applicationId || p.id,
-              name: p.name || 'Application Packet',
-              type: 'Application Packet',
-              sourceType: 'APPLICATION_PACKET',
-              ago: new Date(p.updatedAt || p.submittedAt || Date.now()).toLocaleDateString(),
-            }))
-          : [];
+              id: p.applicationId || p.id, name: p.name || 'Application Packet',
+              type: 'Application Packet', docType: 'packet',
+              ago: ago(p.updatedAt || p.submittedAt),
+            })) : [];
+
+        const strategyItems = Array.isArray(strategyData.strategies)
+          ? strategyData.strategies.map(s => ({
+              id: s.id, name: s.title || 'Target Strategy',
+              type: 'Target Strategy', docType: 'strategy',
+              ago: ago(s.updatedAt),
+            })) : [];
 
         setForgeFiles([
           ...resumeItems,
           ...coverItems,
-          ...identityProfile,
+          ...profileItem,
+          ...prepItems,
           ...roadmapItems,
           ...negotiationItems,
-          ...applicationPacketItems,
+          ...packetItems,
+          ...strategyItems,
         ]);
       })
       .catch(() => {});
@@ -401,21 +403,43 @@ export default function FoundryRoom() {
   const handleShare = useCallback(async (file) => {
     if (!file || !roomId) return;
 
+    // All forge docs go through vault/render-pdf — single pipeline, Vault is source of truth.
+    // render-pdf renders using the sender's session, uploads to Supabase, returns a downloadUrl.
+    // That URL is then registered in FoundrySharedFile so all room participants can access it.
     try {
-      if ((file.sourceType === 'RESUME' || file.type === 'Resume') && file.id) {
-        const exportRes = await fetch('/api/resume/export-foundry', {
+      const docType = file.docType || null;
+      const docId = file.id || null;
+
+      if (docType && docId) {
+        // Step 1: Render PDF via Vault
+        const renderRes = await fetch('/api/vault/render-pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ resumeId: file.id, roomId }),
+          body: JSON.stringify({ docType, docId: String(docId) }),
         });
+        const renderData = await renderRes.json().catch(() => ({}));
+        if (!renderRes.ok) throw new Error(renderData.error || 'Could not render document');
 
-        const exportData = await exportRes.json().catch(() => ({}));
-        if (!exportRes.ok) throw new Error(exportData.error || 'Could not export resume for Foundry');
+        const { downloadUrl, storagePath } = renderData;
 
-        if (exportData.file) {
+        // Step 2: Register in Foundry shared files
+        const shareRes = await fetch(`/api/foundry/room/${roomId}/share-file`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileName: `${file.name || 'Document'}.pdf`,
+            fileUrl: downloadUrl,
+            storagePath,
+            source: 'FORGE',
+          }),
+        });
+        const shareData = await shareRes.json().catch(() => ({}));
+        if (!shareRes.ok) throw new Error(shareData.error || 'Could not share file');
+
+        if (shareData.file) {
           setSharedFiles(prev => {
-            if (prev.find(f => f.id === exportData.file.id || f.name === exportData.file.name)) return prev;
-            return [exportData.file, ...prev];
+            if (prev.find(f => f.id === shareData.file.id || f.name === shareData.file.name)) return prev;
+            return [shareData.file, ...prev];
           });
         } else {
           await loadSharedFiles();
@@ -425,122 +449,7 @@ export default function FoundryRoom() {
         return;
       }
 
-      if ((file.sourceType === 'COVER' || file.type === 'Cover Letter') && file.id) {
-        const exportRes = await fetch('/api/cover/export-foundry', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ coverId: file.id, roomId }),
-        });
-
-        const exportData = await exportRes.json().catch(() => ({}));
-        if (!exportRes.ok) throw new Error(exportData.error || 'Could not export cover letter for Foundry');
-
-        if (exportData.file) {
-          setSharedFiles(prev => {
-            if (prev.find(f => f.id === exportData.file.id || f.name === exportData.file.name)) return prev;
-            return [exportData.file, ...prev];
-          });
-        } else {
-          await loadSharedFiles();
-        }
-
-        broadcastFilesUpdated();
-        return;
-      }
-
-      if ((file.sourceType === 'POP' || file.type === 'Professional Operating Profile') && file.id) {
-        const exportRes = await fetch('/api/anvil/identity/export-foundry', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ roomId }),
-        });
-
-        const exportData = await exportRes.json().catch(() => ({}));
-        if (!exportRes.ok) throw new Error(exportData.error || 'Could not export Professional Operating Profile for Foundry');
-
-        if (exportData.file) {
-          setSharedFiles(prev => {
-            if (prev.find(f => f.id === exportData.file.id || f.name === exportData.file.name)) return prev;
-            return [exportData.file, ...prev];
-          });
-        } else {
-          await loadSharedFiles();
-        }
-
-        broadcastFilesUpdated();
-        return;
-      }
-
-      if ((file.sourceType === 'ROADMAP' || file.type === 'Growth & Pivot Roadmap') && file.id) {
-        const exportRes = await fetch('/api/anvil/onboarding-growth/export-foundry', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ roadmapId: file.id, roomId }),
-        });
-
-        const exportData = await exportRes.json().catch(() => ({}));
-        if (!exportRes.ok) throw new Error(exportData.error || 'Could not export Growth & Pivot Roadmap for Foundry');
-
-        if (exportData.file) {
-          setSharedFiles(prev => {
-            if (prev.find(f => f.id === exportData.file.id || f.name === exportData.file.name)) return prev;
-            return [exportData.file, ...prev];
-          });
-        } else {
-          await loadSharedFiles();
-        }
-
-        broadcastFilesUpdated();
-        return;
-      }
-
-      if ((file.sourceType === 'NEGOTIATION' || file.type === 'Offer & Negotiation Brief') && file.id) {
-        const exportRes = await fetch('/api/offer-negotiation/export-foundry', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ negotiationId: file.id, roomId }),
-        });
-
-        const exportData = await exportRes.json().catch(() => ({}));
-        if (!exportRes.ok) throw new Error(exportData.error || 'Could not export Offer & Negotiation Brief for Foundry');
-
-        if (exportData.file) {
-          setSharedFiles(prev => {
-            if (prev.find(f => f.id === exportData.file.id || f.name === exportData.file.name)) return prev;
-            return [exportData.file, ...prev];
-          });
-        } else {
-          await loadSharedFiles();
-        }
-
-        broadcastFilesUpdated();
-        return;
-      }
-
-      if ((file.sourceType === 'APPLICATION_PACKET' || file.type === 'Application Packet') && file.id) {
-        const exportRes = await fetch('/api/apply/application-packets/export-foundry', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ applicationId: file.id, roomId }),
-        });
-
-        const exportData = await exportRes.json().catch(() => ({}));
-        if (!exportRes.ok) throw new Error(exportData.error || 'Could not export Application Packet for Foundry');
-
-        if (exportData.file) {
-          setSharedFiles(prev => {
-            if (prev.find(f => f.id === exportData.file.id || f.name === exportData.file.name)) return prev;
-            return [exportData.file, ...prev];
-          });
-        } else {
-          await loadSharedFiles();
-        }
-
-        broadcastFilesUpdated();
-        return;
-      }
-
-
+      // Fallback: non-forge file with a direct URL (legacy or upload)
       const fileName = file.name || file.fileName || 'Shared file';
       const fileUrl = file.url || file.fileUrl || null;
 
@@ -549,7 +458,6 @@ export default function FoundryRoom() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileName, fileUrl, source: 'FORGE' }),
       });
-
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Could not share file');
 
