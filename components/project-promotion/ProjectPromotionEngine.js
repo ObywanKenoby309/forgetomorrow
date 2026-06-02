@@ -608,12 +608,15 @@ function LoadingState() {
   );
 }
 
-function ResultCockpit({ result, plan, moves, recommendedRank, mobileTab, onMobileTabChange }) {
+function ResultCockpit({ result, plan, moves, recommendedRank, mobileTab, onMobileTabChange, form }) {
   const [_activeTab, _setActiveTab] = useState("decision");
   const activeTab = mobileTab || _activeTab;
   const setActiveTab = onMobileTabChange || _setActiveTab;
   const [activeMoveRank, setActiveMoveRank] = useState(recommendedRank || 1);
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedId, setSavedId] = useState(null);
+  const [saveError, setSaveError] = useState(null);
   const recommendedMove = moves.find((move) => Number(move?.rank) === recommendedRank) || moves[0] || null;
   const selectedMove =
     moves.find((move) => Number(move?.rank) === Number(activeMoveRank)) ||
@@ -646,6 +649,27 @@ function ResultCockpit({ result, plan, moves, recommendedRank, mobileTab, onMobi
 
   const handleExportPdf = () => {
     downloadBriefPdf(plan, moves, recommendedMove);
+  };
+
+  const handleSaveToVault = async () => {
+    if (saving || savedId) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch('/api/anvil/project-promotion/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ formInput: form, result }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Save failed');
+      setSavedId(data.result?.id);
+    } catch (err) {
+      setSaveError(err.message || 'Could not save to Vault');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const DecisionTab = () => (
@@ -898,24 +922,34 @@ function ResultCockpit({ result, plan, moves, recommendedRank, mobileTab, onMobi
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 6, marginBottom: 10 }}>
-        <button type="button" onClick={handleSaveSnapshot}
-          style={{ padding: "7px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900, cursor: "pointer", background: "rgba(255,255,255,0.86)", color: SLATE, border: "1px solid rgba(0,0,0,0.12)", whiteSpace: "nowrap" }}>
-          💾 Save
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 6, marginBottom: 10 }}>
+        <button type="button" onClick={handleSaveToVault} disabled={saving || !!savedId}
+          style={{ padding: "7px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900,
+            cursor: saving || savedId ? "default" : "pointer",
+            background: savedId ? "#16A34A" : saving ? "rgba(255,112,67,0.15)" : ORANGE,
+            color: "white", border: "none", whiteSpace: "nowrap" }}>
+          {savedId ? "✓ Saved" : saving ? "Saving…" : "🗄️ Vault"}
         </button>
         <button type="button" onClick={handleExportPdf}
-          style={{ padding: "7px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900, cursor: "pointer", background: ORANGE, color: "white", border: "none", whiteSpace: "nowrap" }}>
+          style={{ padding: "7px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900, cursor: "pointer", background: "rgba(255,255,255,0.86)", color: SLATE, border: "1px solid rgba(0,0,0,0.12)", whiteSpace: "nowrap" }}>
           📄 PDF
         </button>
         <button type="button" onClick={handleExportText}
           style={{ padding: "7px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900, cursor: "pointer", background: "rgba(255,255,255,0.86)", color: SLATE, border: "1px solid rgba(0,0,0,0.12)", whiteSpace: "nowrap" }}>
           📝 Text
         </button>
+        <button type="button" onClick={handleSaveSnapshot}
+          style={{ padding: "7px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900, cursor: "pointer", background: "rgba(255,255,255,0.86)", color: SLATE, border: "1px solid rgba(0,0,0,0.12)", whiteSpace: "nowrap" }}>
+          💾 JSON
+        </button>
         <button type="button" onClick={handleCopySummary}
           style={{ padding: "7px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900, cursor: "pointer", background: copied ? "#16A34A" : "rgba(255,255,255,0.86)", color: copied ? "white" : SLATE, border: "1px solid rgba(0,0,0,0.12)", whiteSpace: "nowrap" }}>
-          {copied ? "✓ Copied" : "📋 Copy"}
+          {copied ? "✓" : "📋"}
         </button>
       </div>
+      {saveError && (
+        <div style={{ fontSize: 10, color: "#E53935", marginBottom: 6, fontWeight: 600 }}>{saveError}</div>
+      )}
       <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: 2 }}>
         {activeTab === "decision" && <DecisionTab />}
@@ -1141,7 +1175,7 @@ export default function ProjectPromotionEngine() {
           </details>
           <div style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
             <ResultCockpit result={result} plan={plan} moves={moves} recommendedRank={recommendedRank}
-              mobileTab={mobileTab} onMobileTabChange={setMobileTab} />
+              mobileTab={mobileTab} onMobileTabChange={setMobileTab} form={form} />
           </div>
           <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
             background: "rgba(255,255,255,0.95)", borderTop: "1px solid rgba(0,0,0,0.10)",
@@ -1191,7 +1225,7 @@ export default function ProjectPromotionEngine() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
             {!loading && plan && (
-              <ResultCockpit result={result} plan={plan} moves={moves} recommendedRank={recommendedRank} />
+              <ResultCockpit result={result} plan={plan} moves={moves} recommendedRank={recommendedRank} form={form} />
             )}
           </div>
         </div>

@@ -577,6 +577,69 @@ async function renderInterviewPrep(docId, userId) {
   return { pdfBuffer, fileName: `interview_prep${company ? `_${company.replace(/[^a-z0-9]+/gi, '_')}` : ''}.pdf` };
 }
 
+async function renderProjectPromotion(docId, userId) {
+  const record = await prisma.projectPromotionResult.findFirst({
+    where: { id: String(docId), userId },
+    select: { title: true, formInput: true, result: true, createdAt: true },
+  });
+  if (!record) throw new Error('Project promotion result not found');
+
+  const plan = record.result?.plan || {};
+  const moves = Array.isArray(plan.rankedMoves) ? plan.rankedMoves : [];
+  const recommended = moves.find(m => Number(m.rank) === Number(plan.recommendedMove?.rank || 1)) || moves[0] || null;
+  const form = record.formInput || {};
+
+  const sections = [];
+
+  if (plan.performanceRead) {
+    sections.push({ heading: 'Performance Read — How Leadership Sees You', text: safe(plan.performanceRead) });
+  }
+
+  if (plan.promotionReadiness) {
+    sections.push({ heading: 'Promotion Readiness', text: safe(plan.promotionReadiness) });
+  }
+
+  if (recommended) {
+    sections.push({ heading: `Recommended Move — ${safe(recommended.title)}`, text: safe(recommended.rationale || recommended.description) });
+    if (safeArr(recommended.successMetrics).length) {
+      sections.push({ heading: 'Success Metrics', bullets: safeArr(recommended.successMetrics).map(m => safe(m)) });
+    }
+    if (safeArr(recommended.exampleProjects).length) {
+      sections.push({ heading: 'Example Projects', bullets: safeArr(recommended.exampleProjects).map(p => safe(p)) });
+    }
+  }
+
+  if (moves.length > 1) {
+    sections.push({
+      heading: 'All Ranked Moves',
+      bullets: moves.map(m => `${m.rank}. ${safe(m.title)}`),
+    });
+  }
+
+  if (plan.executionPlan) {
+    const ep = plan.executionPlan;
+    if (ep.firstStep) sections.push({ heading: 'First Step', text: safe(ep.firstStep) });
+    if (ep.whoToAlign) sections.push({ heading: 'Who to Align', text: safe(ep.whoToAlign) });
+    if (ep.howToPitch) sections.push({ heading: 'How to Pitch It', text: safe(ep.howToPitch) });
+    if (ep.proofArtifact) sections.push({ heading: 'Proof Artifact', text: safe(ep.proofArtifact) });
+  }
+
+  if (plan.reviewNarrative) {
+    sections.push({ heading: 'Performance Review Narrative', text: safe(plan.reviewNarrative) });
+  }
+
+  if (!sections.length) sections.push({ text: 'Project & Promotion Brief on file.' });
+
+  const title = safe(record.title, 'Project & Promotion Brief');
+  const subtitle = [safe(form.currentRole), safe(form.currentCompany)].filter(Boolean).join(' · ');
+
+  const pdfBuffer = await pdf(
+    <GenericPDF title={title} subtitle={subtitle || undefined} sections={sections} />
+  ).toBuffer();
+
+  return { pdfBuffer, fileName: `${title.replace(/[^a-z0-9]+/gi, '_').toLowerCase()}.pdf` };
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -602,7 +665,8 @@ export default async function handler(req, res) {
       case 'roadmap':       ({ pdfBuffer, fileName } = await renderRoadmap(docId, userId)); break;
       case 'negotiation':   ({ pdfBuffer, fileName } = await renderNegotiation(docId, userId)); break;
       case 'strategy':      ({ pdfBuffer, fileName } = await renderStrategy(docId, userId)); break;
-      case 'interview':     ({ pdfBuffer, fileName } = await renderInterviewPrep(docId, userId)); break;
+      case 'interview':          ({ pdfBuffer, fileName } = await renderInterviewPrep(docId, userId)); break;
+      case 'projectPromotion':   ({ pdfBuffer, fileName } = await renderProjectPromotion(docId, userId)); break;
       default:
         return res.status(400).json({ error: `Unsupported docType: ${docType}` });
     }

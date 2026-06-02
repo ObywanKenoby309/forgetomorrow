@@ -5,7 +5,6 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
@@ -63,13 +62,15 @@ const TYPE_META = {
   packet:          { label: 'Application packet',       bg: 'rgba(96,125,139,0.10)', color: '#37474F' },
   strategy:        { label: 'Target strategy',          bg: 'rgba(33,150,243,0.10)',  color: '#185FA5' },
   candidateReview: { label: 'Candidate review packet',  bg: 'rgba(255,112,67,0.12)', color: '#7A2A0E' },
-  resumeRole:      { label: 'Resume vs role analysis',  bg: 'rgba(76,175,80,0.12)',   color: '#2E7D32' },
+  resumeRole:           { label: 'Resume vs role analysis',  bg: 'rgba(76,175,80,0.12)',   color: '#2E7D32' },
+  projectPromotion:     { label: 'Project & promotion brief', bg: 'rgba(245,158,11,0.12)',  color: '#92400E' },
 };
 
 const TYPE_CATEGORY = {
   resume: 'seeking', cover: 'seeking', interview: 'seeking', packet: 'seeking',
   profile: 'career', roadmap: 'career', negotiation: 'career',
   strategy: 'coaching', candidateReview: 'candidates', resumeRole: 'intelligence',
+  projectPromotion: 'career',
 };
 
 const WORKSPACE_BADGE = {
@@ -86,7 +87,7 @@ const CATEGORY_LABELS = {
 const TYPE_ICON = {
   resume: '📄', cover: '✉️', interview: '🎯', profile: '🧠',
   roadmap: '🗺️', negotiation: '🤝', packet: '📦',
-  strategy: '🏹', candidateReview: '🧾', resumeRole: '📊',
+  strategy: '🏹', candidateReview: '🧾', resumeRole: '📊', projectPromotion: '🚀',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -205,6 +206,19 @@ function normalizePackets(packets = []) {
     subtitle: [p.company, p.title].filter(Boolean).join(' · ') || null, date: p.updatedAt,
     downloadUrl: p.latestExport?.url || null, hasPdf: Boolean(p.latestExport?.url), raw: p,
     sharePayload: { forgeDocType: 'packet', forgeDocId: String(p.id), fileName: safeText(p.name, 'Application Packet'), downloadUrl: p.latestExport?.url || null },
+  }));
+}
+
+function normalizeProjectPromotions(results = []) {
+  return results.map(r => ({
+    id: r.id, type: 'projectPromotion',
+    workspace: 'seeker',
+    typeLabel: TYPE_META.projectPromotion.label,
+    name: r.title || 'Project & Promotion Brief',
+    subtitle: null,
+    date: r.createdAt,
+    downloadUrl: null, hasPdf: false, raw: r,
+    sharePayload: { forgeDocType: 'projectPromotion', forgeDocId: r.id, fileName: r.title || 'Project & Promotion Brief' },
   }));
 }
 
@@ -1205,7 +1219,6 @@ function SharedWithMeTab({ isMobile }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function ForgeVaultPage() {
-  const router = useRouter();
   const [activeTab, setActiveTab]       = useState('forge');    // 'forge' | 'uploads' | 'shared'
   const [docs, setDocs]                 = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -1223,14 +1236,6 @@ export default function ForgeVaultPage() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Sync ?tab= URL param to activeTab on load
-  useEffect(() => {
-    const t = String(router.query.tab || '').toLowerCase();
-    if (t === 'shared') setActiveTab('shared');
-    else if (t === 'uploads') setActiveTab('uploads');
-    else if (t === 'forge') setActiveTab('forge');
-  }, [router.query.tab]);
-
   // Load forge docs
   useEffect(() => {
     let alive = true;
@@ -1245,7 +1250,7 @@ export default function ForgeVaultPage() {
     }
 
     async function loadAll() {
-      const [resumeData, coverData, roadmapData, negotiationData, packetData, strategyData, vaultData] = await Promise.all([
+      const [resumeData, coverData, roadmapData, negotiationData, packetData, strategyData, vaultData, projectPromoData] = await Promise.all([
         safeGet('/api/resume/list'),
         safeGet('/api/cover/list'),
         safeGet('/api/anvil/onboarding-growth/list'),
@@ -1253,6 +1258,7 @@ export default function ForgeVaultPage() {
         safeGet('/api/apply/application-packets/list'),
         safeGet('/api/coaching/clients/strategy/list'),
         safeGet('/api/vault/documents'),
+        safeGet('/api/anvil/project-promotion/list'),
       ]);
 
       if (!alive) return;
@@ -1268,6 +1274,7 @@ export default function ForgeVaultPage() {
         ...normalizeStrategies(strategyData?.strategies || []),
         ...normalizeCandidateReviewPackets(vaultData?.recruiterReviewPackets || []),
         ...normalizeResumeRoleAnalyses(vaultData?.resumeRoleAnalyses || []),
+        ...normalizeProjectPromotions(projectPromoData?.results || []),
       ];
 
       all.sort((a, b) => {
