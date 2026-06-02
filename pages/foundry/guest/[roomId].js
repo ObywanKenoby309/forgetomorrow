@@ -169,6 +169,7 @@ export default function GuestFoundryRoom({
   const [micMuted, setMicMuted] = useState(true);
   const [camOff, setCamOff] = useState(false);
   const [isRecording] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
 
   const [activeView, setActiveView] = useState('grid');
   const [sidebarHidden, setSidebarHidden] = useState(false);
