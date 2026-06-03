@@ -5,6 +5,7 @@
 // Sheets: Chat | People | Files | Notes | More (screen share, record, invite, host controls)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import FoundryLobbyPanel from './FoundryLobbyPanel';
 
 const ORANGE = '#FF7043';
 const DARK = '#141720';
@@ -279,6 +280,9 @@ export default function FoundryMobileLayout({
   onLockRoom,
   onStopParticipantShare,
   onStopParticipantCamera,
+  coHostUserId,
+  coHostName,
+  onCoHostAssigned,
 
   // Panels — Chat
   messages,
@@ -475,20 +479,31 @@ export default function FoundryMobileLayout({
           </div>
           <div style={S.sheetBody}>
             {isHost && (
-              <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button style={{ ...S.hostCtrlBtn, fontSize: 12, padding: '7px 12px' }} onClick={() => { onMuteAll?.(); closeSheet(); }}>
-                  🔇 Mute all
-                </button>
-                <button style={{ ...S.hostCtrlBtn, fontSize: 12, padding: '7px 12px' }} onClick={() => { onLockRoom?.(); closeSheet(); }}>
-                  🔒 Lock Foundry
-                </button>
-                <button
-                  style={{ ...S.hostCtrlBtn, fontSize: 12, padding: '7px 12px', color: ORANGE, borderColor: 'rgba(255,112,67,0.3)' }}
-                  onClick={() => setActiveSheet('invite')}
-                >
-                  + Invite
-                </button>
-              </div>
+              <>
+                {/* Lobby panel — admit/co-host controls */}
+                <FoundryLobbyPanel
+                  roomId={roomId}
+                  participants={safeParticipants}
+                  coHostUserId={coHostUserId}
+                  coHostName={coHostName}
+                  isHost={isHost}
+                  onCoHostAssigned={onCoHostAssigned}
+                />
+                <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button style={{ ...S.hostCtrlBtn, fontSize: 12, padding: '7px 12px' }} onClick={() => { onMuteAll?.(); closeSheet(); }}>
+                    🔇 Mute all
+                  </button>
+                  <button style={{ ...S.hostCtrlBtn, fontSize: 12, padding: '7px 12px' }} onClick={() => { onLockRoom?.(); closeSheet(); }}>
+                    🔒 Lock Foundry
+                  </button>
+                  <button
+                    style={{ ...S.hostCtrlBtn, fontSize: 12, padding: '7px 12px', color: ORANGE, borderColor: 'rgba(255,112,67,0.3)' }}
+                    onClick={() => setActiveSheet('invite')}
+                  >
+                    + Invite
+                  </button>
+                </div>
+              </>
             )}
             {/* Guest mobile: quick DM to host */}
             {isGuest && safeParticipants.filter(p => p.isHost && !p.local).length > 0 && (

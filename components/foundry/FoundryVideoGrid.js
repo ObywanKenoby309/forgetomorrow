@@ -512,10 +512,17 @@ const checkRoomEmpty = useCallback((current) => {
         callRef.current = call;
 
         const refresh = () => { if (!destroyed) updateParticipants(); };
-        call.on('participant-joined', refresh);
-        call.on('participant-updated', refresh);
-        call.on('track-started', refresh);
-        call.on('track-stopped', refresh);
+        const refreshDebounced = () => {
+          if (destroyed) return;
+          // Fire immediately for UI, then again after track state propagates
+          updateParticipants();
+          setTimeout(() => { if (!destroyed) updateParticipants(); }, 150);
+          setTimeout(() => { if (!destroyed) updateParticipants(); }, 500);
+        };
+        call.on('participant-joined', refreshDebounced);
+        call.on('participant-updated', refreshDebounced);
+        call.on('track-started', refreshDebounced);
+        call.on('track-stopped', refreshDebounced);
 
         call.on('participant-left', () => {
           if (destroyed) return;
@@ -640,7 +647,20 @@ const checkRoomEmpty = useCallback((current) => {
 
         call.on('left-meeting', () => { if (!destroyed) setJoinState('idle'); });
 
-        await call.join({ url: roomUrl, token, startVideoOff: false, startAudioOff: true });
+        // On mobile, forcing camera on immediately causes permission denial and black tiles.
+        // Always start with camera off — user toggles it on themselves.
+        const isMobileDevice = typeof navigator !== 'undefined' &&
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        await call.join({
+          url: roomUrl,
+          token,
+          startVideoOff: true,  // always start video off — avoids mobile permission crash
+          startAudioOff: true,
+          ...(isMobileDevice ? {
+            videoSource: { facingMode: 'user' }, // front camera on mobile
+          } : {}),
+        });
 
       } catch (err) {
         if (!destroyed) {

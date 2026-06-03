@@ -770,6 +770,15 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
         onSend={handleSend}
         onEnd={handleEnd}
         isHost={canManage}
+        coHostUserId={room?.coHostUserId}
+        coHostName={room?.coHost?.name}
+        onCoHostAssigned={(data) => {
+          setRoom(prev => ({
+            ...prev,
+            coHostUserId: data?.coHostUserId || null,
+            coHost: data?.coHostName ? { ...(prev?.coHost || {}), name: data.coHostName } : null,
+          }));
+        }}
         onMuteAll={handleMuteAll}
         onMuteParticipant={handleMuteParticipant}
         onKickParticipant={handleKickParticipant}

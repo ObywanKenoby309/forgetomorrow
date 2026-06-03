@@ -93,7 +93,7 @@ export default async function handler(req, res) {
 
       const user = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { name: true, firstName: true, lastName: true, email: true, avatarUrl: true },
+        select: { name: true, firstName: true, lastName: true, email: true, avatarUrl: true, role: true },
       });
 
       const userName = user?.name ||
@@ -108,6 +108,7 @@ export default async function handler(req, res) {
         userName,
         isOwner: isHost, // only the host is Daily owner; co-host is not
         avatarUrl: user?.avatarUrl || null,
+        role: user?.role || null,
       });
 
       const scheduledEndAt = room.scheduledAt
@@ -187,6 +188,7 @@ if (isInstantRoom) {
     userName,
     isOwner: false,
     avatarUrl: user?.avatarUrl || null,
+    role: user?.role || null,
   });
 
   return res.status(200).json({
@@ -231,7 +233,7 @@ if (isInstantRoom) {
     // Admitted — issue token
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { name: true, firstName: true, lastName: true, email: true, avatarUrl: true },
+      select: { name: true, firstName: true, lastName: true, email: true, avatarUrl: true, role: true },
     });
 
     const userName = user?.name ||
@@ -246,6 +248,7 @@ if (isInstantRoom) {
       userName,
       isOwner: false,
       avatarUrl: user?.avatarUrl || null,
+      role: user?.role || null,
     });
 
     const scheduledEndAt = room.scheduledAt
