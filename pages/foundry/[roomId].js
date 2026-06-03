@@ -306,14 +306,19 @@ const handleCallReady = useCallback((call) => {
 
   const handleParticipantsChange = useCallback((list) => {
     setParticipants(list.map(p => ({
-      id: p.session_id, name: p.user_name || 'Guest',
+      // id = Daily session_id (used for live controls via sendFoundryControl)
+      // userId = Forge platform userId (used for Signal DMs — may be null for external guests)
+      id: p.session_id,
       userId: p.user_id || p.userData?.userId || null,
+      name: p.user_name || 'Guest',
       role: p.userData?.role || '',
       isHost: !!p.owner,
       micMuted: !p.tracks?.audio || p.tracks.audio.state === 'off',
       videoOff: !p.tracks?.video || p.tracks.video.state === 'off',
       isScreenSharing: !!p.tracks?.screenVideo?.persistentTrack && p.tracks?.screenVideo?.state !== 'off' && p.tracks?.screenVideo?.state !== 'blocked',
-      local: p.local, avatarUrl: p.userData?.avatarUrl || null,
+      isGuest: !(p.user_id || p.userData?.userId),
+      local: p.local,
+      avatarUrl: p.userData?.avatarUrl || null,
     })));
   }, []);
 
@@ -445,11 +450,24 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
     });
   }, [roomId, sendFoundryControl]);
 
-  const handleLockRoom = useCallback(() => {
-    // For now, lock is an in-room host signal. Lobby/token gating still controls actual admission.
-    sendFoundryControl('ROOM_LOCKED', '*');
-    alert('Foundry lock signal sent. New participants must remain in lobby until admitted.');
-  }, [sendFoundryControl]);
+  const handleLockRoom = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/foundry/room/${roomId}/participant-action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'LOCK' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        // Update local room state so isLocked reflects immediately
+        setRoom(prev => prev ? { ...prev, isLocked: data.isLocked } : prev);
+        // Signal all participants of lock state change
+        sendFoundryControl('ROOM_LOCKED', '*', { isLocked: data.isLocked });
+      }
+    } catch (err) {
+      console.error('[foundry] lockRoom failed:', err);
+    }
+  }, [roomId, sendFoundryControl]);
 
 
   const handleNotesChange = useCallback((val) => {
@@ -662,6 +680,7 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
 
   const isHost = room?.hostId === session?.user?.id;
   const isCoHost = room?.coHostUserId === session?.user?.id;
+  const canManage = isHost || isCoHost;
 
   if (isMobile) {
     return (
@@ -685,7 +704,7 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
 		onSendDm={handleSendDm}
         onSend={handleSend}
         onEnd={handleEnd}
-        isHost={isHost}
+        isHost={canManage}
         onMuteAll={handleMuteAll}
         onMuteParticipant={handleMuteParticipant}
         onKickParticipant={handleKickParticipant}
@@ -770,8 +789,8 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
             onShare={handleShare}
             onUpload={handleUpload}
             onRemoveFile={handleRemoveFile}
-            isHost={isHost}
-            isCoHost={room?.coHostUserId === session?.user?.id}
+            isHost={canManage}
+            isCoHost={isCoHost}
             initialTab={activePanel}
             currentUserId={session?.user?.id}
             currentUserRole={session?.user?.role}

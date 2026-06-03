@@ -306,6 +306,9 @@ export default function FoundryMobileLayout({
   isGuest,
 }) {
   const [activeSheet, setActiveSheet] = useState(null);
+  // Screen share support — iOS doesn't support getDisplayMedia at all
+  const screenShareSupported = typeof navigator !== 'undefined' &&
+    typeof navigator.mediaDevices?.getDisplayMedia === 'function';
   const [chatDraft, setChatDraft] = useState('');
   const [dmDraft, setDmDraft] = useState('');
   const [notesDraft, setNotesDraft] = useState('');
@@ -476,6 +479,17 @@ export default function FoundryMobileLayout({
                 <button style={{ ...S.hostCtrlBtn, fontSize: 12, padding: '7px 12px' }} onClick={() => { onLockRoom?.(); closeSheet(); }}>
                   🔒 Lock Foundry
                 </button>
+              </div>
+            )}
+            {/* Guest mobile: quick DM to host */}
+            {isGuest && safeParticipants.filter(p => p.isHost && !p.local).length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                {safeParticipants.filter(p => p.isHost && !p.local).map(p => (
+                  <button key={p.id} style={{ ...S.hostCtrlBtn, width: '100%', padding: '10px', textAlign: 'center', color: '#FF7043', borderColor: 'rgba(255,112,67,0.3)', marginBottom: 6 }}
+                    onClick={() => { setSelectedDmParticipant(p); setActiveSheet('dm'); }}>
+                    💬 Message {p.name || 'Host'}
+                  </button>
+                ))}
               </div>
             )}
             {safeParticipants.map(p => (
@@ -790,10 +804,20 @@ export default function FoundryMobileLayout({
               </button>
 
               {/* Screen share */}
-              <button style={S.moreItem} onClick={() => { onShareScreen?.(); closeSheet(); }}>
-                <span style={S.moreIcon}>📺</span>
-                <span style={S.moreLabel}>{isScreenSharing ? 'Stop sharing screen' : 'Share screen'}</span>
-              </button>
+              {screenShareSupported ? (
+                <button style={S.moreItem} onClick={() => { onShareScreen?.(); closeSheet(); }}>
+                  <span style={S.moreIcon}>📺</span>
+                  <span style={S.moreLabel}>{isScreenSharing ? 'Stop sharing screen' : 'Share screen'}</span>
+                </button>
+              ) : (
+                <div style={{ ...S.moreItem, cursor: 'default', opacity: 0.4 }}>
+                  <span style={S.moreIcon}>📺</span>
+                  <div>
+                    <div style={S.moreLabel}>Share screen</div>
+                    <div style={S.moreSublabel}>Not supported on this device</div>
+                  </div>
+                </div>
+              )}
 
               {/* Record */}
               <button style={S.moreItem} onClick={() => { onRecordToggle?.(); closeSheet(); }}>

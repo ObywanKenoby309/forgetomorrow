@@ -391,8 +391,10 @@ export default function GuestFoundryRoom({
     setParticipants(
       list.map((p) => ({
         id: p.session_id,
+        userId: p.user_id || p.userData?.userId || null,
         name: p.user_name || 'Guest',
         isHost: !!p.owner,
+        isGuest: !(p.user_id || p.userData?.userId),
         micMuted: !p.tracks?.audio || p.tracks.audio.state === 'off',
         videoOff: !p.tracks?.video || p.tracks.video.state === 'off',
         local: p.local,

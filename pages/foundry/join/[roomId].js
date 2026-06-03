@@ -119,6 +119,41 @@ export default function GuestJoin({
 }) {
   const router = useRouter();
   const [name, setName] = useState('');
+  const [blockedByWebView, setBlockedByWebView] = useState(false);
+
+  useEffect(() => {
+    const ua = navigator.userAgent || '';
+    const isGmail = /GSA\//.test(ua) || /GSA/.test(ua);
+    const isFB = /FBAN|FBAV|\[FB/.test(ua);
+    const isIG = /Instagram/.test(ua);
+    const isAndroidWV = /wv/.test(ua) && /Android/.test(ua);
+    if (isGmail || isFB || isIG || isAndroidWV) {
+      setBlockedByWebView(true);
+    }
+  }, []);
+
+  if (blockedByWebView) {
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+    return (
+      <div style={{ minHeight: '100vh', background: '#0b0d11', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,112,67,0.3)', borderRadius: 16, padding: '32px 24px', maxWidth: 380, width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#f0f0f0', marginBottom: 10 }}>Open in your browser</div>
+          <div style={{ fontSize: 13, color: '#9ca3af', lineHeight: 1.7, marginBottom: 24 }}>
+            Camera and microphone access is required for Foundry. Gmail's built-in browser blocks this — you need <strong style={{ color: '#fff' }}>Chrome</strong> or <strong style={{ color: '#fff' }}>Safari</strong>.
+          </div>
+          <a href={currentUrl} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'block', background: '#FF7043', color: '#fff', borderRadius: 10, padding: '14px', fontSize: 14, fontWeight: 800, textDecoration: 'none', marginBottom: 16 }}>
+            Open in Chrome / Safari →
+          </a>
+          <div style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: 10, color: '#555', marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Or copy this link</div>
+            <div style={{ fontSize: 11, color: '#666', wordBreak: 'break-all', lineHeight: 1.5 }}>{currentUrl}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isInAppBrowser = typeof navigator !== 'undefined' && (
     /GSA\//.test(navigator.userAgent) ||
@@ -184,7 +219,9 @@ export default function GuestJoin({
         sessionStorage.setItem('foundry_guest_name', guestName.trim());
         sessionStorage.setItem('foundry_guest_token', data.token);
         sessionStorage.setItem('foundry_guest_room_url', data.roomUrl);
-        router.push(`/foundry/guest/${roomId}`);
+        sessionStorage.setItem('foundry_guest_room_id', roomId);
+        sessionStorage.setItem('foundry_guest_code', guestCode || '');
+        router.push(`/foundry/guest/${roomId}?code=${encodeURIComponent(guestCode || '')}`);
         return;
       }
 
