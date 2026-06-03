@@ -740,7 +740,9 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
           roomId={roomId}
           compact={true}
           micMuted={micMuted}
-          camOff={camOff}
+		  camOff={camOff}
+		  onRemoteMute={() => setMicMuted(true)}
+		  onRemoteStopCamera={() => setCamOff(true)}
           onCallReady={handleCallReady}
           onParticipantsChange={handleParticipantsChange}
           onScreenShareChange={handleScreenShareChange}
@@ -777,6 +779,8 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
           compact={compact}
           micMuted={micMuted}
           camOff={camOff}
+		  onRemoteMute={() => setMicMuted(true)}
+		  onRemoteStopCamera={() => setCamOff(true)}
           onCallReady={handleCallReady}
           onParticipantsChange={handleParticipantsChange}
           onScreenShareChange={handleScreenShareChange}

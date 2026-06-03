@@ -318,6 +318,8 @@ export default function FoundryVideoGrid({
   guestToken = null,
   guestRoomUrl = null,
   initialBackground = 'none',
+onRemoteMute = null,
+onRemoteStopCamera = null,
 }) {
   const callRef = useRef(null);
   const [participants, setParticipants] = useState({});
@@ -423,7 +425,6 @@ const checkRoomEmpty = useCallback((current) => {
         call = DailyIframe.createCallObject({
           audioSource: true,
           videoSource: true,
-          dailyConfig: { experimentalChromeVideoMuteLightOff: true },
         });
         callRef.current = call;
 
@@ -510,16 +511,28 @@ const checkRoomEmpty = useCallback((current) => {
 
           try {
             if (data.action === 'MUTE' && isTargetedAtMe) {
-              await callRef.current?.setLocalAudio(false);
-            }
+  callRef.current?.setLocalAudio(false);
+  onRemoteMute?.();
 
-            if (data.action === 'MUTE_ALL' && !localIsOwner) {
-              await callRef.current?.setLocalAudio(false);
-            }
+  setTimeout(updateParticipants, 100);
+  setTimeout(updateParticipants, 500);
+}
 
-            if (data.action === 'STOP_CAMERA' && isTargetedAtMe) {
-              await callRef.current?.setLocalVideo(false);
-            }
+if (data.action === 'MUTE_ALL' && !localIsOwner) {
+  callRef.current?.setLocalAudio(false);
+  onRemoteMute?.();
+
+  setTimeout(updateParticipants, 100);
+  setTimeout(updateParticipants, 500);
+}
+
+if (data.action === 'STOP_CAMERA' && isTargetedAtMe) {
+  callRef.current?.setLocalVideo(false);
+  onRemoteStopCamera?.();
+
+  setTimeout(updateParticipants, 100);
+  setTimeout(updateParticipants, 500);
+}
 
             if (data.action === 'STOP_SCREEN_SHARE' && isTargetedAtMe) {
               await callRef.current?.stopScreenShare?.();

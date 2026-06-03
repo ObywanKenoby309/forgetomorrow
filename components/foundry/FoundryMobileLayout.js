@@ -528,9 +528,13 @@ export default function FoundryMobileLayout({
 
     {isHost && (
       <>
-        <button style={S.hostCtrlBtn} onClick={() => onMuteParticipant?.(p)}>Mute</button>
+        {!p.micMuted && (
+  <button style={S.hostCtrlBtn} onClick={() => onMuteParticipant?.(p)}>Mute</button>
+)}
 
-        <button style={S.hostCtrlBtn} onClick={() => onStopParticipantCamera?.(p)}>Stop video</button>
+{!p.videoOff && (
+  <button style={S.hostCtrlBtn} onClick={() => onStopParticipantCamera?.(p)}>Stop video</button>
+)}
 
         {p.isScreenSharing && <button style={S.hostCtrlBtn} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>}
 

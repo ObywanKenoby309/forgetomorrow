@@ -393,8 +393,13 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, 
             {!p.local && <button style={S.dmBtn} onClick={() => onDmParticipant(p)}>DM</button>}
             {isHost && !p.local && (
               <>
-                {!p.micMuted && <button style={S.dmBtn} onClick={() => onMuteParticipant?.(p)}>Mute</button>}
-				{!p.videoOff && <button style={S.dmBtn} onClick={() => onStopParticipantCamera?.(p)}>Stop video</button>}
+                {!p.micMuted && (
+  <button style={S.dmBtn} onClick={() => onMuteParticipant?.(p)}>Mute</button>
+)}
+
+{!p.videoOff && (
+  <button style={S.dmBtn} onClick={() => onStopParticipantCamera?.(p)}>Stop video</button>
+)}
                 {p.isScreenSharing && <button style={S.dmBtn} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>}
                 <button style={S.dmBtn} onClick={() => onKickParticipant?.(p)}>Kick</button>
                 <button style={{ ...S.dmBtn, color: '#ef5350', borderColor: 'rgba(239,83,80,0.25)' }} onClick={() => onBanParticipant?.(p)}>Ban</button>
