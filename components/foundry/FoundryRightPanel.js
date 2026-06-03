@@ -594,7 +594,16 @@ function ExternalDmList({ participants, sessionDms, onOpenGuestDm }) {
         return (
           <div
             key={participant.id}
-            style={S.threadItem(false)}
+            style={{
+  display: 'flex',
+  alignItems: 'center',
+  gap: 7,
+  padding: '7px 6px',
+  borderRadius: 7,
+  cursor: 'pointer',
+  background: 'rgba(255,255,255,0.025)',
+  border: '1px solid rgba(255,255,255,0.05)',
+}}
             onClick={() => onOpenGuestDm?.(participant)}
           >
             {participant.avatarUrl ? (
