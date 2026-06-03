@@ -391,10 +391,8 @@ export default function GuestFoundryRoom({
     setParticipants(
       list.map((p) => ({
         id: p.session_id,
-        userId: p.user_id || p.userData?.userId || null,
         name: p.user_name || 'Guest',
         isHost: !!p.owner,
-        isGuest: !(p.user_id || p.userData?.userId),
         micMuted: !p.tracks?.audio || p.tracks.audio.state === 'off',
         videoOff: !p.tracks?.video || p.tracks.video.state === 'off',
         local: p.local,
@@ -494,26 +492,34 @@ const handleSendDm = useCallback((target, text) => {
 
 const openInChrome = () => {
   if (typeof window === 'undefined') return;
-
   const currentUrl = window.location.href;
   const url = new URL(currentUrl);
-
   const chromeIntent =
-  `intent://${url.host}${url.pathname}${url.search}${url.hash}` +
+    `intent://${url.host}${url.pathname}${url.search}${url.hash}` +
     `#Intent;scheme=https;package=com.android.chrome;` +
     `S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
-
   window.location.href = chromeIntent;
 };
 
-  // Detect Gmail/in-app browser — they block blob downloads and Daily permissions
-  const isInAppBrowser = typeof navigator !== 'undefined' && (
-    /GSA\//.test(navigator.userAgent) ||        // Gmail iOS
-    /\[FB/.test(navigator.userAgent) ||          // Facebook
-    /Instagram/.test(navigator.userAgent) ||
-    /FBAN|FBAV/.test(navigator.userAgent) ||
-    (!/Chrome/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && /Mobile/.test(navigator.userAgent) && /AppleWebKit/.test(navigator.userAgent))
-  );
+  // Detect restricted browser environments using multiple signals.
+  // User agent sniffing alone is unreliable — Gmail Android often reports Chrome UA.
+  // We use a combination of UA signals + API availability checks.
+  const isInAppBrowser = typeof navigator !== 'undefined' && (() => {
+    const ua = navigator.userAgent || '';
+    // Gmail iOS
+    if (/GSA[\/\s]/.test(ua)) return true;
+    // Facebook in-app
+    if (/FBAN|FBAV/.test(ua)) return true;
+    // Instagram in-app
+    if (/Instagram/.test(ua)) return true;
+    // Android WebView (includes Gmail Android) — wv flag + no Chrome version in specific position
+    if (/Android/.test(ua) && /wv/.test(ua)) return true;
+    // Android Gmail without wv flag — check for missing Chrome features
+    if (/Android/.test(ua) && typeof navigator.mediaDevices === 'undefined') return true;
+    // iOS in-app browser (not Safari or Chrome)
+    if (/iPhone|iPad/.test(ua) && !/Safari\//.test(ua) && !/CriOS/.test(ua)) return true;
+    return false;
+  })();
 
   if (showConversionBanner) {
     return (
