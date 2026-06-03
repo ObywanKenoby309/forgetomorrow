@@ -372,10 +372,42 @@ const handleSendDm = useCallback((target, text) => {
   } catch {}
 }, [session]);
 
-const sendFoundryControl = useCallback((action, targetSessionId = '*', payload = {}) => {
+const sendFoundryControl = useCallback(async (action, targetSessionId = '*', payload = {}) => {
   if (!callRef.current) return;
 
   const resolvedTargetSessionId = targetSessionId || '*';
+
+  // Daily owner direct-control path. This fixes host controls on desktop when
+  // app-message routing is delayed or blocked. Co-hosts still use the
+  // app-message fallback below because they are not Daily room owners.
+  try {
+    const call = callRef.current;
+
+    if (resolvedTargetSessionId !== '*' && typeof call.updateParticipant === 'function') {
+      if (action === 'MUTE') {
+        await call.updateParticipant(resolvedTargetSessionId, { setAudio: false });
+      }
+
+      if (action === 'STOP_CAMERA') {
+        await call.updateParticipant(resolvedTargetSessionId, { setVideo: false });
+      }
+
+      if (action === 'STOP_SCREEN_SHARE') {
+        await call.updateParticipant(resolvedTargetSessionId, { setScreenVideo: false });
+      }
+    }
+
+    if (action === 'MUTE_ALL' && typeof call.updateParticipant === 'function') {
+      const current = call.participants?.() || {};
+      await Promise.all(
+        Object.values(current)
+          .filter((p) => p && !p.local && !p.owner && p.session_id)
+          .map((p) => call.updateParticipant(p.session_id, { setAudio: false }).catch(() => {}))
+      );
+    }
+  } catch (err) {
+    console.warn('[foundry] direct Daily control failed, using app-message fallback:', err);
+  }
 
   try {
     callRef.current.sendAppMessage(
@@ -398,12 +430,17 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
 
   const handleMuteParticipant = useCallback((participant) => {
     if (!participant?.id) return;
-    sendFoundryControl('MUTE', participant.id);
+    sendFoundryControl('MUTE', participant.id, { targetUserId: participant.userId || null });
   }, [sendFoundryControl]);
 
   const handleStopParticipantShare = useCallback((participant) => {
     if (!participant?.id) return;
-    sendFoundryControl('STOP_SCREEN_SHARE', participant.id);
+    sendFoundryControl('STOP_SCREEN_SHARE', participant.id, { targetUserId: participant.userId || null });
+  }, [sendFoundryControl]);
+
+  const handleStopParticipantCamera = useCallback((participant) => {
+    if (!participant?.id) return;
+    sendFoundryControl('STOP_CAMERA', participant.id, { targetUserId: participant.userId || null });
   }, [sendFoundryControl]);
 
   const handleKickParticipant = useCallback(async (participant) => {
@@ -711,6 +748,7 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
         onBanParticipant={handleBanParticipant}
         onLockRoom={handleLockRoom}
         onStopParticipantShare={handleStopParticipantShare}
+        onStopParticipantCamera={handleStopParticipantCamera}
         sharedFiles={sharedFiles}
         forgeFiles={forgeFiles}
         onShare={handleShare}
@@ -809,6 +847,7 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
             onKickParticipant={handleKickParticipant}
             onBanParticipant={handleBanParticipant}
             onStopParticipantShare={handleStopParticipantShare}
+            onStopParticipantCamera={handleStopParticipantCamera}
             onLockRoom={handleLockRoom}
           />
         )}

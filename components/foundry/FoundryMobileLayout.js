@@ -278,6 +278,7 @@ export default function FoundryMobileLayout({
   onBanParticipant,
   onLockRoom,
   onStopParticipantShare,
+  onStopParticipantCamera,
 
   // Panels — Chat
   messages,
@@ -304,6 +305,7 @@ export default function FoundryMobileLayout({
 
   // Guest mode — no forge files, no host controls
   isGuest,
+  guestToken,
 }) {
   const [activeSheet, setActiveSheet] = useState(null);
   // Screen share support — iOS doesn't support getDisplayMedia at all
@@ -384,8 +386,9 @@ export default function FoundryMobileLayout({
   };
 
   const ftLink = roomId && typeof window !== 'undefined' ? `${window.location.origin}/foundry/${roomId}` : '';
-  const guestLink = roomId && guestCode && typeof window !== 'undefined'
-    ? `${window.location.origin}/foundry/join/${roomId}?code=${guestCode}`
+  const effectiveCode = guestCode || guestToken || '';
+  const guestLink = roomId && effectiveCode && typeof window !== 'undefined'
+    ? `${window.location.origin}/foundry/join/${roomId}?code=${effectiveCode}`
     : '';
 
   return (
@@ -479,6 +482,12 @@ export default function FoundryMobileLayout({
                 <button style={{ ...S.hostCtrlBtn, fontSize: 12, padding: '7px 12px' }} onClick={() => { onLockRoom?.(); closeSheet(); }}>
                   🔒 Lock Foundry
                 </button>
+                <button
+                  style={{ ...S.hostCtrlBtn, fontSize: 12, padding: '7px 12px', color: ORANGE, borderColor: 'rgba(255,112,67,0.3)' }}
+                  onClick={() => setActiveSheet('invite')}
+                >
+                  + Invite
+                </button>
               </div>
             )}
             {/* Guest mobile: quick DM to host */}
@@ -486,7 +495,7 @@ export default function FoundryMobileLayout({
               <div style={{ marginBottom: 12 }}>
                 {safeParticipants.filter(p => p.isHost && !p.local).map(p => (
                   <button key={p.id} style={{ ...S.hostCtrlBtn, width: '100%', padding: '10px', textAlign: 'center', color: '#FF7043', borderColor: 'rgba(255,112,67,0.3)', marginBottom: 6 }}
-                    onClick={() => { setSelectedDmParticipant(p); setActiveSheet('dm'); }}>
+                    onClick={() => { onSelectDmParticipant?.(p); setActiveSheet('dm'); }}>
                     💬 Message {p.name || 'Host'}
                   </button>
                 ))}
@@ -505,7 +514,7 @@ export default function FoundryMobileLayout({
                 <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   <span style={{ fontSize: 14, color: p.micMuted ? '#ef5350' : '#4caf50' }}>{p.micMuted ? '🔇' : '🎤'}</span>
                   <span style={{ fontSize: 14, color: p.videoOff ? '#ef5350' : '#4caf50' }}>{p.videoOff ? '📵' : '📹'}</span>
-                  {isHost && !p.local && (
+                  {!p.local && (isHost || (isGuest && p.isHost)) && (
   <>
     <button
       style={S.hostCtrlBtn}
@@ -517,13 +526,19 @@ export default function FoundryMobileLayout({
       DM
     </button>
 
-    <button style={S.hostCtrlBtn} onClick={() => onMuteParticipant?.(p)}>Mute</button>
+    {isHost && (
+      <>
+        <button style={S.hostCtrlBtn} onClick={() => onMuteParticipant?.(p)}>Mute</button>
 
-    <button style={S.hostCtrlBtn} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>
+        <button style={S.hostCtrlBtn} onClick={() => onStopParticipantCamera?.(p)}>Stop video</button>
 
-    <button style={S.hostCtrlBtn} onClick={() => onKickParticipant?.(p)}>Kick</button>
+        <button style={S.hostCtrlBtn} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>
 
-    <button style={S.banBtn} onClick={() => onBanParticipant?.(p)}>Ban</button>
+        <button style={S.hostCtrlBtn} onClick={() => onKickParticipant?.(p)}>Kick</button>
+
+        <button style={S.banBtn} onClick={() => onBanParticipant?.(p)}>Ban</button>
+      </>
+    )}
   </>
 )}
                 </div>
@@ -779,6 +794,43 @@ export default function FoundryMobileLayout({
                 <div style={{ fontSize: 10, color: ORANGE, opacity: 0.5, marginTop: 2 }}>Coming soon · Forge Intelligence</div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* ── INVITE SHEET ─────────────────────────────────────────────── */}
+      {activeSheet === 'invite' && (
+        <div style={{ ...S.sheet, maxHeight: '85vh' }}>
+          <div style={S.sheetHandle}><div style={S.sheetHandleBar} /></div>
+          <div style={S.sheetHeader}>
+            <span style={S.sheetTitle}>Invite to Foundry</span>
+            <button style={S.sheetClose} onClick={closeSheet}>×</button>
+          </div>
+          <div style={S.sheetBody}>
+            {ftLink && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={S.inviteLabel}>ForgeTomorrow members</div>
+                <div style={S.inviteLinkRow}>
+                  <span style={S.inviteLinkText}>{ftLink}</span>
+                  <button style={S.copyBtn} onClick={() => copyText('ft', ftLink)}>{copiedLink === 'ft' ? '✓' : 'Copy'}</button>
+                </div>
+              </div>
+            )}
+            {guestLink && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={S.inviteLabel}>External guests</div>
+                <div style={S.inviteLinkRow}>
+                  <span style={S.inviteLinkText}>{guestLink}</span>
+                  <button style={S.copyBtn} onClick={() => copyText('guest', guestLink)}>{copiedLink === 'guest' ? '✓' : 'Copy'}</button>
+                </div>
+              </div>
+            )}
+            {!ftLink && !guestLink && (
+              <div style={{ fontSize: 12, color: '#444', padding: '20px 0', textAlign: 'center' }}>
+                Invite links are loading…
+              </div>
+            )}
           </div>
         </div>
       )}

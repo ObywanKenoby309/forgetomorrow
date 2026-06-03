@@ -98,7 +98,7 @@ function initials(name) {
   return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
-function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, coHostUserId, coHostName, onCoHostAssigned, isLocked, onMuteAll, onMuteParticipant, onKickParticipant, onBanParticipant, onLockRoom, onStopParticipantShare }) {
+function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, coHostUserId, coHostName, onCoHostAssigned, isLocked, onMuteAll, onMuteParticipant, onKickParticipant, onBanParticipant, onLockRoom, onStopParticipantShare, onStopParticipantCamera }) {
   const [query, setQuery] = useState('');
   const [showInvite, setShowInvite] = useState(false);
   const [inviteTab, setInviteTab] = useState('internal');
@@ -394,6 +394,7 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, 
             {isHost && !p.local && (
               <>
                 <button style={S.dmBtn} onClick={() => onMuteParticipant?.(p)}>Mute</button>
+                <button style={S.dmBtn} onClick={() => onStopParticipantCamera?.(p)}>Stop video</button>
                 <button style={S.dmBtn} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>
                 <button style={S.dmBtn} onClick={() => onKickParticipant?.(p)}>Kick</button>
                 <button style={{ ...S.dmBtn, color: '#ef5350', borderColor: 'rgba(239,83,80,0.25)' }} onClick={() => onBanParticipant?.(p)}>Ban</button>
@@ -407,7 +408,7 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, 
           <div style={S.sectionLabel}>Host controls</div>
           <button style={S.hcBtn} onClick={() => onMuteAll?.()}>🔇 Mute all</button>
           <button style={S.hcBtn} onClick={() => onLockRoom?.()}>{isLocked ? '🔓 Unlock Foundry' : '🔒 Lock Foundry'}</button>
-          <button style={{ ...S.hcBtn, color: '#777' }}>Select a participant above to mute, stop share, kick, or ban.</button>
+          <button style={{ ...S.hcBtn, color: '#777' }}>Select a participant above to mute, stop video, stop share, kick, or ban.</button>
         </div>
       )}
     </div>
@@ -600,6 +601,7 @@ export default function FoundryRightPanel({
   onBanParticipant,
   onLockRoom,
   onStopParticipantShare,
+  onStopParticipantCamera,
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [chatSub, setChatSub] = useState('meeting');
@@ -661,10 +663,13 @@ export default function FoundryRightPanel({
           onBanParticipant={onBanParticipant}
           onLockRoom={onLockRoom}
           onStopParticipantShare={onStopParticipantShare}
+          onStopParticipantCamera={onStopParticipantCamera}
           onDmParticipant={(participant) => {
   if (!participant?.userId) {
     setGuestDmParticipant(participant);
+    onSelectDmParticipant?.(participant);
   } else {
+    setGuestDmParticipant(null);
     onSelectDmParticipant?.(participant);
   }
 
