@@ -500,7 +500,7 @@ const checkRoomEmpty = useCallback((current) => {
           const localParticipant = callRef.current?.participants()?.local;
           const localIsOwner = !!localParticipant?.owner;
           const localSessionId = localParticipant?.session_id;
-          const localUserId = localParticipant?.user_id || localParticipant?.userData?.userId || null;
+          const localUserId = localParticipant?.userData?.userId || localParticipant?.user_id || null;
           const targetSessionId = data?.targetSessionId || '*';
           const targetUserId = data?.targetUserId || null;
           const isTargetedAtMe =

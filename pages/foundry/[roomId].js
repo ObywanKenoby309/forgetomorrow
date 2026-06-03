@@ -381,41 +381,10 @@ const handleSendDm = useCallback((target, text) => {
   } catch {}
 }, [session]);
 
-const sendFoundryControl = useCallback(async (action, targetSessionId = '*', payload = {}) => {
+const sendFoundryControl = useCallback((action, targetSessionId = '*', payload = {}) => {
   if (!callRef.current) return;
 
   const resolvedTargetSessionId = targetSessionId || '*';
-
-  // Daily owner direct-control path. updateParticipant is synchronous in some
-  // Daily builds and Promise-based in others, so never chain .catch() from it.
-  // Co-hosts still rely on the app-message fallback below.
-  try {
-    const call = callRef.current;
-    const update = (participantId, patch) => {
-      if (!participantId || typeof call.updateParticipant !== 'function') return;
-      try {
-        const result = call.updateParticipant(participantId, patch);
-        if (result && typeof result.then === 'function') {
-          return result.catch(() => {});
-        }
-      } catch {}
-    };
-
-    if (resolvedTargetSessionId !== '*') {
-      if (action === 'MUTE') update(resolvedTargetSessionId, { setAudio: false });
-      if (action === 'STOP_CAMERA') update(resolvedTargetSessionId, { setVideo: false });
-      if (action === 'STOP_SCREEN_SHARE') update(resolvedTargetSessionId, { setScreenVideo: false });
-    }
-
-    if (action === 'MUTE_ALL') {
-      const current = call.participants?.() || {};
-      Object.values(current)
-        .filter((p) => p && !p.local && !p.owner && p.session_id)
-        .forEach((p) => update(p.session_id, { setAudio: false }));
-    }
-  } catch (err) {
-    console.warn('[foundry] direct Daily control failed, using app-message fallback:', err);
-  }
 
   try {
     callRef.current.sendAppMessage(
