@@ -532,7 +532,7 @@ export default function FoundryMobileLayout({
 
         <button style={S.hostCtrlBtn} onClick={() => onStopParticipantCamera?.(p)}>Stop video</button>
 
-        <button style={S.hostCtrlBtn} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>
+        {p.isScreenSharing && <button style={S.hostCtrlBtn} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>}
 
         <button style={S.hostCtrlBtn} onClick={() => onKickParticipant?.(p)}>Kick</button>
 

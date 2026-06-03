@@ -395,7 +395,7 @@ function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, 
               <>
                 <button style={S.dmBtn} onClick={() => onMuteParticipant?.(p)}>Mute</button>
                 <button style={S.dmBtn} onClick={() => onStopParticipantCamera?.(p)}>Stop video</button>
-                <button style={S.dmBtn} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>
+                {p.isScreenSharing && <button style={S.dmBtn} onClick={() => onStopParticipantShare?.(p)}>Stop share</button>}
                 <button style={S.dmBtn} onClick={() => onKickParticipant?.(p)}>Kick</button>
                 <button style={{ ...S.dmBtn, color: '#ef5350', borderColor: 'rgba(239,83,80,0.25)' }} onClick={() => onBanParticipant?.(p)}>Ban</button>
               </>
@@ -563,6 +563,31 @@ function NotesTab({ notes, onNotesChange }) {
           <div style={S.aiSoon}>Coming soon · Forge Intelligence</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+
+function DmInput({ placeholder, onSend, styles }) {
+  const [draft, setDraft] = useState('');
+
+  const send = () => {
+    const clean = draft.trim();
+    if (!clean) return;
+    onSend?.(clean);
+    setDraft('');
+  };
+
+  return (
+    <div style={styles.chatIn}>
+      <input
+        style={styles.chatInEl}
+        placeholder={placeholder}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && send()}
+      />
+      <button style={styles.sendB} onClick={send}>→</button>
     </div>
   );
 }
@@ -781,29 +806,11 @@ export default function FoundryRightPanel({
         ))}
     </div>
 
-    <div style={S.chatIn}>
-      <input
-        id="guest-dm-input"
-        style={S.chatInEl}
-        placeholder={`Message ${guestDmParticipant.name}...`}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && e.target.value.trim()) {
-            onSendDm?.(guestDmParticipant, e.target.value.trim());
-            e.target.value = '';
-          }
-        }}
-      />
-      <button
-        style={S.sendB}
-        onClick={() => {
-          const el = document.getElementById('guest-dm-input');
-          if (el && el.value.trim()) {
-            onSendDm?.(guestDmParticipant, el.value.trim());
-            el.value = '';
-          }
-        }}
-      >→</button>
-    </div>
+    <DmInput
+      placeholder={`Message ${guestDmParticipant.name}...`}
+      onSend={(text) => onSendDm?.(guestDmParticipant, text)}
+      styles={S}
+    />
   </div>
 ) : (
   <FoundrySignalPanel

@@ -305,21 +305,30 @@ const handleCallReady = useCallback((call) => {
   }, [scheduledEndAt, scheduleAutoEnd]);
 
   const handleParticipantsChange = useCallback((list) => {
-    setParticipants(list.map(p => ({
-      // id = Daily session_id (used for live controls via sendFoundryControl)
-      // userId = Forge platform userId (used for Signal DMs — may be null for external guests)
-      id: p.session_id,
-      userId: p.user_id || p.userData?.userId || null,
-      name: p.user_name || 'Guest',
-      role: p.userData?.role || '',
-      isHost: !!p.owner,
-      micMuted: !p.tracks?.audio || p.tracks.audio.state === 'off',
-      videoOff: !p.tracks?.video || p.tracks.video.state === 'off',
-      isScreenSharing: !!p.tracks?.screenVideo?.persistentTrack && p.tracks?.screenVideo?.state !== 'off' && p.tracks?.screenVideo?.state !== 'blocked',
-      isGuest: !(p.user_id || p.userData?.userId),
-      local: p.local,
-      avatarUrl: p.userData?.avatarUrl || null,
-    })));
+    setParticipants(list.map(p => {
+      // Daily session_id controls live meeting actions.
+      // Forge userId controls Signal/co-host eligibility.
+      // External Daily guests can have a Daily user_id, so only treat user_id as
+      // a Forge user id when it looks like our cuid/cuid2 ids. This prevents
+      // guests from being routed into Signal while still recognizing FT members.
+      const rawDailyUserId = p.user_id || null;
+      const forgeUserId = p.userData?.userId || (String(rawDailyUserId || '').startsWith('cm') ? rawDailyUserId : null);
+
+      return {
+        id: p.session_id,
+        userId: forgeUserId,
+        dailyUserId: rawDailyUserId,
+        name: p.user_name || 'Guest',
+        role: p.userData?.role || '',
+        isHost: !!p.owner,
+        micMuted: !p.tracks?.audio || p.tracks.audio.state === 'off',
+        videoOff: !p.tracks?.video || p.tracks.video.state === 'off',
+        isScreenSharing: !!p.tracks?.screenVideo?.persistentTrack && p.tracks?.screenVideo?.state !== 'off' && p.tracks?.screenVideo?.state !== 'blocked',
+        isGuest: !forgeUserId,
+        local: p.local,
+        avatarUrl: p.userData?.avatarUrl || null,
+      };
+    }));
   }, []);
 
   const handleScreenShareChange = useCallback((sharing) => {
@@ -377,33 +386,32 @@ const sendFoundryControl = useCallback(async (action, targetSessionId = '*', pay
 
   const resolvedTargetSessionId = targetSessionId || '*';
 
-  // Daily owner direct-control path. This fixes host controls on desktop when
-  // app-message routing is delayed or blocked. Co-hosts still use the
-  // app-message fallback below because they are not Daily room owners.
+  // Daily owner direct-control path. updateParticipant is synchronous in some
+  // Daily builds and Promise-based in others, so never chain .catch() from it.
+  // Co-hosts still rely on the app-message fallback below.
   try {
     const call = callRef.current;
+    const update = (participantId, patch) => {
+      if (!participantId || typeof call.updateParticipant !== 'function') return;
+      try {
+        const result = call.updateParticipant(participantId, patch);
+        if (result && typeof result.then === 'function') {
+          return result.catch(() => {});
+        }
+      } catch {}
+    };
 
-    if (resolvedTargetSessionId !== '*' && typeof call.updateParticipant === 'function') {
-      if (action === 'MUTE') {
-        await call.updateParticipant(resolvedTargetSessionId, { setAudio: false });
-      }
-
-      if (action === 'STOP_CAMERA') {
-        await call.updateParticipant(resolvedTargetSessionId, { setVideo: false });
-      }
-
-      if (action === 'STOP_SCREEN_SHARE') {
-        await call.updateParticipant(resolvedTargetSessionId, { setScreenVideo: false });
-      }
+    if (resolvedTargetSessionId !== '*') {
+      if (action === 'MUTE') update(resolvedTargetSessionId, { setAudio: false });
+      if (action === 'STOP_CAMERA') update(resolvedTargetSessionId, { setVideo: false });
+      if (action === 'STOP_SCREEN_SHARE') update(resolvedTargetSessionId, { setScreenVideo: false });
     }
 
-    if (action === 'MUTE_ALL' && typeof call.updateParticipant === 'function') {
+    if (action === 'MUTE_ALL') {
       const current = call.participants?.() || {};
-      await Promise.all(
-        Object.values(current)
-          .filter((p) => p && !p.local && !p.owner && p.session_id)
-          .map((p) => call.updateParticipant(p.session_id, { setAudio: false }).catch(() => {}))
-      );
+      Object.values(current)
+        .filter((p) => p && !p.local && !p.owner && p.session_id)
+        .forEach((p) => update(p.session_id, { setAudio: false }));
     }
   } catch (err) {
     console.warn('[foundry] direct Daily control failed, using app-message fallback:', err);
