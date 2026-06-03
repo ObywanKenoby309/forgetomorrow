@@ -1,21 +1,69 @@
-// pages/api/contacts/request.js
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   try {
     const session = await getServerSession(req, res, authOptions);
+
     if (!session?.user?.id) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
     const userId = session.user.id;
+
+    // ============================================================
+    // GET /api/contacts/request?incoming=true
+    // ============================================================
+    if (req.method === 'GET') {
+      const { incoming } = req.query;
+
+      if (incoming === 'true') {
+        const requests = await prisma.contactRequest.findMany({
+          where: {
+            toUserId: userId,
+            status: 'PENDING',
+          },
+          include: {
+            fromUser: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+        return res.status(200).json({
+          requests: requests.map((r) => ({
+            id: r.id,
+            fromUserId: r.fromUserId,
+            fromName:
+              [r.fromUser?.firstName, r.fromUser?.lastName]
+                .filter(Boolean)
+                .join(' ') || 'User',
+            fromAvatarUrl: r.fromUser?.avatarUrl || null,
+            createdAt: r.createdAt,
+          })),
+        });
+      }
+
+      return res.status(200).json({ requests: [] });
+    }
+
+    // ============================================================
+    // POST /api/contacts/request
+    // ============================================================
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', 'GET, POST');
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
     const { toUserId } = req.body || {};
 
     if (!toUserId || typeof toUserId !== 'string') {
@@ -28,7 +76,6 @@ export default async function handler(req, res) {
         .json({ error: 'You cannot connect with yourself.' });
     }
 
-    // 1) Are they already contacts RIGHT NOW?
     const existingContact = await prisma.contact.findFirst({
       where: {
         OR: [
@@ -39,14 +86,12 @@ export default async function handler(req, res) {
     });
 
     if (existingContact) {
-      // Already connected → nothing new to create
       return res.status(200).json({
         ok: true,
         alreadyConnected: true,
       });
     }
 
-    // 2) Any existing request either direction?
     const existingRequest = await prisma.contactRequest.findFirst({
       where: {
         OR: [
@@ -57,7 +102,6 @@ export default async function handler(req, res) {
     });
 
     if (existingRequest) {
-      // If there is a *pending* request already, just surface it.
       if (existingRequest.status === 'PENDING') {
         return res.status(200).json({
           ok: true,
@@ -67,8 +111,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // If it was DECLINED / CANCELED / ACCEPTED in the past:
-      // 👉 allow a re-request by "re-opening" as a fresh PENDING from the current user.
       const reopened = await prisma.contactRequest.update({
         where: { id: existingRequest.id },
         data: {
@@ -81,13 +123,12 @@ export default async function handler(req, res) {
 
       return res.status(200).json({
         ok: true,
-        status: reopened.status, // "PENDING"
+        status: reopened.status,
         requestId: reopened.id,
         reopened: true,
       });
     }
 
-    // 3) No contact + no prior request → create brand new PENDING request
     const request = await prisma.contactRequest.create({
       data: {
         fromUserId: userId,
@@ -97,7 +138,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
-      status: request.status, // "PENDING"
+      status: request.status,
       requestId: request.id,
       reopened: false,
     });
