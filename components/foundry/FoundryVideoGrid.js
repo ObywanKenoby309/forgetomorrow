@@ -178,13 +178,9 @@ function ScreenShareTile({ track, sharerName, isLocal, onStopShare }) {
 
   useEffect(() => {
     const el = videoRef.current;
-    if (!el) return;
-    if (track) {
-      el.srcObject = new MediaStream([track]);
-      el.play().catch(() => {});
-    } else {
-      el.srcObject = null;
-    }
+    if (!el || !track) return;
+    el.srcObject = new MediaStream([track]);
+    el.play().catch(() => {});
   }, [track]);
 
   return (
@@ -220,34 +216,36 @@ function VideoTile({ participant, isMain = false }) {
 
   const videoTrack = participant?.tracks?.video?.persistentTrack;
   const audioTrack = participant?.tracks?.audio?.persistentTrack;
-  const videoState = participant?.tracks?.video?.state;
-  const audioState = participant?.tracks?.audio?.state;
-  const videoOff = videoState === 'off' || videoState === 'blocked' || !videoTrack;
-  const micMuted = audioState === 'off' || audioState === 'blocked';
 
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    const isActive = videoState !== 'off' && videoState !== 'blocked';
-    if (videoTrack && isActive) {
+    if (videoTrack) {
       el.srcObject = new MediaStream([videoTrack]);
       el.play().catch(() => {});
     } else {
       el.srcObject = null;
     }
-  }, [videoTrack, videoState]);
+  }, [videoTrack]);
 
   useEffect(() => {
     const el = audioRef.current;
     if (!el || participant?.local) return;
-    const isActive = audioState !== 'off' && audioState !== 'blocked';
-    if (audioTrack && isActive) {
+    if (audioTrack) {
       el.srcObject = new MediaStream([audioTrack]);
       el.play().catch(() => {});
     } else {
       el.srcObject = null;
     }
-  }, [audioTrack, audioState, participant?.local]);
+  }, [audioTrack, participant?.local]);
+
+  const name = participant?.user_name || 'Guest';
+  const avatarUrl = participant?.userData?.avatarUrl || null;
+  const isGuest = !avatarUrl;
+  const videoState = participant?.tracks?.video?.state;
+  const videoOff = videoState === 'off' || videoState === 'blocked' || !videoTrack;
+  const audioState = participant?.tracks?.audio?.state;
+  const micMuted = audioState === 'off' || audioState === 'blocked';
 
   if (isMain) {
     return (
