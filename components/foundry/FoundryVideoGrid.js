@@ -222,11 +222,12 @@ function VideoTile({ participant, isMain = false }) {
   const audioTrack = participant?.tracks?.audio?.persistentTrack;
   const videoState = participant?.tracks?.video?.state;
   const audioState = participant?.tracks?.audio?.state;
+  const videoOff = videoState === 'off' || videoState === 'blocked' || !videoTrack;
+  const micMuted = audioState === 'off' || audioState === 'blocked';
 
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    // Re-run when track reference OR state changes
     const isActive = videoState !== 'off' && videoState !== 'blocked';
     if (videoTrack && isActive) {
       el.srcObject = new MediaStream([videoTrack]);
@@ -247,14 +248,6 @@ function VideoTile({ participant, isMain = false }) {
       el.srcObject = null;
     }
   }, [audioTrack, audioState, participant?.local]);
-
-  const name = participant?.user_name || 'Guest';
-  const avatarUrl = participant?.userData?.avatarUrl || null;
-  const isGuest = !avatarUrl;
-  const videoState = participant?.tracks?.video?.state;
-  const videoOff = videoState === 'off' || videoState === 'blocked' || !videoTrack;
-  const audioState = participant?.tracks?.audio?.state;
-  const micMuted = audioState === 'off' || audioState === 'blocked';
 
   if (isMain) {
     return (
