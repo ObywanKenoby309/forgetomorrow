@@ -388,6 +388,37 @@ onRemoteStopCamera = null,
   const [remoteScreenSharer, setRemoteScreenSharer] = useState('');
   const [isLocalSharing, setIsLocalSharing] = useState(false);
 
+  // Parent callbacks can change identity every render.
+  // Keep them in refs so the Daily join effect does not tear down/rejoin the room.
+  const onCallReadyRef = useRef(onCallReady);
+  const onParticipantsChangeRef = useRef(onParticipantsChange);
+  const onScreenShareChangeRef = useRef(onScreenShareChange);
+  const onRoomEmptyRef = useRef(onRoomEmpty);
+  const onHostEndedRef = useRef(onHostEnded);
+  const onScheduledEndRef = useRef(onScheduledEnd);
+  const onRemoteMuteRef = useRef(onRemoteMute);
+  const onRemoteStopCameraRef = useRef(onRemoteStopCamera);
+
+  useEffect(() => {
+    onCallReadyRef.current = onCallReady;
+    onParticipantsChangeRef.current = onParticipantsChange;
+    onScreenShareChangeRef.current = onScreenShareChange;
+    onRoomEmptyRef.current = onRoomEmpty;
+    onHostEndedRef.current = onHostEnded;
+    onScheduledEndRef.current = onScheduledEnd;
+    onRemoteMuteRef.current = onRemoteMute;
+    onRemoteStopCameraRef.current = onRemoteStopCamera;
+  }, [
+    onCallReady,
+    onParticipantsChange,
+    onScreenShareChange,
+    onRoomEmpty,
+    onHostEnded,
+    onScheduledEnd,
+    onRemoteMute,
+    onRemoteStopCamera,
+  ]);
+
   const syncScreenShareState = useCallback((current) => {
     const local = current?.local;
 
@@ -399,7 +430,7 @@ onRemoteStopCamera = null,
     if (localScreen) {
       setScreenTrack(localScreen);
       setIsLocalSharing(true);
-      onScreenShareChange?.(true);
+      onScreenShareChangeRef.current?.(true);
     } else {
       setScreenTrack(null);
       setIsLocalSharing(false);
@@ -417,7 +448,7 @@ onRemoteStopCamera = null,
       setRemoteScreenTrack(null);
       setRemoteScreenSharer('');
     }
-  }, [onScreenShareChange]);
+  }, []);
 
   const updateParticipants = useCallback(() => {
     if (!callRef.current) return;
@@ -441,11 +472,11 @@ const checkRoomEmpty = useCallback((current) => {
 
       if (stillEmpty) {
         roomEndedRef.current = true;
-        onRoomEmpty?.();
+        onRoomEmptyRef.current?.();
       }
     }, 3000);
   }
-}, [onRoomEmpty]);
+}, []);
 
   useEffect(() => {
     if (!roomId) return;
@@ -467,7 +498,7 @@ const checkRoomEmpty = useCallback((current) => {
           token = data.token;
           roomUrl = data.roomUrl;
           if (data.scheduledEndAt) {
-            onScheduledEnd?.(data.scheduledEndAt, !!data.isOwner);
+            onScheduledEndRef.current?.(data.scheduledEndAt, !!data.isOwner);
           }
         }
 
@@ -513,7 +544,7 @@ const checkRoomEmpty = useCallback((current) => {
 
           setScreenTrack(null);
           setIsLocalSharing(false);
-          onScreenShareChange?.(false);
+          onScreenShareChangeRef.current?.(false);
 
           const current = callRef.current?.participants() || {};
           setParticipants({ ...current });
@@ -524,7 +555,7 @@ const checkRoomEmpty = useCallback((current) => {
           if (!destroyed) {
             setJoinState('joined');
             updateParticipants();
-            onCallReady?.(call);
+            onCallReadyRef.current?.(call);
             applyFoundryBackground(call, initialBackground).catch((err) => {
               console.error('[foundry] initial background failed:', err);
             });
@@ -542,7 +573,7 @@ const checkRoomEmpty = useCallback((current) => {
         call.on('meeting-ended', () => {
           if (!destroyed) {
             setJoinState('idle');
-            onHostEnded?.();
+            onHostEndedRef.current?.();
           }
         });
 
@@ -566,21 +597,21 @@ const checkRoomEmpty = useCallback((current) => {
           try {
             if (data.action === 'MUTE' && isTargetedAtMe) {
               await applyLocalControl(callRef.current, 'MUTE');
-              onRemoteMute?.();
+              onRemoteMuteRef.current?.();
               setTimeout(updateParticipants, 100);
               setTimeout(updateParticipants, 500);
             }
 
             if (data.action === 'MUTE_ALL' && !localIsOwner) {
               await applyLocalControl(callRef.current, 'MUTE_ALL');
-              onRemoteMute?.();
+              onRemoteMuteRef.current?.();
               setTimeout(updateParticipants, 100);
               setTimeout(updateParticipants, 500);
             }
 
             if (data.action === 'STOP_CAMERA' && isTargetedAtMe) {
               await applyLocalControl(callRef.current, 'STOP_CAMERA');
-              onRemoteStopCamera?.();
+              onRemoteStopCameraRef.current?.();
               setTimeout(updateParticipants, 100);
               setTimeout(updateParticipants, 500);
             }
@@ -589,7 +620,7 @@ const checkRoomEmpty = useCallback((current) => {
               await applyLocalControl(callRef.current, 'STOP_SCREEN_SHARE');
               setScreenTrack(null);
               setIsLocalSharing(false);
-              onScreenShareChange?.(false);
+              onScreenShareChangeRef.current?.(false);
               setTimeout(updateParticipants, 100);
               setTimeout(updateParticipants, 500);
             }
@@ -600,7 +631,7 @@ const checkRoomEmpty = useCallback((current) => {
               await callRef.current?.destroy().catch(() => {});
               callRef.current = null;
               setJoinState('idle');
-              onHostEnded?.();
+              onHostEndedRef.current?.();
             }
           } catch (err) {
             console.error('[foundry] control message failed:', err);
@@ -626,7 +657,7 @@ const checkRoomEmpty = useCallback((current) => {
       if (call) { call.leave().catch(() => {}); call.destroy().catch(() => {}); }
       callRef.current = null;
     };
-  }, [roomId, guestToken, guestRoomUrl, updateParticipants, checkRoomEmpty, syncScreenShareState, onCallReady, onScreenShareChange, onScheduledEnd, onRemoteMute, onRemoteStopCamera]);
+  }, [roomId, guestToken, guestRoomUrl]);
 
   useEffect(() => {
     if (!callRef.current || joinState !== 'joined') return;
@@ -646,7 +677,7 @@ const checkRoomEmpty = useCallback((current) => {
   }, [initialBackground, joinState]);
 
   useEffect(() => {
-    onParticipantsChange?.(Object.values(participants));
+    onParticipantsChangeRef.current?.(Object.values(participants));
   }, [participants]);
 
   const handleStopShare = useCallback(async () => {
@@ -654,8 +685,8 @@ const checkRoomEmpty = useCallback((current) => {
     try { await callRef.current.stopScreenShare(); } catch {}
     setScreenTrack(null);
     setIsLocalSharing(false);
-    onScreenShareChange?.(false);
-  }, [onScreenShareChange]);
+    onScreenShareChangeRef.current?.(false);
+  }, []);
 
   const participantList = Object.values(participants);
   const local = participantList.find(p => p.local);
