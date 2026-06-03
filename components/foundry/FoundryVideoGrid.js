@@ -178,9 +178,13 @@ function ScreenShareTile({ track, sharerName, isLocal, onStopShare }) {
 
   useEffect(() => {
     const el = videoRef.current;
-    if (!el || !track) return;
-    el.srcObject = new MediaStream([track]);
-    el.play().catch(() => {});
+    if (!el) return;
+    if (track) {
+      el.srcObject = new MediaStream([track]);
+      el.play().catch(() => {});
+    } else {
+      el.srcObject = null;
+    }
   }, [track]);
 
   return (
@@ -216,28 +220,33 @@ function VideoTile({ participant, isMain = false }) {
 
   const videoTrack = participant?.tracks?.video?.persistentTrack;
   const audioTrack = participant?.tracks?.audio?.persistentTrack;
+  const videoState = participant?.tracks?.video?.state;
+  const audioState = participant?.tracks?.audio?.state;
 
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    if (videoTrack) {
+    // Re-run when track reference OR state changes
+    const isActive = videoState !== 'off' && videoState !== 'blocked';
+    if (videoTrack && isActive) {
       el.srcObject = new MediaStream([videoTrack]);
       el.play().catch(() => {});
     } else {
       el.srcObject = null;
     }
-  }, [videoTrack]);
+  }, [videoTrack, videoState]);
 
   useEffect(() => {
     const el = audioRef.current;
     if (!el || participant?.local) return;
-    if (audioTrack) {
+    const isActive = audioState !== 'off' && audioState !== 'blocked';
+    if (audioTrack && isActive) {
       el.srcObject = new MediaStream([audioTrack]);
       el.play().catch(() => {});
     } else {
       el.srcObject = null;
     }
-  }, [audioTrack, participant?.local]);
+  }, [audioTrack, audioState, participant?.local]);
 
   const name = participant?.user_name || 'Guest';
   const avatarUrl = participant?.userData?.avatarUrl || null;

@@ -662,15 +662,12 @@ export default function FoundryRightPanel({
           onLockRoom={onLockRoom}
           onStopParticipantShare={onStopParticipantShare}
           onDmParticipant={(participant) => {
-  if (!participant?.userId || participant?.isGuest) {
-    // External guest — use session DM
+  if (!participant?.userId) {
     setGuestDmParticipant(participant);
-    onSelectDmParticipant?.(null); // clear any Signal DM target
   } else {
-    // Internal FT user — use Signal
-    setGuestDmParticipant(null); // clear guest DM
     onSelectDmParticipant?.(participant);
   }
+
   setActiveTab('Chat');
   setChatSub('dms');
 }}
@@ -781,6 +778,7 @@ export default function FoundryRightPanel({
 
     <div style={S.chatIn}>
       <input
+        id="guest-dm-input"
         style={S.chatInEl}
         placeholder={`Message ${guestDmParticipant.name}...`}
         onKeyDown={(e) => {
@@ -790,6 +788,16 @@ export default function FoundryRightPanel({
           }
         }}
       />
+      <button
+        style={S.sendB}
+        onClick={() => {
+          const el = document.getElementById('guest-dm-input');
+          if (el && el.value.trim()) {
+            onSendDm?.(guestDmParticipant, el.value.trim());
+            el.value = '';
+          }
+        }}
+      >→</button>
     </div>
   </div>
 ) : (
