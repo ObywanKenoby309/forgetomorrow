@@ -288,11 +288,18 @@ export default function FoundryTopBar({
         });
       }
 
-      if (speakerId) {
-        if (callObject.setOutputDeviceAsync) {
-          await callObject.setOutputDeviceAsync(speakerId);
-        } else if (callObject.setOutputDevice) {
-          await callObject.setOutputDevice(speakerId);
+      if (speakerId && speakerId !== 'default') {
+        const outputDevices = await navigator.mediaDevices.enumerateDevices();
+        const validOutputDevice = outputDevices.some(
+          (device) => device.kind === 'audiooutput' && device.deviceId === speakerId
+        );
+
+        if (validOutputDevice) {
+          if (callObject.setOutputDeviceAsync) {
+            await callObject.setOutputDeviceAsync(speakerId);
+          } else if (callObject.setOutputDevice) {
+            await callObject.setOutputDevice(speakerId);
+          }
         }
       }
 

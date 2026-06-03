@@ -173,6 +173,62 @@ function initials(name) {
   return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
+function getTrack(participant, kind) {
+  const trackObj = participant?.tracks?.[kind];
+  if (trackObj?.persistentTrack) return trackObj.persistentTrack;
+
+  if (kind === 'video' && participant?.videoTrack) return participant.videoTrack;
+  if (kind === 'audio' && participant?.audioTrack) return participant.audioTrack;
+  if (kind === 'screenVideo' && participant?.screenVideoTrack) return participant.screenVideoTrack;
+
+  return null;
+}
+
+function isTrackOff(participant, kind) {
+  const trackObj = participant?.tracks?.[kind];
+  const state = trackObj?.state;
+
+  if (state === 'off' || state === 'blocked' || state === 'interrupted') return true;
+
+  if (kind === 'audio' && participant?.audio === false) return true;
+  if (kind === 'video' && participant?.video === false) return true;
+  if (kind === 'screenVideo' && participant?.screen === false) return true;
+
+  return false;
+}
+
+async function applyLocalControl(callObject, action) {
+  if (!callObject) return;
+
+  const safeCall = (fn) => {
+    try {
+      const result = fn();
+      if (result && typeof result.then === 'function') {
+        return result.catch(() => {});
+      }
+      return result;
+    } catch {
+      return null;
+    }
+  };
+
+  if (action === 'MUTE' || action === 'MUTE_ALL') {
+    safeCall(() => callObject.updateParticipant?.('local', { setAudio: false }));
+    safeCall(() => callObject.setLocalAudio?.(false));
+  }
+
+  if (action === 'STOP_CAMERA') {
+    safeCall(() => callObject.updateParticipant?.('local', { setVideo: false }));
+    safeCall(() => callObject.setLocalVideo?.(false));
+  }
+
+  if (action === 'STOP_SCREEN_SHARE') {
+    safeCall(() => callObject.updateParticipant?.('local', { setScreenShare: false }));
+    safeCall(() => callObject.stopScreenShare?.());
+  }
+}
+
+
 function ScreenShareTile({ track, sharerName, isLocal, onStopShare }) {
   const videoRef = useRef(null);
 
@@ -214,8 +270,8 @@ function VideoTile({ participant, isMain = false }) {
   const videoRef = useRef(null);
   const audioRef = useRef(null);
 
-  const videoTrack = participant?.tracks?.video?.persistentTrack;
-  const audioTrack = participant?.tracks?.audio?.persistentTrack;
+  const videoTrack = getTrack(participant, 'video');
+  const audioTrack = getTrack(participant, 'audio');
 
   useEffect(() => {
     const el = videoRef.current;
@@ -243,16 +299,9 @@ function VideoTile({ participant, isMain = false }) {
   const avatarUrl = participant?.userData?.avatarUrl || null;
   const isGuest = !avatarUrl;
   const videoState = participant?.tracks?.video?.state;
-  const videoOff =
-  videoState === 'off' ||
-  videoState === 'blocked' ||
-  !videoTrack;
-
-const audioState = participant?.tracks?.audio?.state;
-const micMuted =
-  audioState === 'off' ||
-  audioState === 'blocked' ||
-  !audioTrack;
+  const videoOff = isTrackOff(participant, 'video') || !videoTrack;
+  const audioState = participant?.tracks?.audio?.state;
+  const micMuted = isTrackOff(participant, 'audio');
 
   if (isMain) {
     return (
@@ -343,10 +392,8 @@ onRemoteStopCamera = null,
     const local = current?.local;
 
     const localScreen =
-      local?.tracks?.screenVideo?.persistentTrack &&
-      local?.tracks?.screenVideo?.state !== 'off' &&
-      local?.tracks?.screenVideo?.state !== 'blocked'
-        ? local.tracks.screenVideo.persistentTrack
+      !isTrackOff(local, 'screenVideo')
+        ? getTrack(local, 'screenVideo')
         : null;
 
     if (localScreen) {
@@ -360,13 +407,11 @@ onRemoteStopCamera = null,
 
     const remoteSharer = Object.values(current || {}).find((p) => (
       !p.local &&
-      p.tracks?.screenVideo?.persistentTrack &&
-      p.tracks?.screenVideo?.state !== 'off' &&
-      p.tracks?.screenVideo?.state !== 'blocked'
+      getTrack(p, 'screenVideo') && !isTrackOff(p, 'screenVideo')
     ));
 
     if (remoteSharer) {
-      setRemoteScreenTrack(remoteSharer.tracks.screenVideo.persistentTrack || null);
+      setRemoteScreenTrack(getTrack(remoteSharer, 'screenVideo'));
       setRemoteScreenSharer(remoteSharer.user_name || 'Participant');
     } else {
       setRemoteScreenTrack(null);
@@ -438,6 +483,8 @@ const checkRoomEmpty = useCallback((current) => {
         const refresh = () => { if (!destroyed) updateParticipants(); };
         call.on('participant-joined', refresh);
         call.on('participant-updated', refresh);
+        call.on('track-started', refresh);
+        call.on('track-stopped', refresh);
 
         call.on('participant-left', () => {
           if (destroyed) return;
@@ -518,34 +565,33 @@ const checkRoomEmpty = useCallback((current) => {
 
           try {
             if (data.action === 'MUTE' && isTargetedAtMe) {
-  callRef.current?.setLocalAudio(false);
-  onRemoteMute?.();
+              await applyLocalControl(callRef.current, 'MUTE');
+              onRemoteMute?.();
+              setTimeout(updateParticipants, 100);
+              setTimeout(updateParticipants, 500);
+            }
 
-  setTimeout(updateParticipants, 100);
-  setTimeout(updateParticipants, 500);
-}
+            if (data.action === 'MUTE_ALL' && !localIsOwner) {
+              await applyLocalControl(callRef.current, 'MUTE_ALL');
+              onRemoteMute?.();
+              setTimeout(updateParticipants, 100);
+              setTimeout(updateParticipants, 500);
+            }
 
-if (data.action === 'MUTE_ALL' && !localIsOwner) {
-  callRef.current?.setLocalAudio(false);
-  onRemoteMute?.();
-
-  setTimeout(updateParticipants, 100);
-  setTimeout(updateParticipants, 500);
-}
-
-if (data.action === 'STOP_CAMERA' && isTargetedAtMe) {
-  callRef.current?.setLocalVideo(false);
-  onRemoteStopCamera?.();
-
-  setTimeout(updateParticipants, 100);
-  setTimeout(updateParticipants, 500);
-}
+            if (data.action === 'STOP_CAMERA' && isTargetedAtMe) {
+              await applyLocalControl(callRef.current, 'STOP_CAMERA');
+              onRemoteStopCamera?.();
+              setTimeout(updateParticipants, 100);
+              setTimeout(updateParticipants, 500);
+            }
 
             if (data.action === 'STOP_SCREEN_SHARE' && isTargetedAtMe) {
-              await callRef.current?.stopScreenShare?.();
+              await applyLocalControl(callRef.current, 'STOP_SCREEN_SHARE');
               setScreenTrack(null);
               setIsLocalSharing(false);
               onScreenShareChange?.(false);
+              setTimeout(updateParticipants, 100);
+              setTimeout(updateParticipants, 500);
             }
 
             if ((data.action === 'KICK' || data.action === 'BAN') && isTargetedAtMe) {
@@ -580,7 +626,7 @@ if (data.action === 'STOP_CAMERA' && isTargetedAtMe) {
       if (call) { call.leave().catch(() => {}); call.destroy().catch(() => {}); }
       callRef.current = null;
     };
-  }, [roomId, guestToken, guestRoomUrl, updateParticipants, checkRoomEmpty, syncScreenShareState, onCallReady, onScreenShareChange, onScheduledEnd]);
+  }, [roomId, guestToken, guestRoomUrl, updateParticipants, checkRoomEmpty, syncScreenShareState, onCallReady, onScreenShareChange, onScheduledEnd, onRemoteMute, onRemoteStopCamera]);
 
   useEffect(() => {
     if (!callRef.current || joinState !== 'joined') return;

@@ -306,13 +306,35 @@ const handleCallReady = useCallback((call) => {
 
   const handleParticipantsChange = useCallback((list) => {
     setParticipants(list.map(p => {
-      // Daily session_id controls live meeting actions.
-      // Forge userId controls Signal/co-host eligibility.
-      // External Daily guests can have a Daily user_id, so only treat user_id as
-      // a Forge user id when it looks like our cuid/cuid2 ids. This prevents
-      // guests from being routed into Signal while still recognizing FT members.
       const rawDailyUserId = p.user_id || null;
       const forgeUserId = p.userData?.userId || (String(rawDailyUserId || '').startsWith('cm') ? rawDailyUserId : null);
+
+      const audioState = p.tracks?.audio?.state || null;
+      const videoState = p.tracks?.video?.state || null;
+      const screenState = p.tracks?.screenVideo?.state || null;
+
+      const micMuted =
+        p.audio === false ||
+        !p.tracks?.audio ||
+        audioState === 'off' ||
+        audioState === 'blocked' ||
+        audioState === 'interrupted';
+
+      const videoOff =
+        p.video === false ||
+        !p.tracks?.video ||
+        videoState === 'off' ||
+        videoState === 'blocked' ||
+        videoState === 'interrupted';
+
+      const isScreenSharing =
+        p.screen === true ||
+        (
+          !!p.tracks?.screenVideo?.persistentTrack &&
+          screenState !== 'off' &&
+          screenState !== 'blocked' &&
+          screenState !== 'interrupted'
+        );
 
       return {
         id: p.session_id,
@@ -321,24 +343,10 @@ const handleCallReady = useCallback((call) => {
         name: p.user_name || 'Guest',
         role: p.userData?.role || '',
         isHost: !!p.owner,
-        micMuted:
-		  !p.tracks?.audio ||
-		  p.tracks.audio.state === 'off' ||
-		  p.tracks.audio.state === 'blocked' ||
-		  !p.tracks.audio.persistentTrack,
-
-		videoOff:
-		  !p.tracks?.video ||
-		  p.tracks.video.state === 'off' ||
-		  p.tracks.video.state === 'blocked' ||
-		  !p.tracks.video.persistentTrack,
-
-		isScreenSharing:
-		  !!p.tracks?.screenVideo?.persistentTrack &&
-		  p.tracks.screenVideo.state !== 'off' &&
-		  p.tracks.screenVideo.state !== 'blocked',
-  
-		isGuest: !forgeUserId,
+        micMuted,
+        videoOff,
+        isScreenSharing,
+        isGuest: !forgeUserId,
         local: p.local,
         avatarUrl: p.userData?.avatarUrl || null,
       };
@@ -399,9 +407,38 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
   if (!callRef.current) return;
 
   const resolvedTargetSessionId = targetSessionId || '*';
+  const call = callRef.current;
+
+  const safeDailyUpdate = (participantId, patch) => {
+    if (!participantId || typeof call.updateParticipant !== 'function') return;
+    try {
+      const result = call.updateParticipant(participantId, patch);
+      if (result && typeof result.then === 'function') {
+        result.catch((err) => console.warn('[foundry] updateParticipant failed:', err));
+      }
+    } catch (err) {
+      console.warn('[foundry] updateParticipant threw:', err);
+    }
+  };
+
+  // Host/owner path. Daily requires participant-admin permission for remote
+  // mute/camera/screen controls. The app-message fallback below still helps
+  // co-hosts and keeps the recipient UI state synchronized.
+  if (resolvedTargetSessionId !== '*') {
+    if (action === 'MUTE') safeDailyUpdate(resolvedTargetSessionId, { setAudio: false });
+    if (action === 'STOP_CAMERA') safeDailyUpdate(resolvedTargetSessionId, { setVideo: false });
+    if (action === 'STOP_SCREEN_SHARE') safeDailyUpdate(resolvedTargetSessionId, { setScreenShare: false });
+  }
+
+  if (action === 'MUTE_ALL') {
+    const current = call.participants?.() || {};
+    Object.values(current)
+      .filter((p) => p && !p.local && !p.owner && p.session_id)
+      .forEach((p) => safeDailyUpdate(p.session_id, { setAudio: false }));
+  }
 
   try {
-    callRef.current.sendAppMessage(
+    call.sendAppMessage(
       {
         type: 'FOUNDRY_CONTROL',
         action,

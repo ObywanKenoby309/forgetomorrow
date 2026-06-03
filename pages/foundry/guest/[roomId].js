@@ -389,14 +389,45 @@ export default function GuestFoundryRoom({
 
   const handleParticipantsChange = useCallback((list) => {
     setParticipants(
-      list.map((p) => ({
-        id: p.session_id,
-        name: p.user_name || 'Guest',
-        isHost: !!p.owner,
-        micMuted: !p.tracks?.audio || p.tracks.audio.state === 'off',
-        videoOff: !p.tracks?.video || p.tracks.video.state === 'off',
-        local: p.local,
-      }))
+      list.map((p) => {
+        const audioState = p.tracks?.audio?.state || null;
+        const videoState = p.tracks?.video?.state || null;
+        const screenState = p.tracks?.screenVideo?.state || null;
+
+        const micMuted =
+          p.audio === false ||
+          !p.tracks?.audio ||
+          audioState === 'off' ||
+          audioState === 'blocked' ||
+          audioState === 'interrupted';
+
+        const videoOff =
+          p.video === false ||
+          !p.tracks?.video ||
+          videoState === 'off' ||
+          videoState === 'blocked' ||
+          videoState === 'interrupted';
+
+        const isScreenSharing =
+          p.screen === true ||
+          (
+            !!p.tracks?.screenVideo?.persistentTrack &&
+            screenState !== 'off' &&
+            screenState !== 'blocked' &&
+            screenState !== 'interrupted'
+          );
+
+        return {
+          id: p.session_id,
+          name: p.user_name || 'Guest',
+          isHost: !!p.owner,
+          micMuted,
+          videoOff,
+          isScreenSharing,
+          local: p.local,
+          isGuest: !p.owner,
+        };
+      })
     );
   }, []);
 
@@ -647,6 +678,8 @@ const openInChrome = () => {
           micMuted={micMuted}
           camOff={camOff}
           onCallReady={handleCallReady}
+          onRemoteMute={() => setMicMuted(true)}
+          onRemoteStopCamera={() => setCamOff(true)}
           onParticipantsChange={handleParticipantsChange}
           onScreenShareChange={handleScreenShareChange}
           onInvite={() => {}}
@@ -681,6 +714,8 @@ const openInChrome = () => {
           micMuted={micMuted}
           camOff={camOff}
           onCallReady={handleCallReady}
+          onRemoteMute={() => setMicMuted(true)}
+          onRemoteStopCamera={() => setCamOff(true)}
           onParticipantsChange={handleParticipantsChange}
           onInvite={() => {}}
           onHostEnded={() => setShowConversionBanner(true)}

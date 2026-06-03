@@ -573,6 +573,55 @@ function NotesTab({ notes, onNotesChange }) {
 }
 
 
+function ExternalDmList({ participants, sessionDms, onOpenGuestDm }) {
+  const externalParticipants = participants.filter((p) => !p.local && (p.isGuest || !p.userId));
+
+  if (externalParticipants.length === 0) return null;
+
+  const lastMessageFor = (participant) => {
+    const messages = (sessionDms || []).filter(
+      (dm) => dm.fromSessionId === participant.id || dm.toSessionId === participant.id
+    );
+    return messages[messages.length - 1] || null;
+  };
+
+  return (
+    <div style={{ marginBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>
+      <div style={S.sectionLabel}>External guests</div>
+      {externalParticipants.map((participant) => {
+        const last = lastMessageFor(participant);
+
+        return (
+          <div
+            key={participant.id}
+            style={S.threadItem(false)}
+            onClick={() => onOpenGuestDm?.(participant)}
+          >
+            {participant.avatarUrl ? (
+              <img
+                src={participant.avatarUrl}
+                alt={participant.name}
+                style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+              />
+            ) : (
+              <div style={S.avatar()}>{initials(participant.name)}</div>
+            )}
+
+            <div style={S.threadInfo}>
+              <div style={S.threadName}>{participant.name || 'External guest'}</div>
+              <div style={S.threadPreview}>
+                {last ? `${last.fromName}: ${last.text}` : 'Tap to message during this Foundry'}
+              </div>
+            </div>
+
+            <span style={S.foundryBadge}>Guest</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function DmInput({ placeholder, onSend, styles }) {
   const [draft, setDraft] = useState('');
 
@@ -760,6 +809,17 @@ export default function FoundryRightPanel({
         {/* Signal DMs — always mounted, hidden when not active */}
         {/* KEY FIX: FoundrySignalPanel is always in the tree so its hooks never change count */}
         <div style={{ display: chatSub === 'dms' ? 'flex' : 'none', flex: 1, minHeight: 0, flexDirection: 'column' }}>
+          {!guestDmParticipant && (
+            <ExternalDmList
+              participants={participants}
+              sessionDms={sessionDms}
+              onOpenGuestDm={(participant) => {
+                setGuestDmParticipant(participant);
+                onSelectDmParticipant?.(participant);
+              }}
+            />
+          )}
+
           {guestDmParticipant ? (
   <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
     <div style={{
