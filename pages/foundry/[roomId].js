@@ -321,10 +321,24 @@ const handleCallReady = useCallback((call) => {
         name: p.user_name || 'Guest',
         role: p.userData?.role || '',
         isHost: !!p.owner,
-        micMuted: !p.tracks?.audio || p.tracks.audio.state === 'off',
-        videoOff: !p.tracks?.video || p.tracks.video.state === 'off',
-        isScreenSharing: !!p.tracks?.screenVideo?.persistentTrack && p.tracks?.screenVideo?.state !== 'off' && p.tracks?.screenVideo?.state !== 'blocked',
-        isGuest: !forgeUserId,
+        micMuted:
+		  !p.tracks?.audio ||
+		  p.tracks.audio.state === 'off' ||
+		  p.tracks.audio.state === 'blocked' ||
+		  !p.tracks.audio.persistentTrack,
+
+		videoOff:
+		  !p.tracks?.video ||
+		  p.tracks.video.state === 'off' ||
+		  p.tracks.video.state === 'blocked' ||
+		  !p.tracks.video.persistentTrack,
+
+		isScreenSharing:
+		  !!p.tracks?.screenVideo?.persistentTrack &&
+		  p.tracks.screenVideo.state !== 'off' &&
+		  p.tracks.screenVideo.state !== 'blocked',
+  
+		isGuest: !forgeUserId,
         local: p.local,
         avatarUrl: p.userData?.avatarUrl || null,
       };

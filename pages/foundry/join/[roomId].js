@@ -123,11 +123,13 @@ export default function GuestJoin({
 
   useEffect(() => {
     const ua = navigator.userAgent || '';
-    const isGmail = /GSA\//.test(ua) || /GSA/.test(ua);
-    const isFB = /FBAN|FBAV|\[FB/.test(ua);
+    const isGmailIOS = /GSA[\\/\\s]/.test(ua);
+    const isFB = /FBAN|FBAV/.test(ua);
     const isIG = /Instagram/.test(ua);
-    const isAndroidWV = /wv/.test(ua) && /Android/.test(ua);
-    if (isGmail || isFB || isIG || isAndroidWV) {
+    const isAndroidWV = /Android/.test(ua) && /wv/.test(ua);
+    const isAndroidRestricted = /Android/.test(ua) && typeof navigator.mediaDevices === 'undefined';
+    const isIOSInApp = /iPhone|iPad/.test(ua) && !/Safari\//.test(ua) && !/CriOS/.test(ua);
+    if (isGmailIOS || isFB || isIG || isAndroidWV || isAndroidRestricted || isIOSInApp) {
       setBlockedByWebView(true);
     }
   }, []);

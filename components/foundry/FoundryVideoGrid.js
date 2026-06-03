@@ -243,9 +243,16 @@ function VideoTile({ participant, isMain = false }) {
   const avatarUrl = participant?.userData?.avatarUrl || null;
   const isGuest = !avatarUrl;
   const videoState = participant?.tracks?.video?.state;
-  const videoOff = videoState === 'off' || videoState === 'blocked' || !videoTrack;
-  const audioState = participant?.tracks?.audio?.state;
-  const micMuted = audioState === 'off' || audioState === 'blocked';
+  const videoOff =
+  videoState === 'off' ||
+  videoState === 'blocked' ||
+  !videoTrack;
+
+const audioState = participant?.tracks?.audio?.state;
+const micMuted =
+  audioState === 'off' ||
+  audioState === 'blocked' ||
+  !audioTrack;
 
   if (isMain) {
     return (
