@@ -310,8 +310,38 @@ export default function FoundryMobileLayout({
   // Guest mode — no forge files, no host controls
   isGuest,
   guestToken,
+
+  // Mobile settings bridge. If parent does not pass these, the mobile layout
+  // dispatches a browser event that FoundryVideoGrid listens for.
+  callObject = null,
+  selectedBackground = 'none',
+  onBackgroundChange,
+  isFounder = false,
 }) {
   const [activeSheet, setActiveSheet] = useState(null);
+  const [chatMode, setChatMode] = useState('meeting');
+  const [mobileDevices, setMobileDevices] = useState([]);
+  const [mobileCameraId, setMobileCameraId] = useState('');
+  const [mobileMicId, setMobileMicId] = useState('');
+  const [mobileSpeakerId, setMobileSpeakerId] = useState('');
+  const [mobileBackground, setMobileBackground] = useState(selectedBackground || 'none');
+  const [mobileSettingsError, setMobileSettingsError] = useState('');
+  const [mobileSettingsSaving, setMobileSettingsSaving] = useState(false);
+
+  const publicBackgroundOptions = [
+    { id: 'none', label: 'None' },
+    { id: 'blur', label: 'Blur' },
+    { id: 'forge-office', label: 'Forge Office' },
+    { id: 'coaching-library', label: 'Coaching Library' },
+    { id: 'coaching-strategy-room', label: 'Coaching Strategy Room' },
+    { id: 'forge-floor', label: 'Forge Floor' },
+    { id: 'neutral-professional', label: 'Neutral Professional' },
+  ];
+
+  const backgroundOptions = isFounder
+    ? [...publicBackgroundOptions, { id: 'founder-office', label: 'Founder Office' }]
+    : publicBackgroundOptions;
+
   // Screen share support — iOS doesn't support getDisplayMedia at all
   const screenShareSupported = typeof navigator !== 'undefined' &&
     typeof navigator.mediaDevices?.getDisplayMedia === 'function';
@@ -327,6 +357,10 @@ export default function FoundryMobileLayout({
   const safeSharedFiles = sharedFiles || [];
   const safeForgeFiles = forgeFiles || [];
   const safeNotes = notes || '';
+  const safeSessionDms = sessionDms || [];
+  const mobileCameras = mobileDevices.filter((d) => d.kind === 'videoinput');
+  const mobileMicrophones = mobileDevices.filter((d) => d.kind === 'audioinput');
+  const mobileSpeakers = mobileDevices.filter((d) => d.kind === 'audiooutput');
   const notesSaveTimer = useRef(null);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -354,6 +388,101 @@ export default function FoundryMobileLayout({
 
   // Sync notes from parent
   useEffect(() => { setNotesDraft(safeNotes); }, [safeNotes]);
+
+  useEffect(() => {
+    setMobileBackground(selectedBackground || 'none');
+  }, [selectedBackground]);
+
+  const loadMobileDevices = useCallback(async () => {
+    setMobileSettingsError('');
+
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) {
+      setMobileSettingsError('Device settings are not available in this browser.');
+      return;
+    }
+
+    try {
+      const list = await navigator.mediaDevices.enumerateDevices();
+      setMobileDevices(list);
+
+      const firstCamera = list.find((d) => d.kind === 'videoinput');
+      const firstMic = list.find((d) => d.kind === 'audioinput');
+      const firstSpeaker = list.find((d) => d.kind === 'audiooutput');
+
+      setMobileCameraId((prev) => prev || firstCamera?.deviceId || '');
+      setMobileMicId((prev) => prev || firstMic?.deviceId || '');
+      setMobileSpeakerId((prev) => prev || firstSpeaker?.deviceId || '');
+    } catch (err) {
+      setMobileSettingsError(err?.message || 'Could not load camera and microphone devices.');
+    }
+  }, []);
+
+  const openMobileSettings = useCallback(() => {
+    setActiveSheet('settings');
+    loadMobileDevices();
+  }, [loadMobileDevices]);
+
+  const applyMobileSettings = useCallback(async () => {
+    setMobileSettingsSaving(true);
+    setMobileSettingsError('');
+
+    try {
+      const detail = {
+        cameraId: mobileCameraId || '',
+        micId: mobileMicId || '',
+        speakerId: mobileSpeakerId || '',
+        background: mobileBackground || 'none',
+      };
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('foundry_background', detail.background);
+        window.dispatchEvent(new CustomEvent('foundry-mobile-device-settings', { detail }));
+      }
+
+      onBackgroundChange?.(detail.background);
+
+      if (callObject) {
+        if (callObject.setInputDevicesAsync) {
+          await callObject.setInputDevicesAsync({
+            audioDeviceId: detail.micId || undefined,
+            videoDeviceId: detail.cameraId || undefined,
+          });
+        } else if (callObject.setInputDevices) {
+          await callObject.setInputDevices({
+            audioDeviceId: detail.micId || undefined,
+            videoDeviceId: detail.cameraId || undefined,
+          });
+        }
+
+        if (detail.speakerId && detail.speakerId !== 'default') {
+          const validOutputDevice = mobileDevices.some(
+            (device) => device.kind === 'audiooutput' && device.deviceId === detail.speakerId
+          );
+
+          if (validOutputDevice && callObject.setOutputDeviceAsync) {
+            await callObject.setOutputDeviceAsync(detail.speakerId);
+          } else if (validOutputDevice && callObject.setOutputDevice) {
+            await callObject.setOutputDevice(detail.speakerId);
+          }
+        }
+      }
+
+      setActiveSheet(null);
+    } catch (err) {
+      setMobileSettingsError(err?.message || 'Could not apply settings.');
+    } finally {
+      setMobileSettingsSaving(false);
+    }
+  }, [
+    callObject,
+    mobileBackground,
+    mobileCameraId,
+    mobileDevices,
+    mobileMicId,
+    mobileSpeakerId,
+    onBackgroundChange,
+  ]);
+
 
   const closeSheet = useCallback(() => setActiveSheet(null), []);
 
@@ -414,7 +543,7 @@ export default function FoundryMobileLayout({
             {isRecording && ' · REC'}
           </div>
         </div>
-        <button style={S.endBtn} onClick={onEnd}>End</button>
+        <button style={S.endBtn} onClick={onEnd}>{isHost ? 'End' : 'Leave'}</button>
       </div>
 
       {/* Recording badge */}
@@ -572,44 +701,136 @@ export default function FoundryMobileLayout({
         <div style={{ ...S.sheet, maxHeight: '82vh' }}>
           <div style={S.sheetHandle}><div style={S.sheetHandleBar} /></div>
           <div style={S.sheetHeader}>
-            <span style={S.sheetTitle}>Meeting Chat</span>
+            <span style={S.sheetTitle}>Chat</span>
             <button style={S.sheetClose} onClick={closeSheet}>×</button>
           </div>
-          <div style={{ ...S.sheetBody, paddingBottom: 0 }}>
-            <div style={S.chatMessages}>
-              {safeMessages.length === 0 ? (
+
+          <div style={{ display: 'flex', gap: 6, padding: '10px 16px 0' }}>
+            <button
+              style={{
+                flex: 1,
+                background: chatMode === 'meeting' ? 'rgba(255,112,67,0.18)' : 'rgba(255,255,255,0.06)',
+                border: chatMode === 'meeting' ? '1px solid rgba(255,112,67,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                color: chatMode === 'meeting' ? ORANGE : '#aaa',
+                borderRadius: 8,
+                padding: '8px 10px',
+                fontSize: 12,
+                fontWeight: 700,
+                fontFamily: 'inherit',
+              }}
+              onClick={() => setChatMode('meeting')}
+            >
+              Meeting Chat
+            </button>
+            <button
+              style={{
+                flex: 1,
+                background: chatMode === 'dms' ? 'rgba(255,112,67,0.18)' : 'rgba(255,255,255,0.06)',
+                border: chatMode === 'dms' ? '1px solid rgba(255,112,67,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                color: chatMode === 'dms' ? ORANGE : '#aaa',
+                borderRadius: 8,
+                padding: '8px 10px',
+                fontSize: 12,
+                fontWeight: 700,
+                fontFamily: 'inherit',
+              }}
+              onClick={() => setChatMode('dms')}
+            >
+              Direct Messages
+            </button>
+          </div>
+
+          {chatMode === 'meeting' && (
+            <>
+              <div style={{ ...S.sheetBody, paddingBottom: 0 }}>
+                <div style={S.chatMessages}>
+                  {safeMessages.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: '#444', fontSize: 12, padding: '20px 0' }}>
+                      Chat is visible to everyone in this Foundry. Messages disappear when the session ends.
+                    </div>
+                  ) : (
+                    safeMessages.map((msg, i) => (
+                      <div key={i} style={S.chatMsg}>
+                        {msg.avatarUrl
+                          ? <img src={msg.avatarUrl} alt={msg.sender} style={{ ...S.chatAvatar, objectFit: 'cover' }} />
+                          : <div style={S.chatAvatar}>{initials(msg.sender)}</div>
+                        }
+                        <div>
+                          <span style={S.chatSender}>{msg.sender}</span>
+                          <span style={S.chatTime}>{msg.time}</span>
+                          <div style={S.chatText}>{msg.text}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              </div>
+              <div style={S.chatInputRow}>
+                <input
+                  style={S.chatInput}
+                  placeholder="Send to everyone…"
+                  value={chatDraft}
+                  onChange={e => setChatDraft(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendChat()}
+                  autoFocus
+                />
+                <button style={S.chatSendBtn} onClick={sendChat}>→</button>
+              </div>
+            </>
+          )}
+
+          {chatMode === 'dms' && (
+            <div style={S.sheetBody}>
+              {safeParticipants.filter((p) => !p.local).length === 0 ? (
                 <div style={{ textAlign: 'center', color: '#444', fontSize: 12, padding: '20px 0' }}>
-                  Chat is visible to everyone in this Foundry. Messages disappear when the session ends.
+                  No one else is in this Foundry yet.
                 </div>
               ) : (
-                safeMessages.map((msg, i) => (
-                  <div key={i} style={S.chatMsg}>
-                    {msg.avatarUrl
-                      ? <img src={msg.avatarUrl} alt={msg.sender} style={{ ...S.chatAvatar, objectFit: 'cover' }} />
-                      : <div style={S.chatAvatar}>{initials(msg.sender)}</div>
-                    }
-                    <div>
-                      <span style={S.chatSender}>{msg.sender}</span>
-                      <span style={S.chatTime}>{msg.time}</span>
-                      <div style={S.chatText}>{msg.text}</div>
-                    </div>
-                  </div>
-                ))
+                safeParticipants.filter((p) => !p.local).map((participant) => {
+                  const last = safeSessionDms
+                    .filter((dm) => dm.fromSessionId === participant.id || dm.toSessionId === participant.id)
+                    .slice(-1)[0];
+
+                  return (
+                    <button
+                      key={participant.id}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '10px 0',
+                        background: 'none',
+                        border: 'none',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                        textAlign: 'left',
+                        fontFamily: 'inherit',
+                      }}
+                      onClick={() => {
+                        onSelectDmParticipant?.(participant);
+                        setActiveSheet('dm');
+                      }}
+                    >
+                      {participant.avatarUrl
+                        ? <img src={participant.avatarUrl} alt={participant.name} style={{ ...S.participantAvatar, objectFit: 'cover' }} />
+                        : <div style={S.participantAvatar}>{initials(participant.name)}</div>
+                      }
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={S.participantName}>{participant.name || 'Participant'}</div>
+                        <div style={{ fontSize: 11, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {last ? `${last.fromName}: ${last.text}` : 'Tap to message'}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 11, color: ORANGE, fontWeight: 700 }}>
+                        {participant.isGuest || !participant.userId ? 'Guest' : 'DM'}
+                      </span>
+                    </button>
+                  );
+                })
               )}
-              <div ref={messagesEndRef} />
             </div>
-          </div>
-          <div style={S.chatInputRow}>
-            <input
-              style={S.chatInput}
-              placeholder="Send to everyone…"
-              value={chatDraft}
-              onChange={e => setChatDraft(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendChat()}
-              autoFocus
-            />
-            <button style={S.chatSendBtn} onClick={sendChat}>→</button>
-          </div>
+          )}
         </div>
       )}
 
@@ -818,6 +1039,109 @@ export default function FoundryMobileLayout({
       )}
 
 
+      {/* ── SETTINGS SHEET ───────────────────────────────────────────── */}
+      {activeSheet === 'settings' && (
+        <div style={{ ...S.sheet, maxHeight: '85vh' }}>
+          <div style={S.sheetHandle}><div style={S.sheetHandleBar} /></div>
+          <div style={S.sheetHeader}>
+            <span style={S.sheetTitle}>Foundry Settings</span>
+            <button style={S.sheetClose} onClick={closeSheet}>×</button>
+          </div>
+          <div style={S.sheetBody}>
+            {mobileSettingsError && (
+              <div style={{
+                color: '#ffcdd2',
+                background: 'rgba(198,40,40,0.14)',
+                border: '1px solid rgba(198,40,40,0.28)',
+                borderRadius: 9,
+                padding: 10,
+                fontSize: 12,
+                lineHeight: 1.5,
+                marginBottom: 12,
+              }}>
+                {mobileSettingsError}
+              </div>
+            )}
+
+            <label style={{ ...S.inviteLabel, display: 'block' }}>Camera</label>
+            <select
+              style={{ ...S.chatInput, width: '100%', borderRadius: 9, marginBottom: 12 }}
+              value={mobileCameraId}
+              onChange={(e) => setMobileCameraId(e.target.value)}
+            >
+              {mobileCameras.length === 0 ? <option value="">Default camera</option> : null}
+              {mobileCameras.map((device, index) => (
+                <option key={device.deviceId || `camera-${index}`} value={device.deviceId}>
+                  {device.label || `Camera ${index + 1}`}
+                </option>
+              ))}
+            </select>
+
+            <label style={{ ...S.inviteLabel, display: 'block' }}>Microphone</label>
+            <select
+              style={{ ...S.chatInput, width: '100%', borderRadius: 9, marginBottom: 12 }}
+              value={mobileMicId}
+              onChange={(e) => setMobileMicId(e.target.value)}
+            >
+              {mobileMicrophones.length === 0 ? <option value="">Default microphone</option> : null}
+              {mobileMicrophones.map((device, index) => (
+                <option key={device.deviceId || `mic-${index}`} value={device.deviceId}>
+                  {device.label || `Microphone ${index + 1}`}
+                </option>
+              ))}
+            </select>
+
+            <label style={{ ...S.inviteLabel, display: 'block' }}>Speaker</label>
+            <select
+              style={{ ...S.chatInput, width: '100%', borderRadius: 9, marginBottom: 12 }}
+              value={mobileSpeakerId}
+              onChange={(e) => setMobileSpeakerId(e.target.value)}
+            >
+              {mobileSpeakers.length === 0 ? <option value="">System default output</option> : null}
+              {mobileSpeakers.map((device, index) => (
+                <option key={device.deviceId || `speaker-${index}`} value={device.deviceId}>
+                  {device.label || `Speaker ${index + 1}`}
+                </option>
+              ))}
+            </select>
+
+            <label style={{ ...S.inviteLabel, display: 'block' }}>Background</label>
+            <select
+              style={{ ...S.chatInput, width: '100%', borderRadius: 9, marginBottom: 12 }}
+              value={mobileBackground}
+              onChange={(e) => setMobileBackground(e.target.value)}
+            >
+              {backgroundOptions.map((backgroundOption) => (
+                <option key={backgroundOption.id} value={backgroundOption.id}>
+                  {backgroundOption.label}
+                </option>
+              ))}
+            </select>
+
+            <div style={{
+              background: 'rgba(255,112,67,0.08)',
+              border: '1px solid rgba(255,112,67,0.18)',
+              borderRadius: 9,
+              padding: 10,
+              color: '#aaa',
+              fontSize: 12,
+              lineHeight: 1.5,
+              marginBottom: 12,
+            }}>
+              Background effects depend on browser support. Guests can change their background during the meeting, but background preference is not saved for guests.
+            </div>
+
+            <button
+              style={{ ...S.chatSendBtn, width: '100%', borderRadius: 9, padding: '12px 14px', opacity: mobileSettingsSaving ? 0.7 : 1 }}
+              onClick={applyMobileSettings}
+              disabled={mobileSettingsSaving}
+            >
+              {mobileSettingsSaving ? 'Applying…' : 'Apply Settings'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── INVITE SHEET ─────────────────────────────────────────────── */}
       {activeSheet === 'invite' && (
         <div style={{ ...S.sheet, maxHeight: '85vh' }}>
@@ -865,6 +1189,15 @@ export default function FoundryMobileLayout({
           <div style={S.sheetBody}>
             <div style={S.moreMenu}>
 
+              {/* Settings — mobile equivalent of desktop Foundry settings */}
+              <button style={S.moreItem} onClick={openMobileSettings}>
+                <span style={S.moreIcon}>⚙</span>
+                <div>
+                  <div style={S.moreLabel}>Settings</div>
+                  <div style={S.moreSublabel}>Camera, microphone, speaker, and background</div>
+                </div>
+              </button>
+
               {/* Notes — quick access */}
               <button style={S.moreItem} onClick={() => setActiveSheet('notes')}>
                 <span style={S.moreIcon}>📝</span>
@@ -890,11 +1223,13 @@ export default function FoundryMobileLayout({
                 </div>
               )}
 
-              {/* Record */}
-              <button style={S.moreItem} onClick={() => { onRecordToggle?.(); closeSheet(); }}>
-                <span style={S.moreIcon}>{isRecording ? '⏹' : '⏺'}</span>
-                <span style={S.moreLabel}>{isRecording ? 'Stop recording' : 'Record session'}</span>
-              </button>
+              {/* Record — hosts/co-hosts only */}
+              {isHost && (
+                <button style={S.moreItem} onClick={() => { onRecordToggle?.(); closeSheet(); }}>
+                  <span style={S.moreIcon}>{isRecording ? '⏹' : '⏺'}</span>
+                  <span style={S.moreLabel}>{isRecording ? 'Stop recording' : 'Record session'}</span>
+                </button>
+              )}
 
               {/* Invite — host only */}
               {isHost && !isGuest && (

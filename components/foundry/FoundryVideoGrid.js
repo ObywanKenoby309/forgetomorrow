@@ -310,7 +310,16 @@ function VideoTile({ participant, isMain = false }) {
           <div style={S.ambient} />
           <div style={S.floor} />
           <div style={S.frameLine} />
-          <video ref={videoRef} style={S.videoEl} autoPlay muted playsInline />
+          <video
+            ref={videoRef}
+            style={{
+              ...S.videoEl,
+              objectFit: typeof window !== 'undefined' && window.innerWidth < 768 ? 'contain' : 'cover',
+            }}
+            autoPlay
+            muted
+            playsInline
+          />
           {videoOff && (
             <div style={{
               position: 'absolute', inset: 0, display: 'flex',
@@ -341,7 +350,13 @@ function VideoTile({ participant, isMain = false }) {
     <div style={S.pip}>
       <video
         ref={videoRef}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: typeof window !== 'undefined' && window.innerWidth < 768 ? 'contain' : 'cover',
+        }}
         autoPlay muted playsInline
       />
       {videoOff && (
@@ -720,6 +735,54 @@ if (selectedBackground) {
     setScreenTrack(null);
     setIsLocalSharing(false);
     onScreenShareChangeRef.current?.(false);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleMobileDeviceSettings = async (event) => {
+      if (!callRef.current) return;
+
+      const detail = event?.detail || {};
+      const cameraId = detail.cameraId || '';
+      const micId = detail.micId || '';
+      const speakerId = detail.speakerId || '';
+      const background = detail.background || 'none';
+
+      try {
+        if (callRef.current.setInputDevicesAsync) {
+          await callRef.current.setInputDevicesAsync({
+            audioDeviceId: micId || undefined,
+            videoDeviceId: cameraId || undefined,
+          });
+        } else if (callRef.current.setInputDevices) {
+          await callRef.current.setInputDevices({
+            audioDeviceId: micId || undefined,
+            videoDeviceId: cameraId || undefined,
+          });
+        }
+
+        if (speakerId && speakerId !== 'default') {
+          const outputDevices = await navigator.mediaDevices.enumerateDevices();
+          const validOutputDevice = outputDevices.some(
+            (device) => device.kind === 'audiooutput' && device.deviceId === speakerId
+          );
+
+          if (validOutputDevice && callRef.current.setOutputDeviceAsync) {
+            await callRef.current.setOutputDeviceAsync(speakerId);
+          } else if (validOutputDevice && callRef.current.setOutputDevice) {
+            await callRef.current.setOutputDevice(speakerId);
+          }
+        }
+
+        await applyFoundryBackground(callRef.current, background);
+      } catch (err) {
+        console.error('[foundry] mobile settings apply failed:', err);
+      }
+    };
+
+    window.addEventListener('foundry-mobile-device-settings', handleMobileDeviceSettings);
+    return () => window.removeEventListener('foundry-mobile-device-settings', handleMobileDeviceSettings);
   }, []);
 
   const participantList = Object.values(participants);
