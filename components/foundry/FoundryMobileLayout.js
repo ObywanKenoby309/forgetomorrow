@@ -325,6 +325,7 @@ export default function FoundryMobileLayout({
   const [mobileMicId, setMobileMicId] = useState('');
   const [mobileSpeakerId, setMobileSpeakerId] = useState('');
   const [mobileBackground, setMobileBackground] = useState(selectedBackground || 'none');
+  const [bgError, setBgError] = useState('');
   const [mobileSettingsError, setMobileSettingsError] = useState('');
   const [mobileSettingsSaving, setMobileSettingsSaving] = useState(false);
 
@@ -483,6 +484,13 @@ export default function FoundryMobileLayout({
     onBackgroundChange,
   ]);
 
+
+  // Listen for background apply failures from VideoGrid
+  useEffect(() => {
+    const handler = (e) => setBgError(e.detail?.message || 'Background effects not supported on this device.');
+    window.addEventListener('foundry-bg-error', handler);
+    return () => window.removeEventListener('foundry-bg-error', handler);
+  }, []);
 
   const closeSheet = useCallback(() => setActiveSheet(null), []);
 
@@ -1109,7 +1117,7 @@ export default function FoundryMobileLayout({
             <select
               style={{ ...S.chatInput, width: '100%', borderRadius: 9, marginBottom: 12 }}
               value={mobileBackground}
-              onChange={(e) => setMobileBackground(e.target.value)}
+              onChange={(e) => { setMobileBackground(e.target.value); setBgError(''); }}
             >
               {backgroundOptions.map((backgroundOption) => (
                 <option key={backgroundOption.id} value={backgroundOption.id}>
@@ -1117,19 +1125,11 @@ export default function FoundryMobileLayout({
                 </option>
               ))}
             </select>
-
-            <div style={{
-              background: 'rgba(255,112,67,0.08)',
-              border: '1px solid rgba(255,112,67,0.18)',
-              borderRadius: 9,
-              padding: 10,
-              color: '#aaa',
-              fontSize: 12,
-              lineHeight: 1.5,
-              marginBottom: 12,
-            }}>
-              Background effects depend on browser support. Guests can change their background during the meeting, but background preference is not saved for guests.
-            </div>
+            {bgError && (
+              <div style={{ fontSize: 11, color: '#ef5350', marginBottom: 8, lineHeight: 1.5 }}>
+                {bgError}
+              </div>
+            )}
 
             <button
               style={{ ...S.chatSendBtn, width: '100%', borderRadius: 9, padding: '12px 14px', opacity: mobileSettingsSaving ? 0.7 : 1 }}

@@ -134,7 +134,15 @@ function backgroundSource(path) {
 }
 
 async function applyFoundryBackground(callObject, background) {
-  if (!callObject?.updateInputSettings) return;
+  if (!callObject?.updateInputSettings) {
+    // Dispatch failure so mobile UI can show a message
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('foundry-bg-error', {
+        detail: { message: 'Background effects are not supported on this device.' }
+      }));
+    }
+    return;
+  }
 
   const safeBackground = background || 'none';
 
@@ -524,9 +532,18 @@ const checkRoomEmpty = useCallback((current) => {
         localUserDataRef.current = localUserData;
         setJoinState('joining');
 
+        const isMobileDevice = typeof navigator !== 'undefined' &&
+          /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
         call = DailyIframe.createCallObject({
           audioSource: true,
-          videoSource: true,
+          // Explicit video constraints prevent mobile from defaulting to a zoomed/cropped view
+          videoSource: isMobileDevice ? {
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            aspectRatio: { ideal: 16/9 },
+          } : true,
         });
         callRef.current = call;
 
@@ -854,6 +871,19 @@ if (selectedBackground) {
               <span>Invite</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Self-view overlay for compact/mobile mode — always show local camera */}
+      {compact && joinState === 'joined' && local && mainParticipant?.session_id !== local?.session_id && (
+        <div style={{
+          position: 'absolute', bottom: 80, right: 10,
+          width: 90, aspectRatio: '9/16',
+          zIndex: 5, borderRadius: 8, overflow: 'hidden',
+          border: '1px solid rgba(255,255,255,0.2)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+        }}>
+          <VideoTile participant={local} />
         </div>
       )}
     </div>
