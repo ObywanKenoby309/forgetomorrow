@@ -567,7 +567,7 @@ const checkRoomEmpty = useCallback((current) => {
             setJoinState('joined');
             updateParticipants();
             onCallReadyRef.current?.(call);
-            applyFoundryBackground(call, initialBackground).catch((err) => {
+            applyFoundryBackground(call, sessionStorage.getItem('foundry_background') || initialBackground).catch((err) => {
               console.error('[foundry] initial background failed:', err);
             });
           }
@@ -654,12 +654,27 @@ const checkRoomEmpty = useCallback((current) => {
         // On mobile, forcing camera on immediately causes permission denial and black tiles.
         // Always start with camera off — user toggles it on themselves.
 
-        await call.join({
+        const cameraOn =
+  sessionStorage.getItem('foundry_camera_on') !== '0';
+
+const micOn =
+  sessionStorage.getItem('foundry_mic_on') === '1';
+
+await call.join({
   url: roomUrl,
   token,
-  startVideoOff: true,
-  startAudioOff: true,
+  startVideoOff: !cameraOn,
+  startAudioOff: !micOn,
 });
+
+const selectedBackground =
+  sessionStorage.getItem('foundry_background') || initialBackground || 'none';
+
+if (selectedBackground) {
+  try {
+    await applyFoundryBackground(callRef.current, selectedBackground);
+  } catch {}
+}
 
       } catch (err) {
         if (!destroyed) {

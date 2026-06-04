@@ -119,6 +119,9 @@ export default function GuestJoin({
 }) {
   const router = useRouter();
   const [name, setName] = useState('');
+  const [cameraOn, setCameraOn] = useState(true);
+  const [micOn, setMicOn] = useState(false);
+  const [background, setBackground] = useState('none');
   const [blockedByWebView, setBlockedByWebView] = useState(false);
 
   useEffect(() => {
@@ -223,6 +226,9 @@ export default function GuestJoin({
         sessionStorage.setItem('foundry_guest_room_url', data.roomUrl);
         sessionStorage.setItem('foundry_guest_room_id', roomId);
         sessionStorage.setItem('foundry_guest_code', guestCode || '');
+		sessionStorage.setItem('foundry_camera_on', cameraOn ? '1' : '0');
+		sessionStorage.setItem('foundry_mic_on', micOn ? '1' : '0');
+		sessionStorage.setItem('foundry_background', background);
         router.push(`/foundry/guest/${roomId}?code=${encodeURIComponent(guestCode || '')}`);
         return;
       }
@@ -382,6 +388,39 @@ export default function GuestJoin({
             autoFocus
             aria-label="Your name"
           />
+		  <label style={S.label}>Camera</label>
+<select
+  style={S.input}
+  value={cameraOn ? 'on' : 'off'}
+  onChange={(e) => setCameraOn(e.target.value === 'on')}
+>
+  <option value="on">On</option>
+  <option value="off">Off</option>
+</select>
+
+<label style={S.label}>Microphone</label>
+<select
+  style={S.input}
+  value={micOn ? 'on' : 'off'}
+  onChange={(e) => setMicOn(e.target.value === 'on')}
+>
+  <option value="off">Muted</option>
+  <option value="on">On</option>
+</select>
+
+<label style={S.label}>Background</label>
+<select
+  style={S.input}
+  value={background}
+  onChange={(e) => setBackground(e.target.value)}
+>
+  <option value="none">None</option>
+  <option value="blur">Blur</option>
+  <option value="forge-office">Forge Office</option>
+  <option value="coaching-library">Coaching Library</option>
+  <option value="strategy-wall">Strategy Wall</option>
+  <option value="neutral-professional">Neutral Professional</option>
+</select>
           <button
             style={joining ? S.btnDisabled : S.btn}
             onClick={handleJoin}

@@ -172,6 +172,9 @@ export default function GuestFoundryRoom({
   const [guestName, setGuestName] = useState('');
   const [guestToken, setGuestToken] = useState('');
   const [guestUserData, setGuestUserData] = useState(null);
+  const [cameraOn, setCameraOn] = useState(true);
+  const [micOn, setMicOn] = useState(false);
+  const [background, setBackground] = useState('none');
   const [guestAccessCode, setGuestAccessCode] = useState(guestCode || '');
   const [roomUrl, setRoomUrl] = useState('');
   const [error, setError] = useState(serverError || '');
@@ -323,6 +326,9 @@ export default function GuestFoundryRoom({
         sessionStorage.setItem('foundry_guest_token', data.token);
         sessionStorage.setItem('foundry_guest_room_url', data.roomUrl);
         sessionStorage.setItem('foundry_guest_room_id', roomId);
+		sessionStorage.setItem('foundry_camera_on', cameraOn ? '1' : '0');
+		sessionStorage.setItem('foundry_mic_on', micOn ? '1' : '0');
+		sessionStorage.setItem('foundry_background', background);
         sessionStorage.setItem('foundry_guest_code', codeToUse);
       } catch {}
 
@@ -615,6 +621,39 @@ const openInChrome = () => {
                   placeholder="Enter your full name"
                   autoFocus
                 />
+				<label style={S.label}>Camera</label>
+<select
+  style={S.input}
+  value={cameraOn ? 'on' : 'off'}
+  onChange={(e) => setCameraOn(e.target.value === 'on')}
+>
+  <option value="on">On</option>
+  <option value="off">Off</option>
+</select>
+
+<label style={S.label}>Microphone</label>
+<select
+  style={S.input}
+  value={micOn ? 'on' : 'off'}
+  onChange={(e) => setMicOn(e.target.value === 'on')}
+>
+  <option value="off">Muted</option>
+  <option value="on">On</option>
+</select>
+
+<label style={S.label}>Background</label>
+<select
+  style={S.input}
+  value={background}
+  onChange={(e) => setBackground(e.target.value)}
+>
+  <option value="none">None</option>
+  <option value="blur">Blur</option>
+  <option value="forge-office">Forge Office</option>
+  <option value="coaching-library">Coaching Library</option>
+  <option value="strategy-wall">Strategy Wall</option>
+  <option value="neutral-professional">Neutral Professional</option>
+</select>
                 <button
                   type="button"
                   style={{ ...S.btn, opacity: joining ? 0.7 : 1 }}
