@@ -241,6 +241,21 @@ function initials(name) {
   return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
+function formatLocalChatTime(value) {
+  if (!value) return '';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
 function Timer({ startTime }) {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -767,7 +782,7 @@ export default function FoundryMobileLayout({
                         }
                         <div>
                           <span style={S.chatSender}>{msg.sender}</span>
-                          <span style={S.chatTime}>{msg.time}</span>
+                          <span style={S.chatTime}>{formatLocalChatTime(msg.createdAt || msg.time)}</span>
                           <div style={S.chatText}>{msg.text}</div>
                         </div>
                       </div>
@@ -872,7 +887,7 @@ export default function FoundryMobileLayout({
             <div key={dm.id} style={S.chatMsg}>
               <div>
                 <span style={S.chatSender}>{dm.fromName}</span>
-                <span style={S.chatTime}>{dm.time}</span>
+                <span style={S.chatTime}>{formatLocalChatTime(dm.createdAt || dm.time)}</span>
                 <div style={S.chatText}>{dm.text}</div>
               </div>
             </div>

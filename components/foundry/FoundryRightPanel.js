@@ -98,6 +98,21 @@ function initials(name) {
   return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
+function formatLocalChatTime(value) {
+  if (!value) return '';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
 function PeopleTab({ participants, isHost, onDmParticipant, roomId, guestToken, coHostUserId, coHostName, onCoHostAssigned, isLocked, onMuteAll, onMuteParticipant, onKickParticipant, onBanParticipant, onLockRoom, onStopParticipantShare, onStopParticipantCamera }) {
   const [query, setQuery] = useState('');
   const [showInvite, setShowInvite] = useState(false);
@@ -807,7 +822,7 @@ export default function FoundryRightPanel({
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <span style={S.msgName}>{msg.sender}</span>
-                  <span style={S.msgTime}>{msg.time}</span>
+                  <span style={S.chatTime}>{formatLocalChatTime(msg.createdAt || msg.time)}</span>
                   <div style={S.msgText}>{msg.text}</div>
                 </div>
               </div>

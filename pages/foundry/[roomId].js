@@ -359,14 +359,14 @@ const handleCallReady = useCallback((call) => {
 
   const handleSend = useCallback((text) => {
     const me = session?.user;
-    const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    const msg = { sender: me?.name || 'You', text, time: now, color: '#FF7043', avatarUrl: me?.avatarUrl || null };
+    const createdAt = new Date().toISOString();
+	const msg = { sender: me?.name || 'You', text, time: createdAt, createdAt, color: '#FF7043', avatarUrl: me?.avatarUrl || null };
     setMeetingMessages(prev => [...prev, msg]);
     if (callRef.current) {
       try {
         callRef.current.sendAppMessage({
           type: 'MEETING_CHAT', senderName: me?.name || 'Host',
-          text, time: now, color: '#FF7043', avatarUrl: me?.avatarUrl || null,
+          text, time: createdAt, createdAt, color: '#FF7043', avatarUrl: me?.avatarUrl || null,
         }, '*');
       } catch (err) { console.error('[foundry] sendAppMessage error:', err); }
     }
@@ -378,11 +378,7 @@ const handleSendDm = useCallback((target, text) => {
   const local = callRef.current.participants()?.local;
   if (!local?.session_id) return;
 
-  const now = new Date().toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  const createdAt = new Date().toISOString();
 
   const msg = {
     id: `dm_${Date.now()}_${Math.random().toString(36).slice(2)}`,
@@ -392,7 +388,8 @@ const handleSendDm = useCallback((target, text) => {
     fromName: local.user_name || session?.user?.name || 'You',
     toName: target.name || 'Participant',
     text: text.trim(),
-    time: now,
+    time: createdAt,
+	createdAt,
     color: '#FF7043',
   };
 
