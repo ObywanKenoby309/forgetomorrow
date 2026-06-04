@@ -135,7 +135,6 @@ function backgroundSource(path) {
 
 async function applyFoundryBackground(callObject, background) {
   if (!callObject?.updateInputSettings) {
-    // Dispatch failure so mobile UI can show a message
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('foundry-bg-error', {
         detail: { message: 'Background effects are not supported on this device.' }
@@ -532,18 +531,9 @@ const checkRoomEmpty = useCallback((current) => {
         localUserDataRef.current = localUserData;
         setJoinState('joining');
 
-        const isMobileDevice = typeof navigator !== 'undefined' &&
-          /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
         call = DailyIframe.createCallObject({
           audioSource: true,
-          // Explicit video constraints prevent mobile from defaulting to a zoomed/cropped view
-          videoSource: isMobileDevice ? {
-            facingMode: 'user',
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            aspectRatio: { ideal: 16/9 },
-          } : true,
+          videoSource: true,
         });
         callRef.current = call;
 
@@ -874,7 +864,7 @@ if (selectedBackground) {
         </div>
       )}
 
-      {/* Self-view overlay for compact/mobile mode — always show local camera */}
+      {/* Self-view overlay for compact/mobile mode */}
       {compact && joinState === 'joined' && local && mainParticipant?.session_id !== local?.session_id && (
         <div style={{
           position: 'absolute', bottom: 80, right: 10,
