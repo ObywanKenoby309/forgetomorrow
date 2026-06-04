@@ -653,18 +653,13 @@ const checkRoomEmpty = useCallback((current) => {
 
         // On mobile, forcing camera on immediately causes permission denial and black tiles.
         // Always start with camera off — user toggles it on themselves.
-        const isMobileDevice = typeof navigator !== 'undefined' &&
-          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         await call.join({
-          url: roomUrl,
-          token,
-          startVideoOff: true,  // always start video off — avoids mobile permission crash
-          startAudioOff: true,
-          ...(isMobileDevice ? {
-            videoSource: { facingMode: 'user' }, // front camera on mobile
-          } : {}),
-        });
+  url: roomUrl,
+  token,
+  startVideoOff: true,
+  startAudioOff: true,
+});
 
       } catch (err) {
         if (!destroyed) {
