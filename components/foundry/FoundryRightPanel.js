@@ -613,7 +613,23 @@ function ExternalDmList({ participants, sessionDms, onOpenGuestDm }) {
                 style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
               />
             ) : (
-              <div style={S.avatar()}>{initials(participant.name)}</div>
+              <div
+  style={{
+    width: 28,
+    height: 28,
+    borderRadius: '50%',
+    background: '#5C6BC0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 10,
+    fontWeight: 600,
+    color: '#fff',
+    flexShrink: 0,
+  }}
+>
+  {initials(participant.name)}
+</div>
             )}
 
             <div style={S.threadInfo}>
