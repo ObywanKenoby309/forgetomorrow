@@ -279,11 +279,18 @@ if (isInstantRoom) {
       },
     });
 
-  } catch (err) {
-    console.error('[foundry/token]', { roomId: resolvedRoomId, message: String(err?.message || err) });
+    } catch (err) {
+    const detail = String(err?.message || err);
+
+    console.error('[foundry/token]', {
+      roomId: resolvedRoomId,
+      detail,
+      stack: err?.stack || null,
+    });
+
     return res.status(500).json({
       error: 'Could not generate meeting token',
-      detail: process.env.NODE_ENV !== 'production' ? String(err?.message || err) : undefined,
+      detail,
     });
   }
 }
