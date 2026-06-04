@@ -133,7 +133,7 @@ export default async function handler(req, res) {
     const baseUrl = getBaseUrl(req);
     const guestToken = await ensureGuestToken(room);
     const ftLink = `${baseUrl}/foundry/${room.roomId}`;
-    const guestLink = `${baseUrl}/foundry/join/${room.roomId}?code=${guestToken}`;
+    const guestLink = `${baseUrl}/foundry/join/${room.roomId}?code=${guestToken}&fromEmail=1`;
 
     if (req.method === 'GET') {
       const excludedIds = new Set([

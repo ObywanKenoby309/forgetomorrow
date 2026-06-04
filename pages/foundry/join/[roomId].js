@@ -123,6 +123,26 @@ export default function GuestJoin({
   const [micOn, setMicOn] = useState(false);
   const [background, setBackground] = useState('none');
   const [blockedByWebView, setBlockedByWebView] = useState(false);
+  
+  const openExternalBrowser = () => {
+  if (typeof window === 'undefined') return;
+
+  const currentUrl = window.location.href;
+  const url = new URL(currentUrl);
+  const ua = navigator.userAgent || '';
+
+  if (/Android/i.test(ua)) {
+    const chromeIntent =
+      `intent://${url.host}${url.pathname}${url.search}${url.hash}` +
+      `#Intent;scheme=https;package=com.android.chrome;` +
+      `S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
+
+    window.location.href = chromeIntent;
+    return;
+  }
+
+  window.open(currentUrl, '_blank', 'noopener,noreferrer');
+};
 
   useEffect(() => {
     const ua = navigator.userAgent || '';
@@ -147,10 +167,26 @@ export default function GuestJoin({
           <div style={{ fontSize: 13, color: '#9ca3af', lineHeight: 1.7, marginBottom: 24 }}>
             Camera and microphone access is required for Foundry. Gmail's built-in browser blocks this — you need <strong style={{ color: '#fff' }}>Chrome</strong> or <strong style={{ color: '#fff' }}>Safari</strong>.
           </div>
-          <a href={currentUrl} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'block', background: '#FF7043', color: '#fff', borderRadius: 10, padding: '14px', fontSize: 14, fontWeight: 800, textDecoration: 'none', marginBottom: 16 }}>
-            Open in Chrome / Safari →
-          </a>
+          <button
+  type="button"
+  onClick={openExternalBrowser}
+  style={{
+    display: 'block',
+    width: '100%',
+    background: '#FF7043',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 10,
+    padding: '14px',
+    fontSize: 14,
+    fontWeight: 800,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    marginBottom: 16,
+  }}
+>
+  Open in Chrome / Safari →
+</button>
           <div style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ fontSize: 10, color: '#555', marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Or copy this link</div>
             <div style={{ fontSize: 11, color: '#666', wordBreak: 'break-all', lineHeight: 1.5 }}>{currentUrl}</div>
