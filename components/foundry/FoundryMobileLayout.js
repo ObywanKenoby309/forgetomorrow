@@ -317,6 +317,7 @@ export default function FoundryMobileLayout({
   selectedBackground = 'none',
   onBackgroundChange,
   isFounder = false,
+  guestFileSharingAllowed = false,
 }) {
   const [activeSheet, setActiveSheet] = useState(null);
   const [chatMode, setChatMode] = useState('meeting');
@@ -359,6 +360,7 @@ export default function FoundryMobileLayout({
   const safeForgeFiles = forgeFiles || [];
   const safeNotes = notes || '';
   const safeSessionDms = sessionDms || [];
+  const canUploadFromDevice = !!onUpload && (isHost || !isGuest || guestFileSharingAllowed);
   const mobileCameras = mobileDevices.filter((d) => d.kind === 'videoinput');
   const mobileMicrophones = mobileDevices.filter((d) => d.kind === 'audioinput');
   const mobileSpeakers = mobileDevices.filter((d) => d.kind === 'audiooutput');
@@ -938,9 +940,9 @@ export default function FoundryMobileLayout({
                   Shared in session
                   <span style={S.filesSectionCount}>{safeSharedFiles.length}</span>
                 </div>
-                {isHost && (
-                  <button style={S.copyBtn} onClick={() => fileInputRef.current?.click()}>+ Add</button>
-                )}
+                {canUploadFromDevice && (
+  <button style={S.copyBtn} onClick={() => fileInputRef.current?.click()}>+ Add</button>
+)}
               </div>
               {safeSharedFiles.length === 0 ? (
                 <div style={S.emptyFiles}>Nothing shared yet. Share from Your Forge below.</div>
@@ -993,24 +995,27 @@ export default function FoundryMobileLayout({
                     ))
                   )}
                 </div>
-
-                <div style={S.filesDivider} />
-
-                {/* Computer upload */}
-                <div style={S.filesSection}>
-                  <div style={S.filesSectionHeader}>
-                    <div style={S.filesSectionTitle}>
-                      <span style={{ color: '#666' }}>💻</span>
-                      From Computer
-                    </div>
-                  </div>
-                  <button style={S.uploadBtn} onClick={() => fileInputRef.current?.click()}>
-                    <span style={{ fontSize: 24, color: 'rgba(255,255,255,0.1)' }}>↑</span>
-                    <span>Tap to upload a file</span>
-                  </button>
-                </div>
               </>
             )}
+{canUploadFromDevice && (
+  <>
+    <div style={S.filesDivider} />
+
+    {/* Device upload */}
+    <div style={S.filesSection}>
+      <div style={S.filesSectionHeader}>
+        <div style={S.filesSectionTitle}>
+          <span style={{ color: '#666' }}>💻</span>
+          From Device
+        </div>
+      </div>
+      <button style={S.uploadBtn} onClick={() => fileInputRef.current?.click()}>
+        <span style={{ fontSize: 24, color: 'rgba(255,255,255,0.1)' }}>↑</span>
+        <span>Tap to upload a file</span>
+      </button>
+    </div>
+  </>
+)}
           </div>
         </div>
       )}
