@@ -388,6 +388,7 @@ function VideoTile({ participant, isMain = false }) {
 export default function FoundryVideoGrid({
   roomId, compact = false, onInvite,
   micMuted, camOff,
+  activeView = 'grid',
   onCallReady, onParticipantsChange,
   onScreenShareChange,
   onRoomEmpty,
@@ -802,24 +803,130 @@ if (selectedBackground) {
   const showRemoteScreen = !isLocalSharing && remoteScreenTrack;
   const showScreen = showLocalScreen || showRemoteScreen;
 
+  // ── Resolve effective view ──────────────────────────────────────────────────
+  // Screen share always forces presentation-style regardless of activeView
+  const effectiveView = showScreen ? 'presentation' : (compact ? 'speaker' : activeView);
+
+  // ── State/error tiles ────────────────────────────────────────────────────────
+  const stateTile = (
+    <>
+      {(joinState === 'idle' || joinState === 'fetching') && (
+        <div style={{ ...S.mainTile, flex: 1 }}>
+          <div style={S.stateMsg}><span>Connecting…</span></div>
+        </div>
+      )}
+      {joinState === 'joining' && (
+        <div style={{ ...S.mainTile, flex: 1 }}>
+          <div style={S.stateMsg}><span>Joining Foundry…</span></div>
+        </div>
+      )}
+      {joinState === 'error' && (
+        <div style={{ ...S.mainTile, flex: 1 }}>
+          <div style={S.errorMsg}>{errorMsg}</div>
+        </div>
+      )}
+    </>
+  );
+
+  const waitingTile = (
+    <div style={{ ...S.mainTile, flex: 1 }}>
+      <div style={S.stateMsg}>
+        <span style={{ fontSize: 22 }}>🔨</span>
+        <span>Waiting for others to join…</span>
+      </div>
+    </div>
+  );
+
+  // ── GRID VIEW — everyone equal size in a responsive grid ─────────────────
+  if (effectiveView === 'grid' && joinState === 'joined') {
+    const allParticipants = [local, ...remote].filter(Boolean);
+    const count = allParticipants.length;
+    const cols = count <= 1 ? 1 : count <= 4 ? 2 : count <= 9 ? 3 : 4;
+    return (
+      <div style={{ ...S.area, overflowY: 'auto' }}>
+        {allParticipants.length === 0 ? waitingTile : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${cols}, 1fr)`,
+            gap: 8, flex: 1, minHeight: 0,
+          }}>
+            {allParticipants.map(p => (
+              <div key={p.session_id} style={{ position: 'relative', aspectRatio: '16/9', borderRadius: 10, overflow: 'hidden', background: '#070910', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <VideoTile participant={p} isMain />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── FOCUS VIEW — active speaker fills everything, no pip strip ───────────
+  if (effectiveView === 'focus' && joinState === 'joined') {
+    return (
+      <div style={{ ...S.area, overflowY: 'auto' }}>
+        <div style={{ flex: 1, position: 'relative', display: 'flex', minHeight: 0 }}>
+          {mainParticipant ? <VideoTile participant={mainParticipant} isMain /> : waitingTile}
+        </div>
+        {/* Self-view pip in focus mode */}
+        {local && mainParticipant?.session_id !== local?.session_id && (
+          <div style={{
+            position: 'absolute', bottom: 16, right: 16,
+            width: 140, aspectRatio: '16/9',
+            zIndex: 5, borderRadius: 8, overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.2)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+          }}>
+            <VideoTile participant={local} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── PRESENTATION VIEW — screen share fills center, participants on right ──
+  if (effectiveView === 'presentation' && joinState === 'joined') {
+    const screenContent = showScreen ? (
+      <ScreenShareTile
+        track={showLocalScreen ? screenTrack : remoteScreenTrack}
+        sharerName={showLocalScreen ? 'You' : remoteScreenSharer}
+        isLocal={!!showLocalScreen}
+        onStopShare={handleStopShare}
+      />
+    ) : (mainParticipant ? <VideoTile participant={mainParticipant} isMain /> : waitingTile);
+
+    const sideParticipants = showScreen
+      ? participantList.filter(Boolean)
+      : pipParticipants;
+
+    return (
+      <div style={{ ...S.area, flexDirection: 'row', overflow: 'hidden' }}>
+        {/* Main content */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          {screenContent}
+        </div>
+        {/* Participant strip on right */}
+        {sideParticipants.length > 0 && (
+          <div style={{
+            width: 160, display: 'flex', flexDirection: 'column',
+            gap: 6, overflowY: 'auto', flexShrink: 0, padding: '0 0 0 8px',
+          }}>
+            {sideParticipants.map(p => (
+              <div key={p.session_id} style={{ aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
+                <VideoTile participant={p} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── SPEAKER VIEW (default) — active speaker large, others in pip strip ───
   return (
     <div style={{ ...S.area, overflowY: 'auto' }}>
+      {stateTile}
       <div style={{ flex: 1, position: 'relative', display: 'flex', minHeight: 0 }}>
-        {(joinState === 'idle' || joinState === 'fetching') && (
-          <div style={{ ...S.mainTile, flex: 1 }}>
-            <div style={S.stateMsg}><span>Connecting…</span></div>
-          </div>
-        )}
-        {joinState === 'joining' && (
-          <div style={{ ...S.mainTile, flex: 1 }}>
-            <div style={S.stateMsg}><span>Joining Foundry…</span></div>
-          </div>
-        )}
-        {joinState === 'error' && (
-          <div style={{ ...S.mainTile, flex: 1 }}>
-            <div style={S.errorMsg}>{errorMsg}</div>
-          </div>
-        )}
         {joinState === 'joined' && showScreen && (
           <ScreenShareTile
             track={showLocalScreen ? screenTrack : remoteScreenTrack}
@@ -831,14 +938,7 @@ if (selectedBackground) {
         {joinState === 'joined' && !showScreen && mainParticipant && (
           <VideoTile participant={mainParticipant} isMain />
         )}
-        {joinState === 'joined' && !showScreen && !mainParticipant && (
-          <div style={{ ...S.mainTile, flex: 1 }}>
-            <div style={S.stateMsg}>
-              <span style={{ fontSize: 22 }}>🔨</span>
-              <span>Waiting for others to join…</span>
-            </div>
-          </div>
-        )}
+        {joinState === 'joined' && !showScreen && !mainParticipant && waitingTile}
       </div>
 
       {!compact && joinState === 'joined' && (
