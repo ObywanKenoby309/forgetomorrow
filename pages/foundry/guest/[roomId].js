@@ -716,6 +716,7 @@ const openInChrome = () => {
         <FoundryVideoGrid
           roomId={roomId}
           compact={true}
+		  activeView={activeView}
           micMuted={micMuted}
           camOff={camOff}
           onCallReady={handleCallReady}

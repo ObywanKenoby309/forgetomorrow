@@ -805,7 +805,7 @@ if (selectedBackground) {
 
   // ── Resolve effective view ──────────────────────────────────────────────────
   // Screen share always forces presentation-style regardless of activeView
-  const effectiveView = showScreen ? 'presentation' : (compact ? 'speaker' : activeView);
+  const effectiveView = showScreen ? 'presentation' : activeView;
 
   // ── State/error tiles ────────────────────────────────────────────────────────
   const stateTile = (

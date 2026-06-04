@@ -799,6 +799,7 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
         <FoundryVideoGrid
           roomId={roomId}
           compact={true}
+		  activeView={activeView}
           micMuted={micMuted}
 		  camOff={camOff}
 		  onRemoteMute={() => setMicMuted(true)}
@@ -837,6 +838,7 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
         <FoundryVideoGrid
           roomId={roomId}
           compact={compact}
+		  activeView={activeView}
           micMuted={micMuted}
           camOff={camOff}
 		  onRemoteMute={() => setMicMuted(true)}
