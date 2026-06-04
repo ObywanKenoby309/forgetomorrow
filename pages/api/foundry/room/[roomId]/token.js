@@ -123,6 +123,11 @@ export default async function handler(req, res) {
         isOwner: isHost,
         isCoHost,
         scheduledEndAt,
+        userData: {
+          userId: session.user.id,
+          avatarUrl: user?.avatarUrl || null,
+          role: user?.role || null,
+        },
       });
     }
 
@@ -199,6 +204,11 @@ if (isInstantRoom) {
     isOwner: false,
     instantRoom: true,
     userRole: user?.role || null,
+    userData: {
+      userId: session.user.id,
+      avatarUrl: user?.avatarUrl || null,
+      role: user?.role || null,
+    },
   });
 }
 
@@ -262,6 +272,11 @@ if (isInstantRoom) {
       userName,
       isOwner: false,
       scheduledEndAt,
+      userData: {
+        userId: session.user.id,
+        avatarUrl: user?.avatarUrl || null,
+        role: user?.role || null,
+      },
     });
 
   } catch (err) {

@@ -198,6 +198,11 @@ export default async function handler(req, res) {
       guestId,
       guestName: cleanGuestName,
       scheduledEndAt,
+      userData: {
+        userId: null,
+        guestId,
+        isGuest: true,
+      },
     });
   } catch (err) {
     console.error('[foundry/guest-token]', err);

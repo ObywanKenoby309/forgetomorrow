@@ -373,11 +373,13 @@ export default function FoundryVideoGrid({
   onScheduledEnd = null,
   guestToken = null,
   guestRoomUrl = null,
+  guestUserData = null,
   initialBackground = 'none',
-onRemoteMute = null,
-onRemoteStopCamera = null,
+  onRemoteMute = null,
+  onRemoteStopCamera = null,
 }) {
   const callRef = useRef(null);
+  const localUserDataRef = useRef(guestUserData || null);
   const [participants, setParticipants] = useState({});
   const [joinState, setJoinState] = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -486,7 +488,7 @@ const checkRoomEmpty = useCallback((current) => {
     async function join() {
       try {
         setJoinState('fetching');
-        let token, roomUrl;
+        let token, roomUrl, localUserData = guestUserData || null;
 
         if (guestToken && guestRoomUrl) {
           token = guestToken;
@@ -497,12 +499,14 @@ const checkRoomEmpty = useCallback((current) => {
           if (!res.ok) throw new Error(data.error || 'Could not get meeting token');
           token = data.token;
           roomUrl = data.roomUrl;
+          localUserData = data.userData || null;
           if (data.scheduledEndAt) {
             onScheduledEndRef.current?.(data.scheduledEndAt, !!data.isOwner);
           }
         }
 
         if (destroyed) return;
+        localUserDataRef.current = localUserData;
         setJoinState('joining');
 
         call = DailyIframe.createCallObject({

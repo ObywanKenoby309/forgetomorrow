@@ -171,6 +171,7 @@ export default function GuestFoundryRoom({
   }, []);
   const [guestName, setGuestName] = useState('');
   const [guestToken, setGuestToken] = useState('');
+  const [guestUserData, setGuestUserData] = useState(null);
   const [guestAccessCode, setGuestAccessCode] = useState(guestCode || '');
   const [roomUrl, setRoomUrl] = useState('');
   const [error, setError] = useState(serverError || '');
@@ -200,10 +201,11 @@ export default function GuestFoundryRoom({
     guestCode ||
     (typeof router.query.code === 'string' ? router.query.code : '');
 
-  const enterRoom = useCallback((name, token, url) => {
+  const enterRoom = useCallback((name, token, url, userData = null) => {
     if (!name || !token || !url) return false;
     setGuestName(name);
     setGuestToken(token);
+    setGuestUserData(userData || null);
     setRoomUrl(url);
     setReady(true);
     setError('');
@@ -325,7 +327,7 @@ export default function GuestFoundryRoom({
       } catch {}
 
       setGuestAccessCode(codeToUse);
-      enterRoom(name, data.token, data.roomUrl);
+      enterRoom(name, data.token, data.roomUrl, data.userData || null);
     } catch (err) {
       console.error('[foundry guest room] token request failed:', err);
       setError('Network error. Please try again.');
@@ -687,6 +689,7 @@ const openInChrome = () => {
           onRoomEmpty={handleRoomEmpty}
           guestToken={guestToken}
           guestRoomUrl={roomUrl}
+          guestUserData={guestUserData}
         />
       </FoundryMobileLayout>
     );
@@ -723,6 +726,7 @@ const openInChrome = () => {
           onRoomEmpty={handleRoomEmpty}
           guestToken={guestToken}
           guestRoomUrl={roomUrl}
+          guestUserData={guestUserData}
         />
 
         {!sidebarHidden && (
