@@ -1346,8 +1346,7 @@ export default function FoundryMobileLayout({
                 />
                 {inviteContacts.length === 0 && (
                   <div style={{ fontSize: 11, color: '#444', padding: '12px 0', textAlign: 'center', lineHeight: 1.6 }}>
-                    No eligible contacts found.{'
-'}People already in the room or invite list are hidden.
+                    No eligible contacts found. People already in the room or invite list are hidden.
                   </div>
                 )}
                 {inviteContacts
