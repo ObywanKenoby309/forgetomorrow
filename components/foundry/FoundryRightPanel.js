@@ -893,22 +893,44 @@ export default function FoundryRightPanel({
           dm.fromSessionId === guestDmParticipant.id ||
           dm.toSessionId === guestDmParticipant.id
         )
-        .map(dm => (
-          <div key={dm.id} style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 10, color: '#666' }}>
-              {dm.fromName}
-            </div>
-            <div style={{
-              background: 'rgba(255,255,255,0.05)',
-              borderRadius: 6,
-              padding: 8,
-              color: '#ccc',
-              fontSize: 11,
+        .map(dm => {
+          const isMine = dm.toSessionId === guestDmParticipant.id;
+          return (
+            <div key={dm.id} style={{
+              marginBottom: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: isMine ? 'flex-end' : 'flex-start',
             }}>
-              {dm.text}
+              {/* Sender + timestamp */}
+              <div style={{
+                display: 'flex', gap: 6, alignItems: 'baseline',
+                marginBottom: 3,
+                flexDirection: isMine ? 'row-reverse' : 'row',
+              }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: isMine ? '#FF7043' : '#b0b8c8' }}>
+                  {isMine ? 'You' : dm.fromName}
+                </span>
+                {dm.time && (
+                  <span style={{ fontSize: 10, color: '#4a5568' }}>{dm.time}</span>
+                )}
+              </div>
+              {/* Bubble */}
+              <div style={{
+                maxWidth: '80%',
+                background: isMine ? 'rgba(255,112,67,0.18)' : 'rgba(255,255,255,0.08)',
+                border: isMine ? '1px solid rgba(255,112,67,0.28)' : '1px solid rgba(255,255,255,0.1)',
+                borderRadius: isMine ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
+                padding: '8px 12px',
+                color: isMine ? '#ffe0d8' : '#d4dae4',
+                fontSize: 12,
+                lineHeight: 1.5,
+              }}>
+                {dm.text}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
     </div>
 
     <DmInput

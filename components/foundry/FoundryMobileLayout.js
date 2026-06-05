@@ -615,6 +615,12 @@ export default function FoundryMobileLayout({
           <span style={S.ctrlLabel}>People{safeParticipants.length > 0 ? ` (${safeParticipants.length})` : ''}</span>
         </button>
 
+        {/* Notes — promoted from More for quick access */}
+        <button style={S.ctrlBtn(activeSheet === 'notes', false)} onClick={() => setActiveSheet(activeSheet === 'notes' ? null : 'notes')}>
+          <span style={S.ctrlIcon}>📝</span>
+          <span style={S.ctrlLabel}>Notes</span>
+        </button>
+
         {/* More */}
         <button style={{ ...S.ctrlBtn(activeSheet === 'more', false) }} onClick={() => setActiveSheet(activeSheet === 'more' ? null : 'more')}>
           <span style={S.ctrlIcon}>⋯</span>
@@ -631,7 +637,17 @@ export default function FoundryMobileLayout({
           <div style={S.sheetHandle}><div style={S.sheetHandleBar} /></div>
           <div style={S.sheetHeader}>
             <span style={S.sheetTitle}>In this Foundry ({safeParticipants.length})</span>
-            <button style={S.sheetClose} onClick={closeSheet}>×</button>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              {isHost && (
+                <button
+                  style={{ ...S.hostCtrlBtn, color: '#FF7043', borderColor: 'rgba(255,112,67,0.3)', fontSize: 12, padding: '5px 10px' }}
+                  onClick={() => setActiveSheet('invite')}
+                >
+                  + Invite
+                </button>
+              )}
+              <button style={S.sheetClose} onClick={closeSheet}>×</button>
+            </div>
           </div>
           <div style={S.sheetBody}>
             {isHost && (
@@ -885,15 +901,41 @@ export default function FoundryMobileLayout({
             dm.fromSessionId === selectedDmParticipant?.id ||
             dm.toSessionId === selectedDmParticipant?.id
           )
-          .map(dm => (
-            <div key={dm.id} style={S.chatMsg}>
-              <div>
-                <span style={S.chatSender}>{dm.fromName}</span>
-                <span style={S.chatTime}>{formatLocalChatTime(dm.createdAt || dm.time)}</span>
-                <div style={S.chatText}>{dm.text}</div>
+          .map(dm => {
+            const isMine = dm.toSessionId === selectedDmParticipant?.id;
+            return (
+              <div key={dm.id} style={{
+                marginBottom: 10,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: isMine ? 'flex-end' : 'flex-start',
+              }}>
+                <div style={{
+                  display: 'flex', gap: 6, alignItems: 'baseline', marginBottom: 3,
+                  flexDirection: isMine ? 'row-reverse' : 'row',
+                }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: isMine ? '#FF7043' : '#b0b8c8' }}>
+                    {isMine ? 'You' : dm.fromName}
+                  </span>
+                  <span style={{ fontSize: 10, color: '#4a5568' }}>
+                    {formatLocalChatTime(dm.createdAt || dm.time)}
+                  </span>
+                </div>
+                <div style={{
+                  maxWidth: '80%',
+                  background: isMine ? 'rgba(255,112,67,0.18)' : 'rgba(255,255,255,0.08)',
+                  border: isMine ? '1px solid rgba(255,112,67,0.28)' : '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: isMine ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
+                  padding: '8px 12px',
+                  color: isMine ? '#ffe0d8' : '#d4dae4',
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                }}>
+                  {dm.text}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
       </div>
     </div>
 
@@ -1222,7 +1264,7 @@ export default function FoundryMobileLayout({
 
       {/* ── MORE SHEET ────────────────────────────────────────────────── */}
       {activeSheet === 'more' && (
-        <div style={S.sheet}>
+        <div style={{ ...S.sheet, maxHeight: '90vh' }}>
           <div style={S.sheetHandle}><div style={S.sheetHandleBar} /></div>
           <div style={S.sheetHeader}>
             <span style={S.sheetTitle}>More options</span>
@@ -1326,7 +1368,9 @@ export default function FoundryMobileLayout({
               {/* Host controls */}
               {isHost && (
                 <>
-				<button style={S.moreItem} onClick={onToggleGuestFileSharing}>
+                  <div style={S.moreSep} />
+                  <div style={{ padding: '4px 4px 2px', fontSize: 10, color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Host Controls</div>
+                  <button style={S.moreItem} onClick={onToggleGuestFileSharing}>
   <span style={S.moreIcon}>{guestFileSharingAllowed ? '✅' : '⬜'}</span>
   <div>
     <div style={S.moreLabel}>Allow guest file uploads</div>

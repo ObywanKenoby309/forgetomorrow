@@ -68,6 +68,12 @@ export default function FoundryRoom() {
 
   // Live data
   const [participants, setParticipants] = useState([]);
+  // Helper: extract FT userIds from live participant list for VaultShare side-writes
+  const getActiveParticipantUserIds = useCallback(() => {
+    return participants
+      .filter(p => !p.local && !p.isGuest && p.userId)
+      .map(p => p.userId);
+  }, [participants]);
   const [meetingMessages, setMeetingMessages] = useState([]);
   const [sessionDms, setSessionDms] = useState([]);
   const [selectedDmParticipant, setSelectedDmParticipant] = useState(null);
@@ -573,6 +579,7 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            participantUserIds: getActiveParticipantUserIds(),
             fileName: `${file.name || 'Document'}.pdf`,
             fileUrl: downloadUrl,
             storagePath,

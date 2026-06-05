@@ -62,7 +62,7 @@ export default async function handler(req, res) {
     const session = await getServerSession(req, res, authOptions);
     if (!session?.user?.id) return res.status(401).end();
 
-    const { fileName, fileUrl, storagePath, source } = req.body || {};
+    const { fileName, fileUrl, storagePath, source, participantUserIds } = req.body || {};
     if (!fileName) return res.status(400).json({ error: 'fileName required' });
 
     try {
@@ -105,25 +105,38 @@ export default async function handler(req, res) {
         },
       });
 
-      // ── Side-write: create VaultShare for every participant except the sender ─
-      // Non-blocking — if this fails, the Foundry share still succeeds
+      // ── Side-write: create VaultShare for every active participant except sender ─
+      // We use participantUserIds sent from the client (the live Daily participants list)
+      // rather than the FoundryParticipant DB table, which misses users who bypass the lobby
+      // (guests, direct-join users). Non-blocking — Foundry share always succeeds.
       try {
-        const participants = await prisma.foundryParticipant.findMany({
-          where: {
-            roomId: room.id,
-            userId: { not: session.user.id },
-            leftAt: null, // only currently active participants
-          },
-          select: { userId: true },
-        });
+        // Fall back to DB participants if client didn't send the list
+        let recipientIds = [];
 
-        if (participants.length > 0) {
+        if (Array.isArray(participantUserIds) && participantUserIds.length > 0) {
+          // Client-provided: filter out sender, nulls, and non-cuid strings
+          recipientIds = participantUserIds.filter(
+            (id) => id && typeof id === 'string' && id !== session.user.id
+          );
+        } else {
+          // Fallback: query DB participant table
+          const dbParticipants = await prisma.foundryParticipant.findMany({
+            where: {
+              roomId: room.id,
+              userId: { not: session.user.id },
+              leftAt: null,
+            },
+            select: { userId: true },
+          });
+          recipientIds = dbParticipants.map((p) => p.userId);
+        }
+
+        if (recipientIds.length > 0) {
           const downloadUrl = `/api/files/download?fileId=${file.id}`;
-
           await prisma.vaultShare.createMany({
-            data: participants.map((p) => ({
+            data: recipientIds.map((uid) => ({
               fromUserId: session.user.id,
-              toUserId: p.userId,
+              toUserId: uid,
               fileName,
               storagePath: resolvedStoragePath || null,
               downloadUrl,
@@ -135,7 +148,6 @@ export default async function handler(req, res) {
           });
         }
       } catch (vaultErr) {
-        // Never block the Foundry share if vault write fails
         console.error('[foundry/share-file] VaultShare side-write failed (non-blocking):', vaultErr);
       }
 

@@ -183,10 +183,13 @@ export default function FoundryLobbyPanel({
     } catch {}
   };
 
-  // Eligible co-hosts from current participants (COACH or RECRUITER, not the host)
+  // Eligible co-hosts: any non-host, non-local FT user (has a userId, not a guest)
+  // We no longer filter by role here because p.role only populates from Daily userData,
+  // which requires the daily_fix.js token patch. Until every room is recreated after
+  // that patch, role will be empty for many participants. Any authenticated FT user
+  // (Seeker, Coach, or Recruiter) can be assigned co-host — the host decides.
   const eligibleCoHosts = participants.filter(p =>
-    !p.local && !p.isHost &&
-    (String(p.role || '').toUpperCase() === 'COACH' || String(p.role || '').toUpperCase() === 'RECRUITER')
+    !p.local && !p.isHost && !p.isGuest && !!p.userId
   );
 
   if (!isHost) return null;
