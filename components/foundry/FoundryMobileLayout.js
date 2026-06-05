@@ -346,8 +346,6 @@ export default function FoundryMobileLayout({
   const [bgError, setBgError] = useState('');
   const [mobileSettingsError, setMobileSettingsError] = useState('');
   const [mobileSettingsSaving, setMobileSettingsSaving] = useState(false);
-
-  // Invite state — mirrors FoundryRightPanel invite panel
   const [inviteTab, setInviteTab] = useState('contacts');
   const [inviteContacts, setInviteContacts] = useState([]);
   const [inviteContactQuery, setInviteContactQuery] = useState('');
@@ -407,12 +405,7 @@ export default function FoundryMobileLayout({
   // Clear unread when chat opens
   useEffect(() => {
     if (activeSheet === 'chat') setUnreadChat(0);
-    if (activeSheet === 'invite' && isHost) {
-      setInviteMessage('');
-      setInviteError('');
-      loadInviteContacts();
-    }
-  }, [activeSheet, isHost, loadInviteContacts]);
+  }, [activeSheet]);
 
   // Scroll chat to bottom
   useEffect(() => {
@@ -531,13 +524,13 @@ export default function FoundryMobileLayout({
   const loadInviteContacts = useCallback(async () => {
     if (!roomId || !isHost) return;
     try {
-      const res = await fetch(`/api/foundry/room/${roomId}/live-invite`);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Could not load contacts');
-      setInviteContacts(Array.isArray(data.contacts) ? data.contacts : []);
+      const fetchRes = await fetch(`/api/foundry/room/${roomId}/live-invite`);
+      const fetchData = await fetchRes.json().catch(() => ({}));
+      if (!fetchRes.ok) throw new Error(fetchData.error || 'Could not load contacts');
+      setInviteContacts(Array.isArray(fetchData.contacts) ? fetchData.contacts : []);
       setInviteError('');
-    } catch (err) {
-      setInviteError(String(err?.message || 'Could not load contacts'));
+    } catch (fetchErr) {
+      setInviteError(String(fetchErr?.message || 'Could not load contacts'));
     }
   }, [roomId, isHost]);
 
@@ -547,17 +540,17 @@ export default function FoundryMobileLayout({
     setInviteError('');
     setInviteMessage('');
     try {
-      const res = await fetch(`/api/foundry/room/${roomId}/live-invite`, {
+      const postRes = await fetch(`/api/foundry/room/${roomId}/live-invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'internal', userId: contact.id }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Could not invite contact');
+      const postData = await postRes.json().catch(() => ({}));
+      if (!postRes.ok) throw new Error(postData.error || 'Could not invite contact');
       setInviteMessage(`${contact.name || 'Contact'} invited.`);
       await loadInviteContacts();
-    } catch (err) {
-      setInviteError(String(err?.message || 'Could not invite contact'));
+    } catch (postErr) {
+      setInviteError(String(postErr?.message || 'Could not invite contact'));
     } finally {
       setInviteBusy(false);
     }
@@ -571,22 +564,31 @@ export default function FoundryMobileLayout({
     setInviteError('');
     setInviteMessage('');
     try {
-      const res = await fetch(`/api/foundry/room/${roomId}/live-invite`, {
+      const extRes = await fetch(`/api/foundry/room/${roomId}/live-invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'external', email: cleanEmail, name: cleanName }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Could not invite guest');
+      const extData = await extRes.json().catch(() => ({}));
+      if (!extRes.ok) throw new Error(extData.error || 'Could not invite guest');
       setInviteMessage(`${cleanEmail} invited.`);
       setExternalEmail('');
       setExternalName('');
-    } catch (err) {
-      setInviteError(String(err?.message || 'Could not invite guest'));
+    } catch (extErr) {
+      setInviteError(String(extErr?.message || 'Could not invite guest'));
     } finally {
       setInviteBusy(false);
     }
   }, [roomId, externalEmail, externalName]);
+
+  // Load contacts when invite sheet opens — placed after all callbacks are defined
+  useEffect(() => {
+    if (activeSheet === 'invite' && isHost) {
+      setInviteMessage('');
+      setInviteError('');
+      loadInviteContacts();
+    }
+  }, [activeSheet, isHost, loadInviteContacts]);
 
   const sendChat = () => {
     if (!chatDraft.trim()) return;
@@ -1310,39 +1312,34 @@ export default function FoundryMobileLayout({
             <button style={S.sheetClose} onClick={closeSheet}>×</button>
           </div>
           <div style={S.sheetBody}>
-            {/* Tab selector */}
             <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-              {['contacts', 'external', 'links'].map(tab => (
+              {['contacts', 'external', 'links'].map(invTab => (
                 <button
-                  key={tab}
+                  key={invTab}
                   style={{
                     flex: 1,
-                    background: inviteTab === tab ? 'rgba(255,112,67,0.18)' : 'rgba(255,255,255,0.06)',
-                    border: inviteTab === tab ? '1px solid rgba(255,112,67,0.35)' : '1px solid rgba(255,255,255,0.08)',
-                    color: inviteTab === tab ? ORANGE : '#aaa',
+                    background: inviteTab === invTab ? 'rgba(255,112,67,0.18)' : 'rgba(255,255,255,0.06)',
+                    border: inviteTab === invTab ? '1px solid rgba(255,112,67,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                    color: inviteTab === invTab ? ORANGE : '#aaa',
                     borderRadius: 8, padding: '8px 4px',
                     fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
-                    textTransform: 'capitalize',
                   }}
-                  onClick={() => setInviteTab(tab)}
+                  onClick={() => setInviteTab(invTab)}
                 >
-                  {tab === 'contacts' ? 'Contacts' : tab === 'external' ? 'External' : 'Links'}
+                  {invTab === 'contacts' ? 'Contacts' : invTab === 'external' ? 'External' : 'Links'}
                 </button>
               ))}
             </div>
-
-            {/* Feedback */}
             {inviteError && <div style={{ fontSize: 11, color: '#ef5350', marginBottom: 10, lineHeight: 1.5 }}>{inviteError}</div>}
             {inviteMessage && <div style={{ fontSize: 11, color: '#4caf50', marginBottom: 10, lineHeight: 1.5 }}>{inviteMessage}</div>}
 
-            {/* Contacts tab */}
             {inviteTab === 'contacts' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <input
                   style={{ ...S.chatInput, borderRadius: 9, marginBottom: 4 }}
                   placeholder="Search FT contacts…"
                   value={inviteContactQuery}
-                  onChange={e => setInviteContactQuery(e.target.value)}
+                  onChange={invEv => setInviteContactQuery(invEv.target.value)}
                 />
                 {inviteContacts.length === 0 && (
                   <div style={{ fontSize: 11, color: '#444', padding: '12px 0', textAlign: 'center', lineHeight: 1.6 }}>
@@ -1350,30 +1347,30 @@ export default function FoundryMobileLayout({
                   </div>
                 )}
                 {inviteContacts
-                  .filter(c => {
-                    const q = inviteContactQuery.trim().toLowerCase();
-                    if (!q) return true;
-                    return [c.name, c.email, c.role].filter(Boolean).join(' ').toLowerCase().includes(q);
+                  .filter(invContact => {
+                    const invQuery = inviteContactQuery.trim().toLowerCase();
+                    if (!invQuery) return true;
+                    return [invContact.name, invContact.email, invContact.role].filter(Boolean).join(' ').toLowerCase().includes(invQuery);
                   })
                   .slice(0, 10)
-                  .map(contact => (
-                    <div key={contact.id} style={{
+                  .map(invContact => (
+                    <div key={invContact.id} style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       padding: '10px', background: 'rgba(255,255,255,0.03)',
                       border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8,
                     }}>
-                      {contact.avatarUrl
-                        ? <img src={contact.avatarUrl} alt={contact.name} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                        : <div style={{ ...S.participantAvatar, width: 32, height: 32, fontSize: 11, flexShrink: 0 }}>{(contact.name || '?')[0].toUpperCase()}</div>
+                      {invContact.avatarUrl
+                        ? <img src={invContact.avatarUrl} alt={invContact.name} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                        : <div style={{ ...S.participantAvatar, width: 32, height: 32, fontSize: 11, flexShrink: 0 }}>{(invContact.name || '?')[0].toUpperCase()}</div>
                       }
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, color: '#ddd', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{contact.name}</div>
-                        <div style={{ fontSize: 10, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{contact.email || contact.role || 'ForgeTomorrow'}</div>
+                        <div style={{ fontSize: 13, color: '#ddd', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{invContact.name}</div>
+                        <div style={{ fontSize: 10, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{invContact.email || invContact.role || 'ForgeTomorrow'}</div>
                       </div>
                       <button
                         disabled={inviteBusy}
                         style={{ ...S.hostCtrlBtn, color: ORANGE, borderColor: 'rgba(255,112,67,0.3)', flexShrink: 0 }}
-                        onClick={() => sendInternalInvite(contact)}
+                        onClick={() => sendInternalInvite(invContact)}
                       >
                         Invite
                       </button>
@@ -1383,7 +1380,6 @@ export default function FoundryMobileLayout({
               </div>
             )}
 
-            {/* External tab */}
             {inviteTab === 'external' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div>
@@ -1392,7 +1388,7 @@ export default function FoundryMobileLayout({
                     style={{ ...S.chatInput, width: '100%', borderRadius: 9, boxSizing: 'border-box' }}
                     placeholder="Jane Smith"
                     value={externalName}
-                    onChange={e => setExternalName(e.target.value)}
+                    onChange={extEv => setExternalName(extEv.target.value)}
                   />
                 </div>
                 <div>
@@ -1401,8 +1397,8 @@ export default function FoundryMobileLayout({
                     style={{ ...S.chatInput, width: '100%', borderRadius: 9, boxSizing: 'border-box' }}
                     placeholder="guest@company.com"
                     value={externalEmail}
-                    onChange={e => setExternalEmail(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && sendExternalInvite()}
+                    onChange={extEv => setExternalEmail(extEv.target.value)}
+                    onKeyDown={extEv => extEv.key === 'Enter' && sendExternalInvite()}
                     type="email"
                     inputMode="email"
                     autoCapitalize="none"
@@ -1421,7 +1417,6 @@ export default function FoundryMobileLayout({
               </div>
             )}
 
-            {/* Links tab */}
             {inviteTab === 'links' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {ftLink && (
