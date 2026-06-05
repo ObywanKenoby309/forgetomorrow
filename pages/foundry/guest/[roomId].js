@@ -197,6 +197,7 @@ export default function GuestFoundryRoom({
   const [sessionDms, setSessionDms] = useState([]);
   const [selectedDmParticipant, setSelectedDmParticipant] = useState(null);
   const [sharedFiles, setSharedFiles] = useState([]);
+  const [guestFileSharingAllowed, setGuestFileSharingAllowed] = useState(false);
   const startTimeRef = useRef(Date.now());
 
   const effectiveGuestCode =
@@ -361,38 +362,46 @@ export default function GuestFoundryRoom({
     callRef.current = call;
 
     call.on('app-message', ({ data }) => {
-      if (data?.type === 'FOUNDRY_FILES_UPDATED') {
-        fetch(`/api/foundry/room/${roomId}/share-file`)
-          .then((res) => res.json())
-          .then((payload) => {
-            if (Array.isArray(payload.files)) {
-              setSharedFiles(payload.files);
-            }
-          })
-          .catch(() => {});
-      }
-	  if (data?.type === 'FOUNDRY_DM') {
-  const local = call.participants()?.local;
-  const localSessionId = local?.session_id;
+  if (data?.type === 'FOUNDRY_FILES_UPDATED') {
+    fetch(`/api/foundry/room/${roomId}/share-file${effectiveGuestCodeRef.current ? `?guestCode=${encodeURIComponent(effectiveGuestCodeRef.current)}` : ''}`)
+      .then((res) => res.json())
+      .then((payload) => {
+        if (Array.isArray(payload.files)) {
+          setSharedFiles(payload.files);
+        }
+      })
+      .catch(() => {});
+  }
 
-  if (!localSessionId) return;
-  if (data.toSessionId !== localSessionId && data.fromSessionId !== localSessionId) return;
+  if (data?.type === 'FOUNDRY_GUEST_FILE_SHARING') {
+    setGuestFileSharingAllowed(!!data.allowed);
+  }
 
-  setSessionDms(prev =>
-    prev.some(m => m.id === data.id) ? prev : [...prev, data]
-  );
-}
-      if (data?.type === 'MEETING_CHAT') {
-        const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-        setMessages(prev => [...prev, {
-          sender: data.senderName || 'Participant',
-          text: data.text,
-          time: data.time || now,
-          color: data.color || '#5C6BC0',
-          avatarUrl: data.avatarUrl || null,
-        }]);
-      }
-    });
+  if (data?.type === 'FOUNDRY_DM') {
+    const local = call.participants()?.local;
+    const localSessionId = local?.session_id;
+
+    if (!localSessionId) return;
+    if (data.toSessionId !== localSessionId && data.fromSessionId !== localSessionId) return;
+
+    setSessionDms(prev =>
+      prev.some(m => m.id === data.id) ? prev : [...prev, data]
+    );
+  }
+
+  if (data?.type === 'MEETING_CHAT') {
+    const fallbackTime = new Date().toISOString();
+
+    setMessages(prev => [...prev, {
+      sender: data.senderName || 'Participant',
+      text: data.text,
+      time: data.time || data.createdAt || fallbackTime,
+      createdAt: data.createdAt || data.time || fallbackTime,
+      color: data.color || '#5C6BC0',
+      avatarUrl: data.avatarUrl || null,
+    }]);
+  }
+});
   }, [roomId]);
 
   const handleParticipantsChange = useCallback((list) => {
@@ -706,12 +715,17 @@ const openInChrome = () => {
         isGuest={true}
         guestCode={effectiveGuestCode}
         sharedFiles={sharedFiles}
-        forgeFiles={[]}
-        onShare={null}
-        onUpload={null}
-        onRemoveFile={null}
-        notes=""
-        onNotesChange={null}
+forgeFiles={[]}
+onShare={() => {}}
+onUpload={async (file) => {
+  console.log('[guest upload]', file);
+}}
+onRemoveFile={null}
+
+guestFileSharingAllowed={guestFileSharingAllowed}
+
+notes=""
+onNotesChange={null}
       >
         <FoundryVideoGrid
           roomId={roomId}
