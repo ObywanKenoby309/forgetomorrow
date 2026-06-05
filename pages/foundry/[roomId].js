@@ -792,9 +792,18 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
         onRemoveFile={handleRemoveFile}	
 
 		guestFileSharingAllowed={guestFileSharingAllowed}
-		onToggleGuestFileSharing={() =>
-		  setGuestFileSharingAllowed(v => !v)
-		}
+		onToggleGuestFileSharing={() => {
+  setGuestFileSharingAllowed(prev => {
+    const next = !prev;
+    try {
+      callRef.current?.sendAppMessage(
+        { type: 'FOUNDRY_GUEST_FILE_SHARING', allowed: next },
+        '*'
+      );
+    } catch {}
+    return next;
+  });
+}}
 		
         notes={notes}
         onNotesChange={handleNotesChange}
@@ -874,9 +883,18 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
             onSend={handleSend}
 			
 			guestFileSharingAllowed={guestFileSharingAllowed}
-			onToggleGuestFileSharing={() =>
-			  setGuestFileSharingAllowed(v => !v)
-			}
+onToggleGuestFileSharing={() => {
+  setGuestFileSharingAllowed(prev => {
+    const next = !prev;
+    try {
+      callRef.current?.sendAppMessage(
+        { type: 'FOUNDRY_GUEST_FILE_SHARING', allowed: next },
+        '*'
+      );
+    } catch {}
+    return next;
+  });
+}}
 			
             onShare={handleShare}
             onUpload={handleUpload}
@@ -922,7 +940,18 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
     fontFamily: "'DM Sans', sans-serif",
   }}>
     <button
-      onClick={() => setGuestFileSharingAllowed(v => !v)}
+      onClick={() => {
+  setGuestFileSharingAllowed(prev => {
+    const next = !prev;
+    try {
+      callRef.current?.sendAppMessage(
+        { type: 'FOUNDRY_GUEST_FILE_SHARING', allowed: next },
+        '*'
+      );
+    } catch {}
+    return next;
+  });
+}}
       style={{
         width: '100%',
         background: 'none',
