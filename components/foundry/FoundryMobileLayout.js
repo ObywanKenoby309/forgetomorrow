@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import FoundryLobbyPanel from './FoundryLobbyPanel';
+import FoundryBrowserHelp from './FoundryBrowserHelp';
 
 const ORANGE = '#FF7043';
 const DARK = '#141720';
@@ -1163,6 +1164,26 @@ export default function FoundryMobileLayout({
         </div>
       )}
 
+{/* ── BROWSER HELP SHEET ─────────────────────────────────────── */}
+{activeSheet === 'browser-help' && (
+  <div style={{ ...S.sheet, maxHeight: '85vh' }}>
+    <div style={S.sheetHandle}>
+      <div style={S.sheetHandleBar} />
+    </div>
+
+    <div style={S.sheetHeader}>
+      <span style={S.sheetTitle}>Help & Troubleshooting</span>
+      <button style={S.sheetClose} onClick={closeSheet}>
+        ×
+      </button>
+    </div>
+
+    <div style={S.sheetBody}>
+      <FoundryBrowserHelp isMobile />
+    </div>
+  </div>
+)}
+
       {/* ── INVITE SHEET ─────────────────────────────────────────────── */}
       {activeSheet === 'invite' && (
         <div style={{ ...S.sheet, maxHeight: '85vh' }}>
@@ -1218,6 +1239,22 @@ export default function FoundryMobileLayout({
                   <div style={S.moreSublabel}>Camera, microphone, speaker, and background</div>
                 </div>
               </button>
+
+<button
+  style={S.moreItem}
+  onClick={() => {
+    closeSheet();
+    setActiveSheet('browser-help');
+  }}
+>
+  <span style={S.moreIcon}>🌐</span>
+  <div>
+    <div style={S.moreLabel}>Help & Troubleshooting</div>
+    <div style={S.moreSublabel}>
+      Browser setup, permissions, downloads, screen sharing
+    </div>
+  </div>
+</button>
 
               {/* Notes — quick access */}
               <button style={S.moreItem} onClick={() => setActiveSheet('notes')}>
