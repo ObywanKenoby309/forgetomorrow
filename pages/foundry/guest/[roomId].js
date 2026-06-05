@@ -175,7 +175,10 @@ export default function GuestFoundryRoom({
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(false);
   const [background, setBackground] = useState('none');
-  const [selectedBackground, setSelectedBackground] = useState('none');
+  const [selectedBackground, setSelectedBackground] = useState(() => {
+    if (typeof window === 'undefined') return 'none';
+    try { return sessionStorage.getItem('foundry_background') || 'none'; } catch { return 'none'; }
+  });
   const [callObject, setCallObject] = useState(null);
   const [guestAccessCode, setGuestAccessCode] = useState(guestCode || '');
   const [roomUrl, setRoomUrl] = useState('');

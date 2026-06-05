@@ -90,6 +90,11 @@ const S = {
   aiTeaser: { background: 'rgba(255,112,67,0.04)', border: '1px dashed rgba(255,112,67,0.15)', borderRadius: 7, padding: '10px 12px', display: 'flex', gap: 8, marginTop: 8 },
   aiCopy: { fontSize: 10, color: '#444', lineHeight: 1.6 },
   aiSoon: { fontSize: 9, color: ORANGE, opacity: 0.5, marginTop: 2 },
+  // DM thread list styles (were missing — caused huge unstyled text)
+  threadInfo: { flex: 1, minWidth: 0 },
+  threadName: { fontSize: 12, fontWeight: 700, color: '#ddd', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  threadPreview: { fontSize: 10, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 },
+  foundryBadge: { fontSize: 9, fontWeight: 700, color: '#888', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '2px 5px', flexShrink: 0 },
 };
 
 const TABS = ['People', 'Chat', 'Files', 'Notes'];
