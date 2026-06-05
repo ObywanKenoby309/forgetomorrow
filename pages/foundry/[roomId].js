@@ -1028,10 +1028,10 @@ onToggleGuestFileSharing={() => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#ddd', marginBottom: 4 }}>
-                💡 For best audio sharing experience
+                💡 Browser compatibility
               </div>
               <div style={{ fontSize: 11, color: '#888', lineHeight: 1.6 }}>
-                PC users are recommended to use <strong style={{ color: ORANGE }}>Microsoft Edge</strong> for screen sharing. Edge supports system audio from all sources. In Chrome, audio sharing works for browser tabs only.
+                ForgeTomorrow currently recommends Chrome, Edge, Safari (Mac), or Firefox. Support for system audio, screen sharing, camera access, downloads, and virtual backgrounds may vary depending on your browser and device.
               </div>
             </div>
             <button

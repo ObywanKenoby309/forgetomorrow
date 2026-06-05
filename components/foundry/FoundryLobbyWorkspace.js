@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import FoundrySchedulePanel from './FoundrySchedulePanel';
+import FoundryBrowserHelp from './FoundryBrowserHelp';
 
 const ORANGE = '#FF7043';
 const GREEN = '#16A34A';
@@ -286,6 +287,7 @@ const S = {
     transition: 'width 80ms linear',
   }),
   buttonRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 },
+
 };
 
 
@@ -677,9 +679,7 @@ function DeviceTestPanel({ isMobile = false }) {
         <p style={S.panelSub}>Check your camera, microphone, speaker, and screen sharing before joining a Foundry.</p>
       </div>
 
-      <div style={S.infoBox}>
-        For the best screen and system audio sharing experience on PC, ForgeTomorrow currently recommends Microsoft Edge. Chrome may only share audio from browser tabs.
-      </div>
+      <FoundryBrowserHelp isMobile={isMobile} />
 
       {deviceError && <div style={S.error}>{deviceError}</div>}
 
