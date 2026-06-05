@@ -482,6 +482,67 @@ export default function GuestFoundryRoom({
     }
   }, [guestName]);
 
+const handleUpload = useCallback(async (file) => {
+  if (!file || !roomId || !guestFileSharingAllowed) return;
+
+  if (file.size > 10 * 1024 * 1024) {
+    alert('Maximum file size is 10MB.');
+    return;
+  }
+
+  try {
+    const fileBase64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Could not read file'));
+      reader.readAsDataURL(file);
+    });
+
+    const uploadRes = await fetch('/api/files/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileBase64,
+        mimeType: file.type || 'application/octet-stream',
+        context: 'foundry',
+        roomId,
+        guestCode: effectiveGuestCodeRef.current,
+      }),
+    });
+
+    const uploadData = await uploadRes.json().catch(() => ({}));
+    if (!uploadRes.ok) throw new Error(uploadData.error || 'Could not upload file');
+
+    const shareRes = await fetch(`/api/foundry/room/${roomId}/share-file`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: uploadData.fileName || file.name,
+        storagePath: uploadData.storagePath,
+        source: 'COMPUTER',
+        guestCode: effectiveGuestCodeRef.current,
+      }),
+    });
+
+    const shareData = await shareRes.json().catch(() => ({}));
+    if (!shareRes.ok) throw new Error(shareData.error || 'Could not share file');
+
+    if (shareData.file) {
+      setSharedFiles(prev => {
+        if (prev.find(f => f.id === shareData.file.id)) return prev;
+        return [shareData.file, ...prev];
+      });
+    }
+
+    try {
+      callRef.current?.sendAppMessage({ type: 'FOUNDRY_FILES_UPDATED' }, '*');
+    } catch {}
+  } catch (err) {
+    alert(String(err?.message || err || 'Could not upload file'));
+  }
+}, [roomId, guestFileSharingAllowed]);
+
 const handleSendDm = useCallback((target, text) => {
   if (!callRef.current || !target?.id || !text?.trim()) return;
 
@@ -717,11 +778,8 @@ const openInChrome = () => {
         sharedFiles={sharedFiles}
 forgeFiles={[]}
 onShare={() => {}}
-onUpload={async (file) => {
-  console.log('[guest upload]', file);
-}}
+onUpload={handleUpload}
 onRemoveFile={null}
-
 guestFileSharingAllowed={guestFileSharingAllowed}
 
 notes=""
@@ -801,9 +859,11 @@ onNotesChange={null}
             onDm={() => {}}
             onDmOpen={() => {}}
             onShare={() => {}}
-            onUpload={() => {}}
-            isHost={false}
-            guestCode={effectiveGuestCode}
+onUpload={handleUpload}
+isHost={false}
+isGuest={true}
+guestCode={effectiveGuestCode}
+guestFileSharingAllowed={guestFileSharingAllowed}
             initialTab={activePanel}
           />
         )}
