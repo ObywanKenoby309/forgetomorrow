@@ -17,14 +17,43 @@ export default async function handler(req, res) {
     if (!session?.user?.id) return res.status(401).json({ error: 'Not authenticated' });
 
     const { docType, docId, uploadId } = req.query;
+    const resolvedUploadId = uploadId ? String(uploadId) : '';
+    const resolvedDocType = String(docType || '');
+    const resolvedDocId = String(docId || '');
 
-    const where = {
-      fromUserId: session.user.id,
-      ...(uploadId
-        ? { vaultUploadId: String(uploadId) }
-        : { forgeDocType: String(docType || ''), forgeDocId: String(docId || '') }
-      ),
-    };
+    let where;
+
+    if (resolvedUploadId) {
+      const upload = await prisma.vaultUpload.findFirst({
+        where: { id: resolvedUploadId, userId: session.user.id },
+        select: { id: true, fileName: true },
+      });
+
+      where = {
+        fromUserId: session.user.id,
+        OR: [
+          { vaultUploadId: resolvedUploadId },
+          // Legacy Foundry-created VaultShare rows did not store vaultUploadId.
+          // They only stored the Foundry room fields + fileName, which made
+          // Shared With Me work while the owner-side Shared With panel looked empty.
+          ...(upload?.fileName
+            ? [{
+                vaultUploadId: null,
+                forgeDocType: null,
+                forgeDocId: null,
+                foundryRoomId: { not: null },
+                fileName: upload.fileName,
+              }]
+            : []),
+        ],
+      };
+    } else {
+      where = {
+        fromUserId: session.user.id,
+        forgeDocType: resolvedDocType,
+        forgeDocId: resolvedDocId,
+      };
+    }
 
     const shares = await prisma.vaultShare.findMany({
       where,

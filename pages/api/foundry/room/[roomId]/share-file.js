@@ -62,7 +62,16 @@ export default async function handler(req, res) {
     const session = await getServerSession(req, res, authOptions);
     if (!session?.user?.id) return res.status(401).end();
 
-    const { fileName, fileUrl, storagePath, source, participantUserIds } = req.body || {};
+    const {
+      fileName,
+      fileUrl,
+      storagePath,
+      source,
+      participantUserIds,
+      forgeDocType,
+      forgeDocId,
+      vaultUploadId,
+    } = req.body || {};
     if (!fileName) return res.status(400).json({ error: 'fileName required' });
 
     try {
@@ -138,6 +147,9 @@ export default async function handler(req, res) {
               fromUserId: session.user.id,
               toUserId: uid,
               fileName,
+              vaultUploadId: vaultUploadId ? String(vaultUploadId) : null,
+              forgeDocType: forgeDocType || null,
+              forgeDocId: forgeDocId ? String(forgeDocId) : null,
               storagePath: resolvedStoragePath || null,
               downloadUrl,
               foundryRoomId: room.id,
