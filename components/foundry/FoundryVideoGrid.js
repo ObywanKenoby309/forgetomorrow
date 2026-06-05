@@ -593,6 +593,18 @@ const checkRoomEmpty = useCallback((current) => {
             applyFoundryBackground(call, sessionStorage.getItem('foundry_background') || initialBackground).catch((err) => {
               console.error('[foundry] initial background failed:', err);
             });
+            // Explicitly sync camera/mic state after join — Daily may start video off
+            // regardless of startVideoOff, so we re-apply the preference with a delay
+            // to ensure the call is fully negotiated before we toggle
+            setTimeout(() => {
+              if (destroyed || !call) return;
+              try {
+                const camPref = sessionStorage.getItem('foundry_camera_on');
+                const micPref = sessionStorage.getItem('foundry_mic_on');
+                if (camPref !== null) call.setLocalVideo(camPref !== '0');
+                if (micPref !== null) call.setLocalAudio(micPref === '1');
+              } catch {}
+            }, 1200);
           }
         });
 

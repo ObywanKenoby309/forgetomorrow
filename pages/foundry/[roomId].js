@@ -76,6 +76,7 @@ export default function FoundryRoom() {
   }, [participants]);
   const [meetingMessages, setMeetingMessages] = useState([]);
   const [sessionDms, setSessionDms] = useState([]);
+  const [unreadDms, setUnreadDms] = useState(0);
   const [selectedDmParticipant, setSelectedDmParticipant] = useState(null);
   const [sharedFiles, setSharedFiles] = useState([]);
   const [forgeFiles, setForgeFiles] = useState([]);
@@ -294,9 +295,11 @@ const handleCallReady = useCallback((call) => {
       if (!localSessionId) return;
       if (data.toSessionId !== localSessionId && data.fromSessionId !== localSessionId) return;
 
-      setSessionDms(prev =>
-        prev.some(m => m.id === data.id) ? prev : [...prev, data]
-      );
+      setSessionDms(prev => {
+        if (prev.some(m => m.id === data.id)) return prev;
+        setUnreadDms(n => n + 1);
+        return [...prev, data];
+      });
     }
 
     if (data?.type === 'FOUNDRY_FILES_UPDATED') {

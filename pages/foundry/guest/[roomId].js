@@ -175,18 +175,22 @@ export default function GuestFoundryRoom({
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(false);
   const [background, setBackground] = useState('none');
-  const [selectedBackground, setSelectedBackground] = useState(() => {
-    if (typeof window === 'undefined') return 'none';
-    try { return sessionStorage.getItem('foundry_background') || 'none'; } catch { return 'none'; }
-  });
+  const [selectedBackground, setSelectedBackground] = useState('none');
   const [callObject, setCallObject] = useState(null);
   const [guestAccessCode, setGuestAccessCode] = useState(guestCode || '');
   const [roomUrl, setRoomUrl] = useState('');
   const [error, setError] = useState(serverError || '');
   const [joining, setJoining] = useState(false);
 
-  const [micMuted, setMicMuted] = useState(true);
-  const [camOff, setCamOff] = useState(false);
+  const [micMuted, setMicMuted] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    try { return sessionStorage.getItem('foundry_mic_on') !== '1'; } catch { return true; }
+  });
+  const [camOff, setCamOff] = useState(() => {
+    // Respect the camera preference set on the join page
+    if (typeof window === 'undefined') return false;
+    try { return sessionStorage.getItem('foundry_camera_on') === '0'; } catch { return false; }
+  });
   const [isRecording] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
 
@@ -200,6 +204,7 @@ export default function GuestFoundryRoom({
   const [participants, setParticipants] = useState([]);
   const [messages, setMessages] = useState([]);
   const [sessionDms, setSessionDms] = useState([]);
+  const [unreadDms, setUnreadDms] = useState(0);
   const [selectedDmParticipant, setSelectedDmParticipant] = useState(null);
   const [sharedFiles, setSharedFiles] = useState([]);
   const [guestFileSharingAllowed, setGuestFileSharingAllowed] = useState(false);
@@ -390,9 +395,11 @@ export default function GuestFoundryRoom({
     if (!localSessionId) return;
     if (data.toSessionId !== localSessionId && data.fromSessionId !== localSessionId) return;
 
-    setSessionDms(prev =>
-      prev.some(m => m.id === data.id) ? prev : [...prev, data]
-    );
+    setSessionDms(prev => {
+      if (prev.some(m => m.id === data.id)) return prev;
+      setUnreadDms(n => n + 1);
+      return [...prev, data];
+    });
   }
 
   if (data?.type === 'MEETING_CHAT') {

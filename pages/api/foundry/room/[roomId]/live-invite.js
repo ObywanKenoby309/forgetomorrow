@@ -333,21 +333,9 @@ export default async function handler(req, res) {
         await prisma.seekerCalendarItem.create({ data: mirrorData });
       }
 
-      try {
-        const { getOrCreateConversation } = await import('@/lib/signal');
-        const conv = await getOrCreateConversation(session.user.id, userId);
-        if (conv) {
-          await prisma.message.create({
-            data: {
-              conversationId: conv.id,
-              senderId: session.user.id,
-              content: `🔨 ${hostName} invited you to join **${room.title}** in Foundry.\n\nJoin here: ${ftLink}`,
-            },
-          });
-        }
-      } catch {
-        // Signal is helpful but not required.
-      }
+      // Signal message intentionally not written for live in-meeting invites.
+      // The invitee receives a notification + calendar item which is sufficient.
+      // Writing to Signal causes old invite messages to appear in the Foundry chat panel.
 
       return res.status(200).json({ ok: true, type: 'internal', ftLink, guestLink, guestCode: guestToken });
     }
