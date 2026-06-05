@@ -333,6 +333,7 @@ export default function FoundryMobileLayout({
   onBackgroundChange,
   isFounder = false,
   guestFileSharingAllowed = false,
+  onToggleGuestFileSharing,
 }) {
   const [activeSheet, setActiveSheet] = useState(null);
   const [chatMode, setChatMode] = useState('meeting');
@@ -1288,6 +1289,15 @@ export default function FoundryMobileLayout({
               {/* Host controls */}
               {isHost && (
                 <>
+				<button style={S.moreItem} onClick={onToggleGuestFileSharing}>
+  <span style={S.moreIcon}>{guestFileSharingAllowed ? '✅' : '⬜'}</span>
+  <div>
+    <div style={S.moreLabel}>Allow guest file uploads</div>
+    <div style={S.moreSublabel}>
+      {guestFileSharingAllowed ? 'Guests can upload from their device' : 'Guests cannot upload files'}
+    </div>
+  </div>
+</button>
                   <div style={S.moreSep} />
                   <button style={S.moreItem} onClick={() => { onMuteAll?.(); closeSheet(); }}>
                     <span style={S.moreIcon}>🔇</span>

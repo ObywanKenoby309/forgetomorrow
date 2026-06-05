@@ -74,6 +74,8 @@ export default function FoundryRoom() {
   const [sharedFiles, setSharedFiles] = useState([]);
   const [forgeFiles, setForgeFiles] = useState([]);
   const [notes, setNotes] = useState('');
+  const [guestFileSharingAllowed, setGuestFileSharingAllowed] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const startTimeRef = useRef(Date.now());
 
@@ -787,7 +789,13 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
         forgeFiles={forgeFiles}
         onShare={handleShare}
         onUpload={handleUpload}
-        onRemoveFile={handleRemoveFile}
+        onRemoveFile={handleRemoveFile}	
+
+		guestFileSharingAllowed={guestFileSharingAllowed}
+		onToggleGuestFileSharing={() =>
+		  setGuestFileSharingAllowed(v => !v)
+		}
+		
         notes={notes}
         onNotesChange={handleNotesChange}
         guestCode={null}
@@ -864,6 +872,12 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
             notes={notes}
             onNotesChange={handleNotesChange}
             onSend={handleSend}
+			
+			guestFileSharingAllowed={guestFileSharingAllowed}
+			onToggleGuestFileSharing={() =>
+			  setGuestFileSharingAllowed(v => !v)
+			}
+			
             onShare={handleShare}
             onUpload={handleUpload}
             onRemoveFile={handleRemoveFile}
@@ -893,6 +907,41 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
         )}
       </div>
 
+{showMoreMenu && canManage && (
+  <div style={{
+    position: 'fixed',
+    right: 24,
+    bottom: 72,
+    zIndex: 9999,
+    width: 280,
+    background: '#141720',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: 12,
+    padding: 12,
+    boxShadow: '0 12px 36px rgba(0,0,0,0.45)',
+    fontFamily: "'DM Sans', sans-serif",
+  }}>
+    <button
+      onClick={() => setGuestFileSharingAllowed(v => !v)}
+      style={{
+        width: '100%',
+        background: 'none',
+        border: 'none',
+        color: '#ddd',
+        textAlign: 'left',
+        padding: '10px 8px',
+        cursor: 'pointer',
+        fontFamily: 'inherit',
+      }}
+    >
+      {guestFileSharingAllowed ? '✅' : '⬜'} Allow guest file uploads
+      <div style={{ fontSize: 11, color: '#777', marginTop: 3 }}>
+        {guestFileSharingAllowed ? 'Guests can upload from device' : 'Guests cannot upload files'}
+      </div>
+    </button>
+  </div>
+)}
+
       <FoundryBottomBar
         micMuted={micMuted}
         camOff={camOff}
@@ -908,7 +957,7 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
         onFilesToggle={() => togglePanel('Files')}
         onPeopleToggle={() => togglePanel('People')}
         onRecordToggle={handleRecordToggle}
-        onMore={() => {}}
+        onMore={() => setShowMoreMenu(v => !v)}
         onEnd={handleEnd}
       />
 
