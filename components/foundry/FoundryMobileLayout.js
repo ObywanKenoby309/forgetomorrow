@@ -81,6 +81,21 @@ const S = {
     minWidth: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
     padding: '0 3px',
   },
+  inlineBadge: {
+    marginLeft: 5,
+    background: ORANGE,
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: 800,
+    borderRadius: 8,
+    minWidth: 14,
+    height: 14,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0 4px',
+    verticalAlign: 'middle',
+  },
 
   // Sheet system
   backdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 20 },
@@ -378,6 +393,7 @@ export default function FoundryMobileLayout({
   const [notesSaveState, setNotesSaveState] = useState('idle');
   const [copiedLink, setCopiedLink] = useState('');
   const [unreadChat, setUnreadChat] = useState(0);
+  const [unreadDms, setUnreadDms] = useState(0);
   // Safe defaults — prevent null/undefined crashes on any prop
   const safeMessages = messages || [];
   const safeParticipants = participants || [];
@@ -395,17 +411,26 @@ export default function FoundryMobileLayout({
 
   // Track unread chat messages
   const prevMsgCount = useRef(0);
+  const prevDmCount = useRef(0);
   useEffect(() => {
-    if (activeSheet !== 'chat' && safeMessages.length > prevMsgCount.current) {
+    if ((activeSheet !== 'chat' || chatMode !== 'meeting') && safeMessages.length > prevMsgCount.current) {
       setUnreadChat(v => v + (safeMessages.length - prevMsgCount.current));
     }
     prevMsgCount.current = safeMessages.length;
-  }, [safeMessages, activeSheet]);
+  }, [safeMessages, activeSheet, chatMode]);
+
+  useEffect(() => {
+    if ((activeSheet !== 'chat' || chatMode !== 'dms') && safeSessionDms.length > prevDmCount.current) {
+      setUnreadDms(v => v + (safeSessionDms.length - prevDmCount.current));
+    }
+    prevDmCount.current = safeSessionDms.length;
+  }, [safeSessionDms, activeSheet, chatMode]);
 
   // Clear unread when chat opens
   useEffect(() => {
-    if (activeSheet === 'chat') setUnreadChat(0);
-  }, [activeSheet]);
+    if (activeSheet === 'chat' && chatMode === 'meeting') setUnreadChat(0);
+    if (activeSheet === 'chat' && chatMode === 'dms') setUnreadDms(0);
+  }, [activeSheet, chatMode]);
 
   // Scroll chat to bottom
   useEffect(() => {
@@ -676,7 +701,7 @@ export default function FoundryMobileLayout({
         <button style={S.ctrlBtn(activeSheet === 'chat', false)} onClick={() => setActiveSheet(activeSheet === 'chat' ? null : 'chat')}>
           <span style={S.ctrlIcon}>💬</span>
           <span style={S.ctrlLabel}>Chat</span>
-          {unreadChat > 0 && <span style={S.badge}>{unreadChat > 9 ? '9+' : unreadChat}</span>}
+          {(unreadChat + unreadDms) > 0 && <span style={S.badge}>{(unreadChat + unreadDms) > 9 ? '9+' : (unreadChat + unreadDms)}</span>}
         </button>
 
         {/* Files */}
@@ -840,7 +865,7 @@ export default function FoundryMobileLayout({
               }}
               onClick={() => setChatMode('meeting')}
             >
-              Meeting Chat
+              Meeting Chat {unreadChat > 0 && <span style={S.inlineBadge}>{unreadChat > 9 ? '9+' : unreadChat}</span>}
             </button>
             <button
               style={{
@@ -856,7 +881,7 @@ export default function FoundryMobileLayout({
               }}
               onClick={() => setChatMode('dms')}
             >
-              Direct Messages
+              Direct Messages {unreadDms > 0 && <span style={S.inlineBadge}>{unreadDms > 9 ? '9+' : unreadDms}</span>}
             </button>
           </div>
 

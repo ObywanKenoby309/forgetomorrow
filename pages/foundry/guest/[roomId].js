@@ -174,8 +174,14 @@ export default function GuestFoundryRoom({
   const [guestUserData, setGuestUserData] = useState(null);
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(false);
-  const [background, setBackground] = useState('none');
-  const [selectedBackground, setSelectedBackground] = useState('none');
+  const [background, setBackground] = useState(() => {
+    if (typeof window === 'undefined') return 'none';
+    try { return sessionStorage.getItem('foundry_background') || 'none'; } catch { return 'none'; }
+  });
+  const [selectedBackground, setSelectedBackground] = useState(() => {
+    if (typeof window === 'undefined') return 'none';
+    try { return sessionStorage.getItem('foundry_background') || 'none'; } catch { return 'none'; }
+  });
   const [callObject, setCallObject] = useState(null);
   const [guestAccessCode, setGuestAccessCode] = useState(guestCode || '');
   const [roomUrl, setRoomUrl] = useState('');
@@ -344,6 +350,7 @@ export default function GuestFoundryRoom({
       } catch {}
 
       setGuestAccessCode(codeToUse);
+      setSelectedBackground(background || 'none');
       enterRoom(name, data.token, data.roomUrl, data.userData || null);
     } catch (err) {
       console.error('[foundry guest room] token request failed:', err);
@@ -819,6 +826,7 @@ onNotesChange={null}
           guestToken={guestToken}
           guestRoomUrl={roomUrl}
           guestUserData={guestUserData}
+          initialBackground={selectedBackground}
         />
       </FoundryMobileLayout>
     );

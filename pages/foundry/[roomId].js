@@ -799,7 +799,11 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
         forgeFiles={forgeFiles}
         onShare={handleShare}
         onUpload={handleUpload}
-        onRemoveFile={handleRemoveFile}	
+        onRemoveFile={handleRemoveFile}
+        callObject={callObject}
+        selectedBackground={selectedBackground}
+        onBackgroundChange={setSelectedBackground}
+        isFounder={isFounder}
 
 		guestFileSharingAllowed={guestFileSharingAllowed}
 		onToggleGuestFileSharing={() => {

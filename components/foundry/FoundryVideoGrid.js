@@ -740,7 +740,13 @@ if (selectedBackground) {
 
   useEffect(() => {
     if (!callRef.current || joinState !== 'joined') return;
-    applyFoundryBackground(callRef.current, initialBackground).catch((err) => {
+
+    const effectiveBackground =
+      (typeof window !== 'undefined' ? sessionStorage.getItem('foundry_background') : null) ||
+      initialBackground ||
+      'none';
+
+    applyFoundryBackground(callRef.current, effectiveBackground).catch((err) => {
       console.error('[foundry] background update failed:', err);
     });
   }, [initialBackground, joinState]);

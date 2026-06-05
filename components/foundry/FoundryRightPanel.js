@@ -18,7 +18,33 @@ const S = {
     color: active ? ORANGE : '#555', cursor: 'pointer', fontSize: 11, fontWeight: 500,
     padding: '9px 2px', transition: 'all 0.15s', whiteSpace: 'nowrap', textAlign: 'center',
     fontFamily: "'DM Sans', sans-serif",
+    position: 'relative',
   }),
+  tabInner: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, position: 'relative' },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: '50%',
+    background: ORANGE,
+    boxShadow: '0 0 0 2px rgba(255,112,67,0.12)',
+    display: 'inline-block',
+    flexShrink: 0,
+  },
+  smallBadge: {
+    minWidth: 16,
+    height: 16,
+    borderRadius: 999,
+    background: ORANGE,
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 800,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0 4px',
+    lineHeight: 1,
+    flexShrink: 0,
+  },
   content: { flex: 1, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column' },
   chatSub: {
     display: 'flex', gap: 2, background: 'rgba(255,255,255,0.04)',
@@ -731,10 +757,51 @@ export default function FoundryRightPanel({
   const [chatSub, setChatSub] = useState('meeting');
   const [draft, setDraft] = useState('');
   const [guestDmParticipant, setGuestDmParticipant] = useState(null);
+  const [unreadChat, setUnreadChat] = useState(0);
+  const [unreadDms, setUnreadDms] = useState(0);
+  const [unreadFiles, setUnreadFiles] = useState(0);
+  const prevMessageCountRef = useRef(messages.length);
+  const prevDmCountRef = useRef(sessionDms.length);
+  const prevSharedFileCountRef = useRef(sharedFiles.length);
 
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab);
   }, [initialTab]);
+
+  useEffect(() => {
+    if (messages.length > prevMessageCountRef.current && !(activeTab === 'Chat' && chatSub === 'meeting')) {
+      setUnreadChat(v => v + (messages.length - prevMessageCountRef.current));
+    }
+    prevMessageCountRef.current = messages.length;
+  }, [messages.length, activeTab, chatSub]);
+
+  useEffect(() => {
+    if (sessionDms.length > prevDmCountRef.current && !(activeTab === 'Chat' && chatSub === 'dms')) {
+      setUnreadDms(v => v + (sessionDms.length - prevDmCountRef.current));
+    }
+    prevDmCountRef.current = sessionDms.length;
+  }, [sessionDms.length, activeTab, chatSub]);
+
+  useEffect(() => {
+    if (sharedFiles.length > prevSharedFileCountRef.current && activeTab !== 'Files') {
+      setUnreadFiles(v => v + (sharedFiles.length - prevSharedFileCountRef.current));
+    }
+    prevSharedFileCountRef.current = sharedFiles.length;
+  }, [sharedFiles.length, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'Chat' && chatSub === 'meeting') setUnreadChat(0);
+    if (activeTab === 'Chat' && chatSub === 'dms') setUnreadDms(0);
+    if (activeTab === 'Files') setUnreadFiles(0);
+  }, [activeTab, chatSub]);
+
+  useEffect(() => {
+    if (!selectedDmParticipant) return;
+    if (!selectedDmParticipant.userId || selectedDmParticipant.isGuest) {
+      setGuestDmParticipant(selectedDmParticipant);
+      setChatSub('dms');
+    }
+  }, [selectedDmParticipant]);
 
   const handleConvertChatToNotes = (msgs) => {
     const transcript = msgs.map(m => `[${m.time}] ${m.sender}: ${m.text}`).join('\n');
@@ -754,17 +821,26 @@ export default function FoundryRightPanel({
   return (
     <div style={S.panel}>
       <div style={S.tabBar} role="tablist">
-        {TABS_LIST.map(tab => (
-          <button
-            key={tab}
-            style={S.tab(activeTab === tab)}
-            role="tab"
-            aria-selected={activeTab === tab}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
+        {TABS_LIST.map(tab => {
+          const showDot =
+            (tab === 'Chat' && (unreadChat > 0 || unreadDms > 0)) ||
+            (tab === 'Files' && unreadFiles > 0);
+
+          return (
+            <button
+              key={tab}
+              style={S.tab(activeTab === tab)}
+              role="tab"
+              aria-selected={activeTab === tab}
+              onClick={() => setActiveTab(tab)}
+            >
+              <span style={S.tabInner}>
+                {tab}
+                {showDot && <span style={S.dot} />}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* ── Always-mounted panels — visibility toggled via display:none ── */}
@@ -806,8 +882,12 @@ export default function FoundryRightPanel({
       {/* Chat — always mounted, sub-tabs switch between meeting chat and Signal */}
       <div style={{ ...S.content, display: activeTab === 'Chat' ? 'flex' : 'none', flexDirection: 'column' }}>
         <div style={S.chatSub}>
-          <button style={S.subBtn(chatSub === 'meeting')} onClick={() => setChatSub('meeting')}>Meeting Chat</button>
-          <button style={S.subBtn(chatSub === 'dms')} onClick={() => setChatSub('dms')}>Direct Messages</button>
+          <button style={S.subBtn(chatSub === 'meeting')} onClick={() => setChatSub('meeting')}>
+            Meeting Chat {unreadChat > 0 && <span style={S.smallBadge}>{unreadChat > 9 ? '9+' : unreadChat}</span>}
+          </button>
+          <button style={S.subBtn(chatSub === 'dms')} onClick={() => setChatSub('dms')}>
+            Direct Messages {unreadDms > 0 && <span style={S.smallBadge}>{unreadDms > 9 ? '9+' : unreadDms}</span>}
+          </button>
         </div>
 
         {/* Meeting chat */}
