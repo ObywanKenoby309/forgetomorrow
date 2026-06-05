@@ -175,6 +175,8 @@ export default function GuestFoundryRoom({
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(false);
   const [background, setBackground] = useState('none');
+  const [selectedBackground, setSelectedBackground] = useState('none');
+  const [callObject, setCallObject] = useState(null);
   const [guestAccessCode, setGuestAccessCode] = useState(guestCode || '');
   const [roomUrl, setRoomUrl] = useState('');
   const [error, setError] = useState(serverError || '');
@@ -359,7 +361,8 @@ export default function GuestFoundryRoom({
   }, []);
 
   const handleCallReady = useCallback((call) => {
-    callRef.current = call;
+  callRef.current = call;
+  setCallObject(call);
 
     call.on('app-message', ({ data }) => {
   if (data?.type === 'FOUNDRY_FILES_UPDATED') {
@@ -753,7 +756,11 @@ const openInChrome = () => {
         roomId={roomId}
         micMuted={micMuted}
         camOff={camOff}
-        isScreenSharing={isScreenSharing}
+		isScreenSharing={isScreenSharing}
+		callObject={callObject}
+		selectedBackground={selectedBackground}
+		onBackgroundChange={setSelectedBackground}
+		isFounder={false}
         onMicToggle={() => setMicMuted(v => !v)}
         onCamToggle={() => setCamOff(v => !v)}
         onShareScreen={async () => {
@@ -819,7 +826,10 @@ onNotesChange={null}
         onToggleSidebar={() => setSidebarHidden((v) => !v)}
         compact={compact}
         onToggleCompact={() => setCompact((v) => !v)}
-        callObject={callRef.current}
+		callObject={callObject}
+		selectedBackground={selectedBackground}
+		onBackgroundChange={setSelectedBackground}
+		isFounder={false}
       />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -840,6 +850,7 @@ onNotesChange={null}
           guestToken={guestToken}
           guestRoomUrl={roomUrl}
           guestUserData={guestUserData}
+		  initialBackground={selectedBackground}
         />
 
         {!sidebarHidden && (
