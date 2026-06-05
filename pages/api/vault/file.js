@@ -61,12 +61,20 @@ export default async function handler(req, res) {
     const buffer = Buffer.from(await data.arrayBuffer());
 
     const ext = resolvedPath.split('.').pop()?.toLowerCase() || 'pdf';
+    const blockedImageTypes = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg']);
+
+    if (blockedImageTypes.has(ext)) {
+      return res.status(415).json({
+        error: 'Image files are disabled until image moderation is implemented.',
+      });
+    }
+
     const mimeMap = {
       pdf: 'application/pdf',
       doc: 'application/msword',
       docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     };
-    const contentType = mimeMap[ext] || 'application/pdf';
+    const contentType = mimeMap[ext] || 'application/octet-stream';
     const safeFileName = encodeURIComponent(fileName);
 
     res.setHeader('Content-Type', contentType);

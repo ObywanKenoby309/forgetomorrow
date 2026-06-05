@@ -110,6 +110,10 @@ function safeText(v, fallback = '') {
   return s || fallback;
 }
 
+function isImageFileName(fileName = '') {
+  return /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(String(fileName || '').trim());
+}
+
 function downloadText(filename, content) {
   try {
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -1090,6 +1094,8 @@ function SharedWithMeTab({ isMobile }) {
   const [shares, setShares] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [removeError, setRemoveError] = useState(null);
+  const [removingShareId, setRemovingShareId] = useState(null);
 
   useEffect(() => {
     fetch('/api/vault/shared-with-me', { credentials: 'include' })
@@ -1113,6 +1119,36 @@ function SharedWithMeTab({ isMobile }) {
     } catch { /* silent */ }
   }, []);
 
+  const removeShare = useCallback(async (shareId) => {
+    if (!shareId || removingShareId) return;
+    if (!confirm('Remove this document from your Shared With Me list? This only removes your access and does not affect the sender.')) return;
+
+    setRemoveError(null);
+    setRemovingShareId(shareId);
+
+    try {
+      const res = await fetch('/api/vault/shared-with-me/remove', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shareId }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not remove document');
+
+      setShares(prev => {
+        const removed = prev.find(s => s.id === shareId);
+        if (removed?.isUnread) setUnreadCount(n => Math.max(0, n - 1));
+        return prev.filter(s => s.id !== shareId);
+      });
+    } catch (err) {
+      setRemoveError(err?.message || 'Could not remove document');
+    } finally {
+      setRemovingShareId(null);
+    }
+  }, [removingShareId]);
+
   if (loading) return <div style={{ padding: '36px 0', textAlign: 'center', color: '#90A4AE', fontSize: 13 }}>Loading…</div>;
 
   if (!shares.length) {
@@ -1127,6 +1163,15 @@ function SharedWithMeTab({ isMobile }) {
 
   return (
     <div style={{ padding: '0 14px 14px' }}>
+      {removeError && (
+        <div style={{
+          margin: '10px 0', padding: '8px 10px', borderRadius: 8,
+          background: 'rgba(229,57,53,0.06)', color: '#E53935',
+          fontSize: 12, fontWeight: 700,
+        }}>
+          {removeError}
+        </div>
+      )}
       {!isMobile && (
         <div style={{
           display: 'flex', alignItems: 'center', padding: '8px 0',
@@ -1138,7 +1183,7 @@ function SharedWithMeTab({ isMobile }) {
           <div style={{ width: 120 }}>From</div>
           <div style={{ width: 80 }}>Origin</div>
           <div style={{ width: 100 }}>Received</div>
-          <div style={{ width: 110, paddingLeft: 12 }}>Actions</div>
+          <div style={{ width: 170, paddingLeft: 12 }}>Actions</div>
         </div>
       )}
 
@@ -1197,8 +1242,25 @@ function SharedWithMeTab({ isMobile }) {
           </div>
 
           {/* Actions */}
-          <div style={{ flexShrink: 0, width: isMobile ? 'auto' : 110, paddingLeft: isMobile ? 0 : 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-            {s.downloadUrl ? (
+          <div style={{
+            flexShrink: 0,
+            width: isMobile ? 'auto' : 170,
+            paddingLeft: isMobile ? 0 : 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            flexWrap: 'wrap',
+          }}>
+            {isImageFileName(s.fileName) ? (
+              <span
+                title="Image files are disabled until image moderation is implemented."
+                style={{
+                  fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
+                  border: '1px solid rgba(0,0,0,0.10)', background: 'rgba(0,0,0,0.04)',
+                  color: '#78909C', whiteSpace: 'nowrap',
+                }}
+              >Image paused</span>
+            ) : s.downloadUrl ? (
               <button
                 onClick={() => { window.open(s.downloadUrl, '_blank', 'noopener'); if (s.isUnread) markRead(s.id); }}
                 style={{
@@ -1210,6 +1272,20 @@ function SharedWithMeTab({ isMobile }) {
             ) : (
               <span style={{ fontSize: 11, color: '#B0BEC5' }}>No file</span>
             )}
+
+            <button
+              onClick={() => removeShare(s.id)}
+              disabled={removingShareId === s.id}
+              title="Remove this document from your Shared With Me list"
+              style={{
+                fontSize: 11, fontWeight: 700, padding: '5px 9px', borderRadius: 8,
+                border: '1px solid rgba(229,57,53,0.22)', background: 'transparent',
+                color: '#E53935', cursor: removingShareId === s.id ? 'wait' : 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {removingShareId === s.id ? '…' : 'Remove'}
+            </button>
           </div>
         </div>
       ))}
