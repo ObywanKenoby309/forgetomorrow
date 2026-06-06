@@ -227,7 +227,7 @@ function Body({
               <p className="mt-1 text-[11px] text-slate-500 leading-snug">
                 Conversations you start as a <span className="font-semibold">Coach</span>{" "}
                 will show here. Personal DMs live in{" "}
-                <span className="font-semibold">The Signal</span>.
+                <span className="font-semibold">The Spark</span>.
               </p>
             }
             emptyTitle="No coach conversations yet"
@@ -240,7 +240,7 @@ function Body({
                 </p>
                 <p className="max-w-md text-[11px] text-slate-400">
                   Personal one-to-one messages still flow through{" "}
-                  <span className="font-semibold">The Signal</span>.
+                  <span className="font-semibold">The Spark</span>.
                 </p>
               </>
             }
