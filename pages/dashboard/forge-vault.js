@@ -9,6 +9,7 @@ import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
+import Avatar from '@/components/common/Avatar';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const GLASS = {
@@ -1149,6 +1150,41 @@ function SharedWithMeTab({ isMobile }) {
     }
   }, [removingShareId]);
 
+  const sharedActionButtonStyle = (tone = 'neutral') => ({
+    width: 112,
+    minHeight: 30,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    fontSize: 11,
+    fontWeight: 800,
+    padding: '6px 10px',
+    borderRadius: 9,
+    whiteSpace: 'nowrap',
+    transition: 'all 150ms ease',
+    ...(tone === 'open'
+      ? {
+          border: '1px solid rgba(255,112,67,0.35)',
+          background: 'rgba(255,112,67,0.08)',
+          color: '#FF7043',
+          cursor: 'pointer',
+        }
+      : tone === 'remove'
+        ? {
+            border: '1px solid rgba(229,57,53,0.26)',
+            background: 'rgba(255,255,255,0.46)',
+            color: '#E53935',
+            cursor: 'pointer',
+          }
+        : {
+            border: '1px solid rgba(0,0,0,0.12)',
+            background: 'rgba(255,255,255,0.50)',
+            color: '#78909C',
+            cursor: 'default',
+          }),
+  });
+
   if (loading) return <div style={{ padding: '36px 0', textAlign: 'center', color: '#90A4AE', fontSize: 13 }}>Loading…</div>;
 
   if (!shares.length) {
@@ -1174,121 +1210,204 @@ function SharedWithMeTab({ isMobile }) {
       )}
       {!isMobile && (
         <div style={{
-          display: 'flex', alignItems: 'center', padding: '8px 0',
-          fontSize: 10, fontWeight: 800, color: '#90A4AE',
-          letterSpacing: '0.06em', textTransform: 'uppercase',
-          borderBottom: '1px solid rgba(0,0,0,0.05)', marginBottom: 4,
+          display: 'grid',
+          gridTemplateColumns: 'minmax(220px, 1fr) 190px 96px 112px 124px',
+          alignItems: 'center',
+          columnGap: 14,
+          padding: '9px 2px 8px',
+          fontSize: 10,
+          fontWeight: 900,
+          color: '#90A4AE',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          borderBottom: '1px solid rgba(0,0,0,0.06)',
+          marginBottom: 2,
         }}>
-          <div style={{ flex: 1 }}>Document</div>
-          <div style={{ width: 120 }}>From</div>
-          <div style={{ width: 80 }}>Origin</div>
-          <div style={{ width: 100 }}>Received</div>
-          <div style={{ width: 170, paddingLeft: 12 }}>Actions</div>
+          <div>Document</div>
+          <div>From</div>
+          <div>Origin</div>
+          <div>Received</div>
+          <div style={{ textAlign: 'center' }}>Actions</div>
         </div>
       )}
 
-      {shares.map(s => (
-        <div key={s.id}
-          style={{
-            display: 'flex', alignItems: isMobile ? 'flex-start' : 'center',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? 8 : 0, padding: '11px 0',
-            borderBottom: '1px solid rgba(0,0,0,0.05)',
-            background: s.isUnread ? 'rgba(255,112,67,0.04)' : 'transparent',
-            transition: 'background 120ms',
-          }}
-        >
-          {/* File info */}
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-            {s.isUnread && (
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF7043', flexShrink: 0 }} />
-            )}
-            <div style={{ minWidth: 0 }}>
-              <div style={{
-                fontSize: 13, fontWeight: s.isUnread ? 800 : 700, color: '#112033',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                maxWidth: isMobile ? '70vw' : 280,
-              }}>
-                {s.fileName}
-              </div>
-              {s.message && (
-                <div style={{ fontSize: 11, color: '#78909C', marginTop: 2, fontStyle: 'italic' }}>
-                  "{s.message}"
-                </div>
+      {shares.map(s => {
+        const imagePaused = isImageFileName(s.fileName);
+        const fromName = s.from?.name || 'ForgeTomorrow User';
+        const fromRole = s.from?.role ? s.from.role.toLowerCase() : '';
+        const rowStyle = isMobile
+          ? {
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              padding: '13px 2px',
+              borderBottom: '1px solid rgba(0,0,0,0.06)',
+              background: s.isUnread ? 'rgba(255,112,67,0.04)' : 'transparent',
+              transition: 'background 120ms',
+            }
+          : {
+              display: 'grid',
+              gridTemplateColumns: 'minmax(220px, 1fr) 190px 96px 112px 124px',
+              alignItems: 'center',
+              columnGap: 14,
+              padding: '14px 2px',
+              borderBottom: '1px solid rgba(0,0,0,0.06)',
+              background: s.isUnread ? 'rgba(255,112,67,0.04)' : 'transparent',
+              transition: 'background 120ms',
+            };
+
+        return (
+          <div key={s.id} style={rowStyle}>
+            {/* File info */}
+            <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 9 }}>
+              {s.isUnread && (
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF7043', flexShrink: 0 }} />
               )}
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontSize: 13,
+                  fontWeight: s.isUnread ? 900 : 800,
+                  color: '#112033',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: isMobile ? '76vw' : 330,
+                }}>
+                  {s.fileName}
+                </div>
+                {imagePaused && (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    marginTop: 5,
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: '#F4511E',
+                    background: 'rgba(255,112,67,0.10)',
+                    border: '1px solid rgba(255,112,67,0.16)',
+                    borderRadius: 999,
+                    padding: '2px 7px',
+                  }}>
+                    🖼 Image paused
+                  </div>
+                )}
+                {imagePaused && (
+                  <div style={{ fontSize: 10, color: '#78909C', marginTop: 3, lineHeight: 1.35 }}>
+                    Image moderation required before this file can be opened.
+                  </div>
+                )}
+                {s.message && (
+                  <div style={{ fontSize: 11, color: '#78909C', marginTop: 3, fontStyle: 'italic' }}>
+                    "{s.message}"
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* From */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 9,
+              minWidth: 0,
+            }}>
+              <Avatar
+                avatarUrl={s.from?.avatarUrl || null}
+                initials={fromName}
+                size="md"
+                className="shrink-0"
+              />
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: '#112033',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: isMobile ? '70vw' : 132,
+                }}>
+                  {fromName}
+                </div>
+                {fromRole && <div style={{ fontSize: 10, color: '#78909C', textTransform: 'capitalize', marginTop: 1 }}>{fromRole}</div>}
+              </div>
+            </div>
+
+            {/* Origin */}
+            <div>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 10,
+                fontWeight: 800,
+                padding: '3px 8px',
+                borderRadius: 999,
+                background: s.origin === 'foundry' ? 'rgba(103,58,183,0.12)' : 'rgba(33,150,243,0.12)',
+                color: s.origin === 'foundry' ? '#4527A0' : '#185FA5',
+              }}>
+                {s.origin === 'foundry' ? 'Foundry' : 'Direct'}
+              </span>
+            </div>
+
+            {/* Date */}
+            <div style={{ fontSize: 11, color: '#546E7A', fontWeight: 700 }}>
+              {formatDate(s.createdAt)}
+            </div>
+
+            {/* Actions */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: isMobile ? 'flex-start' : 'stretch',
+              gap: 6,
+              width: isMobile ? 'auto' : 112,
+            }}>
+              {imagePaused ? (
+                <span
+                  title="Image files are disabled until image moderation is implemented."
+                  style={sharedActionButtonStyle('neutral')}
+                >Image paused</span>
+              ) : s.downloadUrl ? (
+                <button
+                  type="button"
+                  onClick={() => { window.open(s.downloadUrl, '_blank', 'noopener'); if (s.isUnread) markRead(s.id); }}
+                  style={sharedActionButtonStyle('open')}
+                >↓ Open</button>
+              ) : (
+                <span style={{ ...sharedActionButtonStyle('neutral'), color: '#B0BEC5' }}>No file</span>
+              )}
+
+              <button
+                type="button"
+                onClick={() => removeShare(s.id)}
+                disabled={removingShareId === s.id}
+                title="Remove this document from your Shared With Me list"
+                style={{
+                  ...sharedActionButtonStyle('remove'),
+                  cursor: removingShareId === s.id ? 'wait' : 'pointer',
+                  opacity: removingShareId === s.id ? 0.7 : 1,
+                }}
+              >
+                {removingShareId === s.id ? '…' : 'Remove'}
+              </button>
             </div>
           </div>
+        );
+      })}
 
-          {/* From */}
-          <div style={{ flexShrink: 0, width: isMobile ? 'auto' : 120 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{s.from.name}</div>
-            {s.from.role && <div style={{ fontSize: 10, color: '#90A4AE', textTransform: 'capitalize' }}>{s.from.role.toLowerCase()}</div>}
-          </div>
-
-          {/* Origin */}
-          <div style={{ flexShrink: 0, width: isMobile ? 'auto' : 80 }}>
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
-              background: s.origin === 'foundry' ? 'rgba(103,58,183,0.10)' : 'rgba(33,150,243,0.10)',
-              color: s.origin === 'foundry' ? '#4527A0' : '#185FA5',
-            }}>
-              {s.origin === 'foundry' ? 'Foundry' : 'Direct'}
-            </span>
-          </div>
-
-          {/* Date */}
-          <div style={{ flexShrink: 0, width: isMobile ? 'auto' : 100, fontSize: 11, color: '#546E7A', fontWeight: 600 }}>
-            {formatDate(s.createdAt)}
-          </div>
-
-          {/* Actions */}
-          <div style={{
-            flexShrink: 0,
-            width: isMobile ? 'auto' : 170,
-            paddingLeft: isMobile ? 0 : 12,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            flexWrap: 'wrap',
-          }}>
-            {isImageFileName(s.fileName) ? (
-              <span
-                title="Image files are disabled until image moderation is implemented."
-                style={{
-                  fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
-                  border: '1px solid rgba(0,0,0,0.10)', background: 'rgba(0,0,0,0.04)',
-                  color: '#78909C', whiteSpace: 'nowrap',
-                }}
-              >Image paused</span>
-            ) : s.downloadUrl ? (
-              <button
-                onClick={() => { window.open(s.downloadUrl, '_blank', 'noopener'); if (s.isUnread) markRead(s.id); }}
-                style={{
-                  fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
-                  border: '1px solid rgba(255,112,67,0.30)', background: 'rgba(255,112,67,0.08)',
-                  color: '#FF7043', cursor: 'pointer', whiteSpace: 'nowrap',
-                }}
-              >↓ Open</button>
-            ) : (
-              <span style={{ fontSize: 11, color: '#B0BEC5' }}>No file</span>
-            )}
-
-            <button
-              onClick={() => removeShare(s.id)}
-              disabled={removingShareId === s.id}
-              title="Remove this document from your Shared With Me list"
-              style={{
-                fontSize: 11, fontWeight: 700, padding: '5px 9px', borderRadius: 8,
-                border: '1px solid rgba(229,57,53,0.22)', background: 'transparent',
-                color: '#E53935', cursor: removingShareId === s.id ? 'wait' : 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {removingShareId === s.id ? '…' : 'Remove'}
-            </button>
-          </div>
-        </div>
-      ))}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        paddingTop: 12,
+        fontSize: 11,
+        color: '#64748B',
+      }}>
+        <span style={{ fontSize: 13 }}>ⓘ</span>
+        <span>Image files are temporarily unavailable until image moderation is implemented.</span>
+      </div>
     </div>
   );
 }
