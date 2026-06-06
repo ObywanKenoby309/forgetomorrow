@@ -1151,7 +1151,7 @@ function SharedWithMeTab({ isMobile }) {
   }, [removingShareId]);
 
   const sharedActionButtonStyle = (tone = 'neutral') => ({
-    width: 112,
+    width: '100%',
     minHeight: 30,
     display: 'inline-flex',
     alignItems: 'center',
@@ -1211,9 +1211,9 @@ function SharedWithMeTab({ isMobile }) {
       {!isMobile && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(300px, 1.45fr) 170px 78px 90px 118px',
+          gridTemplateColumns: 'minmax(250px, 1fr) 145px 68px 84px 104px',
           alignItems: 'center',
-          columnGap: 10,
+          columnGap: 8,
           padding: '9px 2px 8px',
           fontSize: 10,
           fontWeight: 900,
@@ -1227,7 +1227,7 @@ function SharedWithMeTab({ isMobile }) {
           <div>From</div>
           <div>Origin</div>
           <div>Received</div>
-          <div style={{ textAlign: 'center', borderLeft: '1px solid rgba(0,0,0,0.10)', paddingLeft: 10 }}>Actions</div>
+          <div style={{ textAlign: 'center', borderLeft: '1px solid rgba(0,0,0,0.10)', paddingLeft: 8 }}>Actions</div>
         </div>
       )}
 
@@ -1247,9 +1247,9 @@ function SharedWithMeTab({ isMobile }) {
             }
           : {
               display: 'grid',
-              gridTemplateColumns: 'minmax(300px, 1.45fr) 170px 78px 90px 118px',
+              gridTemplateColumns: 'minmax(250px, 1fr) 145px 68px 84px 104px',
               alignItems: 'center',
-              columnGap: 10,
+              columnGap: 8,
               padding: '14px 2px',
               borderBottom: '1px solid rgba(0,0,0,0.06)',
               background: s.isUnread ? 'rgba(255,112,67,0.04)' : 'transparent',
@@ -1271,7 +1271,7 @@ function SharedWithMeTab({ isMobile }) {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  maxWidth: isMobile ? '76vw' : 390,
+                  maxWidth: isMobile ? '76vw' : 340,
                 }}>
                   {s.fileName}
                 </div>
@@ -1326,7 +1326,7 @@ function SharedWithMeTab({ isMobile }) {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  maxWidth: isMobile ? '70vw' : 112,
+                  maxWidth: isMobile ? '70vw' : 92,
                 }}>
                   {fromName}
                 </div>
@@ -1362,9 +1362,11 @@ function SharedWithMeTab({ isMobile }) {
               flexDirection: 'column',
               alignItems: isMobile ? 'flex-start' : 'stretch',
               gap: 6,
-              width: isMobile ? 'auto' : 112,
+              width: isMobile ? 112 : '100%',
+              minWidth: isMobile ? 112 : 0,
+              boxSizing: 'border-box',
               borderLeft: isMobile ? 'none' : '1px solid rgba(0,0,0,0.10)',
-              paddingLeft: isMobile ? 0 : 10,
+              paddingLeft: isMobile ? 0 : 8,
             }}>
               {imagePaused ? (
                 <span
