@@ -1211,9 +1211,9 @@ function SharedWithMeTab({ isMobile }) {
       {!isMobile && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(220px, 1fr) 190px 96px 112px 124px',
+          gridTemplateColumns: 'minmax(300px, 1.45fr) 170px 78px 90px 118px',
           alignItems: 'center',
-          columnGap: 14,
+          columnGap: 10,
           padding: '9px 2px 8px',
           fontSize: 10,
           fontWeight: 900,
@@ -1227,7 +1227,7 @@ function SharedWithMeTab({ isMobile }) {
           <div>From</div>
           <div>Origin</div>
           <div>Received</div>
-          <div style={{ textAlign: 'center' }}>Actions</div>
+          <div style={{ textAlign: 'center', borderLeft: '1px solid rgba(0,0,0,0.10)', paddingLeft: 10 }}>Actions</div>
         </div>
       )}
 
@@ -1247,9 +1247,9 @@ function SharedWithMeTab({ isMobile }) {
             }
           : {
               display: 'grid',
-              gridTemplateColumns: 'minmax(220px, 1fr) 190px 96px 112px 124px',
+              gridTemplateColumns: 'minmax(300px, 1.45fr) 170px 78px 90px 118px',
               alignItems: 'center',
-              columnGap: 14,
+              columnGap: 10,
               padding: '14px 2px',
               borderBottom: '1px solid rgba(0,0,0,0.06)',
               background: s.isUnread ? 'rgba(255,112,67,0.04)' : 'transparent',
@@ -1271,7 +1271,7 @@ function SharedWithMeTab({ isMobile }) {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  maxWidth: isMobile ? '76vw' : 330,
+                  maxWidth: isMobile ? '76vw' : 390,
                 }}>
                   {s.fileName}
                 </div>
@@ -1326,7 +1326,7 @@ function SharedWithMeTab({ isMobile }) {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  maxWidth: isMobile ? '70vw' : 132,
+                  maxWidth: isMobile ? '70vw' : 112,
                 }}>
                   {fromName}
                 </div>
@@ -1363,6 +1363,8 @@ function SharedWithMeTab({ isMobile }) {
               alignItems: isMobile ? 'flex-start' : 'stretch',
               gap: 6,
               width: isMobile ? 'auto' : 112,
+              borderLeft: isMobile ? 'none' : '1px solid rgba(0,0,0,0.10)',
+              paddingLeft: isMobile ? 0 : 10,
             }}>
               {imagePaused ? (
                 <span
