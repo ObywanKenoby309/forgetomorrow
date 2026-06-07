@@ -4,16 +4,11 @@
 // POST body:
 //   toUserId     (string, required)
 //   homeLocation (string, optional) – "seeker" | "coach" | "recruiter"
-//                Defaults to "seeker". Only applied when creating a new
-//                conversation; existing conversations are returned as-is.
 //
-// Connection gate (roles loaded from DB, not JWT):
-//   SEEKER → SEEKER : requires a Contact record in both directions (mutual)
-//   COACH  → anyone : always allowed
-//   RECRUITER → anyone : always allowed
-//
-// Response:
-//   { conversationId, homeLocation, otherAvatarUrl, otherUserSlug, otherName }
+// Important:
+//   homeLocation is participant-level. Moving/starting from Coach or Recruiter
+//   updates ONLY the caller's conversationParticipant.homeLocation.
+//   The recipient remains in Spark unless they move it themselves.
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
@@ -37,6 +32,7 @@ export default async function handler(req, res) {
   if (!toUserId || typeof toUserId !== 'string') {
     return res.status(400).json({ error: 'toUserId is required' });
   }
+
   if (fromUserId === toUserId) {
     return res.status(400).json({ error: 'Cannot message yourself' });
   }
@@ -46,23 +42,22 @@ export default async function handler(req, res) {
     : 'seeker';
 
   try {
-    // Load both users from DB — do not trust JWT for roles
     const [fromUser, toUser] = await Promise.all([
       prisma.user.findUnique({
-        where:  { id: fromUserId },
+        where: { id: fromUserId },
         select: { role: true },
       }),
       prisma.user.findUnique({
-        where:  { id: toUserId },
+        where: { id: toUserId },
         select: {
-          id:        true,
-          name:      true,
+          id: true,
+          name: true,
           firstName: true,
-          lastName:  true,
+          lastName: true,
           avatarUrl: true,
-          slug:      true,
+          slug: true,
           deletedAt: true,
-          role:      true,
+          role: true,
         },
       }),
     ]);
@@ -72,32 +67,32 @@ export default async function handler(req, res) {
     }
 
     const fromRole = String(fromUser?.role || 'SEEKER').toUpperCase();
-    const toRole   = String(toUser.role    || 'SEEKER').toUpperCase();
+    const toRole = String(toUser.role || 'SEEKER').toUpperCase();
 
-    // SEEKER → SEEKER requires a mutual contact record
+    // SEEKER → SEEKER requires a contact record.
     if (fromRole === 'SEEKER' && toRole === 'SEEKER') {
       const contact = await prisma.contact.findFirst({
         where: {
           OR: [
             { userId: fromUserId, contactUserId: toUserId },
-            { userId: toUserId,   contactUserId: fromUserId },
+            { userId: toUserId, contactUserId: fromUserId },
           ],
         },
       });
+
       if (!contact) {
         return res.status(403).json({
-          error:   'Not connected',
+          error: 'Not connected',
           message: 'You need to be connected with this member before messaging.',
         });
       }
     }
 
-    // Find or create the 1:1 conversation
     let conversation = await prisma.conversation.findFirst({
       where: {
         isGroup: false,
         participants: { some: { userId: fromUserId } },
-        AND:          { participants: { some: { userId: toUserId } } },
+        AND: { participants: { some: { userId: toUserId } } },
       },
       include: { participants: true },
     });
@@ -105,15 +100,38 @@ export default async function handler(req, res) {
     if (!conversation) {
       conversation = await prisma.conversation.create({
         data: {
-          isGroup:      false,
-          homeLocation: safeHomeLocation,
+          isGroup: false,
+          // Keep legacy conversation.homeLocation populated for compatibility only.
+          // Visibility now uses conversationParticipant.homeLocation.
+          homeLocation: 'seeker',
           participants: {
-            create: [{ userId: fromUserId }, { userId: toUserId }],
+            create: [
+              { userId: fromUserId, homeLocation: safeHomeLocation },
+              { userId: toUserId, homeLocation: 'seeker' },
+            ],
           },
         },
         include: { participants: true },
       });
+    } else {
+      // Opening from a workspace should place it in the caller's selected inbox only.
+      const callerParticipant = conversation.participants.find((p) => p.userId === fromUserId);
+      if (callerParticipant && callerParticipant.homeLocation !== safeHomeLocation) {
+        await prisma.conversationParticipant.update({
+          where: { id: callerParticipant.id },
+          data: { homeLocation: safeHomeLocation },
+        });
+
+        conversation = {
+          ...conversation,
+          participants: conversation.participants.map((p) =>
+            p.id === callerParticipant.id ? { ...p, homeLocation: safeHomeLocation } : p
+          ),
+        };
+      }
     }
+
+    const callerParticipant = conversation.participants.find((p) => p.userId === fromUserId);
 
     const otherName = [toUser.firstName, toUser.lastName]
       .filter(Boolean)
@@ -121,9 +139,9 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       conversationId: conversation.id,
-      homeLocation:   conversation.homeLocation || 'seeker',
+      homeLocation: callerParticipant?.homeLocation || safeHomeLocation,
       otherAvatarUrl: toUser.avatarUrl || null,
-      otherUserSlug:  toUser.slug      || null,
+      otherUserSlug: toUser.slug || null,
       otherName,
     });
   } catch (err) {

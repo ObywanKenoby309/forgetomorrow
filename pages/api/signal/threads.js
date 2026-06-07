@@ -15,30 +15,26 @@ function normalizeView(raw) {
   return 'spark';
 }
 
-function buildHomeLocationWhere(userRole, view) {
+function participantHomeLocationForView(userRole, view) {
   const role = normalizeRole(userRole);
   const v = normalizeView(view);
 
-  // Seekers only have Spark, so Spark must show every conversation they participate in.
-  if (role === 'SEEKER') return {};
+  // Seekers only have Spark. Show all their participant conversations so they
+  // can always receive replies even if a professional filed their own side away.
+  if (role === 'SEEKER') return null;
 
-  // Site-level users can see their participant conversations without homeLocation filtering.
-  if (role === 'ADMIN' || role === 'OWNER' || role === 'SITE_ADMIN') return {};
+  // Site-level users can see all participant conversations.
+  if (role === 'ADMIN' || role === 'OWNER' || role === 'SITE_ADMIN') return null;
 
-  // Coaches have Spark + Coach Inbox.
   if (role === 'COACH') {
-    if (v === 'coach') return { homeLocation: 'coach' };
-    return { homeLocation: 'seeker' };
+    return v === 'coach' ? 'coach' : 'seeker';
   }
 
-  // Recruiters have Spark + Recruiter Inbox.
   if (role === 'RECRUITER') {
-    if (v === 'recruiter') return { homeLocation: 'recruiter' };
-    return { homeLocation: 'seeker' };
+    return v === 'recruiter' ? 'recruiter' : 'seeker';
   }
 
-  // Unknown roles fall back to Spark behavior.
-  return { homeLocation: 'seeker' };
+  return 'seeker';
 }
 
 export default async function handler(req, res) {
@@ -54,24 +50,27 @@ export default async function handler(req, res) {
     }
 
     const userId = session.user.id;
-
-    // New model: view controls which inbox is being rendered.
-    // Backward compatibility: old callers may still pass channel=seeker/coach/recruiter.
     const view = normalizeView(req.query?.view || req.query?.channel || 'spark');
 
-    // Load role from DB so routing does not depend on JWT/session shape.
     const dbUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { role: true },
     });
 
     const role = normalizeRole(dbUser?.role || session?.user?.role || 'SEEKER');
-    const homeLocationWhere = buildHomeLocationWhere(role, view);
+    const requestedHomeLocation = participantHomeLocationForView(role, view);
 
-    // ✅ My participant rows (includes lastReadAt)
+    // Current user's participant rows control inbox visibility.
     const participants = await prisma.conversationParticipant.findMany({
-      where: { userId },
-      select: { conversationId: true, lastReadAt: true },
+      where: {
+        userId,
+        ...(requestedHomeLocation ? { homeLocation: requestedHomeLocation } : {}),
+      },
+      select: {
+        conversationId: true,
+        lastReadAt: true,
+        homeLocation: true,
+      },
     });
 
     if (!participants.length) {
@@ -80,12 +79,9 @@ export default async function handler(req, res) {
 
     const conversationIds = participants.map((p) => p.conversationId);
 
-    // ✅ Conversations sorted newest first (cheap fields only)
-    // Preserve group support and legacy channel field; homeLocation is now the display/storage filter.
     const conversations = await prisma.conversation.findMany({
       where: {
         id: { in: conversationIds },
-        ...homeLocationWhere,
       },
       orderBy: { updatedAt: 'desc' },
       select: {
@@ -105,13 +101,11 @@ export default async function handler(req, res) {
 
     const visibleConversationIds = conversations.map((c) => c.id);
 
-    // ✅ All participants for visible conversations (for "other user" lookup)
     const allParticipants = await prisma.conversationParticipant.findMany({
       where: { conversationId: { in: visibleConversationIds } },
-      select: { conversationId: true, userId: true },
+      select: { conversationId: true, userId: true, homeLocation: true },
     });
 
-    // ✅ Only fetch users that are not me
     const otherUserIds = [
       ...new Set(
         allParticipants
@@ -138,7 +132,6 @@ export default async function handler(req, res) {
     const userById = {};
     for (const u of users) userById[u.id] = u;
 
-    // ✅ Latest message per visible conversation (NO "fetch everything")
     const lastMessages = await prisma.message.findMany({
       where: { conversationId: { in: visibleConversationIds } },
       orderBy: [{ conversationId: 'asc' }, { createdAt: 'desc' }],
@@ -156,14 +149,11 @@ export default async function handler(req, res) {
       lastMessageByConversation[m.conversationId] = m;
     }
 
-    // ✅ Map my participant row by conversation
     const myParticipantByConversationId = {};
     for (const p of participants) {
       myParticipantByConversationId[p.conversationId] = p;
     }
 
-    // ✅ Preserve real unread counts in ONE query (per-conversation lastReadAt cutoff)
-    // unread = messages from someone else where createdAt > my lastReadAt (or all if lastReadAt null)
     const unreadRows = await prisma.$queryRaw(
       Prisma.sql`
         SELECT
@@ -185,13 +175,11 @@ export default async function handler(req, res) {
       unreadByConversationId[Number(r.conversationId)] = Number(r.unreadCount) || 0;
     }
 
-    // ✅ Build threads
     const threads = conversations.map((c) => {
       const participantsForConversation = allParticipants.filter(
         (p) => p.conversationId === c.id
       );
 
-      // For 1:1, pick the other participant. For group, we keep otherUserId null.
       const otherParticipant = participantsForConversation.find(
         (p) => p.userId !== userId
       );
@@ -205,13 +193,16 @@ export default async function handler(req, res) {
 
       const last = lastMessageByConversation[c.id];
       const unreadCount = unreadByConversationId[c.id] || 0;
+      const myParticipant = myParticipantByConversationId[c.id];
 
       return {
         id: c.id,
         isGroup: c.isGroup,
         title: c.isGroup ? c.title || otherName : otherName,
         channel: c.channel || null,
-        homeLocation: c.homeLocation || 'seeker',
+        // This is the current user's inbox placement for this shared thread.
+        homeLocation: myParticipant?.homeLocation || 'seeker',
+        legacyConversationHomeLocation: c.homeLocation || null,
         otherUserId: c.isGroup ? null : otherUser?.id || null,
         otherAvatarUrl: c.isGroup ? null : otherUser?.avatarUrl || null,
         otherUserSlug: c.isGroup ? null : otherUser?.slug || null,

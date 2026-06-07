@@ -1,6 +1,6 @@
 // pages/api/signal/set-home.js
-// Moves a conversation to a different homeLocation.
-// Only a participant of the conversation may call this.
+// Moves a conversation to a different homeLocation for the CURRENT USER ONLY.
+// This is participant-level inbox placement, not a shared conversation setting.
 //
 // POST body:
 //   conversationId  (number, required)
@@ -28,6 +28,7 @@ export default async function handler(req, res) {
   if (!conversationId) {
     return res.status(400).json({ error: 'conversationId is required' });
   }
+
   if (!VALID_HOME_LOCATIONS.includes(homeLocation)) {
     return res.status(400).json({
       error: `homeLocation must be one of: ${VALID_HOME_LOCATIONS.join(', ')}`,
@@ -40,24 +41,32 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Verify caller is a participant (findFirst to match codebase pattern)
     const participant = await prisma.conversationParticipant.findFirst({
       where: { conversationId: convId, userId },
+      select: { id: true, conversationId: true },
     });
 
     if (!participant) {
       return res.status(403).json({ error: 'You are not a participant in this conversation' });
     }
 
-    const updated = await prisma.conversation.update({
-      where:  { id: convId },
-      data:   { homeLocation, updatedAt: new Date() },
-      select: { id: true, homeLocation: true },
+    const updated = await prisma.conversationParticipant.update({
+      where: { id: participant.id },
+      data: { homeLocation },
+      select: {
+        conversationId: true,
+        homeLocation: true,
+      },
+    });
+
+    await prisma.conversation.update({
+      where: { id: convId },
+      data: { updatedAt: new Date() },
     });
 
     return res.status(200).json({
-      conversationId: updated.id,
-      homeLocation:   updated.homeLocation,
+      conversationId: updated.conversationId,
+      homeLocation: updated.homeLocation,
     });
   } catch (err) {
     console.error('[signal/set-home] error:', err);
