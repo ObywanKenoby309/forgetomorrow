@@ -59,6 +59,7 @@ export default function MessagingPage() {
   const [sessionError, setSessionError] = useState("");
   const [jobGroups, setJobGroups] = useState([]);
   const [talentPoolGroups, setTalentPoolGroups] = useState([]);
+  const [otherGroups, setOtherGroups] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,8 +93,64 @@ export default function MessagingPage() {
         if (!res.ok) return;
         const data = await res.json();
         if (cancelled) return;
-        setJobGroups(Array.isArray(data?.jobGroups) ? data.jobGroups : []);
-        setTalentPoolGroups(Array.isArray(data?.talentPoolGroups) ? data.talentPoolGroups : []);
+
+        const nextJobGroups = Array.isArray(data?.jobGroups) ? data.jobGroups : [];
+        const nextTalentPoolGroups = Array.isArray(data?.talentPoolGroups) ? data.talentPoolGroups : [];
+
+        setJobGroups(nextJobGroups);
+        setTalentPoolGroups(nextTalentPoolGroups);
+
+        const knownUserIds = new Set();
+        nextJobGroups.forEach((group) => {
+          (group.candidates || []).forEach((candidate) => {
+            if (candidate?.userId) knownUserIds.add(String(candidate.userId));
+          });
+        });
+        nextTalentPoolGroups.forEach((pool) => {
+          (pool.members || []).forEach((member) => {
+            if (member?.userId) knownUserIds.add(String(member.userId));
+          });
+        });
+
+        try {
+          const threadsRes = await fetch('/api/signal/threads?view=recruiter', {
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          if (threadsRes.ok) {
+            const threadData = await threadsRes.json().catch(() => ({}));
+            const threads = Array.isArray(threadData?.threads) ? threadData.threads : [];
+
+            const otherMembers = threads
+              .filter((thread) => thread?.otherUserId && !knownUserIds.has(String(thread.otherUserId)))
+              .map((thread) => ({
+                userId: thread.otherUserId,
+                name: thread.title || 'Conversation',
+                headline: thread.otherHeadline || 'Other conversation',
+                avatarUrl: thread.otherAvatarUrl || null,
+                conversationId: thread.id,
+                otherGroupId: 'other-conversations',
+                unread: thread.unreadCount || thread.unread || 0,
+              }));
+
+            if (!cancelled) {
+              setOtherGroups([
+                {
+                  id: 'other-conversations',
+                  name: 'Other Conversations',
+                  memberCount: otherMembers.length,
+                  members: otherMembers,
+                },
+              ]);
+            }
+          }
+        } catch (threadErr) {
+          console.error('[MessagingPage] loadOtherConversations error:', threadErr);
+          if (!cancelled) {
+            setOtherGroups([]);
+          }
+        }
       } catch (err) {
         console.error("[MessagingPage] loadGroups error:", err);
       }
@@ -103,19 +160,27 @@ export default function MessagingPage() {
   }, [currentUserId]);
 
   async function createConversation(recipientId) {
-    const res = await fetch("/api/conversations", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recipientId: String(recipientId), channel: "recruiter" }),
+    const res = await fetch('/api/signal/start-or-get', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        toUserId: String(recipientId),
+        homeLocation: 'recruiter',
+      }),
     });
     if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
-      console.error("[MessagingPage] createConversation error:", res.status, payload);
+      console.error('[MessagingPage] createConversation error:', res.status, payload);
       return null;
     }
     const json = await res.json().catch(() => ({}));
-    return json?.conversation || null;
+    const conversationId = json?.conversationId || json?.conversation?.id || json?.id || null;
+    if (!conversationId) return null;
+    return {
+      id: conversationId,
+      homeLocation: json?.homeLocation || 'recruiter',
+    };
   }
 
   async function fetchMessages(conversationId) {
@@ -246,6 +311,7 @@ export default function MessagingPage() {
           currentUserId={currentUserId}
           jobGroups={jobGroups}
           talentPoolGroups={talentPoolGroups}
+          otherGroups={otherGroups}
           onCreateConversation={createConversation}
           fetchMessages={fetchMessages}
           onSendMessage={sendMessage}

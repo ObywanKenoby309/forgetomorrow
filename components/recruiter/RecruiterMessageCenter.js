@@ -296,9 +296,10 @@ function CandidateRow({ candidate, selected, onSelect }) {
 /* ─────────────────────────────────────────────────────────────
    LEFT PANEL
 ───────────────────────────────────────────────────────────── */
-function LeftPanel({ jobGroups, talentPoolGroups, selectedCandidate, onSelectCandidate, threadUnreadMap }) {
+function LeftPanel({ jobGroups, talentPoolGroups, otherGroups, selectedCandidate, onSelectCandidate, threadUnreadMap }) {
   const [candidatesExpanded, setCandidatesExpanded] = useState(true);
   const [poolsExpanded, setPoolsExpanded] = useState(true);
+  const [otherExpanded, setOtherExpanded] = useState(true);
 
   // Track which groups are expanded — default all active open, archived closed
   const [expandedGroups, setExpandedGroups] = useState(() => {
@@ -308,6 +309,9 @@ function LeftPanel({ jobGroups, talentPoolGroups, selectedCandidate, onSelectCan
     }
     for (const p of talentPoolGroups || []) {
       init[p.id] = true;
+    }
+    for (const o of otherGroups || []) {
+      init[o.id] = true;
     }
     return init;
   });
@@ -321,6 +325,10 @@ function LeftPanel({ jobGroups, talentPoolGroups, selectedCandidate, onSelectCan
   );
   const totalPoolMembers = (talentPoolGroups || []).reduce(
     (sum, p) => sum + (p.memberCount || 0),
+    0
+  );
+  const totalOtherMembers = (otherGroups || []).reduce(
+    (sum, g) => sum + (g.memberCount || 0),
     0
   );
 
@@ -452,6 +460,65 @@ function LeftPanel({ jobGroups, talentPoolGroups, selectedCandidate, onSelectCan
                           selected={
                             selectedCandidate?.userId === member.userId &&
                             selectedCandidate?.poolId === member.poolId
+                          }
+                          onSelect={onSelectCandidate}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Divider ── */}
+      <div style={{ height: 1, background: BORDER, margin: "8px 12px" }} />
+
+      {/* ── Other conversations section ── */}
+      <SectionHeader
+        label="Other"
+        count={totalOtherMembers}
+        expanded={otherExpanded}
+        onToggle={() => setOtherExpanded((v) => !v)}
+      />
+
+      {otherExpanded && (
+        <div style={{ marginBottom: 4 }}>
+          {(otherGroups || []).length === 0 && (
+            <div style={{ padding: "6px 20px", fontSize: 12, color: LIGHT_MUTED }}>
+              No other conversations yet
+            </div>
+          )}
+          {(otherGroups || []).map((group) => {
+            const isExpanded = !!expandedGroups[group.id];
+
+            return (
+              <div key={group.id}>
+                <GroupRow
+                  label={group.name}
+                  count={group.memberCount || 0}
+                  archived={false}
+                  expanded={isExpanded}
+                  onToggle={() => toggleGroup(group.id)}
+                />
+                {isExpanded && (
+                  <div>
+                    {(group.members || []).length === 0 && (
+                      <div style={{ padding: "4px 28px", fontSize: 11, color: LIGHT_MUTED }}>
+                        No contacts yet
+                      </div>
+                    )}
+                    {(group.members || []).map((member) => {
+                      const unread = threadUnreadMap?.[String(member.userId)] || member.unread || 0;
+                      return (
+                        <CandidateRow
+                          key={`${group.id}-${member.userId || member.conversationId}`}
+                          candidate={{ ...member, unread }}
+                          selected={
+                            selectedCandidate?.userId === member.userId &&
+                            selectedCandidate?.otherGroupId === member.otherGroupId
                           }
                           onSelect={onSelectCandidate}
                         />
@@ -784,6 +851,7 @@ export default function RecruiterMessageCenter({
   currentUserId,
   jobGroups,
   talentPoolGroups,
+  otherGroups = [],
   onCreateConversation,
   fetchMessages,
   onSendMessage,
@@ -1008,6 +1076,7 @@ export default function RecruiterMessageCenter({
         <LeftPanel
           jobGroups={jobGroups}
           talentPoolGroups={talentPoolGroups}
+          otherGroups={otherGroups}
           selectedCandidate={selectedCandidate}
           onSelectCandidate={handleSelectCandidate}
           threadUnreadMap={threadUnreadMap}
