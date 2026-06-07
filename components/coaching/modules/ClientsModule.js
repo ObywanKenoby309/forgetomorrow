@@ -364,42 +364,71 @@ export default function ClientsModule() {
 
   const openSparkDraft = async () => {
     if (!csatClient?.clientId) {
-      alert('Spark drafts are only available for ForgeTomorrow clients. Use Copy Link or Email Draft for external clients.');
+      alert('Spark messages are only available for ForgeTomorrow clients. Use Email Draft for external clients.');
       return;
     }
-    const draft = buildCsatDraft(csatClient);
-    if (!draft || !coachId) {
-      alert('Could not build the CSAT draft yet. Please refresh and try again.');
+    if (!coachId) {
+      alert('Could not resolve your coach account. Please refresh and try again.');
       return;
     }
     try {
       setCsatLaunching(true);
-      const res = await fetch('/api/messages/start-thread', {
+      const res = await fetch('/api/feedback/send-csat-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel: 'coach', targetUserId: csatClient.clientId }),
+        body: JSON.stringify({
+          mode:       'internal',
+          clientId:   csatClient.clientId,
+          clientName: csatClient.name || 'there',
+        }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json.conversationId) {
-        alert(json.error || 'Could not open Spark draft.');
+      if (!res.ok) {
+        alert(json.error || 'Could not send CSAT request.');
         return;
       }
-      window.location.href = `/coaching/messaging?conversationId=${encodeURIComponent(json.conversationId)}&prefill=${encodeURIComponent(draft)}`;
+      // Navigate to the conversation so coach can see it was sent
+      if (json.conversationId) {
+        window.location.href = `/coaching/messaging?conversationId=${encodeURIComponent(json.conversationId)}`;
+      } else {
+        setCsatClient(null);
+        alert('Feedback request sent via Signal.');
+      }
     } catch {
-      alert('Could not open Spark draft.');
+      alert('Could not send CSAT request. Please try again.');
     } finally {
       setCsatLaunching(false);
     }
   };
 
-  const openEmailDraft = () => {
+  const openEmailDraft = async () => {
     if (!csatClient?.email) {
       alert('This client does not have an email address saved.');
       return;
     }
-    const subject = 'Quick coaching feedback request';
-    const body = buildCsatDraft(csatClient);
-    window.location.href = `mailto:${encodeURIComponent(csatClient.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    try {
+      setCsatLaunching(true);
+      const res = await fetch('/api/feedback/send-csat-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode:        'external',
+          clientEmail: csatClient.email,
+          clientName:  csatClient.name || 'there',
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(json.error || 'Could not send feedback email.');
+        return;
+      }
+      setCsatClient(null);
+      alert('Feedback request email sent successfully.');
+    } catch {
+      alert('Could not send feedback email. Please try again.');
+    } finally {
+      setCsatLaunching(false);
+    }
   };
 
   const csatLink = getCsatLink();
@@ -664,27 +693,28 @@ export default function ClientsModule() {
 
             <div style={{ border: '1px solid rgba(0,0,0,0.08)', background: '#FAFAFA', borderRadius: 10, padding: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: '#78909C', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-                Survey Link
+                How it works
               </div>
-              <div style={{ fontSize: 12, color: '#37474F', wordBreak: 'break-all', lineHeight: 1.5 }}>
-                {csatLink || 'Loading coach survey link…'}
+              <div style={{ fontSize: 13, color: '#37474F', lineHeight: 1.6 }}>
+                {csatClient?.clientId
+                  ? 'A Signal message will be sent with a "Complete Feedback" button. The client clicks it to open the feedback form inside ForgeTomorrow.'
+                  : 'An email will be sent with a "Complete Feedback" button. The client clicks it to open a public feedback form — no login required.'}
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-              <button type="button" onClick={copyCsatLink} disabled={!csatLink} style={{ ...outlineBtn, padding: '9px 10px', textAlign: 'center', opacity: csatLink ? 1 : 0.55 }}>
-                {csatCopied ? 'Copied ✓' : 'Copy Link'}
-              </button>
-              <button type="button" onClick={openSparkDraft} disabled={!csatClient.clientId || csatLaunching || !csatLink} style={{ ...solidBtnSm, padding: '9px 10px', opacity: csatClient.clientId && csatLink ? 1 : 0.55, cursor: csatClient.clientId && csatLink ? 'pointer' : 'not-allowed' }}>
-                {csatLaunching ? 'Opening…' : 'Open Spark Draft'}
-              </button>
-              <button type="button" onClick={openEmailDraft} disabled={!csatClient.email || !csatLink} style={{ ...outlineBtn, padding: '9px 10px', textAlign: 'center', opacity: csatClient.email && csatLink ? 1 : 0.55 }}>
-                Email Draft
+            <div style={{ display: 'grid', gridTemplateColumns: csatClient?.clientId ? 'repeat(2, minmax(0, 1fr))' : '1fr', gap: 8 }}>
+              {csatClient?.clientId && (
+                <button type="button" onClick={openSparkDraft} disabled={csatLaunching} style={{ ...solidBtnSm, padding: '9px 10px', opacity: csatLaunching ? 0.55 : 1, cursor: csatLaunching ? 'not-allowed' : 'pointer' }}>
+                  {csatLaunching ? 'Sending…' : 'Send via Signal'}
+                </button>
+              )}
+              <button type="button" onClick={openEmailDraft} disabled={!csatClient?.email || csatLaunching} style={{ ...outlineBtn, padding: '9px 10px', textAlign: 'center', opacity: csatClient?.email && !csatLaunching ? 1 : 0.55, cursor: csatClient?.email && !csatLaunching ? 'pointer' : 'not-allowed' }}>
+                {csatLaunching ? 'Sending…' : 'Send Email'}
               </button>
             </div>
 
             <div style={{ fontSize: 12, color: '#78909C', lineHeight: 1.5 }}>
-              Spark opens as a draft so you can adjust the name, add context, or include other notes before sending.
+              The client will receive a message with a button to complete the feedback form. No raw links will appear in the message.
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>

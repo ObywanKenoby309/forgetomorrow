@@ -168,6 +168,8 @@ function AppShell({ Component, pageProps }) {
     router.pathname.startsWith('/apply') ||
     router.pathname.startsWith('/hearth') ||
     router.pathname.startsWith('/offer-negotiation') ||
+    // Internal feedback pages (authenticated) — public/[token] is excluded below
+    (router.pathname.startsWith('/feedback/') && !router.pathname.startsWith('/feedback/public/')) ||
     router.pathname === '/dashboard/forge-vault' ||
     isJobApplyRoute ||
     [
