@@ -344,7 +344,7 @@ const MessageThread = forwardRef(function MessageThread(
       </aside>
 
       {/* Active thread + composer */}
-      <section className="md:col-span-2 rounded-lg border bg-white p-4 flex flex-col min-w-0 overflow-hidden">
+      <section className="md:col-span-2 rounded-lg border bg-white p-4 flex flex-col">
         {!hasThreads ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center text-sm text-slate-500 space-y-2">
             <div className="text-base font-semibold text-slate-700">
@@ -419,7 +419,7 @@ const MessageThread = forwardRef(function MessageThread(
 
             <div
               ref={scrollRef}
-              className="flex-1 border rounded p-3 text-sm text-slate-800 bg-slate-50 overflow-y-auto overflow-x-hidden"
+              className="flex-1 border rounded p-3 text-sm text-slate-800 bg-slate-50 overflow-y-auto"
               style={{ minHeight: 280, maxHeight: 460 }}
             >
               {active.messages?.length ? (
@@ -455,22 +455,14 @@ const MessageThread = forwardRef(function MessageThread(
                           )}
 
                           <div
-                            className={`px-3 py-2 rounded ${
+                            className={`px-3 py-2 rounded max-w-[80%] ${
                               isSelf
                                 ? "bg-[#FF7043] text-white"
                                 : "bg-white border"
                             }`}
-                            style={{
-                              maxWidth: "min(82%, 680px)",
-                              minWidth: 0,
-                              overflowWrap: "anywhere",
-                              wordBreak: "break-word",
-                              whiteSpace: "pre-wrap",
-                              lineHeight: 1.45,
-                            }}
                             title={tsFmt(m.ts)}
                           >
-                            <div style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", wordBreak: "break-word" }}>{m.text}</div>
+                            <div>{m.text}</div>
                             {isSelf && (
                               <div className="mt-1 text-[10px] opacity-80">
                                 {m.status === "read" ? "Read" : "Sent"}
@@ -501,15 +493,13 @@ const MessageThread = forwardRef(function MessageThread(
 
         {/* Composer */}
         <div className="mt-3 flex items-center gap-2">
-          <textarea
+          <input
             ref={inputRef}
-            className="flex-1 border rounded px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400 resize-y"
+            className="flex-1 border rounded px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
             placeholder={inputPlaceholder}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             disabled={!canCompose}
-            rows={2}
-            style={{ minHeight: 42, maxHeight: 140, lineHeight: 1.4 }}
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleSend();
             }}
