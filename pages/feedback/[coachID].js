@@ -1,7 +1,7 @@
 // pages/feedback/[coachID].js
 // Internal CSAT feedback page — authenticated ForgeTomorrow members only.
 // SeekerLayout provides the full chrome: wallpaper, sidebar, right rail.
-// getLayout suppresses _app.js AppShell so there is exactly one header.
+// _app.js already classifies /feedback/* as an internal seeker route — no duplicate header.
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -248,6 +248,3 @@ export default function CoachCSATSurvey() {
     </SeekerLayout>
   );
 }
-
-// Suppress _app.js AppShell — SeekerLayout provides the full chrome
-CoachCSATSurvey.getLayout = (page) => page;
