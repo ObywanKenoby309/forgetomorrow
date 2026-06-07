@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 
     const me = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true },
+      select: { id: true, role: true },
     });
 
     if (!me) {
@@ -64,15 +64,41 @@ export default async function handler(req, res) {
     // Make sure the other user exists
     const target = await prisma.user.findUnique({
       where: { id: rawTarget },
-      select: { id: true },
+      select: { id: true, role: true },
     });
 
     if (!target) {
       return res.status(404).json({ error: 'Target user not found' });
     }
 
-    // ✅ Normalize channel (and restrict to known values)
-    const convChannel = normalizeChannel(channel) || 'recruiter';
+    // Route 1:1 conversations by recipient context.
+    // If the recipient is a seeker/client, the thread belongs in their Spark
+    // inbox even when the sender is operating from Coach/Recruiter tools.
+    function normalizeRole(role) {
+      return String(role || '').trim().toUpperCase();
+    }
+
+    function isRecruiterLike(role) {
+      const r = normalizeRole(role);
+      return r === 'RECRUITER' || r === 'ADMIN' || r === 'OWNER';
+    }
+
+    function isCoach(role) {
+      return normalizeRole(role) === 'COACH';
+    }
+
+    function roleToChannel(role) {
+      if (isRecruiterLike(role)) return 'recruiter';
+      if (isCoach(role)) return 'coach';
+      return 'seeker';
+    }
+
+    const requestedChannel = normalizeChannel(channel);
+    const targetIsProfessional = isCoach(target.role) || isRecruiterLike(target.role);
+
+    const convChannel = targetIsProfessional
+      ? (requestedChannel || roleToChannel(target.role))
+      : 'seeker';
 
     // Look for an existing 1:1 conversation in this channel between these two
     const existing = await prisma.conversation.findFirst({

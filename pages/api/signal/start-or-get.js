@@ -53,31 +53,38 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Member not found.' });
     }
 
-    // Derive channel from roles — highest-privilege role wins.
-    // This ensures notifications land in the correct action center
-    // regardless of which surface initiated the conversation.
-    function roleToRank(role) {
-      const r = String(role || '').toUpperCase();
-      if (r === 'RECRUITER' || r === 'ADMIN' || r === 'OWNER') return 3;
-      if (r === 'COACH') return 2;
-      return 1; // SEEKER or unknown
+    // Route 1:1 conversations by recipient context.
+    // Professional senders can work from Coach/Recruiter inboxes, but when the
+    // recipient is a seeker/client, the conversation must land in the seeker's
+    // Spark inbox so they can see and reply to it. Professional-to-professional
+    // conversations stay in the professional channel.
+    function normalizeRole(role) {
+      return String(role || '').trim().toUpperCase();
     }
+
+    function isRecruiterLike(role) {
+      const r = normalizeRole(role);
+      return r === 'RECRUITER' || r === 'ADMIN' || r === 'OWNER';
+    }
+
+    function isCoach(role) {
+      return normalizeRole(role) === 'COACH';
+    }
+
     function roleToChannel(role) {
-      const r = String(role || '').toUpperCase();
-      if (r === 'RECRUITER' || r === 'ADMIN' || r === 'OWNER') return 'recruiter';
-      if (r === 'COACH') return 'coach';
+      if (isRecruiterLike(role)) return 'recruiter';
+      if (isCoach(role)) return 'coach';
       return 'seeker';
     }
-    const senderRank = roleToRank(sender?.role);
-    const targetRank = roleToRank(target.role);
-    // Channel is set by the highest-privilege participant so the notification
-    // scopes correctly for whoever needs to act (e.g. recruiter receiving a
-    // seeker message should see it in their RECRUITER action center)
-    const channel = senderRank >= targetRank
-      ? roleToChannel(sender?.role)
-      : roleToChannel(target.role);
 
+    const senderRole = sender?.role || '';
     const targetRole = target.role;
+    const targetIsProfessional = isCoach(targetRole) || isRecruiterLike(targetRole);
+
+    const channel = targetIsProfessional
+      ? roleToChannel(targetRole)
+      : 'seeker';
+
     const otherName =
       target.name ||
       [target.firstName, target.lastName].filter(Boolean).join(' ') ||
