@@ -507,7 +507,7 @@ export default function SignalMessages() {
 
           {/* Message room */}
           <div ref={messagesRef} onScroll={() => { stickToBottomRef.current = isNearBottom(); }}
-            className="signal-room-messages flex-1 overflow-y-auto rounded-xl p-3 space-y-2"
+            className="signal-room-messages flex-1 overflow-y-auto overflow-x-hidden rounded-xl p-3 space-y-2"
             style={{ ...ROOM_INNER, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)' }}
           >
             {activeConversationId ? (
@@ -518,10 +518,18 @@ export default function SignalMessages() {
               ) : (
                 messages.map((m) => (
                   <div key={m.id} className={`flex ${m.isMine ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[86%] rounded-2xl px-3 py-2 text-xs ${m.isMine ? 'bg-[#FF7043] text-white' : 'bg-white text-gray-900 border border-gray-100'}`}
-                      style={{ boxShadow: m.isMine ? '0 10px 20px rgba(255,112,67,0.18)' : '0 10px 18px rgba(0,0,0,0.06)' }}>
+                    <div className={`rounded-2xl px-3 py-2 text-xs ${m.isMine ? 'bg-[#FF7043] text-white' : 'bg-white text-gray-900 border border-gray-100'}`}
+                      style={{
+                        boxShadow: m.isMine ? '0 10px 20px rgba(255,112,67,0.18)' : '0 10px 18px rgba(0,0,0,0.06)',
+                        maxWidth: 'min(86%, 680px)',
+                        minWidth: 0,
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
+                        whiteSpace: 'pre-wrap',
+                        lineHeight: 1.45,
+                      }}>
                       {!m.isMine && <div className="font-bold text-[11px] mb-0.5 opacity-90">{m.senderName}</div>}
-                      <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
+                      <div className="whitespace-pre-wrap leading-relaxed" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{m.content}</div>
                       <div className="text-[9px] opacity-75 mt-1 text-right">{formatTime(m.createdAt)}</div>
                     </div>
                   </div>
@@ -581,7 +589,7 @@ export default function SignalMessages() {
 
       <style jsx global>{`
         @media (min-width: 768px) { .md\\:hidden { display: none !important; } }
-        .signal-room-messages { min-height: 220px; max-height: 340px; }
+        .signal-room-messages { min-height: 220px; max-height: 420px; }
         @media (max-width: 767px) { .signal-room-messages { min-height: 260px; max-height: 460px; } }
       `}</style>
     </div>
