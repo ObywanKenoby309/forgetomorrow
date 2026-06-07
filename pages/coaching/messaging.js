@@ -148,6 +148,9 @@ function Body({
   onDelete,
   onReport,
   onBlock,
+  onSetHome,
+  activeHomeLocation,
+  movingHome,
 }) {
   useEffect(() => {
     if (!initialThreadId) return;
@@ -250,6 +253,9 @@ function Body({
             onDelete={onDelete}
             onReport={onReport}
             onBlock={onBlock}
+            onSetHome={onSetHome}
+            activeHomeLocation={activeHomeLocation}
+            movingHome={movingHome}
             headerActionsLabel={{
               delete: "Delete",
               report: "Report",
@@ -305,6 +311,8 @@ export default function CoachMessagingPage() {
 
   const [activeThread, setActiveThread] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [activeHomeLocation, setActiveHomeLocation] = useState('coach');
+  const [movingHome, setMovingHome] = useState(false);
 
   const threadRef = useRef(null);
 
@@ -382,8 +390,8 @@ export default function CoachMessagingPage() {
 
     async function loadThreads() {
       try {
-        const data = await fetchJson("/api/signal/threads?view=coach");
-		const conversations = Array.isArray(data.threads) ? data.threads : [];
+        const data = await fetchJson("/api/messages?channel=coach");
+        const conversations = Array.isArray(data.conversations) ? data.conversations : [];
 
         const threadsWithMessages = await Promise.all(
           conversations.map(async (conv) => {
@@ -405,7 +413,7 @@ export default function CoachMessagingPage() {
 
               return {
                 id: conv.id,
-                candidate: conv.title || "Conversation",
+                candidate: conv.name || "Conversation",
                 snippet: conv.lastMessage || lastMsg?.text || "",
                 unread: typeof conv.unread === "number" ? conv.unread : 0,
                 messages: mappedMessages,
@@ -416,7 +424,7 @@ export default function CoachMessagingPage() {
               console.error("Failed to load messages for", conv.id, err);
               return {
                 id: conv.id,
-                candidate: conv.title || "Conversation",
+                candidate: conv.name || "Conversation",
                 snippet: conv.lastMessage || "",
                 unread: typeof conv.unread === "number" ? conv.unread : 0,
                 messages: [],
@@ -570,6 +578,27 @@ export default function CoachMessagingPage() {
     } catch (err) {
       console.error("Failed bulk send (coach):", err);
       setBulkOpen(false);
+    }
+  };
+
+  const handleSetHome = async (newHomeLocation) => {
+    if (!activeThread?.id || movingHome || newHomeLocation === activeHomeLocation) return;
+    setMovingHome(true);
+    try {
+      const res = await fetch('/api/signal/set-home', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ conversationId: activeThread.id, homeLocation: newHomeLocation }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setActiveHomeLocation(data.homeLocation);
+    } catch (err) {
+      console.error('setHome error:', err);
+      alert('Could not move conversation. Please try again.');
+    } finally {
+      setMovingHome(false);
     }
   };
 
@@ -808,11 +837,15 @@ export default function CoachMessagingPage() {
           onActiveThreadChange={(t) => {
             setActiveThread(t);
             setIsBlocked(false);
+            setActiveHomeLocation(t?.homeLocation || 'coach');
           }}
           isBlocked={isBlocked}
           onDelete={handleDelete}
           onReport={handleReport}
           onBlock={handleBlock}
+          onSetHome={handleSetHome}
+          activeHomeLocation={activeHomeLocation}
+          movingHome={movingHome}
         />
       </CoachingLayout>
     </PlanProvider>

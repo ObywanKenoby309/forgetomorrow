@@ -581,7 +581,7 @@ function MessageBubble({ message, isRecruiter }) {
 /* ─────────────────────────────────────────────────────────────
    RIGHT PANEL
 ───────────────────────────────────────────────────────────── */
-function RightPanel({ candidate, messages, onSend, sending, isArchived, currentUserId, activeConversationId, onArchiveMine, onArchiveOrg, onOpenSavedReplies, registerDraftSetter }) {
+function RightPanel({ candidate, messages, onSend, sending, isArchived, currentUserId, activeConversationId, onArchiveMine, onArchiveOrg, onOpenSavedReplies, registerDraftSetter, activeHomeLocation, onSetHome, movingHome }) {
   const [draft, setDraft] = useState("");
   const [showTyping, setShowTyping] = useState(false);
   const messagesContainerRef = useRef(null);
@@ -706,6 +706,49 @@ function RightPanel({ candidate, messages, onSend, sending, isArchived, currentU
           onArchiveOrg={onArchiveOrg}
           buttonStyle={{ marginRight: 0 }}
         />
+        {/* ── Move conversation control ── */}
+        {activeConversationId && onSetHome && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <button
+              type="button"
+              disabled={movingHome || activeHomeLocation === 'seeker'}
+              onClick={() => onSetHome('seeker')}
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                padding: "3px 10px",
+                borderRadius: 8,
+                border: `1px solid ${activeHomeLocation === 'seeker' ? ORANGE : 'rgba(15,23,42,0.14)'}`,
+                background: activeHomeLocation === 'seeker' ? 'rgba(255,112,67,0.08)' : 'white',
+                color: activeHomeLocation === 'seeker' ? ORANGE : MUTED,
+                cursor: activeHomeLocation === 'seeker' ? 'default' : 'pointer',
+                transition: 'all 0.15s',
+                opacity: movingHome ? 0.5 : 1,
+              }}
+            >
+              Spark{activeHomeLocation === 'seeker' ? ' ✓' : ''}
+            </button>
+            <button
+              type="button"
+              disabled={movingHome || activeHomeLocation === 'recruiter'}
+              onClick={() => onSetHome('recruiter')}
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                padding: "3px 10px",
+                borderRadius: 8,
+                border: `1px solid ${activeHomeLocation === 'recruiter' ? ORANGE : 'rgba(15,23,42,0.14)'}`,
+                background: activeHomeLocation === 'recruiter' ? 'rgba(255,112,67,0.08)' : 'white',
+                color: activeHomeLocation === 'recruiter' ? ORANGE : MUTED,
+                cursor: activeHomeLocation === 'recruiter' ? 'default' : 'pointer',
+                transition: 'all 0.15s',
+                opacity: movingHome ? 0.5 : 1,
+              }}
+            >
+              Recruiter Inbox{activeHomeLocation === 'recruiter' ? ' ✓' : ''}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Messages ── */}
@@ -748,7 +791,6 @@ function RightPanel({ candidate, messages, onSend, sending, isArchived, currentU
         ))}
       </div>
 
-      {/* ── Composer or archived notice ── */}
       {isArchived ? (
         <div
           style={{
@@ -769,74 +811,110 @@ function RightPanel({ candidate, messages, onSend, sending, isArchived, currentU
       ) : (
         <div
           style={{
-            padding: "12px 16px",
+            padding: "12px 16px 14px",
             borderTop: `1px solid ${BORDER}`,
             display: "flex",
             flexDirection: "column",
-            gap: 8,
+            gap: 10,
             flexShrink: 0,
+            background: "rgba(248,250,252,0.7)",
           }}
         >
-          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", width: "fit-content" }}>
-            <input
-              type="checkbox"
-              checked={showTyping}
-              onChange={(e) => setShowTyping(e.target.checked)}
-              style={{ accentColor: ORANGE, cursor: "pointer" }}
-            />
-            <span style={{ fontSize: 11, color: MUTED, fontWeight: 600 }}>Show recipient you are typing</span>
-          </label>
-          <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
-          <textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
-            rows={1}
+          {/* Premium composer box */}
+          <div
             style={{
-              flex: 1,
-              resize: "none",
-              border: `1px solid rgba(15,23,42,0.14)`,
-              borderRadius: 10,
-              padding: "9px 12px",
-              fontSize: 13,
-              fontFamily: "inherit",
-              color: SLATE,
-              outline: "none",
-              background: "rgba(248,250,252,0.9)",
-              lineHeight: 1.5,
-              maxHeight: 120,
-              overflowY: "auto",
+              border: `1.5px solid rgba(15,23,42,0.12)`,
+              borderRadius: 14,
+              background: "white",
+              boxShadow: "0 2px 12px rgba(15,23,42,0.07)",
+              overflow: "hidden",
+              transition: "border-color 0.15s, box-shadow 0.15s",
             }}
-            onInput={(e) => {
-              e.target.style.height = "auto";
-              e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+            onFocusCapture={(e) => {
+              e.currentTarget.style.borderColor = "rgba(255,112,67,0.5)";
+              e.currentTarget.style.boxShadow = "0 2px 16px rgba(255,112,67,0.12)";
             }}
-          />
-          <button type="button"
-            onClick={handleSend}
-            disabled={!draft.trim() || sending}
-            style={{
-              background: !draft.trim() || sending
-                ? "rgba(15,23,42,0.15)"
-                : "linear-gradient(135deg, #FF7043 0%, #FF8A65 100%)",
-              color: "white",
-              border: "none",
-              borderRadius: 10,
-              padding: "9px 18px",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: !draft.trim() || sending ? "not-allowed" : "pointer",
-              flexShrink: 0,
-              transition: "background 0.15s",
-              boxShadow: !draft.trim() || sending
-                ? "none"
-                : "0 2px 8px rgba(255,112,67,0.3)",
+            onBlurCapture={(e) => {
+              e.currentTarget.style.borderColor = "rgba(15,23,42,0.12)";
+              e.currentTarget.style.boxShadow = "0 2px 12px rgba(15,23,42,0.07)";
             }}
           >
-            {sending ? "..." : "Send"}
-          </button>
+            <textarea
+              ref={textareaRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Write a message… (Enter to send, Shift+Enter for new line)"
+              rows={3}
+              style={{
+                width: "100%",
+                resize: "none",
+                border: "none",
+                outline: "none",
+                padding: "12px 14px 8px",
+                fontSize: 13,
+                fontFamily: "inherit",
+                color: SLATE,
+                background: "transparent",
+                lineHeight: 1.55,
+                minHeight: 72,
+                maxHeight: 180,
+                overflowY: "auto",
+                boxSizing: "border-box",
+                display: "block",
+              }}
+              onInput={(e) => {
+                e.target.style.height = "auto";
+                e.target.style.height = Math.min(e.target.scrollHeight, 180) + "px";
+              }}
+            />
+            {/* Composer footer row */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "6px 10px 8px",
+                borderTop: `1px solid rgba(15,23,42,0.06)`,
+              }}
+            >
+              <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={showTyping}
+                  onChange={(e) => setShowTyping(e.target.checked)}
+                  style={{ accentColor: ORANGE, cursor: "pointer" }}
+                />
+                <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>
+                  Show typing indicator
+                </span>
+              </label>
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={!draft.trim() || sending}
+                style={{
+                  background: !draft.trim() || sending
+                    ? "rgba(15,23,42,0.10)"
+                    : "linear-gradient(135deg, #FF7043 0%, #FF8A65 100%)",
+                  color: !draft.trim() || sending ? MUTED : "white",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "7px 20px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: !draft.trim() || sending ? "not-allowed" : "pointer",
+                  flexShrink: 0,
+                  transition: "all 0.15s",
+                  boxShadow: !draft.trim() || sending
+                    ? "none"
+                    : "0 2px 8px rgba(255,112,67,0.3)",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                {sending ? "Sending…" : "Send"}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -867,6 +945,10 @@ export default function RecruiterMessageCenter({
 
   // conversationId for the selected candidate (null = ghost, no convo yet)
   const [activeConversationId, setActiveConversationId] = useState(null);
+
+  // homeLocation tracks where the active conversation lives
+  const [activeHomeLocation, setActiveHomeLocation] = useState('recruiter');
+  const [movingHome, setMovingHome] = useState(false);
 
   // Map of userId -> unread count, populated from thread data
   const [threadUnreadMap, setThreadUnreadMap] = useState({});
@@ -928,6 +1010,7 @@ export default function RecruiterMessageCenter({
         : null;
 
       setActiveConversationId(existingConvId);
+      setActiveHomeLocation(candidate.homeLocation || 'recruiter');
 
       if (existingConvId) {
         setLoadingMessages(true);
@@ -1001,6 +1084,27 @@ export default function RecruiterMessageCenter({
       onSendMessage,
     ]
   );
+
+  const handleSetHome = async (newHomeLocation) => {
+    if (!activeConversationId || movingHome || newHomeLocation === activeHomeLocation) return;
+    setMovingHome(true);
+    try {
+      const res = await fetch('/api/signal/set-home', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: activeConversationId, homeLocation: newHomeLocation }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setActiveHomeLocation(data.homeLocation);
+    } catch (err) {
+      console.error('[RecruiterMessageCenter] setHome error:', err);
+      alert('Could not move conversation. Please try again.');
+    } finally {
+      setMovingHome(false);
+    }
+  };
 
   return (
     <div
@@ -1089,6 +1193,9 @@ export default function RecruiterMessageCenter({
           isArchived={!!isArchived}
           currentUserId={currentUserId}
           activeConversationId={activeConversationId}
+          activeHomeLocation={activeHomeLocation}
+          onSetHome={handleSetHome}
+          movingHome={movingHome}
           onOpenSavedReplies={() => setSavedRepliesOpen(true)}
           onInsertText={(text) => { if (draftSetterRef.current) draftSetterRef.current(text); }}
           registerDraftSetter={(fn) => { draftSetterRef.current = fn; }}

@@ -90,6 +90,9 @@ const MessageThread = forwardRef(function MessageThread(
     onBlock,
     showHeaderActions = false,
     headerActionsLabel = {},
+    onSetHome,
+    activeHomeLocation,
+    movingHome = false,
 
     // UI-only additions
     inboxAction = null,
@@ -398,6 +401,40 @@ const MessageThread = forwardRef(function MessageThread(
                   </>
                 )}
 
+                {/* ── Move conversation control ── */}
+                {onSetHome && active && (
+                  <div className="flex items-center gap-1 ml-1">
+                    <button
+                      type="button"
+                      disabled={movingHome || activeHomeLocation === 'seeker'}
+                      onClick={() => onSetHome('seeker')}
+                      className={[
+                        "text-[11px] px-2 py-1 rounded-md border transition-colors",
+                        activeHomeLocation === 'seeker'
+                          ? "border-[#FF7043] bg-[#FFF3E9] text-[#FF7043] font-semibold cursor-default"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer",
+                        movingHome ? "opacity-50 cursor-not-allowed" : "",
+                      ].filter(Boolean).join(" ")}
+                    >
+                      Spark{activeHomeLocation === 'seeker' ? ' ✓' : ''}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={movingHome || activeHomeLocation === 'coach'}
+                      onClick={() => onSetHome('coach')}
+                      className={[
+                        "text-[11px] px-2 py-1 rounded-md border transition-colors",
+                        activeHomeLocation === 'coach'
+                          ? "border-[#FF7043] bg-[#FFF3E9] text-[#FF7043] font-semibold cursor-default"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer",
+                        movingHome ? "opacity-50 cursor-not-allowed" : "",
+                      ].filter(Boolean).join(" ")}
+                    >
+                      Coach Inbox{activeHomeLocation === 'coach' ? ' ✓' : ''}
+                    </button>
+                  </div>
+                )}
+
                 <label className="text-xs text-slate-500 cursor-pointer whitespace-nowrap">
                   <input
                     type="checkbox"
@@ -492,36 +529,70 @@ const MessageThread = forwardRef(function MessageThread(
         )}
 
         {/* Composer */}
-        <div className="mt-3 flex items-center gap-2">
-          <input
-            ref={inputRef}
-            className="flex-1 border rounded px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
-            placeholder={inputPlaceholder}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            disabled={!canCompose}
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleSend();
+        <div className="mt-3">
+          <div
+            className="rounded-xl border border-slate-200 bg-white overflow-hidden transition-shadow"
+            style={{ boxShadow: "0 2px 12px rgba(15,23,42,0.07)" }}
+            onFocusCapture={(e) => {
+              e.currentTarget.style.borderColor = "rgba(255,112,67,0.45)";
+              e.currentTarget.style.boxShadow = "0 2px 16px rgba(255,112,67,0.12)";
             }}
-          />
-          <button
-            className={`rounded text-sm px-3 py-2 ${
-              canCompose
-                ? "bg-black text-white"
-                : "bg-slate-300 text-slate-600 cursor-not-allowed"
-            }`}
-            onClick={handleSend}
-            disabled={!canCompose || !draft.trim()}
-            title={
-              canCompose
-                ? "Ctrl/Cmd+Enter to send"
-                : isBlocked
-                ? "Blocked"
-                : `Open a ${personaLabel.toLowerCase()} conversation to send`
-            }
+            onBlurCapture={(e) => {
+              e.currentTarget.style.borderColor = "rgb(226,232,240)";
+              e.currentTarget.style.boxShadow = "0 2px 12px rgba(15,23,42,0.07)";
+            }}
           >
-            Send
-          </button>
+            <textarea
+              ref={inputRef}
+              className="w-full px-4 pt-3 pb-2 text-sm text-slate-800 bg-transparent border-none outline-none resize-none"
+              style={{
+                minHeight: 72,
+                maxHeight: 180,
+                lineHeight: 1.55,
+                fontFamily: "inherit",
+                display: "block",
+                overflowY: "auto",
+              }}
+              placeholder={inputPlaceholder}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              disabled={!canCompose}
+              onInput={(e) => {
+                e.target.style.height = "auto";
+                e.target.style.height = Math.min(e.target.scrollHeight, 180) + "px";
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+            />
+            <div className="flex items-center justify-between px-3 pb-2 pt-1 border-t border-slate-100">
+              <span className="text-[11px] text-slate-400">
+                Enter to send · Shift+Enter for new line
+              </span>
+              <button
+                className={`rounded-lg text-sm px-4 py-1.5 font-bold transition-all ${
+                  canCompose && draft.trim()
+                    ? "text-white"
+                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                }`}
+                style={
+                  canCompose && draft.trim()
+                    ? {
+                        background: "linear-gradient(135deg, #FF7043 0%, #FF8A65 100%)",
+                        boxShadow: "0 2px 8px rgba(255,112,67,0.3)",
+                      }
+                    : {}
+                }
+                onClick={handleSend}
+                disabled={!canCompose || !draft.trim()}
+              >
+                Send
+              </button>
+            </div>
+          </div>
         </div>
       </section>
     </div>
