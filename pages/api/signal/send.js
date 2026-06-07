@@ -94,6 +94,14 @@ export default async function handler(req, res) {
 
     const now = new Date();
 
+    // Clear typing state for the sender as soon as the message is accepted.
+    await prisma.conversationTyping.deleteMany({
+      where: {
+        conversationId: convoId,
+        userId,
+      },
+    });
+
     // Bump conversation updatedAt
     await prisma.conversation.update({
       where: { id: convoId },

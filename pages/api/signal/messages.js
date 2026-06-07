@@ -127,9 +127,50 @@ export default async function handler(req, res) {
 
     const nextSinceId = normalized.length ? normalized[normalized.length - 1].id : sinceIdNum || null;
 
+    const typingCutoff = new Date(Date.now() - 5000);
+
+    const typingRows = await prisma.conversationTyping.findMany({
+      where: {
+        conversationId: convoId,
+        userId: { not: userId },
+        updatedAt: { gt: typingCutoff },
+      },
+      take: 5,
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    const typingUsers = typingRows.map((row) => {
+      const name =
+        row.user?.name ||
+        [row.user?.firstName, row.user?.lastName].filter(Boolean).join(' ') ||
+        row.user?.email ||
+        'Member';
+
+      return {
+        userId: row.userId,
+        name,
+        avatarUrl: row.user?.avatarUrl || null,
+        updatedAt: row.updatedAt,
+      };
+    });
+
     return res.status(200).json({
       ok: true,
       messages: normalized,
+      typingUsers,
+      typing: typingUsers.length > 0,
       meta: {
         conversationId: convoId,
         returned: normalized.length,

@@ -213,9 +213,11 @@ const MessageThread = forwardRef(function MessageThread(
   }, [threads, activeId]);
 
   const [draft, setDraft] = useState("");
-  const [isTypingVisible, setIsTypingVisible] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
+  const lastTypingSentRef = useRef(0);
+  const typingStopTimerRef = useRef(null);
 
   const hasThreads = threads.length > 0;
   const canCompose = hasThreads && !!active && !isBlocked;
@@ -268,16 +270,106 @@ const MessageThread = forwardRef(function MessageThread(
     }
   }, [activeId, active?.messages?.length]);
 
-  // Reset typing indicator when switching threads
+  const clearTypingState = useMemo(() => {
+    return async (conversationId) => {
+      if (!conversationId) return;
+      try {
+        await fetch("/api/signal/typing", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversationId }),
+        });
+      } catch {
+        // Typing state is non-critical; never block messaging UI.
+      }
+    };
+  }, []);
+
+  const sendTypingHeartbeat = useMemo(() => {
+    return async (conversationId) => {
+      if (!conversationId) return;
+      const now = Date.now();
+      if (now - lastTypingSentRef.current < 1500) return;
+      lastTypingSentRef.current = now;
+
+      try {
+        await fetch("/api/signal/typing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversationId }),
+        });
+      } catch {
+        // Typing state is non-critical; never block composer input.
+      }
+    };
+  }, []);
+
+  const handleDraftChange = (value) => {
+    setDraft(value);
+
+    if (!active?.id || !canCompose) return;
+
+    if (!String(value || "").trim()) {
+      if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+      typingStopTimerRef.current = null;
+      clearTypingState(active.id);
+      return;
+    }
+
+    sendTypingHeartbeat(active.id);
+
+    if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+    typingStopTimerRef.current = setTimeout(() => {
+      clearTypingState(active.id);
+    }, 3500);
+  };
+
+  // Poll typing status for the active conversation.
   useEffect(() => {
-    let t;
-    if (activeId) t = setTimeout(() => setIsTypingVisible(false), 0);
-    return () => clearTimeout(t);
-  }, [activeId]);
+    if (!active?.id) {
+      setTypingUsers([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchTypingUsers = async () => {
+      try {
+        const res = await fetch(`/api/signal/typing?conversationId=${encodeURIComponent(active.id)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setTypingUsers(Array.isArray(data.typingUsers) ? data.typingUsers : []);
+        }
+      } catch {
+        if (!cancelled) setTypingUsers([]);
+      }
+    };
+
+    fetchTypingUsers();
+    const interval = setInterval(fetchTypingUsers, 1500);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      setTypingUsers([]);
+    };
+  }, [active?.id]);
+
+  // Clear local typing state when switching threads or unmounting.
+  useEffect(() => {
+    return () => {
+      if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+      if (active?.id) clearTypingState(active.id);
+    };
+  }, [active?.id, clearTypingState]);
 
   const handleSend = () => {
     const text = draft.trim();
     if (!text || !canCompose) return;
+    if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+    typingStopTimerRef.current = null;
+    clearTypingState(active.id);
     onSend?.(active.id, text);
     setDraft("");
   };
@@ -550,6 +642,37 @@ const MessageThread = forwardRef(function MessageThread(
                   No messages yet. Start by saying hello.
                 </div>
               )}
+
+              {typingUsers.length > 0 && (
+                <div className="mt-3 flex justify-start">
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "8px 11px",
+                      borderRadius: 999,
+                      background: "rgba(248,250,252,0.95)",
+                      border: "1px solid rgba(226,232,240,0.95)",
+                      color: "#64748B",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+                    }}
+                  >
+                    <span>
+                      {typingUsers.length === 1
+                        ? `${typingUsers[0]?.name || active.candidate || "They"} is typing`
+                        : "Multiple people are typing"}
+                    </span>
+                    <span className="typing-dots" aria-hidden="true">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── Composer ── */}
@@ -575,7 +698,7 @@ const MessageThread = forwardRef(function MessageThread(
                 <textarea
                   ref={inputRef}
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
+                  onChange={(e) => handleDraftChange(e.target.value)}
                   placeholder={inputPlaceholder}
                   disabled={!canCompose}
                   onInput={(e) => {
@@ -613,17 +736,9 @@ const MessageThread = forwardRef(function MessageThread(
                   padding: "6px 10px 8px",
                   borderTop: "1px solid rgba(15,23,42,0.06)",
                 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      checked={isTypingVisible}
-                      onChange={(e) => setIsTypingVisible(e.target.checked)}
-                      style={{ accentColor: "#FF7043", cursor: "pointer" }}
-                    />
-                    <span style={{ fontSize: 11, color: "#64748B", fontWeight: 500 }}>
-                      Show typing indicator
-                    </span>
-                  </label>
+                  <span style={{ fontSize: 11, color: "#64748B", fontWeight: 500 }}>
+                    Typing indicator sends automatically
+                  </span>
                   <button
                     type="button"
                     onClick={handleSend}
@@ -650,6 +765,30 @@ const MessageThread = forwardRef(function MessageThread(
             </div>
           </>
         )}
+        <style jsx>{`
+          .typing-dots {
+            display: inline-flex;
+            gap: 3px;
+            align-items: center;
+          }
+          .typing-dots span {
+            width: 4px;
+            height: 4px;
+            border-radius: 999px;
+            background: #94A3B8;
+            animation: typing-dot 1.1s infinite ease-in-out;
+          }
+          .typing-dots span:nth-child(2) {
+            animation-delay: 0.16s;
+          }
+          .typing-dots span:nth-child(3) {
+            animation-delay: 0.32s;
+          }
+          @keyframes typing-dot {
+            0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
+            40% { opacity: 1; transform: translateY(-2px); }
+          }
+        `}</style>
       </section>
     </div>
   );
