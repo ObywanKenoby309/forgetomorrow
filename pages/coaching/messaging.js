@@ -382,8 +382,8 @@ export default function CoachMessagingPage() {
 
     async function loadThreads() {
       try {
-        const data = await fetchJson("/api/messages?channel=coach");
-        const conversations = Array.isArray(data.conversations) ? data.conversations : [];
+        const data = await fetchJson("/api/signal/threads?view=coach");
+		const conversations = Array.isArray(data.threads) ? data.threads : [];
 
         const threadsWithMessages = await Promise.all(
           conversations.map(async (conv) => {
@@ -405,7 +405,7 @@ export default function CoachMessagingPage() {
 
               return {
                 id: conv.id,
-                candidate: conv.name || "Conversation",
+                candidate: conv.title || "Conversation",
                 snippet: conv.lastMessage || lastMsg?.text || "",
                 unread: typeof conv.unread === "number" ? conv.unread : 0,
                 messages: mappedMessages,
@@ -416,7 +416,7 @@ export default function CoachMessagingPage() {
               console.error("Failed to load messages for", conv.id, err);
               return {
                 id: conv.id,
-                candidate: conv.name || "Conversation",
+                candidate: conv.title || "Conversation",
                 snippet: conv.lastMessage || "",
                 unread: typeof conv.unread === "number" ? conv.unread : 0,
                 messages: [],

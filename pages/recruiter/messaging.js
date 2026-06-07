@@ -123,7 +123,11 @@ export default function MessagingPage() {
             const threads = Array.isArray(threadData?.threads) ? threadData.threads : [];
 
             const otherMembers = threads
-              .filter((thread) => thread?.otherUserId && !knownUserIds.has(String(thread.otherUserId)))
+              .filter((thread) =>
+                thread?.otherUserId &&
+                !knownUserIds.has(String(thread.otherUserId)) &&
+                thread.homeLocation === 'recruiter'
+              )
               .map((thread) => ({
                 userId: thread.otherUserId,
                 name: thread.title || 'Conversation',

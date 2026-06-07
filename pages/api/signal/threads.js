@@ -27,13 +27,13 @@ function buildHomeLocationWhere(userRole, view) {
 
   // Coaches have Spark + Coach Inbox.
   if (role === 'COACH') {
-    if (v === 'coach') return { homeLocation: { in: ['seeker', 'coach'] } };
+    if (v === 'coach') return { homeLocation: 'coach' };
     return { homeLocation: 'seeker' };
   }
 
   // Recruiters have Spark + Recruiter Inbox.
   if (role === 'RECRUITER') {
-    if (v === 'recruiter') return { homeLocation: { in: ['seeker', 'recruiter'] } };
+    if (v === 'recruiter') return { homeLocation: 'recruiter' };
     return { homeLocation: 'seeker' };
   }
 
