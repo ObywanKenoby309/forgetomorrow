@@ -1422,6 +1422,7 @@ model ConversationParticipant {
   lastReadAt     DateTime?
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User         @relation("UserConversationParticipants", fields: [userId], references: [id], onDelete: Cascade)
+  homeLocation   String 	  @default("seeker")
 
   @@unique([conversationId, userId])
   @@index([userId])
