@@ -169,6 +169,22 @@ function HeaderKebabMenu({ onDelete, onReport, onBlock, isBlocked }) {
   );
 }
 
+function linkify(text) {
+  const URL_RE = /(https?:\/\/[^\s]+)/g;
+  const parts = String(text || '').split(URL_RE);
+  return parts.map((part, i) => {
+    if (/^https?:\/\//.test(part)) {
+      return (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+          style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2, wordBreak: 'break-all' }}>
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+}
+
 export default function SignalMessages({ view = 'spark', userRole = 'SEEKER' }) {
   const router = useRouter();
   const { toId, toName, told, chrome } = router.query;
@@ -1171,7 +1187,7 @@ export default function SignalMessages({ view = 'spark', userRole = 'SEEKER' }) 
                           wordBreak: 'break-word',
                         }}
                       >
-                        {m.content}
+                        {linkify(m.content)}
                       </div>
 
                       <div className="text-[9px] opacity-75 mt-1 text-right">
