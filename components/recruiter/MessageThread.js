@@ -30,39 +30,137 @@ function normId(v) {
   return String(v);
 }
 
+/* ─── Kebab menu for moderation actions ─────────────────────────────────── */
+function KebabMenu({ onDelete, onReport, onBlock, isBlocked, labels = {} }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          width: 30,
+          height: 30,
+          borderRadius: 8,
+          border: "1px solid rgba(15,23,42,0.10)",
+          background: "white",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 16,
+          color: "#64748B",
+          flexShrink: 0,
+        }}
+        title="More actions"
+      >
+        ⋮
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            right: 0,
+            zIndex: 50,
+            background: "white",
+            border: "1px solid rgba(15,23,42,0.10)",
+            borderRadius: 10,
+            boxShadow: "0 8px 24px rgba(15,23,42,0.14)",
+            minWidth: 140,
+            overflow: "hidden",
+          }}
+        >
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onDelete(); }}
+              style={{
+                display: "block", width: "100%", textAlign: "left",
+                padding: "9px 14px", fontSize: 13, color: "#334155",
+                background: "none", border: "none", cursor: "pointer",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#F8FAFC"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+            >
+              {labels.delete || "Delete"}
+            </button>
+          )}
+          {onReport && (
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onReport(); }}
+              style={{
+                display: "block", width: "100%", textAlign: "left",
+                padding: "9px 14px", fontSize: 13, color: "#334155",
+                background: "none", border: "none", cursor: "pointer",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#F8FAFC"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+            >
+              {labels.report || "Report"}
+            </button>
+          )}
+          {onBlock && (
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onBlock(); }}
+              disabled={isBlocked}
+              style={{
+                display: "block", width: "100%", textAlign: "left",
+                padding: "9px 14px", fontSize: 13,
+                color: isBlocked ? "#94A3B8" : "#DC2626",
+                background: "none", border: "none",
+                cursor: isBlocked ? "default" : "pointer",
+                borderTop: "1px solid rgba(15,23,42,0.06)",
+              }}
+              onMouseEnter={(e) => { if (!isBlocked) e.currentTarget.style.background = "#FEF2F2"; }}
+              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+            >
+              {isBlocked ? (labels.blocked || "Blocked") : (labels.block || "Block")}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
- * props:
- * - threads: [{id, candidate, snippet, messages:[{id, from:'recruiter'|'candidate'|..., text, ts, status?}], unread?: number, otherUserId?, otherAvatarUrl?}]
- * - initialThreadId?: number|string
- * - onSend?: (threadId, messageText) => void
+ * Props — all original props preserved, layout restructured.
  *
- * Existing optional props kept intact.
- *
- * NEW (non-breaking):
- * - onActiveThreadChange?: (thread) => void
- * - otherAvatarKey?: string (default "otherAvatarUrl")
- * - isBlocked?: boolean (default false)
- * - onDelete?: () => void
- * - onReport?: () => void
- * - onBlock?: () => void
- * - showHeaderActions?: boolean (default false)
- * - headerActionsLabel?: { delete?: string, report?: string, block?: string, blocked?: string }
- *
- * NEW UI-only (non-breaking):
- * - inboxAction?: ReactNode
- * - hideInboxDescription?: boolean
- * - hideThreadSnippets?: boolean
- * - onOpenSavedReplies?: () => void
- * - onOpenBulkMessage?: () => void
- * - showInboxToolButtons?: boolean
- * - savedRepliesLabel?: string
- * - bulkMessageLabel?: string
- *
- * NEW (non-breaking via ref):
- * - ref exposes:
- *   - insertText(text, opts?: { mode?: 'append'|'replace', spacer?: string })
- *   - setDraftText(text)
- *   - focusComposer()
+ * threads: [{id, candidate, snippet, messages:[{id, from, text, ts, status?}], unread?, otherUserId?, otherAvatarUrl?}]
+ * initialThreadId?: number|string
+ * onSend?: (threadId, messageText) => void
+ * onActiveThreadChange?: (thread) => void
+ * otherAvatarKey?: string (default "otherAvatarUrl")
+ * isBlocked?: boolean
+ * onDelete?: () => void
+ * onReport?: () => void
+ * onBlock?: () => void
+ * showHeaderActions?: boolean
+ * headerActionsLabel?: { delete?, report?, block?, blocked? }
+ * onSetHome?: (homeLocation: string) => void
+ * activeHomeLocation?: string
+ * movingHome?: boolean
+ * inboxAction?: ReactNode
+ * hideInboxDescription?: boolean
+ * hideThreadSnippets?: boolean
+ * onOpenSavedReplies?: () => void
+ * showInboxToolButtons?: boolean
+ * savedRepliesLabel?: string
+ * ref exposes: insertText(), setDraftText(), focusComposer()
  */
 const MessageThread = forwardRef(function MessageThread(
   {
@@ -70,7 +168,6 @@ const MessageThread = forwardRef(function MessageThread(
     initialThreadId,
     onSend,
 
-    // safe defaults
     persona = "recruiter",
     personaLabel = "Recruiter",
     otherLabel = "candidate",
@@ -81,7 +178,6 @@ const MessageThread = forwardRef(function MessageThread(
     emptyFootnote,
     inputPlaceholderEmpty,
 
-    // new safe callbacks / behavior
     onActiveThreadChange,
     otherAvatarKey = "otherAvatarUrl",
     isBlocked = false,
@@ -94,15 +190,12 @@ const MessageThread = forwardRef(function MessageThread(
     activeHomeLocation,
     movingHome = false,
 
-    // UI-only additions
     inboxAction = null,
     hideInboxDescription = false,
     hideThreadSnippets = false,
     onOpenSavedReplies,
-    onOpenBulkMessage,
     showInboxToolButtons = false,
     savedRepliesLabel = "Saved Replies",
-    bulkMessageLabel = "Bulk Message",
   },
   ref
 ) {
@@ -127,71 +220,45 @@ const MessageThread = forwardRef(function MessageThread(
   const hasThreads = threads.length > 0;
   const canCompose = hasThreads && !!active && !isBlocked;
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      insertText: (text, opts = {}) => {
-        const t = typeof text === "string" ? text : "";
-        if (!t) return;
-
-        const mode = opts.mode || "replace";
-        const spacer = typeof opts.spacer === "string" ? opts.spacer : " ";
-
-        setDraft((prev) => {
-          if (mode === "append") {
-            const base = String(prev || "");
-            if (!base.trim()) return t;
-            return `${base}${spacer}${t}`;
-          }
-          return t;
-        });
-
-        setTimeout(() => {
-          try {
-            inputRef.current?.focus?.();
-          } catch {}
-        }, 0);
-      },
-      setDraftText: (text) => {
-        setDraft(typeof text === "string" ? text : "");
-        setTimeout(() => {
-          try {
-            inputRef.current?.focus?.();
-          } catch {}
-        }, 0);
-      },
-      focusComposer: () => {
-        try {
-          inputRef.current?.focus?.();
-        } catch {}
-      },
-    }),
-    []
-  );
+  useImperativeHandle(ref, () => ({
+    insertText: (text, opts = {}) => {
+      const t = typeof text === "string" ? text : "";
+      if (!t) return;
+      const mode = opts.mode || "replace";
+      const spacer = typeof opts.spacer === "string" ? opts.spacer : " ";
+      setDraft((prev) => {
+        if (mode === "append") {
+          const base = String(prev || "");
+          if (!base.trim()) return t;
+          return `${base}${spacer}${t}`;
+        }
+        return t;
+      });
+      setTimeout(() => { try { inputRef.current?.focus?.(); } catch {} }, 0);
+    },
+    setDraftText: (text) => {
+      setDraft(typeof text === "string" ? text : "");
+      setTimeout(() => { try { inputRef.current?.focus?.(); } catch {} }, 0);
+    },
+    focusComposer: () => { try { inputRef.current?.focus?.(); } catch {} },
+  }), []);
 
   useEffect(() => {
     const initNorm = normId(initialThreadId);
     const lastInit = lastInitRef.current;
     const firstThreadId = normId(threads[0]?.id ?? null);
-
     if (initNorm && initNorm !== lastInit) {
       lastInitRef.current = initNorm;
       setActiveId(initNorm);
       return;
     }
-
     const activeNorm = normId(activeId);
-    const activeStillExists =
-      activeNorm && threads.some((t) => normId(t.id) === activeNorm);
-
-    if (!activeStillExists) {
-      setActiveId(initNorm || firstThreadId || null);
-    }
+    const activeStillExists = activeNorm && threads.some((t) => normId(t.id) === activeNorm);
+    if (!activeStillExists) setActiveId(initNorm || firstThreadId || null);
   }, [initialThreadId, threads, activeId]);
 
   useEffect(() => {
-    if (!onActiveThreadChange) return;
-    if (!active) return;
+    if (!onActiveThreadChange || !active) return;
     onActiveThreadChange(active);
   }, [activeId, active, onActiveThreadChange]);
 
@@ -201,6 +268,7 @@ const MessageThread = forwardRef(function MessageThread(
     }
   }, [activeId, active?.messages?.length]);
 
+  // Reset typing indicator when switching threads
   useEffect(() => {
     let t;
     if (activeId) t = setTimeout(() => setIsTypingVisible(false), 0);
@@ -244,43 +312,32 @@ const MessageThread = forwardRef(function MessageThread(
   const inputPlaceholder = hasThreads
     ? isBlocked
       ? "You have blocked this member."
-      : "Type a message…"
+      : "Write a message… (Enter to send, Shift+Enter for new line)"
     : inputPlaceholderEmpty ||
-      `Start from a ${otherLabel} card and choose ‘Send as ${personaLabel}’ to open a conversation.`;
-
-  const deleteLabel = headerActionsLabel.delete || "Delete";
-  const reportLabel = headerActionsLabel.report || "Report";
-  const blockLabel = headerActionsLabel.block || "Block";
-  const blockedLabel = headerActionsLabel.blocked || "Blocked";
+      `Start from a ${otherLabel} card and choose 'Send as ${personaLabel}' to open a conversation.`;
 
   const inboxToolButtonStyle =
     "inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700 hover:bg-slate-50";
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {/* Threads list */}
+
+      {/* ── Left: Thread list ── */}
       <aside className="md:col-span-1 rounded-lg border bg-white divide-y overflow-hidden">
         <div className="px-4 py-3 border-b bg-slate-50">
           <div className="flex items-center justify-between gap-3">
             <div className="text-xs font-semibold tracking-wide text-slate-600 uppercase whitespace-nowrap">
               {inboxTitle}
             </div>
-
             <div className="flex items-center gap-2 justify-end">
               {!!inboxAction && inboxAction}
-
               {showInboxToolButtons && !!onOpenSavedReplies && (
-                <button
-                  type="button"
-                  onClick={onOpenSavedReplies}
-                  className={inboxToolButtonStyle}
-                >
+                <button type="button" onClick={onOpenSavedReplies} className={inboxToolButtonStyle}>
                   {savedRepliesLabel}
                 </button>
               )}
             </div>
           </div>
-
           {!hideInboxDescription && (
             <p className="mt-1 text-[11px] text-slate-500 leading-snug">
               {inboxDescription || defaultInboxDescription}
@@ -291,8 +348,7 @@ const MessageThread = forwardRef(function MessageThread(
         {!hasThreads && (
           <div className="px-4 py-6 text-sm text-slate-500">
             No conversations yet. Messages you send as{" "}
-            <span className="font-semibold">{personaLabel}</span> will show up
-            here.
+            <span className="font-semibold">{personaLabel}</span> will show up here.
           </div>
         )}
 
@@ -300,30 +356,22 @@ const MessageThread = forwardRef(function MessageThread(
           const avatarUrl = t?.[otherAvatarKey] || null;
           const name = t.candidate || "Conversation";
           const isActive = normId(t.id) === normId(activeId);
-
           return (
             <button
               key={normId(t.id) || t.id}
               onClick={() => setActiveId(normId(t.id))}
-              className={`w-full text-left px-4 py-3 hover:bg-slate-50 focus:bg-slate-50 ${
-                isActive ? "bg-slate-50" : ""
-              }`}
+              className={`w-full text-left px-4 py-3 hover:bg-slate-50 focus:bg-slate-50 ${isActive ? "bg-slate-50" : ""}`}
             >
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 mt-0.5">
                   {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt={name}
-                      className="w-9 h-9 rounded-full object-cover border border-slate-200"
-                    />
+                    <img src={avatarUrl} alt={name} className="w-9 h-9 rounded-full object-cover border border-slate-200" />
                   ) : (
                     <div className="w-9 h-9 rounded-full bg-slate-200 border border-slate-200 flex items-center justify-center text-[11px] font-bold text-slate-700">
                       {initials(name)}
                     </div>
                   )}
                 </div>
-
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-medium truncate">{name}</div>
@@ -333,7 +381,6 @@ const MessageThread = forwardRef(function MessageThread(
                       </span>
                     ) : null}
                   </div>
-
                   {!hideThreadSnippets && (
                     <div className="text-xs text-slate-500 truncate">
                       {t.snippet || "No messages yet."}
@@ -346,143 +393,134 @@ const MessageThread = forwardRef(function MessageThread(
         })}
       </aside>
 
-      {/* Active thread + composer */}
-      <section className="md:col-span-2 rounded-lg border bg-white p-4 flex flex-col">
+      {/* ── Right: Active thread ── */}
+      <section className="md:col-span-2 rounded-lg border bg-white flex flex-col overflow-hidden">
         {!hasThreads ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-sm text-slate-500 space-y-2">
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-sm text-slate-500 space-y-2 p-6">
             <div className="text-base font-semibold text-slate-700">
               {emptyTitle || defaultEmptyTitle}
             </div>
-            <p className="max-w-md text-xs text-slate-500">
-              {emptyBody || defaultEmptyBody}
-            </p>
-            <p className="max-w-md text-[11px] text-slate-400">
-              {emptyFootnote || defaultEmptyFootnote}
-            </p>
+            <p className="max-w-md text-xs text-slate-500">{emptyBody || defaultEmptyBody}</p>
+            <p className="max-w-md text-[11px] text-slate-400">{emptyFootnote || defaultEmptyFootnote}</p>
           </div>
         ) : !active ? (
-          <div className="flex-1 flex items-center justify-center text-sm text-slate-500">
+          <div className="flex-1 flex items-center justify-center text-sm text-slate-500 p-6">
             Select a conversation from the list to view messages.
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-2 gap-2">
-              <div className="font-medium truncate">
-                Conversation with {active.candidate}
+            {/* ── Thread header: avatar + name left, move control + kebab right ── */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "12px 16px",
+                borderBottom: "1px solid rgba(15,23,42,0.08)",
+                flexShrink: 0,
+              }}
+            >
+              {/* Avatar */}
+              {active[otherAvatarKey] ? (
+                <img
+                  src={active[otherAvatarKey]}
+                  alt={active.candidate}
+                  style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: "1.5px solid rgba(255,255,255,0.7)", flexShrink: 0 }}
+                />
+              ) : (
+                <div style={{
+                  width: 36, height: 36, borderRadius: "50%",
+                  background: "linear-gradient(135deg, #FF7043 0%, #FF8A65 100%)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 13, fontWeight: 800, color: "white", flexShrink: 0,
+                }}>
+                  {initials(active.candidate)}
+                </div>
+              )}
+
+              {/* Name */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {active.candidate}
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {showHeaderActions && (
+              {/* Right controls: move pills + kebab */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                {/* Move control */}
+                {onSetHome && (
                   <>
                     <button
                       type="button"
-                      onClick={onDelete}
-                      className="text-[11px] px-2 py-1 border border-slate-200 rounded-md text-slate-800 hover:bg-white"
-                      disabled={!onDelete}
+                      disabled={movingHome || activeHomeLocation === "seeker"}
+                      onClick={() => onSetHome("seeker")}
+                      style={{
+                        fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8,
+                        border: `1px solid ${activeHomeLocation === "seeker" ? "#FF7043" : "rgba(15,23,42,0.12)"}`,
+                        background: activeHomeLocation === "seeker" ? "rgba(255,112,67,0.08)" : "white",
+                        color: activeHomeLocation === "seeker" ? "#FF7043" : "#64748B",
+                        cursor: activeHomeLocation === "seeker" ? "default" : "pointer",
+                        opacity: movingHome ? 0.5 : 1,
+                        transition: "all 0.15s",
+                      }}
                     >
-                      {deleteLabel}
+                      Spark{activeHomeLocation === "seeker" ? " ✓" : ""}
                     </button>
                     <button
                       type="button"
-                      onClick={onReport}
-                      className="text-[11px] px-2 py-1 border border-slate-200 rounded-md text-slate-800 hover:bg-white"
-                      disabled={!onReport}
+                      disabled={movingHome || activeHomeLocation === "coach"}
+                      onClick={() => onSetHome("coach")}
+                      style={{
+                        fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8,
+                        border: `1px solid ${activeHomeLocation === "coach" ? "#FF7043" : "rgba(15,23,42,0.12)"}`,
+                        background: activeHomeLocation === "coach" ? "rgba(255,112,67,0.08)" : "white",
+                        color: activeHomeLocation === "coach" ? "#FF7043" : "#64748B",
+                        cursor: activeHomeLocation === "coach" ? "default" : "pointer",
+                        opacity: movingHome ? 0.5 : 1,
+                        transition: "all 0.15s",
+                      }}
                     >
-                      {reportLabel}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onBlock}
-                      className="text-[11px] px-2 py-1 border border-red-200 rounded-md text-red-700 hover:bg-red-50"
-                      disabled={!onBlock || isBlocked}
-                    >
-                      {isBlocked ? blockedLabel : blockLabel}
+                      Coach Inbox{activeHomeLocation === "coach" ? " ✓" : ""}
                     </button>
                   </>
                 )}
 
-                {/* ── Move conversation control ── */}
-                {onSetHome && active && (
-                  <div className="flex items-center gap-1 ml-1">
-                    <button
-                      type="button"
-                      disabled={movingHome || activeHomeLocation === 'seeker'}
-                      onClick={() => onSetHome('seeker')}
-                      className={[
-                        "text-[11px] px-2 py-1 rounded-md border transition-colors",
-                        activeHomeLocation === 'seeker'
-                          ? "border-[#FF7043] bg-[#FFF3E9] text-[#FF7043] font-semibold cursor-default"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer",
-                        movingHome ? "opacity-50 cursor-not-allowed" : "",
-                      ].filter(Boolean).join(" ")}
-                    >
-                      Spark{activeHomeLocation === 'seeker' ? ' ✓' : ''}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={movingHome || activeHomeLocation === 'coach'}
-                      onClick={() => onSetHome('coach')}
-                      className={[
-                        "text-[11px] px-2 py-1 rounded-md border transition-colors",
-                        activeHomeLocation === 'coach'
-                          ? "border-[#FF7043] bg-[#FFF3E9] text-[#FF7043] font-semibold cursor-default"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer",
-                        movingHome ? "opacity-50 cursor-not-allowed" : "",
-                      ].filter(Boolean).join(" ")}
-                    >
-                      Coach Inbox{activeHomeLocation === 'coach' ? ' ✓' : ''}
-                    </button>
-                  </div>
-                )}
-
-                <label className="text-xs text-slate-500 cursor-pointer whitespace-nowrap">
-                  <input
-                    type="checkbox"
-                    className="mr-1 align-middle"
-                    checked={isTypingVisible}
-                    onChange={(e) => setIsTypingVisible(e.target.checked)}
+                {/* Kebab */}
+                {showHeaderActions && (
+                  <KebabMenu
+                    onDelete={onDelete}
+                    onReport={onReport}
+                    onBlock={onBlock}
+                    isBlocked={isBlocked}
+                    labels={headerActionsLabel}
                   />
-                  Show recipient you are typing
-                </label>
+                )}
               </div>
             </div>
 
             {isBlocked && (
-              <div className="mb-2 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                You have blocked this member. You will not be able to send new
-                messages.
+              <div className="mx-4 mt-3 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                You have blocked this member. You will not be able to send new messages.
               </div>
             )}
 
+            {/* ── Messages ── */}
             <div
               ref={scrollRef}
-              className="flex-1 border rounded p-3 text-sm text-slate-800 bg-slate-50 overflow-y-auto"
+              className="flex-1 overflow-y-auto p-4"
               style={{ minHeight: 280, maxHeight: 460 }}
             >
               {active.messages?.length ? (
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {active.messages.map((m) => {
                     const isSelf = m.from === persona;
                     return (
-                      <li
-                        key={m.id}
-                        className={`flex ${
-                          isSelf ? "justify-end" : "justify-start"
-                        }`}
-                      >
-                        <div
-                          className={`flex items-end gap-2 ${
-                            isSelf ? "flex-row-reverse" : ""
-                          }`}
-                        >
+                      <li key={m.id} className={`flex ${isSelf ? "justify-end" : "justify-start"}`}>
+                        <div className={`flex items-end gap-2 ${isSelf ? "flex-row-reverse" : ""}`}>
                           {!isSelf && (
                             <div className="flex-shrink-0">
                               {active?.[otherAvatarKey] ? (
-                                <img
-                                  src={active[otherAvatarKey]}
-                                  alt={active.candidate}
-                                  className="w-7 h-7 rounded-full object-cover border border-slate-200"
-                                />
+                                <img src={active[otherAvatarKey]} alt={active.candidate} className="w-7 h-7 rounded-full object-cover border border-slate-200" />
                               ) : (
                                 <div className="w-7 h-7 rounded-full bg-slate-200 border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-700">
                                   {initials(active.candidate)}
@@ -490,18 +528,14 @@ const MessageThread = forwardRef(function MessageThread(
                               )}
                             </div>
                           )}
-
                           <div
-                            className={`px-3 py-2 rounded max-w-[80%] ${
-                              isSelf
-                                ? "bg-[#FF7043] text-white"
-                                : "bg-white border"
-                            }`}
+                            className={`px-3 py-2 rounded-2xl max-w-[80%] text-sm ${isSelf ? "text-white" : "bg-white border border-slate-100 text-slate-800"}`}
+                            style={isSelf ? { background: "linear-gradient(135deg, #FF7043 0%, #FF8A65 100%)", boxShadow: "0 2px 8px rgba(255,112,67,0.25)" } : { boxShadow: "0 1px 4px rgba(15,23,42,0.07)" }}
                             title={tsFmt(m.ts)}
                           >
                             <div>{m.text}</div>
                             {isSelf && (
-                              <div className="mt-1 text-[10px] opacity-80">
+                              <div className="mt-1 text-[10px] opacity-75 text-right">
                                 {m.status === "read" ? "Read" : "Sent"}
                               </div>
                             )}
@@ -512,88 +546,110 @@ const MessageThread = forwardRef(function MessageThread(
                   })}
                 </ul>
               ) : (
-                <div className="text-slate-500">
-                  No messages in this conversation yet. Start by saying hello.
+                <div className="text-sm text-slate-400 text-center mt-8">
+                  No messages yet. Start by saying hello.
                 </div>
               )}
+            </div>
 
-              {isTypingVisible && (
-                <div className="mt-2 flex justify-end">
-                  <div className="px-3 py-2 rounded bg-[#FF7043] text-white text-[13px] opacity-80">
-                    You are typing…
-                  </div>
+            {/* ── Composer ── */}
+            <div style={{ padding: "12px 16px 14px", borderTop: "1px solid rgba(15,23,42,0.07)", flexShrink: 0 }}>
+              <div
+                style={{
+                  border: "1.5px solid rgba(15,23,42,0.12)",
+                  borderRadius: 14,
+                  background: "white",
+                  boxShadow: "0 2px 12px rgba(15,23,42,0.07)",
+                  overflow: "hidden",
+                  transition: "border-color 0.15s, box-shadow 0.15s",
+                }}
+                onFocusCapture={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(255,112,67,0.5)";
+                  e.currentTarget.style.boxShadow = "0 2px 16px rgba(255,112,67,0.12)";
+                }}
+                onBlurCapture={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(15,23,42,0.12)";
+                  e.currentTarget.style.boxShadow = "0 2px 12px rgba(15,23,42,0.07)";
+                }}
+              >
+                <textarea
+                  ref={inputRef}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder={inputPlaceholder}
+                  disabled={!canCompose}
+                  onInput={(e) => {
+                    e.target.style.height = "auto";
+                    e.target.style.height = Math.min(e.target.scrollHeight, 180) + "px";
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    resize: "none",
+                    border: "none",
+                    outline: "none",
+                    padding: "12px 14px 8px",
+                    fontSize: 13,
+                    fontFamily: "inherit",
+                    color: "#334155",
+                    background: "transparent",
+                    lineHeight: 1.55,
+                    minHeight: 72,
+                    maxHeight: 180,
+                    overflowY: "auto",
+                    boxSizing: "border-box",
+                    display: "block",
+                  }}
+                />
+                {/* Composer footer */}
+                <div style={{
+                  display: "flex", alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "6px 10px 8px",
+                  borderTop: "1px solid rgba(15,23,42,0.06)",
+                }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={isTypingVisible}
+                      onChange={(e) => setIsTypingVisible(e.target.checked)}
+                      style={{ accentColor: "#FF7043", cursor: "pointer" }}
+                    />
+                    <span style={{ fontSize: 11, color: "#64748B", fontWeight: 500 }}>
+                      Show typing indicator
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleSend}
+                    disabled={!canCompose || !draft.trim()}
+                    style={{
+                      background: canCompose && draft.trim()
+                        ? "linear-gradient(135deg, #FF7043 0%, #FF8A65 100%)"
+                        : "rgba(15,23,42,0.08)",
+                      color: canCompose && draft.trim() ? "white" : "#94A3B8",
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "7px 20px",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: canCompose && draft.trim() ? "pointer" : "not-allowed",
+                      transition: "all 0.15s",
+                      boxShadow: canCompose && draft.trim() ? "0 2px 8px rgba(255,112,67,0.3)" : "none",
+                    }}
+                  >
+                    Send
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           </>
         )}
-
-        {/* Composer */}
-        <div className="mt-3">
-          <div
-            className="rounded-xl border border-slate-200 bg-white overflow-hidden transition-shadow"
-            style={{ boxShadow: "0 2px 12px rgba(15,23,42,0.07)" }}
-            onFocusCapture={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255,112,67,0.45)";
-              e.currentTarget.style.boxShadow = "0 2px 16px rgba(255,112,67,0.12)";
-            }}
-            onBlurCapture={(e) => {
-              e.currentTarget.style.borderColor = "rgb(226,232,240)";
-              e.currentTarget.style.boxShadow = "0 2px 12px rgba(15,23,42,0.07)";
-            }}
-          >
-            <textarea
-              ref={inputRef}
-              className="w-full px-4 pt-3 pb-2 text-sm text-slate-800 bg-transparent border-none outline-none resize-none"
-              style={{
-                minHeight: 72,
-                maxHeight: 180,
-                lineHeight: 1.55,
-                fontFamily: "inherit",
-                display: "block",
-                overflowY: "auto",
-              }}
-              placeholder={inputPlaceholder}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              disabled={!canCompose}
-              onInput={(e) => {
-                e.target.style.height = "auto";
-                e.target.style.height = Math.min(e.target.scrollHeight, 180) + "px";
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-            />
-            <div className="flex items-center justify-between px-3 pb-2 pt-1 border-t border-slate-100">
-              <span className="text-[11px] text-slate-400">
-                Enter to send · Shift+Enter for new line
-              </span>
-              <button
-                className={`rounded-lg text-sm px-4 py-1.5 font-bold transition-all ${
-                  canCompose && draft.trim()
-                    ? "text-white"
-                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                }`}
-                style={
-                  canCompose && draft.trim()
-                    ? {
-                        background: "linear-gradient(135deg, #FF7043 0%, #FF8A65 100%)",
-                        boxShadow: "0 2px 8px rgba(255,112,67,0.3)",
-                      }
-                    : {}
-                }
-                onClick={handleSend}
-                disabled={!canCompose || !draft.trim()}
-              >
-                Send
-              </button>
-            </div>
-          </div>
-        </div>
       </section>
     </div>
   );
