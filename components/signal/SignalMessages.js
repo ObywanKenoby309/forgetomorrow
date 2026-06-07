@@ -169,14 +169,25 @@ function HeaderKebabMenu({ onDelete, onReport, onBlock, isBlocked }) {
   );
 }
 
+// Converts plain-text URLs into clickable anchor tags.
+// Returns an array of strings and <a> elements for React rendering.
 function linkify(text) {
-  const URL_RE = /(https?:\/\/[^\s]+)/g;
-  const parts = String(text || '').split(URL_RE);
+  const parts = String(text || '').split(/(https?:\/\/[^\s]+)/g);
   return parts.map((part, i) => {
     if (/^https?:\/\//.test(part)) {
       return (
-        <a key={i} href={part} target="_blank" rel="noopener noreferrer"
-          style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2, wordBreak: 'break-all' }}>
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: 'inherit',
+            textDecoration: 'underline',
+            textUnderlineOffset: 2,
+            wordBreak: 'break-all',
+          }}
+        >
           {part}
         </a>
       );

@@ -339,7 +339,7 @@ export default function ClientsModule() {
     const link = getCsatLink();
     const clientName = client?.name || 'there';
     const signOff = coachName ? `\n\nThank you,\n${coachName}` : '\n\nThank you';
-    return `Hi ${clientName},\n\nI'd appreciate your feedback regarding our coaching engagement. When you have a few minutes, please complete the brief feedback survey below:\n\n${link}\n\nYour feedback helps me improve and ensures I'm providing the best support possible.${signOff}`;
+    return `Hi ${clientName},\n\nI'd appreciate your feedback regarding our coaching engagement. When you have a few minutes, please complete the brief feedback survey:\n\nComplete Feedback → ${link}\n\nYour feedback helps me improve and ensures I'm providing the best support possible.${signOff}`;
   };
 
   const openCsatModal = (client) => {
