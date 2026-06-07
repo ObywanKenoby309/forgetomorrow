@@ -4,6 +4,43 @@ import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 
+function normalizeRole(role) {
+  return String(role || '').trim().toUpperCase();
+}
+
+function normalizeView(raw) {
+  const v = String(raw || '').trim().toLowerCase();
+  if (v === 'coach' || v === 'recruiter' || v === 'spark') return v;
+  if (v === 'seeker' || v === 'signal' || v === 'personal') return 'spark';
+  return 'spark';
+}
+
+function buildHomeLocationWhere(userRole, view) {
+  const role = normalizeRole(userRole);
+  const v = normalizeView(view);
+
+  // Seekers only have Spark, so Spark must show every conversation they participate in.
+  if (role === 'SEEKER') return {};
+
+  // Site-level users can see their participant conversations without homeLocation filtering.
+  if (role === 'ADMIN' || role === 'OWNER' || role === 'SITE_ADMIN') return {};
+
+  // Coaches have Spark + Coach Inbox.
+  if (role === 'COACH') {
+    if (v === 'coach') return { homeLocation: { in: ['seeker', 'coach'] } };
+    return { homeLocation: 'seeker' };
+  }
+
+  // Recruiters have Spark + Recruiter Inbox.
+  if (role === 'RECRUITER') {
+    if (v === 'recruiter') return { homeLocation: { in: ['seeker', 'recruiter'] } };
+    return { homeLocation: 'seeker' };
+  }
+
+  // Unknown roles fall back to Spark behavior.
+  return { homeLocation: 'seeker' };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -18,12 +55,18 @@ export default async function handler(req, res) {
 
     const userId = session.user.id;
 
-    // Accept channel from query param — defaults to 'seeker' for Signal inbox.
-    // Recruiter and coach inboxes use /api/messages?channel=X (separate endpoint).
-    // This param allows Foundry and future surfaces to request a specific channel.
-    const channelParam = String(req.query?.channel || 'seeker').toLowerCase().trim();
-    const validChannels = new Set(['seeker', 'recruiter', 'coach']);
-    const channel = validChannels.has(channelParam) ? channelParam : 'seeker';
+    // New model: view controls which inbox is being rendered.
+    // Backward compatibility: old callers may still pass channel=seeker/coach/recruiter.
+    const view = normalizeView(req.query?.view || req.query?.channel || 'spark');
+
+    // Load role from DB so routing does not depend on JWT/session shape.
+    const dbUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    const role = normalizeRole(dbUser?.role || session?.user?.role || 'SEEKER');
+    const homeLocationWhere = buildHomeLocationWhere(role, view);
 
     // ✅ My participant rows (includes lastReadAt)
     const participants = await prisma.conversationParticipant.findMany({
@@ -38,22 +81,33 @@ export default async function handler(req, res) {
     const conversationIds = participants.map((p) => p.conversationId);
 
     // ✅ Conversations sorted newest first (cheap fields only)
+    // Preserve group support and legacy channel field; homeLocation is now the display/storage filter.
     const conversations = await prisma.conversation.findMany({
-      where: { id: { in: conversationIds }, channel },
+      where: {
+        id: { in: conversationIds },
+        ...homeLocationWhere,
+      },
       orderBy: { updatedAt: 'desc' },
       select: {
         id: true,
         isGroup: true,
         title: true,
         channel: true,
+        homeLocation: true,
         createdAt: true,
         updatedAt: true,
       },
     });
 
-    // ✅ All participants for these conversations (for "other user" lookup)
+    if (!conversations.length) {
+      return res.status(200).json({ ok: true, threads: [] });
+    }
+
+    const visibleConversationIds = conversations.map((c) => c.id);
+
+    // ✅ All participants for visible conversations (for "other user" lookup)
     const allParticipants = await prisma.conversationParticipant.findMany({
-      where: { conversationId: { in: conversationIds } },
+      where: { conversationId: { in: visibleConversationIds } },
       select: { conversationId: true, userId: true },
     });
 
@@ -76,7 +130,7 @@ export default async function handler(req, res) {
             lastName: true,
             avatarUrl: true,
             headline: true,
-			slug: true,
+            slug: true,
           },
         })
       : [];
@@ -84,9 +138,9 @@ export default async function handler(req, res) {
     const userById = {};
     for (const u of users) userById[u.id] = u;
 
-    // ✅ Latest message per conversation (NO "fetch everything")
+    // ✅ Latest message per visible conversation (NO "fetch everything")
     const lastMessages = await prisma.message.findMany({
-      where: { conversationId: { in: conversationIds } },
+      where: { conversationId: { in: visibleConversationIds } },
       orderBy: [{ conversationId: 'asc' }, { createdAt: 'desc' }],
       distinct: ['conversationId'],
       select: {
@@ -108,7 +162,7 @@ export default async function handler(req, res) {
       myParticipantByConversationId[p.conversationId] = p;
     }
 
-    // ✅ Unread counts in ONE query (per-conversation lastReadAt cutoff)
+    // ✅ Preserve real unread counts in ONE query (per-conversation lastReadAt cutoff)
     // unread = messages from someone else where createdAt > my lastReadAt (or all if lastReadAt null)
     const unreadRows = await prisma.$queryRaw(
       Prisma.sql`
@@ -119,7 +173,7 @@ export default async function handler(req, res) {
         JOIN "conversation_participants" cp
           ON cp."conversationId" = m."conversationId"
          AND cp."userId" = ${userId}
-        WHERE m."conversationId" = ANY(${conversationIds}::int[])
+        WHERE m."conversationId" = ANY(${visibleConversationIds}::int[])
           AND m."senderId" <> ${userId}
           AND (cp."lastReadAt" IS NULL OR m."createdAt" > cp."lastReadAt")
         GROUP BY m."conversationId"
@@ -128,7 +182,6 @@ export default async function handler(req, res) {
 
     const unreadByConversationId = {};
     for (const r of unreadRows || []) {
-      // conversationId comes back as number-like
       unreadByConversationId[Number(r.conversationId)] = Number(r.unreadCount) || 0;
     }
 
@@ -151,25 +204,24 @@ export default async function handler(req, res) {
         (c.isGroup ? c.title || 'Group' : 'Member');
 
       const last = lastMessageByConversation[c.id];
-
-      // Optional: if you want to hide ghost conversations server-side too, uncomment:
-      // if (!last?.content?.trim()) return null;
+      const unreadCount = unreadByConversationId[c.id] || 0;
 
       return {
         id: c.id,
         isGroup: c.isGroup,
         title: c.isGroup ? c.title || otherName : otherName,
+        channel: c.channel || null,
+        homeLocation: c.homeLocation || 'seeker',
         otherUserId: c.isGroup ? null : otherUser?.id || null,
         otherAvatarUrl: c.isGroup ? null : otherUser?.avatarUrl || null,
-		otherUserSlug: c.isGroup ? null : otherUser?.slug || null,
+        otherUserSlug: c.isGroup ? null : otherUser?.slug || null,
         otherHeadline: c.isGroup ? '' : otherUser?.headline || '',
         lastMessage: last ? last.content : '',
         lastMessageAt: last ? last.createdAt : c.createdAt,
-        unreadCount: unreadByConversationId[c.id] || 0,
+        unreadCount,
+        unread: unreadCount,
       };
     });
-
-    // If you enabled the ghost filter above, you’d do: const clean = threads.filter(Boolean)
 
     return res.status(200).json({ ok: true, threads });
   } catch (err) {

@@ -1,189 +1,133 @@
 // pages/api/signal/start-or-get.js
+// Creates or retrieves a 1:1 Signal conversation.
+//
+// POST body:
+//   toUserId     (string, required)
+//   homeLocation (string, optional) – "seeker" | "coach" | "recruiter"
+//                Defaults to "seeker". Only applied when creating a new
+//                conversation; existing conversations are returned as-is.
+//
+// Connection gate (roles loaded from DB, not JWT):
+//   SEEKER → SEEKER : requires a Contact record in both directions (mutual)
+//   COACH  → anyone : always allowed
+//   RECRUITER → anyone : always allowed
+//
+// Response:
+//   { conversationId, homeLocation, otherAvatarUrl, otherUserSlug, otherName }
+
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
+const VALID_HOME_LOCATIONS = ['seeker', 'coach', 'recruiter'];
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const session = await getServerSession(req, res, authOptions);
+  if (!session?.user?.id) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const fromUserId = session.user.id;
+  const { toUserId, homeLocation } = req.body || {};
+
+  if (!toUserId || typeof toUserId !== 'string') {
+    return res.status(400).json({ error: 'toUserId is required' });
+  }
+  if (fromUserId === toUserId) {
+    return res.status(400).json({ error: 'Cannot message yourself' });
+  }
+
+  const safeHomeLocation = VALID_HOME_LOCATIONS.includes(homeLocation)
+    ? homeLocation
+    : 'seeker';
+
   try {
-    const session = await getServerSession(req, res, authOptions);
-
-    if (!session?.user?.id) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    const userId = session.user.id;
-    const { toUserId } = req.body || {};
-
-    if (!toUserId || typeof toUserId !== 'string') {
-      return res.status(400).json({ error: 'Missing toUserId' });
-    }
-
-    if (toUserId === userId) {
-      return res.status(400).json({ error: 'You cannot message yourself.' });
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // 0. Load sender + target user (for role + display)
-    // ─────────────────────────────────────────────────────────────
-    const [sender, target] = await Promise.all([
+    // Load both users from DB — do not trust JWT for roles
+    const [fromUser, toUser] = await Promise.all([
       prisma.user.findUnique({
-        where: { id: userId },
+        where:  { id: fromUserId },
         select: { role: true },
       }),
       prisma.user.findUnique({
-        where: { id: toUserId },
+        where:  { id: toUserId },
         select: {
-          id: true,
-          name: true,
+          id:        true,
+          name:      true,
           firstName: true,
-          lastName: true,
+          lastName:  true,
           avatarUrl: true,
-          headline: true,
-          role: true,
+          slug:      true,
+          deletedAt: true,
+          role:      true,
         },
       }),
     ]);
 
-    if (!target) {
-      return res.status(404).json({ error: 'Member not found.' });
+    if (!toUser || toUser.deletedAt) {
+      return res.status(404).json({ error: 'User not found' });
     }
 
-    // Route 1:1 conversations by recipient context.
-    // Professional senders can work from Coach/Recruiter inboxes, but when the
-    // recipient is a seeker/client, the conversation must land in the seeker's
-    // Spark inbox so they can see and reply to it. Professional-to-professional
-    // conversations stay in the professional channel.
-    function normalizeRole(role) {
-      return String(role || '').trim().toUpperCase();
-    }
+    const fromRole = String(fromUser?.role || 'SEEKER').toUpperCase();
+    const toRole   = String(toUser.role    || 'SEEKER').toUpperCase();
 
-    function isRecruiterLike(role) {
-      const r = normalizeRole(role);
-      return r === 'RECRUITER' || r === 'ADMIN' || r === 'OWNER';
-    }
-
-    function isCoach(role) {
-      return normalizeRole(role) === 'COACH';
-    }
-
-    function roleToChannel(role) {
-      if (isRecruiterLike(role)) return 'recruiter';
-      if (isCoach(role)) return 'coach';
-      return 'seeker';
-    }
-
-    const senderRole = sender?.role || '';
-    const targetRole = target.role;
-    const targetIsProfessional = isCoach(targetRole) || isRecruiterLike(targetRole);
-
-    const channel = targetIsProfessional
-      ? roleToChannel(targetRole)
-      : 'seeker';
-
-    const otherName =
-      target.name ||
-      [target.firstName, target.lastName].filter(Boolean).join(' ') ||
-      'Member';
-
-    // ─────────────────────────────────────────────────────────────
-    // 0.5 DM GATE: Coach / Recruiter require connection first
-    // ─────────────────────────────────────────────────────────────
-    const normalizedRole =
-      typeof targetRole === 'string' ? targetRole.toUpperCase() : null;
-
-    if (normalizedRole === 'COACH' || normalizedRole === 'RECRUITER') {
-      const existingContact = await prisma.contact.findFirst({
+    // SEEKER → SEEKER requires a mutual contact record
+    if (fromRole === 'SEEKER' && toRole === 'SEEKER') {
+      const contact = await prisma.contact.findFirst({
         where: {
           OR: [
-            { userId, contactUserId: toUserId },
-            { userId: toUserId, contactUserId: userId },
+            { userId: fromUserId, contactUserId: toUserId },
+            { userId: toUserId,   contactUserId: fromUserId },
           ],
         },
       });
-
-      if (!existingContact) {
-        const isCoach = normalizedRole === 'COACH';
-
-        return res.status(200).json({
-          ok: false,
-          blocked: true,
-          blockReason: 'ROLE_GATE',
-          role: normalizedRole,
-          message: isCoach
-            ? 'To respect the privacy of coaches, please send a connection request or engage through their mentorship programs before opening a private conversation.'
-            : 'To respect the privacy of recruiters, please send a connection request before opening a private conversation.',
+      if (!contact) {
+        return res.status(403).json({
+          error:   'Not connected',
+          message: 'You need to be connected with this member before messaging.',
         });
       }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // 1. Try to find an existing 1:1 conversation for these users
-    // ─────────────────────────────────────────────────────────────
+    // Find or create the 1:1 conversation
     let conversation = await prisma.conversation.findFirst({
       where: {
         isGroup: false,
-        channel,
-        participants: {
-          some: { userId },
-        },
-        AND: {
-          participants: {
-            some: { userId: toUserId },
-          },
-        },
+        participants: { some: { userId: fromUserId } },
+        AND:          { participants: { some: { userId: toUserId } } },
       },
-      include: {
-        participants: true,
-      },
+      include: { participants: true },
     });
 
-    // ─────────────────────────────────────────────────────────────
-    // 2. If not found, create it (plus participants)
-    // ─────────────────────────────────────────────────────────────
     if (!conversation) {
       conversation = await prisma.conversation.create({
         data: {
-          isGroup: false,
-          channel,
+          isGroup:      false,
+          homeLocation: safeHomeLocation,
           participants: {
-            // keep same shape as your original (no roles to avoid schema mismatch)
-            create: [{ userId }, { userId: toUserId }],
+            create: [{ userId: fromUserId }, { userId: toUserId }],
           },
         },
+        include: { participants: true },
       });
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // 3. Return same shape as your original (plus role on otherUser)
-    // ─────────────────────────────────────────────────────────────
+    const otherName = [toUser.firstName, toUser.lastName]
+      .filter(Boolean)
+      .join(' ') || toUser.name || 'Member';
+
     return res.status(200).json({
-      ok: true,
-      conversation: {
-        id: conversation.id,
-        isGroup: conversation.isGroup,
-        title: otherName,
-        channel: conversation.channel,
-      },
-      otherUser: {
-        id: target.id,
-        name: otherName,
-        avatarUrl: target.avatarUrl || null,
-        headline: target.headline || '',
-        role: targetRole || null,
-      },
+      conversationId: conversation.id,
+      homeLocation:   conversation.homeLocation || 'seeker',
+      otherAvatarUrl: toUser.avatarUrl || null,
+      otherUserSlug:  toUser.slug      || null,
+      otherName,
     });
   } catch (err) {
-    console.error('signal/start-or-get error:', err);
-
-    return res.status(500).json({
-      error: 'Internal server error',
-      detail: String(err),
-      code: err?.code || null,
-    });
+    console.error('[signal/start-or-get] error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -3,24 +3,63 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import MemberAvatarActions from '../member/MemberAvatarActions';
 
-export default function SignalMessages() {
+// ─── homeLocation helpers ─────────────────────────────────────────────────────
+// "seeker"    → Seeker Spark (always visible to the seeker participant)
+// "coach"     → Seeker Spark + Coach Inbox
+// "recruiter" → Seeker Spark + Recruiter Inbox
+//
+// role values accepted: uppercase (COACH, RECRUITER) or lowercase (coach, recruiter)
+// from PlanContext — normalised internally.
+
+const ALL_HOME_OPTIONS = [
+  { value: 'seeker',    label: 'Spark' },
+  { value: 'coach',     label: 'Coach Inbox' },
+  { value: 'recruiter', label: 'Recruiter Inbox' },
+];
+
+function normaliseRole(role) {
+  return String(role || '').toUpperCase();
+}
+
+function getHomeOptions(role) {
+  const r = normaliseRole(role);
+  if (r === 'COACH')     return ALL_HOME_OPTIONS.filter((o) => o.value !== 'recruiter');
+  if (r === 'RECRUITER') return ALL_HOME_OPTIONS.filter((o) => o.value !== 'coach');
+  return [ALL_HOME_OPTIONS[0]]; // SEEKER — control is hidden
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+/**
+ * Props
+ *   view     – "spark" | "coach" | "recruiter"  (default "spark")
+ *              Forwarded to /api/signal/threads to apply the homeLocation filter.
+ *              Read from router.query.view by the page and passed down.
+ *
+ *   userRole – role string from PlanContext or session.
+ *              Accepts "COACH"/"RECRUITER" or "coach"/"recruiter".
+ *              Controls which "Store conversation in" options appear.
+ *              Defaults to "SEEKER" (control hidden, no move available).
+ */
+export default function SignalMessages({ view = 'spark', userRole = 'SEEKER' }) {
   const router = useRouter();
   const { toId, toName, told, chrome } = router.query;
 
-  const [threads,            setThreads]            = useState([]);
-  const [threadsLoading,     setThreadsLoading]     = useState(true);
+  const [threads,              setThreads]              = useState([]);
+  const [threadsLoading,       setThreadsLoading]       = useState(true);
   const [activeConversationId, setActiveConversationId] = useState(null);
-  const [activeTitle,        setActiveTitle]        = useState('');
-  const [activeOtherUserId,  setActiveOtherUserId]  = useState(null);
-  const [messages,           setMessages]           = useState([]);
-  const [messagesLoading,    setMessagesLoading]    = useState(false);
-  const [composer,           setComposer]           = useState('');
-  const [sending,            setSending]            = useState(false);
-  const [isBlocked,          setIsBlocked]          = useState(false);
-  const [mobileView,         setMobileView]         = useState('list');
-  const [query,              setQuery]              = useState('');
-  const [showEmojiTray,      setShowEmojiTray]      = useState(false);
-  const [isMobileDevice,     setIsMobileDevice]     = useState(false);
+  const [activeTitle,          setActiveTitle]          = useState('');
+  const [activeOtherUserId,    setActiveOtherUserId]    = useState(null);
+  const [activeHomeLocation,   setActiveHomeLocation]   = useState('seeker');
+  const [messages,             setMessages]             = useState([]);
+  const [messagesLoading,      setMessagesLoading]      = useState(false);
+  const [composer,             setComposer]             = useState('');
+  const [sending,              setSending]              = useState(false);
+  const [isBlocked,            setIsBlocked]            = useState(false);
+  const [mobileView,           setMobileView]           = useState('list');
+  const [query,                setQuery]                = useState('');
+  const [showEmojiTray,        setShowEmojiTray]        = useState(false);
+  const [isMobileDevice,       setIsMobileDevice]       = useState(false);
+  const [movingHome,           setMovingHome]           = useState(false);
 
   const messagesRef      = useRef(null);
   const lastMsgIdRef     = useRef(null);
@@ -122,9 +161,10 @@ export default function SignalMessages() {
   const fetchThreads = useCallback(async () => {
     setThreadsLoading(true);
     try {
-      const res  = await fetch('/api/signal/threads');
+      const params = new URLSearchParams({ view });
+      const res    = await fetch(`/api/signal/threads?${params}`);
       if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      const data     = await res.json();
       const incoming = Array.isArray(data.threads) ? data.threads : [];
       setThreads(incoming.filter((t) => !!(typeof t.lastMessage === 'string' ? t.lastMessage.trim() : '')));
     } catch (err) {
@@ -133,7 +173,7 @@ export default function SignalMessages() {
     } finally {
       setThreadsLoading(false);
     }
-  }, []);
+  }, [view]);
 
   const fetchMessages = useCallback(async (conversationId, opts = { appendOnly: false }) => {
     if (!conversationId) return;
@@ -170,6 +210,7 @@ export default function SignalMessages() {
     setActiveConversationId(thread.id);
     setActiveTitle(thread.title || 'Conversation');
     setActiveOtherUserId(thread.otherUserId || null);
+    setActiveHomeLocation(thread.homeLocation || 'seeker');
     setIsBlocked(false);
     setShowEmojiTray(false);
     stickToBottomRef.current = true;
@@ -228,13 +269,14 @@ export default function SignalMessages() {
         }
 
         const threadStub = {
-          id:            conversationId,
-          title:         resolvedName,
-          otherUserId:   deepLinkIdRaw,
+          id:             conversationId,
+          title:          resolvedName,
+          otherUserId:    deepLinkIdRaw,
           otherAvatarUrl: data?.otherAvatarUrl || null,
-          otherUserSlug:  data?.otherUserSlug || data?.otherSlug || data?.slug || data?.profileSlug || null,
-          lastMessage:   '',
-          lastMessageAt: null,
+          otherUserSlug:  data?.otherUserSlug || data?.otherSlug || data?.slug || null,
+          homeLocation:   data?.homeLocation || 'seeker',
+          lastMessage:    '',
+          lastMessageAt:  null,
         };
 
         setThreads((prev) => prev.some((t) => t.id === conversationId) ? prev : [threadStub, ...prev]);
@@ -246,7 +288,7 @@ export default function SignalMessages() {
         cleanUrl();
       }
     })();
-  }, [router.isReady, toId, told, chrome, threads, threadsLoading]);
+  }, [router.isReady, toId, told, chrome, threads, threadsLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Live message refresh ──────────────────────────────────────────────────
   useEffect(() => {
@@ -299,6 +341,30 @@ export default function SignalMessages() {
       alert('We could not send your message. Please try again.');
     } finally {
       setSending(false);
+    }
+  };
+
+  // ── Store Conversation In ─────────────────────────────────────────────────
+  const handleSetHome = async (newHomeLocation) => {
+    if (!activeConversationId || movingHome || newHomeLocation === activeHomeLocation) return;
+    setMovingHome(true);
+    try {
+      const res = await fetch('/api/signal/set-home', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: activeConversationId, homeLocation: newHomeLocation }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setActiveHomeLocation(data.homeLocation);
+      setThreads((prev) =>
+        prev.map((t) => t.id === activeConversationId ? { ...t, homeLocation: data.homeLocation } : t)
+      );
+    } catch (err) {
+      console.error('set-home error:', err);
+      alert('Could not update conversation location. Please try again.');
+    } finally {
+      setMovingHome(false);
     }
   };
 
@@ -355,6 +421,7 @@ export default function SignalMessages() {
       });
       if (!res.ok) { console.error('delete error status:', res.status, await res.text()); alert('We could not delete this conversation. Please try again.'); return; }
       setActiveConversationId(null); setActiveTitle(''); setActiveOtherUserId(null);
+      setActiveHomeLocation('seeker');
       setMessages([]); setIsBlocked(false); setShowEmojiTray(false); setMobileView('list');
       await fetchThreads();
     } catch (err) {
@@ -372,6 +439,9 @@ export default function SignalMessages() {
       String(t.lastMessage || '').toLowerCase().includes(q)
     );
   }, [threads, query]);
+
+  const homeOptions = getHomeOptions(userRole);
+  const canMoveHome = normaliseRole(userRole) !== 'SEEKER' && homeOptions.length > 1;
 
   const formatTime = (dt) => {
     try { return new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
@@ -426,7 +496,7 @@ export default function SignalMessages() {
               {filteredThreads.map((t) => {
                 const otherId   = t.otherUserId || null;
                 const otherName = t.title || 'Member';
-                const otherSlug = t.otherUserSlug || t.otherSlug || t.userSlug || t.slug || t.profileSlug || null;
+                const otherSlug = t.otherUserSlug || t.otherSlug || t.userSlug || t.slug || null;
                 const isActive  = t.id === activeConversationId;
 
                 return (
@@ -498,6 +568,38 @@ export default function SignalMessages() {
               </div>
             )}
           </div>
+
+          {/* ── Store Conversation In (coaches and recruiters only) ── */}
+          {activeConversationId && canMoveHome && (
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <span className="text-[11px] font-medium text-gray-500 whitespace-nowrap">
+                Store conversation in:
+              </span>
+              {homeOptions.map((opt) => {
+                const isSelected = activeHomeLocation === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    disabled={movingHome || isSelected}
+                    onClick={() => handleSetHome(opt.value)}
+                    className={[
+                      'text-[11px] px-2 py-1 rounded-md border transition-colors',
+                      isSelected
+                        ? 'border-[#FF7043] bg-[#FFF3E9] text-[#FF7043] font-semibold cursor-default'
+                        : 'border-gray-200 text-gray-700 hover:bg-white cursor-pointer',
+                      movingHome && !isSelected ? 'opacity-50 cursor-not-allowed' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    {opt.label}{isSelected ? ' ✓' : ''}
+                  </button>
+                );
+              })}
+              {movingHome && (
+                <span className="text-[10px] text-gray-400 italic">Saving…</span>
+              )}
+            </div>
+          )}
 
           {activeConversationId && isBlocked && (
             <div className="mb-3 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">

@@ -1,9 +1,11 @@
 // pages/seeker/messages.js
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
+import { usePlan } from '@/context/PlanContext';
 
 // Load SignalMessages only on the client to avoid SSR/prerender issues
 const SignalMessages = dynamic(
@@ -24,6 +26,16 @@ const MUTED = '#64748B';
 
 export default function Messages() {
   const greeting = getTimeGreeting();
+  const router = useRouter();
+  const { role } = usePlan();
+
+  // ?view=spark|coach|recruiter — set by sidebar nav links for inbox routing.
+  // Defaults to "spark" so the page works without the param (seeker default).
+  const view = router.query.view || 'spark';
+
+  // role from PlanContext is lowercase ("seeker" | "coach" | "recruiter").
+  // SignalMessages normalises internally.
+  const userRole = role || 'seeker';
 
   const HeaderBox = (
     <SeekerTitleCard
@@ -41,7 +53,7 @@ export default function Messages() {
       rightVariant="light"
       activeNav="messages"
     >
-      <SignalMessages />
+      <SignalMessages view={view} userRole={userRole} />
     </SeekerLayout>
   );
 }

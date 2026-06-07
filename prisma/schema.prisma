@@ -1398,6 +1398,7 @@ model Conversation {
   isGroup      Boolean                   @default(false)
   title        String?
   channel      String?
+  homeLocation String 					 @default("seeker")
   createdAt    DateTime                  @default(now())
   updatedAt    DateTime                  @default(now())
   participants ConversationParticipant[]
