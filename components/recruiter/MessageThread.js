@@ -222,18 +222,6 @@ const MessageThread = forwardRef(function MessageThread(
   const hasThreads = threads.length > 0;
   const canCompose = hasThreads && !!active && !isBlocked;
 
-  const professionalHomeLocation = persona === "coach"
-    ? "coach"
-    : persona === "recruiter"
-    ? "recruiter"
-    : null;
-
-  const professionalHomeLabel = persona === "coach"
-    ? "Coach Inbox"
-    : persona === "recruiter"
-    ? "Recruiter Inbox"
-    : "Professional Inbox";
-
   useImperativeHandle(ref, () => ({
     insertText: (text, opts = {}) => {
       const t = typeof text === "string" ? text : "";
@@ -570,24 +558,22 @@ const MessageThread = forwardRef(function MessageThread(
                     >
                       Spark{activeHomeLocation === "seeker" ? " ✓" : ""}
                     </button>
-                    {professionalHomeLocation && (
-                      <button
-                        type="button"
-                        disabled={movingHome || activeHomeLocation === professionalHomeLocation}
-                        onClick={() => onSetHome(professionalHomeLocation)}
-                        style={{
-                          fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8,
-                          border: `1px solid ${activeHomeLocation === professionalHomeLocation ? "#FF7043" : "rgba(15,23,42,0.12)"}`,
-                          background: activeHomeLocation === professionalHomeLocation ? "rgba(255,112,67,0.08)" : "white",
-                          color: activeHomeLocation === professionalHomeLocation ? "#FF7043" : "#64748B",
-                          cursor: activeHomeLocation === professionalHomeLocation ? "default" : "pointer",
-                          opacity: movingHome ? 0.5 : 1,
-                          transition: "all 0.15s",
-                        }}
-                      >
-                        {professionalHomeLabel}{activeHomeLocation === professionalHomeLocation ? " ✓" : ""}
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      disabled={movingHome || activeHomeLocation === "coach"}
+                      onClick={() => onSetHome("coach")}
+                      style={{
+                        fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8,
+                        border: `1px solid ${activeHomeLocation === "coach" ? "#FF7043" : "rgba(15,23,42,0.12)"}`,
+                        background: activeHomeLocation === "coach" ? "rgba(255,112,67,0.08)" : "white",
+                        color: activeHomeLocation === "coach" ? "#FF7043" : "#64748B",
+                        cursor: activeHomeLocation === "coach" ? "default" : "pointer",
+                        opacity: movingHome ? 0.5 : 1,
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      Coach Inbox{activeHomeLocation === "coach" ? " ✓" : ""}
+                    </button>
                   </>
                 )}
 
@@ -750,9 +736,7 @@ const MessageThread = forwardRef(function MessageThread(
                   padding: "6px 10px 8px",
                   borderTop: "1px solid rgba(15,23,42,0.06)",
                 }}>
-                  <span style={{ fontSize: 11, color: "#64748B", fontWeight: 500 }}>
-                    Typing indicator sends automatically
-                  </span>
+                  <span aria-hidden="true" />
                   <button
                     type="button"
                     onClick={handleSend}
