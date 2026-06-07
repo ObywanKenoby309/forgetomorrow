@@ -586,10 +586,27 @@ export default function SignalMessages() {
               ) : (
                 messages.map((m) => (
                   <div key={m.id} className={`flex ${m.isMine ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[86%] rounded-2xl px-3 py-2 text-xs ${m.isMine ? 'bg-[#FF7043] text-white' : 'bg-white text-gray-900 border border-gray-100'}`}
-                      style={{ boxShadow: m.isMine ? '0 10px 20px rgba(255,112,67,0.18)' : '0 10px 18px rgba(0,0,0,0.06)' }}>
+                    <div
+  className={`rounded-2xl px-3 py-2 text-xs ${m.isMine ? 'bg-[#FF7043] text-white' : 'bg-white text-gray-900 border border-gray-100'}`}
+  style={{
+    boxShadow: m.isMine ? '0 10px 20px rgba(255,112,67,0.18)' : '0 10px 18px rgba(0,0,0,0.06)',
+    maxWidth: 'min(86%, 680px)',
+    minWidth: 0,
+    overflowWrap: 'anywhere',
+    wordBreak: 'break-word',
+    whiteSpace: 'pre-wrap',
+  }}
+>
                       {!m.isMine && <div className="font-bold text-[11px] mb-0.5 opacity-90">{m.senderName}</div>}
-                      <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
+                      <div
+  className="whitespace-pre-wrap leading-relaxed"
+  style={{
+    overflowWrap: 'anywhere',
+    wordBreak: 'break-word',
+  }}
+>
+  {m.content}
+</div>
                       <div className="text-[9px] opacity-75 mt-1 text-right">{formatTime(m.createdAt)}</div>
                     </div>
                   </div>
