@@ -29,6 +29,7 @@ type JobMeta =
 
 type Props = {
   jdText: string;
+  resumeData?: any;
   summary: string;
   skills: string[];
   experiences: Experience[];
@@ -195,6 +196,7 @@ function guessJobTitle(jdText: string) {
 
 export default function AtsDepthPanel({
   jdText,
+  resumeData: incomingResumeData,
   summary,
   skills,
   experiences,
@@ -321,10 +323,40 @@ export default function AtsDepthPanel({
     { key: 'edu', label: 'Education', matched: matchedEduReqs.length, total: jdEduReqs.length, points: eduCov, missing: [], section: 'education' as const },
   ].filter(b => b.total > 0); // only show buckets that exist in the JD
 
-  const resumeData = useMemo(
-    () => ({ summary, skills, workExperiences: experiences, educationList: education }),
-    [summary, skills, experiences, education]
-  );
+  const resumeData = useMemo(() => {
+    const base = incomingResumeData && typeof incomingResumeData === 'object'
+      ? incomingResumeData
+      : {};
+
+    const baseExperiences = Array.isArray(base.workExperiences)
+      ? base.workExperiences
+      : Array.isArray(base.experiences)
+        ? base.experiences
+        : [];
+
+    const baseEducation = Array.isArray(base.educationList)
+      ? base.educationList
+      : Array.isArray(base.education)
+        ? base.education
+        : [];
+
+    return {
+      ...base,
+      personalInfo: base.personalInfo || {},
+      summary: summary || base.summary || '',
+      skills: Array.isArray(skills) && skills.length ? skills : Array.isArray(base.skills) ? base.skills : [],
+      workExperiences: Array.isArray(experiences) && experiences.length ? experiences : baseExperiences,
+      experiences: Array.isArray(experiences) && experiences.length ? experiences : baseExperiences,
+      educationList: Array.isArray(education) && education.length ? education : baseEducation,
+      education: Array.isArray(education) && education.length ? education : baseEducation,
+      certifications: Array.isArray(base.certifications) ? base.certifications : [],
+      languages: Array.isArray(base.languages) ? base.languages : [],
+      projects: Array.isArray(base.projects) ? base.projects : [],
+      volunteerExperiences: Array.isArray(base.volunteerExperiences) ? base.volunteerExperiences : [],
+      achievements: Array.isArray(base.achievements) ? base.achievements : [],
+      customSections: Array.isArray(base.customSections) ? base.customSections : [],
+    };
+  }, [incomingResumeData, summary, skills, experiences, education]);
 
   const guessedTitle = useMemo(() => guessJobTitle(jdText), [jdText]);
   const words = useMemo(() => countWords(jdText), [jdText]);
