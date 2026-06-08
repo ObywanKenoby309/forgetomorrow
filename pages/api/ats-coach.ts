@@ -20,6 +20,9 @@ type CoachRequestBody = {
     experiences?: any[];
     educationList?: any[];
     education?: any[];
+    certifications?: any[];
+    languages?: any[];
+    projects?: any[];
   };
   context?: any;
   missing?: any;
@@ -130,6 +133,106 @@ function tipFromAction(action: any) {
   if (typeof action === 'string') return action;
   if (!action || typeof action !== 'object') return '';
   return safe(action.requiredSignal || action.signal || action.requirement);
+}
+
+
+function valueFromObject(item: any, keys: string[]) {
+  if (!item || typeof item !== 'object') return '';
+  return keys.map((key) => safe(item[key])).filter(Boolean).join(' ');
+}
+
+function extractResumeEvidence(resumeData: any) {
+  if (!resumeData || typeof resumeData !== 'object') {
+    return {
+      text: '',
+      certificationsText: '',
+      educationText: '',
+      languagesText: '',
+    };
+  }
+
+  const parts: string[] = [];
+
+  const summaryText = [resumeData.summary, resumeData.professionalSummary]
+    .map(safe)
+    .filter(Boolean)
+    .join('\n');
+  if (summaryText) parts.push(`SUMMARY:\n${summaryText}`);
+
+  const skills = Array.isArray(resumeData.skills) ? resumeData.skills.map(safe).filter(Boolean) : [];
+  if (skills.length) parts.push(`SKILLS:\n${skills.join(', ')}`);
+
+  const experiences = Array.isArray(resumeData.workExperiences)
+    ? resumeData.workExperiences
+    : Array.isArray(resumeData.experiences)
+      ? resumeData.experiences
+      : Array.isArray(resumeData.experience)
+        ? resumeData.experience
+        : [];
+
+  const experienceText = experiences
+    .map((exp: any) => {
+      const header = [exp?.title, exp?.company, exp?.location, exp?.startDate || exp?.start, exp?.endDate || exp?.end]
+        .map(safe)
+        .filter(Boolean)
+        .join(' | ');
+      const body = [
+        exp?.description,
+        Array.isArray(exp?.highlights) ? exp.highlights.join(' ') : '',
+        Array.isArray(exp?.bullets) ? exp.bullets.join(' ') : '',
+      ].map(safe).filter(Boolean).join(' ');
+      return [header, body].filter(Boolean).join('\n');
+    })
+    .filter(Boolean)
+    .join('\n\n');
+  if (experienceText) parts.push(`EXPERIENCE:\n${experienceText}`);
+
+  const certifications = Array.isArray(resumeData.certifications) ? resumeData.certifications : [];
+  const certificationsText = certifications
+    .map((cert: any) => typeof cert === 'string'
+      ? safe(cert)
+      : valueFromObject(cert, ['name', 'title', 'certification', 'credential', 'issuer', 'organization', 'date', 'year']))
+    .filter(Boolean)
+    .join('\n');
+  if (certificationsText) parts.push(`CERTIFICATIONS / TRAINING / CREDENTIALS:\n${certificationsText}`);
+
+  const education = Array.isArray(resumeData.educationList)
+    ? resumeData.educationList
+    : Array.isArray(resumeData.education)
+      ? resumeData.education
+      : [];
+  const educationText = education
+    .map((edu: any) => typeof edu === 'string'
+      ? safe(edu)
+      : valueFromObject(edu, ['degree', 'school', 'institution', 'field', 'major', 'date', 'year']))
+    .filter(Boolean)
+    .join('\n');
+  if (educationText) parts.push(`EDUCATION:\n${educationText}`);
+
+  const languages = Array.isArray(resumeData.languages) ? resumeData.languages : [];
+  const languagesText = languages
+    .map((lang: any) => typeof lang === 'string'
+      ? safe(lang)
+      : valueFromObject(lang, ['language', 'name', 'proficiency', 'level']))
+    .filter(Boolean)
+    .join('\n');
+  if (languagesText) parts.push(`LANGUAGES:\n${languagesText}`);
+
+  const projects = Array.isArray(resumeData.projects) ? resumeData.projects : [];
+  const projectText = projects
+    .map((project: any) => typeof project === 'string'
+      ? safe(project)
+      : valueFromObject(project, ['title', 'name', 'description', 'outcome', 'tools']))
+    .filter(Boolean)
+    .join('\n');
+  if (projectText) parts.push(`PROJECTS:\n${projectText}`);
+
+  return {
+    text: parts.filter(Boolean).join('\n\n'),
+    certificationsText,
+    educationText,
+    languagesText,
+  };
 }
 
 // ─── gate ─────────────────────────────────────────────────────────────────────
@@ -337,13 +440,8 @@ async function buildTrajectory(
     .filter(Boolean)
     .join(', ');
 
-  const resumeText = [
-    resumeData?.summary || '',
-    (resumeData?.skills || []).join(', '),
-    (resumeData?.workExperiences || resumeData?.experiences || [])
-      .map((e: any) => `${e.title || ''} at ${e.company || ''}`)
-      .join(', '),
-  ].filter(Boolean).join('. ');
+  const resumeEvidence = extractResumeEvidence(resumeData);
+  const resumeText = resumeEvidence.text;
 
   const trajectoryPrompt = `
 You are a senior career strategist at ForgeTomorrow.
@@ -552,57 +650,12 @@ if (!internalBypassGate && !roleIsUnlimited(role)) {
       console.warn('[ats-coach] buildPromptContext failed — continuing without intelligence:', (err as any)?.message);
     }
 
-function extractResumeText(resumeData: any) {
-  if (!resumeData || typeof resumeData !== "object") return "";
+    const resumeEvidence = extractResumeEvidence(resumeData);
+    const resumeText = resumeEvidence.text;
+    const why = buildExplain(resumeText, jdText);
+    console.log('[ATS-COACH WHY SCORE]', why?.score);
+    console.log('[ATS-COACH RESUME TEXT LENGTH]', resumeText.length);
 
-  const parts: string[] = [];
-
-  if (resumeData.summary) parts.push(resumeData.summary);
-  if (resumeData.professionalSummary) parts.push(resumeData.professionalSummary);
-
-  const experiences =
-    resumeData.experiences ||
-    resumeData.workExperiences ||
-    resumeData.experience ||
-    [];
-
-  for (const exp of Array.isArray(experiences) ? experiences : []) {
-    if (exp?.title) parts.push(exp.title);
-    if (exp?.company) parts.push(exp.company);
-    if (exp?.description) parts.push(exp.description);
-    if (Array.isArray(exp?.highlights)) parts.push(exp.highlights.join(" "));
-    if (Array.isArray(exp?.bullets)) parts.push(exp.bullets.join(" "));
-  }
-
-  const skills = resumeData.skills || [];
-  if (Array.isArray(skills)) parts.push(skills.join(", "));
-
-  const certs = resumeData.certifications || [];
-  for (const c of Array.isArray(certs) ? certs : []) {
-    if (typeof c === "string") parts.push(c);
-    else if (c?.name) parts.push(c.name);
-  }
-
-  const edu = resumeData.educationList || resumeData.education || [];
-  for (const e of Array.isArray(edu) ? edu : []) {
-    if (e?.degree) parts.push(e.degree);
-    if (e?.school) parts.push(e.school);
-    if (e?.field) parts.push(e.field);
-  }
-
-  const projects = resumeData.projects || [];
-  for (const p of Array.isArray(projects) ? projects : []) {
-    if (p?.title) parts.push(p.title);
-    if (p?.description) parts.push(p.description);
-  }
-
-  return parts.filter(Boolean).join("\n");
-}
-
-const resumeText = extractResumeText(resumeData);
-const why = buildExplain(resumeText, jdText);
-console.log('[ATS-COACH WHY SCORE]', why?.score);
-console.log('[ATS-COACH RESUME TEXT LENGTH]', resumeText.length);
 
     // ── Build prompt via strategyBrain ────────────────────────────────────
     // This restores the live-safe single Groq call flow.
@@ -622,11 +675,26 @@ console.log('[ATS-COACH RESUME TEXT LENGTH]', resumeText.length);
 `
       : '';
 
+    const resumeEvidenceBlock = resumeText
+      ? `
+
+AUTHORITATIVE CURRENT RESUME EVIDENCE — USE THIS BEFORE CLAIMING SOMETHING IS MISSING:
+${resumeText.slice(0, 4500)}
+
+CERTIFICATION / EDUCATION / LANGUAGE RULES:
+- If CERTIFICATIONS / TRAINING / CREDENTIALS includes a credential relevant to the JD, treat it as present.
+- If EDUCATION includes a degree, school, or field relevant to the JD, treat it as present.
+- If LANGUAGES includes a language relevant to the JD, treat it as present.
+- Do not say the resume lacks formal certification, training, education, or language evidence when that evidence appears in this block.
+- If wording is close but not exact, say the seeker should clarify or mirror the JD wording, not that the evidence is absent.
+`
+      : '';
+
     // For overview calls, append a hard section-forcing instruction.
     // The brain's JSON template has section:"" which causes the 8B model
     // to collapse all actions to one section. This override prevents that.
     const prompt = requestedSection === 'overview'
-      ? `${intelligenceBlock}${intentPrefix}${brainPrompt}
+      ? `${intelligenceBlock}${intentPrefix}${brainPrompt}${resumeEvidenceBlock}
 
 CRITICAL OUTPUT REQUIREMENT — MANDATORY:
 You MUST return at least 3 improvementActions.
@@ -639,7 +707,7 @@ The "section" field must be one of: "summary", "skills", "experience", "educatio
 Include "education" if the JD explicitly requires a degree, clearance, or if the resume contains relevant education that strengthens recruiter confidence.
 Include "certifications" if the JD explicitly requires or mentions certifications, licenses, or credentials.
 Include "languages" if the JD mentions language requirements or multilingual preferences.`
-      : `${intelligenceBlock}${intentPrefix}${brainPrompt}`.trim();
+      : `${intelligenceBlock}${intentPrefix}${brainPrompt}${resumeEvidenceBlock}`.trim();
 
     // ── Call Groq ─────────────────────────────────────────────────────────
     const openAIRes = await callOpenAI(apiKey, model, prompt);
