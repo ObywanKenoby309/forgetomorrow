@@ -397,9 +397,9 @@ ${resumeEvidenceText.slice(0, 6500)}
 WHY ENGINE CONTEXT:
 ${JSON.stringify({
   score: whyContext?.score ?? null,
-  verdict: whyContext?.verdict ?? null,
-  matchedSignals: whyContext?.matchedSignals || [],
-  missingSignals: whyContext?.missingSignals || [],
+  verdict: (whyContext as any)?.verdict ?? null,
+  matchedSignals: (whyContext as any)?.matchedSignals || [],
+  missingSignals: (whyContext as any)?.missingSignals || [],
 }).slice(0, 2500)}
 
 SCORING RULES:
