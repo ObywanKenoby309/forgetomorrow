@@ -32,6 +32,18 @@ const WHITE_CARD = {
   padding: '20px 24px',
 };
 
+// The six CSAT questions
+const QUESTIONS = [
+  { key: 'satisfaction',    label: 'Overall satisfaction with your coaching' },
+  { key: 'communication',   label: 'Coach communication and responsiveness' },
+  { key: 'quality',         label: 'Quality of guidance provided' },
+  { key: 'helpfulness',     label: 'Helpfulness of resources or action steps' },
+  { key: 'progress',        label: 'Progress made toward your career goal' },
+  { key: 'recommendation',  label: 'Likelihood you would recommend this coach' },
+];
+
+const DEFAULT_SCORES = QUESTIONS.reduce((acc, q) => ({ ...acc, [q.key]: 0 }), {});
+
 function CSATItem({ label, value, onChange }) {
   return (
     <div style={{ marginBottom: 20 }}>
@@ -46,13 +58,8 @@ function CSATItem({ label, value, onChange }) {
             onClick={() => onChange(n)}
             aria-label={`${n} out of 5`}
             style={{
-              borderRadius: 10,
-              padding: '10px 14px',
-              cursor: 'pointer',
-              fontSize: 15,
-              minWidth: 44,
-              fontWeight: 700,
-              fontFamily: 'inherit',
+              borderRadius: 10, padding: '10px 14px', cursor: 'pointer',
+              fontSize: 15, minWidth: 44, fontWeight: 700, fontFamily: 'inherit',
               background: value === n ? ORANGE : 'white',
               color:      value === n ? 'white' : ORANGE,
               border:     `1.5px solid ${ORANGE}`,
@@ -69,18 +76,18 @@ function CSATItem({ label, value, onChange }) {
 }
 
 export default function CoachCSATSurvey() {
-  const router  = useRouter();
+  const router   = useRouter();
   const { data: session, status } = useSession();
   const greeting = getTimeGreeting();
 
   const coachId = String(router.query.coachID || router.query.coachId || '');
 
-  const [coachName,   setCoachName]   = useState('');
-  const [scores,      setScores]      = useState({ satisfaction: 0, timeliness: 0, quality: 0 });
-  const [comment,     setComment]     = useState('');
-  const [anonymous,   setAnonymous]   = useState(true);
-  const [sent,        setSent]        = useState(false);
-  const [submitting,  setSubmitting]  = useState(false);
+  const [coachName,  setCoachName]  = useState('');
+  const [scores,     setScores]     = useState(DEFAULT_SCORES);
+  const [comment,    setComment]    = useState('');
+  const [anonymous,  setAnonymous]  = useState(true);
+  const [sent,       setSent]       = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Redirect to sign-in if not authenticated
   useEffect(() => {
@@ -89,7 +96,7 @@ export default function CoachCSATSurvey() {
     }
   }, [status, router]);
 
-  // Load coach name using /api/users/names
+  // Load coach name
   useEffect(() => {
     if (!coachId || status !== 'authenticated') return;
     fetch('/api/users/names', {
@@ -108,9 +115,9 @@ export default function CoachCSATSurvey() {
   const setScore = (key, val) => setScores((prev) => ({ ...prev, [key]: val }));
 
   const submit = async () => {
-    const { satisfaction, timeliness, quality } = scores;
-    if (!satisfaction || !timeliness || !quality) {
-      alert('Please rate all three items (1–5).');
+    const missing = QUESTIONS.find((q) => !scores[q.key]);
+    if (missing) {
+      alert(`Please rate all six questions (1–5). Missing: "${missing.label}"`);
       return;
     }
     if (!coachId) {
@@ -122,7 +129,7 @@ export default function CoachCSATSurvey() {
       const res = await fetch('/api/coaching/csat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coachId, satisfaction, timeliness, quality, comment: comment.trim(), anonymous }),
+        body: JSON.stringify({ coachId, ...scores, comment: comment.trim(), anonymous }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -167,9 +174,7 @@ export default function CoachCSATSurvey() {
       {sent ? (
         <div style={{ ...GLASS, padding: 28, textAlign: 'center' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
-          <h2 style={{ color: ORANGE, margin: '0 0 8px', fontWeight: 900 }}>
-            Thanks for your feedback!
-          </h2>
+          <h2 style={{ color: ORANGE, margin: '0 0 8px', fontWeight: 900 }}>Thanks for your feedback!</h2>
           <p style={{ color: MUTED, margin: '0 0 20px', fontSize: 14, lineHeight: 1.6 }}>
             Your input helps {displayName} improve and deliver the best coaching experience possible.
           </p>
@@ -189,14 +194,19 @@ export default function CoachCSATSurvey() {
               Client Satisfaction Survey
             </h2>
             <p style={{ margin: 0, color: MUTED, fontSize: 13, lineHeight: 1.5 }}>
-              Rate your experience with <strong>{displayName}</strong> across three dimensions.
+              Rate your experience with <strong>{displayName}</strong> across six dimensions.
             </p>
           </div>
 
           <div style={WHITE_CARD}>
-            <CSATItem label="Overall satisfaction with your coaching"   value={scores.satisfaction} onChange={(v) => setScore('satisfaction', v)} />
-            <CSATItem label="Timeliness of responses and sessions"      value={scores.timeliness}   onChange={(v) => setScore('timeliness', v)} />
-            <CSATItem label="Quality of coaching provided"              value={scores.quality}      onChange={(v) => setScore('quality', v)} />
+            {QUESTIONS.map((q) => (
+              <CSATItem
+                key={q.key}
+                label={q.label}
+                value={scores[q.key]}
+                onChange={(v) => setScore(q.key, v)}
+              />
+            ))}
 
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontWeight: 700, color: '#263238', display: 'block', marginBottom: 8, fontSize: 14 }}>
@@ -211,16 +221,19 @@ export default function CoachCSATSurvey() {
               />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 20 }}>
               <input
                 id="anon-internal"
                 type="checkbox"
                 checked={anonymous}
                 onChange={(e) => setAnonymous(e.target.checked)}
-                style={{ accentColor: ORANGE, cursor: 'pointer' }}
+                style={{ accentColor: ORANGE, cursor: 'pointer', marginTop: 2, flexShrink: 0 }}
               />
-              <label htmlFor="anon-internal" style={{ color: '#37474F', fontSize: 13, cursor: 'pointer' }}>
-                Submit anonymously
+              <label htmlFor="anon-internal" style={{ color: '#37474F', fontSize: 13, cursor: 'pointer', lineHeight: 1.5 }}>
+                <strong>Submit anonymously to the coach</strong>
+                <span style={{ display: 'block', fontSize: 11, color: MUTED, marginTop: 2 }}>
+                  ForgeTomorrow may retain visibility for moderation and platform audit purposes.
+                </span>
               </label>
             </div>
 
