@@ -341,6 +341,7 @@ export default function AtsDepthPanel({
 
   function openCoachOverview() {
     openCoach('overview', null);
+    void runAiScan();
     // Fire the coach immediately — user clicked the button intentionally
     // Small delay so coachOpen state propagates before the panel mounts
     setTimeout(() => {
