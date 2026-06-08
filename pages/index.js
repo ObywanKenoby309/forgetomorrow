@@ -76,30 +76,6 @@ export default function Home() {
             max-width: 900px;
           }
 
-          .hero-eyebrow {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--orange-dim);
-            border: 1px solid rgba(255,112,67,0.25);
-            border-radius: 100px;
-            padding: 6px 16px;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--orange);
-            margin-bottom: 32px;
-          }
-
-          .hero-eyebrow-dot {
-            width: 6px;
-            height: 6px;
-            background: var(--orange);
-            border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
-          }
-
           @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.5; transform: scale(0.7); }
@@ -641,11 +617,6 @@ export default function Home() {
           <div className="hero-overlay" aria-hidden="true" />
 
           <div className="hero-content">
-            <div className="hero-eyebrow">
-              <span className="hero-eyebrow-dot" />
-              Now in early access
-            </div>
-
             <h1 className="hero-h1">
               The career system after algorithms.
               <span className="hero-h1-accent">This is where futures are forged.</span>
