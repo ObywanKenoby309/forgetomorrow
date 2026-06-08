@@ -187,26 +187,6 @@ export default function Home() {
             border-top: 1px solid var(--border);
           }
 
-          .section-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-          }
-
-          .section-label::before {
-            content: '';
-            display: block;
-            width: 20px;
-            height: 1px;
-            background: var(--text-muted);
-          }
-
           .problem-heading {
             font-size: clamp(28px, 4vw, 44px);
             font-weight: 800;
@@ -566,13 +546,6 @@ export default function Home() {
             justify-content: center;
           }
 
-          /* ─── DIVIDER LINE ──────────────────────────────────────── */
-          .section-divider {
-            width: 100%;
-            height: 1px;
-            background: var(--border);
-          }
-
           /* Util */
           .max-container { max-width: 1100px; margin: 0 auto; }
           .text-center { text-align: center; }
@@ -593,7 +566,7 @@ export default function Home() {
             </h1>
 
             <p className="hero-sub">
-              Professional networking, career intelligence, coaching, and hiring — finally built into one system.
+              We built the platform we wish existed when we needed it. Professional networking, career intelligence, coaching, and hiring — connected in one place.
             </p>
 
             <div className="hero-ctas">
@@ -613,7 +586,6 @@ export default function Home() {
         {/* ── PROBLEM / SOLUTION ───────────────────────────────────── */}
         <section className="problem-section">
           <div className="max-container">
-            <div className="section-label">The problem</div>
             <h2 className="problem-heading">
               The current career system is misaligned with human outcomes.
             </h2>
@@ -641,7 +613,7 @@ export default function Home() {
                 <div className="problem-col-label good">What ForgeTomorrow replaces it with</div>
                 {[
                   'Proof-based signals that show what people have actually built and delivered',
-                  'Transparent alignment — why something fits (or doesn\'t) and what to do next',
+                  "Transparent alignment — why something fits (or doesn't) and what to do next",
                   'Tools designed for outcomes: prepare, align, act, and move forward',
                   'One complete system for seekers, recruiters, and coaches',
                 ].map((t, i) => (
@@ -658,9 +630,8 @@ export default function Home() {
         {/* ── PRODUCT SHOWCASE ─────────────────────────────────────── */}
         <section className="showcase-section">
           <div className="max-container text-center">
-            <div className="section-label" style={{ justifyContent: 'center' }}>The platform</div>
             <h2 className="showcase-heading">
-              Professional infrastructure. Unified.
+              Everything connected in one place.
             </h2>
           </div>
 
@@ -687,10 +658,10 @@ export default function Home() {
           <div className="capability-grid">
             {[
               { icon: '🤝', title: 'Professional Networking', desc: 'Build meaningful professional relationships without algorithmic gatekeeping.' },
-              { icon: '🎯', title: 'Career Intelligence', desc: 'Understand alignment, strengths, opportunities, and next steps.' },
-              { icon: '🔍', title: 'Recruiter Intelligence', desc: 'Evaluate candidates with transparent, explainable matching.' },
+              { icon: '🎯', title: 'Career Intelligence', desc: 'Understand fit, strengths, opportunities, and next steps through transparent, explainable insights..' },
+              { icon: '🔍', title: 'Recruiter Intelligence', desc: 'Evaluate candidates with evidence-based matching, transparent reasoning, and deeper hiring context.' },
               { icon: '🎥', title: 'Foundry Meetings', desc: 'Meet, interview, coach, and collaborate inside the platform.' },
-              { icon: '📄', title: 'Portfolio & Resume Tools', desc: 'Create, manage, and showcase professional achievements.' },
+              { icon: '📄', title: 'Career Tools', desc: 'Build resumes and portfolios, negotiate offers, plan career moves, and prepare for what\'s next.' },
               { icon: '📊', title: 'Coaching Workspace', desc: 'Manage sessions, feedback, calendars, and client growth.' },
             ].map((c, i) => (
               <div className="cap-card" key={i}>
@@ -706,9 +677,8 @@ export default function Home() {
         <section className="audience-section">
           <div className="max-container">
             <div className="audience-header">
-              <div className="section-label" style={{ justifyContent: 'center' }}>Built for</div>
               <h2 className="audience-heading">One platform. Three workspaces.</h2>
-              <p className="audience-sub">Every role gets a dedicated workspace built around how they actually work.</p>
+              <p className="audience-sub">Intentionally designed workspaces built around how you actually work.</p>
             </div>
 
             <div className="audience-grid">
@@ -771,11 +741,11 @@ export default function Home() {
           <div className="final-cta-glow" aria-hidden="true" />
           <div className="max-container text-center" style={{ position: 'relative', zIndex: 1 }}>
             <h2 className="final-cta-heading">
-              The career system<br />
-              <span>is changing.</span>
+              Move forward with<br />
+              <span>clarity.</span>
             </h2>
             <p className="final-cta-sub">
-              ForgeTomorrow is already here. Enter the platform and see what it means to move with clarity.
+              WWhatever comes next, don't navigate it alone. ForgeTomorrow gives you the tools to move forward with confidence.
             </p>
             <div className="final-cta-buttons">
               <Link href="/pricing" className="btn-primary">
