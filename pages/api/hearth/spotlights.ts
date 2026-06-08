@@ -84,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           csatMap[r.coachId] = { satisfaction: [], timeliness: [], quality: [], count: 0 };
         }
         csatMap[r.coachId].satisfaction.push(r.satisfaction);
-        csatMap[r.coachId].timeliness.push(r.timeliness);
+        if (r.timeliness != null) csatMap[r.coachId].timeliness.push(r.timeliness);
         csatMap[r.coachId].quality.push(r.quality);
         csatMap[r.coachId].count++;
       }
