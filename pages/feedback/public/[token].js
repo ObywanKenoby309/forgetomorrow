@@ -14,9 +14,9 @@ const ORANGE = '#FF7043';
 const SLATE  = '#334155';
 const MUTED  = '#64748B';
 const DEFAULT_WALLPAPER = '/images/profile-fallbacks/profile-default-wallpaper.png';
+const THANK_YOU_SEAL = '/images/csat/thank-you-seal.png';
 const TOKEN_SECRET = process.env.CSAT_TOKEN_SECRET || process.env.NEXTAUTH_SECRET;
 
-// The six CSAT questions
 const QUESTIONS = [
   { key: 'satisfaction',   label: 'Overall satisfaction with your coaching',       hint: 'How satisfied were you overall?' },
   { key: 'communication',  label: 'Coach communication and responsiveness',         hint: 'Were they easy to reach and responsive?' },
@@ -28,7 +28,6 @@ const QUESTIONS = [
 
 const DEFAULT_SCORES = QUESTIONS.reduce((acc, q) => ({ ...acc, [q.key]: 0 }), {});
 
-// ── Server-side: resolve token + fetch coach data before render ────────────
 export async function getServerSideProps(context) {
   const { token } = context.params;
 
@@ -37,7 +36,6 @@ export async function getServerSideProps(context) {
   }
 
   try {
-    // Verify the JWT
     let payload;
     try {
       payload = jwt.verify(String(token), TOKEN_SECRET);
@@ -50,18 +48,17 @@ export async function getServerSideProps(context) {
       return { props: { tokenError: 'Malformed feedback token.' } };
     }
 
-    // Fetch coach data including wallpaper and headline
     const coach = await prisma.user.findUnique({
       where: { id: coachId },
       select: {
-        id:          true,
-        firstName:   true,
-        lastName:    true,
-        name:        true,
-        headline:    true,
-        avatarUrl:   true,
+        id: true,
+        firstName: true,
+        lastName: true,
+        name: true,
+        headline: true,
+        avatarUrl: true,
         wallpaperUrl: true,
-        deletedAt:   true,
+        deletedAt: true,
       },
     });
 
@@ -69,18 +66,19 @@ export async function getServerSideProps(context) {
       return { props: { tokenError: 'The coach associated with this link no longer exists.' } };
     }
 
-    const coachName = [coach.firstName, coach.lastName].filter(Boolean).join(' ')
-      || coach.name
-      || 'Your coach';
+    const coachName =
+      [coach.firstName, coach.lastName].filter(Boolean).join(' ') ||
+      coach.name ||
+      'Your coach';
 
     return {
       props: {
-        coachId:      coachId,
+        coachId,
         coachName,
-        coachHeadline: coach.headline   || null,
-        coachAvatar:   coach.avatarUrl  || null,
-        wallpaperUrl:  coach.wallpaperUrl || null,
-        tokenError:    null,
+        coachHeadline: coach.headline || null,
+        coachAvatar: coach.avatarUrl || null,
+        wallpaperUrl: coach.wallpaperUrl || null,
+        tokenError: null,
       },
     };
   } catch (err) {
@@ -89,21 +87,23 @@ export async function getServerSideProps(context) {
   }
 }
 
-// ── Helper: coach initials ─────────────────────────────────────────────────
 function initials(name) {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || '?';
 }
 
-// ── Join ForgeTomorrow side card ───────────────────────────────────────────
 function JoinCard() {
   return (
     <aside style={{
       background: 'rgba(255,255,255,0.90)',
-      backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
       border: '1px solid rgba(255,255,255,0.30)',
-      borderRadius: 14, padding: '24px 20px',
-      display: 'grid', gap: 14, alignSelf: 'start',
+      borderRadius: 14,
+      padding: '24px 20px',
+      display: 'grid',
+      gap: 14,
+      alignSelf: 'start',
       boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
     }}>
       <div>
@@ -140,9 +140,15 @@ function JoinCard() {
       <Link
         href="/pricing"
         style={{
-          display: 'block', background: ORANGE, color: 'white',
-          textDecoration: 'none', textAlign: 'center',
-          padding: '11px 16px', borderRadius: 10, fontWeight: 700, fontSize: 14,
+          display: 'block',
+          background: ORANGE,
+          color: 'white',
+          textDecoration: 'none',
+          textAlign: 'center',
+          padding: '11px 16px',
+          borderRadius: 10,
+          fontWeight: 700,
+          fontSize: 14,
           boxShadow: '0 2px 8px rgba(255,112,67,0.28)',
         }}
       >
@@ -156,7 +162,6 @@ function JoinCard() {
   );
 }
 
-// ── CSAT rating row ────────────────────────────────────────────────────────
 function CSATItem({ label, hint, value, onChange }) {
   return (
     <div style={{ marginBottom: 16 }}>
@@ -174,12 +179,17 @@ function CSATItem({ label, hint, value, onChange }) {
             onClick={() => onChange(n)}
             aria-label={`${n} out of 5`}
             style={{
-              borderRadius: 10, padding: '10px 14px', cursor: 'pointer',
-              fontSize: 15, minWidth: 44, fontWeight: 700, fontFamily: 'inherit',
+              borderRadius: 10,
+              padding: '10px 14px',
+              cursor: 'pointer',
+              fontSize: 15,
+              minWidth: 44,
+              fontWeight: 700,
+              fontFamily: 'inherit',
               background: value === n ? ORANGE : 'white',
-              color:      value === n ? 'white' : ORANGE,
-              border:     `1.5px solid ${ORANGE}`,
-              boxShadow:  value === n ? '0 2px 8px rgba(255,112,67,0.3)' : 'none',
+              color: value === n ? 'white' : ORANGE,
+              border: `1.5px solid ${ORANGE}`,
+              boxShadow: value === n ? '0 2px 8px rgba(255,112,67,0.3)' : 'none',
               transition: 'all 0.12s',
             }}
           >
@@ -191,7 +201,6 @@ function CSATItem({ label, hint, value, onChange }) {
   );
 }
 
-// ── Page component ─────────────────────────────────────────────────────────
 export default function PublicCSATSurvey({
   coachId,
   coachName,
@@ -203,10 +212,10 @@ export default function PublicCSATSurvey({
   const effectiveWallpaper = wallpaperUrl || DEFAULT_WALLPAPER;
   const displayName = coachName || 'your coach';
 
-  const [scores,     setScores]     = useState(DEFAULT_SCORES);
-  const [comment,    setComment]    = useState('');
-  const [anonymous,  setAnonymous]  = useState(true);
-  const [sent,       setSent]       = useState(false);
+  const [scores, setScores] = useState(DEFAULT_SCORES);
+  const [comment, setComment] = useState('');
+  const [anonymous, setAnonymous] = useState(true);
+  const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const setScore = (key, val) => setScores((prev) => ({ ...prev, [key]: val }));
@@ -217,18 +226,22 @@ export default function PublicCSATSurvey({
       alert(`Please rate all six questions (1–5). Missing: "${missing.label}"`);
       return;
     }
+
     setSubmitting(true);
+
     try {
       const res = await fetch('/api/coaching/csat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ coachId, ...scores, comment: comment.trim(), anonymous }),
       });
+
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         alert(data?.error || 'Error saving your response. Please try again.');
         return;
       }
+
       setSent(true);
     } catch {
       alert('Error saving your response. Please try again.');
@@ -244,7 +257,6 @@ export default function PublicCSATSurvey({
         <meta name="robots" content="noindex" />
       </Head>
 
-      {/* Full-page wallpaper background — baked in from server, no blip */}
       <div style={{
         minHeight: '100vh',
         backgroundImage: `url(${effectiveWallpaper})`,
@@ -254,14 +266,15 @@ export default function PublicCSATSurvey({
         backgroundRepeat: 'no-repeat',
       }}>
         <div style={{
-          position: 'fixed', inset: 0, zIndex: 0,
+          position: 'fixed',
+          inset: 0,
+          zIndex: 0,
           background: 'linear-gradient(180deg, rgba(10,18,30,0.55) 0%, rgba(10,18,30,0.30) 50%, rgba(10,18,30,0.55) 100%)',
           pointerEvents: 'none',
         }} />
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <main style={{ padding: '28px 20px 48px', maxWidth: 960, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-
             {tokenError ? (
               <div style={{ background: 'rgba(255,255,255,0.90)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,205,210,0.60)', borderRadius: 12, padding: '28px 24px', textAlign: 'center', maxWidth: 480, margin: '0 auto', boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
                 <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
@@ -270,15 +283,33 @@ export default function PublicCSATSurvey({
               </div>
             ) : sent ? (
               <div style={{ display: 'grid', gap: 20, maxWidth: 560, margin: '0 auto' }}>
-                <div style={{ background: 'rgba(255,255,255,0.90)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 14, padding: '36px 28px', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.30)', textAlign: 'center' }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-                  <h2 style={{ color: ORANGE, margin: '0 0 10px', fontWeight: 900, fontSize: 22 }}>
-                    Thank you for helping {displayName} improve their coaching practice.
-                  </h2>
+                <div style={{
+                  background: 'rgba(255,255,255,0.90)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  borderRadius: 14,
+                  padding: '28px 28px 30px',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+                  border: '1px solid rgba(255,255,255,0.30)',
+                  textAlign: 'center',
+                }}>
+                  <img
+                    src={THANK_YOU_SEAL}
+                    alt="Thank you"
+                    style={{
+                      display: 'block',
+                      width: 'min(75%, 380px)',
+                      height: 'auto',
+                      margin: '0 auto 14px',
+                      objectFit: 'contain',
+                    }}
+                  />
+
                   <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.7, margin: 0 }}>
                     Your feedback contributes to a better coaching experience for future clients and helps maintain the quality of coaching on ForgeTomorrow.
                   </p>
                 </div>
+
                 <JoinCard />
               </div>
             ) : (
@@ -286,13 +317,9 @@ export default function PublicCSATSurvey({
                 style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 260px', gap: 24, alignItems: 'start' }}
                 className="csat-public-grid"
               >
-                {/* ── Left: form ── */}
                 <div style={{ display: 'grid', gap: 16 }}>
-
-                  {/* Coach identity card */}
                   <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 14, padding: '20px 24px', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.30)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-                      {/* Avatar */}
                       {coachAvatar ? (
                         <img
                           src={coachAvatar}
@@ -301,15 +328,23 @@ export default function PublicCSATSurvey({
                         />
                       ) : (
                         <div style={{
-                          width: 52, height: 52, borderRadius: '50%', flexShrink: 0,
+                          width: 52,
+                          height: 52,
+                          borderRadius: '50%',
+                          flexShrink: 0,
                           background: `linear-gradient(135deg, ${ORANGE} 0%, #FF8A65 100%)`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 18, fontWeight: 900, color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 18,
+                          fontWeight: 900,
+                          color: 'white',
                           border: '2px solid rgba(255,112,67,0.3)',
                         }}>
                           {initials(displayName)}
                         </div>
                       )}
+
                       <div>
                         <div style={{ fontWeight: 900, fontSize: 16, color: SLATE }}>{displayName}</div>
                         {coachHeadline && (
@@ -317,15 +352,16 @@ export default function PublicCSATSurvey({
                         )}
                       </div>
                     </div>
+
                     <h1 style={{ margin: '0 0 6px', color: ORANGE, fontWeight: 900, fontSize: 18 }}>
                       Coaching Feedback
                     </h1>
+
                     <p style={{ margin: 0, color: MUTED, fontSize: 13, lineHeight: 1.6 }}>
                       Please share your feedback regarding your coaching experience with <strong style={{ color: SLATE }}>{displayName}</strong>. Rate each dimension 1–5. Your responses are private by default.
                     </p>
                   </div>
 
-                  {/* Questions card */}
                   <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 14, padding: '20px', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.30)' }}>
                     {QUESTIONS.map((q) => (
                       <CSATItem
@@ -341,6 +377,7 @@ export default function PublicCSATSurvey({
                       <label style={{ fontWeight: 700, color: '#263238', display: 'block', marginBottom: 8, fontSize: 14 }}>
                         Additional comments (optional)
                       </label>
+
                       <textarea
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
@@ -358,6 +395,7 @@ export default function PublicCSATSurvey({
                         onChange={(e) => setAnonymous(e.target.checked)}
                         style={{ accentColor: ORANGE, cursor: 'pointer', marginTop: 2, flexShrink: 0 }}
                       />
+
                       <label htmlFor="anon-external" style={{ color: '#37474F', fontSize: 13, cursor: 'pointer', lineHeight: 1.5 }}>
                         <strong>Submit anonymously to the coach</strong>
                         <span style={{ display: 'block', fontSize: 11, color: MUTED, marginTop: 2 }}>
@@ -372,10 +410,14 @@ export default function PublicCSATSurvey({
                       disabled={submitting}
                       style={{
                         background: submitting ? 'rgba(255,112,67,0.5)' : ORANGE,
-                        color: 'white', border: 'none', borderRadius: 10,
-                        padding: '12px 28px', fontWeight: 700,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 10,
+                        padding: '12px 28px',
+                        fontWeight: 700,
                         cursor: submitting ? 'not-allowed' : 'pointer',
-                        fontSize: 14, boxShadow: submitting ? 'none' : '0 2px 8px rgba(255,112,67,0.3)',
+                        fontSize: 14,
+                        boxShadow: submitting ? 'none' : '0 2px 8px rgba(255,112,67,0.3)',
                       }}
                     >
                       {submitting ? 'Submitting…' : 'Submit Feedback'}
@@ -383,7 +425,6 @@ export default function PublicCSATSurvey({
                   </div>
                 </div>
 
-                {/* ── Right: join card ── */}
                 <JoinCard />
               </div>
             )}
