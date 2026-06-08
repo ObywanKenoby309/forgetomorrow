@@ -368,9 +368,9 @@ export default function AtsDepthPanel({
     { key: 'title', label: 'Title / Role', matched: matchedTitleKeywords.length, total: titleKeywords.length, points: titleCov, missing: missingTitleKeywords, section: 'skills' as const },
     { key: 'hard', label: 'Hard Skills', matched: matchedHardSkills.length, total: jdHardSkills.length, points: hardCov, missing: missingHardSkills, section: 'skills' as const },
     { key: 'tools', label: 'Tools & Platforms', matched: matchedTools.length, total: jdTools.length, points: toolsCov, missing: missingTools, section: 'skills' as const },
-    { key: 'certs', label: 'Certifications', matched: matchedCerts.length, total: jdCerts.length, points: certsCov, missing: missingCerts, section: 'education' as const },
+    { key: 'certs', label: 'Certifications', matched: matchedCerts.length, total: jdCerts.length, points: certsCov, missing: missingCerts, section: 'certifications' as const },
     { key: 'soft', label: 'Soft Skills', matched: matchedSoftSkills.length, total: jdSoftSkills.length, points: softCov, missing: missingSoftSkills, section: 'summary' as const },
-    { key: 'lang', label: 'Languages', matched: matchedLanguages.length, total: jdLanguages.length, points: langCov, missing: missingLanguages, section: 'skills' as const },
+    { key: 'lang', label: 'Languages', matched: matchedLanguages.length, total: jdLanguages.length, points: langCov, missing: missingLanguages, section: 'languages' as const },
     { key: 'edu', label: 'Education', matched: matchedEduReqs.length, total: jdEduReqs.length, points: eduCov, missing: [], section: 'education' as const },
   ].filter(b => b.total > 0); // only show buckets that exist in the JD
 
@@ -390,6 +390,10 @@ export default function AtsDepthPanel({
   }
 
   function openCoachOverview() {
+    // Review overall alignment should run BOTH parts of Hammer:
+    // 1) numeric alignment score, 2) coach/recruiter assessment.
+    // Without this, the UI can show a default/stale score while Coach runs.
+    runAiScan();
     openCoach('overview', null);
     // Fire the coach immediately — user clicked the button intentionally
     // Small delay so coachOpen state propagates before the panel mounts
@@ -590,7 +594,7 @@ export default function AtsDepthPanel({
 
               <button
                 type="button"
-                onClick={() => { runAiScan(); openCoachOverview(); }}
+                onClick={openCoachOverview}
                 style={{
                   marginTop: 10,
                   width: '100%',
@@ -685,18 +689,15 @@ export default function AtsDepthPanel({
                   'education and credential credibility',
                 ];
 
-                // Client-side evidence classification
-                const resumeText = [
-                  summary || '',
-                  (skills || []).join(' '),
-                  (experiences || []).map((e: any) => `${e.title || ''} ${e.company || ''} ${(e.bullets || []).join(' ')}`).join(' '),
-                  (education || []).map((e: any) => `${e.degree || ''} ${e.school || ''} ${e.field || ''}`).join(' '),
-                ].join(' ').toLowerCase();
+                // Client-side evidence classification uses the same full resume evidence
+                // used by Hammer scoring/Coach so certifications, languages, projects,
+                // achievements, volunteer work, and custom sections are not dropped.
+                const signalResumeText = resumeText;
 
                 const classified = signals.map(signal => {
                   const normalizedSignal = signal.toLowerCase();
                   // Direct match
-                  if (resumeText.includes(normalizedSignal)) {
+                  if (signalResumeText.includes(normalizedSignal)) {
                     return { signal, status: 'direct', confidence: 'high' };
                   }
                   // Pattern matching — simplified client-side version
@@ -711,7 +712,7 @@ export default function AtsDepthPanel({
                     'education and credential credibility': ['bachelor','master','mba','phd','degree','certified','certification','university','college','credential'],
                   };
                   const patterns = patternGroups[normalizedSignal] || [];
-                  const matched = patterns.filter(p => resumeText.includes(p.toLowerCase()));
+                  const matched = patterns.filter(p => signalResumeText.includes(p.toLowerCase()));
                   if (matched.length >= 3) return { signal, status: 'adjacent_technical', confidence: 'high' };
                   if (matched.length >= 1) return { signal, status: 'adjacent', confidence: 'medium' };
                   return { signal, status: 'missing', confidence: 'high' };
@@ -740,7 +741,8 @@ export default function AtsDepthPanel({
 
             const sectionForSignal = (signal: string) => {
               const s = signal.toLowerCase();
-              if (s.includes('education') || s.includes('credential')) return 'education' as const;
+              if (s.includes('certification') || s.includes('credential')) return 'certifications' as const;
+              if (s.includes('education')) return 'education' as const;
               if (s.includes('people') || s.includes('leadership')) return 'experience' as const;
               if (s.includes('domain') || s.includes('qualification')) return 'skills' as const;
               if (s.includes('advisory') || s.includes('client')) return 'experience' as const;
@@ -800,7 +802,7 @@ export default function AtsDepthPanel({
                                   {cfg.icon}
                                 </span>
                                 <span style={{ fontSize: 11, fontWeight: 800, color: '#1E293B', lineHeight: 1.3 }}>
-                                  {sig.signal.replace(/\w/g, (c: string) => c.toUpperCase())}
+                                  {sig.signal.replace(/\b\w/g, (c: string) => c.toUpperCase())}
                                 </span>
                               </div>
                               <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>

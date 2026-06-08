@@ -21,11 +21,14 @@ type CoachRequestBody = {
     educationList?: any[];
     education?: any[];
     certifications?: any[];
+    certificationList?: any[];
+    certificationsList?: any[];
     languages?: any[];
     projects?: any[];
-    volunteerExperiences?: any[];
     achievements?: any[];
-    customSections?: any[];
+    awards?: any[];
+    volunteerExperiences?: any[];
+    volunteerExperience?: any[];
   };
   context?: any;
   missing?: any;
@@ -117,7 +120,8 @@ function normalizeSection(value: any) {
 
 function inferSectionFromSignal(signal: any) {
   const s = safe(signal).toLowerCase();
-  if (s.includes('education') || s.includes('degree') || s.includes('certification') || s.includes('license')) return 'education';
+  if (s.includes('certification') || s.includes('license') || s.includes('credential') || s.includes('itil')) return 'certifications';
+  if (s.includes('education') || s.includes('degree')) return 'education';
   if (s.includes('tool') || s.includes('api') || s.includes('llm') || s.includes('skill')) return 'skills';
   if (s.includes('project') || s.includes('stakeholder') || s.includes('management') || s.includes('experience') || s.includes('ownership') || s.includes('leadership') || s.includes('delivery')) return 'experience';
   return 'summary';
@@ -559,24 +563,22 @@ if (!internalBypassGate && !roleIsUnlimited(role)) {
     }
 
 function extractResumeText(resumeData: any) {
-  if (!resumeData || typeof resumeData !== "object") return "";
-
-  const stringifyValue = (value: any): string => {
-    if (!value) return '';
-    if (typeof value === 'string') return value;
-    if (Array.isArray(value)) return value.map(stringifyValue).filter(Boolean).join(' ');
-    if (typeof value === 'object') return Object.values(value).map(stringifyValue).filter(Boolean).join(' ');
-    return String(value || '');
-  };
+  if (!resumeData || typeof resumeData !== 'object') return '';
 
   const parts: string[] = [];
+  const push = (value: any) => {
+    const text = String(value || '').trim();
+    if (text) parts.push(text);
+  };
 
-  if (resumeData.personalInfo) parts.push(stringifyValue(resumeData.personalInfo));
-  if (resumeData.summary) parts.push(resumeData.summary);
-  if (resumeData.professionalSummary) parts.push(resumeData.professionalSummary);
+  push(resumeData.summary);
+  push(resumeData.professionalSummary);
+  push(resumeData?.personalInfo?.targetedRole);
+  push(resumeData.targetedRole);
+  push(resumeData.jobTitle);
 
   const skills = resumeData.skills || [];
-  if (Array.isArray(skills)) parts.push(skills.join(', '));
+  if (Array.isArray(skills)) push(skills.join(', '));
 
   const experiences =
     resumeData.workExperiences ||
@@ -585,53 +587,71 @@ function extractResumeText(resumeData: any) {
     [];
 
   for (const exp of Array.isArray(experiences) ? experiences : []) {
-    parts.push(stringifyValue(exp));
+    push(exp?.title || exp?.jobTitle || exp?.role);
+    push(exp?.company);
+    push(exp?.description);
+    if (Array.isArray(exp?.highlights)) push(exp.highlights.join(' '));
+    if (Array.isArray(exp?.bullets)) push(exp.bullets.join(' '));
   }
 
   const projects = resumeData.projects || [];
-  for (const p of Array.isArray(projects) ? projects : []) {
-    parts.push(stringifyValue(p));
+  for (const project of Array.isArray(projects) ? projects : []) {
+    push(project?.title || project?.name);
+    push(project?.role);
+    push(project?.description);
+    if (Array.isArray(project?.bullets)) push(project.bullets.join(' '));
   }
 
-  const volunteerExperiences = resumeData.volunteerExperiences || [];
-  for (const v of Array.isArray(volunteerExperiences) ? volunteerExperiences : []) {
-    parts.push(stringifyValue(v));
+  const volunteer = resumeData.volunteerExperiences || resumeData.volunteerExperience || resumeData.volunteer || [];
+  for (const item of Array.isArray(volunteer) ? volunteer : []) {
+    push(item?.title || item?.role);
+    push(item?.organization || item?.company);
+    push(item?.description);
+    if (Array.isArray(item?.bullets)) push(item.bullets.join(' '));
   }
 
-  const edu = resumeData.educationList || resumeData.education || [];
-  for (const e of Array.isArray(edu) ? edu : []) {
-    parts.push(stringifyValue(e));
+  const certs = resumeData.certifications || resumeData.certificationList || resumeData.certificationsList || [];
+  for (const cert of Array.isArray(certs) ? certs : []) {
+    if (typeof cert === 'string') {
+      push(cert);
+    } else {
+      push(cert?.name || cert?.title || cert?.certification || cert?.label);
+      push(cert?.issuer || cert?.organization || cert?.provider);
+      push(cert?.description);
+      push(cert?.credentialId);
+      push(cert?.dateEarned || cert?.date || cert?.year);
+    }
   }
 
-  const certs = resumeData.certifications || [];
-  for (const c of Array.isArray(certs) ? certs : []) {
-    parts.push(stringifyValue(c));
+  const education = resumeData.educationList || resumeData.education || [];
+  for (const item of Array.isArray(education) ? education : []) {
+    push(item?.degree);
+    push(item?.field || item?.program);
+    push(item?.school || item?.institution);
+    push(item?.description);
   }
 
   const languages = resumeData.languages || [];
-  for (const l of Array.isArray(languages) ? languages : []) {
-    parts.push(stringifyValue(l));
+  for (const language of Array.isArray(languages) ? languages : []) {
+    if (typeof language === 'string') push(language);
+    else push([language?.name, language?.proficiency].filter(Boolean).join(' — '));
   }
 
-  const achievements = resumeData.achievements || [];
-  for (const a of Array.isArray(achievements) ? achievements : []) {
-    parts.push(stringifyValue(a));
+  const achievements = resumeData.achievements || resumeData.awards || [];
+  for (const item of Array.isArray(achievements) ? achievements : []) {
+    if (typeof item === 'string') push(item);
+    else {
+      push(item?.title || item?.name);
+      push(item?.description);
+    }
   }
 
-  const customSections = resumeData.customSections || [];
-  for (const c of Array.isArray(customSections) ? customSections : []) {
-    parts.push(stringifyValue(c));
-  }
-
-  return parts.filter(Boolean).join("\n");
+  return parts.filter(Boolean).join('\n');
 }
 
 const resumeText = extractResumeText(resumeData);
 const why = buildExplain(resumeText, jdText);
-console.log('[ATS-COACH WHY SCORE]', why?.score);
-console.log('[ATS-COACH RESUME TEXT LENGTH]', resumeText.length);
-
-    const authoritativeResumeEvidence = `
+const authoritativeResumeEvidence = `
 AUTHORITATIVE CURRENT RESUME EVIDENCE:
 This block is the current resume payload from the builder. Treat it as the source of truth for whether credentials, education, languages, projects, and achievements are present.
 If a credential appears here, do NOT say it is missing. If the JD asks for a preferred credential that appears here, acknowledge it by name.
@@ -660,7 +680,7 @@ ${resumeText || '[No resume evidence supplied]'}
     // The brain's JSON template has section:"" which causes the 8B model
     // to collapse all actions to one section. This override prevents that.
     const prompt = requestedSection === 'overview'
-      ? `${intelligenceBlock}${intentPrefix}${authoritativeResumeEvidence}\n\n${brainPrompt}
+      ? `${intelligenceBlock}${intentPrefix}${authoritativeResumeEvidence}${brainPrompt}
 
 CRITICAL OUTPUT REQUIREMENT — MANDATORY:
 You MUST return at least 3 improvementActions.
@@ -673,7 +693,7 @@ The "section" field must be one of: "summary", "skills", "experience", "educatio
 Include "education" if the JD explicitly requires a degree, clearance, or if the resume contains relevant education that strengthens recruiter confidence.
 Include "certifications" if the JD explicitly requires or mentions certifications, licenses, or credentials.
 Include "languages" if the JD mentions language requirements or multilingual preferences.`
-      : `${intelligenceBlock}${intentPrefix}${authoritativeResumeEvidence}\n\n${brainPrompt}`.trim();
+      : `${intelligenceBlock}${intentPrefix}${authoritativeResumeEvidence}${brainPrompt}`.trim();
 
     // ── Call Groq ─────────────────────────────────────────────────────────
     const openAIRes = await callOpenAI(apiKey, model, prompt);
@@ -717,9 +737,9 @@ console.log('[ATS-COACH RETURN SCORE]', typeof why?.score === 'number' ? why.sco
     // ── Trajectory evaluation ─────────────────────────────────────────────
     // On second+ attempt, if core gaps persist, fire trajectory analysis.
     let trajectory: TrajectoryData = { triggered: false };
-    if (requestedSection === 'overview' && shouldTriggerTrajectory(structured, attemptCount)) {
-      trajectory = await buildTrajectory(apiKey, model, structured, jdText, resumeData, jobMeta);
-    }
+    // Safety fix: do not show Career Trajectory from Hammer alignment.
+    // This panel is only appropriate for true career-path redirection, not an 80%+ resume/JD match.
+    // Keep the helper functions in place for future intentional use, but never auto-trigger here.
 
     return res.status(200).json({
   ok: true,

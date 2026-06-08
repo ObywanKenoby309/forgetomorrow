@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
-import { buildExplain } from '@/lib/intelligence/whyEngine';
 const { buildRecruiterScanPrompt } = require('@/lib/forge/strategyBrain');
 
 // === TYPES ===
@@ -171,12 +170,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const education = (resume.educationList || resume.education || []) as any[];
     const summary = (resume.summary || '').toString();
     const skills = Array.isArray(resume.skills) ? resume.skills : [];
-    const certifications = Array.isArray(resume.certifications) ? resume.certifications : [];
-    const languages = Array.isArray(resume.languages) ? resume.languages : [];
-    const projects = Array.isArray(resume.projects) ? resume.projects : [];
-    const volunteerExperiences = Array.isArray(resume.volunteerExperiences) ? resume.volunteerExperiences : [];
-    const achievements = Array.isArray(resume.achievements) ? resume.achievements : [];
-    const customSections = Array.isArray(resume.customSections) ? resume.customSections : [];
 
     const targetedRole = resume.personalInfo?.targetedRole || resume.targetedRole || resume.jobTitle || '';
 
@@ -191,54 +184,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         const prompt = buildRecruiterScanPrompt({
       jdText: jd,
       resumeData: {
+        ...resume,
         personalInfo: {
+          ...(resume?.personalInfo || {}),
           targetedRole,
         },
         summary,
         skills,
         workExperiences: experiences,
         educationList: education,
-        certifications,
-        languages,
-        projects,
-        volunteerExperiences,
-        achievements,
-        customSections,
       },
       role,
     });
-
-    const fullResumeText = JSON.stringify({
-      personalInfo: resume.personalInfo || {},
-      summary,
-      skills,
-      workExperiences: experiences,
-      projects,
-      volunteerExperiences,
-      educationList: education,
-      certifications,
-      languages,
-      achievements,
-      customSections,
-    });
-    const whyContext = buildExplain(fullResumeText, jd);
-    const scorePrompt = `${prompt}
-
-SHARED WHY ENGINE CONTEXT:
-Use this as supporting alignment evidence. Do not contradict direct credentials or evidence listed here.
-${JSON.stringify({
-      score: (whyContext as any)?.match?.score ?? (whyContext as any)?.score ?? null,
-      grade: (whyContext as any)?.grade ?? null,
-      summary: (whyContext as any)?.summary ?? null,
-      matchedSignals: (whyContext as any)?.signals?.matched || [],
-      missingSignals: (whyContext as any)?.signals?.not_yet_demonstrated || [],
-    }).slice(0, 2500)}`;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4.1-mini',
       messages: [
         { role: 'system', content: 'You are a strict JSON generator. Output JSON only.' },
-        { role: 'user', content: scorePrompt },
+        { role: 'user', content: prompt },
       ],
       temperature: 0.1,
       max_tokens: 450,
@@ -311,6 +274,9 @@ function fallbackResponse(
       resume?.summary,
       ...(resume?.skills || []),
       ...bullets,
+      ...((resume?.certifications || resume?.certificationList || resume?.certificationsList || []).map((c: any) => typeof c === 'string' ? c : [c?.name, c?.issuer, c?.description].filter(Boolean).join(' '))),
+      ...((resume?.educationList || resume?.education || []).map((e: any) => [e?.degree, e?.field, e?.school || e?.institution].filter(Boolean).join(' '))),
+      ...((resume?.languages || []).map((l: any) => typeof l === 'string' ? l : [l?.name, l?.proficiency].filter(Boolean).join(' '))),
     ]
       .filter(Boolean)
       .join(' ')
