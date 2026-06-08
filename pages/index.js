@@ -311,42 +311,12 @@ export default function Home() {
             letter-spacing: -0.03em;
             line-height: 1.1;
             color: var(--text-primary);
-            margin-bottom: 12px;
-          }
-
-          .showcase-sub {
-            font-size: 17px;
-            color: var(--text-secondary);
-            max-width: 520px;
-            margin: 0 auto 16px;
-            line-height: 1.65;
-          }
-
-          .showcase-proof-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(74,222,128,0.07);
-            border: 1px solid rgba(74,222,128,0.2);
-            border-radius: 100px;
-            padding: 5px 14px;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.05em;
-            color: #4ade80;
-            margin-bottom: 56px;
-          }
-
-          .showcase-proof-dot {
-            width: 5px;
-            height: 5px;
-            background: #4ade80;
-            border-radius: 50%;
+            margin-bottom: 40px;
           }
 
           .showcase-frame {
-            max-width: 1400px;
-            margin: 0 auto;
+            max-width: 1160px;
+            margin: 32px auto 0;
             position: relative;
           }
 
@@ -688,17 +658,10 @@ export default function Home() {
         {/* ── PRODUCT SHOWCASE ─────────────────────────────────────── */}
         <section className="showcase-section">
           <div className="max-container text-center">
-            <div className="section-label" style={{ justifyContent: 'center' }}>See the system</div>
+            <div className="section-label" style={{ justifyContent: 'center' }}>The platform</div>
             <h2 className="showcase-heading">
-              Built. Working. Available today.
+              Professional infrastructure. Unified.
             </h2>
-            <p className="showcase-sub">
-              A complete career operating system built for seekers, recruiters, and coaches.
-            </p>
-            <div className="showcase-proof-tag">
-              <span className="showcase-proof-dot" />
-              No mockups. No concepts. No future promises.
-            </div>
           </div>
 
           <div className="showcase-frame">
@@ -706,10 +669,16 @@ export default function Home() {
             <div className="showcase-img-wrap">
               <img
                 src="/images/forge-platform-overview-v1.png"
-                alt="ForgeTomorrow platform overview — live product"
+                alt="ForgeTomorrow platform overview"
                 loading="lazy"
               />
             </div>
+          </div>
+
+          <div className="text-center" style={{ marginTop: '32px' }}>
+            <Link href="/features" className="btn-ghost">
+              See the full platform →
+            </Link>
           </div>
         </section>
 
@@ -802,12 +771,11 @@ export default function Home() {
           <div className="final-cta-glow" aria-hidden="true" />
           <div className="max-container text-center" style={{ position: 'relative', zIndex: 1 }}>
             <h2 className="final-cta-heading">
-              One platform.<br />
-              <span>Three workspaces.</span><br />
-              One source of truth.
+              The career system<br />
+              <span>is changing.</span>
             </h2>
             <p className="final-cta-sub">
-              Stop stitching together five different platforms. ForgeTomorrow brings everything into one place.
+              ForgeTomorrow is already here. Enter the platform and see what it means to move with clarity.
             </p>
             <div className="final-cta-buttons">
               <Link href="/pricing" className="btn-primary">
