@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
-import buildPromptContext from '@/lib/intelligence/buildPromptContext';
 import { buildExplain } from '@/lib/intelligence/whyEngine';
 const { buildRecruiterScanPrompt } = require('@/lib/forge/strategyBrain');
 
@@ -105,172 +104,6 @@ function safeParseJson(raw: string) {
   }
 }
 
-function safeString(value: any): string {
-  return String(value || '').trim();
-}
-
-function valueFromObject(item: any, keys: string[]) {
-  if (!item || typeof item !== 'object') return '';
-  return keys.map((key) => safeString(item[key])).filter(Boolean).join(' ');
-}
-
-function extractResumeEvidence(resume: any) {
-  if (!resume || typeof resume !== 'object') return '';
-
-  const parts: string[] = [];
-
-  const personal = resume.personalInfo && typeof resume.personalInfo === 'object'
-    ? [
-        resume.personalInfo.name,
-        resume.personalInfo.targetedRole,
-        resume.personalInfo.location,
-      ].map(safeString).filter(Boolean).join(' | ')
-    : '';
-  if (personal) parts.push(`PROFILE:\n${personal}`);
-
-  const summary = [resume.summary, resume.professionalSummary].map(safeString).filter(Boolean).join('\n');
-  if (summary) parts.push(`SUMMARY:\n${summary}`);
-
-  const skills = Array.isArray(resume.skills) ? resume.skills.map(safeString).filter(Boolean) : [];
-  if (skills.length) parts.push(`SKILLS:\n${skills.join(', ')}`);
-
-  const experiences = Array.isArray(resume.workExperiences)
-    ? resume.workExperiences
-    : Array.isArray(resume.experiences)
-      ? resume.experiences
-      : Array.isArray(resume.experience)
-        ? resume.experience
-        : [];
-
-  const experienceText = experiences
-    .map((exp: any) => {
-      if (typeof exp === 'string') return safeString(exp);
-      const header = [exp?.title, exp?.company, exp?.location, exp?.startDate || exp?.start, exp?.endDate || exp?.end]
-        .map(safeString)
-        .filter(Boolean)
-        .join(' | ');
-      const body = [
-        exp?.description,
-        Array.isArray(exp?.highlights) ? exp.highlights.join(' ') : '',
-        Array.isArray(exp?.bullets) ? exp.bullets.join(' ') : '',
-      ].map(safeString).filter(Boolean).join(' ');
-      return [header, body].filter(Boolean).join('\n');
-    })
-    .filter(Boolean)
-    .join('\n\n');
-  if (experienceText) parts.push(`EXPERIENCE:\n${experienceText}`);
-
-  const projects = Array.isArray(resume.projects) ? resume.projects : [];
-  const projectText = projects
-    .map((project: any) => typeof project === 'string'
-      ? safeString(project)
-      : valueFromObject(project, ['title', 'name', 'description', 'outcome', 'tools']))
-    .filter(Boolean)
-    .join('\n');
-  if (projectText) parts.push(`PROJECTS:\n${projectText}`);
-
-  const volunteerExperiences = Array.isArray(resume.volunteerExperiences) ? resume.volunteerExperiences : [];
-  const volunteerText = volunteerExperiences
-    .map((item: any) => typeof item === 'string'
-      ? safeString(item)
-      : valueFromObject(item, ['title', 'organization', 'company', 'description', 'bullets']))
-    .filter(Boolean)
-    .join('\n');
-  if (volunteerText) parts.push(`VOLUNTEER EXPERIENCE:\n${volunteerText}`);
-
-  const education = Array.isArray(resume.educationList)
-    ? resume.educationList
-    : Array.isArray(resume.education)
-      ? resume.education
-      : [];
-  const educationText = education
-    .map((edu: any) => typeof edu === 'string'
-      ? safeString(edu)
-      : valueFromObject(edu, ['degree', 'school', 'institution', 'field', 'major', 'notes', 'date', 'year']))
-    .filter(Boolean)
-    .join('\n');
-  if (educationText) parts.push(`EDUCATION:\n${educationText}`);
-
-  const certifications = Array.isArray(resume.certifications) ? resume.certifications : [];
-  const certificationsText = certifications
-    .map((cert: any) => typeof cert === 'string'
-      ? safeString(cert)
-      : valueFromObject(cert, ['name', 'title', 'certification', 'credential', 'issuer', 'organization', 'date', 'year']))
-    .filter(Boolean)
-    .join('\n');
-  if (certificationsText) parts.push(`CERTIFICATIONS / TRAINING / CREDENTIALS:\n${certificationsText}`);
-
-  const languages = Array.isArray(resume.languages) ? resume.languages : [];
-  const languagesText = languages
-    .map((lang: any) => typeof lang === 'string'
-      ? safeString(lang)
-      : valueFromObject(lang, ['language', 'name', 'proficiency', 'level']))
-    .filter(Boolean)
-    .join('\n');
-  if (languagesText) parts.push(`LANGUAGES:\n${languagesText}`);
-
-  const achievements = Array.isArray(resume.achievements) ? resume.achievements : [];
-  const achievementText = achievements
-    .map((item: any) => typeof item === 'string'
-      ? safeString(item)
-      : valueFromObject(item, ['title', 'name', 'description', 'outcome']))
-    .filter(Boolean)
-    .join('\n');
-  if (achievementText) parts.push(`ACHIEVEMENTS / AWARDS:\n${achievementText}`);
-
-  const customSections = Array.isArray(resume.customSections) ? resume.customSections : [];
-  const customText = customSections
-    .map((item: any) => typeof item === 'string'
-      ? safeString(item)
-      : valueFromObject(item, ['title', 'name', 'description', 'content', 'items']))
-    .filter(Boolean)
-    .join('\n');
-  if (customText) parts.push(`CUSTOM SECTIONS:\n${customText}`);
-
-  return parts.filter(Boolean).join('\n\n');
-}
-
-function buildIntelligenceBlock(intelligence: any) {
-  if (!intelligence) return '';
-
-  const lines: string[] = [
-    'CAREER INTELLIGENCE CONTEXT (ForgeTomorrow Unified Intelligence — alignment mode):',
-  ];
-
-  if (Array.isArray(intelligence.proofSignals) && intelligence.proofSignals.length) {
-    lines.push('');
-    lines.push('PROVEN SIGNALS ACROSS FULL PROFILE:');
-    intelligence.proofSignals.slice(0, 10).forEach((s: string) => lines.push(`- ${s}`));
-  }
-
-  const creds = intelligence.credentials;
-  if (creds?.combined?.length) {
-    lines.push('');
-    lines.push('CREDENTIALS ON FILE:');
-    creds.combined.slice(0, 10).forEach((c: string) => lines.push(`- ${c}`));
-  }
-
-  if (Array.isArray(intelligence.relevantWins) && intelligence.relevantWins.length) {
-    lines.push('');
-    lines.push('RELEVANT WINS:');
-    intelligence.relevantWins.slice(0, 8).forEach((w: string) => lines.push(`- ${w}`));
-  }
-
-  if (Array.isArray(intelligence.knownGaps) && intelligence.knownGaps.length) {
-    lines.push('');
-    lines.push('KNOWN GAPS:');
-    intelligence.knownGaps.slice(0, 6).forEach((g: string) => lines.push(`- ${g}`));
-  }
-
-  if (Array.isArray(intelligence.cautionFlags) && intelligence.cautionFlags.length) {
-    lines.push('');
-    lines.push('CAUTION FLAGS:');
-    intelligence.cautionFlags.slice(0, 4).forEach((f: string) => lines.push(`- ${f}`));
-  }
-
-  return lines.length > 1 ? lines.join('\n') : '';
-}
-
 async function resolveUserId(session: any): Promise<string | null> {
   const directId = session?.user?.id;
   if (directId) return String(directId);
@@ -336,26 +169,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     // === 3) Normalize resume shape (accept BOTH formats) ===
     const experiences = (resume.workExperiences || resume.experiences || []) as any[];
     const education = (resume.educationList || resume.education || []) as any[];
+    const summary = (resume.summary || '').toString();
+    const skills = Array.isArray(resume.skills) ? resume.skills : [];
     const certifications = Array.isArray(resume.certifications) ? resume.certifications : [];
     const languages = Array.isArray(resume.languages) ? resume.languages : [];
     const projects = Array.isArray(resume.projects) ? resume.projects : [];
     const volunteerExperiences = Array.isArray(resume.volunteerExperiences) ? resume.volunteerExperiences : [];
     const achievements = Array.isArray(resume.achievements) ? resume.achievements : [];
     const customSections = Array.isArray(resume.customSections) ? resume.customSections : [];
-    const summary = (resume.summary || '').toString();
-    const skills = Array.isArray(resume.skills) ? resume.skills : [];
 
     const targetedRole = resume.personalInfo?.targetedRole || resume.targetedRole || resume.jobTitle || '';
-    const resumeEvidenceText = extractResumeEvidence(resume);
-    const whyContext = buildExplain(resumeEvidenceText, jd);
-
-    let intelligenceBlock = '';
-    try {
-      const intelligence = await buildPromptContext({ userId, mode: 'alignment' });
-      intelligenceBlock = buildIntelligenceBlock(intelligence);
-    } catch (e) {
-      console.warn('[/api/ats-score] buildPromptContext failed — continuing with current resume evidence only', e);
-    }
 
     // === 4) CALL OPENAI (Teacher/Grader) ===
     const apiKey = process.env.OPENAI_API_KEY;
@@ -365,20 +188,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const openai = new OpenAI({ apiKey });
 
-    const basePrompt = buildRecruiterScanPrompt({
+        const prompt = buildRecruiterScanPrompt({
       jdText: jd,
       resumeData: {
-        ...resume,
         personalInfo: {
-          ...(resume.personalInfo || {}),
           targetedRole,
         },
         summary,
         skills,
         workExperiences: experiences,
-        experiences,
         educationList: education,
-        education,
         certifications,
         languages,
         projects,
@@ -389,31 +208,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       role,
     });
 
-    const prompt = `${intelligenceBlock ? `${intelligenceBlock}\n\n` : ''}${basePrompt}
+    const fullResumeText = JSON.stringify({
+      personalInfo: resume.personalInfo || {},
+      summary,
+      skills,
+      workExperiences: experiences,
+      projects,
+      volunteerExperiences,
+      educationList: education,
+      certifications,
+      languages,
+      achievements,
+      customSections,
+    });
+    const whyContext = buildExplain(fullResumeText, jd);
+    const scorePrompt = `${prompt}
 
-AUTHORITATIVE CURRENT RESUME EVIDENCE — USE THIS BEFORE SCORING OR CLAIMING ANYTHING IS MISSING:
-${resumeEvidenceText.slice(0, 6500)}
-
-WHY ENGINE CONTEXT:
+SHARED WHY ENGINE CONTEXT:
+Use this as supporting alignment evidence. Do not contradict direct credentials or evidence listed here.
 ${JSON.stringify({
-  score: whyContext?.score ?? null,
-  verdict: (whyContext as any)?.verdict ?? null,
-  matchedSignals: (whyContext as any)?.matchedSignals || [],
-  missingSignals: (whyContext as any)?.missingSignals || [],
-}).slice(0, 2500)}
-
-SCORING RULES:
-- Score recruiter confidence from evidence, not keyword density alone.
-- Do not penalize a credential, education item, language, project, or tool as missing when it appears in AUTHORITATIVE CURRENT RESUME EVIDENCE or CAREER INTELLIGENCE CONTEXT.
-- If the wording is close but not exact, treat it as present with a clarity gap, not absent.
-- Preferred requirements should reduce confidence moderately only; they should not collapse an otherwise strong match.
-- Return JSON only using the schema requested above.`;
+      score: (whyContext as any)?.match?.score ?? (whyContext as any)?.score ?? null,
+      grade: (whyContext as any)?.grade ?? null,
+      summary: (whyContext as any)?.summary ?? null,
+      matchedSignals: (whyContext as any)?.signals?.matched || [],
+      missingSignals: (whyContext as any)?.signals?.not_yet_demonstrated || [],
+    }).slice(0, 2500)}`;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4.1-mini',
       messages: [
         { role: 'system', content: 'You are a strict JSON generator. Output JSON only.' },
-        { role: 'user', content: prompt },
+        { role: 'user', content: scorePrompt },
       ],
       temperature: 0.1,
       max_tokens: 450,
@@ -481,7 +306,6 @@ function fallbackResponse(
     const bullets = experiences?.flatMap((e: any) => e?.bullets || []) || [];
 
     const resumeText = [
-      extractResumeEvidence(resume),
       resume?.personalInfo?.targetedRole,
       resume?.targetedRole,
       resume?.summary,

@@ -196,7 +196,7 @@ function guessJobTitle(jdText: string) {
 
 export default function AtsDepthPanel({
   jdText,
-  resumeData: incomingResumeData,
+  resumeData: incomingResumeData = null,
   summary,
   skills,
   experiences,
@@ -227,15 +227,66 @@ export default function AtsDepthPanel({
     setMounted(true);
   }, []);
 
+  const fullResumeData = useMemo(() => {
+    const base = incomingResumeData && typeof incomingResumeData === 'object' ? incomingResumeData : {};
+    return {
+      ...base,
+      summary: base.summary ?? summary ?? '',
+      skills: Array.isArray(base.skills) ? base.skills : (skills || []),
+      workExperiences: Array.isArray(base.workExperiences)
+        ? base.workExperiences
+        : Array.isArray(base.experiences)
+          ? base.experiences
+          : (experiences || []),
+      experiences: Array.isArray(base.experiences)
+        ? base.experiences
+        : Array.isArray(base.workExperiences)
+          ? base.workExperiences
+          : (experiences || []),
+      educationList: Array.isArray(base.educationList)
+        ? base.educationList
+        : Array.isArray(base.education)
+          ? base.education
+          : (education || []),
+      education: Array.isArray(base.education)
+        ? base.education
+        : Array.isArray(base.educationList)
+          ? base.educationList
+          : (education || []),
+      certifications: Array.isArray(base.certifications) ? base.certifications : [],
+      languages: Array.isArray(base.languages) ? base.languages : [],
+      projects: Array.isArray(base.projects) ? base.projects : [],
+      volunteerExperiences: Array.isArray(base.volunteerExperiences) ? base.volunteerExperiences : [],
+      achievements: Array.isArray(base.achievements) ? base.achievements : [],
+      customSections: Array.isArray(base.customSections) ? base.customSections : [],
+    };
+  }, [incomingResumeData, summary, skills, experiences, education]);
+
   const resumeText = useMemo(() => {
-    const expBits = (experiences || [])
-      .map((e) => `${e.title || ''} ${e.company || ''} ${(e.bullets || []).join(' ')}`)
-      .join(' ');
-    const eduBits = (education || [])
-      .map((e) => `${e.degree || ''} ${e.field || ''} ${e.school || ''} ${e.notes || ''}`)
-      .join(' ');
-    return `${summary || ''} ${(skills || []).join(' ')} ${expBits} ${eduBits}`.toLowerCase();
-  }, [summary, skills, experiences, education]);
+    const stringifyItem = (item: any): string => {
+      if (!item) return '';
+      if (typeof item === 'string') return item;
+      if (Array.isArray(item)) return item.map(stringifyItem).filter(Boolean).join(' ');
+      if (typeof item === 'object') return Object.values(item).map(stringifyItem).filter(Boolean).join(' ');
+      return String(item || '');
+    };
+
+    return [
+      fullResumeData?.personalInfo,
+      fullResumeData?.summary,
+      fullResumeData?.skills,
+      fullResumeData?.workExperiences,
+      fullResumeData?.experiences,
+      fullResumeData?.projects,
+      fullResumeData?.volunteerExperiences,
+      fullResumeData?.educationList,
+      fullResumeData?.education,
+      fullResumeData?.certifications,
+      fullResumeData?.languages,
+      fullResumeData?.achievements,
+      fullResumeData?.customSections,
+    ].map(stringifyItem).filter(Boolean).join(' ').toLowerCase();
+  }, [fullResumeData]);
 
   const titleKeywords = useMemo(() => extractKeyTerms(jdText, 12), [jdText]);
 
@@ -323,40 +374,7 @@ export default function AtsDepthPanel({
     { key: 'edu', label: 'Education', matched: matchedEduReqs.length, total: jdEduReqs.length, points: eduCov, missing: [], section: 'education' as const },
   ].filter(b => b.total > 0); // only show buckets that exist in the JD
 
-  const resumeData = useMemo(() => {
-    const base = incomingResumeData && typeof incomingResumeData === 'object'
-      ? incomingResumeData
-      : {};
-
-    const baseExperiences = Array.isArray(base.workExperiences)
-      ? base.workExperiences
-      : Array.isArray(base.experiences)
-        ? base.experiences
-        : [];
-
-    const baseEducation = Array.isArray(base.educationList)
-      ? base.educationList
-      : Array.isArray(base.education)
-        ? base.education
-        : [];
-
-    return {
-      ...base,
-      personalInfo: base.personalInfo || {},
-      summary: summary || base.summary || '',
-      skills: Array.isArray(skills) && skills.length ? skills : Array.isArray(base.skills) ? base.skills : [],
-      workExperiences: Array.isArray(experiences) && experiences.length ? experiences : baseExperiences,
-      experiences: Array.isArray(experiences) && experiences.length ? experiences : baseExperiences,
-      educationList: Array.isArray(education) && education.length ? education : baseEducation,
-      education: Array.isArray(education) && education.length ? education : baseEducation,
-      certifications: Array.isArray(base.certifications) ? base.certifications : [],
-      languages: Array.isArray(base.languages) ? base.languages : [],
-      projects: Array.isArray(base.projects) ? base.projects : [],
-      volunteerExperiences: Array.isArray(base.volunteerExperiences) ? base.volunteerExperiences : [],
-      achievements: Array.isArray(base.achievements) ? base.achievements : [],
-      customSections: Array.isArray(base.customSections) ? base.customSections : [],
-    };
-  }, [incomingResumeData, summary, skills, experiences, education]);
+  const resumeData = fullResumeData;
 
   const guessedTitle = useMemo(() => guessJobTitle(jdText), [jdText]);
   const words = useMemo(() => countWords(jdText), [jdText]);
@@ -373,7 +391,6 @@ export default function AtsDepthPanel({
 
   function openCoachOverview() {
     openCoach('overview', null);
-    void runAiScan();
     // Fire the coach immediately — user clicked the button intentionally
     // Small delay so coachOpen state propagates before the panel mounts
     setTimeout(() => {
@@ -573,7 +590,7 @@ export default function AtsDepthPanel({
 
               <button
                 type="button"
-                onClick={openCoachOverview}
+                onClick={() => { runAiScan(); openCoachOverview(); }}
                 style={{
                   marginTop: 10,
                   width: '100%',
