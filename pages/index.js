@@ -745,7 +745,7 @@ export default function Home() {
               <span>clarity.</span>
             </h2>
             <p className="final-cta-sub">
-              WWhatever comes next, don't navigate it alone. ForgeTomorrow gives you the tools to move forward with confidence.
+              Whatever comes next, don't navigate it alone. ForgeTomorrow gives you the tools to move forward with confidence.
             </p>
             <div className="final-cta-buttons">
               <Link href="/pricing" className="btn-primary">
