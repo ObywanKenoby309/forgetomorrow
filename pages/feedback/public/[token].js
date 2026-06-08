@@ -1,7 +1,7 @@
 // pages/feedback/public/[token].js
 // External CSAT feedback page — no authentication required.
 // Token-based. Coach wallpaper pulled to match their profile aesthetic.
-// getLayout bypasses _app.js entirely — this page manages its own shell.
+// AppShell provides LandingHeader and LandingFooter for this public route.
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -26,63 +26,13 @@ const QUESTIONS = [
 
 const DEFAULT_SCORES = QUESTIONS.reduce((acc, q) => ({ ...acc, [q.key]: 0 }), {});
 
-// ── Minimal public header ──────────────────────────────────────────────────
-function PublicHeader() {
-  return (
-    <header style={{
-      position: 'sticky', top: 0, zIndex: 40,
-      background: 'rgba(255,255,255,0.92)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      borderBottom: '1px solid rgba(15,23,42,0.08)',
-      padding: '0 24px',
-      height: 54,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    }}>
-      <Link href="/" style={{ textDecoration: 'none' }}>
-        <span style={{ fontWeight: 900, fontSize: 18, color: ORANGE, letterSpacing: '-0.01em' }}>
-          ForgeTomorrow
-        </span>
-      </Link>
-      <Link href="/auth/signin" style={{
-        fontSize: 12, fontWeight: 600, color: MUTED,
-        textDecoration: 'none', padding: '5px 12px',
-        border: '1px solid rgba(15,23,42,0.10)',
-        borderRadius: 8, background: 'white',
-      }}>
-        Sign In
-      </Link>
-    </header>
-  );
-}
-
-// ── Minimal public footer ──────────────────────────────────────────────────
-function PublicFooter() {
-  return (
-    <footer style={{
-      borderTop: '1px solid rgba(15,23,42,0.08)',
-      padding: '18px 24px',
-      textAlign: 'center',
-      fontSize: 12,
-      color: MUTED,
-      background: 'white',
-    }}>
-      © {new Date().getFullYear()} ForgeTomorrow. All rights reserved.{' '}
-      <Link href="/privacy" style={{ color: MUTED }}>Privacy</Link>
-      {' · '}
-      <Link href="/terms" style={{ color: MUTED }}>Terms</Link>
-    </footer>
-  );
-}
-
 // ── Join ForgeTomorrow side card ───────────────────────────────────────────
 function JoinCard() {
   return (
     <aside style={{
-      background: 'white',
-      border: '1px solid rgba(255,112,67,0.15)',
+      background: 'rgba(255,255,255,0.90)',
+      backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+      border: '1px solid rgba(255,255,255,0.30)',
       borderRadius: 14,
       padding: '24px 20px',
       display: 'grid',
@@ -248,30 +198,24 @@ export default function PublicCSATSurvey() {
         <meta name="robots" content="noindex" />
       </Head>
 
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: LIGHT_BG, fontFamily: 'inherit' }}>
-        <PublicHeader />
-
-        {/* Coach wallpaper hero strip */}
-        {!tokenLoading && !tokenError && (
-          <div style={{
-            height: 120,
-            background: `url(${effectiveWallpaper}) center/cover no-repeat`,
-            position: 'relative',
-            flexShrink: 0,
-          }}>
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(180deg, rgba(15,23,42,0.18) 0%, rgba(15,23,42,0.48) 100%)',
-            }} />
-            <div style={{
-              position: 'absolute', bottom: 16, left: 24,
-              color: 'white', fontSize: 13, fontWeight: 700,
-              textShadow: '0 1px 4px rgba(0,0,0,0.4)',
-            }}>
-              Feedback for <span style={{ color: '#FFB39A' }}>{displayName}</span>
-            </div>
-          </div>
-        )}
+      <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          fontFamily: 'inherit',
+          backgroundImage: `url(${effectiveWallpaper})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+          backgroundRepeat: 'no-repeat',
+        }}>
+        {/* Full-page overlay so content stays readable over any wallpaper */}
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 0,
+          background: 'linear-gradient(180deg, rgba(10,18,30,0.55) 0%, rgba(10,18,30,0.30) 50%, rgba(10,18,30,0.55) 100%)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
         <main style={{ flex: 1, padding: '28px 20px 48px', maxWidth: 960, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           {tokenLoading ? (
@@ -279,14 +223,14 @@ export default function PublicCSATSurvey() {
               Loading feedback form…
             </div>
           ) : tokenError ? (
-            <div style={{ background: 'white', border: '1px solid #FFCDD2', borderRadius: 12, padding: '28px 24px', textAlign: 'center', maxWidth: 480, margin: '0 auto', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: 'rgba(255,255,255,0.90)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,205,210,0.60)', borderRadius: 12, padding: '28px 24px', textAlign: 'center', maxWidth: 480, margin: '0 auto', boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
               <h2 style={{ margin: '0 0 8px', color: SLATE, fontWeight: 900 }}>Link unavailable</h2>
               <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6 }}>{tokenError}</p>
             </div>
           ) : sent ? (
             <div style={{ display: 'grid', gap: 20, maxWidth: 560, margin: '0 auto' }}>
-              <div style={{ background: 'white', borderRadius: 14, padding: '36px 28px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
+              <div style={{ background: 'rgba(255,255,255,0.90)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 14, padding: '36px 28px', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.30)', textAlign: 'center' }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
                 <h2 style={{ color: ORANGE, margin: '0 0 10px', fontWeight: 900, fontSize: 22 }}>Thank you!</h2>
                 <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, margin: 0 }}>
@@ -303,7 +247,7 @@ export default function PublicCSATSurvey() {
               {/* Form */}
               <div style={{ display: 'grid', gap: 16 }}>
                 {/* Intro card */}
-                <div style={{ background: 'white', borderRadius: 14, padding: '22px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 14, padding: '22px 24px', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.30)' }}>
                   <h1 style={{ margin: '0 0 8px', color: ORANGE, fontWeight: 900, fontSize: 20 }}>
                     Coaching Feedback
                   </h1>
@@ -313,7 +257,7 @@ export default function PublicCSATSurvey() {
                 </div>
 
                 {/* Questions card */}
-                <div style={{ background: 'white', borderRadius: 14, padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 14, padding: '24px', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.30)' }}>
                   {QUESTIONS.map((q) => (
                     <CSATItem
                       key={q.key}
@@ -375,8 +319,8 @@ export default function PublicCSATSurvey() {
           )}
         </main>
 
-        <PublicFooter />
-      </div>
+        </div>{/* end zIndex:1 wrapper */}
+      </div>{/* end wallpaper bg */}
 
       <style>{`
         @media (max-width: 640px) {
@@ -386,6 +330,3 @@ export default function PublicCSATSurvey() {
     </>
   );
 }
-
-// Bypass _app.js AppShell entirely — this page is a public standalone shell
-PublicCSATSurvey.getLayout = (page) => page;
