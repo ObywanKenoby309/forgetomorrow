@@ -680,15 +680,19 @@ model CoachingDocument {
 }
 
 model CoachingCsatResponse {
-  id           String   @id @default(cuid())
-  coachId      String
-  satisfaction Int
-  timeliness   Int
-  quality      Int
-  comment      String?
-  anonymous    Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  coach        User     @relation("UserCoachingCsatResponses", fields: [coachId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  coachId        String
+  satisfaction   Int
+  timeliness     Int?     // kept for backward compat — not sent by new form
+  quality        Int
+  communication  Int?     // new: coach communication and responsiveness
+  helpfulness    Int?     // new: helpfulness of resources or action steps
+  progress       Int?     // new: progress made toward career goal
+  recommendation Int?     // new: likelihood to recommend
+  comment        String?
+  anonymous      Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  coach          User     @relation("UserCoachingCsatResponses", fields: [coachId], references: [id], onDelete: Cascade)
 
   @@index([coachId])
   @@index([createdAt])

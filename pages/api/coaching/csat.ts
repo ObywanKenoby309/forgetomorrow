@@ -26,50 +26,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         orderBy: { createdAt: 'desc' },
         take: 100,
         select: {
-          id: true,
-          coachId: true,
-          satisfaction: true,
-          timeliness: true,
-          quality: true,
-          comment: true,
-          anonymous: true,
-          createdAt: true,
+          id:             true,
+          coachId:        true,
+          satisfaction:   true,
+          timeliness:     true,
+          quality:        true,
+          communication:  true,
+          helpfulness:    true,
+          progress:       true,
+          recommendation: true,
+          comment:        true,
+          anonymous:      true,
+          createdAt:      true,
         },
       });
 
       return res.status(200).json({ csat });
     }
 
-    // ───────────── POST: public submission (client not required to be logged in) ─────────────
+    // ───────────── POST: public submission (no auth required) ─────────────
     if (req.method === 'POST') {
       const {
         coachId,
         satisfaction,
-        timeliness,
         quality,
+        communication,
+        helpfulness,
+        progress,
+        recommendation,
         comment,
         anonymous,
-      } = (req.body || {}) as {
-        coachId?: string;
-        satisfaction?: any;
-        timeliness?: any;
-        quality?: any;
-        comment?: string;
-        anonymous?: boolean;
-      };
+      } = (req.body || {}) as Record<string, any>;
 
       const coachIdStr = String(coachId || '').trim();
       if (!coachIdStr) return res.status(400).json({ error: 'Missing coachId' });
 
-      const s = clampInt(satisfaction, 1, 5);
-      const t = clampInt(timeliness, 1, 5);
-      const q = clampInt(quality, 1, 5);
+      // Required fields
+      const s  = clampInt(satisfaction,   1, 5);
+      const q  = clampInt(quality,        1, 5);
+      const co = clampInt(communication,  1, 5);
+      const h  = clampInt(helpfulness,    1, 5);
+      const p  = clampInt(progress,       1, 5);
+      const r  = clampInt(recommendation, 1, 5);
 
-      if (!s || !t || !q) {
-        return res.status(400).json({ error: 'Scores must be 1–5' });
+      if (!s || !q || !co || !h || !p || !r) {
+        return res.status(400).json({ error: 'All six scores must be rated 1–5' });
       }
 
-      // Validate coach exists (avoid writing garbage ids)
+      // Validate coach exists
       const coach = await prisma.user.findUnique({
         where: { id: coachIdStr },
         select: { id: true },
@@ -81,22 +85,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const created = await prisma.coachingCsatResponse.create({
         data: {
-          coachId: coachIdStr,
-          satisfaction: s,
-          timeliness: t,
-          quality: q,
-          comment: (comment || '').trim() || null,
-          anonymous: typeof anonymous === 'boolean' ? anonymous : true,
+          coachId:        coachIdStr,
+          satisfaction:   s,
+          quality:        q,
+          communication:  co,
+          helpfulness:    h,
+          progress:       p,
+          recommendation: r,
+          comment:        (comment || '').trim() || null,
+          anonymous:      typeof anonymous === 'boolean' ? anonymous : true,
         },
         select: {
-          id: true,
-          coachId: true,
-          satisfaction: true,
-          timeliness: true,
-          quality: true,
-          comment: true,
-          anonymous: true,
-          createdAt: true,
+          id:             true,
+          satisfaction:   true,
+          quality:        true,
+          communication:  true,
+          helpfulness:    true,
+          progress:       true,
+          recommendation: true,
+          comment:        true,
+          anonymous:      true,
+          createdAt:      true,
         },
       });
 

@@ -146,7 +146,7 @@ function JoinCard() {
           boxShadow: '0 2px 8px rgba(255,112,67,0.28)',
         }}
       >
-        Join ForgeTomorrow Free
+        Explore Plans & Features
       </Link>
 
       <p style={{ margin: 0, fontSize: 11, color: '#94A3B8', textAlign: 'center' }}>
