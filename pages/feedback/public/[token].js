@@ -133,6 +133,10 @@ function JoinCard() {
         ))}
       </ul>
 
+      <p style={{ margin: 0, fontSize: 12, color: '#64748B', lineHeight: 1.55, fontStyle: 'italic' }}>
+        Everything needed for coaching, meetings, and career growth in one platform.
+      </p>
+
       <Link
         href="/pricing"
         style={{
@@ -155,7 +159,7 @@ function JoinCard() {
 // ── CSAT rating row ────────────────────────────────────────────────────────
 function CSATItem({ label, hint, value, onChange }) {
   return (
-    <div style={{ marginBottom: 24 }}>
+    <div style={{ marginBottom: 16 }}>
       <label style={{ fontWeight: 700, color: '#263238', display: 'block', marginBottom: 3, fontSize: 14 }}>
         {label}
       </label>
@@ -269,10 +273,10 @@ export default function PublicCSATSurvey({
                 <div style={{ background: 'rgba(255,255,255,0.90)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 14, padding: '36px 28px', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.30)', textAlign: 'center' }}>
                   <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
                   <h2 style={{ color: ORANGE, margin: '0 0 10px', fontWeight: 900, fontSize: 22 }}>
-                    Thank you for supporting {displayName}.
+                    Thank you for helping {displayName} improve their coaching practice.
                   </h2>
                   <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.7, margin: 0 }}>
-                    Your feedback helps improve the quality of coaching on ForgeTomorrow and helps future clients make informed decisions.
+                    Your feedback contributes to a better coaching experience for future clients and helps maintain the quality of coaching on ForgeTomorrow.
                   </p>
                 </div>
                 <JoinCard />
@@ -322,7 +326,7 @@ export default function PublicCSATSurvey({
                   </div>
 
                   {/* Questions card */}
-                  <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 14, padding: '24px', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.30)' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 14, padding: '20px', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.30)' }}>
                     {QUESTIONS.map((q) => (
                       <CSATItem
                         key={q.key}
