@@ -321,7 +321,7 @@ export default function PublicCSATSurvey({
                       Coaching Feedback
                     </h1>
                     <p style={{ margin: 0, color: MUTED, fontSize: 13, lineHeight: 1.6 }}>
-                      Please share your feedback regarding your coaching experience with <strong style={{ color: SLATE }}>{displayName}</strong>. Rate each dimension 1–5. Your responses are private.
+                      Please share your feedback regarding your coaching experience with <strong style={{ color: SLATE }}>{displayName}</strong>. Rate each dimension 1–5. Your responses are private by default.
                     </p>
                   </div>
 
