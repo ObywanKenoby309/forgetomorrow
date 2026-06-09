@@ -106,16 +106,21 @@ function Chip({ label, active, onClick }) {
   );
 }
 
-function KPI({ label, value, helper, featured = false }) {
+function KPI({ label, value, featured = false }) {
   return (
     <div
       style={{
         ...WHITE_CARD,
-        padding: featured ? '16px 18px' : '12px 14px',
+        padding: featured ? '14px 18px' : '12px 16px',
         display: 'grid',
-        gap: 5,
+        gap: 4,
+        minHeight: 86,
+        alignContent: 'center',
+        textAlign: 'center',
         borderColor: featured ? 'rgba(255,112,67,0.28)' : 'rgba(0,0,0,0.08)',
-        background: featured ? 'linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,244,239,0.94))' : WHITE_CARD.background,
+        background: featured
+          ? 'linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,244,239,0.94))'
+          : WHITE_CARD.background,
       }}
     >
       <div
@@ -131,7 +136,7 @@ function KPI({ label, value, helper, featured = false }) {
       </div>
       <div
         style={{
-          fontSize: featured ? 28 : 22,
+          fontSize: featured ? 26 : 22,
           fontWeight: 900,
           color: '#0F172A',
           letterSpacing: '-0.03em',
@@ -140,11 +145,6 @@ function KPI({ label, value, helper, featured = false }) {
       >
         {value}
       </div>
-      {helper && (
-        <div style={{ fontSize: 11, color: '#607D8B', fontWeight: 700 }}>
-          {helper}
-        </div>
-      )}
     </div>
   );
 }
@@ -225,47 +225,24 @@ function ResponseCard({ r }) {
     <div
       style={{
         ...WHITE_CARD,
-        padding: '16px 18px',
+        padding: 20,
         display: 'grid',
         gap: 12,
         borderColor: 'rgba(255,112,67,0.12)',
         alignContent: 'start',
       }}
     >
-      <div style={{ display: 'grid', gap: 8 }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 10,
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <Stars value={overallRounded} size={15} />
-            <span style={{ fontSize: 16, fontWeight: 900, color: '#0F172A' }}>
-              {overall.toFixed(1)}
-            </span>
-            <span style={{ fontSize: 12, color: '#78909C', fontWeight: 800 }}>
-              {formatDate(r.createdAt)}
-            </span>
-          </div>
+      <div style={{ display: 'grid', gap: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Stars value={overallRounded} size={15} />
+          <span style={{ fontSize: 16, fontWeight: 900, color: '#0F172A' }}>
+            {overall.toFixed(1)}
+          </span>
+        </div>
 
-          {r.anonymous && (
-            <span
-              style={{
-                fontSize: 11,
-                color: '#607D8B',
-                fontWeight: 800,
-                background: 'rgba(96,125,139,0.1)',
-                borderRadius: 999,
-                padding: '4px 9px',
-              }}
-            >
-              Anonymous
-            </span>
-          )}
+        <div style={{ fontSize: 12, color: '#78909C', fontWeight: 800 }}>
+          {formatDate(r.createdAt)}
+          {r.anonymous ? ' • Anonymous' : ''}
         </div>
       </div>
 
@@ -346,7 +323,7 @@ function ResponseCard({ r }) {
                 fontFamily: 'inherit',
               }}
             >
-              +{hiddenMetricCount} more
+              View all ratings
             </button>
           )}
         </div>
@@ -442,9 +419,6 @@ export default function FeedbackModule() {
       ? overallValues.reduce((s, v) => s + v, 0) / overallValues.length
       : null;
 
-    const positiveCount = overallValues.filter(v => v >= 4).length;
-    const positivePct = overallValues.length ? Math.round((positiveCount / overallValues.length) * 100) : 0;
-
     const detailFields = Object.entries(METRIC_LABELS)
       .map(([key, label]) => {
         const val = avg(responses, key);
@@ -452,11 +426,16 @@ export default function FeedbackModule() {
       })
       .filter(Boolean);
 
+    const latestFeedback = responses
+      .map(r => r.createdAt)
+      .filter(Boolean)
+      .sort((a, b) => new Date(b) - new Date(a))[0];
+
     return {
       overallAverage,
       total: responses.length,
       withComment: responses.filter(r => r.comment?.trim()).length,
-      positivePct,
+      lastFeedback: latestFeedback ? formatDate(latestFeedback) : '—',
       fields: detailFields,
     };
   }, [responses]);
@@ -465,55 +444,40 @@ export default function FeedbackModule() {
     <div style={{ display: 'grid', gap: 14 }}>
       {kpis && (
         <div style={{ ...GLASS, padding: '16px 18px' }}>
-          <div style={{ fontSize: 18, color: '#FF7043', marginBottom: 8, ...ORANGE_HEADING_LIFT }}>
+          <div
+            style={{
+              fontSize: 18,
+              color: '#FF7043',
+              marginBottom: 14,
+              textAlign: 'center',
+              ...ORANGE_HEADING_LIFT,
+            }}
+          >
             Feedback Summary
           </div>
 
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              flexWrap: 'wrap',
-              marginBottom: 12,
-            }}
-          >
-            <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
-              {kpis.overallAverage !== null ? `${kpis.overallAverage.toFixed(1)} average rating` : 'No average yet'}
-            </span>
-            <span style={{ color: '#78909C', fontWeight: 800 }}>•</span>
-            <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
-              {kpis.total} {kpis.total === 1 ? 'response' : 'responses'}
-            </span>
-            <span style={{ color: '#78909C', fontWeight: 800 }}>•</span>
-            <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
-              {kpis.withComment} {kpis.withComment === 1 ? 'comment' : 'comments'}
-            </span>
-            <span style={{ color: '#78909C', fontWeight: 800 }}>•</span>
-            <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
-              {kpis.positivePct}% positive
-            </span>
-          </div>
-
-          <div
-            style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 180px))',
+              justifyContent: 'center',
               gap: 10,
+              maxWidth: 860,
+              margin: '0 auto',
             }}
           >
             <KPI
               label="Overall Rating"
               value={kpis.overallAverage !== null ? `${kpis.overallAverage.toFixed(1)} / 5` : '—'}
-              helper="Average across submitted scores"
               featured
             />
             <KPI label="Total Responses" value={kpis.total} />
             <KPI label="With Comments" value={kpis.withComment} />
+            <KPI label="Last Feedback" value={kpis.lastFeedback} />
           </div>
 
           {kpis.fields.length > 0 && (
-            <details style={{ marginTop: 12 }}>
+            <details style={{ marginTop: 12, textAlign: 'center' }}>
               <summary
                 style={{
                   cursor: 'pointer',
@@ -521,6 +485,7 @@ export default function FeedbackModule() {
                   fontSize: 12,
                   fontWeight: 900,
                   fontFamily: 'inherit',
+                  listStylePosition: 'inside',
                 }}
               >
                 View detailed ratings
@@ -532,6 +497,7 @@ export default function FeedbackModule() {
                   gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))',
                   gap: 8,
                   marginTop: 10,
+                  textAlign: 'left',
                 }}
               >
                 {kpis.fields.map(f => (
