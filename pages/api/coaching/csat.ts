@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       });
 
-      return res.status(200).json({ csat });
+      return res.status(200).json({ responses: csat, csat });
     }
 
     // ───────────── POST: public submission (no auth required) ─────────────

@@ -36,8 +36,17 @@ function formatDate(d) {
 }
 
 function avg(arr, key) {
-  if (!arr.length) return null;
-  return arr.reduce((s, r) => s + (r[key] || 0), 0) / arr.length;
+  const vals = arr.map(r => r[key]).filter(v => typeof v === 'number' && Number.isFinite(v));
+  if (!vals.length) return null;
+  return vals.reduce((s, v) => s + v, 0) / vals.length;
+}
+
+function overallScore(r) {
+  // Use all available numeric fields. timeliness may be null (new schema omits it).
+  const FIELDS = ['satisfaction', 'quality', 'communication', 'helpfulness', 'progress', 'recommendation', 'timeliness'];
+  const vals = FIELDS.map(f => r[f]).filter(v => typeof v === 'number' && Number.isFinite(v));
+  if (!vals.length) return 0;
+  return vals.reduce((s, v) => s + v, 0) / vals.length;
 }
 
 function Stars({ value }) {
@@ -77,7 +86,21 @@ function KPI({ label, value }) {
 }
 
 function ResponseCard({ r }) {
-  const overall = Math.round((r.satisfaction + r.timeliness + r.quality) / 3);
+  const overall = Math.round(overallScore(r));
+  // Build metric rows from whichever fields are present as numbers
+  const METRIC_LABELS = {
+    satisfaction:   'Satisfaction',
+    quality:        'Quality',
+    communication:  'Communication',
+    helpfulness:    'Helpfulness',
+    progress:       'Progress',
+    recommendation: 'Recommendation',
+    timeliness:     'Timeliness',
+  };
+  const metrics = Object.entries(METRIC_LABELS)
+    .filter(([key]) => typeof r[key] === 'number' && Number.isFinite(r[key]))
+    .map(([key, label]) => ({ label, val: r[key] }));
+
   return (
     <div style={{ ...WHITE_CARD, padding: '14px 16px', display: 'grid', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -88,20 +111,18 @@ function ResponseCard({ r }) {
         {r.anonymous && <span style={{ fontSize: 12, color: '#90A4AE' }}>Anonymous</span>}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 8 }}>
-        {[
-          { label: 'Satisfaction', val: r.satisfaction },
-          { label: 'Timeliness',   val: r.timeliness },
-          { label: 'Quality',      val: r.quality },
-        ].map(m => (
-          <div key={m.label} style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 8, padding: '8px 10px' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#90A4AE', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>
-              {m.label}
+      {metrics.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(metrics.length, 3)}, minmax(0,1fr))`, gap: 8 }}>
+          {metrics.map(m => (
+            <div key={m.label} style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 8, padding: '8px 10px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#90A4AE', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>
+                {m.label}
+              </div>
+              <Stars value={m.val} />
             </div>
-            <Stars value={m.val} />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {r.comment && (
         <div style={{ fontSize: 13, color: '#455A64', lineHeight: 1.6, paddingTop: 6, borderTop: '1px solid rgba(0,0,0,0.06)', whiteSpace: 'pre-wrap' }}>
@@ -126,7 +147,11 @@ export default function FeedbackModule() {
       const res  = await fetch('/api/coaching/csat');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load feedback');
-      setResponses(Array.isArray(data.responses) ? data.responses : []);
+      // Accept either key — csat.ts returns both; older .js returned only responses
+      const rows = Array.isArray(data.responses) ? data.responses
+                 : Array.isArray(data.csat)      ? data.csat
+                 : [];
+      setResponses(rows);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -137,7 +162,7 @@ export default function FeedbackModule() {
   useEffect(() => { load(); }, [load]);
 
   const filtered = useMemo(() => responses.filter(r => {
-    const overall   = Math.round((r.satisfaction + r.timeliness + r.quality) / 3);
+    const overall   = Math.round(overallScore(r));
     const byRating  = ratingFilter === 'All' ? true : overall === Number(ratingFilter);
     const byComment = commentOnly ? !!r.comment?.trim() : true;
     return byRating && byComment;
@@ -145,12 +170,25 @@ export default function FeedbackModule() {
 
   const kpis = useMemo(() => {
     if (!responses.length) return null;
+    const KPI_FIELDS = [
+      { key: 'satisfaction',   label: 'Satisfaction' },
+      { key: 'quality',        label: 'Quality' },
+      { key: 'communication',  label: 'Communication' },
+      { key: 'helpfulness',    label: 'Helpfulness' },
+      { key: 'progress',       label: 'Progress' },
+      { key: 'recommendation', label: 'Recommendation' },
+      { key: 'timeliness',     label: 'Timeliness' },
+    ];
+    const fieldKpis = KPI_FIELDS
+      .map(({ key, label }) => {
+        const val = avg(responses, key);
+        return val !== null ? { key, label, value: val.toFixed(1) } : null;
+      })
+      .filter(Boolean);
     return {
-      satisfaction: avg(responses, 'satisfaction')?.toFixed(1),
-      timeliness:   avg(responses, 'timeliness')?.toFixed(1),
-      quality:      avg(responses, 'quality')?.toFixed(1),
-      total:        responses.length,
-      withComment:  responses.filter(r => r.comment?.trim()).length,
+      fields:      fieldKpis,
+      total:       responses.length,
+      withComment: responses.filter(r => r.comment?.trim()).length,
     };
   }, [responses]);
 
@@ -163,10 +201,10 @@ export default function FeedbackModule() {
           <div style={{ fontSize: 18, color: '#FF7043', marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
             Summary
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: 10 }}>
-            <KPI label="Satisfaction"    value={`${kpis.satisfaction} / 5`} />
-            <KPI label="Timeliness"      value={`${kpis.timeliness} / 5`} />
-            <KPI label="Quality"         value={`${kpis.quality} / 5`} />
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(kpis.fields.length + 2, 5)}, minmax(0,1fr))`, gap: 10 }}>
+            {kpis.fields.map(f => (
+              <KPI key={f.key} label={f.label} value={`${f.value} / 5`} />
+            ))}
             <KPI label="Total responses" value={kpis.total} />
             <KPI label="With comments"   value={kpis.withComment} />
           </div>
