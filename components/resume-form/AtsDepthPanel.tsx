@@ -1020,7 +1020,7 @@ export default function AtsDepthPanel({
                   Why {Number.isFinite(primaryScore) ? primaryScore : 0}/100?
                 </div>
                 <div style={{ fontSize: 11, color: '#78909C', marginTop: 2 }}>
-                  Signals Hammer used to evaluate this resume
+                  How Hammer weighted each signal for this role
                 </div>
               </div>
               <button
@@ -1059,13 +1059,10 @@ export default function AtsDepthPanel({
                 </div>
               )}
 
-              {/* Scan ran -- JD-adaptive weighted signal breakdown */}
+              {/* Scan ran -- signal weight breakdown only */}
               {aiScore !== null && (() => {
-                // Use server-returned signalBreakdown if available (JD-derived, works for any role).
-                // Fall back to client-side signalAnalysis if server didn't return it.
                 const serverSignals = aiSignalBreakdown.length > 0 ? aiSignalBreakdown : null;
                 const clientSignals = signalAnalysis?.classified || [];
-
                 const rawSignals: Array<{ signal: string; status: string; required: boolean }> =
                   serverSignals
                     ? serverSignals
@@ -1073,23 +1070,11 @@ export default function AtsDepthPanel({
 
                 if (!rawSignals.length) return null;
 
-                // JD-adaptive weighting:
-                // Required signals (derived from THIS JD) share 90% of total weight equally.
-                // Non-required signals (credibility-only) share the remaining 10% equally.
-                // This means the breakdown reflects THIS role's actual priorities,
-                // not a hardcoded template. A nursing JD weights domain knowledge heavily.
-                // A warehouse JD weights delivery heavily. An exec role weights stakeholder heavily.
                 const required = rawSignals.filter((s) => s.required);
                 const notRequired = rawSignals.filter((s) => !s.required);
                 const requiredWeight = required.length > 0 ? Math.floor(90 / required.length) : 0;
                 const credibilityWeight = notRequired.length > 0 ? Math.floor(10 / notRequired.length) : 0;
 
-                const STATUS_MULTIPLIER: Record<string, number> = {
-                  direct: 1.0,
-                  adjacent_technical: 0.8,
-                  adjacent: 0.5,
-                  missing: 0.0,
-                };
                 const STATUS_COLOR: Record<string, string> = {
                   direct: '#15803D',
                   adjacent_technical: '#0369A1',
@@ -1102,100 +1087,71 @@ export default function AtsDepthPanel({
                   adjacent: 'Partial proof',
                   missing: 'Not demonstrated',
                 };
+                const STATUS_MULTIPLIER: Record<string, number> = {
+                  direct: 1.0,
+                  adjacent_technical: 0.8,
+                  adjacent: 0.5,
+                  missing: 0.0,
+                };
 
                 const rows = rawSignals.map((sig) => {
                   const weight = sig.required ? requiredWeight : credibilityWeight;
                   const mult = STATUS_MULTIPLIER[sig.status] ?? 0;
-                  const earned = Math.round(weight * mult);
                   return {
                     ...sig,
                     weight,
-                    earned,
+                    pct: Math.round(mult * 100),
                     label: STATUS_LABEL[sig.status] || sig.status,
                     color: STATUS_COLOR[sig.status] || '#64748B',
                   };
                 }).filter((r) => r.weight > 0);
 
-                const totalEarned = rows.reduce((sum, r) => sum + r.earned, 0);
-                const totalPossible = rows.reduce((sum, r) => sum + r.weight, 0);
-
-                const serverGaps = [
-                  ...aiMissingProof,
-                  ...(aiRejectionRisk ? [aiRejectionRisk] : []),
-                ].filter(Boolean);
-                const fallbackGaps = serverGaps.length === 0
-                  ? rows.filter((r) => r.status === 'missing' || r.status === 'adjacent')
-                      .map((r) => String(r.signal).replace(/\b\w/g, (c: string) => c.toUpperCase()))
-                  : [];
-                const allGaps = [...serverGaps, ...fallbackGaps]
-                  .filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 5);
-
                 return (
-                  <>
-                    {/* Score breakdown */}
-                    <div style={{ padding: '10px 12px', borderRadius: 10, background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                        <span style={{ fontSize: 11, fontWeight: 900, color: '#334155' }}>Signal breakdown</span>
-                        <span style={{ fontSize: 11, color: '#64748B' }}>{totalEarned}/{totalPossible} pts</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                        {rows.map((r) => (
-                          <div key={r.signal}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-                                <span style={{ fontSize: 11, color: '#1E293B', fontWeight: 700 }}>
-                                  {String(r.signal).replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                                </span>
-                                {!r.required && (
-                                  <span style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600, flexShrink: 0 }}>credibility</span>
-                                )}
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                                <span style={{ fontSize: 10, color: r.color, fontWeight: 800 }}>{r.label}</span>
-                                <span style={{ fontSize: 11, fontWeight: 900, color: r.earned > 0 ? r.color : '#DC2626', minWidth: 36, textAlign: 'right' }}>
-                                  {r.earned}/{r.weight}
-                                </span>
-                              </div>
-                            </div>
-                            <div style={{ height: 5, borderRadius: 999, background: '#E2E8F0', overflow: 'hidden' }}>
-                              <div style={{
-                                width: `${r.weight > 0 ? (r.earned / r.weight) * 100 : 0}%`,
-                                height: '100%',
-                                background: r.color,
-                                transition: 'width 0.3s ease',
-                              }} />
-                            </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                    {rows.map((r) => (
+                      <div key={r.signal}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ fontSize: 11, color: '#1E293B', fontWeight: 700 }}>
+                              {String(r.signal).replace(/\w/g, (c: string) => c.toUpperCase())}
+                            </span>
+                            {!r.required && (
+                              <span style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600 }}>credibility</span>
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Gaps */}
-                    {allGaps.length > 0 && (
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 900, color: '#D97706', marginBottom: 8 }}>Areas That Could Improve Alignment</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                          {allGaps.map((g: string) => (
-                            <div key={g} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 12, color: '#1E293B', lineHeight: 1.4 }}>
-                              <span style={{ color: '#D97706', fontWeight: 900, flexShrink: 0, marginTop: 1 }}>-</span>
-                              {g}
-                            </div>
-                          ))}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            <span style={{ fontSize: 10, color: r.color, fontWeight: 800 }}>{r.label}</span>
+                            <span style={{ fontSize: 10, color: '#64748B', minWidth: 28, textAlign: 'right' }}>{r.weight}%</span>
+                          </div>
+                        </div>
+                        <div style={{ height: 5, borderRadius: 999, background: '#E2E8F0', overflow: 'hidden' }}>
+                          <div style={{
+                            width: `${r.pct}%`,
+                            height: '100%',
+                            background: r.color,
+                            transition: 'width 0.3s ease',
+                          }} />
                         </div>
                       </div>
-                    )}
+                    ))}
 
-                    {/* AI summary */}
-                    {aiSummary && (
-                      <div style={{ padding: '10px 12px', borderRadius: 10, background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: 11, color: '#475569', lineHeight: 1.5 }}>
-                        {aiSummary}
-                      </div>
-                    )}
-                  </>
+                    {/* Legend */}
+                    <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid #F1F5F9', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      {[
+                        { color: '#15803D', label: 'Proven' },
+                        { color: '#0369A1', label: 'Strong evidence' },
+                        { color: '#D97706', label: 'Partial proof' },
+                        { color: '#DC2626', label: 'Not demonstrated' },
+                      ].map((l) => (
+                        <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: l.color, flexShrink: 0 }} />
+                          <span style={{ fontSize: 10, color: '#64748B' }}>{l.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 );
               })()}
-            </div>
-
             {/* Footer */}
             <div style={{
               borderTop: '1px solid #F1F5F9',
