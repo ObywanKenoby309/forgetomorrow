@@ -215,6 +215,11 @@ export default function AtsDepthPanel({
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiUpgrade, setAiUpgrade] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiStrongestSignal, setAiStrongestSignal] = useState<string | null>(null);
+  const [aiRejectionRisk, setAiRejectionRisk] = useState<string | null>(null);
+  const [aiMissingProof, setAiMissingProof] = useState<string[]>([]);
+  const [explainOpen, setExplainOpen] = useState(false);
 
   const [coachOpen, setCoachOpen] = useState(false);
   const [coachContext, setCoachContext] = useState<CoachContext>({
@@ -429,6 +434,10 @@ export default function AtsDepthPanel({
         : null;
       setAiScore(s);
       setAiTips(Array.isArray(data?.tips) ? data.tips : []);
+      setAiSummary(typeof data?.aiSummary === 'string' ? data.aiSummary.trim() : null);
+      setAiStrongestSignal(typeof data?.strongestSignal === 'string' ? data.strongestSignal.trim() : null);
+      setAiRejectionRisk(typeof data?.rejectionRisk === 'string' ? data.rejectionRisk.trim() : null);
+      setAiMissingProof(Array.isArray(data?.missingProof) ? data.missingProof.filter((x: any) => typeof x === 'string' && x.trim()) : []);
     } catch (e) {
       console.error('[AtsDepthPanel] AI scan failed', e);
       setAiError('AI scan failed - try again.');
@@ -441,6 +450,53 @@ export default function AtsDepthPanel({
   const normalizedTips: string[] = Array.isArray(aiTips)
     ? aiTips.filter((t) => typeof t === 'string' && t.trim().length > 0)
     : [];
+
+  // Hoisted to component scope so both Signal Report tab and Explainability modal can access it
+  const signalAnalysis = useMemo(() => {
+    try {
+      const signals = [
+        'ownership and accountability',
+        'delivery and execution',
+        'people leadership and team management',
+        'advisory and client service delivery',
+        'stakeholder and executive engagement',
+        'process and methodology development',
+        'domain knowledge and qualification',
+        'education and credential credibility',
+      ];
+      const signalResumeText = resumeText;
+      const patternGroups: Record<string, string[]> = {
+        'ownership and accountability': ['owned','responsible','accountable','managed','oversaw','led','directed','drove','built','launched','founded'],
+        'delivery and execution': ['delivered','executed','implemented','launched','shipped','completed','produced','operated','maintained','performed'],
+        'people leadership and team management': ['managed a team','direct reports','supervised','coached','mentored','hired','staffing','team lead','headcount','workforce'],
+        'advisory and client service delivery': ['advised','consulted','client','customer','service','supported','guided','engagement','relationship','account'],
+        'stakeholder and executive engagement': ['stakeholder','executive','senior leadership','cross-functional','collaborated','aligned','presented','briefed','reported to'],
+        'process and methodology development': ['methodology','process','procedure','framework','playbook','standard','protocol','compliance','workflow','audit'],
+        'domain knowledge and qualification': ['expertise','specialist','certified','certification','licensed','degree','trained','background in','years of experience'],
+        'education and credential credibility': ['bachelor','master','mba','phd','degree','certified','certification','university','college','credential'],
+      };
+      const classified = signals.map(signal => {
+        const normalizedSignal = signal.toLowerCase();
+        if (signalResumeText.includes(normalizedSignal)) {
+          return { signal, status: 'direct', confidence: 'high' };
+        }
+        const patterns = patternGroups[normalizedSignal] || [];
+        const matched = patterns.filter((p: string) => signalResumeText.includes(p.toLowerCase()));
+        if (matched.length >= 3) return { signal, status: 'adjacent_technical', confidence: 'high' };
+        if (matched.length >= 1) return { signal, status: 'adjacent', confidence: 'medium' };
+        return { signal, status: 'missing', confidence: 'high' };
+      });
+      const direct = classified.filter((s: any) => s.status === 'direct' || s.status === 'adjacent_technical');
+      const adjacent = classified.filter((s: any) => s.status === 'adjacent');
+      const missing = classified.filter((s: any) => s.status === 'missing');
+      const score = direct.length;
+      const verdict = score >= 6 ? 'Low Hiring Risk' : score >= 4 ? 'Moderate Hiring Risk' : score >= 2 ? 'Elevated Hiring Risk' : 'High Hiring Risk';
+      const verdictColor = score >= 6 ? '#16A34A' : score >= 4 ? '#0EA5E9' : score >= 2 ? '#D97706' : '#DC2626';
+      return { classified, direct, adjacent, missing, verdict, verdictColor, score };
+    } catch {
+      return null;
+    }
+  }, [resumeText]);
 
   const tabButton = (key: ActivePanel, label: string) => ({
     type: 'button' as const,
@@ -491,9 +547,29 @@ export default function AtsDepthPanel({
           </div>
 
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontSize: 28, fontWeight: 950, color: barColor, letterSpacing: -0.5, lineHeight: 1 }}>
-              {Number.isFinite(primaryScore) ? primaryScore : 0}
-              <span style={{ fontSize: 13, color: '#B0BEC5', marginLeft: 2 }}>/100</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+              <div style={{ fontSize: 28, fontWeight: 950, color: barColor, letterSpacing: -0.5, lineHeight: 1 }}>
+                {Number.isFinite(primaryScore) ? primaryScore : 0}
+                <span style={{ fontSize: 13, color: '#B0BEC5', marginLeft: 2 }}>/100</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setExplainOpen(true)}
+                title="Why this score?"
+                aria-label="Why this score?"
+                style={{
+                  width: 18, height: 18, borderRadius: '50%',
+                  border: '1.5px solid #90A4AE',
+                  background: 'transparent',
+                  color: '#78909C',
+                  fontSize: 10, fontWeight: 900,
+                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, lineHeight: 1, padding: 0,
+                }}
+              >
+                i
+              </button>
             </div>
             <div style={{ marginTop: 3, fontSize: 10, color: '#78909C', fontWeight: 800 }}>
               {hasWhyScore ? 'WHY Score · ForgeTomorrow' : 'Resume alignment'}
@@ -675,62 +751,8 @@ export default function AtsDepthPanel({
           )}
 
           {activePanel === 'signal' && (() => {
-            // Run deterministic analysis — zero AI tokens, instant
-            const analysis = (() => {
-              try {
-                const signals = [
-                  'ownership and accountability',
-                  'delivery and execution',
-                  'people leadership and team management',
-                  'advisory and client service delivery',
-                  'stakeholder and executive engagement',
-                  'process and methodology development',
-                  'domain knowledge and qualification',
-                  'education and credential credibility',
-                ];
-
-                // Client-side evidence classification uses the same full resume evidence
-                // used by Hammer scoring/Coach so certifications, languages, projects,
-                // achievements, volunteer work, and custom sections are not dropped.
-                const signalResumeText = resumeText;
-
-                const classified = signals.map(signal => {
-                  const normalizedSignal = signal.toLowerCase();
-                  // Direct match
-                  if (signalResumeText.includes(normalizedSignal)) {
-                    return { signal, status: 'direct', confidence: 'high' };
-                  }
-                  // Pattern matching — simplified client-side version
-                  const patternGroups: Record<string, string[]> = {
-                    'ownership and accountability': ['owned','responsible','accountable','managed','oversaw','led','directed','drove','built','launched','founded'],
-                    'delivery and execution': ['delivered','executed','implemented','launched','shipped','completed','produced','operated','maintained','performed'],
-                    'people leadership and team management': ['managed a team','direct reports','supervised','coached','mentored','hired','staffing','team lead','headcount','workforce'],
-                    'advisory and client service delivery': ['advised','consulted','client','customer','service','supported','guided','engagement','relationship','account'],
-                    'stakeholder and executive engagement': ['stakeholder','executive','senior leadership','cross-functional','collaborated','aligned','presented','briefed','reported to'],
-                    'process and methodology development': ['methodology','process','procedure','framework','playbook','standard','protocol','compliance','workflow','audit'],
-                    'domain knowledge and qualification': ['expertise','specialist','certified','certification','licensed','degree','trained','background in','years of experience'],
-                    'education and credential credibility': ['bachelor','master','mba','phd','degree','certified','certification','university','college','credential'],
-                  };
-                  const patterns = patternGroups[normalizedSignal] || [];
-                  const matched = patterns.filter(p => signalResumeText.includes(p.toLowerCase()));
-                  if (matched.length >= 3) return { signal, status: 'adjacent_technical', confidence: 'high' };
-                  if (matched.length >= 1) return { signal, status: 'adjacent', confidence: 'medium' };
-                  return { signal, status: 'missing', confidence: 'high' };
-                });
-
-                const direct = classified.filter(s => s.status === 'direct' || s.status === 'adjacent_technical');
-                const adjacent = classified.filter(s => s.status === 'adjacent');
-                const missing = classified.filter(s => s.status === 'missing');
-
-                const score = direct.length;
-                const verdict = score >= 6 ? 'Low Hiring Risk' : score >= 4 ? 'Moderate Hiring Risk' : score >= 2 ? 'Elevated Hiring Risk' : 'High Hiring Risk';
-                const verdictColor = score >= 6 ? '#16A34A' : score >= 4 ? '#0EA5E9' : score >= 2 ? '#D97706' : '#DC2626';
-
-                return { classified, direct, adjacent, missing, verdict, verdictColor, score };
-              } catch (e) {
-                return null;
-              }
-            })();
+            // Reuse hoisted signalAnalysis -- computed once at component level, shared with modal
+            const analysis = signalAnalysis;
 
             const statusConfig: Record<string, { label: string; riskLabel: string; color: string; bg: string; icon: string }> = {
               direct:            { label: 'Proven',          riskLabel: 'Low Risk',    color: '#15803D', bg: 'rgba(22,163,74,0.10)',  icon: '✓' },
@@ -953,5 +975,186 @@ export default function AtsDepthPanel({
         </div>
       </div>
     </div>
+
+      {/* Explainability Modal */}
+      {explainOpen && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '16px',
+            background: 'rgba(0,0,0,0.45)',
+          }}
+          onClick={() => setExplainOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Why this score?"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#FFFFFF',
+              borderRadius: 16,
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.18)',
+              width: '100%',
+              maxWidth: 480,
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '14px 16px 12px',
+              borderBottom: '1px solid #F1F5F9',
+            }}>
+              <div>
+                <div style={{ fontWeight: 950, fontSize: 15, color: '#263238' }}>
+                  Why {Number.isFinite(primaryScore) ? primaryScore : 0}/100?
+                </div>
+                <div style={{ fontSize: 11, color: '#78909C', marginTop: 2 }}>
+                  Signals Hammer used to evaluate this resume
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setExplainOpen(false)}
+                aria-label="Close"
+                style={{
+                  background: 'transparent', border: 'none',
+                  fontSize: 18, color: '#90A4AE', cursor: 'pointer',
+                  lineHeight: 1, padding: '2px 4px', borderRadius: 6,
+                }}
+              >
+                &#x2715;
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+              {/* Strengths */}
+              {(() => {
+                const directSignals = signalAnalysis?.classified
+                  ? signalAnalysis.classified.filter((s: any) =>
+                      s.status === 'direct' || s.status === 'adjacent_technical'
+                    )
+                  : [];
+                const kwStrengths: string[] = [
+                  ...matchedHardSkills.slice(0, 4),
+                  ...matchedTools.slice(0, 3),
+                  ...matchedCerts.slice(0, 3),
+                ];
+                const allStrengths = [
+                  ...directSignals.map((s: any) =>
+                    String(s.signal).replace(/\b\w/g, (c: string) => c.toUpperCase())
+                  ),
+                  ...kwStrengths,
+                ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 10);
+
+                if (!allStrengths.length) return null;
+                return (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 900, color: '#15803D', marginBottom: 8 }}>
+                      Strengths
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      {allStrengths.map((s) => (
+                        <div key={s} style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 7,
+                          fontSize: 12, color: '#1E293B', lineHeight: 1.4,
+                        }}>
+                          <span style={{ color: '#15803D', fontWeight: 900, flexShrink: 0, marginTop: 1 }}>+</span>
+                          {s}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Areas to improve */}
+              {(() => {
+                const missingSignals = signalAnalysis?.missing
+                  ? signalAnalysis.missing.map((s: any) =>
+                      String(s.signal).replace(/\b\w/g, (c: string) => c.toUpperCase())
+                    )
+                  : [];
+                const allGaps = [
+                  ...missingSignals,
+                  ...aiMissingProof,
+                  ...(aiRejectionRisk ? [aiRejectionRisk] : []),
+                ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
+
+                if (!allGaps.length) return null;
+                return (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 900, color: '#D97706', marginBottom: 8 }}>
+                      Areas That Could Improve Alignment
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      {allGaps.map((g) => (
+                        <div key={g} style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 7,
+                          fontSize: 12, color: '#1E293B', lineHeight: 1.4,
+                        }}>
+                          <span style={{ color: '#D97706', fontWeight: 900, flexShrink: 0, marginTop: 1 }}>-</span>
+                          {g}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* AI summary */}
+              {aiSummary && (
+                <div style={{
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  fontSize: 11,
+                  color: '#475569',
+                  lineHeight: 1.5,
+                }}>
+                  {aiSummary}
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!aiSummary && !signalAnalysis?.classified?.length && (
+                <div style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', padding: '16px 0' }}>
+                  Run &quot;Review overall alignment&quot; to generate signal details.
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              borderTop: '1px solid #F1F5F9',
+              padding: '10px 16px',
+              display: 'flex', justifyContent: 'flex-end',
+            }}>
+              <button
+                type="button"
+                onClick={() => setExplainOpen(false)}
+                style={{
+                  padding: '7px 16px', borderRadius: 8,
+                  border: '1px solid #E2E8F0',
+                  background: '#FFFFFF',
+                  fontSize: 12, fontWeight: 700,
+                  color: '#475569', cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
   );
 }

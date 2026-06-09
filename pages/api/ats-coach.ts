@@ -503,11 +503,20 @@ if (!internalBypassGate && !roleIsUnlimited(role)) {
     // but preserve the specific intent so the AI knows what was requested
     const promptSection = requestedSection === 'certifications' ? 'education'
       : requestedSection === 'languages' ? 'skills'
+      : requestedSection === 'projects' ? 'experience'
+      : requestedSection === 'volunteer' ? 'experience'
+      : requestedSection === 'achievements' ? 'experience'
       : requestedSection;
     const sectionIntent = requestedSection === 'certifications'
       ? 'The seeker specifically clicked "Certifications" — focus coaching on certifications, licenses, and credentials that this JD requires or would strengthen the application. Do not give generic education coaching.'
       : requestedSection === 'languages'
       ? 'The seeker specifically clicked "Languages" — focus coaching on language skills, multilingual capabilities, and how to present them on the resume for this role.'
+      : requestedSection === 'projects'
+      ? 'The seeker specifically clicked "Projects" — evaluate whether any listed projects provide direct or supporting evidence for the JD requirements. If projects demonstrate relevant capabilities, name them and explain their credibility value. Do not return empty feedback if projects exist that are relevant to the JD.'
+      : requestedSection === 'volunteer'
+      ? 'The seeker specifically clicked "Volunteer Experience" — evaluate whether volunteer experience provides supporting credibility evidence for the JD. Name specific volunteer roles if they demonstrate relevant leadership, delivery, or stakeholder engagement. Do not return empty feedback if relevant volunteer experience exists.'
+      : requestedSection === 'achievements'
+      ? 'The seeker specifically clicked "Achievements" — evaluate whether listed achievements, awards, or recognitions strengthen recruiter confidence for this specific role. Name specific achievements if relevant. Do not return empty feedback if relevant achievements exist.'
       : '';
     const attemptCount = Number(body.attemptCount || 1);
 
