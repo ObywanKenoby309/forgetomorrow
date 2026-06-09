@@ -306,26 +306,6 @@ function ResponseCard({ r }) {
           {visibleMetrics.map(m => (
             <MetricPill key={m.key} label={m.label} value={m.val} />
           ))}
-
-          {hiddenMetricCount > 0 && !showDetails && (
-            <button
-              type="button"
-              onClick={() => setShowDetails(true)}
-              style={{
-                border: '1px solid rgba(0,0,0,0.1)',
-                background: 'rgba(255,255,255,0.6)',
-                color: '#607D8B',
-                borderRadius: 999,
-                padding: '6px 10px',
-                fontSize: 12,
-                fontWeight: 800,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              View all ratings
-            </button>
-          )}
         </div>
       )}
 
