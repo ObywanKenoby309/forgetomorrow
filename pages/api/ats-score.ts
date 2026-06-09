@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
-const { buildRecruiterScanPrompt, buildDeterministicHammerAnalysis } = require('@/lib/forge/strategyBrain');
+const { buildRecruiterScanPrompt, buildDeterministicHammerAnalysis, deriveHammerSignalWeights } = require('@/lib/forge/strategyBrain');
 
 // === TYPES ===
 type ApiResponse = {
@@ -20,7 +20,7 @@ type ApiResponse = {
   missingProof?: string[];
   wouldAdvance?: boolean | null;
   topFixes?: string[];
-  signalBreakdown?: Array<{ signal: string; status: string; required: boolean }>;
+  signalBreakdown?: Array<{ signal: string; status: string; required: boolean; weight: number; termCount: number }>;
   error?: string;
 };
 
@@ -244,11 +244,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       ? parsed.topFixes.map((x: any) => String(x || '').trim()).filter(Boolean)
       : [];
 
-    // Run deterministic analysis to get per-signal evidence classifications.
-    // This is JD-driven -- required signals are derived from THIS job description,
-    // not hardcoded. Works for any role: nurse, engineer, warehouse lead, CEO.
-    let signalBreakdown: Array<{ signal: string; status: string; required: boolean }> = [];
+    // Build JD-weighted signal breakdown for the explainability modal.
+    // Weights are derived from term frequency in THIS JD -- no hardcoding.
+    // A JD that mentions delivery 8 times weights it more than one that mentions it twice.
+    // Works for any role: nurse, engineer, warehouse lead, CEO.
+    let signalBreakdown: Array<{ signal: string; status: string; required: boolean; weight: number; termCount: number }> = [];
     try {
+      // Step 1: get JD-derived weights (term-frequency based)
+      const signalWeights = deriveHammerSignalWeights({ jdText: jd });
+
+      // Step 2: get evidence classifications for those signals
       const deterministicResult = buildDeterministicHammerAnalysis({
         jdText: jd,
         resume: {
@@ -259,13 +264,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
           educationList: education,
         },
       });
-      const requiredSet = new Set(
-        (deterministicResult?.requiredSignals || []).map((s: string) => s.toLowerCase())
+
+      // Step 3: merge weights with evidence status
+      const evidenceMap = new Map(
+        (deterministicResult?.evidenceSignals || []).map((sig: any) => [sig.signal.toLowerCase(), sig.status])
       );
-      signalBreakdown = (deterministicResult?.evidenceSignals || []).map((sig: any) => ({
-        signal: sig.signal,
-        status: sig.status,
-        required: requiredSet.has(sig.signal.toLowerCase()),
+      signalBreakdown = signalWeights.map((sw: any) => ({
+        signal: sw.signal,
+        status: evidenceMap.get(sw.signal.toLowerCase()) || 'missing',
+        required: sw.required,
+        weight: sw.weight,
+        termCount: sw.termCount,
       }));
     } catch (e) {
       // Non-fatal -- modal will fall back to client-side signalAnalysis

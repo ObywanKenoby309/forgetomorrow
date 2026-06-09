@@ -219,7 +219,7 @@ export default function AtsDepthPanel({
   const [aiStrongestSignal, setAiStrongestSignal] = useState<string | null>(null);
   const [aiRejectionRisk, setAiRejectionRisk] = useState<string | null>(null);
   const [aiMissingProof, setAiMissingProof] = useState<string[]>([]);
-  const [aiSignalBreakdown, setAiSignalBreakdown] = useState<Array<{ signal: string; status: string; required: boolean }>>([]);
+  const [aiSignalBreakdown, setAiSignalBreakdown] = useState<Array<{ signal: string; status: string; required: boolean; weight: number; termCount: number }>>([]);
   const [explainOpen, setExplainOpen] = useState(false);
 
   const [coachOpen, setCoachOpen] = useState(false);
@@ -1152,8 +1152,6 @@ export default function AtsDepthPanel({
                   </div>
                 );
               })()}
-            </div>
-
             {/* Footer */}
             <div style={{
               borderTop: '1px solid #F1F5F9',
