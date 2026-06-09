@@ -67,6 +67,13 @@ function overallScore(r) {
   return vals.reduce((s, v) => s + v, 0) / vals.length;
 }
 
+function truncateText(text, max = 150) {
+  if (!text) return '';
+  const clean = String(text).trim();
+  if (clean.length <= max) return clean;
+  return `${clean.slice(0, max).trim()}…`;
+}
+
 function Stars({ value, size = 14 }) {
   const n = Math.max(0, Math.min(5, Math.round(value || 0)));
 
@@ -200,14 +207,18 @@ function DetailMetric({ label, value }) {
 
 function ResponseCard({ r }) {
   const [showDetails, setShowDetails] = useState(false);
+  const [showFullComment, setShowFullComment] = useState(false);
+
   const overall = overallScore(r);
   const overallRounded = Math.round(overall);
+  const comment = r.comment?.trim() || '';
+  const hasLongComment = comment.length > 150;
 
   const metrics = Object.entries(METRIC_LABELS)
     .filter(([key]) => typeof r[key] === 'number' && Number.isFinite(r[key]))
     .map(([key, label]) => ({ key, label, val: r[key] }));
 
-  const visibleMetrics = metrics.slice(0, 4);
+  const visibleMetrics = metrics.slice(0, 3);
   const hiddenMetricCount = Math.max(0, metrics.length - visibleMetrics.length);
 
   return (
@@ -218,73 +229,63 @@ function ResponseCard({ r }) {
         display: 'grid',
         gap: 12,
         borderColor: 'rgba(255,112,67,0.12)',
+        alignContent: 'start',
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 12,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div style={{ display: 'grid', gap: 5 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <Stars value={overallRounded} size={15} />
-            <span style={{ fontSize: 12, color: '#78909C', fontWeight: 700 }}>
-              {formatDate(r.createdAt)}
-            </span>
-            {r.anonymous && (
-              <span
-                style={{
-                  fontSize: 11,
-                  color: '#607D8B',
-                  fontWeight: 800,
-                  background: 'rgba(96,125,139,0.1)',
-                  borderRadius: 999,
-                  padding: '3px 8px',
-                }}
-              >
-                Anonymous
-              </span>
-            )}
-          </div>
-        </div>
-
+      <div style={{ display: 'grid', gap: 8 }}>
         <div
           style={{
-            minWidth: 88,
-            textAlign: 'center',
-            borderRadius: 13,
-            padding: '10px 12px',
-            background: 'rgba(255,112,67,0.09)',
-            border: '1px solid rgba(255,112,67,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            flexWrap: 'wrap',
           }}
         >
-          <div style={{ fontSize: 10, fontWeight: 900, color: '#FF7043', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Overall
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <Stars value={overallRounded} size={15} />
+            <span style={{ fontSize: 16, fontWeight: 900, color: '#0F172A' }}>
+              {overall.toFixed(1)}
+            </span>
+            <span style={{ fontSize: 12, color: '#78909C', fontWeight: 800 }}>
+              {formatDate(r.createdAt)}
+            </span>
           </div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: '#0F172A', lineHeight: 1.1 }}>
-            {overall.toFixed(1)}
-          </div>
+
+          {r.anonymous && (
+            <span
+              style={{
+                fontSize: 11,
+                color: '#607D8B',
+                fontWeight: 800,
+                background: 'rgba(96,125,139,0.1)',
+                borderRadius: 999,
+                padding: '4px 9px',
+              }}
+            >
+              Anonymous
+            </span>
+          )}
         </div>
       </div>
 
-      {r.comment?.trim() ? (
+      {comment ? (
         <div
+          onClick={() => hasLongComment && setShowFullComment(p => !p)}
           style={{
-            fontSize: 15,
+            fontSize: 14,
             color: '#1E293B',
-            lineHeight: 1.7,
+            lineHeight: 1.65,
             background: 'rgba(255,255,255,0.74)',
             border: '1px solid rgba(15,23,42,0.06)',
             borderRadius: 12,
-            padding: '14px 15px',
+            padding: '13px 14px',
             whiteSpace: 'pre-wrap',
+            cursor: hasLongComment ? 'pointer' : 'default',
+            minHeight: 72,
           }}
         >
-          “{r.comment.trim()}”
+          “{showFullComment ? comment : truncateText(comment)}”
         </div>
       ) : (
         <div
@@ -296,10 +297,31 @@ function ResponseCard({ r }) {
             border: '1px dashed rgba(15,23,42,0.12)',
             borderRadius: 12,
             padding: '12px 14px',
+            minHeight: 72,
           }}
         >
           No written comment included with this response.
         </div>
+      )}
+
+      {hasLongComment && (
+        <button
+          type="button"
+          onClick={() => setShowFullComment(p => !p)}
+          style={{
+            justifySelf: 'start',
+            border: 'none',
+            background: 'transparent',
+            color: '#FF7043',
+            fontSize: 12,
+            fontWeight: 900,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            padding: 0,
+          }}
+        >
+          {showFullComment ? 'Show less' : 'View full comment'}
+        </button>
       )}
 
       {visibleMetrics.length > 0 && (
@@ -420,7 +442,6 @@ export default function FeedbackModule() {
       ? overallValues.reduce((s, v) => s + v, 0) / overallValues.length
       : null;
 
-    const recommendationAverage = avg(responses, 'recommendation');
     const positiveCount = overallValues.filter(v => v >= 4).length;
     const positivePct = overallValues.length ? Math.round((positiveCount / overallValues.length) * 100) : 0;
 
@@ -435,7 +456,6 @@ export default function FeedbackModule() {
       overallAverage,
       total: responses.length,
       withComment: responses.filter(r => r.comment?.trim()).length,
-      recommendationAverage,
       positivePct,
       fields: detailFields,
     };
@@ -445,34 +465,34 @@ export default function FeedbackModule() {
     <div style={{ display: 'grid', gap: 14 }}>
       {kpis && (
         <div style={{ ...GLASS, padding: '16px 18px' }}>
+          <div style={{ fontSize: 18, color: '#FF7043', marginBottom: 8, ...ORANGE_HEADING_LIFT }}>
+            Feedback Summary
+          </div>
+
           <div
             style={{
               display: 'flex',
-              alignItems: 'flex-end',
-              justifyContent: 'space-between',
-              gap: 12,
-              marginBottom: 12,
+              alignItems: 'center',
+              gap: 8,
               flexWrap: 'wrap',
+              marginBottom: 12,
             }}
           >
-            <div>
-              <div style={{ fontSize: 18, color: '#FF7043', marginBottom: 6, ...ORANGE_HEADING_LIFT }}>
-                Feedback Summary
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
-                  {kpis.total} {kpis.total === 1 ? 'Response' : 'Responses'}
-                </span>
-                <span style={{ color: '#78909C', fontWeight: 800 }}>•</span>
-                <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
-                  {kpis.positivePct}% Positive
-                </span>
-                <span style={{ color: '#78909C', fontWeight: 800 }}>•</span>
-                <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
-                  {kpis.withComment} {kpis.withComment === 1 ? 'Comment' : 'Comments'}
-                </span>
-              </div>
-            </div>
+            <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
+              {kpis.overallAverage !== null ? `${kpis.overallAverage.toFixed(1)} average rating` : 'No average yet'}
+            </span>
+            <span style={{ color: '#78909C', fontWeight: 800 }}>•</span>
+            <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
+              {kpis.total} {kpis.total === 1 ? 'response' : 'responses'}
+            </span>
+            <span style={{ color: '#78909C', fontWeight: 800 }}>•</span>
+            <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
+              {kpis.withComment} {kpis.withComment === 1 ? 'comment' : 'comments'}
+            </span>
+            <span style={{ color: '#78909C', fontWeight: 800 }}>•</span>
+            <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
+              {kpis.positivePct}% positive
+            </span>
           </div>
 
           <div
@@ -490,10 +510,6 @@ export default function FeedbackModule() {
             />
             <KPI label="Total Responses" value={kpis.total} />
             <KPI label="With Comments" value={kpis.withComment} />
-            <KPI
-              label="Recommendation"
-              value={kpis.recommendationAverage !== null ? `${kpis.recommendationAverage.toFixed(1)} / 5` : '—'}
-            />
           </div>
 
           {kpis.fields.length > 0 && (
@@ -594,7 +610,14 @@ export default function FeedbackModule() {
             )}
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+              gap: 12,
+              alignItems: 'start',
+            }}
+          >
             {filtered.map(r => <ResponseCard key={r.id} r={r} />)}
           </div>
         )}
