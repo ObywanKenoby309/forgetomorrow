@@ -1116,9 +1116,6 @@ export default function AtsDepthPanel({
                             <span style={{ fontSize: 11, color: '#1E293B', fontWeight: 700 }}>
                               {r.signal.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                             </span>
-                            {!r.required && (
-                              <span style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600 }}>credibility</span>
-                            )}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                             <span style={{ fontSize: 10, color: r.color, fontWeight: 800 }}>{r.label}</span>
