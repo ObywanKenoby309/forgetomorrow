@@ -226,6 +226,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             'Add at least one bullet with clear metrics (%, $, time saved) to your most recent role.',
           ];
 
+    // Pass through signal-level fields for the explainability modal.
+    // These come from the AI's JSON response -- no extra tokens, no extra call.
+    const strongestSignal = typeof parsed.strongestSignal === 'string' ? parsed.strongestSignal.trim() : null;
+    const rejectionRisk = typeof parsed.rejectionRisk === 'string' ? parsed.rejectionRisk.trim() : null;
+    const missingProof = Array.isArray(parsed.missingProof)
+      ? parsed.missingProof.map((x: any) => String(x || '').trim()).filter(Boolean)
+      : [];
+    const wouldAdvance = typeof parsed.wouldAdvance === 'boolean' ? parsed.wouldAdvance : null;
+    const topFixes = Array.isArray(parsed.topFixes)
+      ? parsed.topFixes.map((x: any) => String(x || '').trim()).filter(Boolean)
+      : [];
+
     // === 5) OPTIONAL HISTORY LOG (NOT gate) ===
     const { key: monthKey } = monthWindowUTC(new Date());
     try {
@@ -247,6 +259,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       role,
       aiSummary,
       aiRecommendations,
+      strongestSignal,
+      rejectionRisk,
+      missingProof,
+      wouldAdvance,
+      topFixes,
     });
   } catch (error: any) {
     console.error(`[/api/ats-score] AI failed for user ${userId || 'unknown'}:`, error);

@@ -466,14 +466,14 @@ export default function AtsDepthPanel({
       ];
       const signalResumeText = resumeText;
       const patternGroups: Record<string, string[]> = {
-        'ownership and accountability': ['owned','responsible','accountable','managed','oversaw','led','directed','drove','built','launched','founded'],
-        'delivery and execution': ['delivered','executed','implemented','launched','shipped','completed','produced','operated','maintained','performed'],
-        'people leadership and team management': ['managed a team','direct reports','supervised','coached','mentored','hired','staffing','team lead','headcount','workforce'],
-        'advisory and client service delivery': ['advised','consulted','client','customer','service','supported','guided','engagement','relationship','account'],
-        'stakeholder and executive engagement': ['stakeholder','executive','senior leadership','cross-functional','collaborated','aligned','presented','briefed','reported to'],
-        'process and methodology development': ['methodology','process','procedure','framework','playbook','standard','protocol','compliance','workflow','audit'],
-        'domain knowledge and qualification': ['expertise','specialist','certified','certification','licensed','degree','trained','background in','years of experience'],
-        'education and credential credibility': ['bachelor','master','mba','phd','degree','certified','certification','university','college','credential'],
+        'ownership and accountability': ['owned','ownership','responsible','accountable','managed','oversaw','oversight','led','leading','drove','driving','spearheaded','directed','head of','founded','launched','established','built','created','designed','developed','implemented','executed','coordinated','overseeing','managing the','leading the','led the','managed the','responsible for','accountable for','serve as','served as'],
+        'delivery and execution': ['delivered','delivery','executed','execution','implemented','implementation','launched','completed','produced','operated','operations','maintained','performed','results','outcomes','deployed','ran','managed operations','day-to-day','on-time','sla','service level','kpi','operational performance','service performance','service delivery','annual value','annual service'],
+        'people leadership and team management': ['managed a team','managed the team','team of','direct reports','supervised','supervision','coached','coaching','mentored','mentoring','staffed','staffing','hired','hiring','performance management','team lead','team leader','team leadership','leading the team','workforce','personnel','staff','headcount','onboarding','training','hybrid team','offshore'],
+        'advisory and client service delivery': ['advised','advisory','consulted','consulting','consultant','client','customer','service','client-facing','customer-facing','supported','guided','engagement','relationship','account management','serving','recommendations','customer success','client success','client services','service delivery','account operations','strategic account','enterprise account','retention','escalation','renewal','adoption'],
+        'stakeholder and executive engagement': ['stakeholder','executive','senior leadership','senior management','c-suite','board','cross-functional','collaborated','coordination','aligned','alignment','escalation','escalated','communicated','communication','presented','presentation','briefed','briefing','reported to','reporting','interfaced','partnered','worked with leadership','executive communication','executive reporting'],
+        'process and methodology development': ['methodology','methodologies','process','processes','procedure','procedures','standard','standards','framework','playbook','template','repeatable','scalable','protocol','policy','compliance','quality','qa','audit','workflow','built the process','established','standardized','operationalized','delivery standards','operations manual','sop','process improvement','operational excellence'],
+        'domain knowledge and qualification': ['expertise','expert','specialist','proficiency','proficient','certified','certification','licensed','degree','education','trained','training','background in','knowledge of','years of experience','years experience','proven track record','subject matter','sme','qualified','credentialed','experienced in','itil','pmp','servicenow','salesforce','18 years','18+'],
+        'education and credential credibility': ['bachelor','master','mba','phd','doctorate','associate','degree','education','university','college','certified','certification','licensed','credential','trained','itil','professional development','continuing education'],
       };
       const classified = signals.map(signal => {
         const normalizedSignal = signal.toLowerCase();
@@ -482,6 +482,7 @@ export default function AtsDepthPanel({
         }
         const patterns = patternGroups[normalizedSignal] || [];
         const matched = patterns.filter((p: string) => signalResumeText.includes(p.toLowerCase()));
+        if (matched.length >= 6) return { signal, status: 'direct', confidence: 'high' };
         if (matched.length >= 3) return { signal, status: 'adjacent_technical', confidence: 'high' };
         if (matched.length >= 1) return { signal, status: 'adjacent', confidence: 'medium' };
         return { signal, status: 'missing', confidence: 'high' };
@@ -1056,35 +1057,29 @@ export default function AtsDepthPanel({
                 </div>
               )}
 
-              {/* Scan ran — show full breakdown */}
+              {/* Scan ran -- show full breakdown using server response as source of truth */}
               {aiScore !== null && (
                 <>
-                  {/* Strengths — signal-level evidence only, no raw keyword chips */}
+                  {/* Strengths: server-classified direct signals from signalAnalysis */}
                   {(() => {
                     const directSignals = signalAnalysis?.classified
-                      ? signalAnalysis.classified.filter((s: any) =>
-                          s.status === 'direct' || s.status === 'adjacent_technical'
-                        )
+                      ? signalAnalysis.classified
+                          .filter((s: any) => s.status === 'direct' || s.status === 'adjacent_technical')
+                          .map((s: any) => String(s.signal).replace(/\b\w/g, (c: string) => c.toUpperCase()))
                       : [];
-                    const allStrengths = directSignals
-                      .map((s: any) =>
-                        String(s.signal).replace(/\b\w/g, (c: string) => c.toUpperCase())
-                      )
-                      .filter(Boolean)
-                      .slice(0, 10);
-
+                    const allStrengths = [
+                      ...directSignals,
+                      ...(aiStrongestSignal && !directSignals.some((s: string) =>
+                        aiStrongestSignal.toLowerCase().includes(s.toLowerCase())
+                      ) ? [aiStrongestSignal] : []),
+                    ].filter(Boolean).slice(0, 10);
                     if (!allStrengths.length) return null;
                     return (
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 900, color: '#15803D', marginBottom: 8 }}>
-                          Strengths
-                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 900, color: '#15803D', marginBottom: 8 }}>Strengths</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                           {allStrengths.map((s: string) => (
-                            <div key={s} style={{
-                              display: 'flex', alignItems: 'flex-start', gap: 7,
-                              fontSize: 12, color: '#1E293B', lineHeight: 1.4,
-                            }}>
+                            <div key={s} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 12, color: '#1E293B', lineHeight: 1.4 }}>
                               <span style={{ color: '#15803D', fontWeight: 900, flexShrink: 0, marginTop: 1 }}>+</span>
                               {s}
                             </div>
@@ -1094,31 +1089,28 @@ export default function AtsDepthPanel({
                     );
                   })()}
 
-                  {/* Areas to improve — signal gaps + AI-identified missing proof */}
+                  {/* Gaps: server missingProof + rejectionRisk as primary source */}
                   {(() => {
-                    const missingSignals = signalAnalysis?.missing
+                    // Server fields are the source of truth -- they reflect the actual AI evaluation.
+                    // signalAnalysis.missing is only a fallback if the server returned nothing.
+                    const serverGaps = [
+                      ...aiMissingProof,
+                      ...(aiRejectionRisk ? [aiRejectionRisk] : []),
+                    ].filter(Boolean);
+                    const fallbackGaps = serverGaps.length === 0 && signalAnalysis?.missing
                       ? signalAnalysis.missing.map((s: any) =>
                           String(s.signal).replace(/\b\w/g, (c: string) => c.toUpperCase())
                         )
                       : [];
-                    const allGaps = [
-                      ...missingSignals,
-                      ...aiMissingProof,
-                      ...(aiRejectionRisk ? [aiRejectionRisk] : []),
-                    ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
-
+                    const allGaps = [...serverGaps, ...fallbackGaps]
+                      .filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
                     if (!allGaps.length) return null;
                     return (
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 900, color: '#D97706', marginBottom: 8 }}>
-                          Areas That Could Improve Alignment
-                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 900, color: '#D97706', marginBottom: 8 }}>Areas That Could Improve Alignment</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                           {allGaps.map((g: string) => (
-                            <div key={g} style={{
-                              display: 'flex', alignItems: 'flex-start', gap: 7,
-                              fontSize: 12, color: '#1E293B', lineHeight: 1.4,
-                            }}>
+                            <div key={g} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 12, color: '#1E293B', lineHeight: 1.4 }}>
                               <span style={{ color: '#D97706', fontWeight: 900, flexShrink: 0, marginTop: 1 }}>-</span>
                               {g}
                             </div>
