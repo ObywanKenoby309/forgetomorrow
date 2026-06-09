@@ -1040,17 +1040,12 @@ export default function AtsDepthPanel({
             {/* Body */}
             <div style={{ overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-              {/* Gate: scan hasn't run yet */}
+              {/* Gate: scan has not run yet */}
               {aiScore === null && !aiLoading && (
                 <div style={{
-                  padding: '16px 12px',
-                  borderRadius: 10,
-                  background: '#FFF8E1',
-                  border: '1px solid #FFE0B2',
-                  fontSize: 12,
-                  color: '#5D4037',
-                  lineHeight: 1.55,
-                  textAlign: 'center',
+                  padding: '16px 12px', borderRadius: 10,
+                  background: '#FFF8E1', border: '1px solid #FFE0B2',
+                  fontSize: 12, color: '#5D4037', lineHeight: 1.55, textAlign: 'center',
                 }}>
                   <div style={{ fontWeight: 900, marginBottom: 6, color: '#E65100' }}>
                     Score details not yet generated
@@ -1059,21 +1054,26 @@ export default function AtsDepthPanel({
                 </div>
               )}
 
-              {/* Scan ran -- signal weight breakdown only */}
+              {/* Signal weight breakdown */}
               {aiScore !== null && (() => {
-                const serverSignals = aiSignalBreakdown.length > 0 ? aiSignalBreakdown : null;
-                const clientSignals = signalAnalysis?.classified || [];
-                const rawSignals: Array<{ signal: string; status: string; required: boolean }> =
-                  serverSignals
-                    ? serverSignals
-                    : clientSignals.map((s: any) => ({ signal: s.signal, status: s.status, required: true }));
+                const hasServerWeights = aiSignalBreakdown.length > 0 && aiSignalBreakdown.some((s: any) => s.weight > 0);
+                const clientSignals = signalAnalysis ? signalAnalysis.classified || [] : [];
+
+                type SigRow = { signal: string; status: string; required: boolean; weight: number; termCount: number };
+
+                const rawSignals: SigRow[] = hasServerWeights
+                  ? (aiSignalBreakdown as SigRow[])
+                  : clientSignals.map((s: any, i: number, arr: any[]) => ({
+                      signal: s.signal,
+                      status: s.status,
+                      required: true,
+                      weight: i === arr.length - 1
+                        ? 100 - Math.floor(92 / arr.length) * (arr.length - 1)
+                        : Math.floor(92 / arr.length),
+                      termCount: 0,
+                    }));
 
                 if (!rawSignals.length) return null;
-
-                const required = rawSignals.filter((s) => s.required);
-                const notRequired = rawSignals.filter((s) => !s.required);
-                const requiredWeight = required.length > 0 ? Math.floor(90 / required.length) : 0;
-                const credibilityWeight = notRequired.length > 0 ? Math.floor(10 / notRequired.length) : 0;
 
                 const STATUS_COLOR: Record<string, string> = {
                   direct: '#15803D',
@@ -1094,21 +1094,21 @@ export default function AtsDepthPanel({
                   missing: 0.0,
                 };
 
-                const rows = rawSignals.map((sig) => {
-                  const weight = sig.required ? requiredWeight : credibilityWeight;
-                  const mult = STATUS_MULTIPLIER[sig.status] ?? 0;
-                  return {
-                    ...sig,
-                    weight,
-                    pct: Math.round(mult * 100),
-                    label: STATUS_LABEL[sig.status] || sig.status,
-                    color: STATUS_COLOR[sig.status] || '#64748B',
-                  };
-                }).filter((r) => r.weight > 0);
+                const rows = rawSignals.map((sig: SigRow) => ({
+                  ...sig,
+                  barPct: Math.round((STATUS_MULTIPLIER[sig.status] ?? 0) * 100),
+                  label: STATUS_LABEL[sig.status] || sig.status,
+                  color: STATUS_COLOR[sig.status] || '#64748B',
+                }));
 
                 return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                    {rows.map((r) => (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {hasServerWeights && (
+                      <div style={{ fontSize: 10, color: '#94A3B8', lineHeight: 1.4, paddingBottom: 6, borderBottom: '1px solid #F1F5F9' }}>
+                        Weights reflect how much this job description emphasizes each signal.
+                      </div>
+                    )}
+                    {rows.map((r: any) => (
                       <div key={r.signal}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -1126,7 +1126,7 @@ export default function AtsDepthPanel({
                         </div>
                         <div style={{ height: 5, borderRadius: 999, background: '#E2E8F0', overflow: 'hidden' }}>
                           <div style={{
-                            width: `${r.pct}%`,
+                            width: r.barPct + '%',
                             height: '100%',
                             background: r.color,
                             transition: 'width 0.3s ease',
@@ -1134,18 +1134,16 @@ export default function AtsDepthPanel({
                         </div>
                       </div>
                     ))}
-
-                    {/* Legend */}
-                    <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid #F1F5F9', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    <div style={{ marginTop: 4, paddingTop: 8, borderTop: '1px solid #F1F5F9', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                       {[
                         { color: '#15803D', label: 'Proven' },
                         { color: '#0369A1', label: 'Strong evidence' },
                         { color: '#D97706', label: 'Partial proof' },
                         { color: '#DC2626', label: 'Not demonstrated' },
-                      ].map((l) => (
-                        <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: l.color, flexShrink: 0 }} />
-                          <span style={{ fontSize: 10, color: '#64748B' }}>{l.label}</span>
+                      ].map((leg: any) => (
+                        <div key={leg.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: leg.color, flexShrink: 0 }} />
+                          <span style={{ fontSize: 10, color: '#64748B' }}>{leg.label}</span>
                         </div>
                       ))}
                     </div>
