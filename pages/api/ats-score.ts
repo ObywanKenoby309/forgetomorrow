@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
-const { buildRecruiterScanPrompt, buildDeterministicHammerAnalysis, deriveHammerSignalWeights } = require('@/lib/forge/strategyBrain');
+import { buildRecruiterScanPrompt, buildDeterministicHammerAnalysis, deriveHammerSignalWeights } from '@/lib/forge/strategyBrain';
 
 // === TYPES ===
 type ApiResponse = {
