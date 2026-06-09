@@ -250,17 +250,14 @@ function ResponseCard({ r }) {
               </span>
             )}
           </div>
-          <div style={{ fontSize: 12, color: '#90A4AE', fontWeight: 700 }}>
-            Client feedback response
-          </div>
         </div>
 
         <div
           style={{
-            minWidth: 78,
+            minWidth: 88,
             textAlign: 'center',
-            borderRadius: 12,
-            padding: '8px 10px',
+            borderRadius: 13,
+            padding: '10px 12px',
             background: 'rgba(255,112,67,0.09)',
             border: '1px solid rgba(255,112,67,0.2)',
           }}
@@ -268,7 +265,7 @@ function ResponseCard({ r }) {
           <div style={{ fontSize: 10, fontWeight: 900, color: '#FF7043', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Overall
           </div>
-          <div style={{ fontSize: 18, fontWeight: 900, color: '#0F172A', lineHeight: 1.1 }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: '#0F172A', lineHeight: 1.1 }}>
             {overall.toFixed(1)}
           </div>
         </div>
@@ -277,13 +274,13 @@ function ResponseCard({ r }) {
       {r.comment?.trim() ? (
         <div
           style={{
-            fontSize: 14,
-            color: '#334155',
-            lineHeight: 1.65,
-            background: 'rgba(255,255,255,0.7)',
+            fontSize: 15,
+            color: '#1E293B',
+            lineHeight: 1.7,
+            background: 'rgba(255,255,255,0.74)',
             border: '1px solid rgba(15,23,42,0.06)',
             borderRadius: 12,
-            padding: '13px 14px',
+            padding: '14px 15px',
             whiteSpace: 'pre-wrap',
           }}
         >
@@ -349,7 +346,7 @@ function ResponseCard({ r }) {
               padding: 0,
             }}
           >
-            {showDetails ? 'Hide detailed metrics' : 'View detailed metrics'}
+            {showDetails ? 'Hide detailed ratings' : 'View detailed ratings'}
           </button>
 
           {showDetails && (
@@ -459,15 +456,21 @@ export default function FeedbackModule() {
             }}
           >
             <div>
-              <div style={{ fontSize: 18, color: '#FF7043', marginBottom: 4, ...ORANGE_HEADING_LIFT }}>
+              <div style={{ fontSize: 18, color: '#FF7043', marginBottom: 6, ...ORANGE_HEADING_LIFT }}>
                 Feedback Summary
               </div>
-              <div style={{ fontSize: 13, color: '#334155', fontWeight: 700, lineHeight: 1.5 }}>
-                {kpis.total} {kpis.total === 1 ? 'response' : 'responses'} received
-                {' · '}
-                {kpis.positivePct}% positive
-                {' · '}
-                {kpis.withComment} with comments
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
+                  {kpis.total} {kpis.total === 1 ? 'Response' : 'Responses'}
+                </span>
+                <span style={{ color: '#78909C', fontWeight: 800 }}>•</span>
+                <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
+                  {kpis.positivePct}% Positive
+                </span>
+                <span style={{ color: '#78909C', fontWeight: 800 }}>•</span>
+                <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 900 }}>
+                  {kpis.withComment} {kpis.withComment === 1 ? 'Comment' : 'Comments'}
+                </span>
               </div>
             </div>
           </div>
@@ -504,7 +507,7 @@ export default function FeedbackModule() {
                   fontFamily: 'inherit',
                 }}
               >
-                View detailed category averages
+                View detailed ratings
               </summary>
 
               <div
