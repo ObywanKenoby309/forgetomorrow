@@ -244,16 +244,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       ? parsed.topFixes.map((x: any) => String(x || '').trim()).filter(Boolean)
       : [];
 
+    // Run deterministic analysis to get per-signal evidence classifications.
+    // This is JD-driven -- required signals are derived from THIS job description,
+    // not hardcoded. Works for any role: nurse, engineer, warehouse lead, CEO.
     // Build JD-weighted signal breakdown for the explainability modal.
-    // Weights are derived from term frequency in THIS JD -- no hardcoding.
-    // A JD that mentions delivery 8 times weights it more than one that mentions it twice.
-    // Works for any role: nurse, engineer, warehouse lead, CEO.
+    // Step 1: deriveHammerSignalWeights counts term hits per signal in THIS JD.
+    //   Result: weights proportional to how much the JD emphasizes each signal.
+    //   A CS Director JD with 7 delivery terms weights delivery at ~25%.
+    //   A nursing JD with 8 patient-care terms weights advisory at ~30%.
+    //   This is fully explainable: weight = termCount / totalTerms * 92%.
+    // Step 2: buildDeterministicHammerAnalysis evaluates resume evidence per signal.
+    // Step 3: merge weights + evidence into signalBreakdown for the modal.
     let signalBreakdown: Array<{ signal: string; status: string; required: boolean; weight: number; termCount: number }> = [];
     try {
-      // Step 1: get JD-derived weights (term-frequency based)
       const signalWeights = deriveHammerSignalWeights({ jdText: jd });
-
-      // Step 2: get evidence classifications for those signals
       const deterministicResult = buildDeterministicHammerAnalysis({
         jdText: jd,
         resume: {
@@ -264,8 +268,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
           educationList: education,
         },
       });
-
-      // Step 3: merge weights with evidence status
       const evidenceMap = new Map(
         (deterministicResult?.evidenceSignals || []).map((sig: any) => [sig.signal.toLowerCase(), sig.status])
       );
@@ -278,6 +280,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       }));
     } catch (e) {
       // Non-fatal -- modal will fall back to client-side signalAnalysis
+      console.error('[ats-score] signalBreakdown failed:', e);
     }
 
     // === 5) OPTIONAL HISTORY LOG (NOT gate) ===

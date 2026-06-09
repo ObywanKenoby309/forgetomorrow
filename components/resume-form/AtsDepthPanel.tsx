@@ -1152,6 +1152,8 @@ export default function AtsDepthPanel({
                   </div>
                 );
               })()}
+            </div>
+
             {/* Footer */}
             <div style={{
               borderTop: '1px solid #F1F5F9',
@@ -1174,6 +1176,8 @@ export default function AtsDepthPanel({
             </div>
           </div>
         </div>
+        </div>
+      </div>
       )}
     </>
   );
