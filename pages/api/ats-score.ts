@@ -15,6 +15,11 @@ type ApiResponse = {
   upgrade?: boolean;
   aiSummary?: string;
   aiRecommendations?: string[];
+  strongestSignal?: string | null;
+  rejectionRisk?: string | null;
+  missingProof?: string[];
+  wouldAdvance?: boolean | null;
+  topFixes?: string[];
   error?: string;
 };
 
