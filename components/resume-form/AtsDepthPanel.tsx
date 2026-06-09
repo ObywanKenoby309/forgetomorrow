@@ -1113,7 +1113,7 @@ export default function AtsDepthPanel({
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                             <span style={{ fontSize: 11, color: '#1E293B', fontWeight: 700 }}>
-                              {String(r.signal).replace(/\w/g, (c: string) => c.toUpperCase())}
+                              {r.signal.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                             </span>
                             {!r.required && (
                               <span style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600 }}>credibility</span>
@@ -1152,6 +1152,8 @@ export default function AtsDepthPanel({
                   </div>
                 );
               })()}
+            </div>
+
             {/* Footer */}
             <div style={{
               borderTop: '1px solid #F1F5F9',
