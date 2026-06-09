@@ -194,6 +194,9 @@ function guessJobTitle(jdText: string) {
   return '';
 }
 
+// Signal row type for the explainability modal
+type SigRow = { signal: string; status: string; required: boolean; weight: number; termCount: number };
+
 export default function AtsDepthPanel({
   jdText,
   resumeData: incomingResumeData = null,
@@ -1058,8 +1061,6 @@ export default function AtsDepthPanel({
               {aiScore !== null && (() => {
                 const hasServerWeights = aiSignalBreakdown.length > 0 && aiSignalBreakdown.some((s: any) => s.weight > 0);
                 const clientSignals = signalAnalysis ? signalAnalysis.classified || [] : [];
-
-                type SigRow = { signal: string; status: string; required: boolean; weight: number; termCount: number };
 
                 const rawSignals: SigRow[] = hasServerWeights
                   ? (aiSignalBreakdown as SigRow[])
