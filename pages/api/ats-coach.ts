@@ -690,8 +690,10 @@ You MUST return exactly one action with "section": "experience".
 Do NOT assign the same section value to more than one action.
 Do NOT return all actions tagged as "summary".
 The "section" field must be one of: "summary", "skills", "experience", "education", "certifications", "languages".
-Include "education" if the JD explicitly requires a degree, clearance, or if the resume contains relevant education that strengthens recruiter confidence.
-Include "certifications" if the JD explicitly requires or mentions certifications, licenses, or credentials.
+Include "education" if the JD explicitly requires or prefers a degree, clearance, or if the resume contains relevant education that strengthens recruiter confidence.
+Include "certifications" ALWAYS when any of these are true:
+  - The JD names or prefers a specific certification (ITIL, PMP, Salesforce, AWS, etc.) AND the resume contains that certification or an equivalent. When a match exists, generate an action that names the cert, confirms it is present, and states its credibility value. Do NOT skip this or return empty feedback — a direct cert match is a section completeness requirement.
+  - The JD names a cert the resume does NOT have. Generate an action explaining the gap and its severity.
 Include "languages" if the JD mentions language requirements or multilingual preferences.`
       : `${intelligenceBlock}${intentPrefix}${authoritativeResumeEvidence}${brainPrompt}`.trim();
 
