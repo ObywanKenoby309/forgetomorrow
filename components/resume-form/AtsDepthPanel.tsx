@@ -1179,8 +1179,6 @@ export default function AtsDepthPanel({
             </div>
           </div>
         </div>
-        </div>
-      </div>
       )}
     </>
   );
