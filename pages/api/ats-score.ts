@@ -257,7 +257,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     // Step 3: merge weights + evidence into signalBreakdown for the modal.
     let signalBreakdown: Array<{ signal: string; status: string; required: boolean; weight: number; termCount: number }> = [];
     try {
+      // DEBUG STAGE1: confirm function is callable and jd is populated
+      console.log('[Hammer] STAGE1 deriveHammerSignalWeights type:', typeof deriveHammerSignalWeights, '| jd length:', jd?.length || 0);
       const signalWeights = deriveHammerSignalWeights({ jdText: jd });
+      // DEBUG STAGE2: confirm weights computed
+      console.log('[Hammer] STAGE2 weights:', JSON.stringify(signalWeights?.map((s: any) => ({ signal: s.signal, termCount: s.termCount, weight: s.weight }))));
       const deterministicResult = buildDeterministicHammerAnalysis({
         jdText: jd,
         resume: {
@@ -278,9 +282,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         weight: sw.weight,
         termCount: sw.termCount,
       }));
+      // DEBUG STAGE3: confirm signalBreakdown built
+      console.log('[Hammer] STAGE3 breakdown:', JSON.stringify(signalBreakdown?.map((s: any) => ({ signal: s.signal, weight: s.weight, termCount: s.termCount }))));
     } catch (e) {
-      // Non-fatal -- modal will fall back to client-side signalAnalysis
-      console.error('[ats-score] signalBreakdown failed:', e);
+      console.error('[Hammer] STAGE_FAIL signalBreakdown error:', e);
     }
 
     // === 5) OPTIONAL HISTORY LOG (NOT gate) ===

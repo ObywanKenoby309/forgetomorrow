@@ -443,6 +443,8 @@ export default function AtsDepthPanel({
       setAiRejectionRisk(typeof data?.rejectionRisk === 'string' ? data.rejectionRisk.trim() : null);
       setAiMissingProof(Array.isArray(data?.missingProof) ? data.missingProof.filter((x: any) => typeof x === 'string' && x.trim()) : []);
       setAiSignalBreakdown(Array.isArray(data?.signalBreakdown) ? data.signalBreakdown : []);
+      // DEBUG STAGE4: confirm signalBreakdown received client-side
+      console.log('[Hammer] STAGE4 signalBreakdown from API:', JSON.stringify((data?.signalBreakdown || []).map((s: any) => ({ signal: s.signal, weight: s.weight, termCount: s.termCount }))));
     } catch (e) {
       console.error('[AtsDepthPanel] AI scan failed', e);
       setAiError('AI scan failed - try again.');
@@ -1060,6 +1062,8 @@ export default function AtsDepthPanel({
               {/* Signal weight breakdown */}
               {aiScore !== null && (() => {
                 const hasServerWeights = aiSignalBreakdown.length > 0 && aiSignalBreakdown.some((s: any) => s.weight > 0);
+                // DEBUG STAGE5: confirm hasServerWeights evaluation
+                console.log('[Hammer] STAGE5 breakdown length:', aiSignalBreakdown.length, 'hasServerWeights:', hasServerWeights, 'first entry:', JSON.stringify(aiSignalBreakdown[0] || null));
                 const clientSignals = signalAnalysis ? signalAnalysis.classified || [] : [];
 
                 const rawSignals: SigRow[] = hasServerWeights
@@ -1175,6 +1179,8 @@ export default function AtsDepthPanel({
             </div>
           </div>
         </div>
+        </div>
+      </div>
       )}
     </>
   );
