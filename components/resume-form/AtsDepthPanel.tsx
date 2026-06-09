@@ -1037,100 +1037,112 @@ export default function AtsDepthPanel({
             {/* Body */}
             <div style={{ overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-              {/* Strengths */}
-              {(() => {
-                const directSignals = signalAnalysis?.classified
-                  ? signalAnalysis.classified.filter((s: any) =>
-                      s.status === 'direct' || s.status === 'adjacent_technical'
-                    )
-                  : [];
-                const kwStrengths: string[] = [
-                  ...matchedHardSkills.slice(0, 4),
-                  ...matchedTools.slice(0, 3),
-                  ...matchedCerts.slice(0, 3),
-                ];
-                const allStrengths = [
-                  ...directSignals.map((s: any) =>
-                    String(s.signal).replace(/\b\w/g, (c: string) => c.toUpperCase())
-                  ),
-                  ...kwStrengths,
-                ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 10);
-
-                if (!allStrengths.length) return null;
-                return (
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 900, color: '#15803D', marginBottom: 8 }}>
-                      Strengths
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      {allStrengths.map((s) => (
-                        <div key={s} style={{
-                          display: 'flex', alignItems: 'flex-start', gap: 7,
-                          fontSize: 12, color: '#1E293B', lineHeight: 1.4,
-                        }}>
-                          <span style={{ color: '#15803D', fontWeight: 900, flexShrink: 0, marginTop: 1 }}>+</span>
-                          {s}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Areas to improve */}
-              {(() => {
-                const missingSignals = signalAnalysis?.missing
-                  ? signalAnalysis.missing.map((s: any) =>
-                      String(s.signal).replace(/\b\w/g, (c: string) => c.toUpperCase())
-                    )
-                  : [];
-                const allGaps = [
-                  ...missingSignals,
-                  ...aiMissingProof,
-                  ...(aiRejectionRisk ? [aiRejectionRisk] : []),
-                ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
-
-                if (!allGaps.length) return null;
-                return (
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 900, color: '#D97706', marginBottom: 8 }}>
-                      Areas That Could Improve Alignment
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      {allGaps.map((g) => (
-                        <div key={g} style={{
-                          display: 'flex', alignItems: 'flex-start', gap: 7,
-                          fontSize: 12, color: '#1E293B', lineHeight: 1.4,
-                        }}>
-                          <span style={{ color: '#D97706', fontWeight: 900, flexShrink: 0, marginTop: 1 }}>-</span>
-                          {g}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* AI summary */}
-              {aiSummary && (
+              {/* Gate: scan hasn't run yet */}
+              {aiScore === null && !aiLoading && (
                 <div style={{
-                  padding: '10px 12px',
+                  padding: '16px 12px',
                   borderRadius: 10,
-                  background: '#F8FAFC',
-                  border: '1px solid #E2E8F0',
-                  fontSize: 11,
-                  color: '#475569',
-                  lineHeight: 1.5,
+                  background: '#FFF8E1',
+                  border: '1px solid #FFE0B2',
+                  fontSize: 12,
+                  color: '#5D4037',
+                  lineHeight: 1.55,
+                  textAlign: 'center',
                 }}>
-                  {aiSummary}
+                  <div style={{ fontWeight: 900, marginBottom: 6, color: '#E65100' }}>
+                    Score details not yet generated
+                  </div>
+                  Click <strong>Review overall alignment</strong> in the Coach tab to run the analysis, then open this panel to see the full breakdown.
                 </div>
               )}
 
-              {/* Empty state */}
-              {!aiSummary && !signalAnalysis?.classified?.length && (
-                <div style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', padding: '16px 0' }}>
-                  Run &quot;Review overall alignment&quot; to generate signal details.
-                </div>
+              {/* Scan ran — show full breakdown */}
+              {aiScore !== null && (
+                <>
+                  {/* Strengths — signal-level evidence only, no raw keyword chips */}
+                  {(() => {
+                    const directSignals = signalAnalysis?.classified
+                      ? signalAnalysis.classified.filter((s: any) =>
+                          s.status === 'direct' || s.status === 'adjacent_technical'
+                        )
+                      : [];
+                    const allStrengths = directSignals
+                      .map((s: any) =>
+                        String(s.signal).replace(/\b\w/g, (c: string) => c.toUpperCase())
+                      )
+                      .filter(Boolean)
+                      .slice(0, 10);
+
+                    if (!allStrengths.length) return null;
+                    return (
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 900, color: '#15803D', marginBottom: 8 }}>
+                          Strengths
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          {allStrengths.map((s: string) => (
+                            <div key={s} style={{
+                              display: 'flex', alignItems: 'flex-start', gap: 7,
+                              fontSize: 12, color: '#1E293B', lineHeight: 1.4,
+                            }}>
+                              <span style={{ color: '#15803D', fontWeight: 900, flexShrink: 0, marginTop: 1 }}>+</span>
+                              {s}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Areas to improve — signal gaps + AI-identified missing proof */}
+                  {(() => {
+                    const missingSignals = signalAnalysis?.missing
+                      ? signalAnalysis.missing.map((s: any) =>
+                          String(s.signal).replace(/\b\w/g, (c: string) => c.toUpperCase())
+                        )
+                      : [];
+                    const allGaps = [
+                      ...missingSignals,
+                      ...aiMissingProof,
+                      ...(aiRejectionRisk ? [aiRejectionRisk] : []),
+                    ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
+
+                    if (!allGaps.length) return null;
+                    return (
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 900, color: '#D97706', marginBottom: 8 }}>
+                          Areas That Could Improve Alignment
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          {allGaps.map((g: string) => (
+                            <div key={g} style={{
+                              display: 'flex', alignItems: 'flex-start', gap: 7,
+                              fontSize: 12, color: '#1E293B', lineHeight: 1.4,
+                            }}>
+                              <span style={{ color: '#D97706', fontWeight: 900, flexShrink: 0, marginTop: 1 }}>-</span>
+                              {g}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* AI summary */}
+                  {aiSummary && (
+                    <div style={{
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      background: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      fontSize: 11,
+                      color: '#475569',
+                      lineHeight: 1.5,
+                    }}>
+                      {aiSummary}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
