@@ -525,6 +525,7 @@ export default function AtsDepthPanel({
   if (!jdText?.trim()) return null;
 
   return (
+    <>
     <div style={{ marginTop: 0 }}>
       <div
         style={{
@@ -1156,5 +1157,6 @@ export default function AtsDepthPanel({
           </div>
         </div>
       )}
+    </>
   );
 }
