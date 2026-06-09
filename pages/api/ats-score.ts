@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
-const { buildRecruiterScanPrompt } = require('@/lib/forge/strategyBrain');
+const { buildRecruiterScanPrompt, buildDeterministicHammerAnalysis } = require('@/lib/forge/strategyBrain');
 
 // === TYPES ===
 type ApiResponse = {
@@ -20,6 +20,7 @@ type ApiResponse = {
   missingProof?: string[];
   wouldAdvance?: boolean | null;
   topFixes?: string[];
+  signalBreakdown?: Array<{ signal: string; status: string; required: boolean }>;
   error?: string;
 };
 
@@ -243,6 +244,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       ? parsed.topFixes.map((x: any) => String(x || '').trim()).filter(Boolean)
       : [];
 
+    // Run deterministic analysis to get per-signal evidence classifications.
+    // This is JD-driven -- required signals are derived from THIS job description,
+    // not hardcoded. Works for any role: nurse, engineer, warehouse lead, CEO.
+    let signalBreakdown: Array<{ signal: string; status: string; required: boolean }> = [];
+    try {
+      const deterministicResult = buildDeterministicHammerAnalysis({
+        jdText: jd,
+        resume: {
+          ...resume,
+          summary,
+          skills,
+          workExperiences: experiences,
+          educationList: education,
+        },
+      });
+      const requiredSet = new Set(
+        (deterministicResult?.requiredSignals || []).map((s: string) => s.toLowerCase())
+      );
+      signalBreakdown = (deterministicResult?.evidenceSignals || []).map((sig: any) => ({
+        signal: sig.signal,
+        status: sig.status,
+        required: requiredSet.has(sig.signal.toLowerCase()),
+      }));
+    } catch (e) {
+      // Non-fatal -- modal will fall back to client-side signalAnalysis
+    }
+
     // === 5) OPTIONAL HISTORY LOG (NOT gate) ===
     const { key: monthKey } = monthWindowUTC(new Date());
     try {
@@ -269,6 +297,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       missingProof,
       wouldAdvance,
       topFixes,
+      signalBreakdown,
     });
   } catch (error: any) {
     console.error(`[/api/ats-score] AI failed for user ${userId || 'unknown'}:`, error);

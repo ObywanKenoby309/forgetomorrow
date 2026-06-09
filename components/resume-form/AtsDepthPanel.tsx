@@ -219,6 +219,7 @@ export default function AtsDepthPanel({
   const [aiStrongestSignal, setAiStrongestSignal] = useState<string | null>(null);
   const [aiRejectionRisk, setAiRejectionRisk] = useState<string | null>(null);
   const [aiMissingProof, setAiMissingProof] = useState<string[]>([]);
+  const [aiSignalBreakdown, setAiSignalBreakdown] = useState<Array<{ signal: string; status: string; required: boolean }>>([]);
   const [explainOpen, setExplainOpen] = useState(false);
 
   const [coachOpen, setCoachOpen] = useState(false);
@@ -438,6 +439,7 @@ export default function AtsDepthPanel({
       setAiStrongestSignal(typeof data?.strongestSignal === 'string' ? data.strongestSignal.trim() : null);
       setAiRejectionRisk(typeof data?.rejectionRisk === 'string' ? data.rejectionRisk.trim() : null);
       setAiMissingProof(Array.isArray(data?.missingProof) ? data.missingProof.filter((x: any) => typeof x === 'string' && x.trim()) : []);
+      setAiSignalBreakdown(Array.isArray(data?.signalBreakdown) ? data.signalBreakdown : []);
     } catch (e) {
       console.error('[AtsDepthPanel] AI scan failed', e);
       setAiError('AI scan failed - try again.');
@@ -1057,55 +1059,119 @@ export default function AtsDepthPanel({
                 </div>
               )}
 
-              {/* Scan ran -- show full breakdown using server response as source of truth */}
-              {aiScore !== null && (
-                <>
-                  {/* Strengths: server-classified direct signals from signalAnalysis */}
-                  {(() => {
-                    const directSignals = signalAnalysis?.classified
-                      ? signalAnalysis.classified
-                          .filter((s: any) => s.status === 'direct' || s.status === 'adjacent_technical')
-                          .map((s: any) => String(s.signal).replace(/\b\w/g, (c: string) => c.toUpperCase()))
-                      : [];
-                    const allStrengths = [
-                      ...directSignals,
-                      ...(aiStrongestSignal && !directSignals.some((s: string) =>
-                        aiStrongestSignal.toLowerCase().includes(s.toLowerCase())
-                      ) ? [aiStrongestSignal] : []),
-                    ].filter(Boolean).slice(0, 10);
-                    if (!allStrengths.length) return null;
-                    return (
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 900, color: '#15803D', marginBottom: 8 }}>Strengths</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                          {allStrengths.map((s: string) => (
-                            <div key={s} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 12, color: '#1E293B', lineHeight: 1.4 }}>
-                              <span style={{ color: '#15803D', fontWeight: 900, flexShrink: 0, marginTop: 1 }}>+</span>
-                              {s}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
+              {/* Scan ran -- JD-adaptive weighted signal breakdown */}
+              {aiScore !== null && (() => {
+                // Use server-returned signalBreakdown if available (JD-derived, works for any role).
+                // Fall back to client-side signalAnalysis if server didn't return it.
+                const serverSignals = aiSignalBreakdown.length > 0 ? aiSignalBreakdown : null;
+                const clientSignals = signalAnalysis?.classified || [];
 
-                  {/* Gaps: server missingProof + rejectionRisk as primary source */}
-                  {(() => {
-                    // Server fields are the source of truth -- they reflect the actual AI evaluation.
-                    // signalAnalysis.missing is only a fallback if the server returned nothing.
-                    const serverGaps = [
-                      ...aiMissingProof,
-                      ...(aiRejectionRisk ? [aiRejectionRisk] : []),
-                    ].filter(Boolean);
-                    const fallbackGaps = serverGaps.length === 0 && signalAnalysis?.missing
-                      ? signalAnalysis.missing.map((s: any) =>
-                          String(s.signal).replace(/\b\w/g, (c: string) => c.toUpperCase())
-                        )
-                      : [];
-                    const allGaps = [...serverGaps, ...fallbackGaps]
-                      .filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
-                    if (!allGaps.length) return null;
-                    return (
+                const rawSignals: Array<{ signal: string; status: string; required: boolean }> =
+                  serverSignals
+                    ? serverSignals
+                    : clientSignals.map((s: any) => ({ signal: s.signal, status: s.status, required: true }));
+
+                if (!rawSignals.length) return null;
+
+                // JD-adaptive weighting:
+                // Required signals (derived from THIS JD) share 90% of total weight equally.
+                // Non-required signals (credibility-only) share the remaining 10% equally.
+                // This means the breakdown reflects THIS role's actual priorities,
+                // not a hardcoded template. A nursing JD weights domain knowledge heavily.
+                // A warehouse JD weights delivery heavily. An exec role weights stakeholder heavily.
+                const required = rawSignals.filter((s) => s.required);
+                const notRequired = rawSignals.filter((s) => !s.required);
+                const requiredWeight = required.length > 0 ? Math.floor(90 / required.length) : 0;
+                const credibilityWeight = notRequired.length > 0 ? Math.floor(10 / notRequired.length) : 0;
+
+                const STATUS_MULTIPLIER: Record<string, number> = {
+                  direct: 1.0,
+                  adjacent_technical: 0.8,
+                  adjacent: 0.5,
+                  missing: 0.0,
+                };
+                const STATUS_COLOR: Record<string, string> = {
+                  direct: '#15803D',
+                  adjacent_technical: '#0369A1',
+                  adjacent: '#D97706',
+                  missing: '#DC2626',
+                };
+                const STATUS_LABEL: Record<string, string> = {
+                  direct: 'Proven',
+                  adjacent_technical: 'Strong evidence',
+                  adjacent: 'Partial proof',
+                  missing: 'Not demonstrated',
+                };
+
+                const rows = rawSignals.map((sig) => {
+                  const weight = sig.required ? requiredWeight : credibilityWeight;
+                  const mult = STATUS_MULTIPLIER[sig.status] ?? 0;
+                  const earned = Math.round(weight * mult);
+                  return {
+                    ...sig,
+                    weight,
+                    earned,
+                    label: STATUS_LABEL[sig.status] || sig.status,
+                    color: STATUS_COLOR[sig.status] || '#64748B',
+                  };
+                }).filter((r) => r.weight > 0);
+
+                const totalEarned = rows.reduce((sum, r) => sum + r.earned, 0);
+                const totalPossible = rows.reduce((sum, r) => sum + r.weight, 0);
+
+                const serverGaps = [
+                  ...aiMissingProof,
+                  ...(aiRejectionRisk ? [aiRejectionRisk] : []),
+                ].filter(Boolean);
+                const fallbackGaps = serverGaps.length === 0
+                  ? rows.filter((r) => r.status === 'missing' || r.status === 'adjacent')
+                      .map((r) => String(r.signal).replace(/\b\w/g, (c: string) => c.toUpperCase()))
+                  : [];
+                const allGaps = [...serverGaps, ...fallbackGaps]
+                  .filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 5);
+
+                return (
+                  <>
+                    {/* Score breakdown */}
+                    <div style={{ padding: '10px 12px', borderRadius: 10, background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                        <span style={{ fontSize: 11, fontWeight: 900, color: '#334155' }}>Signal breakdown</span>
+                        <span style={{ fontSize: 11, color: '#64748B' }}>{totalEarned}/{totalPossible} pts</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                        {rows.map((r) => (
+                          <div key={r.signal}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+                                <span style={{ fontSize: 11, color: '#1E293B', fontWeight: 700 }}>
+                                  {String(r.signal).replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                                </span>
+                                {!r.required && (
+                                  <span style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600, flexShrink: 0 }}>credibility</span>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                <span style={{ fontSize: 10, color: r.color, fontWeight: 800 }}>{r.label}</span>
+                                <span style={{ fontSize: 11, fontWeight: 900, color: r.earned > 0 ? r.color : '#DC2626', minWidth: 36, textAlign: 'right' }}>
+                                  {r.earned}/{r.weight}
+                                </span>
+                              </div>
+                            </div>
+                            <div style={{ height: 5, borderRadius: 999, background: '#E2E8F0', overflow: 'hidden' }}>
+                              <div style={{
+                                width: `${r.weight > 0 ? (r.earned / r.weight) * 100 : 0}%`,
+                                height: '100%',
+                                background: r.color,
+                                transition: 'width 0.3s ease',
+                              }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Gaps */}
+                    {allGaps.length > 0 && (
                       <div>
                         <div style={{ fontSize: 12, fontWeight: 900, color: '#D97706', marginBottom: 8 }}>Areas That Could Improve Alignment</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -1117,27 +1183,17 @@ export default function AtsDepthPanel({
                           ))}
                         </div>
                       </div>
-                    );
-                  })()}
+                    )}
 
-                  {/* AI summary */}
-                  {aiSummary && (
-                    <div style={{
-                      padding: '10px 12px',
-                      borderRadius: 10,
-                      background: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
-                      fontSize: 11,
-                      color: '#475569',
-                      lineHeight: 1.5,
-                    }}>
-                      {aiSummary}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
+                    {/* AI summary */}
+                    {aiSummary && (
+                      <div style={{ padding: '10px 12px', borderRadius: 10, background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: 11, color: '#475569', lineHeight: 1.5 }}>
+                        {aiSummary}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             {/* Footer */}
             <div style={{
               borderTop: '1px solid #F1F5F9',
