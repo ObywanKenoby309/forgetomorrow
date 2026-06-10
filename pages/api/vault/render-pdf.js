@@ -204,22 +204,24 @@ async function renderRoadmap(docId, userId) {
   const meta = d.meta || {};
   const sections = [];
 
-  if (d.summary || d.overview) sections.push({ heading: 'Overview', text: safe(d.summary || d.overview) });
-  if (safeArr(d.pivotOptions || d.options).length) {
-    sections.push({
-      heading: 'Growth & Pivot Options',
-      bullets: safeArr(d.pivotOptions || d.options).map(o => safe(o.title || o.name || o)),
-    });
-  }
-  if (safeArr(d.milestones || d.steps).length) {
-    sections.push({
-      heading: 'Milestones',
-      bullets: safeArr(d.milestones || d.steps).map(m => safe(m.description || m.title || m)),
-    });
-  }
-  if (d.nextStep || d.immediateAction) {
-    sections.push({ heading: 'Next Step', text: safe(d.nextStep || d.immediateAction) });
-  }
+  const phase = (title, p) => {
+    if (!p) return;
+    if (safeArr(p.objectives).length) sections.push({ heading: `${title} — Objectives`, bullets: safeArr(p.objectives).map(x => safe(x)) });
+    if (safeArr(p.actions).length)    sections.push({ heading: `${title} — Actions`,    bullets: safeArr(p.actions).map(x => safe(x)) });
+    if (safeArr(p.metrics).length)    sections.push({ heading: `${title} — Metrics`,    bullets: safeArr(p.metrics).map(x => safe(x)) });
+    if (safeArr(p.quickWins).length)  sections.push({ heading: `${title} — Quick Wins`, bullets: safeArr(p.quickWins).map(x => safe(x)) });
+    if (safeArr(p.risks).length)      sections.push({ heading: `${title} — Risks`,      bullets: safeArr(p.risks).map(x => safe(x)) });
+    if (p.presentation)               sections.push({ heading: `${title} — Positioning`, text: safe(p.presentation) });
+  };
+
+  phase('First 30 Days', d.day30);
+  phase('Days 31–60',    d.day60);
+  phase('Days 61–90',    d.day90);
+
+  if (safeArr(d.growthRecommendations).length)
+    sections.push({ heading: 'Growth Recommendations', bullets: safeArr(d.growthRecommendations).map(x => safe(x)) });
+  if (safeArr(d.skillsFocus).length)
+    sections.push({ heading: 'Skills Focus', bullets: safeArr(d.skillsFocus).map(x => safe(x)) });
 
   if (!sections.length) sections.push({ text: 'Growth & Pivot Roadmap on file.' });
 
