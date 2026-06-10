@@ -7,7 +7,7 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
-import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { renderToBuffer, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { nanoid } from 'nanoid';
 import { uploadFile } from '@/lib/storage';
 
@@ -118,7 +118,7 @@ async function renderResume(docId, userId) {
   };
 
   const Component = templateId === 'hybrid' ? HybridDesignedPDF : ReverseDesignedPDF;
-  return { pdfBuffer: await pdf(<Component data={data} />).toBuffer(), fileName: `${safe(resume.name, 'resume')}.pdf` };
+  return { pdfBuffer: await renderToBuffer(<Component data={data} />), fileName: `${safe(resume.name, 'resume')}.pdf` };
 }
 
 async function renderCover(docId, userId) {
@@ -155,13 +155,13 @@ async function renderCover(docId, userId) {
     { text: `${data.signoff}\n${data.fullName}` },
   ];
 
-  const pdfBuffer = await pdf(
+  const pdfBuffer = await renderToBuffer(
     <GenericPDF
       title={`Cover Letter — ${data.company}`}
       subtitle={`${data.fullName} · ${data.email}`}
       sections={sections}
     />
-  ).toBuffer();
+  );
 
   return { pdfBuffer, fileName: `${safe(cover.name, 'cover_letter').replace(/[^a-z0-9_-]+/gi, '_')}.pdf` };
 }
@@ -186,9 +186,9 @@ async function renderProfile(userId) {
 
   if (!sections.length) sections.push({ text: 'Professional Operating Profile on file.' });
 
-  const pdfBuffer = await pdf(
+  const pdfBuffer = await renderToBuffer(
     <GenericPDF title="Professional Operating Profile" sections={sections} />
-  ).toBuffer();
+  );
 
   return { pdfBuffer, fileName: 'professional_operating_profile.pdf' };
 }
@@ -223,13 +223,13 @@ async function renderRoadmap(docId, userId) {
 
   if (!sections.length) sections.push({ text: 'Growth & Pivot Roadmap on file.' });
 
-  const pdfBuffer = await pdf(
+  const pdfBuffer = await renderToBuffer(
     <GenericPDF
       title={`${safe(meta.candidate, 'Growth')} · Growth & Pivot Roadmap`}
       subtitle={safe(meta.headline)}
       sections={sections}
     />
-  ).toBuffer();
+  );
 
   return { pdfBuffer, fileName: 'growth_pivot_roadmap.pdf' };
 }
@@ -266,13 +266,13 @@ async function renderNegotiation(docId, userId) {
 
   if (!sections.length) sections.push({ text: 'Offer & Negotiation Brief on file.' });
 
-  const pdfBuffer = await pdf(
+  const pdfBuffer = await renderToBuffer(
     <GenericPDF
       title={`Offer & Negotiation Brief${company ? ` · ${company}` : ''}`}
       subtitle={role}
       sections={sections}
     />
-  ).toBuffer();
+  );
 
   return { pdfBuffer, fileName: `negotiation_brief${company ? `_${company.replace(/[^a-z0-9]+/gi, '_')}` : ''}.pdf` };
 }
@@ -517,13 +517,13 @@ async function renderStrategy(docId, userId) {
   const strategy = safeJsonParse(client.strategyJson) || {};
   const clientName = safe(client.name, 'Client');
 
-  const pdfBuffer = await pdf(
+  const pdfBuffer = await renderToBuffer(
     <StrategyPDF
       clientName={clientName}
       s={strategy}
       targetCompanies={client.targetCompanies || ''}
     />
-  ).toBuffer();
+  );
 
   return {
     pdfBuffer,
@@ -566,13 +566,13 @@ async function renderInterviewPrep(docId, userId) {
 
   if (!sections.length) sections.push({ text: 'Interview prep guide on file.' });
 
-  const pdfBuffer = await pdf(
+  const pdfBuffer = await renderToBuffer(
     <GenericPDF
       title={`Interview Prep${company ? ` · ${company}` : ''}`}
       subtitle={role}
       sections={sections}
     />
-  ).toBuffer();
+  );
 
   return { pdfBuffer, fileName: `interview_prep${company ? `_${company.replace(/[^a-z0-9]+/gi, '_')}` : ''}.pdf` };
 }
@@ -633,9 +633,9 @@ async function renderProjectPromotion(docId, userId) {
   const title = safe(record.title, 'Project & Promotion Brief');
   const subtitle = [safe(form.currentRole), safe(form.currentCompany)].filter(Boolean).join(' · ');
 
-  const pdfBuffer = await pdf(
+  const pdfBuffer = await renderToBuffer(
     <GenericPDF title={title} subtitle={subtitle || undefined} sections={sections} />
-  ).toBuffer();
+  );
 
   return { pdfBuffer, fileName: `${title.replace(/[^a-z0-9]+/gi, '_').toLowerCase()}.pdf` };
 }
@@ -688,10 +688,9 @@ export default async function handler(req, res) {
           downloadUrl,
         },
       });
-      console.log('[api/vault/render-pdf] VaultUpload created OK — storagePath:', savedPath);
     } catch (e) {
-      console.error('[api/vault/render-pdf] VaultUpload FAILED:', e?.message);
-      // Non-fatal — PDF is in storage, user can still access it this session
+      // Non-fatal — PDF is in storage, log and continue
+      console.warn('[api/vault/render-pdf] VaultUpload record creation failed (non-fatal):', e?.message);
     }
 
     return res.status(200).json({ ok: true, downloadUrl, storagePath, fileName });
