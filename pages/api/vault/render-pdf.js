@@ -688,9 +688,11 @@ export default async function handler(req, res) {
           downloadUrl,
         },
       });
+      console.log('[api/vault/render-pdf] VaultUpload created OK — storagePath:', savedPath);
     } catch (e) {
-      // Non-fatal — PDF is in storage, log and continue
-      console.warn('[api/vault/render-pdf] VaultUpload record creation failed (non-fatal):', e?.message);
+      console.error('[api/vault/render-pdf] VaultUpload FAILED:', e?.message, e?.code, JSON.stringify(e?.meta));
+      // Return the error so it's visible — this is why the 403 happens
+      return res.status(500).json({ error: `PDF generated but could not register in Vault: ${e?.message}` });
     }
 
     return res.status(200).json({ ok: true, downloadUrl, storagePath, fileName });
