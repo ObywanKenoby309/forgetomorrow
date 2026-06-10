@@ -675,6 +675,24 @@ export default async function handler(req, res) {
     const savedPath = await uploadFile({ buffer: pdfBuffer, path: storagePath, contentType: 'application/pdf' });
     const downloadUrl = `/api/vault/file?path=${encodeURIComponent(savedPath)}`;
 
+    // Create a VaultUpload record so the owner can access the file through /api/vault/file.
+    // vault/file.js checks VaultShare OR VaultUpload — without this record it returns 403.
+    try {
+      await prisma.vaultUpload.create({
+        data: {
+          userId,
+          storagePath: savedPath,
+          fileName,
+          fileType: 'application/pdf',
+          fileSizeBytes: pdfBuffer.length,
+          downloadUrl,
+        },
+      });
+    } catch (e) {
+      // Non-fatal — PDF is in storage, log and continue
+      console.warn('[api/vault/render-pdf] VaultUpload record creation failed (non-fatal):', e?.message);
+    }
+
     return res.status(200).json({ ok: true, downloadUrl, storagePath, fileName });
   } catch (err) {
     console.error('[api/vault/render-pdf]', err);
