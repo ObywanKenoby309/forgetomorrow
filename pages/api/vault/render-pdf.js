@@ -200,28 +200,28 @@ async function renderRoadmap(docId, userId) {
   });
   if (!roadmap) throw new Error('Roadmap not found');
 
-  const d = safeJsonParse(roadmap.data) || {};
-  const meta = d.meta || {};
+  const roadmapData = safeJsonParse(roadmap.data) || {};
+  const meta = roadmapData.meta || {};
   const sections = [];
 
-  const phase = (title, p) => {
-    if (!p) return;
-    if (safeArr(p.objectives).length) sections.push({ heading: `${title} — Objectives`, bullets: safeArr(p.objectives).map(x => safe(x)) });
+  const renderPhase = (title, phaseData) => {
+    if (!phaseData) return;
+    if (safeArr(phaseData.objectives).length) sections.push({ heading: `${title} — Objectives`, bullets: safeArr(phaseData.objectives).map(x => safe(x)) });
     if (safeArr(p.actions).length)    sections.push({ heading: `${title} — Actions`,    bullets: safeArr(p.actions).map(x => safe(x)) });
     if (safeArr(p.metrics).length)    sections.push({ heading: `${title} — Metrics`,    bullets: safeArr(p.metrics).map(x => safe(x)) });
     if (safeArr(p.quickWins).length)  sections.push({ heading: `${title} — Quick Wins`, bullets: safeArr(p.quickWins).map(x => safe(x)) });
     if (safeArr(p.risks).length)      sections.push({ heading: `${title} — Risks`,      bullets: safeArr(p.risks).map(x => safe(x)) });
-    if (p.presentation)               sections.push({ heading: `${title} — Positioning`, text: safe(p.presentation) });
+    if (phaseData.presentation)       sections.push({ heading: `${title} — Positioning`, text: safe(phaseData.presentation) });
   };
 
-  phase('First 30 Days', d.day30);
-  phase('Days 31–60',    d.day60);
-  phase('Days 61–90',    d.day90);
+  renderPhase('First 30 Days', roadmapData.day30);
+  renderPhase('Days 31–60',    roadmapData.day60);
+  renderPhase('Days 61–90',    roadmapData.day90);
 
-  if (safeArr(d.growthRecommendations).length)
-    sections.push({ heading: 'Growth Recommendations', bullets: safeArr(d.growthRecommendations).map(x => safe(x)) });
-  if (safeArr(d.skillsFocus).length)
-    sections.push({ heading: 'Skills Focus', bullets: safeArr(d.skillsFocus).map(x => safe(x)) });
+  if (safeArr(roadmapData.growthRecommendations).length)
+    sections.push({ heading: 'Growth Recommendations', bullets: safeArr(roadmapData.growthRecommendations).map(x => safe(x)) });
+  if (safeArr(roadmapData.skillsFocus).length)
+    sections.push({ heading: 'Skills Focus', bullets: safeArr(roadmapData.skillsFocus).map(x => safe(x)) });
 
   if (!sections.length) sections.push({ text: 'Growth & Pivot Roadmap on file.' });
 
@@ -252,35 +252,35 @@ async function renderNegotiation(docId, userId) {
   const sections = [];
 
   if (result.decision) {
-    const d = result.decision;
+    const decision = result.decision;
     sections.push({ heading: 'Recommended Move', kvPairs: [
-      { key: 'Move',     val: safe(d.recommendedMove) },
-      { key: 'Summary',  val: safe(d.oneLineSummary) },
-      { key: 'Leverage', val: safe(d.leverageBand) + (d.leverageScore != null ? ` (${d.leverageScore}/10)` : '') },
-      { key: 'Risk',     val: safe(d.riskLevel) },
-      { key: 'Target',   val: safe(d.targetAsk) },
-      { key: 'Floor',    val: safe(d.fallbackFloor) },
+      { key: 'Move',     val: safe(decision.recommendedMove) },
+      { key: 'Summary',  val: safe(decision.oneLineSummary) },
+      { key: 'Leverage', val: safe(decision.leverageBand) + (decision.leverageScore != null ? ` (${decision.leverageScore}/10)` : '') },
+      { key: 'Risk',     val: safe(decision.riskLevel) },
+      { key: 'Target',   val: safe(decision.targetAsk) },
+      { key: 'Floor',    val: safe(decision.fallbackFloor) },
     ].filter(kv => kv.val) });
-    if (safeArr(d.doNotTradeAway).length)
-      sections.push({ heading: 'Do Not Trade Away', bullets: safeArr(d.doNotTradeAway).map(x => safe(x)) });
+    if (safeArr(decision.doNotTradeAway).length)
+      sections.push({ heading: 'Do Not Trade Away', bullets: safeArr(decision.doNotTradeAway).map(x => safe(x)) });
   }
 
   if (result.negotiationRiskSnapshot) {
-    const s = result.negotiationRiskSnapshot;
+    const riskSnapshot = result.negotiationRiskSnapshot;
     sections.push({ heading: 'Negotiation Risk Snapshot', kvPairs: [
-      { key: 'Strength',    val: safe(s.biggestStrength) },
-      { key: 'Weakness',    val: safe(s.biggestWeakness) },
-      { key: 'Opportunity', val: safe(s.biggestOpportunity) },
-      { key: 'Risk',        val: safe(s.biggestRisk) },
+      { key: 'Strength',    val: safe(riskSnapshot.biggestStrength) },
+      { key: 'Weakness',    val: safe(riskSnapshot.biggestWeakness) },
+      { key: 'Opportunity', val: safe(riskSnapshot.biggestOpportunity) },
+      { key: 'Risk',        val: safe(riskSnapshot.biggestRisk) },
     ].filter(kv => kv.val) });
   }
 
   if (result.marketReality) {
-    const m = result.marketReality;
+    const market = result.marketReality;
     sections.push({ heading: 'Market Reality', kvPairs: [
-      { key: 'Range',      val: safe(m.directionalRange) },
-      { key: 'Tension',    val: safe(m.marketTension) },
-      { key: 'Confidence', val: safe(m.confidenceLevel) },
+      { key: 'Range',      val: safe(market.directionalRange) },
+      { key: 'Tension',    val: safe(market.marketTension) },
+      { key: 'Confidence', val: safe(market.confidenceLevel) },
     ].filter(kv => kv.val) });
   }
 

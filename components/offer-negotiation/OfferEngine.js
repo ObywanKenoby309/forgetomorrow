@@ -405,7 +405,7 @@ function downloadBrief(plan, form) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const margin = 44;
   const maxW = 524;
-  let y = margin;
+  let yPos = margin;
 
   const write = (text, size = 11, bold = false, color = [30, 41, 59]) => {
     doc.setFontSize(size);
@@ -413,13 +413,13 @@ function downloadBrief(plan, form) {
     doc.setTextColor(...color);
     const lines = doc.splitTextToSize(String(text || ''), maxW);
     lines.forEach(line => {
-      if (y > 750) { doc.addPage(); y = margin; }
-      doc.text(line, margin, y);
-      y += size * 1.5;
+      if (yPos > 750) { doc.addPage(); yPos = margin; }
+      doc.text(line, margin, yPos);
+      yPos += size * 1.5;
     });
   };
 
-  const gap = (n = 10) => { y += n; };
+  const gap = (n = 10) => { yPos += n; };
 
   write('ForgeTomorrow Negotiation Brief', 18, true, [255, 112, 67]);
   gap(4);
@@ -794,14 +794,14 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
           </div>
           {/* Selected path detail */}
           {safeArr(plan?.negotiationPaths)[selectedPath] && (() => {
-            const p = safeArr(plan.negotiationPaths)[selectedPath];
+            const pathData = safeArr(plan.negotiationPaths)[selectedPath];
             const colors = ['#16A34A', '#0EA5E9', '#DC2626'];
-            const c = colors[selectedPath] || ORANGE;
+            const pathColor = colors[selectedPath] || ORANGE;
             return (
-              <div style={{ borderRadius: 10, padding: '12px 14px', background: `${c}08`, border: `1px solid ${c}28`, display: 'grid', gap: 8 }}>
-                {[['Ask', p?.askFraming], ['Best when', p?.bestWhen], ['Tradeoffs', p?.tradeoffs]].map(([k, v]) => v && (
+              <div style={{ borderRadius: 10, padding: '12px 14px', background: `${pathColor}08`, border: `1px solid ${pathColor}28`, display: 'grid', gap: 8 }}>
+                {[['Ask', pathData?.askFraming], ['Best when', pathData?.bestWhen], ['Tradeoffs', pathData?.tradeoffs]].map(([k, v]) => v && (
                   <div key={k}>
-                    <div style={{ fontSize: 9, fontWeight: 800, color: c, marginBottom: 3, letterSpacing: 0.3 }}>{k.toUpperCase()}</div>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: pathColor, marginBottom: 3, letterSpacing: 0.3 }}>{k.toUpperCase()}</div>
                     <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.5 }}>{v}</div>
                   </div>
                 ))}
