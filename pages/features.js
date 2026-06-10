@@ -379,9 +379,10 @@ export default function Features() {
 
           <AutoCarousel
             images={[
-              { src: "/images/Agenda.png", alt: "Coaching Agenda" },
-              { src: "/images/Clients.png", alt: "Client Management" },
-              { src: "/images/Feedback.png", alt: "Coach Feedback" },
+              { src: "/images/Target_Strategy.png", alt: "Target Strategy" },
+			  { src: "/images/Feedback.png", alt: "Coach Feedback" },
+			  { src: "/images/Agenda.png", alt: "Coaching Agenda" },
+			  { src: "/images/Clients.png", alt: "Client Management" },
             ]}
             intervalMs={9500}
             aspectClass="aspect-[16/9]"
