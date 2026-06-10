@@ -1,5 +1,5 @@
 // pages/api/offer-negotiation/generate.js
-// UNIFIED — runs resume through ForgeTomorrow evidence engine before GPT
+// UNIFIED — DB-first resume evidence before GPT
 // Same intelligence backbone as Forge Hammer and Coaching Strategy
 
 import { getServerSession } from 'next-auth/next';
@@ -13,8 +13,113 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 function safeString(v) { return typeof v === 'string' ? v.trim() : ''; }
 function safeNum(v) { return String(v ?? '').trim(); }
-function safeJsonParse(text) { try { return JSON.parse(text); } catch { return null; } }
+function safeJsonParse(text) {
+  if (!text) return null;
+  if (typeof text === 'object') return text;
+  try { return JSON.parse(text); } catch { return null; }
+}
 function extractChat(resp) { return String(resp?.choices?.[0]?.message?.content || ''); }
+
+function normalizeArray(val) {
+  return Array.isArray(val) ? val.filter(Boolean) : [];
+}
+
+function pickFirstNonEmptyArray(...vals) {
+  for (const v of vals) {
+    const arr = normalizeArray(v);
+    if (arr.length > 0) return arr;
+  }
+  return [];
+}
+
+function normalizeRoot(builderData) {
+  if (!builderData || typeof builderData !== 'object') return {};
+  return builderData.resumeData || builderData.data || builderData;
+}
+
+function buildResumeDataFromStoredResume({ stored, user }) {
+  const root = normalizeRoot(stored?.data || stored);
+  const formDataRaw = root.formData || root.personalInfo || {};
+
+  return {
+    summary: root.summary || root.professionalSummary || root.about || root.summaryText || '',
+    skills: normalizeArray(root.skills),
+    workExperiences: pickFirstNonEmptyArray(root.experiences, root.workExperiences, root.workExperience),
+    educationList: pickFirstNonEmptyArray(root.educationList, root.education, root.educations),
+    projects: normalizeArray(root.projects),
+    certifications: pickFirstNonEmptyArray(root.certifications, root.certificationList),
+    achievements: normalizeArray(root.achievements),
+    volunteerExperiences: pickFirstNonEmptyArray(root.volunteerExperiences, root.volunteer, root.volunteering),
+    customSections: normalizeArray(root.customSections),
+    personalInfo: {
+      name: formDataRaw.fullName || formDataRaw.name || user?.name || '',
+      email: formDataRaw.email || user?.email || '',
+      phone: formDataRaw.phone || '',
+      location: formDataRaw.location || '',
+      portfolio: formDataRaw.portfolio || formDataRaw.forgeUrl || formDataRaw.ftProfile || '',
+      externalurl: formDataRaw.externalurl || '',
+      github: formDataRaw.github || '',
+      role: formDataRaw.role || formDataRaw.targetedRole || '',
+    },
+  };
+}
+
+function hasResumeEvidence(resumeData) {
+  return Boolean(
+    resumeData?.summary ||
+    resumeData?.workExperiences?.length ||
+    resumeData?.skills?.length ||
+    resumeData?.projects?.length ||
+    resumeData?.certifications?.length ||
+    resumeData?.educationList?.length
+  );
+}
+
+async function loadDbResumeData(userId) {
+  const [user, resume] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true },
+    }),
+    prisma.resume.findFirst({
+      where: { userId },
+      orderBy: [
+        { isPrimary: 'desc' },
+        { updatedAt: 'desc' },
+      ],
+      select: {
+        id: true,
+        name: true,
+        content: true,
+        isPrimary: true,
+        updatedAt: true,
+      },
+    }),
+  ]);
+
+  if (!resume?.content) {
+    return { resumeData: null, resumeMeta: null };
+  }
+
+  const stored = safeJsonParse(resume.content);
+  if (!stored) {
+    console.error('[offer-negotiation/generate] Failed to parse stored resume content', { resumeId: resume.id });
+    return { resumeData: null, resumeMeta: null };
+  }
+
+  const resumeData = buildResumeDataFromStoredResume({ stored, user });
+
+  return {
+    resumeData,
+    resumeMeta: {
+      id: resume.id,
+      name: resume.name || 'Resume',
+      isPrimary: resume.isPrimary,
+      updatedAt: resume.updatedAt,
+      source: 'database',
+    },
+  };
+}
 
 // Seven universal negotiation leverage signals — same categories as Forge Hammer
 const NEGOTIATION_SIGNALS = [
@@ -30,9 +135,7 @@ const NEGOTIATION_SIGNALS = [
 function runEvidenceEngine(resumeData) {
   if (!resumeData) return { summary: '', leverageBand: '', score: 0 };
 
-  const hasData = resumeData.summary ||
-    resumeData.workExperiences?.length ||
-    resumeData.skills?.length;
+  const hasData = hasResumeEvidence(resumeData);
 
   if (!hasData) return { summary: '', leverageBand: '', score: 0 };
 
@@ -78,11 +181,25 @@ export default async function handler(req, res) {
     const session = await getServerSession(req, res, authOptions);
     if (!session?.user?.id) return res.status(401).json({ error: 'Not authenticated' });
 
-    const { formData, resumeData } = req.body || {};
+    const { formData, resumeData: clientResumeData } = req.body || {};
     if (!formData) return res.status(400).json({ error: 'Missing formData' });
 
+    const { resumeData: dbResumeData, resumeMeta } = await loadDbResumeData(session.user.id);
+
+    const resolvedResumeData = hasResumeEvidence(dbResumeData)
+      ? dbResumeData
+      : hasResumeEvidence(clientResumeData)
+        ? clientResumeData
+        : null;
+
+    const resumeSource = hasResumeEvidence(dbResumeData)
+      ? 'database'
+      : hasResumeEvidence(clientResumeData)
+        ? 'client_context'
+        : 'none';
+
     // ── Run resume through ForgeTomorrow evidence engine ─────────────────────
-    const evidence = runEvidenceEngine(resumeData);
+    const evidence = runEvidenceEngine(resolvedResumeData);
 
     // ── Extract form fields ───────────────────────────────────────────────────
     const jobDescription = safeString(formData.jobDescription);
@@ -165,6 +282,7 @@ ${evidence.summary
   ? `Resume analyzed through unified intelligence backbone:
 ${evidence.summary}
 Evidence-based leverage band: ${evidence.leverageBand} (score: ${evidence.score}/21)
+Resume source: ${resumeSource}${resumeMeta?.name ? ` (${resumeMeta.name})` : ''}
 
 This analysis reflects what is ACTUALLY PROVEN in the resume. Use it to ground the leverage assessment.`
   : 'No resume connected — relying on self-reported inputs only.'}
@@ -268,6 +386,8 @@ Return JSON:
           input: {
             formData,
             resumeConnected: !!(evidence.summary),
+            resumeSource,
+            resumeMeta,
             evidenceBand: evidence.leverageBand || null,
             evidenceScore: evidence.score || 0,
           },
@@ -284,6 +404,8 @@ Return JSON:
       negotiationId: negotiation?.id || null,
       savedAt: negotiation?.createdAt || null,
       resumeConnected: !!(evidence.summary),
+      resumeSource,
+      resumeMeta,
       evidenceBand: evidence.leverageBand || null,
     });
   } catch (err) {
