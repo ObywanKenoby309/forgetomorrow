@@ -232,66 +232,60 @@ const RESULT_TABS = [
   { id: 'skills', label: 'Skills' },
 ];
 
-function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMobile, mobileTab, onMobileTabChange }) {
+function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMobile, mobileTab, onMobileTabChange, roadmapId, pdfUrl, setPdfUrl, printingBrief, setPrintingBrief }) {
   const router = useRouter();
   const [tab, setTab] = useState('day30');
   const activeTab = mobileTab || tab;
   const setActiveTab = onMobileTabChange || setTab;
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!plan) return;
-    const dirLabel = direction === 'compare' ? 'Your Compare Plan'
-      : direction === 'pivot' ? `Your Pivot Plan${pivotTarget ? ` — ${pivotTarget}` : ''}`
-      : 'Your Stay-the-Course Plan';
 
-    const w = window.open('', '_blank', 'noopener,noreferrer');
-    if (!w) return;
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
 
-    const listHtml = (items) => {
-      const arr = Array.isArray(items) ? items.filter(Boolean) : [];
-      if (!arr.length) return '<p style="color:#9ca3af">—</p>';
-      return `<ul>${arr.map(i => `<li>${String(i).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</li>`).join('')}</ul>`;
-    };
+    if (!roadmapId) {
+      window.alert('This roadmap does not have a saved document ID yet. Please regenerate the plan and try again.');
+      return;
+    }
 
-    const phaseHtml = (title, data) => !data ? '' : `
-      <section style="border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:14px 0;page-break-inside:avoid">
-        <h2 style="margin:0 0 12px;font-size:18px;font-weight:800;color:#FF7043">${title}</h2>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-          <div><div style="font-weight:800;margin-bottom:6px">Objectives</div>${listHtml(data.objectives)}</div>
-          <div><div style="font-weight:800;margin-bottom:6px">Actions</div>${listHtml(data.actions)}</div>
-          <div><div style="font-weight:800;margin-bottom:6px">Metrics</div>${listHtml(data.metrics)}</div>
-          <div><div style="font-weight:800;margin-bottom:6px">Quick Wins</div>${listHtml(data.quickWins)}</div>
-        </div>
-        ${data.risks?.length ? `<div style="margin-top:12px"><div style="font-weight:800;color:#DC2626;margin-bottom:6px">Risks</div>${listHtml(data.risks)}</div>` : ''}
-        ${data.presentation ? `<div style="margin-top:12px;padding:10px;background:#fff7ed;border-left:3px solid #FF7043;border-radius:6px;font-size:13px">${data.presentation}</div>` : ''}
-      </section>`;
+    setPrintingBrief(true);
 
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${dirLabel} — ForgeTomorrow</title>
-    <style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;padding:24px;color:#111;line-height:1.5}
-    ul{padding-left:18px}li{margin:4px 0}.note{margin-top:14px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb;font-size:12.5px}
-    @page{margin:12mm}</style></head><body>
-    <div style="border-bottom:2px solid #FF7043;padding-bottom:14px;margin-bottom:18px">
-      <h1 style="margin:0;color:#FF7043;font-size:26px">${dirLabel}</h1>
-      <div style="color:#6b7280;font-size:13px;margin-top:4px">${plan?.meta?.candidate || ''} — Generated ${plan?.meta?.generatedAt ? new Date(plan.meta.generatedAt).toLocaleDateString() : new Date().toLocaleDateString()}</div>
-    </div>
-    ${phaseHtml('First 30 Days', plan?.day30)}
-    ${phaseHtml('Days 31–60', plan?.day60)}
-    ${phaseHtml('Days 61–90', plan?.day90)}
-    ${plan?.growthRecommendations?.length ? `<section style="border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:14px 0"><h2 style="margin:0 0 10px;font-size:18px;font-weight:800">Growth Recommendations</h2>${listHtml(plan.growthRecommendations)}</section>` : ''}
-    ${plan?.skillsFocus?.length ? `<section style="border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:14px 0"><h2 style="margin:0 0 10px;font-size:18px;font-weight:800">Skills Focus</h2>${listHtml(plan.skillsFocus)}</section>` : ''}
-    <div class="note"><strong>ForgeTomorrow Guidance Note:</strong> AI-assisted guidance grounded in your resume evidence. Not a substitute for live coaching or mentorship. Work with a coach through The Hearth to refine your strategy.</div>
-    </body></html>`;
+    try {
+      const res = await fetch('/api/vault/render-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docType: 'roadmap', docId: roadmapId }),
+      });
 
-    w.document.open(); w.document.write(html); w.document.close();
-    setTimeout(() => { try { w.focus(); w.print(); } catch {} }, 250);
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Could not generate the brief PDF.');
+      }
+
+      if (!data?.downloadUrl) {
+        throw new Error('PDF generated, but no download URL was returned.');
+      }
+
+      setPdfUrl(data.downloadUrl);
+      window.open(data.downloadUrl, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      console.error('[GrowthEngine] Print Brief failed', err);
+      window.alert(err?.message || 'Could not generate the brief PDF.');
+    } finally {
+      setPrintingBrief(false);
+    }
   };
 
   // Action bar — coach CTA removed, lives at bottom only
   const ActionBar = () => (
     <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-      <button type="button" onClick={handlePrint}
-        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: ORANGE, color: 'white', border: 'none' }}>
-        📄 Print Brief
+      <button type="button" onClick={handlePrint} disabled={printingBrief}
+        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: printingBrief ? 'not-allowed' : 'pointer', background: ORANGE, color: 'white', border: 'none', opacity: printingBrief ? 0.7 : 1 }}>
+        {printingBrief ? 'Generating Brief...' : pdfUrl ? 'Open Brief PDF' : '📄 Print Brief'}
       </button>
       <button type="button" onClick={() => router.push('/calendar')}
         style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(255,255,255,0.85)', color: SLATE, border: '1px solid rgba(0,0,0,0.12)' }}>
@@ -394,6 +388,9 @@ export default function GrowthEngine() {
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [roadmapId, setRoadmapId] = useState('');
+  const [pdfUrl, setPdfUrl] = useState('');
+  const [printingBrief, setPrintingBrief] = useState(false);
 
   // Mobile
   const [isMobile, setIsMobile] = useState(false);
@@ -458,6 +455,8 @@ export default function GrowthEngine() {
       if (!data?.plan) throw new Error('No plan returned from server.');
 
       setPlan(data.plan);
+      setRoadmapId(String(data?.roadmapId || data?.planId || ''));
+      setPdfUrl('');
     } catch (e) {
       setError(e?.name === 'AbortError' ? 'Generation timed out. Please try again.' : String(e?.message || 'Something went wrong.'));
     } finally {
@@ -595,7 +594,9 @@ export default function GrowthEngine() {
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           <ResultCockpit plan={plan} direction={direction} pivotTarget={pivotTarget}
             onReset={handleReset} hasResume={Boolean(selectedResumeId)}
-            isMobile={true} mobileTab={mobileTab} onMobileTabChange={setMobileTab} />
+            isMobile={true} mobileTab={mobileTab} onMobileTabChange={setMobileTab}
+            roadmapId={roadmapId} pdfUrl={pdfUrl} setPdfUrl={setPdfUrl}
+            printingBrief={printingBrief} setPrintingBrief={setPrintingBrief} />
           {/* Sticky bottom tab nav */}
           <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
             background: 'rgba(255,255,255,0.95)', borderTop: '1px solid rgba(0,0,0,0.10)',
@@ -661,7 +662,9 @@ export default function GrowthEngine() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <ResultCockpit plan={plan} direction={direction} pivotTarget={pivotTarget}
-            onReset={handleReset} hasResume={Boolean(selectedResumeId)} isMobile={false} />
+            onReset={handleReset} hasResume={Boolean(selectedResumeId)} isMobile={false}
+            roadmapId={roadmapId} pdfUrl={pdfUrl} setPdfUrl={setPdfUrl}
+            printingBrief={printingBrief} setPrintingBrief={setPrintingBrief} />
         </div>
       </div>
     );
