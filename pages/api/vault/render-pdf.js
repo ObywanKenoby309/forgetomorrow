@@ -250,20 +250,67 @@ async function renderNegotiation(docId, userId) {
   const company = safe(form.offerCompany, '');
 
   const sections = [];
-  if (result.summary) sections.push({ heading: 'Summary', text: safe(result.summary) });
-  if (safeArr(result.leveragePoints).length) sections.push({ heading: 'Leverage Points', bullets: safeArr(result.leveragePoints).map(l => safe(l.point || l)) });
-  if (safeArr(result.scripts || result.negotiationScripts).length) {
-    sections.push({ heading: 'Talking Points', bullets: safeArr(result.scripts || result.negotiationScripts).map(s => safe(s.script || s.line || s)) });
+
+  if (result.decision) {
+    const d = result.decision;
+    sections.push({ heading: 'Recommended Move', kvPairs: [
+      { key: 'Move',     val: safe(d.recommendedMove) },
+      { key: 'Summary',  val: safe(d.oneLineSummary) },
+      { key: 'Leverage', val: safe(d.leverageBand) + (d.leverageScore != null ? ` (${d.leverageScore}/10)` : '') },
+      { key: 'Risk',     val: safe(d.riskLevel) },
+      { key: 'Target',   val: safe(d.targetAsk) },
+      { key: 'Floor',    val: safe(d.fallbackFloor) },
+    ].filter(kv => kv.val) });
+    if (safeArr(d.doNotTradeAway).length)
+      sections.push({ heading: 'Do Not Trade Away', bullets: safeArr(d.doNotTradeAway).map(x => safe(x)) });
   }
-  if (result.recommendation) sections.push({ heading: 'Recommendation', text: safe(result.recommendation) });
-  if (result.floorSalary || result.targetSalary) {
-    sections.push({
-      heading: 'Compensation Range',
-      kvPairs: [
-        ...(result.floorSalary ? [{ key: 'Floor', val: safe(result.floorSalary) }] : []),
-        ...(result.targetSalary ? [{ key: 'Target', val: safe(result.targetSalary) }] : []),
-      ],
-    });
+
+  if (result.negotiationRiskSnapshot) {
+    const s = result.negotiationRiskSnapshot;
+    sections.push({ heading: 'Negotiation Risk Snapshot', kvPairs: [
+      { key: 'Strength',    val: safe(s.biggestStrength) },
+      { key: 'Weakness',    val: safe(s.biggestWeakness) },
+      { key: 'Opportunity', val: safe(s.biggestOpportunity) },
+      { key: 'Risk',        val: safe(s.biggestRisk) },
+    ].filter(kv => kv.val) });
+  }
+
+  if (result.marketReality) {
+    const m = result.marketReality;
+    sections.push({ heading: 'Market Reality', kvPairs: [
+      { key: 'Range',      val: safe(m.directionalRange) },
+      { key: 'Tension',    val: safe(m.marketTension) },
+      { key: 'Confidence', val: safe(m.confidenceLevel) },
+    ].filter(kv => kv.val) });
+  }
+
+  if (result.valueJustification) {
+    if (safeArr(result.valueJustification.coreLeverage).length)
+      sections.push({ heading: 'Core Leverage', bullets: safeArr(result.valueJustification.coreLeverage).map(x => safe(x)) });
+    if (safeArr(result.valueJustification.nonSalaryLevers).length)
+      sections.push({ heading: 'Non-Salary Levers', bullets: safeArr(result.valueJustification.nonSalaryLevers).map(x => safe(x)) });
+  }
+
+  safeArr(result.negotiationPaths).slice(0, 3).forEach(p => {
+    sections.push({ heading: `Path: ${safe(p.label || 'Option')}`, kvPairs: [
+      { key: 'Ask',       val: safe(p.askFraming) },
+      { key: 'Best when', val: safe(p.bestWhen) },
+      { key: 'Tradeoffs', val: safe(p.tradeoffs) },
+    ].filter(kv => kv.val) });
+  });
+
+  if (result.conversationScript?.emailVersion)
+    sections.push({ heading: 'Email Script', text: safe(result.conversationScript.emailVersion) });
+  if (result.conversationScript?.liveConversationVersion)
+    sections.push({ heading: 'Live Conversation Script', text: safe(result.conversationScript.liveConversationVersion) });
+
+  if (result.nextSteps) {
+    if (safeArr(result.nextSteps.immediate).length)
+      sections.push({ heading: 'Next Steps', bullets: safeArr(result.nextSteps.immediate).map(x => safe(x)) });
+    if (safeArr(result.nextSteps.prepareForPushback).length)
+      sections.push({ heading: 'Prepare for Pushback', bullets: safeArr(result.nextSteps.prepareForPushback).map(x => safe(x)) });
+    if (safeArr(result.nextSteps.walkAwaySignals).length)
+      sections.push({ heading: 'Walk-Away Signals', bullets: safeArr(result.nextSteps.walkAwaySignals).map(x => safe(x)) });
   }
 
   if (!sections.length) sections.push({ text: 'Offer & Negotiation Brief on file.' });
