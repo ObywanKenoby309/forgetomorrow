@@ -950,9 +950,7 @@ export default function OfferEngine() {
     primaryResume = null,
   } = useContext(ResumeContext) || {};
 
-  // Resume is connected if DB-resolved primary resume exists
   // ResumeContext fields kept as fallback for submit payload only — not UI judgment
-  const hasResume = Boolean(selectedResumeId);
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(INITIAL_FORM);
@@ -970,6 +968,9 @@ export default function OfferEngine() {
   const [resumes, setResumes] = useState([]);
   const [selectedResumeId, setSelectedResumeId] = useState('');
   const [loadingResumes, setLoadingResumes] = useState(false);
+  
+  // Resume is connected if DB-resolved primary resume exists  
+  const hasResume = Boolean(selectedResumeId);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
