@@ -952,7 +952,7 @@ export default function OfferEngine() {
 
   // Resume is connected if DB-resolved primary resume exists
   // ResumeContext fields kept as fallback for submit payload only — not UI judgment
-  const hasResume = Boolean(primaryResume);
+  const hasResume = Boolean(selectedResumeId);
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(INITIAL_FORM);
@@ -967,6 +967,9 @@ export default function OfferEngine() {
   const [isMobile, setIsMobile] = useState(false);
   const [mobileTab, setMobileTab] = useState('form'); // 'form' | 'insights' during steps; tab name during results
   const [intelligence, setIntelligence] = useState(null);
+  const [resumes, setResumes] = useState([]);
+  const [selectedResumeId, setSelectedResumeId] = useState('');
+  const [loadingResumes, setLoadingResumes] = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -981,6 +984,39 @@ export default function OfferEngine() {
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.context) setIntelligence(d.context); })
       .catch(() => {});
+  }, []);
+
+  // Load saved resumes from DB — same pattern as Growth & Pivot.
+  // This gives the API a real resumeId instead of relying on client context.
+  useEffect(() => {
+    let active = true;
+    setLoadingResumes(true);
+
+    fetch('/api/resume/list')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!active) return;
+
+        const list = Array.isArray(data?.resumes) ? data.resumes : [];
+        setResumes(list);
+
+        const primary = list.find(r => r?.isPrimary);
+        const first = list[0];
+        setSelectedResumeId(String(primary?.id || first?.id || ''));
+      })
+      .catch(() => {
+        if (active) {
+          setResumes([]);
+          setSelectedResumeId('');
+        }
+      })
+      .finally(() => {
+        if (active) setLoadingResumes(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleChange = useCallback((e) => {
@@ -1046,7 +1082,8 @@ export default function OfferEngine() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           formData: { ...form, confidenceLevel: form.confidenceLevel || 'medium' },
-          // Send live resume data so the API can run evidence engine
+          resumeId: selectedResumeId,
+          // Keep client resume data only as fallback. Server loads the selected DB resume first.
           resumeData: {
             summary,
             skills,

@@ -1,15 +1,18 @@
 // pages/api/offer-negotiation/generate.js
 // UNIFIED — DB-first resume evidence before GPT
-// Same intelligence backbone as Forge Hammer and Coaching Strategy
+// Same intelligence backbone as Forge Hammer, Growth & Pivot, and Coaching Strategy
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import prisma from '@/lib/prisma';
 import OpenAI from 'openai';
+import jwt from 'jsonwebtoken';
 import { evaluateSignals } from '@/lib/forge/evidenceEngine';
 import { classifyRisk } from '@/lib/forge/riskEngine';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production';
 
 function safeString(v) { return typeof v === 'string' ? v.trim() : ''; }
 function safeNum(v) { return String(v ?? '').trim(); }
@@ -19,6 +22,59 @@ function safeJsonParse(text) {
   try { return JSON.parse(text); } catch { return null; }
 }
 function extractChat(resp) { return String(resp?.choices?.[0]?.message?.content || ''); }
+
+function getCookie(req, name) {
+  try {
+    const raw = req.headers?.cookie || '';
+    const parts = raw.split(';').map((p) => p.trim());
+
+    for (const part of parts) {
+      if (part.startsWith(`${name}=`)) {
+        return decodeURIComponent(part.slice(name.length + 1));
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeEmail(value) {
+  const email = String(value || '').toLowerCase().trim();
+  return email || null;
+}
+
+async function getAuthedUser(req, res) {
+  const session = await getServerSession(req, res, authOptions);
+  const sessionUserId = String(session?.user?.id || '').trim();
+  const sessionEmail = normalizeEmail(session?.user?.email);
+
+  if (sessionUserId || sessionEmail) {
+    const user = await prisma.user.findFirst({
+      where: sessionUserId ? { id: sessionUserId } : { email: sessionEmail },
+      select: { id: true, name: true, email: true },
+    });
+
+    if (user?.id) return user;
+  }
+
+  const token = getCookie(req, 'auth');
+  if (!token) return null;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const email = normalizeEmail(decoded?.email);
+    if (!email) return null;
+
+    return await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, name: true, email: true },
+    });
+  } catch {
+    return null;
+  }
+}
 
 function normalizeArray(val) {
   return Array.isArray(val) ? val.filter(Boolean) : [];
@@ -37,20 +93,36 @@ function normalizeRoot(builderData) {
   return builderData.resumeData || builderData.data || builderData;
 }
 
-function buildResumeDataFromStoredResume({ stored, user }) {
+function buildResumeDataFromStoredResume({ stored, user, rawContent }) {
   const root = normalizeRoot(stored?.data || stored);
   const formDataRaw = root.formData || root.personalInfo || {};
+
+  const workExperiences = pickFirstNonEmptyArray(
+    root.experiences,
+    root.workExperiences,
+    root.workExperience
+  );
+
+  const educationList = pickFirstNonEmptyArray(
+    root.educationList,
+    root.education,
+    root.educations
+  );
 
   return {
     summary: root.summary || root.professionalSummary || root.about || root.summaryText || '',
     skills: normalizeArray(root.skills),
-    workExperiences: pickFirstNonEmptyArray(root.experiences, root.workExperiences, root.workExperience),
-    educationList: pickFirstNonEmptyArray(root.educationList, root.education, root.educations),
+    experiences: workExperiences,
+    workExperiences,
+    workExperience: workExperiences,
+    educationList,
+    education: educationList,
     projects: normalizeArray(root.projects),
     certifications: pickFirstNonEmptyArray(root.certifications, root.certificationList),
     achievements: normalizeArray(root.achievements),
     volunteerExperiences: pickFirstNonEmptyArray(root.volunteerExperiences, root.volunteer, root.volunteering),
     customSections: normalizeArray(root.customSections),
+    rawContent: typeof rawContent === 'string' ? rawContent : '',
     personalInfo: {
       name: formDataRaw.fullName || formDataRaw.name || user?.name || '',
       email: formDataRaw.email || user?.email || '',
@@ -68,46 +140,49 @@ function hasResumeEvidence(resumeData) {
   return Boolean(
     resumeData?.summary ||
     resumeData?.workExperiences?.length ||
+    resumeData?.experiences?.length ||
     resumeData?.skills?.length ||
     resumeData?.projects?.length ||
     resumeData?.certifications?.length ||
-    resumeData?.educationList?.length
+    resumeData?.educationList?.length ||
+    resumeData?.rawContent
   );
 }
 
-async function loadDbResumeData(userId) {
-  const [user, resume] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, name: true, email: true },
-    }),
-    prisma.resume.findFirst({
-      where: { userId },
-      orderBy: [
-        { isPrimary: 'desc' },
-        { updatedAt: 'desc' },
-      ],
-      select: {
-        id: true,
-        name: true,
-        content: true,
-        isPrimary: true,
-        updatedAt: true,
-      },
-    }),
-  ]);
+async function loadDbResumeData({ user, resumeId }) {
+  const resumeIdNum = Number(String(resumeId || '').trim());
+
+  const where = resumeId && !Number.isNaN(resumeIdNum)
+    ? { id: resumeIdNum, userId: user.id }
+    : { userId: user.id };
+
+  const resume = await prisma.resume.findFirst({
+    where,
+    orderBy: resumeId && !Number.isNaN(resumeIdNum)
+      ? undefined
+      : [
+          { isPrimary: 'desc' },
+          { updatedAt: 'desc' },
+        ],
+    select: {
+      id: true,
+      name: true,
+      content: true,
+      isPrimary: true,
+      updatedAt: true,
+    },
+  });
 
   if (!resume?.content) {
     return { resumeData: null, resumeMeta: null };
   }
 
-  const stored = safeJsonParse(resume.content);
-  if (!stored) {
-    console.error('[offer-negotiation/generate] Failed to parse stored resume content', { resumeId: resume.id });
-    return { resumeData: null, resumeMeta: null };
-  }
-
-  const resumeData = buildResumeDataFromStoredResume({ stored, user });
+  const stored = safeJsonParse(resume.content) || { summary: String(resume.content || '') };
+  const resumeData = buildResumeDataFromStoredResume({
+    stored,
+    user,
+    rawContent: resume.content,
+  });
 
   return {
     resumeData,
@@ -116,7 +191,7 @@ async function loadDbResumeData(userId) {
       name: resume.name || 'Resume',
       isPrimary: resume.isPrimary,
       updatedAt: resume.updatedAt,
-      source: 'database',
+      source: resumeId ? 'selected_database_resume' : 'database_primary_or_latest',
     },
   };
 }
@@ -178,13 +253,16 @@ export default async function handler(req, res) {
   try {
     if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'Server missing OPENAI_API_KEY' });
 
-    const session = await getServerSession(req, res, authOptions);
-    if (!session?.user?.id) return res.status(401).json({ error: 'Not authenticated' });
+    const user = await getAuthedUser(req, res);
+    if (!user?.id) return res.status(401).json({ error: 'Not authenticated' });
 
-    const { formData, resumeData: clientResumeData } = req.body || {};
+    const { formData, resumeData: clientResumeData, resumeId } = req.body || {};
     if (!formData) return res.status(400).json({ error: 'Missing formData' });
 
-    const { resumeData: dbResumeData, resumeMeta } = await loadDbResumeData(session.user.id);
+    const { resumeData: dbResumeData, resumeMeta } = await loadDbResumeData({
+      user,
+      resumeId,
+    });
 
     const resolvedResumeData = hasResumeEvidence(dbResumeData)
       ? dbResumeData
@@ -193,7 +271,7 @@ export default async function handler(req, res) {
         : null;
 
     const resumeSource = hasResumeEvidence(dbResumeData)
-      ? 'database'
+      ? resumeMeta?.source || 'database'
       : hasResumeEvidence(clientResumeData)
         ? 'client_context'
         : 'none';
@@ -382,9 +460,10 @@ Return JSON:
     try {
       negotiation = await prisma.negotiation.create({
         data: {
-          userId: session.user.id,
+          userId: user.id,
           input: {
             formData,
+            resumeId: resumeMeta?.id || null,
             resumeConnected: !!(evidence.summary),
             resumeSource,
             resumeMeta,
