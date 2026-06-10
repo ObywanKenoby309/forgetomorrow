@@ -502,7 +502,7 @@ const RESULT_TABS = [
   { id: 'plan', label: 'Plan' },
 ];
 
-function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange, onSaveStrategy }) {
+function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange, onSaveStrategy, onDownloadBrief, printingBrief }) {
   const [_tab, _setTab] = useState('decision');
   const tab = mobileActiveTab || _tab;
   const setTab = onMobileTabChange || _setTab;
@@ -544,10 +544,10 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
           border: '1px solid rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
         {saved ? '✓ Saved' : '💾 Save'}
       </button>
-      <button type="button" onClick={() => downloadBrief(plan, form)}
-        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
-          background: ORANGE, color: 'white', border: 'none' }}>
-        📄 Download Brief
+      <button type="button" onClick={onDownloadBrief || (() => downloadBrief(plan, form))} disabled={printingBrief}
+        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: printingBrief ? 'not-allowed' : 'pointer',
+          background: ORANGE, color: 'white', border: 'none', opacity: printingBrief ? 0.7 : 1 }}>
+        {printingBrief ? 'Saving to Vault...' : '📄 Download Brief'}
       </button>
       <button type="button" onClick={copyEmail}
         style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
@@ -861,7 +861,7 @@ function ResultCockpit({ plan, form, onReset, mobileActiveTab, onMobileTabChange
 }
 
 // ─── Right panel — context accumulator / results cockpit ─────────────────────
-function RightPanel({ step, plan, loading, error, insights, onReset, form, mobileActiveTab, onMobileTabChange, onSaveStrategy }) {
+function RightPanel({ step, plan, loading, error, insights, onReset, form, mobileActiveTab, onMobileTabChange, onSaveStrategy, onDownloadBrief, printingBrief }) {
   if (loading) {
     return (
       <div style={{ ...GLASS, padding: '32px 16px', textAlign: 'center' }}>
@@ -879,7 +879,7 @@ function RightPanel({ step, plan, loading, error, insights, onReset, form, mobil
   }
 
   if (plan) {
-    return <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}><ResultCockpit plan={plan} form={form} onReset={onReset} mobileActiveTab={mobileActiveTab} onMobileTabChange={onMobileTabChange} onSaveStrategy={onSaveStrategy} /></div>;
+    return <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}><ResultCockpit plan={plan} form={form} onReset={onReset} mobileActiveTab={mobileActiveTab} onMobileTabChange={onMobileTabChange} onSaveStrategy={onSaveStrategy} onDownloadBrief={onDownloadBrief} printingBrief={printingBrief} /></div>;
   }
 
   return (
@@ -958,6 +958,8 @@ export default function OfferEngine() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [plan, setPlan] = useState(null);
   const [negotiationId, setNegotiationId] = useState(null);
+  const [briefUrl, setBriefUrl] = useState('');
+  const [printingBrief, setPrintingBrief] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [animating, setAnimating] = useState(false);
@@ -1058,6 +1060,7 @@ export default function OfferEngine() {
       if (!res.ok) throw new Error(json?.error || 'Failed to generate plan');
       setPlan(json?.plan || null);
       setNegotiationId(json?.negotiationId || null);
+      setBriefUrl('');
     } catch (e) {
       setError(String(e?.message || 'Something went wrong. Please try again.'));
     } finally {
@@ -1085,6 +1088,47 @@ export default function OfferEngine() {
     if (savedId) setNegotiationId(savedId);
     return savedId;
   }, [form, negotiationId, plan]);
+
+  // Save PDF to Vault and open it. Falls back to local jsPDF download if vault unavailable.
+  const handleDownloadBrief = useCallback(async () => {
+    if (!plan) return;
+
+    // If already generated, just re-open
+    if (briefUrl) {
+      window.open(briefUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    setPrintingBrief(true);
+    try {
+      // Ensure negotiation is saved first so render-pdf can find the record
+      let id = negotiationId;
+      if (!id) {
+        id = await persistNegotiation();
+      }
+
+      if (!id) throw new Error('Could not save negotiation before generating PDF.');
+
+      const res = await fetch('/api/vault/render-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docType: 'negotiation', docId: id }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Could not generate PDF.');
+      if (!data?.downloadUrl) throw new Error('PDF generated but no download URL returned.');
+
+      setBriefUrl(data.downloadUrl);
+      window.open(data.downloadUrl, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      console.error('[OfferEngine] Download Brief failed — falling back to local PDF', err);
+      // Fallback: local jsPDF download so the user never gets nothing
+      downloadBrief(plan, form);
+    } finally {
+      setPrintingBrief(false);
+    }
+  }, [plan, briefUrl, negotiationId, persistNegotiation, form]);
 
   const handleReset = () => { setPlan(null); setNegotiationId(null); setForm(INITIAL_FORM); setStep(1); setError(''); setInsights([]); };
 
@@ -1158,9 +1202,9 @@ export default function OfferEngine() {
               style={{ flex: 1, padding: '9px 8px', borderRadius: 10, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(255,255,255,0.85)', color: SLATE, border: '1px solid rgba(0,0,0,0.12)' }}>
               💾 Save
             </button>
-            <button type="button" onClick={() => downloadBrief(plan, form)}
-              style={{ flex: 1, padding: '9px 8px', borderRadius: 10, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: ORANGE, color: 'white', border: 'none' }}>
-              📄 Download
+            <button type="button" onClick={() => handleDownloadBrief()} disabled={printingBrief}
+              style={{ flex: 1, padding: '9px 8px', borderRadius: 10, fontSize: 11, fontWeight: 800, cursor: printingBrief ? 'not-allowed' : 'pointer', background: ORANGE, color: 'white', border: 'none', opacity: printingBrief ? 0.7 : 1 }}>
+              {printingBrief ? 'Saving...' : '📄 Download'}
             </button>
             <button type="button" onClick={() => navigator.clipboard?.writeText(plan?.conversationScript?.emailVersion || '')}
               style={{ flex: 1, padding: '9px 8px', borderRadius: 10, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(255,255,255,0.85)', color: SLATE, border: '1px solid rgba(0,0,0,0.12)' }}>
@@ -1181,7 +1225,7 @@ export default function OfferEngine() {
                 <style>{`@keyframes pulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1)}}`}</style>
               </div>
             ) : (
-              <RightPanel step={step} plan={plan} loading={false} error={error} insights={insights} onReset={handleReset} form={form} mobileActiveTab={mobileTab} onMobileTabChange={setMobileTab} onSaveStrategy={persistNegotiation} />
+              <RightPanel step={step} plan={plan} loading={false} error={error} insights={insights} onReset={handleReset} form={form} mobileActiveTab={mobileTab} onMobileTabChange={setMobileTab} onSaveStrategy={persistNegotiation} onDownloadBrief={handleDownloadBrief} printingBrief={printingBrief} />
             )}
           </div>
 
@@ -1331,7 +1375,7 @@ export default function OfferEngine() {
           <InputSummaryDesktop />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} onSaveStrategy={persistNegotiation} />
+          <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} onSaveStrategy={persistNegotiation} onDownloadBrief={handleDownloadBrief} printingBrief={printingBrief} />
         </div>
       </div>
     );
@@ -1397,7 +1441,7 @@ export default function OfferEngine() {
 
       {/* RIGHT: Context accumulator */}
       <div style={{ position: 'sticky', top: 16, alignSelf: 'start' }}>
-        <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} onSaveStrategy={persistNegotiation} />
+        <RightPanel step={step} plan={plan} loading={loading} error={error} insights={insights} onReset={handleReset} form={form} onSaveStrategy={persistNegotiation} onDownloadBrief={handleDownloadBrief} printingBrief={printingBrief} />
       </div>
     </div>
   );

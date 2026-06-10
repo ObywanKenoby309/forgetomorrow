@@ -4,7 +4,6 @@
 // Left: resume + direction input | Right: tabbed 30/60/90 roadmap cockpit
 import { useState, useCallback, useEffect, useContext } from 'react';
 import { useRouter } from 'next/router';
-import jsPDF from 'jspdf';
 
 const ORANGE = '#FF7043';
 const SLATE = '#334155';
@@ -233,99 +232,51 @@ const RESULT_TABS = [
   { id: 'skills', label: 'Skills' },
 ];
 
-function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMobile, mobileTab, onMobileTabChange }) {
+function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMobile, mobileTab, onMobileTabChange, roadmapId, pdfUrl, setPdfUrl, printingBrief, setPrintingBrief }) {
   const router = useRouter();
   const [tab, setTab] = useState('day30');
   const activeTab = mobileTab || tab;
   const setActiveTab = onMobileTabChange || setTab;
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!plan) return;
 
-    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
-    const margin = 44;
-    const maxW = 524;
-    let y = margin;
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
 
-    const write = (text, size = 11, bold = false, color = [30, 41, 59]) => {
-      doc.setFontSize(size);
-      doc.setFont('helvetica', bold ? 'bold' : 'normal');
-      doc.setTextColor(...color);
-      const lines = doc.splitTextToSize(String(text || ''), maxW);
-      lines.forEach(line => {
-        if (y > 750) { doc.addPage(); y = margin; }
-        doc.text(line, margin, y);
-        y += size * 1.5;
+    if (!roadmapId) {
+      window.alert('No document ID found. Please regenerate the plan and try again.');
+      return;
+    }
+
+    setPrintingBrief(true);
+    try {
+      const res = await fetch('/api/vault/render-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docType: 'roadmap', docId: roadmapId }),
       });
-    };
-
-    const gap = (n = 10) => { y += n; };
-
-    const bullets = (items) => {
-      const arr = Array.isArray(items) ? items.filter(Boolean) : [];
-      arr.forEach(item => write(`• ${item}`, 11));
-    };
-
-    const dirLabel = direction === 'compare' ? 'Compare Plan'
-      : direction === 'pivot' ? `Pivot Plan${pivotTarget ? ` — ${pivotTarget}` : ''}`
-      : 'Stay-the-Course Plan';
-
-    write('ForgeTomorrow Growth & Pivot Brief', 18, true, [255, 112, 67]);
-    gap(4);
-    write(`${plan?.meta?.candidate || ''} — ${dirLabel}`, 12, false, [100, 116, 139]);
-    write(new Date().toLocaleDateString(), 10, false, [148, 163, 184]);
-    gap(16);
-
-    if (plan?.meta?.headline) {
-      write(plan.meta.headline, 11, false, [71, 85, 105]);
-      gap(8);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Could not generate PDF.');
+      if (!data?.downloadUrl) throw new Error('PDF generated but no download URL returned.');
+      setPdfUrl(data.downloadUrl);
+      window.open(data.downloadUrl, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      console.error('[GrowthEngine] Print Brief failed', err);
+      window.alert(err?.message || 'Could not generate the brief PDF.');
+    } finally {
+      setPrintingBrief(false);
     }
-
-    const phases = [
-      ['FIRST 30 DAYS', plan?.day30],
-      ['DAYS 31–60', plan?.day60],
-      ['DAYS 61–90', plan?.day90],
-    ];
-
-    phases.forEach(([title, phase]) => {
-      if (!phase) return;
-      write(title, 10, true, [255, 112, 67]);
-      gap(4);
-      if (phase.objectives?.length) { write('Objectives', 10, true, [51, 65, 85]); bullets(phase.objectives); gap(4); }
-      if (phase.actions?.length)    { write('Actions',    10, true, [51, 65, 85]); bullets(phase.actions);    gap(4); }
-      if (phase.metrics?.length)    { write('Metrics',    10, true, [51, 65, 85]); bullets(phase.metrics);    gap(4); }
-      if (phase.quickWins?.length)  { write('Quick Wins', 10, true, [51, 65, 85]); bullets(phase.quickWins);  gap(4); }
-      if (phase.risks?.length)      { write('Risks',      10, true, [220, 38, 38]); bullets(phase.risks);    gap(4); }
-      if (phase.presentation)       { write('How to present yourself:', 10, true, [51, 65, 85]); write(phase.presentation, 11); gap(4); }
-      gap(8);
-    });
-
-    if (plan?.growthRecommendations?.length) {
-      write('GROWTH RECOMMENDATIONS', 10, true, [255, 112, 67]);
-      gap(4);
-      bullets(plan.growthRecommendations);
-      gap(12);
-    }
-
-    if (plan?.skillsFocus?.length) {
-      write('SKILLS FOCUS', 10, true, [255, 112, 67]);
-      gap(4);
-      bullets(plan.skillsFocus);
-      gap(12);
-    }
-
-    gap(8);
-    write('ForgeTomorrow — AI-assisted guidance grounded in your resume evidence. Not a substitute for live coaching or mentorship.', 9, false, [148, 163, 184]);
-
-    doc.save('ForgeTomorrow-Growth-Brief.pdf');
   };
 
   // Action bar — coach CTA removed, lives at bottom only
   const ActionBar = () => (
     <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-      <button type="button" onClick={handlePrint}
-        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: ORANGE, color: 'white', border: 'none' }}>
-        📄 Print Brief
+      <button type="button" onClick={handlePrint} disabled={printingBrief}
+        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: printingBrief ? 'not-allowed' : 'pointer', background: ORANGE, color: 'white', border: 'none', opacity: printingBrief ? 0.7 : 1 }}>
+        {printingBrief ? 'Saving to Vault...' : pdfUrl ? '📄 Open Brief' : '📄 Save & Open Brief'}
       </button>
       <button type="button" onClick={() => router.push('/calendar')}
         style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(255,255,255,0.85)', color: SLATE, border: '1px solid rgba(0,0,0,0.12)' }}>
@@ -428,6 +379,9 @@ export default function GrowthEngine() {
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [roadmapId, setRoadmapId] = useState('');
+  const [pdfUrl, setPdfUrl] = useState('');
+  const [printingBrief, setPrintingBrief] = useState(false);
 
   // Mobile
   const [isMobile, setIsMobile] = useState(false);
@@ -492,6 +446,8 @@ export default function GrowthEngine() {
       if (!data?.plan) throw new Error('No plan returned from server.');
 
       setPlan(data.plan);
+      setRoadmapId(String(data?.roadmapId || data?.planId || ''));
+      setPdfUrl('');
     } catch (e) {
       setError(e?.name === 'AbortError' ? 'Generation timed out. Please try again.' : String(e?.message || 'Something went wrong.'));
     } finally {
@@ -629,7 +585,9 @@ export default function GrowthEngine() {
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           <ResultCockpit plan={plan} direction={direction} pivotTarget={pivotTarget}
             onReset={handleReset} hasResume={Boolean(selectedResumeId)}
-            isMobile={true} mobileTab={mobileTab} onMobileTabChange={setMobileTab} />
+            isMobile={true} mobileTab={mobileTab} onMobileTabChange={setMobileTab}
+            roadmapId={roadmapId} pdfUrl={pdfUrl} setPdfUrl={setPdfUrl}
+            printingBrief={printingBrief} setPrintingBrief={setPrintingBrief} />
           {/* Sticky bottom tab nav */}
           <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
             background: 'rgba(255,255,255,0.95)', borderTop: '1px solid rgba(0,0,0,0.10)',
@@ -695,7 +653,9 @@ export default function GrowthEngine() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <ResultCockpit plan={plan} direction={direction} pivotTarget={pivotTarget}
-            onReset={handleReset} hasResume={Boolean(selectedResumeId)} isMobile={false} />
+            onReset={handleReset} hasResume={Boolean(selectedResumeId)} isMobile={false}
+            roadmapId={roadmapId} pdfUrl={pdfUrl} setPdfUrl={setPdfUrl}
+            printingBrief={printingBrief} setPrintingBrief={setPrintingBrief} />
         </div>
       </div>
     );
