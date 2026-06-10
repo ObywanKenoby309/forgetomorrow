@@ -190,7 +190,7 @@ function Step1({ form, onChange, hasResume }) {
         <div style={{ fontWeight: 900, fontSize: 12, color: DARK, marginBottom: 4 }}>Tell me about the role</div>
         <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6 }}>Paste the JD or describe what you are targeting</div>
         <textarea name="jobDescription" value={form.jobDescription} onChange={onChange} rows={4}
-          placeholder="e.g. Strategic Advisory Services Manager at CrowdStrike — leads consultants, manages engagements, executive stakeholder communication..."
+          placeholder="e.g. Strategic Advisory Services Manager at Company XYZ — leads consultants, manages engagements, executive stakeholder communication..."
           style={{ ...INPUT, resize: 'vertical', lineHeight: 1.55 }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
