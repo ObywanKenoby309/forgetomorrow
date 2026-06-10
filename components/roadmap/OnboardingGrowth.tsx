@@ -281,6 +281,9 @@ export default function OnboardingGrowth() {
   const [plan, setPlan] = useState<CareerRoadmapPlan | null>(null);
 
   const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [roadmapId, setRoadmapId] = useState<string>('');
+  const [savingBrief, setSavingBrief] = useState(false);
+  const [briefSaved, setBriefSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingResumes, setLoadingResumes] = useState(false);
   const [error, setError] = useState('');
@@ -340,6 +343,61 @@ export default function OnboardingGrowth() {
     }
   }, [direction]);
 
+  const getRoadmapIdFromResponse = (data: any) => {
+    return String(
+      data?.roadmapId ||
+      data?.roadmap?.id ||
+      data?.record?.id ||
+      data?.careerRoadmap?.id ||
+      data?.id ||
+      ''
+    );
+  };
+
+  const renderAndSaveBrief = async (docId?: string) => {
+    const idToRender = String(docId || roadmapId || '').trim();
+
+    if (!idToRender) {
+      throw new Error('Roadmap was generated, but no saved roadmap ID was returned for Vault PDF rendering.');
+    }
+
+    const res = await fetch('/api/vault/render-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ docType: 'roadmap', docId: idToRender }),
+    });
+
+    const data = await safeReadJson(res);
+
+    if (!res.ok) {
+      throw new Error(data?.error || `Failed to render brief (${res.status})`);
+    }
+
+    if (!data?.downloadUrl) {
+      throw new Error('Brief render completed, but no download URL was returned.');
+    }
+
+    setPdfUrl(String(data.downloadUrl));
+    setBriefSaved(true);
+    return String(data.downloadUrl);
+  };
+
+  const handleSaveBriefToVault = async () => {
+    if (!plan) return;
+
+    setSavingBrief(true);
+    setError('');
+
+    try {
+      const url = await renderAndSaveBrief();
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      setError(err?.message || 'Unable to save brief to ForgeVault. Please try again.');
+    } finally {
+      setSavingBrief(false);
+    }
+  };
+
   const generateRoadmap = async () => {
     if (!selectedResume) {
       setError('Please select a resume');
@@ -358,6 +416,8 @@ export default function OnboardingGrowth() {
     setError('');
     setPlan(null);
     setPdfUrl('');
+    setRoadmapId('');
+    setBriefSaved(false);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 45000);
@@ -377,7 +437,6 @@ export default function OnboardingGrowth() {
 
       const data = await safeReadJson(res);
 
-      // ✅ Only change: friendly message instead of "free_limit_reached"
       if (res.status === 403 && data?.error === 'free_limit_reached') {
         throw new Error(
           "You've already used your free Growth plan. Upgrade to Seeker Pro to generate another one."
@@ -391,9 +450,22 @@ export default function OnboardingGrowth() {
 
       if (!data?.plan) throw new Error('Roadmap response missing plan');
 
+      const generatedRoadmapId = getRoadmapIdFromResponse(data);
+      const existingPdfUrl = String(data?.pdfUrl || '');
+
       setPlan(data.plan as CareerRoadmapPlan);
-      setPdfUrl(String(data?.pdfUrl || ''));
+      setRoadmapId(generatedRoadmapId);
+      setPdfUrl(existingPdfUrl);
+      setBriefSaved(Boolean(existingPdfUrl));
       setHasGenerated(true);
+
+      if (!existingPdfUrl && generatedRoadmapId) {
+        try {
+          await renderAndSaveBrief(generatedRoadmapId);
+        } catch (briefErr) {
+          console.error('[OnboardingGrowth] brief render failed', briefErr);
+        }
+      }
     } catch (err: any) {
       if (err?.name === 'AbortError') {
         setError('Roadmap generation timed out. Please try again.');
@@ -406,8 +478,26 @@ export default function OnboardingGrowth() {
     }
   };
 
-  const handlePrintToPdf = () => {
+  const handlePrintToPdf = async () => {
     if (!plan) return;
+
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    setSavingBrief(true);
+    setError('');
+
+    try {
+      const url = await renderAndSaveBrief();
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    } catch (err: any) {
+      console.error('[OnboardingGrowth] render-pdf fallback failed', err);
+    } finally {
+      setSavingBrief(false);
+    }
 
     try {
       const title =
@@ -652,23 +742,22 @@ export default function OnboardingGrowth() {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          {pdfUrl ? (
-            <a
-              href={pdfUrl}
-              download
-              className="bg-green-600 text-white px-5 py-3 rounded-lg hover:bg-green-700 transition flex items-center gap-2"
-            >
-              <Download size={20} />
-              Download PDF
-            </a>
-          ) : null}
+          <button
+            onClick={handleSaveBriefToVault}
+            disabled={savingBrief || !plan}
+            className="bg-green-600 text-white px-5 py-3 rounded-lg hover:bg-green-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {savingBrief ? <Loader2 className="animate-spin" size={20} /> : <Download size={20} />}
+            {savingBrief ? 'Saving Brief...' : briefSaved ? 'Open Saved Brief' : 'Save Brief to Vault'}
+          </button>
 
           <button
             onClick={handlePrintToPdf}
-            className="bg-white border border-gray-300 text-gray-800 px-5 py-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
+            disabled={savingBrief || !plan}
+            className="bg-white border border-gray-300 text-gray-800 px-5 py-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Printer size={20} />
-            Print / Save as PDF
+            {pdfUrl ? 'Open Brief PDF' : 'Print / Save as PDF'}
           </button>
 
           <button
@@ -690,6 +779,11 @@ export default function OnboardingGrowth() {
       </div>
 
       {error ? <p className="text-red-600 font-medium mb-4">{error}</p> : null}
+      {briefSaved && pdfUrl ? (
+        <p className="text-green-700 font-medium mb-4">
+          Brief saved. It can be opened from this page and shared from ForgeVault where roadmap documents are listed.
+        </p>
+      ) : null}
 
       <div className="bg-white border border-gray-200 rounded-xl p-8 md:p-10">
         {plan ? (
@@ -782,7 +876,6 @@ function Block({
     <div>
       <div className="font-semibold mb-2">{label}</div>
 
-      {/* ✅ FIXED: valid JSX ternary (no extra ": null" / mismatched braces) */}
       {list.length === 0 ? (
         <p className="text-gray-600">{emptyDash ? '—' : 'None yet'}</p>
       ) : (
