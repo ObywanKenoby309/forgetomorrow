@@ -237,8 +237,75 @@ function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMob
   const [tab, setTab] = useState('day30');
   const activeTab = mobileTab || tab;
   const setActiveTab = onMobileTabChange || setTab;
+  const [saved, setSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  const handlePrint = async () => {
+  const buildCopyText = () => {
+    const lines = [];
+    const mode = direction === 'compare'
+      ? 'Compare: Stay vs Pivot'
+      : direction === 'grow'
+        ? 'Stay the Course'
+        : `Pivot${pivotTarget ? ` → ${pivotTarget}` : ''}`;
+
+    lines.push('ForgeTomorrow Growth & Pivot Brief');
+    lines.push('');
+    lines.push(`Direction: ${mode}`);
+    if (plan?.meta?.candidate) lines.push(`Candidate: ${plan.meta.candidate}`);
+    if (plan?.meta?.headline) lines.push(`Headline: ${plan.meta.headline}`);
+    lines.push('');
+
+    const addPhase = (label, phase) => {
+      if (!phase) return;
+      lines.push(label);
+      const sections = [
+        ['Objectives', phase.objectives],
+        ['Actions', phase.actions],
+        ['Metrics', phase.metrics],
+        ['Quick Wins', phase.quickWins],
+        ['Risks', phase.risks],
+      ];
+      sections.forEach(([sectionLabel, items]) => {
+        const arr = Array.isArray(items) ? items.filter(Boolean) : [];
+        if (!arr.length) return;
+        lines.push(`${sectionLabel}:`);
+        arr.forEach(item => lines.push(`• ${item}`));
+      });
+      if (phase.presentation) lines.push(`Presentation: ${phase.presentation}`);
+      lines.push('');
+    };
+
+    addPhase('30 Days', plan?.day30);
+    addPhase('60 Days', plan?.day60);
+    addPhase('90 Days', plan?.day90);
+
+    const growth = Array.isArray(plan?.growthRecommendations) ? plan.growthRecommendations.filter(Boolean) : [];
+    if (growth.length) {
+      lines.push('Growth Recommendations:');
+      growth.forEach(item => lines.push(`• ${item}`));
+      lines.push('');
+    }
+
+    const skills = Array.isArray(plan?.skillsFocus) ? plan.skillsFocus.filter(Boolean) : [];
+    if (skills.length) {
+      lines.push('Skills Focus:');
+      skills.forEach(item => lines.push(`• ${item}`));
+    }
+
+    return lines.join('\n').trim();
+  };
+
+  const handleSave = async () => {
+    if (!roadmapId) {
+      window.alert('No document ID found. Please regenerate the plan and try again.');
+      return;
+    }
+
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleDownloadBrief = async () => {
     if (!plan) return;
 
     if (pdfUrl) {
@@ -264,23 +331,48 @@ function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMob
       setPdfUrl(data.downloadUrl);
       window.open(data.downloadUrl, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      console.error('[GrowthEngine] Print Brief failed', err);
+      console.error('[GrowthEngine] Download Brief failed', err);
       window.alert(err?.message || 'Could not generate the brief PDF.');
     } finally {
       setPrintingBrief(false);
     }
   };
 
-  // Action bar — coach CTA removed, lives at bottom only
+  const handleCopyBrief = async () => {
+    const text = buildCopyText();
+    if (!text) {
+      window.alert('No roadmap text found to copy.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.alert('Could not copy the roadmap brief.');
+    }
+  };
+
+  // Action bar — matched to OfferEngine results workflow
   const ActionBar = () => (
     <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-      <button type="button" onClick={handlePrint} disabled={printingBrief}
-        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: printingBrief ? 'not-allowed' : 'pointer', background: ORANGE, color: 'white', border: 'none', opacity: printingBrief ? 0.7 : 1 }}>
-        {printingBrief ? 'Saving to Vault...' : pdfUrl ? '📄 Open Brief' : '📄 Save & Open Brief'}
+      <button type="button" onClick={handleSave}
+        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
+          background: saved ? '#16A34A' : 'rgba(255,255,255,0.85)', color: saved ? 'white' : SLATE,
+          border: '1px solid rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
+        {saved ? '✓ Saved' : '💾 Save'}
       </button>
-      <button type="button" onClick={() => router.push('/calendar')}
-        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(255,255,255,0.85)', color: SLATE, border: '1px solid rgba(0,0,0,0.12)' }}>
-        📅 Open Calendar
+      <button type="button" onClick={handleDownloadBrief} disabled={printingBrief}
+        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: printingBrief ? 'not-allowed' : 'pointer',
+          background: ORANGE, color: 'white', border: 'none', opacity: printingBrief ? 0.7 : 1 }}>
+        {printingBrief ? 'Saving to Vault...' : '📄 Download Brief'}
+      </button>
+      <button type="button" onClick={handleCopyBrief}
+        style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
+          background: copied ? '#16A34A' : 'rgba(255,255,255,0.85)', color: copied ? 'white' : SLATE,
+          border: '1px solid rgba(0,0,0,0.12)', transition: 'all 0.2s' }}>
+        {copied ? '✓ Copied' : '📋 Copy Brief'}
       </button>
       <button type="button" onClick={onReset}
         style={{ padding: '7px 14px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer', background: 'transparent', color: '#94A3B8', border: '1px solid rgba(0,0,0,0.08)', marginLeft: 'auto' }}>

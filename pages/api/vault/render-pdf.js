@@ -207,10 +207,10 @@ async function renderRoadmap(docId, userId) {
   const renderPhase = (title, phaseData) => {
     if (!phaseData) return;
     if (safeArr(phaseData.objectives).length) sections.push({ heading: `${title} — Objectives`, bullets: safeArr(phaseData.objectives).map(x => safe(x)) });
-    if (safeArr(p.actions).length)    sections.push({ heading: `${title} — Actions`,    bullets: safeArr(p.actions).map(x => safe(x)) });
-    if (safeArr(p.metrics).length)    sections.push({ heading: `${title} — Metrics`,    bullets: safeArr(p.metrics).map(x => safe(x)) });
-    if (safeArr(p.quickWins).length)  sections.push({ heading: `${title} — Quick Wins`, bullets: safeArr(p.quickWins).map(x => safe(x)) });
-    if (safeArr(p.risks).length)      sections.push({ heading: `${title} — Risks`,      bullets: safeArr(p.risks).map(x => safe(x)) });
+	if (safeArr(phaseData.actions).length) sections.push({ heading: `${title} — Actions`, bullets: safeArr(phaseData.actions).map(x => safe(x)) });
+    if (safeArr(phaseData.metrics).length) sections.push({ heading: `${title} — Metrics`, bullets: safeArr(phaseData.metrics).map(x => safe(x)) });
+	if (safeArr(phaseData.quickWins).length) sections.push({ heading: `${title} — Quick Wins`, bullets: safeArr(phaseData.quickWins).map(x => safe(x)) });
+	if (safeArr(phaseData.risks).length) sections.push({ heading: `${title} — Risks`, bullets: safeArr(phaseData.risks).map(x => safe(x)) });
     if (phaseData.presentation)       sections.push({ heading: `${title} — Positioning`, text: safe(phaseData.presentation) });
   };
 
