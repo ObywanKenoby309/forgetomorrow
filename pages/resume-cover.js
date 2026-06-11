@@ -101,12 +101,11 @@ const TEMPLATES = [
 	helper: 'Clear roles, timeline, and results. Best for most applications.',
   },
   {
-    key: 'hybrid',
-    name: 'Hybrid',
-    tagline: 'Built for human review.',
-	helper: 'Highlights first, story second. Best for pivots and positioning.',
-    pro: true,
-  },
+  key: 'hybrid',
+  name: 'Hybrid',
+  tagline: 'Built for human review.',
+  helper: 'Highlights first, story second. Best for pivots and positioning.',
+},
 ];
 
 const TEMPLATE_PREVIEW_IMAGES = {
