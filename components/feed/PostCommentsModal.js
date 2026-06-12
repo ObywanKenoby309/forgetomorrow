@@ -365,7 +365,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/55 p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 sm:p-6"
       onClick={onClose}
     >
       <div
@@ -380,7 +380,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
           ✕
         </button>
 
-        <div className="max-h-[88vh] overflow-y-auto">
+        <div className="max-h-[85vh] overflow-y-auto">
           <div className="border-b border-gray-100 px-5 py-5 sm:px-6">
             <header className="flex items-center gap-3 pr-12">
               {post.authorAvatar ? (
