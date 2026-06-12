@@ -8,11 +8,25 @@ import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar';
 
+// ─── SSR-safe mobile hook (matches seeker/contact-center.js) ───────────────
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(null);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 export default function BlockedUsersPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  const isMobile = useIsMobile();
 
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -92,14 +106,69 @@ export default function BlockedUsersPage() {
           </Link>
         </>
       }
+      isMobile={isMobile === true}
     />
   );
+
+  const avatarBlock = (user) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+      {user.avatarUrl ? (
+        <img
+          src={user.avatarUrl}
+          alt={user.name}
+          style={{ width: 48, height: 48, borderRadius: '50%', flexShrink: 0, objectFit: 'cover' }}
+        />
+      ) : (
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            background: '#E2E8F0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#64748B',
+            fontWeight: 600,
+            flexShrink: 0,
+          }}
+        >
+          {user.name?.charAt(0)?.toUpperCase() || '?'}
+        </div>
+      )}
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontWeight: 600,
+            color: '#111827',
+            overflowWrap: 'anywhere',
+            wordBreak: 'break-word',
+          }}
+        >
+          {user.name || 'Member'}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render nothing until we know which layout to show (avoids hydration flash)
+  if (isMobile === null) {
+    return (
+      <SeekerLayout
+        title="Blocked Users | ForgeTomorrow"
+        header={HeaderBox}
+        right={<RightRailPlacementManager surfaceId="blocked" />}
+        rightVariant="light"
+        activeNav="contacts"
+      />
+    );
+  }
 
   return (
     <SeekerLayout
       title="Blocked Users | ForgeTomorrow"
       header={HeaderBox}
-      right={<RightRailPlacementManager surfaceId="blocked" />}
+      right={isMobile ? null : <RightRailPlacementManager surfaceId="blocked" />}
       rightVariant="light"
       activeNav="contacts"
     >
@@ -109,9 +178,14 @@ export default function BlockedUsersPage() {
         style={{
           background: 'white',
           borderRadius: 12,
-          padding: 16,
+          padding: isMobile ? 12 : 16,
           border: '1px solid #eee',
           boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+          minWidth: 0,
+          overflowX: 'hidden',
         }}
       >
         {loading ? (
@@ -122,80 +196,100 @@ export default function BlockedUsersPage() {
           </p>
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
-            {blockedUsers.map((user) => (
-              <div
-                key={user.id}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'auto 1fr auto',
-                  alignItems: 'center',
-                  gap: 16,
-                  padding: '12px 16px',
-                  borderRadius: 10,
-                  background: '#F9FAFB',
-                  border: '1px solid #eee',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.name}
-                      style={{ width: 48, height: 48, borderRadius: '50%' }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: '50%',
-                        background: '#E2E8F0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#64748B',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {user.name?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
-                  )}
-                  <div>
-                    <div style={{ fontWeight: 600, color: '#111827' }}>
-                      {user.name || 'Member'}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                  <div>
-                    <span style={{ fontWeight: 600, color: '#374151' }}>Reason:</span>{' '}
-                    <span style={{ color: '#607D8B' }}>
-                      {user.reason || 'No reason provided'}
-                    </span>
-                  </div>
-                  <div>
-                    <span style={{ fontWeight: 600, color: '#374151' }}>Blocked on:</span>{' '}
-                    <span style={{ color: '#607D8B' }}>{formatDate(user.createdAt)}</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleUnblock(user.id, user.name)}
+            {blockedUsers.map((user) =>
+              isMobile ? (
+                // ── MOBILE: stacked card — avatar/name, then reason + date, then full-width button ──
+                <div
+                  key={user.id}
                   style={{
-                    padding: '8px 16px',
-                    borderRadius: 8,
-                    background: '#FF7043',
-                    color: 'white',
-                    border: 'none',
-                    fontWeight: 600,
-                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                    padding: 12,
+                    borderRadius: 10,
+                    background: '#F9FAFB',
+                    border: '1px solid #eee',
+                    minWidth: 0,
                   }}
                 >
-                  Unblock
-                </button>
-              </div>
-            ))}
+                  {avatarBlock(user)}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                    <div style={{ minWidth: 0, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                      <span style={{ fontWeight: 600, color: '#374151' }}>Reason: </span>
+                      <span style={{ color: '#607D8B' }}>
+                        {user.reason || 'No reason provided'}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 600, color: '#374151' }}>Blocked on: </span>
+                      <span style={{ color: '#607D8B' }}>{formatDate(user.createdAt)}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleUnblock(user.id, user.name)}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: 8,
+                      background: '#FF7043',
+                      color: 'white',
+                      border: 'none',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      width: '100%',
+                    }}
+                  >
+                    Unblock
+                  </button>
+                </div>
+              ) : (
+                // ── DESKTOP: original 3-column grid layout ──
+                <div
+                  key={user.id}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'auto 1fr auto',
+                    alignItems: 'center',
+                    gap: 16,
+                    padding: '12px 16px',
+                    borderRadius: 10,
+                    background: '#F9FAFB',
+                    border: '1px solid #eee',
+                  }}
+                >
+                  {avatarBlock(user)}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div>
+                      <span style={{ fontWeight: 600, color: '#374151' }}>Reason:</span>{' '}
+                      <span style={{ color: '#607D8B' }}>
+                        {user.reason || 'No reason provided'}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 600, color: '#374151' }}>Blocked on:</span>{' '}
+                      <span style={{ color: '#607D8B' }}>{formatDate(user.createdAt)}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleUnblock(user.id, user.name)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 8,
+                      background: '#FF7043',
+                      color: 'white',
+                      border: 'none',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Unblock
+                  </button>
+                </div>
+              )
+            )}
           </div>
         )}
       </section>

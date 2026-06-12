@@ -8,11 +8,25 @@ import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar';
 
+// ─── SSR-safe mobile hook (matches seeker/contact-center.js) ───────────────
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(null);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 export default function ProfileViewsPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  const isMobile = useIsMobile();
 
   const [views, setViews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,14 +83,28 @@ export default function ProfileViewsPage() {
           </Link>
         </>
       }
+      isMobile={isMobile === true}
     />
   );
+
+  // Render nothing until we know which layout to show (avoids hydration flash)
+  if (isMobile === null) {
+    return (
+      <SeekerLayout
+        title="Profile Views | ForgeTomorrow"
+        header={HeaderBox}
+        right={<RightRailPlacementManager surfaceId="profile_views" />}
+        rightVariant="light"
+        activeNav="contacts"
+      />
+    );
+  }
 
   return (
     <SeekerLayout
       title="Profile Views | ForgeTomorrow"
       header={HeaderBox}
-      right={<RightRailPlacementManager surfaceId="profile_views" />}
+      right={isMobile ? null : <RightRailPlacementManager surfaceId="profile_views" />}
       rightVariant="light"
       activeNav="contacts"
     >
@@ -86,26 +114,37 @@ export default function ProfileViewsPage() {
         style={{
           background: 'white',
           borderRadius: 12,
-          padding: 16,
+          padding: isMobile ? 12 : 16,
           border: '1px solid #eee',
           boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+          minWidth: 0,
+          overflowX: 'hidden',
         }}
       >
         <div
           style={{
             display: 'flex',
+            flexWrap: 'wrap',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            gap: 8,
             marginBottom: 8,
           }}
         >
-          <h2 style={{ margin: 0, color: '#FF7043' }}>Who&apos;s looking at you</h2>
-          <Link
-            href={contactCenterHref}
-            style={{ color: '#FF7043', fontWeight: 700, fontSize: 13 }}
-          >
-            ← Back to Contact Center
-          </Link>
+          <h2 style={{ margin: 0, color: '#FF7043', fontSize: isMobile ? 17 : 20 }}>
+            Who&apos;s looking at you
+          </h2>
+          {!isMobile && (
+            <Link
+              href={contactCenterHref}
+              style={{ color: '#FF7043', fontWeight: 700, fontSize: 13 }}
+            >
+              ← Back to Contact Center
+            </Link>
+          )}
         </div>
 
         {loading ? (
@@ -130,19 +169,24 @@ export default function ProfileViewsPage() {
                 key={v.id}
                 style={{
                   display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
                   justifyContent: 'space-between',
-                  alignItems: 'center',
+                  alignItems: isMobile ? 'flex-start' : 'center',
+                  gap: isMobile ? 6 : 0,
                   padding: '8px 10px',
                   borderRadius: 8,
                   background: '#F9FAFB',
+                  minWidth: 0,
                 }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   <span
                     style={{
                       fontWeight: 600,
                       color: v.viewer?.name ? '#111827' : '#6B7280',
                       fontSize: 14,
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
                     }}
                   >
                     {v.viewer?.name || 'Anonymous ForgeTomorrow member'}
@@ -151,6 +195,8 @@ export default function ProfileViewsPage() {
                     style={{
                       fontSize: 12,
                       color: '#6B7280',
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
                     }}
                   >
                     Viewed your profile • {formatDateTime(v.createdAt)}
@@ -170,6 +216,8 @@ export default function ProfileViewsPage() {
                       cursor: 'pointer',
                       color: '#374151',
                       fontWeight: 600,
+                      flexShrink: 0,
+                      alignSelf: isMobile ? 'flex-start' : 'center',
                     }}
                   >
                     View profile
@@ -178,6 +226,14 @@ export default function ProfileViewsPage() {
               </li>
             ))}
           </ul>
+        )}
+
+        {isMobile && (
+          <div style={{ marginTop: 12, fontSize: 13 }}>
+            <Link href={contactCenterHref} style={{ color: '#FF7043', fontWeight: 700 }}>
+              ← Back to Contact Center
+            </Link>
+          </div>
         )}
       </section>
     </SeekerLayout>

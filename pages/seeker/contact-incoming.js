@@ -9,11 +9,25 @@ import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import IncomingRequestsList from '@/components/IncomingRequestsList';
 import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar';
 
+// ─── SSR-safe mobile hook (matches seeker/contact-center.js) ───────────────
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(null);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 export default function SeekerIncomingInvitesPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  const isMobile = useIsMobile();
 
   const [contacts, setContacts] = useState([]);
   const [incomingRequests, setIncomingRequests] = useState([]);
@@ -128,14 +142,28 @@ export default function SeekerIncomingInvitesPage() {
           </Link>
         </>
       }
+      isMobile={isMobile === true}
     />
   );
+
+  // Render nothing until we know which layout to show (avoids hydration flash)
+  if (isMobile === null) {
+    return (
+      <SeekerLayout
+        title="Pending Invites | ForgeTomorrow"
+        header={HeaderBox}
+        right={<RightRailPlacementManager surfaceId="contact_incoming" />}
+        rightVariant="light"
+        activeNav="contacts"
+      />
+    );
+  }
 
   return (
     <SeekerLayout
       title="Pending Invites | ForgeTomorrow"
       header={HeaderBox}
-      right={<RightRailPlacementManager surfaceId="contact_incoming" />}
+      right={isMobile ? null : <RightRailPlacementManager surfaceId="contact_incoming" />}
       rightVariant="light"
       activeNav="contacts"
     >
@@ -145,20 +173,36 @@ export default function SeekerIncomingInvitesPage() {
         style={{
           background: 'white',
           borderRadius: 12,
-          padding: 16,
+          padding: isMobile ? 12 : 16,
           border: '1px solid #eee',
           boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+          minWidth: 0,
+          overflowX: 'hidden',
         }}
       >
-        <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 8 }}>
+        <h2
+          style={{
+            color: '#FF7043',
+            marginTop: 0,
+            marginBottom: 8,
+            fontSize: isMobile ? 17 : 20,
+          }}
+        >
           All Pending Invites
         </h2>
-        <IncomingRequestsList
-          items={incomingRequests}
-          onAccept={handleAccept}
-          onDecline={handleDecline}
-          onViewProfile={handleViewProfile}
-        />
+        {loading ? (
+          <p style={{ color: '#607D8B', fontSize: 14 }}>Loading invites…</p>
+        ) : (
+          <IncomingRequestsList
+            items={incomingRequests}
+            onAccept={handleAccept}
+            onDecline={handleDecline}
+            onViewProfile={handleViewProfile}
+          />
+        )}
         <div style={{ marginTop: 12, fontSize: 14 }}>
           <Link
             href={withChrome('/seeker/contacts')}
