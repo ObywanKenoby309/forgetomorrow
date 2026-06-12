@@ -7,6 +7,20 @@ import SeekerLayout from '@/components/layouts/SeekerLayout';
 
 const ORANGE = '#FF7043';
 
+// ─── SSR-safe mobile hook ───────────────────────────────────────────────────
+function useIsMobile(breakpoint = 1024) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const SELF_ID_LINKS = {
   disability503:
     'https://www.dol.gov/sites/dolgov/files/OFCCP/regs/compliance/sec503/Self_ID_Forms/503Self-IDForm-04262023.pdf',
@@ -117,6 +131,7 @@ function mergeQuestions(jobQs, tplQs) {
 
 export default function JobApplyPage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const { id: jobId } = router.query;
 
   const chrome =
@@ -599,6 +614,7 @@ export default function JobApplyPage() {
           borderRadius: 12,
           boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
           padding: 20,
+          paddingBottom: isMobile ? 'calc(160px + env(safe-area-inset-bottom))' : 20,
           display: 'grid',
           gap: 16,
         }}
@@ -652,43 +668,103 @@ export default function JobApplyPage() {
               )}
             </div>
 
-            <div
-              className="pt-4 mt-2 border-t flex items-center justify-between gap-3"
-              style={{ borderColor: 'rgba(0,0,0,0.08)' }}
-            >
-              <button
-                type="button"
-                onClick={handleBack}
-                disabled={stepIndex === 0 || saving}
-                className="px-4 py-2 rounded-full text-sm font-semibold"
-                style={{
-                  background: 'rgba(255,255,255,0.85)',
-                  border: '1px solid rgba(0,0,0,0.10)',
-                  color: '#334155',
-                  opacity: stepIndex === 0 || saving ? 0.5 : 1,
-                  cursor: stepIndex === 0 || saving ? 'default' : 'pointer',
-                }}
+            {!isMobile && (
+              <div
+                className="pt-4 mt-2 border-t flex items-center justify-between gap-3"
+                style={{ borderColor: 'rgba(0,0,0,0.08)' }}
               >
-                Back
-              </button>
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  disabled={stepIndex === 0 || saving}
+                  className="px-4 py-2 rounded-full text-sm font-semibold"
+                  style={{
+                    background: 'rgba(255,255,255,0.85)',
+                    border: '1px solid rgba(0,0,0,0.10)',
+                    color: '#334155',
+                    opacity: stepIndex === 0 || saving ? 0.5 : 1,
+                    cursor: stepIndex === 0 || saving ? 'default' : 'pointer',
+                  }}
+                >
+                  Back
+                </button>
 
-              <button
-                type="button"
-                onClick={handleNext}
-                disabled={!canContinue}
-                className="px-5 py-2 rounded-full text-sm font-semibold shadow-md"
-                style={{
-                  backgroundColor: canContinue ? ORANGE : 'rgba(148,163,184,0.35)',
-                  color: canContinue ? '#FFFFFF' : '#475569',
-                  cursor: canContinue ? 'pointer' : 'default',
-                }}
-              >
-                {saving ? 'Saving…' : currentStep.key === 'review' ? 'Submit application' : 'Continue'}
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={!canContinue}
+                  className="px-5 py-2 rounded-full text-sm font-semibold shadow-md"
+                  style={{
+                    backgroundColor: canContinue ? ORANGE : 'rgba(148,163,184,0.35)',
+                    color: canContinue ? '#FFFFFF' : '#475569',
+                    cursor: canContinue ? 'pointer' : 'default',
+                  }}
+                >
+                  {saving ? 'Saving…' : currentStep.key === 'review' ? 'Submit application' : 'Continue'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
+
+      {/* Sticky bottom wizard nav — mobile only */}
+      {isMobile && !loading && (
+        <div
+          style={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            bottom: 'calc(76px + env(safe-area-inset-bottom))',
+            zIndex: 99997,
+            padding: '8px 16px',
+            background: 'rgba(255,255,255,0.92)',
+            borderTop: '1px solid rgba(0,0,0,0.08)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}
+        >
+          <div className="text-center text-xs text-slate-500">
+            Step {Math.min(stepIndex + 1, steps.length)} of {steps.length} · {currentStep.title}
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleBack}
+              disabled={stepIndex === 0 || saving}
+              className="px-4 py-2 rounded-full text-sm font-semibold"
+              style={{
+                background: 'rgba(255,255,255,0.85)',
+                border: '1px solid rgba(0,0,0,0.10)',
+                color: '#334155',
+                opacity: stepIndex === 0 || saving ? 0.5 : 1,
+                cursor: stepIndex === 0 || saving ? 'default' : 'pointer',
+                flex: '0 0 auto',
+              }}
+            >
+              Back
+            </button>
+
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={!canContinue}
+              className="px-5 py-2 rounded-full text-sm font-semibold shadow-md"
+              style={{
+                backgroundColor: canContinue ? ORANGE : 'rgba(148,163,184,0.35)',
+                color: canContinue ? '#FFFFFF' : '#475569',
+                cursor: canContinue ? 'pointer' : 'default',
+                flex: '1 1 auto',
+              }}
+            >
+              {saving ? 'Saving…' : currentStep.key === 'review' ? 'Submit application' : 'Continue'}
+            </button>
+          </div>
+        </div>
+      )}
     </SeekerLayout>
   );
 }
