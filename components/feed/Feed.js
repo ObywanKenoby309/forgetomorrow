@@ -345,8 +345,8 @@ export default function Feed() {
   const filteredPosts = posts.filter((p) => !blockedAuthorIds.includes(p.authorId));
 
   return (
-    <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 pt-2 pb-10">
-      <div className="mb-5 rounded-[24px] border border-white/50 bg-white/72 backdrop-blur-xl shadow-[0_14px_40px_rgba(15,23,42,0.08)] px-4 py-4 sm:px-5">
+    <div className="flex h-full min-h-0 w-full max-w-none flex-col overflow-hidden px-2 pt-2 pb-0 sm:px-4 lg:px-6">
+      <div className="mb-4 shrink-0 rounded-[24px] border border-white/50 bg-white/72 backdrop-blur-xl shadow-[0_14px_40px_rgba(15,23,42,0.08)] px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="text-[18px] sm:text-[20px] font-bold text-gray-900">
@@ -390,7 +390,7 @@ export default function Feed() {
         </div>
       </div>
 
-      <div className="bg-white/78 backdrop-blur-xl rounded-[26px] border border-white/50 shadow-[0_16px_50px_rgba(15,23,42,0.08)] p-4 sm:p-5 mb-6 w-full">
+      <div className="mb-4 w-full shrink-0 rounded-[26px] border border-white/50 bg-white/78 p-4 shadow-[0_16px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-5">
         <div className="flex items-center gap-3">
           <div className="shrink-0">
             {!avatarResolved ? (
@@ -432,16 +432,18 @@ export default function Feed() {
         </div>
       </div>
 
-      <PostList
-        posts={filteredPosts}
-        filter={filter}
-        onReply={handleReply}
-        onDelete={handleDelete}
-        onReact={handleReact}
-        currentUserId={currentUserId}
-        currentUserName={currentUserName}
-        onBlockAuthor={handleBlockAuthor}
-      />
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 pb-6 sm:pr-2">
+        <PostList
+          posts={filteredPosts}
+          filter={filter}
+          onReply={handleReply}
+          onDelete={handleDelete}
+          onReact={handleReact}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+          onBlockAuthor={handleBlockAuthor}
+        />
+      </div>
 
       {showComposer && (
         <div

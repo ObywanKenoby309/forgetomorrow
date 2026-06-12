@@ -39,7 +39,11 @@ export default function FeedPage() {
             WebkitBackdropFilter: "blur(12px)",
             padding: 16,
             width: "100%",
-            minHeight: "60vh",
+            height: "calc(100vh - 220px)",
+            minHeight: 520,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <Feed />

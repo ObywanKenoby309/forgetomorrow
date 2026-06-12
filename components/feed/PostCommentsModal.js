@@ -370,7 +370,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl overflow-hidden rounded-[28px] border border-white/40 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl"
+        className="relative flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/40 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl"
       >
         <button
           onClick={onClose}
@@ -380,8 +380,8 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
           ✕
         </button>
 
-        <div className="max-h-[85vh] overflow-y-auto">
-          <div className="border-b border-gray-100 px-5 py-5 sm:px-6">
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="max-h-[34vh] shrink-0 overflow-y-auto border-b border-gray-100 px-5 py-5 sm:px-6">
             <header className="flex items-center gap-3 pr-12">
               {post.authorAvatar ? (
                 <img
@@ -466,8 +466,8 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
             )}
           </div>
 
-          <div className="px-5 py-5 sm:px-6">
-            <div className="mb-4 flex items-center justify-between">
+          <div className="flex min-h-0 flex-1 flex-col px-5 py-5 sm:px-6">
+            <div className="mb-4 flex shrink-0 items-center justify-between">
               <div className="text-sm font-semibold text-gray-900">
                 Comments
               </div>
@@ -476,7 +476,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
               </div>
             </div>
 
-            <div className="space-y-3 max-h-[42vh] overflow-y-auto pr-1">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
               {visibleComments.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
                   No comments yet. Be the first to add one.
@@ -625,7 +625,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
               )}
             </div>
 
-            <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-3 sm:p-4">
+            <div className="mt-5 shrink-0 rounded-2xl border border-gray-200 bg-gray-50 p-3 sm:p-4">
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
