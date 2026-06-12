@@ -649,13 +649,21 @@ export default function CreateResumePage() {
     <ResumeBuilderLayout title="Resume Builder | ForgeTomorrow">
       <style jsx global>{`
         html, body { overflow-x: hidden; }
-        @media (max-width: 1100px) { .ft-rb-main { grid-template-columns: 1fr !important; } }
+        @media (max-width: 1100px) {
+          .ft-rb-main { grid-template-columns: 1fr !important; }
+          .ft-rb-toprow { grid-template-columns: 1fr !important; }
+          .ft-ad-rail-outer { width: 100% !important; height: auto !important; }
+          .ft-ad-rail-inner { width: 100% !important; transform: none !important; }
+          .ft-rb-intel-rail { position: static !important; top: auto !important; }
+          .ft-rb-toolbar-row { grid-template-columns: 1fr !important; }
+          .ft-rb-status-col { width: 100% !important; }
+        }
       `}</style>
 
       <div style={{width:'100%',boxSizing:'border-box'}} className="overflow-x-hidden">
 
         {/* TOP: title + command card | compact ad rail — ad no longer controls page spacing */}
-        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,alignItems:'start',marginBottom:8,width:'100%'}}>
+        <div className="ft-rb-toprow" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,alignItems:'start',marginBottom:8,width:'100%'}}>
           <div style={{minWidth:0,display:'grid',gap:8}}>
             <SeekerTitleCard
               greeting={greeting}
@@ -664,7 +672,7 @@ export default function CreateResumePage() {
             />
             <div style={{...GLASS_CARD,padding:'12px 14px'}}>
               {/* Two-column: left = 3 uniform rows, right = Status + Next Step stacked */}
-              <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:10,alignItems:'start'}}>
+              <div className="ft-rb-toolbar-row" style={{display:'grid',gridTemplateColumns:'1fr auto',gap:10,alignItems:'start'}}>
 
                 {/* LEFT — three rows, all same width */}
                 <div style={{display:'grid',gap:6}}>
@@ -725,7 +733,7 @@ export default function CreateResumePage() {
                 </div>
 
                 {/* RIGHT — Status + Next Step, stacked, fixed width */}
-                <div style={{display:'grid',gap:6,width:140,flexShrink:0}}>
+                <div className="ft-rb-status-col" style={{display:'grid',gap:6,width:140,flexShrink:0}}>
 
                   {/* Status — ring only, label on hover */}
                   <div style={{...TOOL_GROUP,flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'8px 10px',textAlign:'center'}}>
@@ -767,8 +775,8 @@ export default function CreateResumePage() {
 
           {/* AD RAIL — beside title + command card only, without forcing a tall spacer */}
           {!isFocusMode&&(
-            <div style={{width:'220px',height:295,flexShrink:0,overflow:'hidden',borderRadius:14}}>
-              <div style={{width:280,transform:'scale(0.78)',transformOrigin:'top left'}}>
+            <div className="ft-ad-rail-outer" style={{width:'220px',height:295,flexShrink:0,overflow:'hidden',borderRadius:14}}>
+              <div className="ft-ad-rail-inner" style={{width:280,transform:'scale(0.78)',transformOrigin:'top left'}}>
                 <RightRailPlacementManager slot="right_rail_1"/>
               </div>
             </div>
@@ -801,7 +809,7 @@ export default function CreateResumePage() {
 
           {/* FORGE HAMMER — permanent right rail */}
           {!isFocusMode&&(
-            <div style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20,alignSelf:'start'}}>
+            <div className="ft-rb-intel-rail" style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20,alignSelf:'start'}}>
               <div style={{...GLASS_CARD,overflow:'hidden'}}>
                 <div style={{padding:'12px 16px',background:'linear-gradient(135deg, rgba(255,112,67,0.15), rgba(255,112,67,0.05))',borderBottom:'1px solid rgba(255,112,67,0.15)'}}>
                   <div style={{fontWeight:900,fontSize:15,color:ORANGE}}>🔨 The Forge Hammer</div>

@@ -789,6 +789,7 @@ export default function ResumeCoverLanding() {
       </p>
 
       <div
+        className="ft-rc-documents-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: documentsGridColumns,
@@ -1083,6 +1084,12 @@ export default function ResumeCoverLanding() {
       rightVariant="light"
       activeNav="resume-cover"
     >
+      <style jsx global>{`
+        @media (max-width: 760px) {
+          .ft-rc-documents-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+
       <div
   style={{
     width: '100%',

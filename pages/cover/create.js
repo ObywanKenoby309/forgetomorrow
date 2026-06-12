@@ -431,13 +431,19 @@ export default function CoverLetterPage() {
     <ResumeBuilderLayout title="Cover Letter Builder | ForgeTomorrow">
       <style jsx global>{`
         html, body { overflow-x: hidden; }
-        @media (max-width: 1100px) { .ft-rb-main { grid-template-columns: 1fr !important; } }
+        @media (max-width: 1100px) {
+          .ft-rb-main { grid-template-columns: 1fr !important; }
+          .ft-cover-toprow, .ft-cover-philosophy { grid-template-columns: 1fr !important; }
+          .ft-ad-rail-outer { width: 100% !important; height: auto !important; }
+          .ft-ad-rail-inner { width: 100% !important; transform: none !important; }
+          .ft-cover-intel-rail { position: static !important; top: auto !important; }
+        }
       `}</style>
 
       <div style={{width:'100%',boxSizing:'border-box'}} className="overflow-x-hidden">
 
         {/* TOP: title + command card */}
-        <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,alignItems:'start',marginBottom:8,width:'100%'}}>
+        <div className="ft-cover-toprow" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,alignItems:'start',marginBottom:8,width:'100%'}}>
           <div style={{minWidth:0,display:'grid',gap:8}}>
             <SeekerTitleCard
               greeting={greetingText}
@@ -499,8 +505,8 @@ export default function CoverLetterPage() {
 
           {/* AD RAIL */}
           {!isFocusMode&&(
-            <div style={{width:'220px',height:295,flexShrink:0,overflow:'hidden',borderRadius:14}}>
-              <div style={{width:280,transform:'scale(0.78)',transformOrigin:'top left'}}>
+            <div className="ft-ad-rail-outer" style={{width:'220px',height:295,flexShrink:0,overflow:'hidden',borderRadius:14}}>
+              <div className="ft-ad-rail-inner" style={{width:280,transform:'scale(0.78)',transformOrigin:'top left'}}>
                 <RightRailPlacementManager slot="right_rail_1"/>
               </div>
             </div>
@@ -509,7 +515,7 @@ export default function CoverLetterPage() {
 
         {/* Philosophy panel */}
         {showPhilosophy&&(
-          <div style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,marginBottom:8,marginTop:-4}}>
+          <div className="ft-cover-philosophy" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,marginBottom:8,marginTop:-4}}>
           <div style={{...GLASS_CARD,padding:'16px 20px',borderLeft:`3px solid ${ORANGE}`,borderTopLeftRadius:0,borderTopRightRadius:0,borderTop:'none'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
               <div style={{fontWeight:900,fontSize:14,color:ORANGE}}>The Forge Cover Letter Philosophy</div>
@@ -545,7 +551,7 @@ export default function CoverLetterPage() {
 
                     {/* RIGHT: Cover Intelligence Rail — mirrors Forge Hammer */}
           {!isFocusMode&&(
-            <div style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20,alignSelf:'start'}}>
+            <div className="ft-cover-intel-rail" style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20,alignSelf:'start'}}>
               <div style={{...GLASS_CARD,overflow:'hidden'}}>
                 <div style={{padding:'12px 16px',background:'linear-gradient(135deg, rgba(255,112,67,0.15), rgba(255,112,67,0.05))',borderBottom:'1px solid rgba(255,112,67,0.15)'}}>
                   <div style={{fontWeight:900,fontSize:15,color:ORANGE}}>✍️ Cover Intelligence</div>
