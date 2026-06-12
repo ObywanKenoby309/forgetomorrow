@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
 import { useConnect } from '@/components/actions/useConnect';
+import { createPortal } from 'react-dom';
 
 export default function PostCommentsModal({ post, onClose, onReply }) {
   const [text, setText] = useState('');
@@ -18,6 +19,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
   const { connectWith } = useConnect();
 
   if (!post) return null;
+  if (typeof document === 'undefined') return null;
 
   const chrome = String(router.query?.chrome || '').toLowerCase();
   const withChrome = (path) =>
@@ -361,11 +363,18 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
       });
   }, [post?.attachments]);
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 sm:p-6"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/55 p-4 sm:p-6"
+style={{
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+}}
       onClick={onClose}
     >
       <div
@@ -650,6 +659,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
