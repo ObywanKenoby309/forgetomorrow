@@ -6,7 +6,6 @@ import MemberAvatarActions from '@/components/member/MemberAvatarActions';
 
 export default function PostCard({
   post,
-  onReply,
   onOpenComments,
   onDelete,
   onReact,
@@ -19,8 +18,6 @@ export default function PostCard({
   const router = useRouter();
 
   const [expanded,       setExpanded]       = useState(false);
-  const [showReplyInput, setShowReplyInput] = useState(false);
-  const [replyText,      setReplyText]      = useState('');
   const [hoveredEmoji,   setHoveredEmoji]   = useState(null);
   const [reactionUsers,  setReactionUsers]  = useState({});
   const [actionsMenuOpen,setActionsMenuOpen]= useState(false);
@@ -47,9 +44,14 @@ export default function PostCard({
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  const visibleCommentsCount = Array.isArray(post.comments)
-    ? post.comments.filter((c) => !(c && c.deleted === true)).length
-    : 0;
+  const visibleComments = Array.isArray(post.comments)
+    ? post.comments.filter((c) => !(c && c.deleted === true))
+    : [];
+
+  const visibleCommentsCount = visibleComments.length;
+  const latestVisibleComment = visibleCommentsCount > 0
+    ? visibleComments[visibleCommentsCount - 1]
+    : null;
 
   const HEARTH_THRESHOLD = 5;
   const canRecommendForHearth = !isOwner && !hearthThreadId;
@@ -89,14 +91,6 @@ export default function PostCard({
     if (!post?.id) return;
     logPostView('open_post');
     router.push(withChrome(`/post-view?id=${post.id}`));
-  };
-
-  const handleReplySubmit = async () => {
-    if (!replyText.trim()) return;
-    logPostView('reply_submit');
-    onReply(post.id, replyText.trim());
-    setReplyText('');
-    setShowReplyInput(false);
   };
 
   const handleReportPost = async () => {
@@ -526,67 +520,148 @@ export default function PostCard({
       )}
 
       {/* Action bar */}
-      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
-        <button type="button" onClick={handleLike}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition ${likeSelected ? 'bg-blue-50 border-blue-200 text-blue-800' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'}`}>
-          <span className="text-base">👍</span>
-          <span className="text-xs font-semibold">{likeCount}</span>
-          <span className="text-xs font-semibold">Like</span>
-        </button>
+      <div className="border-t border-gray-100 pt-3 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleLike}
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border text-sm font-semibold transition ${
+                likeSelected
+                  ? 'bg-blue-50 border-blue-200 text-blue-800'
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-base">👍</span>
+              <span>Like</span>
+              {likeCount > 0 && <span className="text-xs text-gray-500">{likeCount}</span>}
+            </button>
 
-        <button type="button" onClick={() => onOpenComments?.(post)}
-          className="px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-700">
-          💬 {visibleCommentsCount} {visibleCommentsCount === 1 ? 'comment' : 'comments'}
-        </button>
+            <button
+              type="button"
+              onClick={() => onOpenComments?.(post)}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 transition"
+            >
+              <span>💬</span>
+              <span>Comment</span>
+              {visibleCommentsCount > 0 && (
+                <span className="text-xs text-gray-500">{visibleCommentsCount}</span>
+              )}
+            </button>
 
-        <button type="button" onClick={() => setShowEmojiBar((v) => !v)}
-          className="px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-700">
-          🙂 React
-        </button>
+            <button
+              type="button"
+              onClick={handleShare}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 transition"
+            >
+              {copyConfirm ? '✅ Copied' : '↗ Share'}
+            </button>
+          </div>
 
-        <button type="button" onClick={handleShare}
-          className="px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 transition">
-          {copyConfirm ? '✅ Copied!' : '↗ Share'}
-        </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowEmojiBar((v) => !v)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-gray-200 bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-600 transition"
+            >
+              🙂 React
+            </button>
 
-        <button type="button" onClick={handleSave} disabled={saveLoading}
-          className={`px-3 py-1.5 rounded-full border transition ${saved ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'}`}>
-          {saved ? '🔖 Saved' : '🔖 Save'}
-        </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saveLoading}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-semibold transition ${
+                saved
+                  ? 'bg-orange-50 border-orange-300 text-orange-700'
+                  : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600'
+              }`}
+            >
+              {saved ? '🔖 Saved' : '🔖 Save'}
+            </button>
+          </div>
+        </div>
 
-        {hearthThreadId ? (
+        {latestVisibleComment && (
           <button
             type="button"
-            onClick={() => router.push(withChrome(`/seeker/the-hearth/forums?thread=${hearthThreadId}`))}
-            className="px-3 py-1.5 rounded-full border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-800 font-semibold transition"
-            title={hearthThreadTitle || 'Continued in the Hearth'}
+            onClick={() => onOpenComments?.(post)}
+            className="w-full text-left rounded-2xl border border-gray-100 bg-gray-50/80 px-3 py-2.5 hover:bg-gray-50 transition"
           >
-            🔥 Continued in Hearth
+            <div className="flex items-start gap-2">
+              {latestVisibleComment.avatarUrl ? (
+                <img
+                  src={latestVisibleComment.avatarUrl}
+                  alt={latestVisibleComment.by || 'Commenter'}
+                  className="mt-0.5 h-7 w-7 rounded-full object-cover bg-gray-200"
+                />
+              ) : (
+                <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-[10px] font-semibold text-gray-500">
+                  {latestVisibleComment.by?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
+
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-bold text-gray-800">
+                  {latestVisibleComment.by || 'Member'}
+                </div>
+                <div className="mt-0.5 line-clamp-2 text-sm text-gray-600">
+                  {latestVisibleComment.text}
+                </div>
+                {visibleCommentsCount > 1 && (
+                  <div className="mt-1 text-xs font-semibold text-[#ff7043]">
+                    View all {visibleCommentsCount} comments
+                  </div>
+                )}
+              </div>
+            </div>
           </button>
-        ) : canBranchToHearth ? (
-          <button
-            type="button"
-            onClick={handleBranchToHearth}
-            disabled={hearthLoading}
-            className="px-3 py-1.5 rounded-full border border-orange-300 bg-orange-600 hover:bg-orange-700 text-white font-semibold transition disabled:opacity-60"
-          >
-            🔥 Continue in Hearth ({hearthCount})
-          </button>
-        ) : canRecommendForHearth ? (
-          <button
-            type="button"
-            onClick={handleRecommendForHearth}
-            disabled={hearthLoading || hearthRecommended}
-            className={`px-3 py-1.5 rounded-full border transition ${hearthRecommended ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-gray-200 bg-white hover:bg-orange-50 text-gray-700'}`}
-            title="Recommend this post to become a deeper Hearth discussion"
-          >
-            {hearthRecommended ? `🔥 Recommended (${hearthCount})` : `🔥 Recommend for Hearth (${hearthCount})`}
-          </button>
-        ) : hearthCount > 0 ? (
-          <span className="px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-gray-600">
-            🔥 {hearthCount} Hearth {hearthCount === 1 ? 'recommendation' : 'recommendations'}
-          </span>
-        ) : null}
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          {hearthThreadId ? (
+            <button
+              type="button"
+              onClick={() => router.push(withChrome(`/seeker/the-hearth/forums?thread=${hearthThreadId}`))}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-orange-300 bg-orange-50 hover:bg-orange-100 text-sm font-bold text-orange-800 transition"
+              title={hearthThreadTitle || 'Continued in the Hearth'}
+            >
+              🔥 Continued in Hearth
+            </button>
+          ) : canBranchToHearth ? (
+            <button
+              type="button"
+              onClick={handleBranchToHearth}
+              disabled={hearthLoading}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-orange-300 bg-orange-600 hover:bg-orange-700 text-sm font-bold text-white transition disabled:opacity-60"
+            >
+              🔥 Continue in Hearth
+              <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">{hearthCount} / {HEARTH_THRESHOLD}</span>
+            </button>
+          ) : canRecommendForHearth ? (
+            <button
+              type="button"
+              onClick={handleRecommendForHearth}
+              disabled={hearthLoading || hearthRecommended}
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-2xl border text-sm font-bold transition ${
+                hearthRecommended
+                  ? 'bg-orange-50 border-orange-300 text-orange-700'
+                  : 'border-gray-200 bg-white hover:bg-orange-50 text-gray-700'
+              }`}
+              title="Recommend this post to move into a deeper Hearth discussion"
+            >
+              🔥 Move to Hearth
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                {hearthCount} / {HEARTH_THRESHOLD}
+              </span>
+            </button>
+          ) : hearthCount > 0 ? (
+            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-600">
+              🔥 Hearth interest
+              <span className="rounded-full bg-white px-2 py-0.5 text-xs">{hearthCount} / {HEARTH_THRESHOLD}</span>
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {/* Emoji bar */}
@@ -608,29 +683,6 @@ export default function PostCard({
             </div>
           )}
         </div>
-      )}
-
-      {/* Reply */}
-      {showReplyInput ? (
-        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-          <div className="flex gap-2">
-            <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)}
-              placeholder="Write a reply…" rows={2}
-              className="flex-1 border border-gray-200 rounded-xl p-3 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400" />
-            <button onClick={handleReplySubmit} disabled={!replyText.trim()}
-              className="px-4 py-2 bg-[#ff7043] text-white rounded-xl font-semibold disabled:opacity-50">Send</button>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-            <span>Keep it constructive. Forge builds people.</span>
-            <button type="button" onClick={() => { setShowReplyInput(false); setReplyText(''); }}
-              className="font-semibold text-gray-600 hover:text-gray-900">Cancel</button>
-          </div>
-        </div>
-      ) : (
-        <button onClick={() => setShowReplyInput(true)}
-          className="text-sm font-semibold text-gray-700 hover:text-gray-900 inline-flex items-center gap-2">
-          <span aria-hidden="true">↩</span> Reply
-        </button>
       )}
     </div>
 
