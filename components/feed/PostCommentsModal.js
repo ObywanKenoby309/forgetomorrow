@@ -377,10 +377,10 @@ style={{
 }}
       onClick={onClose}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="relative flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/40 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl"
-      >
+   <div
+  onClick={(e) => e.stopPropagation()}
+  className="relative flex h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/40 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl"
+>
         <button
           onClick={onClose}
           className="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
@@ -390,7 +390,7 @@ style={{
         </button>
 
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="max-h-[34vh] shrink-0 overflow-y-auto border-b border-gray-100 px-5 py-5 sm:px-6">
+          <div className="shrink-0 border-b border-gray-100 px-5 py-4 sm:px-6">
             <header className="flex items-center gap-3 pr-12">
               {post.authorAvatar ? (
                 <img
@@ -413,9 +413,16 @@ style={{
               </div>
             </header>
 
-            <div className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-gray-800">
-              {post.body}
-            </div>
+            <div
+  className="mt-3 text-[14px] leading-relaxed text-gray-800 overflow-hidden"
+  style={{
+    display: '-webkit-box',
+    WebkitLineClamp: 3,
+    WebkitBoxOrient: 'vertical',
+  }}
+>
+  {post.body}
+</div>
 
             {safeAttachments.length > 0 && (
               <div className="mt-4 space-y-3">
