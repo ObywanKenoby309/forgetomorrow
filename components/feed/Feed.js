@@ -432,7 +432,7 @@ export default function Feed() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 pb-6 sm:pr-2">
+      <div className="pr-1 pb-6 sm:pr-2">
         <PostList
           posts={filteredPosts}
           filter={filter}

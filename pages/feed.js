@@ -31,20 +31,16 @@ export default function FeedPage() {
       >
         <div
           style={{
-            borderRadius: 18,
-            border: "1px solid rgba(255,255,255,0.24)",
-            background: "rgba(255,255,255,0.52)",
-            boxShadow: "0 14px 36px rgba(0,0,0,0.12)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
-            padding: 16,
-            width: "100%",
-            height: "calc(100vh - 220px)",
-            minHeight: 520,
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-          }}
+  borderRadius: 18,
+  border: "1px solid rgba(255,255,255,0.24)",
+  background: "rgba(255,255,255,0.52)",
+  boxShadow: "0 14px 36px rgba(0,0,0,0.12)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  padding: 16,
+  width: "100%",
+  minHeight: "180vh",
+}}
         >
           <Feed />
         </div>
