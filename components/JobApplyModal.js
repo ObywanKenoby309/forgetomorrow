@@ -64,7 +64,7 @@ export default function JobApplyModal({ job, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+    <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 px-4">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
         <h2 className="text-lg font-semibold mb-2">
           External job posting

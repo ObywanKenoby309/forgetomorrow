@@ -6,6 +6,20 @@ import Link from 'next/link';
 import { track } from '@/lib/track';
 import JobApplyModal from '@/components/JobApplyModal';
 
+// ─── SSR-safe mobile hook (matches sm: breakpoint already used on this page) ──
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 // ──────────────────────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────────────────────
@@ -53,6 +67,7 @@ function getJobStatus(job) {
 // ──────────────────────────────────────────────────────────────
 export default function PublicJobView() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const { id: jobId } = router.query;
 
   const [job, setJob] = useState(null);
@@ -114,6 +129,15 @@ export default function PublicJobView() {
     status !== 'Draft' &&
     status !== 'Closed';
 
+  const applyButtonLabel =
+    status === 'Closed'
+      ? 'Closed'
+      : status === 'Reviewing'
+      ? 'Applications paused'
+      : isInternal
+      ? 'Apply on ForgeTomorrow'
+      : 'Apply on employer site';
+
   const handleApplyClick = () => {
     if (!job) return;
 
@@ -136,7 +160,7 @@ export default function PublicJobView() {
       <main
         className="min-h-screen"
         style={{
-          padding: '32px 16px 48px',
+          padding: isMobile ? '32px 16px 96px' : '32px 16px 48px',
           background: isInternal
             ? 'radial-gradient(circle at top, #112033 0, #050910 55%, #020308 100%)'
             : '#F5F7FA',
@@ -263,8 +287,8 @@ export default function PublicJobView() {
                     </span>
                   )}
 
-                  {/* Apply button */}
-                  {!loading && job && (
+                  {/* Apply button — desktop only; mobile uses the sticky bottom bar */}
+                  {!loading && job && !isMobile && (
                     <button
                       type="button"
                       onClick={handleApplyClick}
@@ -277,13 +301,7 @@ export default function PublicJobView() {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {status === 'Closed'
-                        ? 'Closed'
-                        : status === 'Reviewing'
-                        ? 'Applications paused'
-                        : isInternal
-                        ? 'Apply on ForgeTomorrow'
-                        : 'Apply on employer site'}
+                      {applyButtonLabel}
                     </button>
                   )}
                 </div>
@@ -421,6 +439,39 @@ export default function PublicJobView() {
             job={job}
             onClose={() => setShowApplyModal(false)}
           />
+        )}
+
+        {/* Sticky bottom apply bar — mobile only */}
+        {isMobile && !loading && job && (
+          <div
+            style={{
+              position: 'fixed',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 40,
+              padding: '10px 16px',
+              paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
+              background: isInternal ? 'rgba(11,23,36,0.92)' : 'rgba(255,255,255,0.92)',
+              borderTop: `1px solid ${isInternal ? 'rgba(255,255,255,0.12)' : '#E0E0E0'}`,
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleApplyClick}
+              disabled={!canApply}
+              className="w-full px-4 py-3 rounded-full text-sm font-semibold shadow-md"
+              style={{
+                backgroundColor: canApply ? '#FF7043' : '#CFD8DC',
+                color: canApply ? '#FFFFFF' : '#607D8B',
+                cursor: canApply ? 'pointer' : 'default',
+              }}
+            >
+              {applyButtonLabel}
+            </button>
+          </div>
         )}
       </main>
     </>
