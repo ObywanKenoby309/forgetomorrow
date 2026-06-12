@@ -500,6 +500,17 @@ export default function ProfileAnalyticsPage() {
                     <div className="mt-3 bg-[#FAFAFA] border border-gray-200 rounded-xl p-3 text-sm text-[#455A64]">
                       {analyticsLoading ? 'Loading…' : `Profile interactions: ${analytics.totalViews.toLocaleString()}`}
                     </div>
+
+                    {detailedAnalyticsAvailable ? (
+                      <div className="mt-3 space-y-3">
+                        <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
+                        <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
+                      </div>
+                    ) : (
+                      <section className="mt-3 bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-sm text-[#455A64]">
+                        {analyticsLoading ? 'Loading charts…' : 'No 7-day chart data available yet.'}
+                      </section>
+                    )}
                   </div>
                 ) : null}
 
@@ -511,6 +522,18 @@ export default function ProfileAnalyticsPage() {
                     </p>
                     <div className="mt-3 bg-[#FAFAFA] border border-gray-200 rounded-xl p-3 text-sm text-[#455A64]">
                       {analyticsLoading ? 'Loading…' : `Recent viewers: ${analytics.recentViewers.length}`}
+                    </div>
+
+                    <div className="mt-3 space-y-3">
+                      {Array.isArray(analytics.connectionsLast7Days) ? (
+                        <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days} />
+                      ) : (
+                        <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-sm text-[#455A64]">
+                          {analyticsLoading ? 'Loading…' : 'No connection trend data available yet.'}
+                        </section>
+                      )}
+
+                      <RecentViewers viewers={analytics.recentViewers} allViewsHref={allViewsHref} />
                     </div>
                   </div>
                 ) : null}
@@ -544,6 +567,7 @@ export default function ProfileAnalyticsPage() {
                       <KPI label="Profile Completion" value={`${analytics.profileCompletionPct}%`} />
                       <KPI label="Posts" value={kpiValue(analytics.postsCount)} />
                       <KPI label="Comments" value={kpiValue(analytics.commentsCount)} />
+                      <KPI label="Connections (7d)" value={kpiValue(analytics.connectionsGained7d)} />
                     </div>
 
                     {/* Charts */}

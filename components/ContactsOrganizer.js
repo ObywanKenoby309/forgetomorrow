@@ -1,6 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 
+// ─── SSR-safe mobile hook (matches breakpoint used elsewhere in seeker pages) ──
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const GLASS = {
   borderRadius: 14,
   border: '1px solid rgba(255,255,255,0.22)',
@@ -65,6 +79,8 @@ export default function ContactsOrganizer({
   const router = useRouter();
   const chromeFromRoute = router.query?.chrome;
   const effectiveChrome = chromeFromRoute || chrome;
+
+  const isMobile = useIsMobile();
 
   const [openMap, setOpenMap] = useState({});
   const [globalNewCat, setGlobalNewCat] = useState('');
@@ -523,11 +539,13 @@ export default function ContactsOrganizer({
 
           <div
             style={{
-              marginLeft: 'auto',
+              marginLeft: isMobile ? 0 : 'auto',
+              width: isMobile ? '100%' : 'auto',
               display: 'flex',
               flexWrap: 'wrap',
+              flexDirection: isMobile ? 'column' : 'row',
               gap: 10,
-              alignItems: 'center',
+              alignItems: isMobile ? 'stretch' : 'center',
             }}
           >
             <input
@@ -535,7 +553,7 @@ export default function ContactsOrganizer({
               onChange={(e) => setGlobalNewCat(e.target.value)}
               placeholder="New category"
               className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300"
-              style={{ minWidth: 220, background: 'rgba(255,255,255,0.9)' }}
+              style={{ minWidth: isMobile ? 0 : 220, width: isMobile ? '100%' : undefined, background: 'rgba(255,255,255,0.9)', boxSizing: 'border-box' }}
             />
             <button
               type="button"
@@ -552,6 +570,7 @@ export default function ContactsOrganizer({
                 fontWeight: 700,
                 cursor: 'pointer',
                 boxShadow: '0 6px 16px rgba(255,112,67,0.22)',
+                width: isMobile ? '100%' : undefined,
               }}
             >
               Add Category
@@ -580,6 +599,7 @@ export default function ContactsOrganizer({
           isOpen
           onToggle={() => {}}
           depth={0}
+          isMobile={isMobile}
         />
 
         {categoryTree.roots.map((root) => {
@@ -609,6 +629,7 @@ export default function ContactsOrganizer({
                 isOpen={!!openMap[root.name]}
                 onToggle={() => toggleCategory(root.name)}
                 depth={0}
+                isMobile={isMobile}
               />
 
               {openMap[root.name] &&
@@ -640,6 +661,7 @@ export default function ContactsOrganizer({
                       isOpen={!!openMap[child.name]}
                       onToggle={() => toggleCategory(child.name)}
                       depth={1}
+                      isMobile={isMobile}
                     />
                   );
                 })}
@@ -670,6 +692,7 @@ function CategoryBlock({
   isOpen,
   onToggle,
   depth = 0,
+  isMobile = false,
 }) {
   const Header = (
     <div
@@ -769,8 +792,8 @@ function CategoryBlock({
     <div
       style={{
         ...GLASS,
-        padding: 18,
-        marginLeft: depth > 0 ? 18 : 0,
+        padding: isMobile ? 12 : 18,
+        marginLeft: depth > 0 ? (isMobile ? 8 : 18) : 0,
       }}
     >
       {Header}
@@ -799,6 +822,7 @@ function CategoryBlock({
                 onReportContact={onReportContact}
                 onAddCategory={onAddCategory}
                 onViewProfile={onViewProfile}
+                isMobile={isMobile}
               />
             ))}
           </ul>
@@ -820,6 +844,7 @@ function ContactCard({
   onReportContact,
   onAddCategory,
   onViewProfile,
+  isMobile = false,
 }) {
   const [actionsOpen, setActionsOpen] = useState(false);
 
@@ -998,11 +1023,13 @@ function ContactCard({
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr)',
         gap: 14,
-        padding: 16,
+        padding: isMobile ? 12 : 16,
         borderRadius: 14,
         border: '1px solid rgba(0,0,0,0.08)',
         background: 'rgba(255,255,255,0.82)',
         boxShadow: '0 6px 18px rgba(0,0,0,0.06)',
+        minWidth: 0,
+        boxSizing: 'border-box',
       }}
     >
       <div
@@ -1020,7 +1047,7 @@ function ContactCard({
             alignItems: 'center',
             gap: 14,
             minWidth: 0,
-            flex: '1 1 320px',
+            flex: isMobile ? '1 1 100%' : '1 1 320px',
           }}
         >
           {imageSrc ? (
@@ -1096,7 +1123,8 @@ function ContactCard({
             fontWeight: 700,
             cursor: 'pointer',
             boxShadow: '0 6px 16px rgba(255,112,67,0.22)',
-            flex: '0 0 auto',
+            flex: isMobile ? '1 1 100%' : '0 0 auto',
+            width: isMobile ? '100%' : undefined,
           }}
         >
           View Profile
@@ -1107,7 +1135,8 @@ function ContactCard({
         style={{
           display: 'flex',
           gap: 10,
-          alignItems: 'center',
+          alignItems: isMobile ? 'stretch' : 'center',
+          flexDirection: isMobile ? 'column' : 'row',
           flexWrap: 'wrap',
           position: 'relative',
         }}
@@ -1116,7 +1145,9 @@ function ContactCard({
           value={pendingRootId}
           onChange={(e) => handleCategoryChange(e.target.value)}
           style={{
-            minWidth: 180,
+            minWidth: isMobile ? 0 : 180,
+            width: isMobile ? '100%' : undefined,
+            boxSizing: 'border-box',
             padding: '9px 10px',
             borderRadius: 10,
             border: '1px solid #D7DEE2',
@@ -1144,7 +1175,9 @@ function ContactCard({
             }
           }}
           style={{
-            minWidth: 180,
+            minWidth: isMobile ? 0 : 180,
+            width: isMobile ? '100%' : undefined,
+            boxSizing: 'border-box',
             padding: '9px 10px',
             borderRadius: 10,
             border: '1px solid #D7DEE2',
@@ -1173,7 +1206,9 @@ function ContactCard({
             onChange={(e) => setNewCategoryName(e.target.value)}
             placeholder="New category"
             style={{
-              minWidth: 170,
+              minWidth: isMobile ? 0 : 170,
+              width: isMobile ? '100%' : undefined,
+              boxSizing: 'border-box',
               padding: '9px 10px',
               borderRadius: 10,
               border: '1px solid #D7DEE2',
@@ -1189,7 +1224,9 @@ function ContactCard({
             onChange={(e) => setNewGroupName(e.target.value)}
             placeholder="New group"
             style={{
-              minWidth: 170,
+              minWidth: isMobile ? 0 : 170,
+              width: isMobile ? '100%' : undefined,
+              boxSizing: 'border-box',
               padding: '9px 10px',
               borderRadius: 10,
               border: '1px solid #D7DEE2',
@@ -1211,12 +1248,13 @@ function ContactCard({
             fontSize: 13,
             fontWeight: 700,
             cursor: 'pointer',
+            width: isMobile ? '100%' : undefined,
           }}
         >
           Add & Assign
         </button>
 
-        <div style={{ marginLeft: 'auto', position: 'relative' }}>
+        <div style={{ marginLeft: isMobile ? 0 : 'auto', width: isMobile ? '100%' : undefined, position: 'relative' }}>
           <button
             type="button"
             onClick={() => setActionsOpen((v) => !v)}
@@ -1228,6 +1266,7 @@ function ContactCard({
               color: '#455A64',
               fontWeight: 700,
               cursor: 'pointer',
+              width: isMobile ? '100%' : undefined,
             }}
           >
             Actions
@@ -1239,7 +1278,10 @@ function ContactCard({
                 position: 'absolute',
                 top: 46,
                 right: 0,
-                minWidth: 170,
+                left: isMobile ? 0 : 'auto',
+                minWidth: isMobile ? 0 : 170,
+                width: isMobile ? '100%' : undefined,
+                boxSizing: 'border-box',
                 borderRadius: 12,
                 border: '1px solid #D7DEE2',
                 background: 'rgba(255,255,255,0.98)',

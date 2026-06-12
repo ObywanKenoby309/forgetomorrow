@@ -142,7 +142,7 @@ export default function SeekerOutgoingRequestsPage() {
     <SeekerLayout
       title="Pending Requests | ForgeTomorrow"
       header={HeaderBox}
-      right={isMobile ? null : <RightRailPlacementManager surfaceId="contact_outgoing" />}
+      right={<RightRailPlacementManager surfaceId="contact_outgoing" />}
       rightVariant="light"
       activeNav="contacts"
     >

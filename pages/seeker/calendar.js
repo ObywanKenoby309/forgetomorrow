@@ -8,6 +8,20 @@ import SeekerCalendar from '@/components/calendar/SeekerCalendar';
 import CalendarDayPanel from '@/components/calendar/CalendarDayPanel';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
+// ─── Mobile hook (matches breakpoint used inside SeekerCalendarInterface) ──
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const STORAGE_KEY = 'seekerCalendar_live_v1';
 const API_URL = '/api/seeker/calendar';
 
@@ -35,19 +49,26 @@ function mapItemsToEvents(items) {
   }));
 }
 
-function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
+function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit, isMobile, dayPanelRef }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', marginBottom: -24 }}>
+      {isMobile ? (
         <RightRailPlacementManager />
-      </div>
+      ) : (
+        <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', marginBottom: -24 }}>
+          <RightRailPlacementManager />
+        </div>
+      )}
 
-      <CalendarDayPanel
-        selectedDate={selectedDate}
-        events={dayEvents}
-        onAdd={onAdd}
-        onEdit={onEdit}
-      />
+      <div ref={dayPanelRef}>
+        <CalendarDayPanel
+          selectedDate={selectedDate}
+          events={dayEvents}
+          onAdd={onAdd}
+          onEdit={onEdit}
+          isMobile={isMobile}
+        />
+      </div>
     </div>
   );
 }
@@ -55,6 +76,9 @@ function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
 export default function SeekerCalendarPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || 'seeker').toLowerCase();
+
+  const isMobile = useIsMobile();
+  const dayPanelRef = useRef(null);
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -118,7 +142,17 @@ export default function SeekerCalendarPage() {
   const handleDaySelect = useCallback((dateStr, eventsForDate) => {
     setSelectedDate(dateStr);
     setDayEvents(eventsForDate || []);
-  }, []);
+
+    if (isMobile && dayPanelRef.current) {
+      requestAnimationFrame(() => {
+        try {
+          dayPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch {
+          // ignore
+        }
+      });
+    }
+  }, [isMobile]);
 
   const handleAdd = useCallback((dateStr) => {
     calendarRef.current?.openAdd?.(dateStr);
@@ -148,6 +182,8 @@ export default function SeekerCalendarPage() {
           dayEvents={dayEvents}
           onAdd={handleAdd}
           onEdit={handleEdit}
+          isMobile={isMobile}
+          dayPanelRef={dayPanelRef}
         />
       }
       rightVariant="light"

@@ -168,7 +168,7 @@ export default function BlockedUsersPage() {
     <SeekerLayout
       title="Blocked Users | ForgeTomorrow"
       header={HeaderBox}
-      right={isMobile ? null : <RightRailPlacementManager surfaceId="blocked" />}
+      right={<RightRailPlacementManager surfaceId="blocked" />}
       rightVariant="light"
       activeNav="contacts"
     >

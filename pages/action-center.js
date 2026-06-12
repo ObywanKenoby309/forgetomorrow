@@ -10,6 +10,20 @@ import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import SeekerTitleCard from "@/components/seeker/SeekerTitleCard";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 
+// ─── SSR-safe mobile hook (matches breakpoint used elsewhere in seeker pages) ──
+function useIsMobile(breakpoint = 1024) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === "undefined" ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 /* -----------------------------
    UI: Frosted glass helpers
 ------------------------------ */
@@ -349,6 +363,7 @@ function byCreatedDesc(a, b) {
 ------------------------------ */
 export default function ActionCenterPage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const chrome = String(router.query.chrome || "").toLowerCase();
   const scopeFromQuery = String(router.query.scope || "").toUpperCase();
   const tabFromQueryRaw = String(router.query.tab || "").toUpperCase();
@@ -523,10 +538,20 @@ export default function ActionCenterPage() {
     const href = actionHrefForNotification(n, scope, chrome);
 
     return (
-      <div className="border border-white/30 bg-white/60 hover:bg-white/75 transition rounded-2xl p-3 flex items-start justify-between gap-3">
+      <div
+        className={[
+          "border border-white/30 bg-white/60 hover:bg-white/75 transition rounded-2xl p-3 gap-3",
+          isMobile ? "flex flex-col" : "flex items-start justify-between",
+        ].join(" ")}
+      >
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <div className="font-semibold text-slate-900 truncate">
+            <div
+              className={[
+                "font-semibold text-slate-900",
+                isMobile ? "break-words" : "truncate",
+              ].join(" ")}
+            >
               {n.title || "Notification"}
             </div>
             <Dot show={isUnread} />
@@ -541,13 +566,21 @@ export default function ActionCenterPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 items-end shrink-0">
+        <div
+          className={[
+            "flex gap-2 shrink-0",
+            isMobile ? "flex-row items-center" : "flex-col items-end",
+          ].join(" ")}
+        >
           <Link
             href={href}
             onClick={() => {
               markRead(n.id);
             }}
-            className="text-xs font-semibold px-3 py-1.5 rounded-full bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-100"
+            className={[
+              "text-xs font-semibold px-3 py-1.5 rounded-full bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-100",
+              isMobile ? "flex-1 text-center" : "",
+            ].join(" ")}
           >
             Open
           </Link>
@@ -556,7 +589,10 @@ export default function ActionCenterPage() {
             <button
               type="button"
               onClick={() => markRead(n.id)}
-              className="text-[11px] text-slate-700 hover:underline"
+              className={[
+                "text-[11px] text-slate-700 hover:underline",
+                isMobile ? "shrink-0" : "",
+              ].join(" ")}
             >
               Mark read
             </button>
@@ -653,7 +689,7 @@ export default function ActionCenterPage() {
               ) : needsAttention.length === 0 ? (
                 <div className="text-slate-600">No items needing action right now.</div>
               ) : (
-                <div className="grid gap-2 max-h-[520px] overflow-auto pr-1">
+                <div className={isMobile ? "grid gap-2" : "grid gap-2 max-h-[520px] overflow-auto pr-1"}>
                   {needsAttention.map((n) => (
                     <NotificationRow key={n.id} n={n} />
                   ))}
@@ -715,7 +751,7 @@ export default function ActionCenterPage() {
               ) : historyItems.length === 0 ? (
                 <div className="text-slate-600">No history items right now.</div>
               ) : (
-                <div className="grid gap-2 max-h-[520px] overflow-auto pr-1">
+                <div className={isMobile ? "grid gap-2" : "grid gap-2 max-h-[520px] overflow-auto pr-1"}>
                   {historyItems.map((n) => (
                     <NotificationRow key={n.id} n={n} />
                   ))}
@@ -856,6 +892,8 @@ export default function ActionCenterPage() {
           activeNav="overview"
           headerDescription="Updates that need your attention."
           headerExtra={Header}
+          right={<RightRailPlacementManager slot="right_rail_1" />}
+          rightVariant="light"
         >
           {Content}
         </CoachingLayout>

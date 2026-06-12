@@ -163,7 +163,7 @@ export default function SeekerIncomingInvitesPage() {
     <SeekerLayout
       title="Pending Invites | ForgeTomorrow"
       header={HeaderBox}
-      right={isMobile ? null : <RightRailPlacementManager surfaceId="contact_incoming" />}
+      right={<RightRailPlacementManager surfaceId="contact_incoming" />}
       rightVariant="light"
       activeNav="contacts"
     >

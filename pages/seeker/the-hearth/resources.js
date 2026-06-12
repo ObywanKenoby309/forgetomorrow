@@ -8,6 +8,18 @@ import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import { SECTION_DETAILS } from '@/lib/resourceSections';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
+// ─── SSR-safe mobile hook (matches seeker/contact-center.js) ───────────────
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(null);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 function makeLayout(chromeRaw) {
   let Layout = SeekerLayout;
   let activeNav = 'the-hearth';
@@ -29,7 +41,7 @@ const Header = (
       background: 'white',
       border: '1px solid #eee',
       borderRadius: 12,
-      padding: 16,
+      padding: 'clamp(12px, 4vw, 16px)',
       boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
       textAlign: 'center',
     }}
@@ -38,8 +50,9 @@ const Header = (
       style={{
         margin: 0,
         color: '#FF7043',
-        fontSize: 24,
+        fontSize: 'clamp(20px, 5vw, 24px)',
         fontWeight: 800,
+        lineHeight: 1.2,
       }}
     >
       Resource Library
@@ -49,6 +62,8 @@ const Header = (
         margin: '6px auto 0',
         color: '#607D8B',
         maxWidth: 720,
+        fontSize: 'clamp(13px, 3.5vw, 15px)',
+        lineHeight: 1.5,
       }}
     >
       Browse core learning sections now. Articles and guides today; paid certs and
@@ -104,7 +119,7 @@ const SECTION_CARDS = [
 // ─────────────────────────────────────────────
 // Viewer component with expandable + scroll-to articles
 // ─────────────────────────────────────────────
-function SectionViewer({ selectedSection }) {
+function SectionViewer({ selectedSection, isMobile }) {
   const [expandedIndex, setExpandedIndex] = useState(0);
   const articleRefs = useRef([]);
 
@@ -116,10 +131,14 @@ function SectionViewer({ selectedSection }) {
     background: 'white',
     border: '1px solid #eee',
     borderRadius: 12,
-    padding: 16,
+    padding: isMobile ? 14 : 16,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     minHeight: 200,
+    minWidth: 0,
+    boxSizing: 'border-box',
   };
+
+  const bodyTextStyle = { color: '#455A64', marginTop: 6, fontSize: 'clamp(13px, 3.5vw, 15px)', lineHeight: 1.5 };
 
   if (!selectedSection) {
     return (
@@ -127,10 +146,10 @@ function SectionViewer({ selectedSection }) {
         <div style={{ fontWeight: 800, color: '#263238', marginBottom: 8 }}>
           Pick a learning section
         </div>
-        <p style={{ color: '#455A64', marginTop: 6 }}>
-          Select a section on the left to see what is inside. Each area includes focused
-          guides, checklists, and scripts designed to move your career forward without
-          overwhelm.
+        <p style={bodyTextStyle}>
+          {isMobile
+            ? 'Tap a section below to see what is inside. Each area includes focused guides, checklists, and scripts designed to move your career forward without overwhelm.'
+            : 'Select a section on the left to see what is inside. Each area includes focused guides, checklists, and scripts designed to move your career forward without overwhelm.'}
         </p>
       </div>
     );
@@ -144,7 +163,7 @@ function SectionViewer({ selectedSection }) {
         <div style={{ fontWeight: 800, color: '#263238', marginBottom: 8 }}>
           {selectedSection}
         </div>
-        <p style={{ color: '#455A64', marginTop: 6 }}>
+        <p style={bodyTextStyle}>
           Content for this section is coming soon.
         </p>
       </div>
@@ -160,11 +179,11 @@ function SectionViewer({ selectedSection }) {
       </div>
 
       {details.description && (
-        <p style={{ color: '#455A64', marginTop: 6 }}>{details.description}</p>
+        <p style={bodyTextStyle}>{details.description}</p>
       )}
 
       {details.items && details.items.length > 0 && (
-        <ul style={{ marginTop: 10, paddingLeft: 18, color: '#455A64' }}>
+        <ul style={{ marginTop: 10, paddingLeft: 18, color: '#455A64', fontSize: 'clamp(13px, 3.5vw, 15px)', lineHeight: 1.5 }}>
           {details.items.map((item, idx) => (
             <li key={idx} style={{ marginBottom: 4 }}>
               {item}
@@ -189,6 +208,7 @@ function SectionViewer({ selectedSection }) {
                   marginTop: idx === 0 ? 0 : 12,
                   borderTop: '1px solid #ECEFF1',
                   paddingTop: 10,
+                  minWidth: 0,
                 }}
               >
                 <button
@@ -221,7 +241,7 @@ function SectionViewer({ selectedSection }) {
                     gap: 8,
                   }}
                 >
-                  <div style={{ fontWeight: 700, color: '#263238' }}>
+                  <div style={{ fontWeight: 700, color: '#263238', fontSize: 'clamp(13px, 3.5vw, 15px)', minWidth: 0, overflowWrap: 'anywhere' }}>
                     {article.title}
                   </div>
                   <span style={{ fontSize: 12, color: '#90A4AE', flexShrink: 0 }}>
@@ -236,7 +256,7 @@ function SectionViewer({ selectedSection }) {
                     ) : (
                       article.paragraphs &&
                       article.paragraphs.map((para, pIdx) => (
-                        <p key={pIdx} style={{ color: '#455A64', marginTop: 6 }}>
+                        <p key={pIdx} style={bodyTextStyle}>
                           {para}
                         </p>
                       ))
@@ -263,6 +283,7 @@ export default function HearthResourcesPage() {
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
   const { Layout, activeNav } = makeLayout(chrome);
+  const isMobile = useIsMobile();
 
   const RightRail = (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -272,6 +293,7 @@ export default function HearthResourcesPage() {
 
   const [selectedSection, setSelectedSection] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const viewerRef = useRef(null);
 
   const filteredCards = SECTION_CARDS.filter((card) => {
     if (!searchTerm.trim()) return true;
@@ -282,6 +304,21 @@ export default function HearthResourcesPage() {
     );
   });
 
+  const handleSelectSection = (title) => {
+    setSelectedSection(title);
+    // On mobile, the viewer sits below the section list — scroll to it
+    // so picking a section actually shows the content that just loaded.
+    if (isMobile && viewerRef.current) {
+      requestAnimationFrame(() => {
+        try {
+          viewerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch {
+          // ignore
+        }
+      });
+    }
+  };
+
   const Item = ({ title, blurb, isActive, onClick }) => (
     <button
       type="button"
@@ -291,17 +328,105 @@ export default function HearthResourcesPage() {
         background: isActive ? '#FFF3E0' : 'white',
         border: isActive ? '1px solid #FFB74D' : '1px solid #eee',
         borderRadius: 12,
-        padding: 16,
+        padding: isMobile ? 14 : 16,
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         cursor: 'pointer',
+        width: '100%',
+        boxSizing: 'border-box',
+        minWidth: 0,
       }}
     >
-      <div style={{ fontWeight: 800, color: '#263238' }}>{title}</div>
-      <p style={{ color: '#455A64', marginTop: 6 }}>{blurb}</p>
+      <div style={{ fontWeight: 800, color: '#263238', fontSize: 'clamp(14px, 4vw, 16px)' }}>{title}</div>
+      <p style={{ color: '#455A64', marginTop: 6, fontSize: 'clamp(13px, 3.5vw, 15px)', lineHeight: 1.5 }}>{blurb}</p>
       <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: '#FF7043' }}>
         View details →
       </div>
     </button>
+  );
+
+  // Render nothing until we know which layout to show (avoids hydration flash)
+  if (isMobile === null) {
+    return (
+      <Layout
+        title="Resources | ForgeTomorrow"
+        header={Header}
+        right={RightRail}
+        activeNav={activeNav}
+      />
+    );
+  }
+
+  const filterCardStyle = {
+    background: 'white',
+    border: '1px solid #eee',
+    borderRadius: 12,
+    padding: 12,
+    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+    display: 'grid',
+    gap: 8,
+    minWidth: 0,
+    boxSizing: 'border-box',
+  };
+
+  const quickLinks = (
+    <div style={{ marginTop: 2, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <Link href={withChrome('/seeker/the-hearth/events')} style={{ color: '#FF7043', fontWeight: 800, fontSize: 12 }}>
+        Events
+      </Link>
+      <span style={{ color: '#B0BEC5' }}>•</span>
+      <Link href={withChrome('/seeker/the-hearth/forums')} style={{ color: '#FF7043', fontWeight: 800, fontSize: 12 }}>
+        Forums
+      </Link>
+      <span style={{ color: '#B0BEC5' }}>•</span>
+      <Link href={withChrome('/hearth/spotlights')} style={{ color: '#FF7043', fontWeight: 800, fontSize: 12 }}>
+        Spotlights
+      </Link>
+    </div>
+  );
+
+  const filterBlock = (
+    <div style={filterCardStyle}>
+      <div style={{ fontWeight: 700, fontSize: 13, color: '#263238' }}>
+        Filter resources
+      </div>
+
+      <input
+        type="text"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        placeholder="Search sections..."
+        style={{
+          width: '100%',
+          padding: '6px 10px',
+          borderRadius: 8,
+          border: '1px solid #CFD8DC',
+          fontSize: 13,
+          boxSizing: 'border-box',
+        }}
+      />
+
+      <div style={{ fontSize: 11, color: '#90A4AE' }}>
+        Showing {filteredCards.length} of {SECTION_CARDS.length} sections
+      </div>
+
+      {quickLinks}
+    </div>
+  );
+
+  const sectionList = (
+    <div style={{ display: 'grid', gap: 12, minWidth: 0 }}>
+      {filterBlock}
+
+      {filteredCards.map((card) => (
+        <Item
+          key={card.title}
+          title={card.title}
+          blurb={card.blurb}
+          isActive={selectedSection === card.title}
+          onClick={() => handleSelectSection(card.title)}
+        />
+      ))}
+    </div>
   );
 
   return (
@@ -311,78 +436,28 @@ export default function HearthResourcesPage() {
       right={RightRail}
       activeNav={activeNav}
     >
-      <section
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1.6fr)',
-          gap: 16,
-          alignItems: 'flex-start',
-        }}
-      >
-        {/* Left: filter + section list */}
-        <div style={{ display: 'grid', gap: 12 }}>
-          <div
-            style={{
-              background: 'white',
-              border: '1px solid #eee',
-              borderRadius: 12,
-              padding: 12,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              display: 'grid',
-              gap: 8,
-            }}
-          >
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#263238' }}>
-              Filter resources
-            </div>
-
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search sections..."
-              style={{
-                width: '100%',
-                padding: '6px 10px',
-                borderRadius: 8,
-                border: '1px solid #CFD8DC',
-                fontSize: 13,
-              }}
-            />
-
-            <div style={{ fontSize: 11, color: '#90A4AE' }}>
-              Showing {filteredCards.length} of {SECTION_CARDS.length} sections
-            </div>
-
-            <div style={{ marginTop: 2, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <Link href={withChrome('/seeker/the-hearth/events')} style={{ color: '#FF7043', fontWeight: 800, fontSize: 12 }}>
-                Events
-              </Link>
-              <span style={{ color: '#B0BEC5' }}>•</span>
-              <Link href={withChrome('/seeker/the-hearth/forums')} style={{ color: '#FF7043', fontWeight: 800, fontSize: 12 }}>
-                Forums
-              </Link>
-              <span style={{ color: '#B0BEC5' }}>•</span>
-              <Link href={withChrome('/hearth/spotlights')} style={{ color: '#FF7043', fontWeight: 800, fontSize: 12 }}>
-                Spotlights
-              </Link>
-            </div>
+      {isMobile ? (
+        // ── MOBILE: single column — section list first, viewer below ──
+        <section style={{ display: 'grid', gap: 16, minWidth: 0 }}>
+          {sectionList}
+          <div ref={viewerRef}>
+            <SectionViewer selectedSection={selectedSection} isMobile />
           </div>
-
-          {filteredCards.map((card) => (
-            <Item
-              key={card.title}
-              title={card.title}
-              blurb={card.blurb}
-              isActive={selectedSection === card.title}
-              onClick={() => setSelectedSection(card.title)}
-            />
-          ))}
-        </div>
-
-        {/* Right: viewer pane */}
-        <SectionViewer selectedSection={selectedSection} />
-      </section>
+        </section>
+      ) : (
+        // ── DESKTOP: two-column layout — list on left, viewer on right ──
+        <section
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1.6fr)',
+            gap: 16,
+            alignItems: 'flex-start',
+          }}
+        >
+          {sectionList}
+          <SectionViewer selectedSection={selectedSection} isMobile={false} />
+        </section>
+      )}
     </Layout>
   );
 }

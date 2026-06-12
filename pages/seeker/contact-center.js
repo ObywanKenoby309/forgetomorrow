@@ -459,7 +459,13 @@ export default function SeekerContactCenter() {
   // ── MOBILE layout ──────────────────────────────────────────────────────────
   if (isMobile) {
     return (
-      <SeekerLayout title="Contact Center | ForgeTomorrow" header={HeaderBox} right={null} activeNav="contacts">
+      <SeekerLayout
+        title="Contact Center | ForgeTomorrow"
+        header={HeaderBox}
+        right={<RightRailPlacementManager surfaceId="contact_center" />}
+        rightVariant="light"
+        activeNav="contacts"
+      >
         <div style={{ ...MOBILE_ROOT, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <MobileTabStrip counts={counts} withChrome={withChrome} />
 

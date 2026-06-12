@@ -28,6 +28,9 @@ export default function PostCard({
   const [saved,          setSaved]          = useState(false);
   const [saveLoading,    setSaveLoading]    = useState(false);
   const [copyConfirm,    setCopyConfirm]    = useState(false);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const touchStartXRef = useRef(null);
 
   const actionsMenuRef = useRef(null);
   const TRUNCATE_LIMIT = 280;
@@ -211,6 +214,48 @@ export default function PostCard({
   const mediaAttachments = useMemo(() => safeAttachments.filter((a) => a.type === 'image' || a.type === 'video'), [safeAttachments]);
   const linkAttachments  = useMemo(() => safeAttachments.filter((a) => a.type === 'link'),  [safeAttachments]);
 
+  useEffect(() => {
+    if (activeMediaIndex >= mediaAttachments.length) {
+      setActiveMediaIndex(0);
+    }
+  }, [activeMediaIndex, mediaAttachments.length]);
+
+  const activeMedia = mediaAttachments[activeMediaIndex] || mediaAttachments[0] || null;
+  const hasMultipleMedia = mediaAttachments.length > 1;
+
+  const goToMedia = (idx) => {
+    if (!mediaAttachments.length) return;
+    const total = mediaAttachments.length;
+    const nextIndex = ((idx % total) + total) % total;
+    setActiveMediaIndex(nextIndex);
+  };
+
+  const openLightbox = (idx = activeMediaIndex) => {
+    if (!mediaAttachments.length) return;
+    setLightboxIndex(idx);
+    logPostView('media_open');
+  };
+
+  const closeLightbox = () => setLightboxIndex(null);
+
+  const showPreviousMedia = () => goToMedia(activeMediaIndex - 1);
+  const showNextMedia = () => goToMedia(activeMediaIndex + 1);
+
+  const handleMediaTouchStart = (e) => {
+    touchStartXRef.current = e.touches?.[0]?.clientX ?? null;
+  };
+
+  const handleMediaTouchEnd = (e) => {
+    if (!hasMultipleMedia || touchStartXRef.current == null) return;
+    const endX = e.changedTouches?.[0]?.clientX ?? touchStartXRef.current;
+    const delta = touchStartXRef.current - endX;
+    touchStartXRef.current = null;
+
+    if (Math.abs(delta) < 40) return;
+    if (delta > 0) showNextMedia();
+    else showPreviousMedia();
+  };
+
   const signalMeta = useMemo(() => {
     const rawBody = String(post?.body || '');
     const rules = [
@@ -231,6 +276,7 @@ export default function PostCard({
   // ── Render ────────────────────────────────────────────────
 
   return (
+    <>
     <div className="relative bg-white/90 backdrop-blur rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 space-y-4 w-full">
 
       {/* Header row */}
@@ -316,29 +362,78 @@ export default function PostCard({
       </div>
 
       {/* Media attachments */}
-      {mediaAttachments.length > 0 && (
-        <div className={`grid gap-3 ${mediaAttachments.length > 1 ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
-          {mediaAttachments.map((a, idx) => {
-            const label = a.name || `${a.type} attachment`;
-            if (a.type === 'image') return (
-              <button key={`${a.type}-${idx}`} type="button" onClick={handleOpenPost}
-                className="group relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 text-left">
-                <div className="h-[220px] sm:h-[240px] md:h-[280px] w-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                  <img src={a.url} alt={label}
-                    className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.01]"
-                    onError={(e) => { try { e.currentTarget.style.display = 'none'; } catch {} }} />
-                </div>
+      {activeMedia && (
+        <div
+          className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gray-950"
+          onTouchStart={handleMediaTouchStart}
+          onTouchEnd={handleMediaTouchEnd}
+        >
+          <div className="relative h-[260px] sm:h-[340px] md:h-[420px] w-full bg-gray-950 flex items-center justify-center overflow-hidden">
+            {activeMedia.type === 'image' && (
+              <button
+                type="button"
+                onClick={() => openLightbox(activeMediaIndex)}
+                className="group h-full w-full"
+                aria-label="Open image"
+              >
+                <img
+                  src={activeMedia.url}
+                  alt={activeMedia.name || 'Post image'}
+                  className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.01]"
+                  onError={(e) => { try { e.currentTarget.style.display = 'none'; } catch {} }}
+                />
               </button>
-            );
-            if (a.type === 'video') return (
-              <div key={`${a.type}-${idx}`} className="overflow-hidden rounded-2xl border border-gray-200 bg-black">
-                <div className="h-[220px] sm:h-[240px] md:h-[280px] w-full">
-                  <video src={a.url} controls className="h-full w-full object-cover bg-black" />
+            )}
+
+            {activeMedia.type === 'video' && (
+              <video
+                src={activeMedia.url}
+                controls
+                className="h-full w-full object-contain bg-black"
+              />
+            )}
+
+            {hasMultipleMedia && (
+              <>
+                <button
+                  type="button"
+                  onClick={showPreviousMedia}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white border border-white/20 backdrop-blur hover:bg-black/65"
+                  aria-label="Previous media"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  onClick={showNextMedia}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white border border-white/20 backdrop-blur hover:bg-black/65"
+                  aria-label="Next media"
+                >
+                  ›
+                </button>
+                <div className="absolute right-3 top-3 rounded-full bg-black/50 px-3 py-1 text-xs font-bold text-white border border-white/15 backdrop-blur">
+                  {activeMediaIndex + 1} / {mediaAttachments.length}
                 </div>
-              </div>
-            );
-            return null;
-          })}
+              </>
+            )}
+          </div>
+
+          {hasMultipleMedia && (
+            <div className="flex items-center justify-center gap-1.5 px-3 py-3 bg-white">
+              {mediaAttachments.map((a, idx) => (
+                <button
+                  key={`${a.type}-${idx}`}
+                  type="button"
+                  onClick={() => goToMedia(idx)}
+                  className={`h-2.5 rounded-full transition-all ${
+                    idx === activeMediaIndex ? 'w-7 bg-[#ff7043]' : 'w-2.5 bg-gray-300 hover:bg-gray-400'
+                  }`}
+                  aria-label={`Show media ${idx + 1}`}
+                  aria-current={idx === activeMediaIndex ? 'true' : 'false'}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -428,5 +523,43 @@ export default function PostCard({
         </button>
       )}
     </div>
+
+    {lightboxIndex !== null && mediaAttachments[lightboxIndex] && (
+      <div
+        className="fixed inset-0 z-[80] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+        onClick={closeLightbox}
+        role="dialog"
+        aria-modal="true"
+      >
+        <button
+          type="button"
+          onClick={closeLightbox}
+          className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white hover:bg-white/20"
+          aria-label="Close media viewer"
+        >
+          ✕
+        </button>
+
+        {mediaAttachments[lightboxIndex].type === 'image' && (
+          <img
+            src={mediaAttachments[lightboxIndex].url}
+            alt={mediaAttachments[lightboxIndex].name || 'Post image'}
+            className="max-h-[88vh] max-w-[94vw] rounded-2xl object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+
+        {mediaAttachments[lightboxIndex].type === 'video' && (
+          <video
+            src={mediaAttachments[lightboxIndex].url}
+            controls
+            autoPlay
+            className="max-h-[88vh] max-w-[94vw] rounded-2xl bg-black shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+      </div>
+    )}
+    </>
   );
 }

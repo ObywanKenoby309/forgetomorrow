@@ -62,7 +62,7 @@ const Header = (
       background: 'white',
       border: '1px solid #eee',
       borderRadius: 12,
-      padding: 16,
+      padding: 'clamp(12px, 4vw, 16px)',
       boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
       textAlign: 'center',
     }}
@@ -71,8 +71,9 @@ const Header = (
       style={{
         margin: 0,
         color: '#FF7043',
-        fontSize: 24,
+        fontSize: 'clamp(20px, 5vw, 24px)',
         fontWeight: 800,
+        lineHeight: 1.2,
       }}
     >
       Mentorship Programs
@@ -82,6 +83,8 @@ const Header = (
         margin: '6px auto 0',
         color: '#607D8B',
         maxWidth: 720,
+        fontSize: 'clamp(13px, 3.5vw, 15px)',
+        lineHeight: 1.5,
       }}
     >
       Discover mentors by specialty, experience, and availability — coming soon.
@@ -113,28 +116,31 @@ export default function HearthMentorshipPage() {
           background: 'white',
           border: '1px dashed #B0BEC5',
           borderRadius: 12,
-          padding: 20,
+          padding: 'clamp(14px, 4vw, 20px)',
           boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
           textAlign: 'left',
+          minWidth: 0,
+          boxSizing: 'border-box',
         }}
       >
         <div
           style={{
-            fontSize: 18,
+            fontSize: 'clamp(15px, 4vw, 18px)',
             fontWeight: 800,
             color: '#37474F',
             marginBottom: 6,
+            lineHeight: 1.3,
           }}
         >
           Mentorship programs are not live yet
         </div>
-        <p style={{ color: '#607D8B', marginTop: 4 }}>
+        <p style={{ color: '#607D8B', marginTop: 4, fontSize: 'clamp(13px, 3.5vw, 15px)', lineHeight: 1.5 }}>
           This space will host verified mentors and structured mentoring programs across
-          roles, industries, and regions. You’ll be able to filter by specialty,
+          roles, industries, and regions. You&rsquo;ll be able to filter by specialty,
           availability, and style of support.
         </p>
-        <p style={{ color: '#607D8B', marginTop: 8 }}>
-          If you’re interested in mentoring when this launches, please contact our support
+        <p style={{ color: '#607D8B', marginTop: 8, fontSize: 'clamp(13px, 3.5vw, 15px)', lineHeight: 1.5 }}>
+          If you&rsquo;re interested in mentoring when this launches, please contact our support
           team using the orange support button in the lower-right corner.
         </p>
       </section>

@@ -42,12 +42,20 @@ export default function HearthForumsPage() {
         background: 'white',
         border: '1px solid #eee',
         borderRadius: 12,
-        padding: 16,
+        padding: 'clamp(12px, 4vw, 16px)',
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         textAlign: 'center',
       }}
     >
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
+      <h1
+        style={{
+          margin: 0,
+          color: '#FF7043',
+          fontSize: 'clamp(20px, 5vw, 24px)',
+          fontWeight: 800,
+          lineHeight: 1.2,
+        }}
+      >
         Discussion Forums
       </h1>
       <p
@@ -55,6 +63,8 @@ export default function HearthForumsPage() {
           margin: '6px auto 0',
           color: '#607D8B',
           maxWidth: 720,
+          fontSize: 'clamp(13px, 3.5vw, 15px)',
+          lineHeight: 1.5,
         }}
       >
         Topic threads, replies, and reputation are on the roadmap. This area is wired and
@@ -75,36 +85,38 @@ export default function HearthForumsPage() {
           background: 'white',
           border: '1px dashed #B0BEC5',
           borderRadius: 12,
-          padding: 20,
+          padding: 'clamp(14px, 4vw, 20px)',
           boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
           textAlign: 'center',
+          minWidth: 0,
+          boxSizing: 'border-box',
         }}
       >
-        <div style={{ fontSize: 18, fontWeight: 800, color: '#37474F' }}>
+        <div style={{ fontSize: 'clamp(15px, 4vw, 18px)', fontWeight: 800, color: '#37474F', lineHeight: 1.3 }}>
           Forums not enabled yet
         </div>
 
-        <p style={{ color: '#607D8B', marginTop: 6 }}>
-          We’re finishing moderation tools, spam protection, and reporting workflows so
+        <p style={{ color: '#607D8B', marginTop: 6, fontSize: 'clamp(13px, 3.5vw, 15px)', lineHeight: 1.5 }}>
+          We&rsquo;re finishing moderation tools, spam protection, and reporting workflows so
           that conversations here stay healthy and constructive.
         </p>
 
-        <p style={{ color: '#607D8B', marginTop: 8 }}>
+        <p style={{ color: '#607D8B', marginTop: 8, fontSize: 'clamp(13px, 3.5vw, 15px)', lineHeight: 1.5 }}>
           Once everything is ready, this space will open for topic-based threads,
           replies, and community reputation. For now, you can navigate here to see that
           the Forums area is in place and under review.
         </p>
 
         <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <Link href={withChrome('/seeker/the-hearth/events')} style={{ color: '#FF7043', fontWeight: 800 }}>
+          <Link href={withChrome('/seeker/the-hearth/events')} style={{ color: '#FF7043', fontWeight: 800, fontSize: 'clamp(13px, 3.5vw, 15px)' }}>
             Events
           </Link>
           <span style={{ color: '#B0BEC5' }}>•</span>
-          <Link href={withChrome('/seeker/the-hearth/resources')} style={{ color: '#FF7043', fontWeight: 800 }}>
+          <Link href={withChrome('/seeker/the-hearth/resources')} style={{ color: '#FF7043', fontWeight: 800, fontSize: 'clamp(13px, 3.5vw, 15px)' }}>
             Resources
           </Link>
           <span style={{ color: '#B0BEC5' }}>•</span>
-          <Link href={withChrome('/hearth/spotlights')} style={{ color: '#FF7043', fontWeight: 800 }}>
+          <Link href={withChrome('/hearth/spotlights')} style={{ color: '#FF7043', fontWeight: 800, fontSize: 'clamp(13px, 3.5vw, 15px)' }}>
             Spotlights
           </Link>
         </div>

@@ -104,7 +104,7 @@ export default function ProfileViewsPage() {
     <SeekerLayout
       title="Profile Views | ForgeTomorrow"
       header={HeaderBox}
-      right={isMobile ? null : <RightRailPlacementManager surfaceId="profile_views" />}
+      right={<RightRailPlacementManager surfaceId="profile_views" />}
       rightVariant="light"
       activeNav="contacts"
     >

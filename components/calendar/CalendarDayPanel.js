@@ -118,7 +118,7 @@ function getFoundryJoinUrl(event) {
   );
 }
 
-export default function CalendarDayPanel({ selectedDate, events = [], onAdd, onEdit }) {
+export default function CalendarDayPanel({ selectedDate, events = [], onAdd, onEdit, isMobile = false }) {
   const label = selectedDate ? fmtLongDayLabel(selectedDate) : 'Select a day';
 
   return (
@@ -183,14 +183,14 @@ export default function CalendarDayPanel({ selectedDate, events = [], onAdd, onE
           display: 'flex',
           flexDirection: 'column',
           gap: 8,
-          maxHeight: 320,
-          overflowY: 'auto',
+          maxHeight: isMobile ? 'none' : 320,
+          overflowY: isMobile ? 'visible' : 'auto',
         }}
       >
         {!selectedDate && (
           <div style={{ textAlign: 'center', padding: '20px 8px', color: '#B0BEC5', fontSize: 12 }}>
             <div style={{ fontSize: 22, marginBottom: 6 }}>📅</div>
-            Click any day to see its events
+            {isMobile ? 'Tap any day to see its events' : 'Click any day to see its events'}
           </div>
         )}
 
