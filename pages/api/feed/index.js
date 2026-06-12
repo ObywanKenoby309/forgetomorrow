@@ -28,6 +28,18 @@ export default async function handler(req, res) {
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
+        include: {
+          _count: { select: { hearthRecommendations: true } },
+          hearthRecommendations: {
+            where: { userId: session.user.id },
+            select: { id: true },
+            take: 1,
+          },
+          hearthThreads: {
+            select: { id: true, title: true },
+            take: 1,
+          },
+        },
       });
 
       // Fetch author avatars + slug from users table
@@ -53,6 +65,10 @@ export default async function handler(req, res) {
         ...p,
         authorSlug: authorMap[p.authorId]?.authorSlug || null,
         authorAvatar: authorMap[p.authorId]?.authorAvatar || null,
+        hearthRecommendationCount: p._count?.hearthRecommendations || 0,
+        currentUserRecommendedHearth: Array.isArray(p.hearthRecommendations) && p.hearthRecommendations.length > 0,
+        hearthThreadId: Array.isArray(p.hearthThreads) && p.hearthThreads.length > 0 ? p.hearthThreads[0].id : null,
+        hearthThreadTitle: Array.isArray(p.hearthThreads) && p.hearthThreads.length > 0 ? p.hearthThreads[0].title : null,
       }));
 
       return res.status(200).json({ posts: postsWithAvatars });

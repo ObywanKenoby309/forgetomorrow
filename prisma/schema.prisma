@@ -683,12 +683,12 @@ model CoachingCsatResponse {
   id             String   @id @default(cuid())
   coachId        String
   satisfaction   Int
-  timeliness     Int?     // kept for backward compat — not sent by new form
+  timeliness     Int? // kept for backward compat — not sent by new form
   quality        Int
-  communication  Int?     // new: coach communication and responsiveness
-  helpfulness    Int?     // new: helpfulness of resources or action steps
-  progress       Int?     // new: progress made toward career goal
-  recommendation Int?     // new: likelihood to recommend
+  communication  Int? // new: coach communication and responsiveness
+  helpfulness    Int? // new: helpfulness of resources or action steps
+  progress       Int? // new: progress made toward career goal
+  recommendation Int? // new: likelihood to recommend
   comment        String?
   anonymous      Boolean  @default(true)
   createdAt      DateTime @default(now())
@@ -969,6 +969,9 @@ model User {
   recruiterReviewPacketsCreated  RecruiterCandidateReviewPacket[] @relation("RecruiterReviewPacketsCreated")
   resumes                        Resume[]
   savedPosts                     SavedPost[]
+  feedHearthRecommendations      FeedHearthRecommendation[]
+  hearthForumThreads             HearthForumThread[]              @relation("HearthThreadAuthor")
+  hearthForumReplies             HearthForumReply[]               @relation("HearthReplyAuthor")
   scanLogs                       ScanLog[]
   seekerCalendarItems            SeekerCalendarItem[]             @relation("UserSeekerCalendarItems")
   seekerJobPreference            SeekerJobPreference?
@@ -1426,7 +1429,7 @@ model ConversationParticipant {
   lastReadAt     DateTime?
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User         @relation("UserConversationParticipants", fields: [userId], references: [id], onDelete: Cascade)
-  homeLocation   String 	  @default("seeker")
+  homeLocation   String       @default("seeker")
 
   @@unique([conversationId, userId])
   @@index([userId])
@@ -1738,19 +1741,21 @@ model NewsletterSubscription {
 }
 
 model FeedPost {
-  id          Int            @id @default(autoincrement())
-  authorId    String
-  authorName  String
-  content     String
-  type        String         @default("business")
-  likes       Int            @default(0)
-  comments    Json           @default("[]")
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  reactions   Json?          @default("[]")
-  attachments Json           @default("[]")
-  views       FeedPostView[]
-  savedBy     SavedPost[]
+  id                    Int                        @id @default(autoincrement())
+  authorId              String
+  authorName            String
+  content               String
+  type                  String                     @default("business")
+  likes                 Int                        @default(0)
+  comments              Json                       @default("[]")
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  reactions             Json?                      @default("[]")
+  attachments           Json                       @default("[]")
+  views                 FeedPostView[]
+  savedBy               SavedPost[]
+  hearthRecommendations FeedHearthRecommendation[]
+  hearthThreads         HearthForumThread[]
 
   @@index([authorId])
   @@map("feed_posts")
@@ -1782,6 +1787,55 @@ model SavedPost {
   @@index([userId])
   @@index([postId])
   @@map("saved_posts")
+}
+
+model FeedHearthRecommendation {
+  id        String   @id @default(cuid())
+  postId    Int
+  userId    String
+  createdAt DateTime @default(now())
+  post      FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("feed_hearth_recommendations")
+}
+
+model HearthForumThread {
+  id           String             @id @default(cuid())
+  title        String
+  body         String
+  category     String             @default("General")
+  sourcePostId Int?
+  authorId     String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  sourcePost   FeedPost?          @relation(fields: [sourcePostId], references: [id], onDelete: SetNull)
+  author       User               @relation("HearthThreadAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  replies      HearthForumReply[]
+
+  @@index([sourcePostId])
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("hearth_forum_threads")
+}
+
+model HearthForumReply {
+  id        String            @id @default(cuid())
+  threadId  String
+  authorId  String
+  body      String
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  thread    HearthForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author    User              @relation("HearthReplyAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("hearth_forum_replies")
 }
 
 model SupportTicket {
@@ -2098,6 +2152,7 @@ enum ApplicationQuestionType {
 }
 
 enum NotificationCategory {
+  SOCIAL
   MESSAGING
   CRM
   PIPELINE
@@ -2117,6 +2172,8 @@ enum NotificationScope {
 }
 
 enum NotificationEntityType {
+  FEED_POST
+  HEARTH_THREAD
   CONVERSATION
   TICKET
   SLA_EVENT

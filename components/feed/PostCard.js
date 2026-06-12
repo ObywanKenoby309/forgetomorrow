@@ -27,6 +27,11 @@ export default function PostCard({
   const [showEmojiBar,   setShowEmojiBar]   = useState(false);
   const [saved,          setSaved]          = useState(false);
   const [saveLoading,    setSaveLoading]    = useState(false);
+  const [hearthCount,    setHearthCount]    = useState(Number(post.hearthRecommendationCount || 0));
+  const [hearthRecommended, setHearthRecommended] = useState(Boolean(post.currentUserRecommendedHearth));
+  const [hearthThreadId, setHearthThreadId] = useState(post.hearthThreadId || null);
+  const [hearthThreadTitle, setHearthThreadTitle] = useState(post.hearthThreadTitle || null);
+  const [hearthLoading,  setHearthLoading]  = useState(false);
   const [copyConfirm,    setCopyConfirm]    = useState(false);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState(null);
@@ -46,6 +51,10 @@ export default function PostCard({
     ? post.comments.filter((c) => !(c && c.deleted === true)).length
     : 0;
 
+  const HEARTH_THRESHOLD = 5;
+  const canRecommendForHearth = !isOwner && !hearthThreadId;
+  const canBranchToHearth = isOwner && !hearthThreadId && hearthCount >= HEARTH_THRESHOLD;
+
   // Close actions menu on outside click
   useEffect(() => {
     const onDocDown = (e) => {
@@ -56,6 +65,13 @@ export default function PostCard({
     document.addEventListener('mousedown', onDocDown);
     return () => document.removeEventListener('mousedown', onDocDown);
   }, [actionsMenuOpen]);
+
+  useEffect(() => {
+    setHearthCount(Number(post.hearthRecommendationCount || 0));
+    setHearthRecommended(Boolean(post.currentUserRecommendedHearth));
+    setHearthThreadId(post.hearthThreadId || null);
+    setHearthThreadTitle(post.hearthThreadTitle || null);
+  }, [post.id, post.hearthRecommendationCount, post.currentUserRecommendedHearth, post.hearthThreadId, post.hearthThreadTitle]);
 
   // ── Handlers ─────────────────────────────────────────────
 
@@ -150,6 +166,66 @@ export default function PostCard({
       if (res.ok) { const data = await res.json(); setSaved(data.saved); }
     } catch (err) { console.error('save error:', err); }
     finally { setSaveLoading(false); }
+  };
+
+
+
+  const handleRecommendForHearth = async () => {
+    if (!post?.id || hearthLoading || hearthRecommended || hearthThreadId) return;
+    setHearthLoading(true);
+    try {
+      const res = await fetch('/api/feed/hearth-recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'We could not recommend this post for the Hearth.');
+        return;
+      }
+      setHearthRecommended(true);
+      setHearthCount(Number(data.count || 0));
+      if (data.hearthThreadId) setHearthThreadId(data.hearthThreadId);
+    } catch (err) {
+      console.error('hearth recommend error:', err);
+      alert('We could not recommend this post for the Hearth. Please try again.');
+    } finally {
+      setHearthLoading(false);
+    }
+  };
+
+  const handleBranchToHearth = async () => {
+    if (!post?.id || hearthLoading || hearthThreadId) return;
+    const suggestedTitle = String(signalMeta?.displayBody || post.body || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80);
+    const title = window.prompt('Name this Hearth discussion:', suggestedTitle || 'Community discussion');
+    if (title === null) return;
+
+    setHearthLoading(true);
+    try {
+      const res = await fetch('/api/feed/branch-to-hearth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id, title: title.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'We could not continue this discussion in the Hearth.');
+        return;
+      }
+      const thread = data.thread || {};
+      setHearthThreadId(thread.id || null);
+      setHearthThreadTitle(thread.title || title.trim() || 'Hearth discussion');
+      if (thread.id) router.push(withChrome(`/seeker/the-hearth/forums?thread=${thread.id}`));
+    } catch (err) {
+      console.error('branch to hearth error:', err);
+      alert('We could not continue this discussion in the Hearth. Please try again.');
+    } finally {
+      setHearthLoading(false);
+    }
   };
 
   // ── Reactions ─────────────────────────────────────────────
@@ -477,6 +553,40 @@ export default function PostCard({
           className={`px-3 py-1.5 rounded-full border transition ${saved ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'}`}>
           {saved ? '🔖 Saved' : '🔖 Save'}
         </button>
+
+        {hearthThreadId ? (
+          <button
+            type="button"
+            onClick={() => router.push(withChrome(`/seeker/the-hearth/forums?thread=${hearthThreadId}`))}
+            className="px-3 py-1.5 rounded-full border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-800 font-semibold transition"
+            title={hearthThreadTitle || 'Continued in the Hearth'}
+          >
+            🔥 Continued in Hearth
+          </button>
+        ) : canBranchToHearth ? (
+          <button
+            type="button"
+            onClick={handleBranchToHearth}
+            disabled={hearthLoading}
+            className="px-3 py-1.5 rounded-full border border-orange-300 bg-orange-600 hover:bg-orange-700 text-white font-semibold transition disabled:opacity-60"
+          >
+            🔥 Continue in Hearth ({hearthCount})
+          </button>
+        ) : canRecommendForHearth ? (
+          <button
+            type="button"
+            onClick={handleRecommendForHearth}
+            disabled={hearthLoading || hearthRecommended}
+            className={`px-3 py-1.5 rounded-full border transition ${hearthRecommended ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-gray-200 bg-white hover:bg-orange-50 text-gray-700'}`}
+            title="Recommend this post to become a deeper Hearth discussion"
+          >
+            {hearthRecommended ? `🔥 Recommended (${hearthCount})` : `🔥 Recommend for Hearth (${hearthCount})`}
+          </button>
+        ) : hearthCount > 0 ? (
+          <span className="px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-gray-600">
+            🔥 {hearthCount} Hearth {hearthCount === 1 ? 'recommendation' : 'recommendations'}
+          </span>
+        ) : null}
       </div>
 
       {/* Emoji bar */}

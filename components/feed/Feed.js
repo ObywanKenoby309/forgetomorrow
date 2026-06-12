@@ -132,6 +132,10 @@ export default function Feed() {
       attachments,
       reactions,
       isJob: false,
+      hearthRecommendationCount: Number(row.hearthRecommendationCount || 0),
+      currentUserRecommendedHearth: Boolean(row.currentUserRecommendedHearth),
+      hearthThreadId: row.hearthThreadId || null,
+      hearthThreadTitle: row.hearthThreadTitle || null,
     };
   };
 

@@ -117,6 +117,10 @@ function mapFeedPostRow(row, userMap, viewerId) {
     comments,
     attachments,
     reactions,
+    hearthRecommendationCount: row._count?.hearthRecommendations || 0,
+    currentUserRecommendedHearth: Array.isArray(row.hearthRecommendations) && row.hearthRecommendations.length > 0,
+    hearthThreadId: Array.isArray(row.hearthThreads) && row.hearthThreads.length > 0 ? row.hearthThreads[0].id : null,
+    hearthThreadTitle: Array.isArray(row.hearthThreads) && row.hearthThreads.length > 0 ? row.hearthThreads[0].title : null,
   };
 }
 
@@ -132,6 +136,18 @@ export default async function handler(req, res) {
       const rows = await prisma.feedPost.findMany({
         orderBy: { createdAt: 'desc' },
         take: 50,
+        include: {
+          _count: { select: { hearthRecommendations: true } },
+          hearthRecommendations: {
+            where: { userId: session.user.id },
+            select: { id: true },
+            take: 1,
+          },
+          hearthThreads: {
+            select: { id: true, title: true },
+            take: 1,
+          },
+        },
       });
 
       // ✅ MIN CHANGE: also hydrate commenter avatars, not just post authors
