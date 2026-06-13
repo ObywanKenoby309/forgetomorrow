@@ -465,14 +465,9 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
           <section className="flex min-h-0 flex-1 flex-col bg-gradient-to-b from-white to-gray-50/80">
             <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3 sm:px-7">
-              <div>
-                <div className="text-[15px] font-bold text-gray-950">
-                  Comments
-                </div>
-                <div className="mt-0.5 text-xs text-gray-500">
-                  Read the full conversation without fighting the scroll.
-                </div>
-              </div>
+              <div className="text-[15px] font-bold text-gray-950">
+  Comments
+</div>
 
               <div className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm">
                 {visibleComments.length}{' '}
