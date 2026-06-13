@@ -676,14 +676,29 @@ useEffect(() => {
 
 <SeekerTitleCard
   greeting={greeting}
-  title="Job Listings"
-  subtitle="Explore openings, review full details, and apply with confidence."
+  title={`${totalJobCount.toLocaleString()} Opportunities`}
+  subtitle="Ranked against your profile and preferences."
 />
 
-        {/* ── Filter bar ── */}
-        <div style={{ padding: '0 12px 12px' }}>
-          <JobSearchFilters isMobile={true} {...filterProps} />
-        </div>
+{/* ── Filter bar ── */}
+<div
+  style={{
+    padding: '0 16px 12px',
+    marginTop: -6,
+  }}
+>
+  <div
+    style={{
+      background: 'rgba(255,255,255,0.92)',
+      borderRadius: '0 0 20px 20px',
+      boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
+      overflow: 'hidden',
+      border: '1px solid rgba(255,255,255,0.65)',
+    }}
+  >
+    <JobSearchFilters isMobile={true} {...filterProps} />
+  </div>
+</div>
 
         {/* ── Result count ── */}
         {totalJobCount > 0 && (
@@ -785,11 +800,10 @@ useEffect(() => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <SeekerTitleCard
-        greeting={greeting}
-        title="Job Listings"
-        subtitle="Explore openings, review full details, and apply with confidence."
-      />
-
+  greeting={greeting}
+  title={`${totalJobCount.toLocaleString()} Opportunities`}
+  subtitle="Ranked against your profile and preferences."
+/>
       <ForgeAlignmentExplainer />
 
       <JobSearchFilters isMobile={false} {...filterProps} />
