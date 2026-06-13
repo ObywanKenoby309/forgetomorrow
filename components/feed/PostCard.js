@@ -262,8 +262,8 @@ export default function PostCard({
 
   const typeLabel    = post.type === 'personal' ? 'Personal' : 'Business';
   const typePillClass = post.type === 'personal'
-    ? 'bg-purple-50 border-purple-200 text-purple-700'
-    : 'bg-slate-50 border-slate-200 text-slate-700';
+    ? 'bg-purple-500/10 border-purple-400/30 text-purple-300'
+    : 'bg-blue-500/10 border-blue-400/30 text-blue-300';
 
   const attachments = useMemo(() => {
     const arr = Array.isArray(post?.attachments) ? post.attachments : [];
@@ -329,13 +329,13 @@ export default function PostCard({
   const signalMeta = useMemo(() => {
     const rawBody = String(post?.body || '');
     const rules = [
-      { prefix: 'Hiring for',               label: 'Hiring',    className: 'bg-orange-50 border-orange-200 text-orange-700' },
-      { prefix: 'Open to opportunities in', label: 'Open to work', className: 'bg-green-50 border-green-200 text-green-700' },
-      { prefix: 'Hosting a workshop on',    label: 'Workshop',  className: 'bg-blue-50 border-blue-200 text-blue-700' },
-      { prefix: 'Coaching insight:',        label: 'Coaching',  className: 'bg-sky-50 border-sky-200 text-sky-700' },
-      { prefix: 'Looking for advice on',    label: 'Advice',    className: 'bg-indigo-50 border-indigo-200 text-indigo-700' },
-      { prefix: 'Sharing a win:',           label: 'Win',       className: 'bg-amber-50 border-amber-200 text-amber-700' },
-      { prefix: 'Sharing an idea about',    label: 'Idea',      className: 'bg-gray-50 border-gray-200 text-gray-700' },
+      { prefix: 'Hiring for',               label: 'Hiring',    className: 'bg-orange-500/10 border-orange-400/30 text-orange-300' },
+      { prefix: 'Open to opportunities in', label: 'Open to work', className: 'bg-green-500/10 border-green-400/30 text-green-300' },
+      { prefix: 'Hosting a workshop on',    label: 'Workshop',  className: 'bg-blue-500/10 border-blue-400/30 text-blue-300' },
+      { prefix: 'Coaching insight:',        label: 'Coaching',  className: 'bg-sky-500/10 border-sky-400/30 text-sky-300' },
+      { prefix: 'Looking for advice on',    label: 'Advice',    className: 'bg-indigo-500/10 border-indigo-400/30 text-indigo-300' },
+      { prefix: 'Sharing a win:',           label: 'Win',       className: 'bg-amber-500/10 border-amber-400/30 text-amber-300' },
+      { prefix: 'Sharing an idea about',    label: 'Idea',      className: 'bg-white/5 border-white/15 text-white/60' },
     ];
     const match = rules.find((rule) => rawBody.startsWith(rule.prefix));
     if (!match) return { signalLabel: '', signalClassName: '', displayBody: rawBody };
@@ -347,7 +347,27 @@ export default function PostCard({
 
   return (
     <>
-    <div className="relative bg-white/90 backdrop-blur rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 space-y-4 w-full">
+    <style jsx>{`
+      @keyframes ft-pop {
+        0%   { transform: scale(1) rotate(0deg); }
+        35%  { transform: scale(1.45) rotate(-8deg); }
+        65%  { transform: scale(0.92) rotate(4deg); }
+        100% { transform: scale(1) rotate(0deg); }
+      }
+      @keyframes ft-flicker {
+        0%, 100% { filter: drop-shadow(0 0 0px rgba(255,112,67,0)); transform: scale(1); }
+        50%      { filter: drop-shadow(0 0 6px rgba(255,112,67,0.7)); transform: scale(1.06); }
+      }
+      @keyframes ft-slidedown {
+        from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      .ft-pop { animation: ft-pop 0.42s cubic-bezier(.34,1.56,.64,1); }
+      .ft-flicker { animation: ft-flicker 2.4s ease-in-out infinite; }
+      .ft-slidedown { animation: ft-slidedown 0.28s ease; }
+    `}</style>
+
+    <div className="relative rounded-[20px] border border-white/10 bg-[#12141c]/85 backdrop-blur-xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_20px_50px_-20px_rgba(0,0,0,0.65)] p-5 space-y-4 w-full transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-orange-400/30 hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_0_0_1px_rgba(255,112,67,0.08),0_28px_60px_-24px_rgba(255,112,67,0.25),0_28px_60px_-24px_rgba(0,0,0,0.75)]">
 
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
@@ -363,11 +383,11 @@ export default function PostCard({
               <img
                 src={post.authorAvatar}
                 alt={post.author}
-                className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                className="w-10 h-10 rounded-full object-cover ring-1 ring-white/10 shadow-[0_0_0_3px_rgba(255,112,67,0.12)]"
                 style={{ cursor: canTargetAuthor ? 'pointer' : 'default' }}
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 border border-gray-200">
+              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/60 ring-1 ring-white/10 shadow-[0_0_0_3px_rgba(255,112,67,0.12)]">
                 {post.author?.charAt(0)?.toUpperCase()}
               </div>
             )}
@@ -375,9 +395,9 @@ export default function PostCard({
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="font-semibold text-gray-900 truncate">{post.author}</div>
-			  {post.authorHeadline && (
-  <div className="w-full text-xs text-gray-500">
+              <div className="font-semibold text-white truncate">{post.author}</div>
+				  {post.authorHeadline && (
+  <div className="w-full text-xs text-white/45">
     {post.authorHeadline}
   </div>
 )}
@@ -388,7 +408,7 @@ export default function PostCard({
                 </span>
               )}
             </div>
-            <div className="text-xs text-gray-500 mt-0.5">{new Date(post.createdAt).toLocaleString()}</div>
+            <div className="text-xs text-white/35 mt-0.5">{new Date(post.createdAt).toLocaleString()}</div>
           </div>
         </div>
 
@@ -397,24 +417,28 @@ export default function PostCard({
           <button
             type="button"
             onClick={() => setActionsMenuOpen((v) => !v)}
-            className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+            className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white transition"
             aria-label="Post actions"
           >
-            ⋯
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <circle cx="5" cy="12" r="1.4" />
+              <circle cx="12" cy="12" r="1.4" />
+              <circle cx="19" cy="12" r="1.4" />
+            </svg>
           </button>
           {actionsMenuOpen && (
-            <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-30 overflow-hidden" role="menu">
+            <div className="absolute right-0 mt-2 w-40 bg-[#1a1d27] border border-white/10 rounded-xl shadow-2xl shadow-black/50 z-30 overflow-hidden" role="menu">
               {!isOwner ? (
                 <>
                   <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={handleReportPost}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50" role="menuitem">Report</button>
+                    className="w-full text-left px-3 py-2 text-sm text-white/75 hover:bg-white/5" role="menuitem">Report</button>
                   <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={handleBlockAuthorAction}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 text-red-700" role="menuitem">Block</button>
+                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10" role="menuitem">Block</button>
                 </>
               ) : (
                 <button type="button" onMouseDown={(e) => e.preventDefault()}
                   onClick={() => { setActionsMenuOpen(false); onDelete?.(post.id); }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 text-red-700" role="menuitem">Delete</button>
+                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10" role="menuitem">Delete</button>
               )}
             </div>
           )}
@@ -423,14 +447,14 @@ export default function PostCard({
 
       {/* Post body */}
       <div className="w-full text-left">
-        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-gray-800">
+        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-white/80">
           {!expanded && signalMeta.displayBody?.length > TRUNCATE_LIMIT
             ? signalMeta.displayBody.slice(0, TRUNCATE_LIMIT).trimEnd() + '…'
             : signalMeta.displayBody}
         </p>
         {signalMeta.displayBody?.length > TRUNCATE_LIMIT && (
           <button type="button" onClick={() => setExpanded((v) => !v)}
-            className="mt-1 text-sm font-semibold text-orange-500 hover:text-orange-600">
+            className="mt-1 text-sm font-semibold text-orange-400 hover:text-orange-300">
             {expanded ? 'See less' : 'See more'}
           </button>
         )}
@@ -439,7 +463,7 @@ export default function PostCard({
       {/* Media attachments */}
       {activeMedia && (
         <div
-          className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gray-950"
+          className="relative overflow-hidden rounded-2xl border border-white/10 bg-gray-950"
           onTouchStart={handleMediaTouchStart}
           onTouchEnd={handleMediaTouchEnd}
         >
@@ -494,14 +518,14 @@ export default function PostCard({
           </div>
 
           {hasMultipleMedia && (
-            <div className="flex items-center justify-center gap-1.5 px-3 py-3 bg-white">
+            <div className="flex items-center justify-center gap-1.5 px-3 py-3 bg-[#0c0e14]">
               {mediaAttachments.map((a, idx) => (
                 <button
                   key={`${a.type}-${idx}`}
                   type="button"
                   onClick={() => goToMedia(idx)}
                   className={`h-2.5 rounded-full transition-all ${
-                    idx === activeMediaIndex ? 'w-7 bg-[#ff7043]' : 'w-2.5 bg-gray-300 hover:bg-gray-400'
+                    idx === activeMediaIndex ? 'w-7 bg-[#ff7043]' : 'w-2.5 bg-white/15 hover:bg-white/30'
                   }`}
                   aria-label={`Show media ${idx + 1}`}
                   aria-current={idx === activeMediaIndex ? 'true' : 'false'}
@@ -517,49 +541,75 @@ export default function PostCard({
         <div className="flex flex-wrap gap-2">
           {linkAttachments.map((a, idx) => (
             <a key={`${a.type}-${idx}`} href={a.url} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm text-blue-700 break-all">
-              🔗 <span className="font-semibold">{a.name || 'Link attachment'}</span>
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20 text-sm text-orange-300 break-all transition">
+              <svg className="w-[16px] h-[16px] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
+                <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+              </svg>
+              <span className="font-semibold">{a.name || 'Link attachment'}</span>
             </a>
           ))}
         </div>
       )}
 
       {/* Action bar */}
-      <div className="border-t border-gray-100 pt-3 space-y-3">
+      <div className="border-t border-white/10 pt-3 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={handleLike}
-              className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border text-sm font-semibold transition ${
+              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border text-sm font-bold transition-all duration-150 ${
                 likeSelected
-                  ? 'bg-blue-50 border-blue-200 text-blue-800'
-                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                  ? 'text-white border-orange-400/50 bg-gradient-to-br from-orange-500/35 to-orange-500/10'
+                  : 'text-white/70 border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 hover:text-white hover:-translate-y-0.5'
               }`}
             >
-              <span className="text-base">👍</span>
+              <svg className={`w-[18px] h-[18px] ${likeSelected ? 'ft-pop' : ''}`} viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2 21h4V9H2v12zM22 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13.17 1 7.59 6.59C7.22 6.95 7 7.45 7 8v11c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
+              </svg>
               <span>Like</span>
-              {likeCount > 0 && <span className="text-xs text-gray-500">{likeCount}</span>}
+              {likeCount > 0 && <span className="text-xs text-white/40">{likeCount}</span>}
             </button>
 
             <button
               type="button"
               onClick={() => onOpenComments?.(post)}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 transition"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 text-sm font-bold text-white/70 hover:text-white transition-all duration-150 hover:-translate-y-0.5"
             >
-              <span>💬</span>
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+              </svg>
               <span>Comment</span>
               {visibleCommentsCount > 0 && (
-                <span className="text-xs text-gray-500">{visibleCommentsCount}</span>
+                <span className="text-xs text-white/40">{visibleCommentsCount}</span>
               )}
             </button>
 
             <button
               type="button"
               onClick={handleShare}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 transition"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 text-sm font-bold text-white/70 hover:text-white transition-all duration-150 hover:-translate-y-0.5"
             >
-              {copyConfirm ? '✅ Copied' : '↗ Share'}
+              {copyConfirm ? (
+                <>
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                  <span>Copied</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="18" cy="5" r="3" />
+                    <circle cx="6" cy="12" r="3" />
+                    <circle cx="18" cy="19" r="3" />
+                    <path d="M8.59 13.51 15.42 17.49" />
+                    <path d="M15.41 6.51 8.59 10.49" />
+                  </svg>
+                  <span>Share</span>
+                </>
+              )}
             </button>
           </div>
 
@@ -567,22 +617,36 @@ export default function PostCard({
             <button
               type="button"
               onClick={() => setShowEmojiBar((v) => !v)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-gray-200 bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-600 transition"
+              className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 text-white/60 hover:text-white transition-all duration-150"
+              aria-label="React"
             >
-              🙂 React
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M9 9h.01M15 9h.01M8.5 14.5a4 4 0 0 0 7 0" />
+              </svg>
             </button>
 
             <button
               type="button"
               onClick={handleSave}
               disabled={saveLoading}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-semibold transition ${
+              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border text-sm font-bold transition-all duration-150 disabled:opacity-50 ${
                 saved
-                  ? 'bg-orange-50 border-orange-300 text-orange-700'
-                  : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600'
+                  ? 'text-orange-300 border-orange-400/40 bg-orange-500/10'
+                  : 'text-white/70 border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 hover:text-white'
               }`}
             >
-              {saved ? '🔖 Saved' : '🔖 Save'}
+              <svg
+                className={`w-[18px] h-[18px] transition-transform duration-300 ${saved ? 'scale-110' : ''}`}
+                viewBox="0 0 24 24"
+                fill={saved ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinejoin="round"
+              >
+                <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" />
+              </svg>
+              <span>{saved ? 'Saved' : 'Save'}</span>
             </button>
           </div>
         </div>
@@ -591,35 +655,35 @@ export default function PostCard({
           <button
             type="button"
             onClick={() => onOpenComments?.(post)}
-            className="w-full text-left rounded-2xl border border-gray-100 bg-gray-50/80 px-3 py-2.5 hover:bg-gray-50 transition"
+            className="w-full text-left rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 hover:bg-white/[0.05] hover:border-white/10 transition"
           >
             <div className="flex items-start gap-2">
               {latestVisibleComment.avatarUrl ? (
                 <img
                   src={latestVisibleComment.avatarUrl}
                   alt={latestVisibleComment.by || 'Commenter'}
-                  className="mt-0.5 h-7 w-7 rounded-full object-cover bg-gray-200"
+                  className="mt-0.5 h-7 w-7 rounded-full object-cover bg-white/5 ring-1 ring-white/10"
                 />
               ) : (
-                <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-[10px] font-semibold text-gray-500">
+                <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-[10px] font-extrabold text-white">
                   {latestVisibleComment.by?.charAt(0)?.toUpperCase() || '?'}
                 </div>
               )}
 
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-bold text-gray-800">
+                <div className="text-xs font-bold text-white">
                   {latestVisibleComment.by || 'Member'}
                 </div>
 				{latestVisibleComment.headline && (
-  <div className="text-[11px] text-gray-500">
+  <div className="text-[11px] text-white/40">
     {latestVisibleComment.headline}
   </div>
 )}
-                <div className="mt-0.5 line-clamp-2 text-sm text-gray-600">
+                <div className="mt-0.5 line-clamp-2 text-sm text-white/55">
                   {latestVisibleComment.text}
                 </div>
                 {visibleCommentsCount > 1 && (
-                  <div className="mt-1 text-xs font-semibold text-[#ff7043]">
+                  <div className="mt-1 text-xs font-bold text-orange-400">
                     View all {visibleCommentsCount} comments
                   </div>
                 )}
@@ -633,19 +697,19 @@ export default function PostCard({
             <button
               type="button"
               onClick={() => router.push(withChrome(`/seeker/the-hearth/forums?thread=${hearthThreadId}`))}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-orange-300 bg-orange-50 hover:bg-orange-100 text-sm font-bold text-orange-800 transition"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-orange-400/40 bg-gradient-to-br from-orange-500/25 to-orange-500/5 text-sm font-bold text-orange-200 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_0_24px_rgba(255,112,67,0.25)]"
               title={hearthThreadTitle || 'Continued in the Hearth'}
             >
-              🔥 Continued in Hearth
+              <span className="ft-flicker">🔥</span> Continued in Hearth
             </button>
           ) : canBranchToHearth ? (
             <button
               type="button"
               onClick={handleBranchToHearth}
               disabled={hearthLoading}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-orange-300 bg-orange-600 hover:bg-orange-700 text-sm font-bold text-white transition disabled:opacity-60"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-transparent bg-gradient-to-br from-[#ff7043] to-[#e55a2b] text-sm font-bold text-white shadow-[0_8px_20px_-8px_rgba(255,112,67,0.55)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-10px_rgba(255,112,67,0.65)] disabled:opacity-60"
             >
-              🔥 Continue in Hearth
+              <span className="ft-flicker">🔥</span> Continue in Hearth
               <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">{hearthCount} / {HEARTH_THRESHOLD}</span>
             </button>
           ) : canRecommendForHearth ? (
@@ -653,22 +717,22 @@ export default function PostCard({
               type="button"
               onClick={handleRecommendForHearth}
               disabled={hearthLoading || hearthRecommended}
-              className={`inline-flex items-center gap-2 px-3 py-2 rounded-2xl border text-sm font-bold transition ${
+              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border text-sm font-bold transition-all duration-150 ${
                 hearthRecommended
-                  ? 'bg-orange-50 border-orange-300 text-orange-700'
-                  : 'border-gray-200 bg-white hover:bg-orange-50 text-gray-700'
+                  ? 'bg-orange-500/15 border-orange-400/40 text-orange-200'
+                  : 'border-white/10 bg-white/[0.04] text-white/70 hover:bg-orange-500/10 hover:border-orange-400/40 hover:text-orange-200 hover:-translate-y-0.5'
               }`}
               title="Recommend this post to move into a deeper Hearth discussion"
             >
-              🔥 Move to Hearth
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+              <span className="ft-flicker">🔥</span> Move to Hearth
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/60">
                 {hearthCount} / {HEARTH_THRESHOLD}
               </span>
             </button>
           ) : hearthCount > 0 ? (
-            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-600">
-              🔥 Hearth interest
-              <span className="rounded-full bg-white px-2 py-0.5 text-xs">{hearthCount} / {HEARTH_THRESHOLD}</span>
+            <span className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-white/10 bg-white/[0.03] text-sm font-semibold text-white/50">
+              <span className="ft-flicker">🔥</span> Hearth interest
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs">{hearthCount} / {HEARTH_THRESHOLD}</span>
             </span>
           ) : null}
         </div>
@@ -677,7 +741,7 @@ export default function PostCard({
       {/* Emoji bar */}
       {showEmojiBar && (
         <div className="relative">
-          <div className="mt-2">
+          <div className="mt-2 ft-slidedown">
             <QuickEmojiBar
               emojis={['🔥', '🎉', '👏', '❤️']}
               onPick={(emoji) => onReact?.(post.id, emoji)}
@@ -688,7 +752,7 @@ export default function PostCard({
             />
           </div>
           {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
-            <div className="absolute bottom-full left-0 mb-3 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20 whitespace-nowrap">
+            <div className="absolute bottom-full left-0 mb-3 bg-[#1a1d27] border border-white/10 text-white text-sm rounded-lg p-3 shadow-2xl shadow-black/50 z-20 whitespace-nowrap">
               {getTooltipText(hoveredEmoji)}
             </div>
           )}
