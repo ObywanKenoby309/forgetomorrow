@@ -120,6 +120,18 @@ export default function PostCard({
     router.push(withChrome(`/post-view?id=${post.id}`));
   };
 
+  // Clicking anywhere on the card opens the full post + comments modal —
+  // unless the click originated on/within an interactive element (buttons,
+  // links, inputs, menus), which handle their own actions.
+  const handleCardClick = (e) => {
+    const target = e.target;
+    if (target.closest && target.closest('button, a, input, textarea, [role="menu"], [role="menuitem"], [data-stop-card-click]')) {
+      return;
+    }
+    logPostView('open_post');
+    onOpenComments?.(post);
+  };
+
   const handleReportPost = async () => {
     const reason = window.prompt(
       'Tell us briefly what happened. This will be sent to the ForgeTomorrow moderation team.'
@@ -403,7 +415,10 @@ export default function PostCard({
       .ft-slidedown { animation: ft-slidedown 0.28s ease; }
     `}</style>
 
-    <div className={`relative overflow-hidden rounded-[20px] border border-white/40 bg-[linear-gradient(160deg,rgba(255,255,255,0.22),rgba(255,180,130,0.18))] backdrop-blur-[26px] backdrop-saturate-[160%] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_20px_50px_-24px_rgba(50,20,10,0.3)] p-3.5 sm:p-5 space-y-3 sm:space-y-4 w-full transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-white/60 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(50,20,10,0.35)] ${accentEdgeClass}`}>
+    <div
+      onClick={handleCardClick}
+      className={`relative overflow-hidden rounded-[20px] border border-white/40 bg-[linear-gradient(160deg,rgba(255,255,255,0.22),rgba(255,180,130,0.18))] backdrop-blur-[26px] backdrop-saturate-[160%] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_20px_50px_-24px_rgba(50,20,10,0.3)] p-3.5 sm:p-5 space-y-3 sm:space-y-4 w-full cursor-pointer transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-white/60 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(50,20,10,0.35)] ${accentEdgeClass}`}
+    >
 
       {/* Header row */}
       <div className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[1fr_auto_1fr] items-start gap-2 sm:gap-3">
@@ -412,24 +427,26 @@ export default function PostCard({
         <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
 
           {/* Avatar — unified action system handles routing, connect, message */}
-          <MemberAvatarActions
-            targetUserId={canTargetAuthor ? post.authorId : null}
-            targetUserSlug={post.authorSlug}
-            targetName={post.author}
-          >
-            {post.authorAvatar ? (
-              <img
-                src={post.authorAvatar}
-                alt={post.author}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-1 ring-white/60 shrink-0"
-                style={{ cursor: canTargetAuthor ? 'pointer' : 'default' }}
-              />
-            ) : (
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/40 flex items-center justify-center text-[#8a5d44] ring-1 ring-white/60 shrink-0">
-                {post.author?.charAt(0)?.toUpperCase()}
-              </div>
-            )}
-          </MemberAvatarActions>
+          <div data-stop-card-click onClick={(e) => e.stopPropagation()}>
+            <MemberAvatarActions
+              targetUserId={canTargetAuthor ? post.authorId : null}
+              targetUserSlug={post.authorSlug}
+              targetName={post.author}
+            >
+              {post.authorAvatar ? (
+                <img
+                  src={post.authorAvatar}
+                  alt={post.author}
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-1 ring-white/60 shrink-0"
+                  style={{ cursor: canTargetAuthor ? 'pointer' : 'default' }}
+                />
+              ) : (
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/40 flex items-center justify-center text-[#8a5d44] ring-1 ring-white/60 shrink-0">
+                  {post.author?.charAt(0)?.toUpperCase()}
+                </div>
+              )}
+            </MemberAvatarActions>
+          </div>
 
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-[#3a2418] truncate">{post.author}</div>
