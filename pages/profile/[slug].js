@@ -1049,6 +1049,21 @@ flushPendingSaveRef.current = flushPendingSave;
             .ft-desktop-only { display:none; }
             .ft-mobile-only  { display:block; }
             .ft-footer { display:none; }
+
+            .ft-sheet { width:100vw; max-width:100vw; overflow-x:hidden; }
+            .ft-sheet-body { min-width:0; overflow-x:hidden; }
+            .ft-sheet-body * { max-width:100%; box-sizing:border-box; }
+            .ft-dark-input, .ft-dark-select, .ft-dark-textarea { min-width:0; }
+            .ft-chip-input-row { min-width:0; }
+            .ft-chip-input-row .ft-dark-input { min-width:0; }
+            .ft-modal-backdrop { padding:12px; align-items:center; justify-items:center; }
+            .ft-modal { width:calc(100vw - 24px); max-width:calc(100vw - 24px); }
+            .ft-modal-body { max-width:100%; overflow-x:hidden; padding:16px; }
+            .ft-modal-foot { flex-wrap:wrap; }
+            .ft-resume-row { flex-wrap:wrap; align-items:flex-start; min-width:0; }
+            .ft-resume-row > div { min-width:0; }
+            .ft-resume-name { white-space:normal; overflow-wrap:anywhere; }
+            .ft-resume-set-btn, .ft-resume-primary-badge { max-width:100%; }
           }
           ::-webkit-scrollbar { width:6px; }
           ::-webkit-scrollbar-track { background:var(--navy); }
