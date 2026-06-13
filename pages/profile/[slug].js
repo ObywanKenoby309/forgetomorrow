@@ -226,6 +226,8 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   const [copied,             setCopied]             = useState(false);
   const [siderailsCollapsed, setSiderailsCollapsed] = useState(false);
   const [mobileSheet,        setMobileSheet]        = useState(null);
+  const [showSignalDrawer,   setShowSignalDrawer]   = useState(false); // mobile-only Profile Signal Engine slide-up drawer
+  const [signalDrawerMounted, setSignalDrawerMounted] = useState(false); // lazy-mount so it doesn't fetch until first opened
   const [showPrefsEdit,      setShowPrefsEdit]      = useState(false); // inline prefs edit panel
 
   const {
@@ -359,6 +361,11 @@ const [profileVisibility,        setProfileVisibility]        = useState(
     if (mobileTab === 'skills') { const t = setTimeout(() => setMobileSkillsReady(true), 120); return () => clearTimeout(t); }
     setMobileSkillsReady(false);
   }, [mobileTab]);
+
+  // Profile Signal Engine drawer slides closed whenever the user changes tabs
+  // or leaves edit mode — it re-opens via the floating toggle when wanted.
+  useEffect(() => { setShowSignalDrawer(false); }, [mobileTab]);
+  useEffect(() => { if (!editMode) setShowSignalDrawer(false); }, [editMode]);
 
   async function handleCopyProfileUrl() {
     try {
@@ -984,6 +991,7 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-sheet-save-row { padding:12px 20px; border-top:1px solid rgba(255,255,255,0.08); flex-shrink:0; }
           .ft-sheet-save-btn { width:100%; padding:14px; border-radius:12px; background:${ORANGE}; border:none; color:white; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; box-shadow:0 4px 14px rgba(255,112,67,0.40); }
           .ft-mobile-only  { display:none; }
+          .ft-signal-fab, .ft-signal-drawer, .ft-signal-drawer-backdrop { display:none; }
           .ft-desktop-only { display:block; }
           .ft-mobile-shell { min-height:100vh; display:flex; flex-direction:column; background:rgba(10,9,8,0.34); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
           .ft-mobile-profile { flex:1; display:flex; flex-direction:column; background:rgba(14,13,12,0.58); border:1px solid rgba(255,255,255,0.07); border-radius:20px; overflow:hidden; box-shadow:0 18px 40px rgba(0,0,0,0.32); }
@@ -1042,6 +1050,41 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-mobile-edit-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
           .ft-mobile-edit-btn { padding:6px 14px; border-radius:999px; background:rgba(255,112,67,0.14); border:1px solid rgba(255,112,67,0.35); color:${ORANGE}; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; }
 
+          /* ─── Mobile Profile Signal Engine — floating toggle + slide-up drawer ─── */
+          .ft-signal-fab {
+            position: fixed; right: 16px; bottom: 16px; z-index: 220;
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 11px 18px; border-radius: 999px; border: none;
+            background: linear-gradient(135deg, ${ORANGE}, #FF8A65);
+            color: #fff; font-family: inherit; font-size: 12px; font-weight: 800;
+            letter-spacing: 0.02em; cursor: pointer;
+            box-shadow: 0 10px 26px rgba(255,112,67,0.45);
+            transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+          }
+          .ft-signal-fab:active { transform: scale(0.96); }
+          .ft-signal-fab.open { background: rgba(13,27,42,0.92); color: ${ORANGE}; border: 1px solid rgba(255,112,67,0.45); box-shadow: 0 10px 26px rgba(0,0,0,0.35); }
+          .ft-signal-drawer-backdrop {
+            position: fixed; inset: 0; z-index: 218;
+            background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+          }
+          .ft-signal-drawer-backdrop.open { opacity: 1; pointer-events: all; }
+          .ft-signal-drawer {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 219;
+            background: rgba(10,18,30,0.98); border-top: 1px solid rgba(255,255,255,0.12);
+            border-radius: 20px 20px 0 0; box-shadow: 0 -12px 40px rgba(0,0,0,0.45);
+            max-height: 72vh; display: flex; flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom, 16px);
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+          }
+          .ft-signal-drawer.open { transform: translateY(0); }
+          .ft-signal-drawer-handle-row { display:flex; align-items:center; justify-content:space-between; padding:14px 20px 10px; flex-shrink:0; }
+          .ft-signal-drawer-handle { width:36px; height:4px; border-radius:2px; background:rgba(255,255,255,0.20); margin:0 auto; }
+          .ft-signal-drawer-close { background:rgba(255,255,255,0.10); border:none; color:rgba(255,255,255,0.60); width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-family:inherit; }
+          .ft-signal-drawer-body { flex:1; overflow-y:auto; padding:0 20px 24px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+          .ft-signal-drawer-body::-webkit-scrollbar { display:none; }
+
           @media (max-width:760px) {
             .ft-page { background-attachment:scroll; border-radius:16px; }
             .ft-page-overlay { padding:10px 0 18px; background:linear-gradient(180deg, rgba(10,9,8,0.24) 0%, rgba(10,9,8,0.14) 50%, rgba(10,9,8,0.24) 100%); }
@@ -1049,6 +1092,10 @@ flushPendingSaveRef.current = flushPendingSave;
             .ft-desktop-only { display:none; }
             .ft-mobile-only  { display:block; }
             .ft-footer { display:none; }
+
+            .ft-signal-fab { display:inline-flex; }
+            .ft-signal-drawer { display:flex; }
+            .ft-signal-drawer-backdrop { display:block; }
 
             .ft-sheet { width:100vw; max-width:100vw; overflow-x:hidden; }
             .ft-sheet-body { min-width:0; overflow-x:hidden; }
@@ -1496,15 +1543,7 @@ flushPendingSaveRef.current = flushPendingSave;
                           <div className="ft-mobile-stat"><div className="ft-mobile-stat-n">{education.length}<em>+</em></div><div className="ft-mobile-stat-l">Education</div></div>
                           <div className="ft-mobile-stat"><div className="ft-mobile-stat-n">{languages.length}<em>+</em></div><div className="ft-mobile-stat-l">Languages</div></div>
                         </div>
-                        {isOwner && (
-                          <div className="ft-mobile-edit-row">
-                            <span style={{ fontSize:12, color:'var(--forge-muted)' }}>Summary</span>
-                            <div style={{ display:'flex', gap:8 }}>
-                              {editMode && <button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('enhance')}>✨ Enhance</button>}
-                              <button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('about')}>✎ Edit</button>
-                            </div>
-                          </div>
-                        )}
+                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Summary</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('about')}>✎ Edit</button></div>}
                         {(aboutMe || headline) && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Summary</div><div className="ft-mobile-card-text">{aboutMe || headline}</div></div>}
                         {(location || status) && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Details</div><div className="ft-mobile-card-text">{location ? `Location: ${location}` : ''}{location && status ? '\n' : ''}{status ? `Status: ${status}` : ''}</div></div>}
                       </div>
@@ -1607,6 +1646,37 @@ flushPendingSaveRef.current = flushPendingSave;
           </div>
         </div>
 
+        {/* ══ MOBILE PROFILE SIGNAL ENGINE — floating toggle + slide-up drawer ══ */}
+        {/* Persists across tabs while editing; reuses the same liveProfileData / */}
+        {/* handleApplyField used by the desktop right rail — no duplicated logic. */}
+        {isOwner && editMode && (
+          <button
+            type="button"
+            className={`ft-signal-fab${showSignalDrawer ? ' open' : ''}`}
+            onClick={() => { setSignalDrawerMounted(true); setShowSignalDrawer(v => !v); }}
+          >
+            <span style={{ fontSize: 13 }}>✨</span>
+            {showSignalDrawer ? 'Hide Signals' : 'Profile Signals'}
+          </button>
+        )}
+
+        {isOwner && editMode && showSignalDrawer && (
+          <div className="ft-signal-drawer-backdrop open" onClick={() => setShowSignalDrawer(false)} />
+        )}
+
+        {isOwner && editMode && signalDrawerMounted && (
+          <div className={`ft-signal-drawer${showSignalDrawer ? ' open' : ''}`}>
+            <div className="ft-signal-drawer-handle-row">
+              <div style={{ width:28 }} />
+              <div className="ft-signal-drawer-handle" />
+              <button type="button" className="ft-signal-drawer-close" onClick={() => setShowSignalDrawer(false)}>✕</button>
+            </div>
+            <div className="ft-signal-drawer-body">
+              <ProfileSignalEngine profileData={liveProfileData} onApply={handleApplyField} />
+            </div>
+          </div>
+        )}
+
         {/* ══ MOBILE SHEETS ══ */}
         {mobileSheet && (
           <>
@@ -1704,17 +1774,6 @@ flushPendingSaveRef.current = flushPendingSave;
                   </div>
                 </div>
                 <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={async () => { await flushPendingSaveRef.current(true); setMobileSheet(null); }}>Done</button></div></>
-              )}
-
-              {mobileSheet === 'enhance' && (
-                <><div style={{ padding:'0 20px 14px', flexShrink:0 }}>
-                  <div className="ft-sheet-title">Profile Enhancement</div>
-                  <div style={{ fontSize:12, color:'var(--forge-muted)', marginTop:4 }}>AI-powered signal analysis and suggestions for your profile — same tool as on desktop.</div>
-                </div>
-                <div className="ft-sheet-body">
-                  <ProfileSignalEngine profileData={liveProfileData} onApply={handleApplyField} />
-                </div>
-                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
               )}
 
               {mobileSheet === 'skills' && (
