@@ -157,7 +157,7 @@ export async function getServerSideProps(context) {
       bannerMode: true, bannerHeight: true, bannerFocalY: true,
       wallpaperUrl: true, corporateBannerKey: true, corporateBannerLocked: true,
       isProfilePublic: true, profileVisibility: true, role: true, email: true,
-      workPreferences: true,
+      workPreferences: true, socialLinks: true,
       resumes: {
         where: { isPrimary: true }, orderBy: { updatedAt: 'desc' }, take: 1,
         select: { id: true, name: true, updatedAt: true },
@@ -237,6 +237,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
     bannerMode: serverBannerMode, bannerHeight: serverBannerH, bannerFocalY: serverFocalY,
     corporateBannerKey, corporateBannerLocked,
     workPreferences: serverWorkPrefs,
+    socialLinks: serverSocialLinks,
     profileVisibility: serverProfileVisibility,
     customSectionJson: serverCustomSectionJson,
   } = user;
@@ -262,7 +263,16 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   const [certifications,  setCertifications]  = useState(Array.isArray(user.certificationsJson) ? user.certificationsJson : []);
   const [projects,        setProjects]        = useState(Array.isArray(user.projectsJson) ? user.projectsJson : []);
   const [customSection, setCustomSection]      = useState(Array.isArray(serverCustomSectionJson) ? serverCustomSectionJson : []);
-  const [socialLinks,     setSocialLinks]     = useState({ github: '', x: '', youtube: '', instagram: '' });
+  const [socialLinks,     setSocialLinks]     = useState(
+    serverSocialLinks && typeof serverSocialLinks === 'object'
+      ? {
+          github: serverSocialLinks.github || '',
+          x: serverSocialLinks.x || '',
+          youtube: serverSocialLinks.youtube || '',
+          instagram: serverSocialLinks.instagram || '',
+        }
+      : { github: '', x: '', youtube: '', instagram: '' }
+  );
   const [avatarUploading, setAvatarUploading] = useState(false);
   const updateSocial = (key, val) => setSocialLinks(p => ({ ...p, [key]: val }));
 
