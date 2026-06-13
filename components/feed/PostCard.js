@@ -374,9 +374,16 @@ export default function PostCard({
       .ft-pop { animation: ft-pop 0.42s cubic-bezier(.34,1.56,.64,1); }
       .ft-flicker { animation: ft-flicker 2.4s ease-in-out infinite; }
       .ft-slidedown { animation: ft-slidedown 0.28s ease; }
+
+      .ft-card {
+        text-shadow: 0 1px 3px rgba(40,20,10,0.45);
+      }
+      .ft-card svg {
+        filter: drop-shadow(0 1px 2px rgba(40,20,10,0.35));
+      }
     `}</style>
 
-    <div className={`relative overflow-hidden rounded-[20px] border border-[rgba(255,185,140,0.35)] bg-[linear-gradient(160deg,rgba(255,150,100,0.24),rgba(205,85,50,0.28))] backdrop-blur-[24px] backdrop-saturate-[180%] backdrop-brightness-110 shadow-[inset_0_1px_0_rgba(255,205,175,0.25),0_20px_50px_-22px_rgba(0,0,0,0.45)] p-5 space-y-4 w-full transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-[rgba(255,205,175,0.5)] hover:shadow-[inset_0_1px_0_rgba(255,220,195,0.3),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(0,0,0,0.5)] ${accentEdgeClass}`}>
+    <div className={`ft-card relative overflow-hidden rounded-[20px] border border-[rgba(255,185,140,0.35)] bg-[linear-gradient(160deg,rgba(255,150,100,0.24),rgba(205,85,50,0.28))] backdrop-blur-[24px] backdrop-saturate-[180%] backdrop-brightness-110 shadow-[inset_0_1px_0_rgba(255,205,175,0.25),0_20px_50px_-22px_rgba(0,0,0,0.45)] p-5 space-y-4 w-full transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-[rgba(255,205,175,0.5)] hover:shadow-[inset_0_1px_0_rgba(255,220,195,0.3),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(0,0,0,0.5)] ${accentEdgeClass}`}>
 
       {/* Header row */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
