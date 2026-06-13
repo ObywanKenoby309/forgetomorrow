@@ -262,8 +262,8 @@ export default function PostCard({
 
   const typeLabel    = post.type === 'personal' ? 'Personal' : 'Business';
   const typePillClass = post.type === 'personal'
-    ? 'bg-[rgba(168,120,255,0.18)] border-[rgba(168,120,255,0.40)] text-[#e6cdfd]'
-    : 'bg-[rgba(95,150,255,0.18)] border-[rgba(95,150,255,0.40)] text-[#cfe2ff]';
+    ? 'bg-[rgba(168,120,255,0.18)] border-[rgba(168,120,255,0.4)] text-[#5a3aa8]'
+    : 'bg-[rgba(95,150,255,0.18)] border-[rgba(95,150,255,0.4)] text-[#2f5fb0]';
 
   // Type-driven accent treatments — purple for personal, blue for business
   const accentEdgeClass = post.type === 'personal'
@@ -338,13 +338,13 @@ export default function PostCard({
   const signalMeta = useMemo(() => {
     const rawBody = String(post?.body || '');
     const rules = [
-      { prefix: 'Hiring for',               label: 'Hiring',    className: 'bg-[rgba(255,112,67,0.18)] border-[rgba(255,112,67,0.45)] text-[#ffd9c7]' },
-      { prefix: 'Open to opportunities in', label: 'Open to work', className: 'bg-[rgba(120,200,90,0.18)] border-[rgba(120,200,90,0.45)] text-[#cdebb8]' },
-      { prefix: 'Hosting a workshop on',    label: 'Workshop',  className: 'bg-[rgba(60,200,170,0.18)] border-[rgba(60,200,170,0.45)] text-[#bdeee0]' },
-      { prefix: 'Coaching insight:',        label: 'Coaching',  className: 'bg-[rgba(70,190,230,0.18)] border-[rgba(70,190,230,0.45)] text-[#c9eefc]' },
-      { prefix: 'Looking for advice on',    label: 'Advice',    className: 'bg-[rgba(230,90,170,0.18)] border-[rgba(230,90,170,0.45)] text-[#ffd0ea]' },
-      { prefix: 'Sharing a win:',           label: 'Win',       className: 'bg-[rgba(245,190,80,0.18)] border-[rgba(245,190,80,0.45)] text-[#ffe7b0]' },
-      { prefix: 'Sharing an idea about',    label: 'Idea',      className: 'bg-white/[0.10] border-[rgba(255,210,182,0.25)] text-[rgba(255,241,232,0.85)]' },
+      { prefix: 'Hiring for',               label: 'Hiring',    className: 'bg-[rgba(255,112,67,0.18)] border-[rgba(255,112,67,0.4)] text-[#b6481f]' },
+      { prefix: 'Open to opportunities in', label: 'Open to work', className: 'bg-[rgba(120,200,90,0.18)] border-[rgba(120,200,90,0.4)] text-[#3f7a1f]' },
+      { prefix: 'Hosting a workshop on',    label: 'Workshop',  className: 'bg-[rgba(60,200,170,0.18)] border-[rgba(60,200,170,0.4)] text-[#1a7a66]' },
+      { prefix: 'Coaching insight:',        label: 'Coaching',  className: 'bg-[rgba(70,190,230,0.18)] border-[rgba(70,190,230,0.4)] text-[#1a6e8f]' },
+      { prefix: 'Looking for advice on',    label: 'Advice',    className: 'bg-[rgba(230,90,170,0.18)] border-[rgba(230,90,170,0.4)] text-[#a3275f]' },
+      { prefix: 'Sharing a win:',           label: 'Win',       className: 'bg-[rgba(245,190,80,0.18)] border-[rgba(245,190,80,0.4)] text-[#8a5d0a]' },
+      { prefix: 'Sharing an idea about',    label: 'Idea',      className: 'bg-white/40 border-white/50 text-[#6b4a3a]' },
     ];
     const match = rules.find((rule) => rawBody.startsWith(rule.prefix));
     if (!match) return { signalLabel: '', signalClassName: '', displayBody: rawBody };
@@ -374,16 +374,9 @@ export default function PostCard({
       .ft-pop { animation: ft-pop 0.42s cubic-bezier(.34,1.56,.64,1); }
       .ft-flicker { animation: ft-flicker 2.4s ease-in-out infinite; }
       .ft-slidedown { animation: ft-slidedown 0.28s ease; }
-
-      .ft-card {
-        text-shadow: 0 1px 3px rgba(40,20,10,0.45);
-      }
-      .ft-card svg {
-        filter: drop-shadow(0 1px 2px rgba(40,20,10,0.35));
-      }
     `}</style>
 
-    <div className={`ft-card relative overflow-hidden rounded-[20px] border border-[rgba(255,185,140,0.35)] bg-[linear-gradient(160deg,rgba(255,150,100,0.24),rgba(205,85,50,0.28))] backdrop-blur-[24px] backdrop-saturate-[180%] backdrop-brightness-110 shadow-[inset_0_1px_0_rgba(255,205,175,0.25),0_20px_50px_-22px_rgba(0,0,0,0.45)] p-5 space-y-4 w-full transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-[rgba(255,205,175,0.5)] hover:shadow-[inset_0_1px_0_rgba(255,220,195,0.3),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(0,0,0,0.5)] ${accentEdgeClass}`}>
+    <div className={`relative overflow-hidden rounded-[20px] border border-white/40 bg-[linear-gradient(160deg,rgba(255,255,255,0.22),rgba(255,180,130,0.18))] backdrop-blur-[26px] backdrop-saturate-[160%] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_20px_50px_-24px_rgba(50,20,10,0.3)] p-5 space-y-4 w-full transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-white/60 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(50,20,10,0.35)] ${accentEdgeClass}`}>
 
       {/* Header row */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
@@ -401,24 +394,24 @@ export default function PostCard({
               <img
                 src={post.authorAvatar}
                 alt={post.author}
-                className="w-10 h-10 rounded-full object-cover ring-1 ring-[rgba(255,210,182,0.25)]"
+                className="w-10 h-10 rounded-full object-cover ring-1 ring-white/60"
                 style={{ cursor: canTargetAuthor ? 'pointer' : 'default' }}
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-white/[0.08] flex items-center justify-center text-[rgba(255,241,232,0.8)] ring-1 ring-[rgba(255,210,182,0.25)]">
+              <div className="w-10 h-10 rounded-full bg-white/40 flex items-center justify-center text-[#8a5d44] ring-1 ring-white/60">
                 {post.author?.charAt(0)?.toUpperCase()}
               </div>
             )}
           </MemberAvatarActions>
 
           <div className="min-w-0">
-            <div className="font-semibold text-white truncate">{post.author}</div>
+            <div className="font-semibold text-[#3a2418] truncate">{post.author}</div>
             {post.authorHeadline && (
-              <div className="w-full text-xs text-[rgba(255,231,217,0.62)]">
+              <div className="w-full text-xs text-[#8a5d44]">
                 {post.authorHeadline}
               </div>
             )}
-            <div className="text-xs text-[rgba(255,231,217,0.5)] mt-0.5">{new Date(post.createdAt).toLocaleString()}</div>
+            <div className="text-xs text-[#a8775f] mt-0.5">{new Date(post.createdAt).toLocaleString()}</div>
           </div>
         </div>
 
@@ -439,7 +432,7 @@ export default function PostCard({
             <button
               type="button"
               onClick={() => setActionsMenuOpen((v) => !v)}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-[rgba(255,210,182,0.2)] bg-white/[0.08] hover:bg-white/[0.14] text-[rgba(255,241,232,0.7)] hover:text-white transition"
+              className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 text-[#6b4a3a] hover:text-[#3a2418] transition"
               aria-label="Post actions"
             >
               <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
@@ -449,18 +442,18 @@ export default function PostCard({
               </svg>
             </button>
             {actionsMenuOpen && (
-              <div className="absolute right-0 mt-2 w-40 bg-[#241a16] border border-[rgba(255,210,182,0.2)] rounded-xl shadow-2xl shadow-black/50 z-30 overflow-hidden" role="menu">
+              <div className="absolute right-0 mt-2 w-40 bg-white/95 border border-white/40 rounded-xl shadow-2xl shadow-black/50 z-30 overflow-hidden" role="menu">
                 {!isOwner ? (
                   <>
                     <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={handleReportPost}
-                      className="w-full text-left px-3 py-2 text-sm text-[rgba(255,241,232,0.85)] hover:bg-white/[0.06]" role="menuitem">Report</button>
+                      className="w-full text-left px-3 py-2 text-sm text-[#6b4a3a] hover:bg-white/[0.06]" role="menuitem">Report</button>
                     <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={handleBlockAuthorAction}
-                      className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10" role="menuitem">Block</button>
+                      className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50" role="menuitem">Block</button>
                   </>
                 ) : (
                   <button type="button" onMouseDown={(e) => e.preventDefault()}
                     onClick={() => { setActionsMenuOpen(false); onDelete?.(post.id); }}
-                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10" role="menuitem">Delete</button>
+                    className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50" role="menuitem">Delete</button>
                 )}
               </div>
             )}
@@ -470,14 +463,14 @@ export default function PostCard({
 
       {/* Post body */}
       <div className="w-full text-left">
-        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[rgba(255,245,236,0.96)]">
+        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[#4a3024]">
           {!expanded && signalMeta.displayBody?.length > TRUNCATE_LIMIT
             ? signalMeta.displayBody.slice(0, TRUNCATE_LIMIT).trimEnd() + '…'
             : signalMeta.displayBody}
         </p>
         {signalMeta.displayBody?.length > TRUNCATE_LIMIT && (
           <button type="button" onClick={() => setExpanded((v) => !v)}
-            className="mt-1 text-sm font-semibold text-orange-400 hover:text-orange-300">
+            className="mt-1 text-sm font-semibold text-[#d6602f] hover:text-[#b6481f]">
             {expanded ? 'See less' : 'See more'}
           </button>
         )}
@@ -486,7 +479,7 @@ export default function PostCard({
       {/* Media attachments */}
       {activeMedia && (
         <div
-          className="relative overflow-hidden rounded-2xl border border-[rgba(255,210,182,0.2)] bg-gray-950"
+          className="relative overflow-hidden rounded-2xl border border-white/40 bg-gray-950"
           onTouchStart={handleMediaTouchStart}
           onTouchEnd={handleMediaTouchEnd}
         >
@@ -564,7 +557,7 @@ export default function PostCard({
         <div className="flex flex-wrap gap-2">
           {linkAttachments.map((a, idx) => (
             <a key={`${a.type}-${idx}`} href={a.url} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[rgba(255,210,182,0.2)] bg-white/[0.07] hover:bg-white/[0.12] hover:border-[rgba(255,210,182,0.35)] text-sm text-orange-300 break-all transition">
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/40 bg-white/35 hover:bg-white/55 hover:border-white/60 text-sm text-[#2f5fb0] break-all transition">
               <svg className="w-[16px] h-[16px] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
                 <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.5-1.5" />
@@ -585,35 +578,35 @@ export default function PostCard({
               onClick={handleLike}
               className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border text-sm font-bold transition-all duration-150 ${
                 likeSelected
-                  ? 'text-white border-orange-400/50 bg-gradient-to-br from-orange-500/35 to-orange-500/10'
-                  : 'text-[rgba(255,241,232,0.85)] border-[rgba(255,210,182,0.2)] bg-white/[0.08] hover:bg-white/[0.14] hover:border-[rgba(255,210,182,0.35)] hover:text-white hover:-translate-y-0.5'
+                  ? 'text-[#b6481f] border-orange-400/50 bg-gradient-to-br from-orange-500/25 to-orange-500/10'
+                  : 'text-[#6b4a3a] border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 hover:text-[#3a2418] hover:-translate-y-0.5'
               }`}
             >
               <svg className={`w-[18px] h-[18px] ${likeSelected ? 'ft-pop' : ''}`} viewBox="0 0 24 24" fill="currentColor">
                 <path d="M2 21h4V9H2v12zM22 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13.17 1 7.59 6.59C7.22 6.95 7 7.45 7 8v11c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
               </svg>
               <span>Like</span>
-              {likeCount > 0 && <span className="text-xs text-[rgba(255,241,232,0.55)]">{likeCount}</span>}
+              {likeCount > 0 && <span className="text-xs text-[#a8775f]">{likeCount}</span>}
             </button>
 
             <button
               type="button"
               onClick={() => onOpenComments?.(post)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-[rgba(255,210,182,0.2)] bg-white/[0.08] hover:bg-white/[0.14] hover:border-[rgba(255,210,182,0.35)] text-sm font-bold text-[rgba(255,241,232,0.85)] hover:text-white transition-all duration-150 hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 text-sm font-bold text-[#6b4a3a] hover:text-[#3a2418] transition-all duration-150 hover:-translate-y-0.5"
             >
               <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
               </svg>
               <span>Comment</span>
               {visibleCommentsCount > 0 && (
-                <span className="text-xs text-[rgba(255,241,232,0.55)]">{visibleCommentsCount}</span>
+                <span className="text-xs text-[#a8775f]">{visibleCommentsCount}</span>
               )}
             </button>
 
             <button
               type="button"
               onClick={handleShare}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-[rgba(255,210,182,0.2)] bg-white/[0.08] hover:bg-white/[0.14] hover:border-[rgba(255,210,182,0.35)] text-sm font-bold text-[rgba(255,241,232,0.85)] hover:text-white transition-all duration-150 hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 text-sm font-bold text-[#6b4a3a] hover:text-[#3a2418] transition-all duration-150 hover:-translate-y-0.5"
             >
               {copyConfirm ? (
                 <>
@@ -641,7 +634,7 @@ export default function PostCard({
             <button
               type="button"
               onClick={() => setShowEmojiBar((v) => !v)}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-[rgba(255,210,182,0.2)] bg-white/[0.08] hover:bg-white/[0.14] hover:border-[rgba(255,210,182,0.35)] text-[rgba(255,241,232,0.7)] hover:text-white transition-all duration-150"
+              className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 text-[#6b4a3a] hover:text-[#3a2418] transition-all duration-150"
               aria-label="React"
             >
               <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -656,8 +649,8 @@ export default function PostCard({
               disabled={saveLoading}
               className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border text-sm font-bold transition-all duration-150 disabled:opacity-50 ${
                 saved
-                  ? 'text-orange-300 border-orange-400/40 bg-orange-500/10'
-                  : 'text-[rgba(255,241,232,0.85)] border-[rgba(255,210,182,0.2)] bg-white/[0.08] hover:bg-white/[0.14] hover:border-[rgba(255,210,182,0.35)] hover:text-white'
+                  ? 'text-[#b6481f] border-orange-400/40 bg-orange-500/10'
+                  : 'text-[#6b4a3a] border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 hover:text-[#3a2418]'
               }`}
             >
               <svg
@@ -679,14 +672,14 @@ export default function PostCard({
           <button
             type="button"
             onClick={() => onOpenComments?.(post)}
-            className="w-full text-left pl-3.5 border-l-2 border-[rgba(255,205,175,0.3)] hover:border-[rgba(255,205,175,0.5)] transition"
+            className="w-full text-left pl-3.5 border-l-2 border-[rgba(180,140,110,0.35)] hover:border-[rgba(180,140,110,0.6)] transition"
           >
             <div className="flex items-start gap-2">
               {latestVisibleComment.avatarUrl ? (
                 <img
                   src={latestVisibleComment.avatarUrl}
                   alt={latestVisibleComment.by || 'Commenter'}
-                  className="mt-0.5 h-7 w-7 rounded-full object-cover bg-white/[0.08] ring-1 ring-[rgba(255,210,182,0.2)]"
+                  className="mt-0.5 h-7 w-7 rounded-full object-cover bg-white/40 ring-1 ring-white/50"
                 />
               ) : (
                 <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-[10px] font-extrabold text-white">
@@ -695,19 +688,19 @@ export default function PostCard({
               )}
 
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-bold text-white">
+                <div className="text-xs font-bold text-[#3a2418]">
                   {latestVisibleComment.by || 'Member'}
                 </div>
 				{latestVisibleComment.headline && (
-  <div className="text-[11px] text-[rgba(255,231,217,0.5)]">
+  <div className="text-[11px] text-[#a8775f]">
     {latestVisibleComment.headline}
   </div>
 )}
-                <div className="mt-0.5 line-clamp-2 text-sm text-[rgba(255,241,232,0.7)]">
+                <div className="mt-0.5 line-clamp-2 text-sm text-[#6b4a3a]">
                   {latestVisibleComment.text}
                 </div>
                 {visibleCommentsCount > 1 && (
-                  <div className="mt-1 text-xs font-bold text-orange-400">
+                  <div className="mt-1 text-xs font-bold text-[#d6602f]">
                     View all {visibleCommentsCount} comments
                   </div>
                 )}
@@ -721,7 +714,7 @@ export default function PostCard({
             <button
               type="button"
               onClick={() => router.push(withChrome(`/seeker/the-hearth/forums?thread=${hearthThreadId}`))}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-orange-400/40 bg-gradient-to-br from-orange-500/25 to-orange-500/5 text-sm font-bold text-orange-200 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_0_24px_rgba(255,112,67,0.25)]"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-orange-400/40 bg-gradient-to-br from-orange-500/25 to-orange-500/5 text-sm font-bold text-[#b6481f] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_0_24px_rgba(255,112,67,0.25)]"
               title={hearthThreadTitle || 'Continued in the Hearth'}
             >
               <span className="ft-flicker">🔥</span> Continued in Hearth
@@ -743,20 +736,20 @@ export default function PostCard({
               disabled={hearthLoading || hearthRecommended}
               className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border text-sm font-bold transition-all duration-150 ${
                 hearthRecommended
-                  ? 'bg-orange-500/15 border-orange-400/40 text-orange-200'
-                  : 'border-[rgba(255,210,182,0.2)] bg-white/[0.08] text-[rgba(255,241,232,0.85)] hover:bg-orange-500/10 hover:border-orange-400/40 hover:text-orange-200 hover:-translate-y-0.5'
+                  ? 'bg-orange-500/15 border-orange-400/40 text-[#b6481f]'
+                  : 'border-white/40 bg-white/40 text-[#6b4a3a] hover:bg-orange-500/10 hover:border-orange-400/40 hover:text-[#b6481f] hover:-translate-y-0.5'
               }`}
               title="Recommend this post to move into a deeper Hearth discussion"
             >
               <span className="ft-flicker">🔥</span> Move to Hearth
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-[rgba(255,241,232,0.6)]">
+              <span className="rounded-full bg-white/40 px-2 py-0.5 text-xs text-[#8a5d44]">
                 {hearthCount} / {HEARTH_THRESHOLD}
               </span>
             </button>
           ) : hearthCount > 0 ? (
-            <span className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-[rgba(255,210,182,0.18)] bg-white/[0.05] text-sm font-semibold text-[rgba(255,241,232,0.55)]">
+            <span className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-white/40 bg-white/30 text-sm font-semibold text-[#a8775f]">
               <span className="ft-flicker">🔥</span> Hearth interest
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs">{hearthCount} / {HEARTH_THRESHOLD}</span>
+              <span className="rounded-full bg-white/40 px-2 py-0.5 text-xs">{hearthCount} / {HEARTH_THRESHOLD}</span>
             </span>
           ) : null}
         </div>
@@ -776,7 +769,7 @@ export default function PostCard({
             />
           </div>
           {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
-            <div className="absolute bottom-full left-0 mb-3 bg-[#241a16] border border-[rgba(255,210,182,0.2)] text-white text-sm rounded-lg p-3 shadow-2xl shadow-black/50 z-20 whitespace-nowrap">
+            <div className="absolute bottom-full left-0 mb-3 bg-white/95 border border-white/40 text-[#3a2418] text-sm rounded-lg p-3 shadow-2xl shadow-black/50 z-20 whitespace-nowrap">
               {getTooltipText(hoveredEmoji)}
             </div>
           )}
