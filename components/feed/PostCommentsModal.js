@@ -1,5 +1,5 @@
 // components/feed/PostCommentsModal.js
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
@@ -12,10 +12,15 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
   const [deletingKey, setDeletingKey] = useState(null);
   const [commentMenuKey, setCommentMenuKey] = useState(null);
   const [connectingKey, setConnectingKey] = useState(null);
+  const [localComments, setLocalComments] = useState([]);
 
   const { data: session } = useSession();
   const router = useRouter();
   const { connectWith } = useConnect();
+
+  useEffect(() => {
+    setLocalComments(Array.isArray(post?.comments) ? post.comments : []);
+  }, [post?.id, post?.comments]);
 
   if (!post) return null;
   if (typeof document === 'undefined') return null;
@@ -41,6 +46,21 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     const t = text.trim();
     if (!t) return;
 
+    const optimisticComment = {
+      id: `local_${Date.now()}`,
+      authorId: session?.user?.id || null,
+      userId: session?.user?.id || null,
+      by: session?.user?.name || 'You',
+      text: t,
+      at: new Date().toISOString(),
+      avatarUrl: session?.user?.avatarUrl || session?.user?.image || null,
+      headline: session?.user?.headline || null,
+      likes: 0,
+      likedBy: [],
+    };
+
+    setLocalComments((prev) => [...prev, optimisticComment]);
+
     logPostView('reply_submit');
     onReply?.(post.id, t);
     setText('');
@@ -59,7 +79,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     }
   })();
 
-  const allComments = Array.isArray(post.comments) ? post.comments : [];
+  const allComments = Array.isArray(localComments) ? localComments : [];
   const visibleComments = allComments.filter((c) => !(c && c.deleted === true));
 
   const myId = session?.user?.id ? String(session.user.id) : '';
@@ -70,6 +90,10 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     } catch {
       return '';
     }
+  };
+
+  const getCommentHeadline = (c) => {
+    return c?.headline || c?.authorHeadline || null;
   };
 
   const logProfileView = async (targetUserId, source) => {
@@ -151,38 +175,29 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
         ? Math.max(0, currentLikes - 1)
         : currentLikes + 1;
 
-      if (Array.isArray(post.comments)) {
-        const nextComments = post.comments.map((c) => {
+      setLocalComments((prev) =>
+        prev.map((c, idx) => {
           if (!c) return c;
+
           if (commentId && String(c.id || '') === String(commentId)) {
             return { ...c, likes: nextLikes, hasLiked: !hasLiked };
           }
-          return c;
-        });
 
-        if (!commentId) {
-          const actualIndex = (() => {
+          if (!commentId) {
             let seen = -1;
-            for (let i = 0; i < post.comments.length; i++) {
-              const x = post.comments[i];
+            for (let i = 0; i < prev.length; i++) {
+              const x = prev[i];
               if (x && x.deleted === true) continue;
               seen += 1;
-              if (seen === visibleIndex) return i;
+              if (seen === visibleIndex && idx === i) {
+                return { ...c, likes: nextLikes, hasLiked: !hasLiked };
+              }
             }
-            return -1;
-          })();
-
-          if (actualIndex >= 0) {
-            nextComments[actualIndex] = {
-              ...(nextComments[actualIndex] || {}),
-              likes: nextLikes,
-              hasLiked: !hasLiked,
-            };
           }
-        }
 
-        post.comments = nextComments;
-      }
+          return c;
+        })
+      );
     } catch {}
 
     try {
@@ -204,27 +219,27 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
       const data = await res.json().catch(() => ({}));
       const updated = data?.comment || null;
 
-      if (updated && Array.isArray(post.comments)) {
-        const nextComments = post.comments.map((c) => {
-          if (!c) return c;
-          if (commentId && String(c.id || '') === String(commentId)) {
-            return {
-              ...c,
-              likes:
-                typeof updated.likes === 'number'
-                  ? updated.likes
-                  : Number(c?.likes) || 0,
-              hasLiked:
-                typeof updated.hasLiked === 'boolean'
-                  ? updated.hasLiked
-                  : Boolean(c?.hasLiked),
-              id: updated.id ?? c.id,
-            };
-          }
-          return c;
-        });
-
-        post.comments = nextComments;
+      if (updated) {
+        setLocalComments((prev) =>
+          prev.map((c) => {
+            if (!c) return c;
+            if (commentId && String(c.id || '') === String(commentId)) {
+              return {
+                ...c,
+                likes:
+                  typeof updated.likes === 'number'
+                    ? updated.likes
+                    : Number(c?.likes) || 0,
+                hasLiked:
+                  typeof updated.hasLiked === 'boolean'
+                    ? updated.hasLiked
+                    : Boolean(c?.hasLiked),
+                id: updated.id ?? c.id,
+              };
+            }
+            return c;
+          })
+        );
       }
     } catch {
     } finally {
@@ -250,36 +265,31 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     let prior = null;
 
     try {
-      if (Array.isArray(post.comments)) {
-        const next = post.comments.map((c) => {
+      setLocalComments((prev) =>
+        prev.map((c, idx) => {
           if (!c) return c;
+
           if (commentId && String(c.id || '') === String(commentId)) {
             prior = c;
             return { ...c, deleted: true };
           }
-          return c;
-        });
 
-        if (!commentId) {
-          const actualIndex = (() => {
+          if (!commentId) {
             let seen = -1;
-            for (let i = 0; i < post.comments.length; i++) {
-              const x = post.comments[i];
+            for (let i = 0; i < prev.length; i++) {
+              const x = prev[i];
               if (x && x.deleted === true) continue;
               seen += 1;
-              if (seen === visibleIndex) return i;
+              if (seen === visibleIndex && idx === i) {
+                prior = c;
+                return { ...c, deleted: true };
+              }
             }
-            return -1;
-          })();
-
-          if (actualIndex >= 0) {
-            prior = post.comments[actualIndex] || null;
-            next[actualIndex] = { ...(next[actualIndex] || {}), deleted: true };
           }
-        }
 
-        post.comments = next;
-      }
+          return c;
+        })
+      );
     } catch {}
 
     try {
@@ -294,33 +304,33 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
       });
 
       if (!res.ok) {
-        try {
-          if (prior && Array.isArray(post.comments)) {
-            post.comments = post.comments.map((c) => {
+        if (prior) {
+          setLocalComments((prev) =>
+            prev.map((c) => {
               if (!c) return c;
               if (commentId && String(c.id || '') === String(commentId)) {
                 return prior;
               }
               return c;
-            });
-          }
-        } catch {}
+            })
+          );
+        }
 
         const msg = await res.json().catch(() => ({}));
         alert(msg?.error || 'Delete failed. The comment was restored.');
       }
     } catch {
-      try {
-        if (prior && Array.isArray(post.comments)) {
-          post.comments = post.comments.map((c) => {
+      if (prior) {
+        setLocalComments((prev) =>
+          prev.map((c) => {
             if (!c) return c;
             if (commentId && String(c.id || '') === String(commentId)) {
               return prior;
             }
             return c;
-          });
-        }
-      } catch {}
+          })
+        );
+      }
 
       alert('Delete failed (network/server). The comment was restored.');
     } finally {
@@ -391,20 +401,20 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
               )}
 
               <div className="min-w-0">
-  <div className="truncate text-[15px] font-bold text-gray-950">
-    {post.author}
-  </div>
+                <div className="truncate text-[15px] font-bold text-gray-950">
+                  {post.author}
+                </div>
 
-  {post.authorHeadline && (
-    <div className="text-xs text-gray-500">
-      {post.authorHeadline}
-    </div>
-  )}
+                {post.authorHeadline && (
+                  <div className="text-xs text-gray-500">
+                    {post.authorHeadline}
+                  </div>
+                )}
 
-  <div className="mt-0.5 text-xs text-gray-500">
-    {createdAtLabel} • {post.type === 'personal' ? 'Personal' : 'Business'}
-  </div>
-</div>
+                <div className="mt-0.5 text-xs text-gray-500">
+                  {createdAtLabel} • {post.type === 'personal' ? 'Personal' : 'Business'}
+                </div>
+              </div>
             </header>
 
             <div className="mt-4 max-h-[22vh] overflow-y-auto pr-1 text-[15px] leading-7 text-gray-800 sm:max-h-[26vh]">
@@ -472,8 +482,8 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
           <section className="flex min-h-0 flex-1 flex-col bg-gradient-to-b from-white to-gray-50/80">
             <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3 sm:px-7">
               <div className="text-[15px] font-bold text-gray-950">
-  Comments
-</div>
+                Comments
+              </div>
 
               <div className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm">
                 {visibleComments.length}{' '}
@@ -510,6 +520,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
                     const menuKey = `${post.id}:${c?.id ?? i}`;
                     const menuOpen = commentMenuKey === menuKey;
+                    const commentHeadline = getCommentHeadline(c);
 
                     return (
                       <article
@@ -593,22 +604,22 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-  <div className="text-sm font-bold text-gray-950">
-    {c.by}
-  </div>
+                              <div className="text-sm font-bold text-gray-950">
+                                {c.by}
+                              </div>
 
-  {c.headline && (
-    <div className="w-full text-xs text-gray-500">
-      {c.headline}
-    </div>
-  )}
+                              {commentHeadline && (
+                                <div className="w-full text-xs text-gray-500">
+                                  {commentHeadline}
+                                </div>
+                              )}
 
-  {c.at && (
-    <div className="text-xs text-gray-400">
-      {new Date(c.at).toLocaleString()}
-    </div>
-  )}
-</div>
+                              {c.at && (
+                                <div className="text-xs text-gray-400">
+                                  {new Date(c.at).toLocaleString()}
+                                </div>
+                              )}
+                            </div>
 
                             <div className="mt-2 whitespace-pre-wrap break-words text-[15px] leading-7 text-gray-800">
                               {c.text}
