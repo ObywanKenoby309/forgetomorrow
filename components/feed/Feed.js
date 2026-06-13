@@ -259,6 +259,7 @@ export default function Feed() {
 
     const newComment = {
   userId: currentUserId || null,
+  authorId: currentUserId || null,
   byUserId: currentUserId || null,
   by: currentUserName || 'You',
   text: trimmed,
