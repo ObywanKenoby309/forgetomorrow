@@ -157,7 +157,7 @@ export async function getServerSideProps(context) {
       bannerMode: true, bannerHeight: true, bannerFocalY: true,
       wallpaperUrl: true, corporateBannerKey: true, corporateBannerLocked: true,
       isProfilePublic: true, profileVisibility: true, role: true, email: true,
-      workPreferences: true, socialLinks: true,
+      workPreferences: true,
       resumes: {
         where: { isPrimary: true }, orderBy: { updatedAt: 'desc' }, take: 1,
         select: { id: true, name: true, updatedAt: true },
@@ -237,7 +237,6 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
     bannerMode: serverBannerMode, bannerHeight: serverBannerH, bannerFocalY: serverFocalY,
     corporateBannerKey, corporateBannerLocked,
     workPreferences: serverWorkPrefs,
-    socialLinks: serverSocialLinks,
     profileVisibility: serverProfileVisibility,
     customSectionJson: serverCustomSectionJson,
   } = user;
@@ -263,16 +262,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   const [certifications,  setCertifications]  = useState(Array.isArray(user.certificationsJson) ? user.certificationsJson : []);
   const [projects,        setProjects]        = useState(Array.isArray(user.projectsJson) ? user.projectsJson : []);
   const [customSection, setCustomSection]      = useState(Array.isArray(serverCustomSectionJson) ? serverCustomSectionJson : []);
-  const [socialLinks,     setSocialLinks]     = useState(
-    serverSocialLinks && typeof serverSocialLinks === 'object'
-      ? {
-          github: serverSocialLinks.github || '',
-          x: serverSocialLinks.x || '',
-          youtube: serverSocialLinks.youtube || '',
-          instagram: serverSocialLinks.instagram || '',
-        }
-      : { github: '', x: '', youtube: '', instagram: '' }
-  );
+  const [socialLinks,     setSocialLinks]     = useState({ github: '', x: '', youtube: '', instagram: '' });
   const [avatarUploading, setAvatarUploading] = useState(false);
   const updateSocial = (key, val) => setSocialLinks(p => ({ ...p, [key]: val }));
 
@@ -1445,12 +1435,13 @@ flushPendingSaveRef.current = flushPendingSave;
                     {/* Mobile signals strip */}
                     {signals.length > 0 && (
                       <div className="ft-mobile-signals">
-                        {signals.slice(0, 4).map(sig => {
+                        {signals.map(sig => {
                           const sc = sig.type === 'status' ? (STATUS_COLOR[sig.label] || STATUS_COLOR['Not Looking']) : null;
                           return (
                             <span key={sig.key} className="ft-mobile-signal-chip"
                               style={sc ? { background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color } : {}}>
                               {sig.type === 'status' && sc && <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc.dot, display: 'inline-block', flexShrink: 0 }} />}
+                              {sig.type !== 'status' && sig.icon && <span style={{ fontSize: 10 }}>{sig.icon}</span>}
                               {sig.label}
                             </span>
                           );
@@ -1538,7 +1529,7 @@ flushPendingSaveRef.current = flushPendingSave;
 
                       {/* More */}
                       <div className={`ft-mobile-panel${mobileTab === 'more' ? ' active' : ''}`}>
-                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Languages & Interests</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('more')}>✎ Edit</button></div>}
+                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Languages, Interests & Appearance</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('more')}>✎ Edit</button></div>}
                         {languages.length > 0 && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Languages</div><div className="ft-chips">{languages.map(l => <span key={l} className="ft-chip">{l}</span>)}</div></div>}
                         {hobbies.length > 0 && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Interests</div><div className="ft-chips">{hobbies.map(h => <span key={h} className="ft-chip">{h}</span>)}</div></div>}
                         {languages.length === 0 && hobbies.length === 0 && <div className="ft-mobile-card"><div className="ft-mobile-card-label">More</div><div className="ft-mobile-card-text">No additional details added yet.</div></div>}
@@ -1546,20 +1537,12 @@ flushPendingSaveRef.current = flushPendingSave;
 
                       {/* Connect */}
                       <div className={`ft-mobile-panel${mobileTab === 'connect' ? ' active' : ''}`}>
-                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Connect</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('connect')}>✎ Edit</button></div>}
                         <button type="button" className="ft-mobile-contact-row" onClick={handleCopyProfileUrl}>
                           <div className="ft-mobile-contact-icon" style={{ background:'rgba(232,96,28,0.14)', color:'#e8601c' }}>⎘</div>
                           <div style={{ minWidth:0 }}><div className="ft-mobile-contact-label">Portfolio</div><div className="ft-mobile-contact-value">{profileUrl.replace('https://', '')}</div></div>
                           <div className="ft-mobile-contact-arrow">{copied ? '✓' : '›'}</div>
                         </button>
                         {location && <div className="ft-mobile-contact-row"><div className="ft-mobile-contact-icon" style={{ background:'rgba(59,130,246,0.14)', color:'#60a5fa' }}>⌖</div><div style={{ minWidth:0 }}><div className="ft-mobile-contact-label">Location</div><div className="ft-mobile-contact-value">{location}</div></div><div className="ft-mobile-contact-arrow">›</div></div>}
-                        {SOCIAL_FIELDS.map(f => socialLinks[f.key] ? (
-                          <a key={f.key} className="ft-mobile-contact-row" href={socialLinks[f.key].startsWith('http') ? socialLinks[f.key] : `https://${socialLinks[f.key]}`} target="_blank" rel="noopener noreferrer">
-                            <div className="ft-mobile-contact-icon" style={{ background:'rgba(255,112,67,0.12)', color:'#FF7043' }}>{f.icon}</div>
-                            <div style={{ minWidth:0 }}><div className="ft-mobile-contact-label">{f.label}</div><div className="ft-mobile-contact-value">{socialLinks[f.key].replace(/^https?:\/\//, '')}</div></div>
-                            <div className="ft-mobile-contact-arrow">›</div>
-                          </a>
-                        ) : null)}
                         {primaryResume && <a className="ft-mobile-contact-row" href={`/api/resume/public-download?resumeId=${encodeURIComponent(primaryResume.id)}&slug=${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer"><div className="ft-mobile-contact-icon" style={{ background:'rgba(34,197,94,0.14)', color:'#4ade80' }}>↓</div><div style={{ minWidth:0 }}><div className="ft-mobile-contact-label">Resume</div><div className="ft-mobile-contact-value">Download primary resume</div></div><div className="ft-mobile-contact-arrow">›</div></a>}
                       </div>
 
@@ -1650,9 +1633,29 @@ flushPendingSaveRef.current = flushPendingSave;
               )}
 
               {mobileSheet === 'about' && (
-                <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">Professional Summary</div></div>
-                <div className="ft-sheet-body"><textarea className="ft-dark-textarea" value={aboutMe} onChange={e => setAboutMe(e.target.value)} placeholder="Tell your professional story…" rows={8} style={{ width:'100%' }} /></div>
-                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
+                <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">About</div><div style={{ fontSize:12, color:'var(--forge-muted)', marginTop:4 }}>Update the profile details people see first.</div></div>
+                <div className="ft-sheet-body">
+                  <div style={{ display:'grid', gap:14 }}>
+                    <div className="ft-dark-field">
+                      <label className="ft-dark-label">Account Name</label>
+                      <div className="ft-dark-input" style={{ color:'rgba(255,255,255,0.62)', background:'rgba(255,255,255,0.04)' }}>{fullName}</div>
+                      <div style={{ fontSize:11, color:'rgba(255,255,255,0.42)', lineHeight:1.5 }}>Need a legal/account name change? Contact the Support Desk.</div>
+                    </div>
+                    <div className="ft-dark-field">
+                      <label className="ft-dark-label">Pronouns</label>
+                      <input className="ft-dark-input" value={pronouns} onChange={e => setPronouns(e.target.value)} placeholder="e.g. he/him, she/her, they/them" />
+                    </div>
+                    <div className="ft-dark-field">
+                      <label className="ft-dark-label">Headline</label>
+                      <input className="ft-dark-input" value={headline} onChange={e => setHeadline(e.target.value)} placeholder="Your professional headline" maxLength={160} />
+                    </div>
+                    <div className="ft-dark-field">
+                      <label className="ft-dark-label">Professional Summary</label>
+                      <textarea className="ft-dark-textarea" value={aboutMe} onChange={e => setAboutMe(e.target.value)} placeholder="Tell your professional story…" rows={8} style={{ width:'100%' }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={async () => { await flushPendingSaveRef.current(true); setMobileSheet(null); }}>Done</button></div></>
               )}
 
               {mobileSheet === 'skills' && (
@@ -1705,20 +1708,74 @@ flushPendingSaveRef.current = flushPendingSave;
               )}
 
               {mobileSheet === 'more' && (
-                <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">Languages & Interests</div></div>
+                <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">More & Appearance</div><div style={{ fontSize:12, color:'var(--forge-muted)', marginTop:4 }}>Manage languages, interests, photo, banner, and background.</div></div>
                 <div className="ft-sheet-body">
                   <div className="ft-dark-section-label" style={{ marginBottom:10 }}>Languages</div>
                   <div className="ft-chip-input-row" style={{ marginBottom:4 }}><input className="ft-dark-input" value={langInput} onChange={e => setLangInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && langInput.trim()) { setLanguages(p => [...p, langInput.trim()]); setLangInput(''); e.preventDefault(); }}} placeholder="Add a language…" /><button type="button" className="ft-add-btn" onClick={() => { if (langInput.trim()) { setLanguages(p => [...p, langInput.trim()]); setLangInput(''); }}}>+ Add</button></div>
                   <div className="ft-dark-chips" style={{ marginBottom:20 }}>{languages.map((l,i) => <span key={l+i} className="ft-dark-chip">{l}<button type="button" className="ft-dark-chip-x" onClick={() => setLanguages(p => p.filter((_,idx) => idx !== i))}>×</button></span>)}</div>
+
                   <div className="ft-dark-section-label" style={{ marginBottom:10 }}>Interests</div>
                   <div className="ft-chip-input-row" style={{ marginBottom:4 }}><input className="ft-dark-input" value={hobbyInput} onChange={e => setHobbyInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && hobbyInput.trim()) { setHobbies(p => [...p, hobbyInput.trim()]); setHobbyInput(''); e.preventDefault(); }}} placeholder="Add an interest…" /><button type="button" className="ft-add-btn" onClick={() => { if (hobbyInput.trim()) { setHobbies(p => [...p, hobbyInput.trim()]); setHobbyInput(''); }}}>+ Add</button></div>
-                  <div className="ft-dark-chips">{hobbies.map((h,i) => <span key={h+i} className="ft-dark-chip">{h}<button type="button" className="ft-dark-chip-x" onClick={() => setHobbies(p => p.filter((_,idx) => idx !== i))}>×</button></span>)}</div>
+                  <div className="ft-dark-chips" style={{ marginBottom:22 }}>{hobbies.map((h,i) => <span key={h+i} className="ft-dark-chip">{h}<button type="button" className="ft-dark-chip-x" onClick={() => setHobbies(p => p.filter((_,idx) => idx !== i))}>×</button></span>)}</div>
+
+                  <div className="ft-dark-section-label" style={{ marginBottom:10 }}>Profile Photo</div>
+                  <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap', marginBottom:22 }}>
+                    <button type="button" onClick={() => fileInputRef.current?.click()} style={{ width:52, height:52, borderRadius:'50%', border:'2px dashed rgba(255,112,67,0.55)', background:'rgba(255,112,67,0.08)', color:ORANGE, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+                      <span style={{ fontSize:16, lineHeight:1 }}>{avatarUploading ? '◌' : '↑'}</span><span style={{ fontSize:8, fontWeight:800 }}>Upload</span>
+                    </button>
+                    {PRESET_AVATARS.map(opt => (
+                      <button key={opt.url} type="button" onClick={() => setAvatarUrl(opt.url)} style={{ width:52, height:52, borderRadius:'50%', padding:2, border:`2px solid ${avatarUrl === opt.url ? ORANGE : 'transparent'}`, background:'transparent', cursor:'pointer', flexShrink:0 }}>
+                        <img src={opt.url} alt={opt.label} style={{ width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover', display:'block' }} />
+                      </button>
+                    ))}
+                    {avatarUrl && (
+                      <button type="button" onClick={handleAvatarRemove} style={{ width:52, height:52, borderRadius:'50%', border:'2px solid rgba(211,47,47,0.35)', background:'rgba(211,47,47,0.08)', color:'#EF9A9A', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+                        <span style={{ fontSize:16, lineHeight:1 }}>×</span><span style={{ fontSize:8, fontWeight:800 }}>Remove</span>
+                      </button>
+                    )}
+                    <input ref={fileInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleAvatarFileChange} />
+                  </div>
+
+                  <div className="ft-dark-section-label" style={{ marginBottom:10 }}>Banner</div>
+                  <div className="ft-asset-rail" style={{ marginBottom:12 }}>
+                    <button type="button" className={`ft-asset-none${!coverUrl ? ' selected' : ''}`} onClick={() => setCoverUrl('')}>None</button>
+                    {profileBanners.map(b => (
+                      <button key={b.key} type="button" className={`ft-asset-chip${coverUrl === b.src ? ' selected' : ''}`} onClick={() => setCoverUrl(b.src)}>
+                        <img src={b.src} alt={b.name} />
+                      </button>
+                    ))}
+                  </div>
+                  {coverUrl && (
+                    <div style={{ display:'grid', gap:10, marginBottom:22 }}>
+                      <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                        <span style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.60)' }}>Mode</span>
+                        {['cover','fit'].map(m => (
+                          <button key={m} type="button" onClick={() => setBannerMode(m)}
+                            style={{ padding:'4px 12px', borderRadius:999, fontFamily:'inherit', border:`1px solid ${bannerMode === m ? ORANGE : 'rgba(255,255,255,0.20)'}`, background: bannerMode === m ? 'rgba(255,112,67,0.18)' : 'rgba(255,255,255,0.08)', color: bannerMode === m ? ORANGE : 'rgba(255,255,255,0.60)', fontSize:12, fontWeight:700, cursor:'pointer', textTransform:'capitalize' }}>
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="ft-slider-row"><div className="ft-slider-label">Height — {bannerH}px</div><input type="range" min={80} max={400} value={bannerH} className="ft-slider" onChange={e => setBannerH(Number(e.target.value))} /></div>
+                      {bannerMode === 'cover' && <div className="ft-slider-row"><div className="ft-slider-label">Vertical focus — {focalY}%</div><input type="range" min={0} max={100} value={focalY} className="ft-slider" onChange={e => setFocalY(Number(e.target.value))} /></div>}
+                    </div>
+                  )}
+
+                  <div className="ft-dark-section-label" style={{ marginBottom:10 }}>Background</div>
+                  <div className="ft-asset-rail">
+                    <button type="button" className={`ft-asset-none${!wallpaperUrl ? ' selected' : ''}`} onClick={() => setWallpaperUrl('')}>Default</button>
+                    {profileWallpapers.map(w => (
+                      <button key={w.key} type="button" className={`ft-asset-chip${wallpaperUrl === w.src ? ' selected' : ''}`} onClick={() => setWallpaperUrl(w.src)}>
+                        <img src={w.src} alt={w.name} />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={async () => { await flushPendingSaveRef.current(true); setMobileSheet(null); }}>Done</button></div></>
               )}
 
               {mobileSheet === 'connect' && (
-                <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">Edit Connect</div><div style={{ fontSize:12, color:'var(--forge-muted)', marginTop:4 }}>Update the contact links shown on your portfolio.</div></div>
+                <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">Edit Connect</div><div style={{ fontSize:12, color:'var(--forge-muted)', marginTop:4 }}>Update contact links and your primary resume.</div></div>
                 <div className="ft-sheet-body">
                   <div style={{ display:'grid', gap:14 }}>
                     <div className="ft-dark-field">
@@ -1740,7 +1797,7 @@ flushPendingSaveRef.current = flushPendingSave;
                       </select>
                     </div>
                     <button type="button" className="ft-add-btn" style={{ width:'100%', padding:'12px 14px' }} onClick={openResumeModal}>
-                      Select Primary Resume
+                      {primaryResume ? `Primary Resume: ${primaryResume.name || 'Selected Resume'}` : 'Select Primary Resume'}
                     </button>
                     <button type="button" className="ft-add-btn" style={{ width:'100%', padding:'12px 14px', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.78)' }} onClick={handleCopyProfileUrl}>
                       {copied ? 'Copied Profile Link' : 'Copy Profile Link'}
