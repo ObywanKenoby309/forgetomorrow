@@ -57,8 +57,25 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    const user = session.user;
-    const viewerId = user.id; // ✅ commenter id
+    const user = await prisma.user.findUnique({
+  where: { id: session.user.id },
+  select: {
+    id: true,
+    email: true,
+    name: true,
+    firstName: true,
+    lastName: true,
+    avatarUrl: true,
+    image: true,
+    headline: true,
+  },
+});
+
+if (!user) {
+  return res.status(404).json({ error: 'User not found' });
+}
+
+const viewerId = user.id;
 
     const displayName =
       user.name ||

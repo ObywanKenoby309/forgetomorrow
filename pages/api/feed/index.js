@@ -42,14 +42,31 @@ export default async function handler(req, res) {
         },
       });
 
-      // Fetch author avatars + slug from users table
-      const authorIds = [...new Set(posts.map((p) => p.authorId).filter(Boolean))];
-      const authors = authorIds.length
-        ? await prisma.user.findMany({
-            where: { id: { in: authorIds } },
-            select: { id: true, slug: true, avatarUrl: true, image: true, headline: true },
-          })
-        : [];
+      // Fetch post authors + comment authors
+const authorIds = new Set();
+
+posts.forEach((p) => {
+  if (p.authorId) authorIds.add(p.authorId);
+
+  if (Array.isArray(p.comments)) {
+    p.comments.forEach((c) => {
+      if (c?.authorId) authorIds.add(c.authorId);
+    });
+  }
+});
+
+const authors = authorIds.size
+  ? await prisma.user.findMany({
+      where: { id: { in: [...authorIds] } },
+      select: {
+        id: true,
+        slug: true,
+        avatarUrl: true,
+        image: true,
+        headline: true,
+      },
+    })
+  : [];
 
       const authorMap = Object.fromEntries(
         authors.map((u) => [
@@ -63,15 +80,34 @@ export default async function handler(req, res) {
       );
 
       const postsWithAvatars = posts.map((p) => ({
-        ...p,
-        authorSlug: authorMap[p.authorId]?.authorSlug || null,
-        authorAvatar: authorMap[p.authorId]?.authorAvatar || null,
-		authorHeadline: authorMap[p.authorId]?.authorHeadline || null,
-        hearthRecommendationCount: p._count?.hearthRecommendations || 0,
-        currentUserRecommendedHearth: Array.isArray(p.hearthRecommendations) && p.hearthRecommendations.length > 0,
-        hearthThreadId: Array.isArray(p.hearthThreads) && p.hearthThreads.length > 0 ? p.hearthThreads[0].id : null,
-        hearthThreadTitle: Array.isArray(p.hearthThreads) && p.hearthThreads.length > 0 ? p.hearthThreads[0].title : null,
-      }));
+  ...p,
+  authorSlug: authorMap[p.authorId]?.authorSlug || null,
+  authorAvatar: authorMap[p.authorId]?.authorAvatar || null,
+  authorHeadline: authorMap[p.authorId]?.authorHeadline || null,
+
+  comments: Array.isArray(p.comments)
+    ? p.comments.map((c) => ({
+        ...c,
+        headline:
+          c.headline ||
+          authorMap[c.authorId]?.authorHeadline ||
+          null,
+      }))
+    : [],
+
+  hearthRecommendationCount: p._count?.hearthRecommendations || 0,
+  currentUserRecommendedHearth:
+    Array.isArray(p.hearthRecommendations) &&
+    p.hearthRecommendations.length > 0,
+  hearthThreadId:
+    Array.isArray(p.hearthThreads) && p.hearthThreads.length > 0
+      ? p.hearthThreads[0].id
+      : null,
+  hearthThreadTitle:
+    Array.isArray(p.hearthThreads) && p.hearthThreads.length > 0
+      ? p.hearthThreads[0].title
+      : null,
+}));
 
       return res.status(200).json({ posts: postsWithAvatars });
     } catch (err) {

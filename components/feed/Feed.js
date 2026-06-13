@@ -251,11 +251,17 @@ export default function Feed() {
         return;
       }
 
-      await logPostInteraction(postId, 'comment');
-    } catch (err) {
-      console.error('Comment error:', err);
-      return;
-    }
+      const data = await res.json().catch(() => ({}));
+const updatedPost = data?.post ? normalizeCommunityPost(data.post) : null;
+
+await logPostInteraction(postId, 'comment');
+
+if (updatedPost) {
+  setPosts((prev) =>
+    prev.map((p) => (p.id === postId ? updatedPost : p))
+  );
+  return;
+}
 
     const newComment = {
   userId: currentUserId || null,
