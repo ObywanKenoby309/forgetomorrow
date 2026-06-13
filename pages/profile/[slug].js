@@ -362,9 +362,8 @@ const [profileVisibility,        setProfileVisibility]        = useState(
     setMobileSkillsReady(false);
   }, [mobileTab]);
 
-  // Profile Signal Engine drawer slides closed whenever the user changes tabs
-  // or leaves edit mode — it re-opens via the floating toggle when wanted.
-  useEffect(() => { setShowSignalDrawer(false); }, [mobileTab]);
+  // Profile Signals drawer persists across tab switches while editing —
+  // pull it in/out as needed. It only auto-closes when edit mode ends.
   useEffect(() => { if (!editMode) setShowSignalDrawer(false); }, [editMode]);
 
   async function handleCopyProfileUrl() {
@@ -991,7 +990,7 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-sheet-save-row { padding:12px 20px; border-top:1px solid rgba(255,255,255,0.08); flex-shrink:0; }
           .ft-sheet-save-btn { width:100%; padding:14px; border-radius:12px; background:${ORANGE}; border:none; color:white; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; box-shadow:0 4px 14px rgba(255,112,67,0.40); }
           .ft-mobile-only  { display:none; }
-          .ft-signal-fab, .ft-signal-drawer, .ft-signal-drawer-backdrop { display:none; }
+          .ft-signal-tab, .ft-signal-drawer, .ft-signal-drawer-backdrop { display:none; }
           .ft-desktop-only { display:block; }
           .ft-mobile-shell { min-height:100vh; display:flex; flex-direction:column; background:rgba(10,9,8,0.34); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
           .ft-mobile-profile { flex:1; display:flex; flex-direction:column; background:rgba(14,13,12,0.58); border:1px solid rgba(255,255,255,0.07); border-radius:20px; overflow:hidden; box-shadow:0 18px 40px rgba(0,0,0,0.32); }
@@ -1050,39 +1049,50 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-mobile-edit-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
           .ft-mobile-edit-btn { padding:6px 14px; border-radius:999px; background:rgba(255,112,67,0.14); border:1px solid rgba(255,112,67,0.35); color:${ORANGE}; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; }
 
-          /* ─── Mobile Profile Signal Engine — floating toggle + slide-up drawer ─── */
-          .ft-signal-fab {
-            position: fixed; right: 16px; bottom: 16px; z-index: 220;
-            display: inline-flex; align-items: center; gap: 7px;
-            padding: 11px 18px; border-radius: 999px; border: none;
+          /* ─── Mobile Profile Signal Engine — edge pull-tab + side drawer ─── */
+          /* Docked to the right edge, vertically centered, sitting above the   */
+          /* bottom edit toolbar/save bar so both remain usable at once.        */
+          .ft-signal-tab {
+            position: fixed; right: 0; top: 50%; transform: translateY(-50%);
+            z-index: 220;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 12px 6px; border-radius: 12px 0 0 12px; border: none;
             background: linear-gradient(135deg, ${ORANGE}, #FF8A65);
-            color: #fff; font-family: inherit; font-size: 12px; font-weight: 800;
-            letter-spacing: 0.02em; cursor: pointer;
-            box-shadow: 0 10px 26px rgba(255,112,67,0.45);
-            transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+            color: #fff; font-family: inherit; font-size: 10px; font-weight: 800;
+            letter-spacing: 0.04em; cursor: pointer; writing-mode: vertical-rl;
+            text-orientation: mixed;
+            box-shadow: -6px 0 20px rgba(255,112,67,0.40);
+            transition: right 0.3s cubic-bezier(0.32,0.72,0,1), background 0.15s, color 0.15s, border-color 0.15s;
           }
-          .ft-signal-fab:active { transform: scale(0.96); }
-          .ft-signal-fab.open { background: rgba(13,27,42,0.92); color: ${ORANGE}; border: 1px solid rgba(255,112,67,0.45); box-shadow: 0 10px 26px rgba(0,0,0,0.35); }
+          .ft-signal-tab.open {
+            right: min(85vw, 360px);
+            background: rgba(13,27,42,0.94); color: ${ORANGE};
+            border: 1px solid rgba(255,112,67,0.45); border-right: none;
+            box-shadow: -6px 0 20px rgba(0,0,0,0.35);
+          }
+          .ft-signal-tab .ft-signal-tab-arrow { writing-mode: horizontal-tb; font-size: 13px; }
           .ft-signal-drawer-backdrop {
             position: fixed; inset: 0; z-index: 218;
-            background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            background: rgba(0,0,0,0.45); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
           }
           .ft-signal-drawer-backdrop.open { opacity: 1; pointer-events: all; }
           .ft-signal-drawer {
-            position: fixed; left: 0; right: 0; bottom: 0; z-index: 219;
-            background: rgba(10,18,30,0.98); border-top: 1px solid rgba(255,255,255,0.12);
-            border-radius: 20px 20px 0 0; box-shadow: 0 -12px 40px rgba(0,0,0,0.45);
-            max-height: 72vh; display: flex; flex-direction: column;
-            padding-bottom: env(safe-area-inset-bottom, 16px);
-            transform: translateY(100%);
+            position: fixed; top: 0; right: 0; bottom: 0; z-index: 219;
+            width: min(85vw, 360px); max-width: 100vw;
+            background: rgba(10,18,30,0.98); border-left: 1px solid rgba(255,255,255,0.12);
+            box-shadow: -12px 0 40px rgba(0,0,0,0.45);
+            display: flex; flex-direction: column;
+            padding-top: env(safe-area-inset-top, 14px);
+            padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 64px); /* clear bottom edit toolbar */
+            transform: translateX(100%);
             transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
           }
-          .ft-signal-drawer.open { transform: translateY(0); }
-          .ft-signal-drawer-handle-row { display:flex; align-items:center; justify-content:space-between; padding:14px 20px 10px; flex-shrink:0; }
-          .ft-signal-drawer-handle { width:36px; height:4px; border-radius:2px; background:rgba(255,255,255,0.20); margin:0 auto; }
+          .ft-signal-drawer.open { transform: translateX(0); }
+          .ft-signal-drawer-handle-row { display:flex; align-items:center; justify-content:space-between; padding:14px 16px 10px; flex-shrink:0; }
+          .ft-signal-drawer-title { font-size:13px; font-weight:800; color:var(--white); letter-spacing:0.04em; }
           .ft-signal-drawer-close { background:rgba(255,255,255,0.10); border:none; color:rgba(255,255,255,0.60); width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-family:inherit; }
-          .ft-signal-drawer-body { flex:1; overflow-y:auto; padding:0 20px 24px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+          .ft-signal-drawer-body { flex:1; overflow-y:auto; padding:0 16px 24px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
           .ft-signal-drawer-body::-webkit-scrollbar { display:none; }
 
           @media (max-width:760px) {
@@ -1093,7 +1103,7 @@ flushPendingSaveRef.current = flushPendingSave;
             .ft-mobile-only  { display:block; }
             .ft-footer { display:none; }
 
-            .ft-signal-fab { display:inline-flex; }
+            .ft-signal-tab { display:flex; }
             .ft-signal-drawer { display:flex; }
             .ft-signal-drawer-backdrop { display:block; }
 
@@ -1646,17 +1656,19 @@ flushPendingSaveRef.current = flushPendingSave;
           </div>
         </div>
 
-        {/* ══ MOBILE PROFILE SIGNAL ENGINE — floating toggle + slide-up drawer ══ */}
-        {/* Persists across tabs while editing; reuses the same liveProfileData / */}
-        {/* handleApplyField used by the desktop right rail — no duplicated logic. */}
+        {/* ══ MOBILE PROFILE SIGNAL ENGINE — right-edge pull tab + side drawer ══ */}
+        {/* Persists across tabs while editing (does not auto-close on tab switch); */}
+        {/* docked above the bottom edit toolbar. Reuses liveProfileData /          */}
+        {/* handleApplyField from the desktop right rail — no duplicated logic.     */}
         {isOwner && editMode && (
           <button
             type="button"
-            className={`ft-signal-fab${showSignalDrawer ? ' open' : ''}`}
+            className={`ft-signal-tab${showSignalDrawer ? ' open' : ''}`}
             onClick={() => { setSignalDrawerMounted(true); setShowSignalDrawer(v => !v); }}
+            aria-label="Toggle Profile Signals panel"
           >
-            <span style={{ fontSize: 13 }}>✨</span>
-            {showSignalDrawer ? 'Hide Signals' : 'Profile Signals'}
+            <span className="ft-signal-tab-arrow">{showSignalDrawer ? '›' : '‹'}</span>
+            <span>✨ Signals</span>
           </button>
         )}
 
@@ -1667,8 +1679,7 @@ flushPendingSaveRef.current = flushPendingSave;
         {isOwner && editMode && signalDrawerMounted && (
           <div className={`ft-signal-drawer${showSignalDrawer ? ' open' : ''}`}>
             <div className="ft-signal-drawer-handle-row">
-              <div style={{ width:28 }} />
-              <div className="ft-signal-drawer-handle" />
+              <span className="ft-signal-drawer-title">Profile Signals</span>
               <button type="button" className="ft-signal-drawer-close" onClick={() => setShowSignalDrawer(false)}>✕</button>
             </div>
             <div className="ft-signal-drawer-body">
