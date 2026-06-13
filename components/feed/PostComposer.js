@@ -136,14 +136,14 @@ export default function PostComposer({
   };
 
   return (
-    <section className="w-full rounded-[26px] border border-white/60 bg-white/80 backdrop-blur-xl shadow-[0_16px_50px_rgba(15,23,42,0.08)] p-4 sm:p-5">
+    <section className="w-full rounded-[22px] border border-white/35 bg-[linear-gradient(160deg,rgba(255,255,255,0.22),rgba(255,255,255,0.10))] backdrop-blur-[28px] backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_20px_50px_-24px_rgba(50,20,10,0.35)] p-4 sm:p-5">
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[18px] sm:text-[20px] font-bold text-gray-900">
+            <div className="text-[18px] sm:text-[20px] font-extrabold text-[#3a2418]">
               Share a signal
             </div>
-            <div className="mt-1 text-sm text-gray-600">
+            <div className="mt-1 text-sm text-[#8a5d44]">
               Post a win, update, idea, opportunity, or question for the community.
             </div>
           </div>
@@ -152,7 +152,7 @@ export default function PostComposer({
             <button
               type="button"
               onClick={onCancel}
-              className="shrink-0 px-3 py-2 rounded-xl border border-gray-200 bg-white/90 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="shrink-0 px-3 py-2 rounded-xl border border-white/50 bg-white/40 text-sm font-semibold text-[#6b4a3a] hover:bg-white/60 transition"
             >
               Cancel
             </button>
@@ -165,34 +165,34 @@ export default function PostComposer({
               key={prompt}
               type="button"
               onClick={() => addStarterPrompt(prompt)}
-              className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50/80 px-3 py-1.5 text-xs font-semibold text-[#c85b33] hover:bg-orange-100"
+              className="inline-flex items-center rounded-full border border-[rgba(255,112,67,0.28)] bg-[rgba(255,112,67,0.12)] px-3 py-1.5 text-xs font-bold text-[#a8431b] hover:bg-[rgba(255,112,67,0.2)] hover:-translate-y-0.5 transition-all duration-150"
             >
               {prompt}
             </button>
           ))}
         </div>
 
-        <div className="rounded-2xl border border-gray-200/80 bg-white/90 overflow-hidden">
+        <div className="rounded-2xl border border-white/50 bg-white/45 overflow-hidden">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="What’s happening in your career world right now?"
-            className="w-full resize-none border-0 p-4 bg-transparent text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0"
+            className="w-full resize-none border-0 p-4 bg-transparent text-[15px] text-[#3a2418] placeholder:text-[#b48b78] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[rgba(255,112,67,0.4)]"
             rows={5}
           />
 
-          <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-4 py-2.5 bg-white/70">
-            <div className="text-xs text-gray-500">
+          <div className="flex items-center justify-between gap-3 border-t border-white/40 px-4 py-2.5 bg-white/25">
+            <div className="text-xs text-[#a8775f]">
               Keep it useful, clear, and signal-driven.
             </div>
-            <div className="text-xs font-medium text-gray-400">
+            <div className="text-xs font-semibold text-[#c79a86]">
               {text.trim().length} characters
             </div>
           </div>
         </div>
 
         {uploading && (
-          <div className="flex items-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-3 py-2.5 text-sm text-orange-600">
+          <div className="flex items-center gap-2 rounded-2xl border border-[rgba(255,112,67,0.28)] bg-[rgba(255,112,67,0.12)] px-3 py-2.5 text-sm font-semibold text-[#a8431b]">
             <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
@@ -202,7 +202,7 @@ export default function PostComposer({
         )}
 
         {submitError && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-2xl px-3 py-2.5">
+          <div className="text-sm text-[#b91c1c] bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-2xl px-3 py-2.5">
             {submitError}
           </div>
         )}
@@ -212,7 +212,7 @@ export default function PostComposer({
             {attachments.map((a, idx) => (
               <div
                 key={idx}
-                className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white/90 shadow-sm"
+                className="relative overflow-hidden rounded-2xl border border-white/45 bg-white/30"
               >
                 {a.type === 'image' && (
                   <img
@@ -232,34 +232,36 @@ export default function PostComposer({
 
                 {a.type === 'link' && (
                   <div className="p-4 flex flex-col gap-2 min-h-[144px] justify-between">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <div className="text-xs font-bold uppercase tracking-wide text-[#c79a86]">
                       Link
                     </div>
                     <a
                       href={a.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm font-medium text-blue-600 underline break-all"
+                      className="text-sm font-semibold text-[#4f8cff] underline break-all"
                     >
                       {a.url}
                     </a>
-                    <div className="text-xs text-gray-500 truncate">{a.name}</div>
+                    <div className="text-xs text-[#a8775f] truncate">{a.name}</div>
                   </div>
                 )}
 
                 {a.type !== 'link' && (
-                  <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-t border-gray-100 bg-white">
-                    <span className="truncate text-xs font-medium text-gray-600">
+                  <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-t border-white/40 bg-white/25">
+                    <span className="truncate text-xs font-semibold text-[#6b4a3a]">
                       {a.name}
                     </span>
                     <button
                       type="button"
                       onClick={() => removeAttachment(idx)}
-                      className="text-gray-500 hover:text-gray-800"
+                      className="text-[#8a5d44] hover:text-[#3a2418]"
                       aria-label="Remove attachment"
                       title="Remove"
                     >
-                      ✕
+                      <svg className="w-[16px] h-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6 6 18M6 6l12 12" />
+                      </svg>
                     </button>
                   </div>
                 )}
@@ -268,11 +270,13 @@ export default function PostComposer({
                   <button
                     type="button"
                     onClick={() => removeAttachment(idx)}
-                    className="absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:text-gray-800"
+                    className="absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/50 bg-white/60 text-[#8a5d44] hover:text-[#3a2418] hover:bg-white/80 transition"
                     aria-label="Remove attachment"
                     title="Remove"
                   >
-                    ✕
+                    <svg className="w-[14px] h-[14px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 6 6 18M6 6l12 12" />
+                    </svg>
                   </button>
                 )}
               </div>
@@ -281,20 +285,20 @@ export default function PostComposer({
         )}
 
         {showLinkInput && (
-          <div className="rounded-2xl border border-gray-200 bg-white/85 p-3">
+          <div className="rounded-2xl border border-white/45 bg-white/30 p-3">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <input
                 type="url"
                 value={linkValue}
                 onChange={(e) => setLinkValue(e.target.value)}
                 placeholder="Paste a link (https://...)"
-                className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+                className="flex-1 border border-white/50 rounded-xl px-3 py-2.5 bg-white/50 text-[#3a2418] placeholder:text-[#b48b78] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[rgba(255,112,67,0.4)]"
               />
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={addLink}
-                  className="px-3 py-2.5 rounded-xl bg-gray-900 text-white hover:bg-gray-800 text-sm font-semibold"
+                  className="px-3 py-2.5 rounded-xl bg-gradient-to-br from-[#FF7043] to-[#E55A2B] text-white text-sm font-bold shadow-[0_10px_24px_-10px_rgba(255,112,67,0.55)] hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-10px_rgba(255,112,67,0.65)] transition-all duration-150"
                 >
                   Attach
                 </button>
@@ -304,7 +308,7 @@ export default function PostComposer({
                     setShowLinkInput(false);
                     setLinkValue('');
                   }}
-                  className="px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium"
+                  className="px-3 py-2.5 rounded-xl border border-white/50 bg-white/40 hover:bg-white/60 text-sm font-semibold text-[#6b4a3a] transition"
                 >
                   Cancel
                 </button>
@@ -320,7 +324,7 @@ export default function PostComposer({
                 key={emoji}
                 type="button"
                 onClick={() => addEmoji(emoji)}
-                className="px-3 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 bg-white text-lg"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/50 bg-white/40 hover:bg-[rgba(255,112,67,0.15)] hover:border-[rgba(255,112,67,0.3)] hover:-translate-y-1 hover:scale-110 text-lg transition-all duration-150"
                 aria-label={`Insert ${emoji}`}
                 title={emoji}
               >
@@ -331,7 +335,7 @@ export default function PostComposer({
         )}
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2.5 text-sm text-gray-700">
+          <div className="flex flex-wrap items-center gap-2.5 text-sm text-[#6b4a3a]">
             <input
               id="feed-image-input"
               type="file"
@@ -345,11 +349,15 @@ export default function PostComposer({
             />
             <label
               htmlFor="feed-image-input"
-              className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer font-medium ${
+              className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-full border border-white/50 bg-white/40 hover:bg-white/60 hover:-translate-y-0.5 cursor-pointer font-bold transition-all duration-150 ${
                 uploading ? 'opacity-50 pointer-events-none' : ''
               }`}
             >
-              <span role="img" aria-label="photo">📷</span>
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="9" cy="9" r="2" />
+                <path d="m21 15-3.5-3.5L9 18" />
+              </svg>
               Photo
             </label>
 
@@ -366,42 +374,51 @@ export default function PostComposer({
             />
             <label
               htmlFor="feed-video-input"
-              className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer font-medium ${
+              className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-full border border-white/50 bg-white/40 hover:bg-white/60 hover:-translate-y-0.5 cursor-pointer font-bold transition-all duration-150 ${
                 uploading ? 'opacity-50 pointer-events-none' : ''
               }`}
             >
-              <span role="img" aria-label="video">🎥</span>
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m22 8-6 4 6 4V8Z" />
+                <rect x="2" y="6" width="14" height="12" rx="2" />
+              </svg>
               Video
             </label>
 
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 font-medium"
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-full border border-white/50 bg-white/40 hover:bg-white/60 hover:-translate-y-0.5 font-bold transition-all duration-150"
               onClick={() => setShowLinkInput((v) => !v)}
             >
-              <span role="img" aria-label="link">🔗</span>
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
+                <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+              </svg>
               Link
             </button>
 
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 font-medium"
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-full border border-white/50 bg-white/40 hover:bg-white/60 hover:-translate-y-0.5 font-bold transition-all duration-150"
               onClick={() => setShowEmojiBar((v) => !v)}
             >
-              <span role="img" aria-label="emoji">🙂</span>
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M9 9h.01M15 9h.01M8.5 14.5a4 4 0 0 0 7 0" />
+              </svg>
               Emoji
             </button>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2.5">
-            <div className="inline-flex rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
+            <div className="inline-flex rounded-full border border-white/50 bg-white/35 overflow-hidden">
               <button
                 type="button"
                 onClick={() => setPostType('business')}
-                className={`px-4 py-2.5 text-sm font-semibold ${
+                className={`px-4 py-2.5 text-sm font-extrabold transition-all duration-150 ${
                   postType === 'business'
-                    ? 'bg-[#ff8a65] text-white'
-                    : 'bg-white text-gray-800 hover:bg-gray-50'
+                    ? 'text-white bg-gradient-to-br from-[#6fa8ff] to-[#4f8cff] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]'
+                    : 'text-[#6b4a3a] hover:bg-white/30'
                 }`}
                 aria-pressed={postType === 'business'}
               >
@@ -410,10 +427,10 @@ export default function PostComposer({
               <button
                 type="button"
                 onClick={() => setPostType('personal')}
-                className={`px-4 py-2.5 text-sm font-semibold ${
+                className={`px-4 py-2.5 text-sm font-extrabold transition-all duration-150 ${
                   postType === 'personal'
-                    ? 'bg-[#ff8a65] text-white'
-                    : 'bg-white text-gray-800 hover:bg-gray-50'
+                    ? 'text-white bg-gradient-to-br from-[#a679ff] to-[#7c5cff] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]'
+                    : 'text-[#6b4a3a] hover:bg-white/30'
                 }`}
                 aria-pressed={postType === 'personal'}
               >
@@ -425,16 +442,31 @@ export default function PostComposer({
               type="button"
               onClick={submit}
               disabled={!canPost}
-              className="bg-[#ff7043] text-white font-extrabold px-5 py-2.5 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-95 shadow-[0_10px_24px_rgba(255,112,67,0.22)]"
+              className="inline-flex items-center gap-2 bg-gradient-to-br from-[#FF7043] to-[#E55A2B] text-white font-extrabold px-5 py-2.5 rounded-full disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_10px_24px_-10px_rgba(255,112,67,0.55)] hover:-translate-y-0.5 shadow-[0_10px_24px_-10px_rgba(255,112,67,0.55)] hover:shadow-[0_14px_28px_-10px_rgba(255,112,67,0.65)] transition-all duration-150"
               title={!canPost ? 'Write something and choose Business or Personal' : 'Post'}
             >
-              {uploading ? 'Uploading…' : 'Post signal'}
+              {uploading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Uploading…
+                </>
+              ) : (
+                <>
+                  Post signal
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </>
+              )}
             </button>
           </div>
         </div>
 
         {!postType && text.trim() && (
-          <div className="text-xs text-red-500">
+          <div className="text-xs font-semibold text-[#c0392b]">
             Please choose Business or Personal before posting.
           </div>
         )}

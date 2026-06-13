@@ -359,6 +359,11 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
       });
   }, [post?.attachments]);
 
+  const typeLabel = post.type === 'personal' ? 'Personal' : 'Business';
+  const typePillClass = post.type === 'personal'
+    ? 'bg-[rgba(168,120,255,0.15)] border-[rgba(168,120,255,0.35)] text-[#7c5cff]'
+    : 'bg-[rgba(95,150,255,0.15)] border-[rgba(95,150,255,0.35)] text-[#4f8cff]';
+
   return createPortal(
     <div
       role="dialog"
@@ -375,49 +380,54 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative flex h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[26px] border border-white/45 bg-white/95 shadow-[0_28px_90px_rgba(15,23,42,0.34)] backdrop-blur-xl sm:h-[88vh] sm:rounded-[30px]"
+        className="relative flex h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[26px] border border-white/50 bg-[rgba(255,250,245,0.94)] backdrop-blur-[28px] backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_28px_90px_rgba(50,20,10,0.35)] sm:h-[88vh] sm:rounded-[30px]"
       >
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-xl text-gray-500 shadow-sm transition hover:bg-gray-50 hover:text-gray-800"
+          className="absolute right-4 top-4 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/50 bg-white/70 text-[#6b4a3a] shadow-sm transition hover:bg-white/90 hover:text-[#3a2418]"
           aria-label="Close"
         >
-          ×
+          <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
         </button>
 
         <div className="flex min-h-0 flex-1 flex-col">
-          <section className="shrink-0 border-b border-gray-100 bg-white/80 px-4 py-4 sm:px-7 sm:py-5">
+          <section className="shrink-0 border-b border-white/40 bg-white/30 px-4 py-4 sm:px-7 sm:py-5">
             <header className="flex items-center gap-3 pr-14">
               {post.authorAvatar ? (
                 <img
                   src={post.authorAvatar}
                   alt={post.author || 'Author'}
-                  className="h-11 w-11 flex-shrink-0 rounded-full bg-gray-200 object-cover"
+                  className="h-11 w-11 flex-shrink-0 rounded-full bg-white/40 object-cover ring-1 ring-white/50"
                 />
               ) : (
-                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm text-gray-500">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-white/40 text-sm font-bold text-[#8a5d44] ring-1 ring-white/50">
                   {post.author?.charAt(0)?.toUpperCase() || '?'}
                 </div>
               )}
 
               <div className="min-w-0">
-                <div className="truncate text-[15px] font-bold text-gray-950">
+                <div className="truncate text-[15px] font-extrabold text-[#3a2418]">
                   {post.author}
                 </div>
 
                 {post.authorHeadline && (
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-[#8a5d44]">
                     {post.authorHeadline}
                   </div>
                 )}
 
-                <div className="mt-0.5 text-xs text-gray-500">
-                  {createdAtLabel} • {post.type === 'personal' ? 'Personal' : 'Business'}
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-xs text-[#a8775f]">{createdAtLabel}</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold rounded-full border ${typePillClass}`}>
+                    {typeLabel}
+                  </span>
                 </div>
               </div>
             </header>
 
-            <div className="mt-4 max-h-[22vh] overflow-y-auto pr-1 text-[15px] leading-7 text-gray-800 sm:max-h-[26vh]">
+            <div className="mt-4 max-h-[22vh] overflow-y-auto pr-1 text-[15px] leading-7 text-[#4a3024] sm:max-h-[26vh]">
               <div className="whitespace-pre-wrap">{post.body}</div>
 
               {safeAttachments.length > 0 && (
@@ -427,12 +437,12 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                       return (
                         <div
                           key={`modal-attachment-${idx}`}
-                          className="overflow-hidden rounded-2xl border border-gray-200 bg-white"
+                          className="overflow-hidden rounded-2xl border border-white/45 bg-white/30"
                         >
                           <img
                             src={a.url}
                             alt={a.name || 'Image attachment'}
-                            className="max-h-[360px] w-full bg-white object-contain"
+                            className="max-h-[360px] w-full bg-white/20 object-contain"
                             onError={(e) => {
                               try {
                                 e.currentTarget.style.display = 'none';
@@ -447,7 +457,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                       return (
                         <div
                           key={`modal-attachment-${idx}`}
-                          className="overflow-hidden rounded-2xl border border-gray-200 bg-black"
+                          className="overflow-hidden rounded-2xl border border-white/45 bg-black"
                         >
                           <video
                             src={a.url}
@@ -465,9 +475,13 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                           href={a.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 break-all rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-blue-700 hover:bg-gray-50"
+                          className="inline-flex items-center gap-2 break-all rounded-xl border border-white/45 bg-white/35 px-3 py-2 text-sm text-[#4f8cff] hover:bg-white/55 transition"
                         >
-                          🔗 {a.name || a.url}
+                          <svg className="w-[16px] h-[16px] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
+                            <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+                          </svg>
+                          {a.name || a.url}
                         </a>
                       );
                     }
@@ -479,13 +493,13 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
             </div>
           </section>
 
-          <section className="flex min-h-0 flex-1 flex-col bg-gradient-to-b from-white to-gray-50/80">
-            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3 sm:px-7">
-              <div className="text-[15px] font-bold text-gray-950">
+          <section className="flex min-h-0 flex-1 flex-col bg-gradient-to-b from-white/10 to-white/30">
+            <div className="flex shrink-0 items-center justify-between border-b border-white/40 px-4 py-3 sm:px-7">
+              <div className="text-[15px] font-extrabold text-[#3a2418]">
                 Comments
               </div>
 
-              <div className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm">
+              <div className="rounded-full border border-white/50 bg-white/40 px-3 py-1 text-xs font-bold text-[#6b4a3a]">
                 {visibleComments.length}{' '}
                 {visibleComments.length === 1 ? 'reply' : 'replies'}
               </div>
@@ -493,7 +507,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-7 sm:py-5">
               {visibleComments.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-gray-200 bg-white px-5 py-10 text-center text-sm text-gray-500 shadow-sm">
+                <div className="rounded-3xl border border-dashed border-white/50 bg-white/25 px-5 py-10 text-center text-sm text-[#8a5d44]">
                   No comments yet. Be the first to add one.
                 </div>
               ) : (
@@ -525,7 +539,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                     return (
                       <article
                         key={key}
-                        className="group rounded-3xl border border-gray-200/80 bg-white p-4 shadow-sm transition hover:border-gray-300 hover:shadow-md sm:p-5"
+                        className="group rounded-3xl border border-white/50 bg-white/50 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] transition hover:bg-white/65 hover:border-white/70 sm:p-5"
                       >
                         <div className="flex items-start gap-3 sm:gap-4">
                           <div className="relative shrink-0">
@@ -550,10 +564,10 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                                 <img
                                   src={c.avatarUrl}
                                   alt={c.by || 'User'}
-                                  className="h-10 w-10 rounded-full bg-gray-200 object-cover ring-2 ring-white"
+                                  className="h-10 w-10 rounded-full bg-white/40 object-cover ring-1 ring-white/50"
                                 />
                               ) : (
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-500 ring-2 ring-white">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
                                   {c.by?.charAt(0)?.toUpperCase() || '?'}
                                 </div>
                               )}
@@ -561,14 +575,14 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
                             {menuOpen && canTarget ? (
                               <div
-                                className="absolute left-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
+                                className="absolute left-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-white/50 bg-white/95 shadow-xl"
                                 role="menu"
                               >
                                 <button
                                   type="button"
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => handleViewProfile(targetUserId)}
-                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
+                                  className="w-full px-3 py-2 text-left text-sm text-[#3a2418] hover:bg-white/60"
                                   role="menuitem"
                                 >
                                   View profile
@@ -581,7 +595,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                                     handleConnect(targetUserId, menuKey)
                                   }
                                   disabled={connectingKey === menuKey}
-                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:bg-white disabled:text-gray-400"
+                                  className="w-full px-3 py-2 text-left text-sm text-[#3a2418] hover:bg-white/60 disabled:bg-transparent disabled:text-[#c79a86]"
                                   role="menuitem"
                                 >
                                   {connectingKey === menuKey
@@ -593,7 +607,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                                   type="button"
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => handleMessage(targetUserId)}
-                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
+                                  className="w-full px-3 py-2 text-left text-sm text-[#3a2418] hover:bg-white/60"
                                   role="menuitem"
                                 >
                                   Message
@@ -604,24 +618,24 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <div className="text-sm font-bold text-gray-950">
+                              <div className="text-sm font-extrabold text-[#3a2418]">
                                 {c.by}
                               </div>
 
                               {commentHeadline && (
-                                <div className="w-full text-xs text-gray-500">
+                                <div className="w-full text-xs text-[#a8775f]">
                                   {commentHeadline}
                                 </div>
                               )}
 
                               {c.at && (
-                                <div className="text-xs text-gray-400">
+                                <div className="text-xs text-[#c79a86]">
                                   {new Date(c.at).toLocaleString()}
                                 </div>
                               )}
                             </div>
 
-                            <div className="mt-2 whitespace-pre-wrap break-words text-[15px] leading-7 text-gray-800">
+                            <div className="mt-2 whitespace-pre-wrap break-words text-[15px] leading-7 text-[#4a3024]">
                               {c.text}
                             </div>
 
@@ -630,17 +644,20 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                                 type="button"
                                 onClick={() => toggleCommentLike(c, i)}
                                 disabled={busyLike}
-                                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
                                   hasLiked
-                                    ? 'border-[#FF7043]/30 bg-[#FF7043]/10 text-[#FF7043]'
-                                    : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+                                    ? 'border-[rgba(255,112,67,0.35)] bg-[rgba(255,112,67,0.15)] text-[#c0512a]'
+                                    : 'border-white/50 bg-white/40 text-[#6b4a3a] hover:bg-white/60'
                                 } ${busyLike ? 'opacity-60' : ''}`}
                                 aria-label={
                                   hasLiked ? 'Unlike comment' : 'Like comment'
                                 }
                                 title={hasLiked ? 'Unlike' : 'Like'}
                               >
-                                👍 Like{likes > 0 ? ` · ${likes}` : ''}
+                                <svg className="w-[14px] h-[14px]" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M2 21h4V9H2v12zM22 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13.17 1 7.59 6.59C7.22 6.95 7 7.45 7 8v11c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
+                                </svg>
+                                Like{likes > 0 ? ` · ${likes}` : ''}
                               </button>
 
                               {canDelete && (
@@ -648,14 +665,17 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                                   type="button"
                                   onClick={() => deleteComment(c, i)}
                                   disabled={busyDelete}
-                                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
                                     busyDelete
-                                      ? 'opacity-60'
-                                      : 'border-red-200 bg-white text-red-600 hover:bg-red-50'
+                                      ? 'opacity-60 border-white/40 bg-white/30 text-[#c79a86]'
+                                      : 'border-[rgba(239,68,68,0.3)] bg-white/40 text-[#c0392b] hover:bg-[rgba(239,68,68,0.1)]'
                                   }`}
                                   aria-label="Delete comment"
                                   title="Delete"
                                 >
+                                  <svg className="w-[14px] h-[14px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
+                                  </svg>
                                   Delete
                                 </button>
                               )}
@@ -669,15 +689,17 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
               )}
             </div>
 
-            <div className="shrink-0 border-t border-gray-100 bg-white/90 px-4 py-3 shadow-[0_-12px_35px_rgba(15,23,42,0.06)] sm:px-7 sm:py-4">
-              <div className="rounded-3xl border border-gray-200 bg-gray-50 p-3 sm:p-4">
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  rows={3}
-                  className="max-h-40 min-h-[96px] w-full resize-y rounded-2xl border border-gray-200 bg-white p-4 text-[15px] leading-6 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  placeholder="Write your comment…"
-                />
+            <div className="shrink-0 border-t border-white/40 bg-white/35 px-4 py-3 shadow-[0_-12px_35px_rgba(50,20,10,0.06)] sm:px-7 sm:py-4">
+              <div className="rounded-3xl border border-white/50 bg-white/40 p-3 sm:p-4">
+                <div className="rounded-2xl border border-white/50 bg-white/45 overflow-hidden">
+                  <textarea
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    rows={3}
+                    className="max-h-40 min-h-[96px] w-full resize-y border-0 p-4 bg-transparent text-[15px] leading-6 text-[#3a2418] placeholder:text-[#b48b78] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[rgba(255,112,67,0.4)]"
+                    placeholder="Write your comment…"
+                  />
+                </div>
 
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <QuickEmojiBar onPick={addEmoji} />
@@ -686,9 +708,12 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                     <button
                       onClick={send}
                       disabled={!text.trim()}
-                      className="rounded-2xl bg-[#ff8a65] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#ff7043] disabled:cursor-not-allowed disabled:opacity-45"
+                      className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-[#FF7043] to-[#E55A2B] px-5 py-2.5 text-sm font-extrabold text-white shadow-[0_10px_24px_-10px_rgba(255,112,67,0.55)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-10px_rgba(255,112,67,0.65)] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 disabled:hover:shadow-[0_10px_24px_-10px_rgba(255,112,67,0.55)]"
                     >
                       Comment
+                      <svg className="w-[16px] h-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14M13 6l6 6-6 6" />
+                      </svg>
                     </button>
                   </div>
                 </div>
