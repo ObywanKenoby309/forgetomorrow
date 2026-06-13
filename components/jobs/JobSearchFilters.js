@@ -70,9 +70,9 @@ export default function JobSearchFilters({
 
   if (isMobile) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 14, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 2px 10px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+      <div style={{ background: 'rgba(255,248,242,0.92)', borderRadius: '0 0 20px 20px', border: '1px solid rgba(255,255,255,0.65)', boxShadow: '0 10px 24px rgba(0,0,0,0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', overflow: 'hidden' }}>
         <button type="button" onClick={() => setFilterOpen(o => !o)}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer' }}>
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: 'none', border: 'none', cursor: 'pointer' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#112033' }}>Filter jobs</span>
             {activeFilterCount > 0 && <span style={{ background: '#FF7043', color: 'white', borderRadius: 999, fontSize: 11, fontWeight: 800, padding: '1px 7px' }}>{activeFilterCount}</span>}
