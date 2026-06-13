@@ -32,6 +32,7 @@ export const authOptions: NextAuthOptions = {
               accountKey: true,
               passwordHash: true,
               avatarUrl: true,
+			  headline: true,
               foundryBackground: true,
             },
           });
@@ -68,6 +69,7 @@ export const authOptions: NextAuthOptions = {
             accountKey: user.accountKey ?? null,
             isPlatformAdmin,
             avatarUrl: user.avatarUrl ?? null,
+			headline: user.headline ?? null,
             foundryBackground: user.foundryBackground ?? null,
           };
         } catch (err) {
@@ -111,6 +113,7 @@ export const authOptions: NextAuthOptions = {
         (token as any).accountKey = (user as any).accountKey ?? null;
         (token as any).isPlatformAdmin = !!(user as any).isPlatformAdmin;
         (token as any).avatarUrl = (user as any).avatarUrl ?? null;
+		(token as any).headline = (user as any).headline ?? null;
         (token as any).foundryBackground = (user as any).foundryBackground ?? null;
       }
       return token;
@@ -125,6 +128,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).accountKey = (token as any).accountKey ?? null;
         (session.user as any).isPlatformAdmin = !!(token as any).isPlatformAdmin;
         (session.user as any).avatarUrl = (token as any).avatarUrl ?? null;
+		(session.user as any).headline = (token as any).headline ?? null;
         (session.user as any).foundryBackground = (token as any).foundryBackground ?? null;
         (session.user as any).image =
           (token as any).avatarUrl ?? (session.user as any).image ?? null;
