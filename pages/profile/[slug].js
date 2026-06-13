@@ -157,7 +157,7 @@ export async function getServerSideProps(context) {
       bannerMode: true, bannerHeight: true, bannerFocalY: true,
       wallpaperUrl: true, corporateBannerKey: true, corporateBannerLocked: true,
       isProfilePublic: true, profileVisibility: true, role: true, email: true,
-      workPreferences: true,
+      workPreferences: true, socialLinks: true,
       resumes: {
         where: { isPrimary: true }, orderBy: { updatedAt: 'desc' }, take: 1,
         select: { id: true, name: true, updatedAt: true },
@@ -237,6 +237,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
     bannerMode: serverBannerMode, bannerHeight: serverBannerH, bannerFocalY: serverFocalY,
     corporateBannerKey, corporateBannerLocked,
     workPreferences: serverWorkPrefs,
+    socialLinks: serverSocialLinks,
     profileVisibility: serverProfileVisibility,
     customSectionJson: serverCustomSectionJson,
   } = user;
@@ -262,7 +263,16 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   const [certifications,  setCertifications]  = useState(Array.isArray(user.certificationsJson) ? user.certificationsJson : []);
   const [projects,        setProjects]        = useState(Array.isArray(user.projectsJson) ? user.projectsJson : []);
   const [customSection, setCustomSection]      = useState(Array.isArray(serverCustomSectionJson) ? serverCustomSectionJson : []);
-  const [socialLinks,     setSocialLinks]     = useState({ github: '', x: '', youtube: '', instagram: '' });
+  const [socialLinks,     setSocialLinks]     = useState(
+    serverSocialLinks && typeof serverSocialLinks === 'object'
+      ? {
+          github: serverSocialLinks.github || '',
+          x: serverSocialLinks.x || '',
+          youtube: serverSocialLinks.youtube || '',
+          instagram: serverSocialLinks.instagram || '',
+        }
+      : { github: '', x: '', youtube: '', instagram: '' }
+  );
   const [avatarUploading, setAvatarUploading] = useState(false);
   const updateSocial = (key, val) => setSocialLinks(p => ({ ...p, [key]: val }));
 
@@ -492,20 +502,6 @@ const flushPendingSave = useCallback(async (force = false) => {
 
 const flushPendingSaveRef = useRef(null);
 flushPendingSaveRef.current = flushPendingSave;
-
-const openMobileEditSheet = useCallback((sheet) => {
-  if (!isOwner) return;
-  setEditMode(true);
-  setMobileSheet(sheet);
-}, [isOwner]);
-
-const closeMobileEditSheet = useCallback(async () => {
-  const ok = await flushPendingSaveRef.current?.(true);
-  if (ok !== false) {
-    setMobileSheet(null);
-    setEditMode(false);
-  }
-}, []);
 
   useEffect(() => {
     if (!editMode) return;
@@ -1449,13 +1445,12 @@ const closeMobileEditSheet = useCallback(async () => {
                     {/* Mobile signals strip */}
                     {signals.length > 0 && (
                       <div className="ft-mobile-signals">
-                        {signals.map(sig => {
+                        {signals.slice(0, 4).map(sig => {
                           const sc = sig.type === 'status' ? (STATUS_COLOR[sig.label] || STATUS_COLOR['Not Looking']) : null;
                           return (
                             <span key={sig.key} className="ft-mobile-signal-chip"
                               style={sc ? { background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color } : {}}>
                               {sig.type === 'status' && sc && <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc.dot, display: 'inline-block', flexShrink: 0 }} />}
-                              {sig.type !== 'status' && sig.icon && <span style={{ fontSize: 10, lineHeight: 1 }}>{sig.icon}</span>}
                               {sig.label}
                             </span>
                           );
@@ -1485,14 +1480,14 @@ const closeMobileEditSheet = useCallback(async () => {
                           <div className="ft-mobile-stat"><div className="ft-mobile-stat-n">{education.length}<em>+</em></div><div className="ft-mobile-stat-l">Education</div></div>
                           <div className="ft-mobile-stat"><div className="ft-mobile-stat-n">{languages.length}<em>+</em></div><div className="ft-mobile-stat-l">Languages</div></div>
                         </div>
-                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Summary</span><button type="button" className="ft-mobile-edit-btn" onClick={() => openMobileEditSheet('about')}>✎ Edit</button></div>}
+                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Summary</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('about')}>✎ Edit</button></div>}
                         {(aboutMe || headline) && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Summary</div><div className="ft-mobile-card-text">{aboutMe || headline}</div></div>}
                         {(location || status) && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Details</div><div className="ft-mobile-card-text">{location ? `Location: ${location}` : ''}{location && status ? '\n' : ''}{status ? `Status: ${status}` : ''}</div></div>}
                       </div>
 
                       {/* Skills */}
                       <div className={`ft-mobile-panel${mobileTab === 'skills' ? ' active' : ''}`}>
-                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Skills</span><button type="button" className="ft-mobile-edit-btn" onClick={() => openMobileEditSheet('skills')}>✎ Edit</button></div>}
+                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Skills</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('skills')}>✎ Edit</button></div>}
                         {skills.length > 0 ? (
                           <div className="ft-mobile-skill-grid">
                             {skills.map((skill, idx) => {
@@ -1511,7 +1506,7 @@ const closeMobileEditSheet = useCallback(async () => {
 
                       {/* Projects */}
                       <div className={`ft-mobile-panel${mobileTab === 'projects' ? ' active' : ''}`}>
-                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Projects</span><button type="button" className="ft-mobile-edit-btn" onClick={() => openMobileEditSheet('projects')}>✎ Edit</button></div>}
+                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Projects</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('projects')}>✎ Edit</button></div>}
                         <div className="ft-mobile-card">
                           <div className="ft-mobile-card-label">Projects</div>
                           <ProfileProjects
@@ -1524,7 +1519,7 @@ const closeMobileEditSheet = useCallback(async () => {
 
                       {/* Education */}
                       <div className={`ft-mobile-panel${mobileTab === 'education' ? ' active' : ''}`}>
-                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Education</span><button type="button" className="ft-mobile-edit-btn" onClick={() => openMobileEditSheet('education')}>✎ Edit</button></div>}
+                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Education</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('education')}>✎ Edit</button></div>}
                         {education.length > 0 ? education.map((edu, idx) => {
                           const line1 = [edu?.degree, edu?.field].filter(Boolean).join(' — ');
                           const years = [edu?.startYear, edu?.endYear].filter(Boolean).join(' – ');
@@ -1543,7 +1538,7 @@ const closeMobileEditSheet = useCallback(async () => {
 
                       {/* More */}
                       <div className={`ft-mobile-panel${mobileTab === 'more' ? ' active' : ''}`}>
-                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Languages & Interests</span><button type="button" className="ft-mobile-edit-btn" onClick={() => openMobileEditSheet('more')}>✎ Edit</button></div>}
+                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Languages & Interests</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('more')}>✎ Edit</button></div>}
                         {languages.length > 0 && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Languages</div><div className="ft-chips">{languages.map(l => <span key={l} className="ft-chip">{l}</span>)}</div></div>}
                         {hobbies.length > 0 && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Interests</div><div className="ft-chips">{hobbies.map(h => <span key={h} className="ft-chip">{h}</span>)}</div></div>}
                         {languages.length === 0 && hobbies.length === 0 && <div className="ft-mobile-card"><div className="ft-mobile-card-label">More</div><div className="ft-mobile-card-text">No additional details added yet.</div></div>}
@@ -1551,18 +1546,20 @@ const closeMobileEditSheet = useCallback(async () => {
 
                       {/* Connect */}
                       <div className={`ft-mobile-panel${mobileTab === 'connect' ? ' active' : ''}`}>
-                        {isOwner && (
-                          <div className="ft-mobile-edit-row">
-                            <span style={{ fontSize:12, color:'var(--forge-muted)' }}>Contact & Portfolio</span>
-                            <button type="button" className="ft-mobile-edit-btn" onClick={() => openMobileEditSheet('identity')}>✎ Edit</button>
-                          </div>
-                        )}
+                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Connect</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('connect')}>✎ Edit</button></div>}
                         <button type="button" className="ft-mobile-contact-row" onClick={handleCopyProfileUrl}>
                           <div className="ft-mobile-contact-icon" style={{ background:'rgba(232,96,28,0.14)', color:'#e8601c' }}>⎘</div>
                           <div style={{ minWidth:0 }}><div className="ft-mobile-contact-label">Portfolio</div><div className="ft-mobile-contact-value">{profileUrl.replace('https://', '')}</div></div>
                           <div className="ft-mobile-contact-arrow">{copied ? '✓' : '›'}</div>
                         </button>
                         {location && <div className="ft-mobile-contact-row"><div className="ft-mobile-contact-icon" style={{ background:'rgba(59,130,246,0.14)', color:'#60a5fa' }}>⌖</div><div style={{ minWidth:0 }}><div className="ft-mobile-contact-label">Location</div><div className="ft-mobile-contact-value">{location}</div></div><div className="ft-mobile-contact-arrow">›</div></div>}
+                        {SOCIAL_FIELDS.map(f => socialLinks[f.key] ? (
+                          <a key={f.key} className="ft-mobile-contact-row" href={socialLinks[f.key].startsWith('http') ? socialLinks[f.key] : `https://${socialLinks[f.key]}`} target="_blank" rel="noopener noreferrer">
+                            <div className="ft-mobile-contact-icon" style={{ background:'rgba(255,112,67,0.12)', color:'#FF7043' }}>{f.icon}</div>
+                            <div style={{ minWidth:0 }}><div className="ft-mobile-contact-label">{f.label}</div><div className="ft-mobile-contact-value">{socialLinks[f.key].replace(/^https?:\/\//, '')}</div></div>
+                            <div className="ft-mobile-contact-arrow">›</div>
+                          </a>
+                        ) : null)}
                         {primaryResume && <a className="ft-mobile-contact-row" href={`/api/resume/public-download?resumeId=${encodeURIComponent(primaryResume.id)}&slug=${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer"><div className="ft-mobile-contact-icon" style={{ background:'rgba(34,197,94,0.14)', color:'#4ade80' }}>↓</div><div style={{ minWidth:0 }}><div className="ft-mobile-contact-label">Resume</div><div className="ft-mobile-contact-value">Download primary resume</div></div><div className="ft-mobile-contact-arrow">›</div></a>}
                       </div>
 
@@ -1582,12 +1579,12 @@ const closeMobileEditSheet = useCallback(async () => {
         {/* ══ MOBILE SHEETS ══ */}
         {mobileSheet && (
           <>
-            <div className="ft-sheet-backdrop" onClick={() => closeMobileEditSheet()} />
+            <div className="ft-sheet-backdrop" onClick={() => setMobileSheet(null)} />
             <div className="ft-sheet">
               <div className="ft-sheet-handle-row">
                 <div style={{ width:28 }} />
                 <div className="ft-sheet-handle" />
-                <button type="button" className="ft-sheet-close" onClick={() => closeMobileEditSheet()}>✕</button>
+                <button type="button" className="ft-sheet-close" onClick={() => setMobileSheet(null)}>✕</button>
               </div>
 
               {mobileSheet === 'identity' && (
@@ -1644,48 +1641,10 @@ const closeMobileEditSheet = useCallback(async () => {
                           <input ref={fileInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleAvatarFileChange} />
                         </div>
                       </div>
-                      <div className="ft-dark-field">
-                        <label className="ft-dark-label">Social Links</label>
-                        <div className="ft-social-grid">
-                          {SOCIAL_FIELDS.map(f => (
-                            <div key={f.key} className="ft-social-row">
-                              <span className="ft-social-icon">{f.icon}</span>
-                              <input
-                                className="ft-dark-input"
-                                type="url"
-                                value={socialLinks[f.key] || ''}
-                                onChange={e => updateSocial(f.key, e.target.value)}
-                                placeholder={f.placeholder}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="ft-dark-field">
-                        <label className="ft-dark-label">Portfolio Link & Resume</label>
-                        <div style={{ display:'grid', gap:8 }}>
-                          <button type="button" className="ft-mobile-contact-row" onClick={handleCopyProfileUrl} style={{ marginBottom:0 }}>
-                            <div className="ft-mobile-contact-icon" style={{ background:'rgba(232,96,28,0.14)', color:'#e8601c' }}>⎘</div>
-                            <div style={{ minWidth:0 }}>
-                              <div className="ft-mobile-contact-label">Portfolio</div>
-                              <div className="ft-mobile-contact-value">{profileUrl.replace('https://', '')}</div>
-                            </div>
-                            <div className="ft-mobile-contact-arrow">{copied ? '✓' : '›'}</div>
-                          </button>
-                          <button type="button" className="ft-mobile-contact-row" onClick={openResumeModal} style={{ marginBottom:0 }}>
-                            <div className="ft-mobile-contact-icon" style={{ background:'rgba(255,112,67,0.14)', color:'#FF7043' }}>☰</div>
-                            <div style={{ minWidth:0 }}>
-                              <div className="ft-mobile-contact-label">Resume</div>
-                              <div className="ft-mobile-contact-value">{primaryResume ? 'Change primary resume' : 'Select primary resume'}</div>
-                            </div>
-                            <div className="ft-mobile-contact-arrow">›</div>
-                          </button>
-                        </div>
-                      </div>
                     </div>
                   </div>
                   <div className="ft-sheet-save-row">
-                    <button type="button" className="ft-sheet-save-btn" onClick={() => closeMobileEditSheet()}>Save changes</button>
+                    <button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Save changes</button>
                   </div>
                 </>
               )}
@@ -1693,7 +1652,7 @@ const closeMobileEditSheet = useCallback(async () => {
               {mobileSheet === 'about' && (
                 <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">Professional Summary</div></div>
                 <div className="ft-sheet-body"><textarea className="ft-dark-textarea" value={aboutMe} onChange={e => setAboutMe(e.target.value)} placeholder="Tell your professional story…" rows={8} style={{ width:'100%' }} /></div>
-                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => closeMobileEditSheet()}>Done</button></div></>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
               )}
 
               {mobileSheet === 'skills' && (
@@ -1705,7 +1664,7 @@ const closeMobileEditSheet = useCallback(async () => {
                   </div>
                   <div className="ft-dark-chips">{skills.map((s, i) => <span key={s+i} className="ft-dark-chip">{s}<button type="button" className="ft-dark-chip-x" onClick={() => setSkills(p => p.filter((_,idx) => idx !== i))}>×</button></span>)}</div>
                 </div>
-                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => closeMobileEditSheet()}>Done</button></div></>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
               )}
 
               {mobileSheet === 'projects' && (
@@ -1718,7 +1677,7 @@ const closeMobileEditSheet = useCallback(async () => {
                     editMode={true}
                   />
                 </div>
-                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={async () => { mobileProjectsRef.current?.commitPending?.(); await closeMobileEditSheet(); }}>Done</button></div></>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => { mobileProjectsRef.current?.commitPending?.(); setMobileSheet(null); }}>Done</button></div></>
               )}
 
               {mobileSheet === 'education' && (
@@ -1742,7 +1701,7 @@ const closeMobileEditSheet = useCallback(async () => {
                     <button type="button" className="ft-add-btn" onClick={() => { if (!eduDraft.school.trim()) return; setEducation(p => [...p, {...eduDraft}]); setEduDraft(blankEdu()); }}>+ Add Education</button>
                   </div>
                 </div>
-                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => closeMobileEditSheet()}>Done</button></div></>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
               )}
 
               {mobileSheet === 'more' && (
@@ -1755,7 +1714,40 @@ const closeMobileEditSheet = useCallback(async () => {
                   <div className="ft-chip-input-row" style={{ marginBottom:4 }}><input className="ft-dark-input" value={hobbyInput} onChange={e => setHobbyInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && hobbyInput.trim()) { setHobbies(p => [...p, hobbyInput.trim()]); setHobbyInput(''); e.preventDefault(); }}} placeholder="Add an interest…" /><button type="button" className="ft-add-btn" onClick={() => { if (hobbyInput.trim()) { setHobbies(p => [...p, hobbyInput.trim()]); setHobbyInput(''); }}}>+ Add</button></div>
                   <div className="ft-dark-chips">{hobbies.map((h,i) => <span key={h+i} className="ft-dark-chip">{h}<button type="button" className="ft-dark-chip-x" onClick={() => setHobbies(p => p.filter((_,idx) => idx !== i))}>×</button></span>)}</div>
                 </div>
-                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => closeMobileEditSheet()}>Done</button></div></>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
+              )}
+
+              {mobileSheet === 'connect' && (
+                <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">Edit Connect</div><div style={{ fontSize:12, color:'var(--forge-muted)', marginTop:4 }}>Update the contact links shown on your portfolio.</div></div>
+                <div className="ft-sheet-body">
+                  <div style={{ display:'grid', gap:14 }}>
+                    <div className="ft-dark-field">
+                      <label className="ft-dark-label">Location</label>
+                      <input className="ft-dark-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="City, state, country, or Remote" />
+                    </div>
+                    {SOCIAL_FIELDS.map(f => (
+                      <div key={f.key} className="ft-dark-field">
+                        <label className="ft-dark-label">{f.label}</label>
+                        <input className="ft-dark-input" type="url" value={socialLinks[f.key] || ''} onChange={e => updateSocial(f.key, e.target.value)} placeholder={f.placeholder} />
+                      </div>
+                    ))}
+                    <div className="ft-dark-field">
+                      <label className="ft-dark-label">Profile Visibility</label>
+                      <select className="ft-dark-select" value={profileVisibility} onChange={e => setProfileVisibility(e.target.value)}>
+                        <option value="PUBLIC">Public</option>
+                        <option value="PRIVATE">Private</option>
+                        <option value="RECRUITERS_ONLY">Recruiters Only</option>
+                      </select>
+                    </div>
+                    <button type="button" className="ft-add-btn" style={{ width:'100%', padding:'12px 14px' }} onClick={openResumeModal}>
+                      Select Primary Resume
+                    </button>
+                    <button type="button" className="ft-add-btn" style={{ width:'100%', padding:'12px 14px', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.78)' }} onClick={handleCopyProfileUrl}>
+                      {copied ? 'Copied Profile Link' : 'Copy Profile Link'}
+                    </button>
+                  </div>
+                </div>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={async () => { await flushPendingSaveRef.current(true); setMobileSheet(null); }}>Done</button></div></>
               )}
 
               {mobileSheet === 'visibility' && (
@@ -1775,7 +1767,7 @@ const closeMobileEditSheet = useCallback(async () => {
                     </div>
                   </div>
                 </div>
-                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => closeMobileEditSheet()}>Done</button></div></>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
               )}
 
               {mobileSheet === 'prefs' && (
@@ -1798,7 +1790,7 @@ const closeMobileEditSheet = useCallback(async () => {
                     </div>
                   </div>
                 </div>
-                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => closeMobileEditSheet()}>Done</button></div></>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
               )}
             </div>
           </>
