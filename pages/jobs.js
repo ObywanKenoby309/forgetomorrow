@@ -674,45 +674,11 @@ useEffect(() => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 0, paddingBottom: 100 }}>
 
-        {/* ── Mobile hero header ── */}
-        <div style={{
-          padding: '18px 16px 14px',
-          background: 'linear-gradient(135deg, rgba(13,27,42,0.72), rgba(13,27,42,0.42))',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          marginBottom: 12,
-        }}>
-          <div style={{ fontSize: 10, fontWeight: 900, color: 'rgba(255,112,67,0.80)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 4 }}>
-            {greeting}
-          </div>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.1 }}>
-            The Pipeline
-          </h1>
-          <p style={{ margin: '5px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.55)', fontWeight: 500, lineHeight: 1.4 }}>
-            Forge Alignment scores every role against your live profile.
-          </p>
-
-          {/* Live job count badge */}
-          {totalJobCount > 0 && (
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              marginTop: 10,
-              padding: '4px 11px',
-              borderRadius: 999,
-              background: 'rgba(255,112,67,0.14)',
-              border: '1px solid rgba(255,112,67,0.30)',
-              fontSize: 12,
-              fontWeight: 700,
-              color: '#FF7043',
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: 999, background: '#FF7043', display: 'inline-block' }} />
-              {totalJobCount.toLocaleString()} open roles
-            </div>
-          )}
-        </div>
+<SeekerTitleCard
+  greeting={greeting}
+  title="Job Listings"
+  subtitle="Explore openings, review full details, and apply with confidence."
+/>
 
         {/* ── Filter bar ── */}
         <div style={{ padding: '0 12px 12px' }}>

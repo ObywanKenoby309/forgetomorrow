@@ -133,12 +133,11 @@ function MobileCard({ job, isSelected, onClick, getJobStatus, isInternalJob, get
       onClick={onClick}
       style={{
         cursor: 'pointer',
-        background: isSelected ? 'rgba(255,112,67,0.04)' : '#FFFFFF',
-        borderRadius: 20,
-        border: isSelected ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.08)',
-        boxShadow: isSelected
-          ? '0 8px 24px rgba(255,112,67,0.16)'
-          : '0 2px 12px rgba(0,0,0,0.06)',
+        background: '#FFFFFF',
+border: isSelected ? '1.5px solid rgba(15,23,42,0.22)' : '1px solid rgba(0,0,0,0.08)',
+boxShadow: isSelected
+  ? '0 3px 12px rgba(15,23,42,0.10)'
+  : '0 2px 12px rgba(0,0,0,0.06)',
         overflow: 'hidden',
         display: 'flex',
         transition: 'box-shadow 0.18s ease, border-color 0.18s ease',
@@ -317,7 +316,7 @@ function MobileCard({ job, isSelected, onClick, getJobStatus, isInternalJob, get
         display: 'flex',
         alignItems: 'center',
         paddingRight: 12,
-        color: isSelected ? ORANGE : '#CBD5E1',
+        color: isSelected ? '#64748B' : '#CBD5E1',
         fontSize: 16,
         fontWeight: 900,
         transition: 'color 0.15s',
