@@ -121,44 +121,98 @@ function MobileCard({ job, isSelected, onClick, getJobStatus, isInternalJob, get
     }
   }
 
-  // Accent color for Forge-tier jobs
-  const accentLeft = isFtOfficial
-    ? `linear-gradient(180deg, ${ORANGE}, #FF5722)`
-    : isPartner
-    ? 'linear-gradient(180deg, #1A4B8F, #0B1724)'
-    : 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.04))';
+  const cardTone = isFtOfficial
+    ? {
+        accent: `linear-gradient(180deg, ${ORANGE}, #FF5722)`,
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,244,238,0.96))',
+        border: '1px solid rgba(255,112,67,0.24)',
+        sourceColor: ORANGE,
+        sourceBg: 'rgba(255,112,67,0.10)',
+        sourceBorder: 'rgba(255,112,67,0.24)',
+        sourceLabel: '⚡ Forge Official',
+      }
+    : isPartner || internal
+    ? {
+        accent: 'linear-gradient(180deg, #1A4B8F, #0B1724)',
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(241,247,255,0.96))',
+        border: '1px solid rgba(26,75,143,0.22)',
+        sourceColor: '#1A4B8F',
+        sourceBg: 'rgba(26,75,143,0.08)',
+        sourceBorder: 'rgba(26,75,143,0.18)',
+        sourceLabel: 'Forge Recruiter',
+      }
+    : {
+        accent: 'linear-gradient(180deg, rgba(100,116,139,0.32), rgba(100,116,139,0.10))',
+        background: 'rgba(255,255,255,0.96)',
+        border: '1px solid rgba(15,23,42,0.08)',
+        sourceColor: '#78909C',
+        sourceBg: 'rgba(15,23,42,0.035)',
+        sourceBorder: 'rgba(15,23,42,0.08)',
+        sourceLabel: displaySource,
+      };
+
+  const scoreToShow = alignScore !== null ? alignScore : searchScore;
+  const scoreLabel = alignScore !== null ? 'Align' : searchScore !== null ? 'Match' : null;
+  const scoreColor = scoreToShow === null
+    ? '#94A3B8'
+    : alignScore !== null
+    ? scoreToShow >= 75 ? '#16A34A' : scoreToShow >= 50 ? ORANGE : '#DC2626'
+    : '#64748B';
 
   return (
     <article
       onClick={onClick}
       style={{
         cursor: 'pointer',
-        background: '#FFFFFF',
-border: isSelected ? '1.5px solid rgba(15,23,42,0.22)' : '1px solid rgba(0,0,0,0.08)',
-boxShadow: isSelected
-  ? '0 3px 12px rgba(15,23,42,0.10)'
-  : '0 2px 12px rgba(0,0,0,0.06)',
+        background: cardTone.background,
+        borderRadius: 22,
+        border: isSelected ? '1.5px solid rgba(15,23,42,0.24)' : cardTone.border,
+        boxShadow: isSelected
+          ? '0 8px 22px rgba(15,23,42,0.12)'
+          : '0 8px 24px rgba(15,23,42,0.08)',
         overflow: 'hidden',
         display: 'flex',
-        transition: 'box-shadow 0.18s ease, border-color 0.18s ease',
+        position: 'relative',
+        transition: 'box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease',
         WebkitTapHighlightColor: 'transparent',
       }}
     >
-      {/* Left accent bar */}
-      <div style={{ width: 4, flexShrink: 0, background: accentLeft }} />
+      {/* Left accent bar — communicates job source, not selected state */}
+      <div style={{ width: 5, flexShrink: 0, background: cardTone.accent }} />
 
       {/* Card body */}
-      <div style={{ flex: 1, minWidth: 0, padding: '14px 14px 12px 12px' }}>
+      <div style={{ flex: 1, minWidth: 0, padding: '15px 14px 13px 13px' }}>
+        {/* Source / date strip */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
+          <span style={{
+            fontSize: 10,
+            fontWeight: 900,
+            color: cardTone.sourceColor,
+            background: cardTone.sourceBg,
+            border: `1px solid ${cardTone.sourceBorder}`,
+            borderRadius: 999,
+            padding: '3px 9px',
+            letterSpacing: '0.02em',
+            whiteSpace: 'nowrap',
+          }}>
+            {cardTone.sourceLabel}
+          </span>
+          {postedLabel && (
+            <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: '#94A3B8', whiteSpace: 'nowrap' }}>
+              {postedLabel}
+            </span>
+          )}
+        </div>
 
         {/* Top row: title + score */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, justifyContent: 'space-between' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              fontSize: 15,
-              fontWeight: 800,
+              fontSize: 16,
+              fontWeight: 900,
               color: '#0F172A',
-              lineHeight: 1.25,
-              letterSpacing: '-0.2px',
+              lineHeight: 1.22,
+              letterSpacing: '-0.25px',
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
@@ -167,73 +221,52 @@ boxShadow: isSelected
               {job.title}
             </div>
             <div style={{
-              marginTop: 4,
+              marginTop: 5,
               fontSize: 13,
-              fontWeight: 600,
+              fontWeight: 750,
               color: '#607D8B',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              textTransform: 'capitalize',
             }}>
               {job.company}
             </div>
           </div>
 
-          {/* Alignment score badge — shown when available */}
-          {alignScore !== null && (
+          {/* Alignment/search score badge — shows the FT intelligence when available */}
+          {scoreToShow !== null && (
             <div style={{
               flexShrink: 0,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 52,
-              height: 52,
-              borderRadius: 14,
-              background: alignScore >= 75
-                ? 'rgba(22,163,74,0.08)'
-                : alignScore >= 50
-                ? 'rgba(255,112,67,0.08)'
-                : 'rgba(220,38,38,0.07)',
+              width: 56,
+              height: 50,
+              borderRadius: 16,
+              background: alignScore !== null
+                ? scoreToShow >= 75
+                  ? 'rgba(22,163,74,0.08)'
+                  : scoreToShow >= 50
+                  ? 'rgba(255,112,67,0.08)'
+                  : 'rgba(220,38,38,0.07)'
+                : 'rgba(100,116,139,0.07)',
               border: `1.5px solid ${
-                alignScore >= 75 ? 'rgba(22,163,74,0.22)'
-                : alignScore >= 50 ? 'rgba(255,112,67,0.22)'
-                : 'rgba(220,38,38,0.20)'
+                alignScore !== null
+                  ? scoreToShow >= 75
+                    ? 'rgba(22,163,74,0.22)'
+                    : scoreToShow >= 50
+                    ? 'rgba(255,112,67,0.22)'
+                    : 'rgba(220,38,38,0.20)'
+                  : 'rgba(100,116,139,0.18)'
               }`,
             }}>
-              <div style={{
-                fontSize: 14,
-                fontWeight: 900,
-                lineHeight: 1,
-                color: alignScore >= 75 ? '#16A34A' : alignScore >= 50 ? ORANGE : '#DC2626',
-              }}>
-                {alignScore}%
+              <div style={{ fontSize: 15, fontWeight: 950, lineHeight: 1, color: scoreColor }}>
+                {scoreToShow}%
               </div>
-              <div style={{ fontSize: 8, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 2, textAlign: 'center', lineHeight: 1.1 }}>
-                Align
-              </div>
-            </div>
-          )}
-
-          {/* Search relevance badge — shown when no align score but search active */}
-          {alignScore === null && searchScore !== null && (
-            <div style={{
-              flexShrink: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 52,
-              height: 52,
-              borderRadius: 14,
-              background: 'rgba(100,116,139,0.07)',
-              border: '1.5px solid rgba(100,116,139,0.18)',
-            }}>
-              <div style={{ fontSize: 14, fontWeight: 900, lineHeight: 1, color: '#64748B' }}>
-                {searchScore}%
-              </div>
-              <div style={{ fontSize: 8, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 2, textAlign: 'center', lineHeight: 1.1 }}>
-                Match
+              <div style={{ fontSize: 8, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 3, textAlign: 'center', lineHeight: 1.1 }}>
+                {scoreLabel}
               </div>
             </div>
           )}
@@ -242,18 +275,18 @@ boxShadow: isSelected
         {/* Location */}
         {location ? (
           <div style={{
-            marginTop: 8,
+            marginTop: 9,
             fontSize: 12,
             color: '#78909C',
-            fontWeight: 500,
+            fontWeight: 650,
             display: 'flex',
             alignItems: 'center',
-            gap: 4,
+            gap: 5,
             overflow: 'hidden',
             whiteSpace: 'nowrap',
             textOverflow: 'ellipsis',
           }}>
-            <svg width="10" height="12" viewBox="0 0 10 12" fill="none" style={{ flexShrink: 0, opacity: 0.6 }}>
+            <svg width="10" height="12" viewBox="0 0 10 12" fill="none" style={{ flexShrink: 0, opacity: 0.62 }}>
               <path d="M5 0A4 4 0 001 4C1 7.5 5 12 5 12S9 7.5 9 4A4 4 0 005 0zm0 5.5A1.5 1.5 0 113.5 4 1.5 1.5 0 015 5.5z" fill="currentColor"/>
             </svg>
             {location}
@@ -261,50 +294,34 @@ boxShadow: isSelected
         ) : null}
 
         {/* Bottom chip row */}
-        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ marginTop: 11, display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
           {locationType && (
             <span style={{
-              fontSize: 11, fontWeight: 700, color: '#546E7A',
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#546E7A',
               background: 'rgba(84,110,122,0.08)',
               border: '1px solid rgba(84,110,122,0.16)',
-              borderRadius: 999, padding: '3px 9px',
+              borderRadius: 999,
+              padding: '4px 10px',
             }}>
               {locationType}
             </span>
           )}
 
-          {isFtOfficial ? (
+          {isSelected && (
             <span style={{
-              fontSize: 11, fontWeight: 800, color: '#FF7043',
-              background: 'rgba(255,112,67,0.09)',
-              border: '1px solid rgba(255,112,67,0.22)',
-              borderRadius: 999, padding: '3px 9px',
+              fontSize: 10,
+              fontWeight: 850,
+              color: '#64748B',
+              background: 'rgba(100,116,139,0.08)',
+              border: '1px solid rgba(100,116,139,0.14)',
+              borderRadius: 999,
+              padding: '4px 9px',
+              marginLeft: 'auto',
+              whiteSpace: 'nowrap',
             }}>
-              ⚡ Forge Official
-            </span>
-          ) : internal ? (
-            <span style={{
-              fontSize: 11, fontWeight: 700, color: '#1A4B8F',
-              background: 'rgba(26,75,143,0.08)',
-              border: '1px solid rgba(26,75,143,0.18)',
-              borderRadius: 999, padding: '3px 9px',
-            }}>
-              Forge Recruiter
-            </span>
-          ) : (
-            <span style={{
-              fontSize: 11, fontWeight: 600, color: '#78909C',
-              background: 'rgba(0,0,0,0.04)',
-              border: '1px solid rgba(0,0,0,0.08)',
-              borderRadius: 999, padding: '3px 9px',
-            }}>
-              External
-            </span>
-          )}
-
-          {postedLabel && (
-            <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: '#94A3B8' }}>
-              {postedLabel}
+              Last viewed
             </span>
           )}
         </div>
@@ -317,7 +334,7 @@ boxShadow: isSelected
         alignItems: 'center',
         paddingRight: 12,
         color: isSelected ? '#64748B' : '#CBD5E1',
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 900,
         transition: 'color 0.15s',
       }}>

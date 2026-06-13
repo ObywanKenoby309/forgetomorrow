@@ -75,7 +75,7 @@ export default function MobileJobDetail({
     ? `linear-gradient(135deg, ${ORANGE}, #FF5722)`
     : isPartner
     ? `linear-gradient(135deg, ${NAVY}, #162236)`
-    : 'rgba(255,255,255,0.96)';
+    : 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,247,243,0.96))';
 
   const titleColor  = isDark ? '#FFFFFF' : '#112033';
   const subtleColor = isDark ? 'rgba(255,255,255,0.70)' : '#607D8B';
@@ -102,7 +102,7 @@ export default function MobileJobDetail({
           zIndex: 60,
           display: 'flex',
           flexDirection: 'column',
-          background: '#F4F6F8',
+          background: 'linear-gradient(180deg, #FFF7F2 0%, #F4F6F8 34%, #EEF2F5 100%)',
         }}
       >
         {/* ── Sticky header ── */}
@@ -115,7 +115,8 @@ export default function MobileJobDetail({
             borderBottom: isDark
               ? '1px solid rgba(255,255,255,0.08)'
               : '1px solid rgba(0,0,0,0.07)',
-            padding: '12px 16px 14px',
+            boxShadow: '0 10px 28px rgba(15,23,42,0.08)',
+            padding: '12px 16px 16px',
           }}
         >
           {/* Back button */}
@@ -250,22 +251,64 @@ export default function MobileJobDetail({
             WebkitOverflowScrolling: 'touch',
           }}
         >
-          {paragraphs.length === 0 ? (
-            <p style={{ margin: 0, color: '#607D8B', fontSize: 14, lineHeight: 1.7, fontStyle: 'italic' }}>
-              No description provided.
-            </p>
-          ) : (
-            paragraphs.map((para, idx) => (
-              <p key={idx} style={{
-                margin: idx === 0 ? '0 0 12px' : '12px 0 0',
-                color: '#37474F',
-                fontSize: 14,
-                lineHeight: 1.75,
+          <section
+            aria-label="Job description"
+            style={{
+              background: 'rgba(255,255,255,0.92)',
+              border: '1px solid rgba(15,23,42,0.08)',
+              borderRadius: 22,
+              boxShadow: '0 10px 28px rgba(15,23,42,0.08)',
+              padding: '18px 18px 20px',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: 12,
+            }}>
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: 999,
+                background: 'rgba(255,112,67,0.12)',
+                color: ORANGE,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 900,
+                fontSize: 13,
+                flexShrink: 0,
               }}>
-                {para}
+                JD
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 900, color: '#112033', letterSpacing: '-0.2px' }}>
+                  Role Overview
+                </div>
+                <div style={{ fontSize: 11, color: '#78909C', fontWeight: 650, marginTop: 1 }}>
+                  Full posting details
+                </div>
+              </div>
+            </div>
+
+            {paragraphs.length === 0 ? (
+              <p style={{ margin: 0, color: '#607D8B', fontSize: 14, lineHeight: 1.7, fontStyle: 'italic' }}>
+                No description provided.
               </p>
-            ))
-          )}
+            ) : (
+              paragraphs.map((para, idx) => (
+                <p key={idx} style={{
+                  margin: idx === 0 ? 0 : '14px 0 0',
+                  color: '#37474F',
+                  fontSize: 14,
+                  lineHeight: 1.78,
+                }}>
+                  {para}
+                </p>
+              ))
+            )}
+          </section>
 
           {status === 'Reviewing' && (
             <div style={{
@@ -309,11 +352,11 @@ export default function MobileJobDetail({
             left: 0,
             right: 0,
             bottom: 68,
-            background: 'rgba(244,246,248,0.97)',
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)',
-            borderTop: '1px solid rgba(0,0,0,0.07)',
-            boxShadow: '0 -6px 20px rgba(0,0,0,0.08)',
+            background: 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            borderTop: '1px solid rgba(255,255,255,0.65)',
+            boxShadow: '0 -12px 34px rgba(15,23,42,0.14)',
             padding: '10px 12px',
             zIndex: 61,
             display: 'flex',
@@ -321,8 +364,8 @@ export default function MobileJobDetail({
           }}>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: isPaidUser ? '1fr 1.35fr 72px' : '1fr 72px',
-              gap: 10,
+              gridTemplateColumns: isPaidUser ? '1.05fr 1.2fr 58px' : '1fr 58px',
+              gap: 9,
               width: '100%',
               maxWidth: 560,
               alignItems: 'center',
@@ -333,7 +376,7 @@ export default function MobileJobDetail({
                 style={{
                   width: '100%',
                   padding: '14px 12px',
-                  background: ORANGE,
+                  background: 'linear-gradient(135deg, #FF7043, #FF5722)',
                   color: 'white',
                   border: 'none',
                   borderRadius: 14,
@@ -356,11 +399,11 @@ export default function MobileJobDetail({
                   style={{
                     width: '100%',
                     padding: '14px 12px',
-                    background: 'white',
+                    background: 'rgba(255,112,67,0.08)',
                     color: ORANGE,
                     border: `1.5px solid ${ORANGE}`,
                     borderRadius: 14,
-                    fontWeight: 700,
+                    fontWeight: 800,
                     fontSize: 14,
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
@@ -371,8 +414,8 @@ export default function MobileJobDetail({
                 </button>
               )}
 
-              <div style={{ width: 72, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ transform: 'scale(1.45)', transformOrigin: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 58, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 14 }}>
+                <div style={{ transform: 'scale(1.05)', transformOrigin: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', maxWidth: 56, overflow: 'hidden' }}>
                   <PinnedJobToggleButton
                     jobId={job.id}
                     initiallyPinned={isJobPinned(job)}
