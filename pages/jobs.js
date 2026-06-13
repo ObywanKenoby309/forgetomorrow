@@ -672,24 +672,102 @@ useEffect(() => {
 
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px 100px' }}>
-        <SeekerTitleCard
-          greeting={greeting}
-          title="Job Listings"
-          subtitle="Explore openings, review full details, and apply with confidence."
-          isMobile={true}
-        />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0, paddingBottom: 100 }}>
 
-        <ForgeAlignmentExplainer />
+        {/* ── Mobile hero header ── */}
+        <div style={{
+          padding: '18px 16px 14px',
+          background: 'linear-gradient(135deg, rgba(13,27,42,0.72), rgba(13,27,42,0.42))',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          marginBottom: 12,
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 900, color: 'rgba(255,112,67,0.80)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 4 }}>
+            {greeting}
+          </div>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.1 }}>
+            The Pipeline
+          </h1>
+          <p style={{ margin: '5px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.55)', fontWeight: 500, lineHeight: 1.4 }}>
+            Forge Alignment scores every role against your live profile.
+          </p>
 
-        <JobSearchFilters isMobile={true} {...filterProps} />
-
-        <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600, paddingLeft: 2 }}>
-          Showing {totalJobCount === 0 ? 0 : startIndex + 1}–
-          {Math.min(startIndex + pageSize, totalJobCount)} of {totalJobCount} jobs
+          {/* Live job count badge */}
+          {totalJobCount > 0 && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              marginTop: 10,
+              padding: '4px 11px',
+              borderRadius: 999,
+              background: 'rgba(255,112,67,0.14)',
+              border: '1px solid rgba(255,112,67,0.30)',
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#FF7043',
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: 999, background: '#FF7043', display: 'inline-block' }} />
+              {totalJobCount.toLocaleString()} open roles
+            </div>
+          )}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/* ── Filter bar ── */}
+        <div style={{ padding: '0 12px 12px' }}>
+          <JobSearchFilters isMobile={true} {...filterProps} />
+        </div>
+
+        {/* ── Result count ── */}
+        {totalJobCount > 0 && (
+          <div style={{
+            padding: '0 14px 8px',
+            fontSize: 11,
+            color: 'rgba(255,255,255,0.40)',
+            fontWeight: 600,
+          }}>
+            {startIndex + 1}–{Math.min(startIndex + pageSize, totalJobCount)} of {totalJobCount} jobs
+          </div>
+        )}
+
+        {/* ── Job feed ── */}
+        <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {loading && pagedJobs.length === 0 && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+            }}>
+              {[1,2,3,4].map(n => (
+                <div key={n} style={{
+                  height: 108,
+                  borderRadius: 20,
+                  background: 'rgba(255,255,255,0.07)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  animation: 'mobilePulse 1.4s ease-in-out infinite',
+                  animationDelay: `${n * 0.1}s`,
+                }} />
+              ))}
+              <style>{`@keyframes mobilePulse { 0%,100%{opacity:0.5} 50%{opacity:1} }`}</style>
+            </div>
+          )}
+
+          {!loading && pagedJobs.length === 0 && (
+            <div style={{
+              textAlign: 'center',
+              padding: '48px 20px',
+              background: 'rgba(255,255,255,0.06)',
+              borderRadius: 20,
+              border: '1px solid rgba(255,255,255,0.10)',
+              color: 'rgba(255,255,255,0.45)',
+              fontSize: 14,
+            }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>💼</div>
+              No jobs match your filters.
+            </div>
+          )}
+
           {pagedJobs.map((job) => (
             <div key={job.id} ref={selectedJob?.id === job.id ? selectedJobCardRef : null}>
               <JobListCard
@@ -700,36 +778,29 @@ useEffect(() => {
                 isInternalJob={isInternalJob}
                 getJobTier={getJobTier}
                 showSearchRelevance={hasAppliedSearch}
+                isMobile={true}
               />
             </div>
           ))}
-
-          {pagedJobs.length === 0 && (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '40px 20px',
-                background: 'rgba(255,255,255,0.70)',
-                borderRadius: 14,
-                border: '1px solid rgba(255,255,255,0.30)',
-                color: '#78909C',
-                fontSize: 14,
-              }}
-            >
-              No jobs match your filters.
-            </div>
-          )}
         </div>
 
-        <JobPagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        {/* ── Pagination ── */}
+        <div style={{ padding: '12px 12px 0' }}>
+          <JobPagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </div>
 
-        <JobsBottomRow viewedJobs={viewedJobs} appliedJobs={appliedJobs} onSelectJob={handleSelectJob} />
+        {/* ── Recently viewed / applied ── */}
+        <div style={{ padding: '16px 12px 0' }}>
+          <JobsBottomRow viewedJobs={viewedJobs} appliedJobs={appliedJobs} onSelectJob={handleSelectJob} />
+        </div>
 
+        {/* ── Full-screen job detail ── */}
         {mobileDetailOpen && selectedJob && (
           <MobileJobDetail
-			job={selectedJob}
-			profileSignal={selectedJob?.jdProfileSignal || profileSignal}
-			showSearchRelevance={hasAppliedSearch}
+            job={selectedJob}
+            onBack={() => setMobileDetailOpen(false)}
+            profileSignal={selectedJob?.jdProfileSignal || profileSignal}
+            showSearchRelevance={hasAppliedSearch}
             getJobStatus={getJobStatus}
             isInternalJob={isInternalJob}
             getJobTier={getJobTier}
