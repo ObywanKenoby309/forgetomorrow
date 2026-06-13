@@ -376,7 +376,7 @@ export default function PostCard({
       .ft-slidedown { animation: ft-slidedown 0.28s ease; }
     `}</style>
 
-    <div className={`relative overflow-hidden rounded-[20px] border border-[rgba(255,195,158,0.22)] bg-[linear-gradient(160deg,rgba(82,55,44,0.40),rgba(44,30,30,0.40))] backdrop-blur-[26px] backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,210,182,0.14),0_20px_50px_-22px_rgba(0,0,0,0.5)] p-5 space-y-4 w-full transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-[rgba(255,205,175,0.35)] hover:shadow-[inset_0_1px_0_rgba(255,215,190,0.18),0_28px_60px_-24px_rgba(255,140,90,0.25),0_28px_60px_-24px_rgba(0,0,0,0.55)] ${accentEdgeClass}`}>
+    <div className={`relative overflow-hidden rounded-[20px] border border-[rgba(255,185,140,0.35)] bg-[linear-gradient(160deg,rgba(255,150,100,0.24),rgba(205,85,50,0.28))] backdrop-blur-[24px] backdrop-saturate-[180%] backdrop-brightness-110 shadow-[inset_0_1px_0_rgba(255,205,175,0.25),0_20px_50px_-22px_rgba(0,0,0,0.45)] p-5 space-y-4 w-full transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-[rgba(255,205,175,0.5)] hover:shadow-[inset_0_1px_0_rgba(255,220,195,0.3),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(0,0,0,0.5)] ${accentEdgeClass}`}>
 
       {/* Header row */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
@@ -672,7 +672,7 @@ export default function PostCard({
           <button
             type="button"
             onClick={() => onOpenComments?.(post)}
-            className="w-full text-left rounded-2xl border border-[rgba(255,210,182,0.18)] bg-white/[0.06] px-3 py-2.5 hover:bg-white/[0.1] hover:border-[rgba(255,210,182,0.3)] transition"
+            className="w-full text-left pl-3.5 border-l-2 border-[rgba(255,205,175,0.3)] hover:border-[rgba(255,205,175,0.5)] transition"
           >
             <div className="flex items-start gap-2">
               {latestVisibleComment.avatarUrl ? (
