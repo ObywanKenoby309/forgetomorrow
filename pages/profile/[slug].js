@@ -1803,7 +1803,7 @@ flushPendingSaveRef.current = flushPendingSave;
               {mobileSheet === 'connect' && (
                 <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">Edit Connect</div><div style={{ fontSize:12, color:'var(--forge-muted)', marginTop:4 }}>Update contact links and your primary resume.</div></div>
                 <div className="ft-sheet-body">
-                  <div style={{ display:'grid', gap:14 }}>
+                  <div style={{ display:'grid', gap:14, width:'100%', maxWidth:'100%', overflowX:'hidden' }}>
                     <div className="ft-dark-field">
                       <label className="ft-dark-label">Location</label>
                       <input className="ft-dark-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="City, state, country, or Remote" />
@@ -1822,9 +1822,10 @@ flushPendingSaveRef.current = flushPendingSave;
                         <option value="RECRUITERS_ONLY">Recruiters Only</option>
                       </select>
                     </div>
-                    <button type="button" className="ft-add-btn" style={{ width:'100%', padding:'12px 14px' }} onClick={openResumeModal}>
-                      {primaryResume ? `Primary Resume: ${primaryResume.name || 'Selected Resume'}` : 'Select Primary Resume'}
-                    </button>
+					<button type="button" className="ft-add-btn" style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '12px 14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', }} onClick={openResumeModal}>
+					  {primaryResume ? `Primary Resume: ${primaryResume.name || 'Selected Resume'}` : 'Select Primary Resume'}
+					</button>
+					
                     <button type="button" className="ft-add-btn" style={{ width:'100%', padding:'12px 14px', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.78)' }} onClick={handleCopyProfileUrl}>
                       {copied ? 'Copied Profile Link' : 'Copy Profile Link'}
                     </button>
