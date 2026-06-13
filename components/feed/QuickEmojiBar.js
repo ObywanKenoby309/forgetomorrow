@@ -17,7 +17,7 @@ export default function QuickEmojiBar({
   };
 
   return (
-    <div className="flex items-center gap-2 mt-2 flex-wrap">
+    <div className="flex items-center gap-1.5 sm:gap-2 mt-2 flex-wrap">
       {list.map((emoji) => {
         const count = reactionCounts[emoji] || 0;
         const isSelected = selectedEmojis.includes(emoji);
@@ -29,17 +29,17 @@ export default function QuickEmojiBar({
             onClick={() => handleClick(emoji)}
             onMouseEnter={() => onMouseEnter?.(emoji)}
             onMouseLeave={onMouseLeave}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-base font-medium transition-all duration-200 border ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-base font-medium transition-all duration-150 border ${
               isSelected
-                ? 'bg-blue-100 border-blue-300 text-blue-800 shadow-sm'
-                : 'bg-gray-100 border-transparent hover:bg-gray-200 text-gray-700 hover:shadow'
+                ? 'bg-orange-500/15 border-orange-400/40 text-[#b6481f] shadow-sm'
+                : 'bg-white/40 border-white/40 text-[#6b4a3a] hover:bg-white/60 hover:border-white/60 hover:-translate-y-0.5'
             }`}
             aria-label={isSelected ? `Remove ${emoji}` : `Add ${emoji}`}
             title={isSelected ? `Remove ${emoji}` : `Add ${emoji}`}
           >
-            <span className="text-xl">{emoji}</span>
+            <span className="text-lg sm:text-xl">{emoji}</span>
             {count > 0 && (
-              <span className="text-xs text-gray-600 font-semibold">{count}</span>
+              <span className="text-xs font-semibold text-[#a8775f]">{count}</span>
             )}
           </button>
         );

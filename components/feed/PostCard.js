@@ -376,13 +376,13 @@ export default function PostCard({
       .ft-slidedown { animation: ft-slidedown 0.28s ease; }
     `}</style>
 
-    <div className={`relative overflow-hidden rounded-[20px] border border-white/40 bg-[linear-gradient(160deg,rgba(255,255,255,0.22),rgba(255,180,130,0.18))] backdrop-blur-[26px] backdrop-saturate-[160%] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_20px_50px_-24px_rgba(50,20,10,0.3)] p-5 space-y-4 w-full transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-white/60 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(50,20,10,0.35)] ${accentEdgeClass}`}>
+    <div className={`relative overflow-hidden rounded-[20px] border border-white/40 bg-[linear-gradient(160deg,rgba(255,255,255,0.22),rgba(255,180,130,0.18))] backdrop-blur-[26px] backdrop-saturate-[160%] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_20px_50px_-24px_rgba(50,20,10,0.3)] p-3.5 sm:p-5 space-y-3 sm:space-y-4 w-full transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-white/60 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(50,20,10,0.35)] ${accentEdgeClass}`}>
 
       {/* Header row */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[1fr_auto_1fr] items-start gap-2 sm:gap-3">
 
         {/* Left: avatar + name + headline + meta */}
-        <div className="flex items-start gap-3 min-w-0">
+        <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
 
           {/* Avatar — unified action system handles routing, connect, message */}
           <MemberAvatarActions
@@ -394,17 +394,17 @@ export default function PostCard({
               <img
                 src={post.authorAvatar}
                 alt={post.author}
-                className="w-10 h-10 rounded-full object-cover ring-1 ring-white/60"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-1 ring-white/60 shrink-0"
                 style={{ cursor: canTargetAuthor ? 'pointer' : 'default' }}
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-white/40 flex items-center justify-center text-[#8a5d44] ring-1 ring-white/60">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/40 flex items-center justify-center text-[#8a5d44] ring-1 ring-white/60 shrink-0">
                 {post.author?.charAt(0)?.toUpperCase()}
               </div>
             )}
           </MemberAvatarActions>
 
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="font-semibold text-[#3a2418] truncate">{post.author}</div>
             {post.authorHeadline && (
               <div className="w-full text-xs text-[#8a5d44]">
@@ -412,11 +412,20 @@ export default function PostCard({
               </div>
             )}
             <div className="text-xs text-[#a8775f] mt-0.5">{new Date(post.createdAt).toLocaleString()}</div>
+
+            {/* Mobile-only signal pill, shown inline under the meta line */}
+            {signalMeta.signalLabel && (
+              <div className="mt-1.5 sm:hidden">
+                <span className={`inline-flex items-center px-2.5 py-1 text-[11px] font-extrabold tracking-wide rounded-full border whitespace-nowrap ${signalMeta.signalClassName}`}>
+                  {signalMeta.signalLabel}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Center: signal pill (Hiring, Open to work, Win, etc.) */}
-        <div className="justify-self-center">
+        {/* Center: signal pill (Hiring, Open to work, Win, etc.) — desktop only, mobile shows it inline above */}
+        <div className="hidden sm:flex sm:justify-self-center">
           {signalMeta.signalLabel && (
             <span className={`inline-flex items-center px-2.5 py-1 text-[11px] font-extrabold tracking-wide rounded-full border whitespace-nowrap ${signalMeta.signalClassName}`}>
               {signalMeta.signalLabel}
@@ -425,17 +434,17 @@ export default function PostCard({
         </div>
 
         {/* Right: type pill + post actions menu */}
-        <div className="flex items-center gap-2 justify-self-end">
-          <span className={`inline-flex items-center px-2.5 py-1 text-[11px] font-semibold rounded-full border whitespace-nowrap ${typePillClass}`}>{typeLabel}</span>
+        <div className="flex items-center gap-1.5 sm:gap-2 justify-self-end shrink-0">
+          <span className={`inline-flex items-center px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-semibold rounded-full border whitespace-nowrap ${typePillClass}`}>{typeLabel}</span>
 
           <div className="relative" ref={actionsMenuRef}>
             <button
               type="button"
               onClick={() => setActionsMenuOpen((v) => !v)}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 text-[#6b4a3a] hover:text-[#3a2418] transition"
+              className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 text-[#6b4a3a] hover:text-[#3a2418] transition"
               aria-label="Post actions"
             >
-              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <svg className="w-4 h-4 sm:w-[18px] sm:h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                 <circle cx="5" cy="12" r="1.4" />
                 <circle cx="12" cy="12" r="1.4" />
                 <circle cx="19" cy="12" r="1.4" />
@@ -571,53 +580,52 @@ export default function PostCard({
       {/* Action bar */}
       <div className="pt-3 space-y-3">
         <div className={`h-px w-full ${accentDividerClass}`} />
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={handleLike}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border text-sm font-bold transition-all duration-150 ${
+              className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full border text-xs sm:text-sm font-bold transition-all duration-150 ${
                 likeSelected
                   ? 'text-[#b6481f] border-orange-400/50 bg-gradient-to-br from-orange-500/25 to-orange-500/10'
                   : 'text-[#6b4a3a] border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 hover:text-[#3a2418] hover:-translate-y-0.5'
               }`}
             >
-              <svg className={`w-[18px] h-[18px] ${likeSelected ? 'ft-pop' : ''}`} viewBox="0 0 24 24" fill="currentColor">
+              <svg className={`w-4 h-4 sm:w-[18px] sm:h-[18px] ${likeSelected ? 'ft-pop' : ''}`} viewBox="0 0 24 24" fill="currentColor">
                 <path d="M2 21h4V9H2v12zM22 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13.17 1 7.59 6.59C7.22 6.95 7 7.45 7 8v11c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
               </svg>
               <span>Like</span>
-              {likeCount > 0 && <span className="text-xs text-[#a8775f]">{likeCount}</span>}
+              {likeCount > 0 && <span className="text-[10px] sm:text-xs text-[#a8775f]">{likeCount}</span>}
             </button>
 
             <button
               type="button"
               onClick={() => onOpenComments?.(post)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 text-sm font-bold text-[#6b4a3a] hover:text-[#3a2418] transition-all duration-150 hover:-translate-y-0.5"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 text-xs sm:text-sm font-bold text-[#6b4a3a] hover:text-[#3a2418] transition-all duration-150 hover:-translate-y-0.5"
             >
-              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-4 h-4 sm:w-[18px] sm:h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
               </svg>
               <span>Comment</span>
               {visibleCommentsCount > 0 && (
-                <span className="text-xs text-[#a8775f]">{visibleCommentsCount}</span>
+                <span className="text-[10px] sm:text-xs text-[#a8775f]">{visibleCommentsCount}</span>
               )}
             </button>
 
             <button
               type="button"
               onClick={handleShare}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 text-sm font-bold text-[#6b4a3a] hover:text-[#3a2418] transition-all duration-150 hover:-translate-y-0.5"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 text-xs sm:text-sm font-bold text-[#6b4a3a] hover:text-[#3a2418] transition-all duration-150 hover:-translate-y-0.5"
             >
               {copyConfirm ? (
                 <>
-                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="w-4 h-4 sm:w-[18px] sm:h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 6 9 17l-5-5" />
                   </svg>
                   <span>Copied</span>
                 </>
               ) : (
                 <>
-                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="w-4 h-4 sm:w-[18px] sm:h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="18" cy="5" r="3" />
                     <circle cx="6" cy="12" r="3" />
                     <circle cx="18" cy="19" r="3" />
@@ -628,16 +636,14 @@ export default function PostCard({
                 </>
               )}
             </button>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setShowEmojiBar((v) => !v)}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 text-[#6b4a3a] hover:text-[#3a2418] transition-all duration-150"
+              className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 text-[#6b4a3a] hover:text-[#3a2418] transition-all duration-150"
               aria-label="React"
             >
-              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-4 h-4 sm:w-[18px] sm:h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="9" />
                 <path d="M9 9h.01M15 9h.01M8.5 14.5a4 4 0 0 0 7 0" />
               </svg>
@@ -647,14 +653,14 @@ export default function PostCard({
               type="button"
               onClick={handleSave}
               disabled={saveLoading}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border text-sm font-bold transition-all duration-150 disabled:opacity-50 ${
+              className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full border text-xs sm:text-sm font-bold transition-all duration-150 disabled:opacity-50 ${
                 saved
                   ? 'text-[#b6481f] border-orange-400/40 bg-orange-500/10'
                   : 'text-[#6b4a3a] border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 hover:text-[#3a2418]'
               }`}
             >
               <svg
-                className={`w-[18px] h-[18px] transition-transform duration-300 ${saved ? 'scale-110' : ''}`}
+                className={`w-4 h-4 sm:w-[18px] sm:h-[18px] transition-transform duration-300 ${saved ? 'scale-110' : ''}`}
                 viewBox="0 0 24 24"
                 fill={saved ? 'currentColor' : 'none'}
                 stroke="currentColor"
@@ -665,7 +671,6 @@ export default function PostCard({
               </svg>
               <span>{saved ? 'Saved' : 'Save'}</span>
             </button>
-          </div>
         </div>
 
         {latestVisibleComment && (
