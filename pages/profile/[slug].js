@@ -1547,6 +1547,7 @@ flushPendingSaveRef.current = flushPendingSave;
 
                       {/* Connect */}
                       <div className={`ft-mobile-panel${mobileTab === 'connect' ? ' active' : ''}`}>
+                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Contact, visibility & resume</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('connect')}>✎ Edit</button></div>}
                         <button type="button" className="ft-mobile-contact-row" onClick={handleCopyProfileUrl}>
                           <div className="ft-mobile-contact-icon" style={{ background:'rgba(232,96,28,0.14)', color:'#e8601c' }}>⎘</div>
                           <div style={{ minWidth:0 }}><div className="ft-mobile-contact-label">Portfolio</div><div className="ft-mobile-contact-value">{profileUrl.replace('https://', '')}</div></div>
