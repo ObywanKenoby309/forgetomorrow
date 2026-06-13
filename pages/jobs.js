@@ -13,7 +13,6 @@ import JobDetailPanel from '../components/jobs/JobDetailPanel';
 import MobileJobDetail from '../components/jobs/MobileJobDetail';
 import JobsBottomRow from '../components/jobs/JobsBottomRow';
 import JobSearchFilters from '../components/jobs/JobSearchFilters';
-import MobileFilterDrawer from '../components/jobs/MobileFilterDrawer';
 
 // ── SSR-safe mobile hook ──────────────────────────────────────
 function useIsMobile(bp = 768) {
@@ -700,12 +699,6 @@ useEffect(() => {
     <JobSearchFilters isMobile={true} {...filterProps} />
   </div>
 </div>
-
-<MobileFilterDrawer
-  open={filterOpen}
-  onClose={() => setFilterOpen(false)}
-  filterProps={filterProps}
-/>
 
         {/* ── Result count ── */}
         {totalJobCount > 0 && (

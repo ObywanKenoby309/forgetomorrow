@@ -70,15 +70,81 @@ export default function JobSearchFilters({
 
   if (isMobile) {
     return (
-      <div style={{ background: 'rgba(255,248,242,0.92)', borderRadius: '0 0 20px 20px', border: '1px solid rgba(255,255,255,0.65)', boxShadow: '0 10px 24px rgba(0,0,0,0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', overflow: 'hidden' }}>
-        <button type="button" onClick={() => setFilterOpen(true)}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: 'none', border: 'none', cursor: 'pointer' }}>
+      <div style={{ background: 'transparent', borderRadius: 0, border: 'none', boxShadow: 'none', overflow: 'hidden' }}>
+        <button type="button" onClick={() => setFilterOpen(o => !o)}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: 'transparent', border: 'none', cursor: 'pointer' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#112033' }}>Filter jobs</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#112033' }}>Filter jobs</span>
             {activeFilterCount > 0 && <span style={{ background: '#FF7043', color: 'white', borderRadius: 999, fontSize: 11, fontWeight: 800, padding: '1px 7px' }}>{activeFilterCount}</span>}
           </div>
-          <span style={{ fontSize: 18, color: '#90A4AE', lineHeight: 1 }}>{filterOpen ? '▲' : '▼'}</span>
+          <span style={{ fontSize: 18, color: '#78909C', lineHeight: 1 }}>{filterOpen ? '▲' : '▼'}</span>
         </button>
+
+        {filterOpen && (
+          <div style={{
+            padding: '0 16px 16px',
+            display: 'grid',
+            gap: 10,
+            borderTop: '1px solid rgba(255,112,67,0.14)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.52), rgba(255,248,242,0.72))',
+          }}>
+            <input type="text" value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Keywords — title, skills, tags..."
+              style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box', marginTop: 12 }} />
+            <input type="text" value={companyFilter} onChange={e => setCompanyFilter(e.target.value)} placeholder="Company name..."
+              style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+            <input type="text" value={locationFilter} onChange={e => setLocationFilter(e.target.value)} placeholder="City, region, country..."
+              style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <select value={locationTypeFilter} onChange={e => setLocationTypeFilter(e.target.value)}
+                style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', background: 'white', minWidth: 0 }}>
+                <option value="">All types</option>
+                <option value="Remote">Remote</option>
+                <option value="Hybrid">Hybrid</option>
+                <option value="On-site">On-site</option>
+              </select>
+              <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}
+                style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', background: 'white', minWidth: 0 }}>
+                <option value="">All sources</option>
+                <option value="external">External</option>
+                <option value="internal">Forge recruiters</option>
+              </select>
+            </div>
+            <input type="number" min="1" value={daysFilter} onChange={e => setDaysFilter(e.target.value)} placeholder="Posted within (days) e.g. 7"
+              style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 13, color: '#263238', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, color: '#78909C' }}>Per page:</span>
+                <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                  style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', fontSize: 12, background: 'white' }}>
+                  <option value={10}>10</option><option value={20}>20</option><option value={50}>50</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {activeFilterCount > 0 && (
+                  <button type="button" onClick={clearFilters}
+                    style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #CFD8DC', background: 'white', color: '#78909C', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
+                    Clear
+                  </button>
+                )}
+                {typeof onSavePreferences === 'function' && (
+                  <button type="button" onClick={onSavePreferences} disabled={savingPreferences}
+                    style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(26,75,143,0.25)', background: savingPreferences ? 'rgba(26,75,143,0.08)' : 'white', color: '#1A4B8F', fontSize: 13, cursor: savingPreferences ? 'default' : 'pointer', fontWeight: 700 }}>
+                    {savingPreferences ? 'Saving...' : 'Save for dashboard'}
+                  </button>
+                )}
+                <button type="button" onClick={applyFilters}
+                  style={{ padding: '8px 18px', borderRadius: 8, background: '#FF7043', color: 'white', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+            {preferenceSaveStatus && (
+              <div style={{ fontSize: 11, fontWeight: 700, color: preferenceSaveStatus === 'saved' ? '#2E7D32' : '#D32F2F' }}>
+                {preferenceSaveStatus === 'saved' ? 'Dashboard preferences saved.' : 'Could not save dashboard preferences.'}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
