@@ -316,6 +316,7 @@ const [profileVisibility,        setProfileVisibility]        = useState(
   };
   const fileInputRef = useRef(null);
   const projectsRef = useRef(null);
+  const mobileProjectsRef = useRef(null);
   const customSectionRef = useRef(null);
   const [saveState,  setSaveState]  = useState('idle');
   const saveTimerRef = useRef(null);
@@ -991,8 +992,9 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-mobile-sub { font-size:12px; color:var(--forge-muted); margin-top:2px; line-height:1.35; white-space:normal; word-break:break-word; }
           .ft-mobile-signals { display:flex; gap:6px; flex-wrap:wrap; padding:10px 16px 0; flex-shrink:0; }
           .ft-mobile-signal-chip { font-size:10px; font-weight:600; padding:3px 9px; border-radius:999px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.07); color:rgba(240,236,230,0.80); white-space:nowrap; display:inline-flex; align-items:center; gap:4px; }
-          .ft-mobile-tab-bar { display:flex; margin:14px 16px 0; background:var(--forge-surface); border-radius:12px; padding:3px; flex-shrink:0; }
-          .ft-mobile-tab-btn { flex:1; padding:8px 4px; border:none; background:transparent; border-radius:9px; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; color:var(--forge-muted); cursor:pointer; transition:all 0.18s; }
+          .ft-mobile-tab-bar { display:flex; gap:3px; margin:14px 16px 0; background:var(--forge-surface); border-radius:12px; padding:3px; flex-shrink:0; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+          .ft-mobile-tab-bar::-webkit-scrollbar { display:none; }
+          .ft-mobile-tab-btn { flex:0 0 auto; min-width:86px; padding:8px 4px; border:none; background:transparent; border-radius:9px; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; color:var(--forge-muted); cursor:pointer; transition:all 0.18s; }
           .ft-mobile-tab-btn.active { background:rgba(22,20,18,0.98); color:var(--forge-text); box-shadow:0 1px 4px rgba(0,0,0,0.4); }
           .ft-mobile-tab-dot { display:inline-block; width:4px; height:4px; border-radius:50%; background:transparent; margin-right:4px; vertical-align:middle; margin-top:-2px; transition:background 0.18s; }
           .ft-mobile-tab-btn.active .ft-mobile-tab-dot { background:var(--forge-orange); }
@@ -1447,7 +1449,7 @@ flushPendingSaveRef.current = flushPendingSave;
                     )}
 
                     <div className="ft-mobile-tab-bar">
-                      {['about','skills','education','more','connect'].map(tab => (
+                      {['about','skills','projects','education','more','connect'].map(tab => (
                         <button key={tab} type="button"
                           className={`ft-mobile-tab-btn${mobileTab === tab ? ' active' : ''}`}
                           onClick={() => setMobileTab(tab)}>
@@ -1492,6 +1494,19 @@ flushPendingSaveRef.current = flushPendingSave;
                         ) : <div className="ft-mobile-card"><div className="ft-mobile-card-label">Skills</div><div className="ft-mobile-card-text">No skills added yet.</div></div>}
                       </div>
 
+                      {/* Projects */}
+                      <div className={`ft-mobile-panel${mobileTab === 'projects' ? ' active' : ''}`}>
+                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Projects</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('projects')}>✎ Edit</button></div>}
+                        <div className="ft-mobile-card">
+                          <div className="ft-mobile-card-label">Projects</div>
+                          <ProfileProjects
+                            projects={projects}
+                            setProjects={setProjects}
+                            editMode={false}
+                          />
+                        </div>
+                      </div>
+
                       {/* Education */}
                       <div className={`ft-mobile-panel${mobileTab === 'education' ? ' active' : ''}`}>
                         {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Education</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('education')}>✎ Edit</button></div>}
@@ -1530,15 +1545,6 @@ flushPendingSaveRef.current = flushPendingSave;
                         {primaryResume && <a className="ft-mobile-contact-row" href={`/api/resume/public-download?resumeId=${encodeURIComponent(primaryResume.id)}&slug=${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer"><div className="ft-mobile-contact-icon" style={{ background:'rgba(34,197,94,0.14)', color:'#4ade80' }}>↓</div><div style={{ minWidth:0 }}><div className="ft-mobile-contact-label">Resume</div><div className="ft-mobile-contact-value">Download primary resume</div></div><div className="ft-mobile-contact-arrow">›</div></a>}
                       </div>
 
-                      {/* Footer */}
-                      <div className="ft-mobile-footer">
-                        <button type="button" className="ft-mobile-footer-btn" onClick={handleCopyProfileUrl}>⎘ {copied ? 'Copied' : 'Copy Link'}</button>
-                        {isOwner ? (
-                          <button type="button" className="ft-mobile-footer-btn primary" onClick={() => setMobileSheet('identity')}>✎ Edit Portfolio</button>
-                        ) : primaryResume ? (
-                          <a className="ft-mobile-footer-btn primary" href={`/api/resume/public-download?resumeId=${encodeURIComponent(primaryResume.id)}&slug=${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer">↓ Download Resume</a>
-                        ) : null}
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -1572,6 +1578,7 @@ flushPendingSaveRef.current = flushPendingSave;
                       {[
                         { id:'about',     label:'Summary',              icon:'✍' },
                         { id:'skills',    label:'Skills',               icon:'⚡' },
+                        { id:'projects',  label:'Projects',             icon:'🧱' },
                         { id:'education', label:'Education',            icon:'🎓' },
                         { id:'more',      label:'Languages & Interests',icon:'🌐' },
                         { id:'prefs',     label:'Work Preferences',     icon:'💼' },
@@ -1640,6 +1647,19 @@ flushPendingSaveRef.current = flushPendingSave;
                   <div className="ft-dark-chips">{skills.map((s, i) => <span key={s+i} className="ft-dark-chip">{s}<button type="button" className="ft-dark-chip-x" onClick={() => setSkills(p => p.filter((_,idx) => idx !== i))}>×</button></span>)}</div>
                 </div>
                 <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
+              )}
+
+              {mobileSheet === 'projects' && (
+                <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">Projects</div></div>
+                <div className="ft-sheet-body">
+                  <ProfileProjects
+                    ref={mobileProjectsRef}
+                    projects={projects}
+                    setProjects={setProjects}
+                    editMode={true}
+                  />
+                </div>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => { mobileProjectsRef.current?.commitPending?.(); setMobileSheet(null); }}>Done</button></div></>
               )}
 
               {mobileSheet === 'education' && (
