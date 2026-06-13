@@ -376,6 +376,11 @@ export default function PostCard({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <div className="font-semibold text-gray-900 truncate">{post.author}</div>
+			  {post.authorHeadline && (
+  <div className="w-full text-xs text-gray-500">
+    {post.authorHeadline}
+  </div>
+)}
               <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-full border ${typePillClass}`}>{typeLabel}</span>
               {signalMeta.signalLabel && (
                 <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-full border ${signalMeta.signalClassName}`}>
@@ -605,6 +610,11 @@ export default function PostCard({
                 <div className="text-xs font-bold text-gray-800">
                   {latestVisibleComment.by || 'Member'}
                 </div>
+				{latestVisibleComment.headline && (
+  <div className="text-[11px] text-gray-500">
+    {latestVisibleComment.headline}
+  </div>
+)}
                 <div className="mt-0.5 line-clamp-2 text-sm text-gray-600">
                   {latestVisibleComment.text}
                 </div>
