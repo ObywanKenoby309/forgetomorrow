@@ -1496,7 +1496,15 @@ flushPendingSaveRef.current = flushPendingSave;
                           <div className="ft-mobile-stat"><div className="ft-mobile-stat-n">{education.length}<em>+</em></div><div className="ft-mobile-stat-l">Education</div></div>
                           <div className="ft-mobile-stat"><div className="ft-mobile-stat-n">{languages.length}<em>+</em></div><div className="ft-mobile-stat-l">Languages</div></div>
                         </div>
-                        {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Summary</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('about')}>✎ Edit</button></div>}
+                        {isOwner && (
+                          <div className="ft-mobile-edit-row">
+                            <span style={{ fontSize:12, color:'var(--forge-muted)' }}>Summary</span>
+                            <div style={{ display:'flex', gap:8 }}>
+                              {editMode && <button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('enhance')}>✨ Enhance</button>}
+                              <button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('about')}>✎ Edit</button>
+                            </div>
+                          </div>
+                        )}
                         {(aboutMe || headline) && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Summary</div><div className="ft-mobile-card-text">{aboutMe || headline}</div></div>}
                         {(location || status) && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Details</div><div className="ft-mobile-card-text">{location ? `Location: ${location}` : ''}{location && status ? '\n' : ''}{status ? `Status: ${status}` : ''}</div></div>}
                       </div>
@@ -1550,6 +1558,20 @@ flushPendingSaveRef.current = flushPendingSave;
                             </div>
                           );
                         }) : <div className="ft-mobile-card"><div className="ft-mobile-card-label">Education</div><div className="ft-mobile-card-text">No education added yet.</div></div>}
+
+                        {/* Certifications — alongside Education */}
+                        {hasCertificationsContent ? (
+                          <div className="ft-mobile-card">
+                            <div className="ft-mobile-card-label">Certifications</div>
+                            <ProfileCertifications
+                              certifications={certifications}
+                              setCertifications={setCertifications}
+                              editMode={false}
+                            />
+                          </div>
+                        ) : (
+                          <div className="ft-mobile-card"><div className="ft-mobile-card-label">Certifications</div><div className="ft-mobile-card-text">No certifications added yet.</div></div>
+                        )}
                       </div>
 
                       {/* More */}
@@ -1684,6 +1706,17 @@ flushPendingSaveRef.current = flushPendingSave;
                 <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={async () => { await flushPendingSaveRef.current(true); setMobileSheet(null); }}>Done</button></div></>
               )}
 
+              {mobileSheet === 'enhance' && (
+                <><div style={{ padding:'0 20px 14px', flexShrink:0 }}>
+                  <div className="ft-sheet-title">Profile Enhancement</div>
+                  <div style={{ fontSize:12, color:'var(--forge-muted)', marginTop:4 }}>AI-powered signal analysis and suggestions for your profile — same tool as on desktop.</div>
+                </div>
+                <div className="ft-sheet-body">
+                  <ProfileSignalEngine profileData={liveProfileData} onApply={handleApplyField} />
+                </div>
+                <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
+              )}
+
               {mobileSheet === 'skills' && (
                 <><div style={{ padding:'0 20px 14px', flexShrink:0 }}><div className="ft-sheet-title">Skills</div></div>
                 <div className="ft-sheet-body">
@@ -1728,6 +1761,16 @@ flushPendingSaveRef.current = flushPendingSave;
                       <div className="ft-dark-field" style={{ flex:1 }}><label className="ft-dark-label">End</label><input className="ft-dark-input" value={eduDraft.endYear} onChange={e => setEduDraft(p => ({...p, endYear:e.target.value}))} placeholder="2022" /></div>
                     </div>
                     <button type="button" className="ft-add-btn" onClick={() => { if (!eduDraft.school.trim()) return; setEducation(p => [...p, {...eduDraft}]); setEduDraft(blankEdu()); }}>+ Add Education</button>
+                  </div>
+
+                  {/* Certifications — reuses existing certifications state & save flow */}
+                  <div style={{ marginTop:24 }}>
+                    <div className="ft-dark-section-label" style={{ marginBottom:10 }}>Certifications</div>
+                    <ProfileCertifications
+                      certifications={certifications}
+                      setCertifications={setCertifications}
+                      editMode={true}
+                    />
                   </div>
                 </div>
                 <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={() => setMobileSheet(null)}>Done</button></div></>
