@@ -14,6 +14,7 @@ export default function PostList({
   onBlockAuthor, // ✅ NEW: passed from Feed for global block
 }) {
   const [activePostId, setActivePostId] = useState(null);
+  const [activePostSnapshot, setActivePostSnapshot] = useState(null);
 
   // ✅ ensure we only log a view once per "open" cycle
   const lastTrackedPostIdRef = useRef(null);
@@ -26,14 +27,40 @@ export default function PostList({
   }, [safePosts, filter]);
 
   const activePost =
-    activePostId != null ? safePosts.find((p) => p.id === activePostId) || null : null;
+    activePostSnapshot ||
+    (activePostId != null ? safePosts.find((p) => p.id === activePostId) || null : null);
 
-  const handleOpenComments = (post) => {
-    setActivePostId(post?.id ?? null);
+  const handleOpenComments = async (post) => {
+    const postId = post?.id ?? null;
+    setActivePostId(postId);
+    setActivePostSnapshot(post || null);
+
+    if (!postId) return;
+
+    try {
+      const res = await fetch('/api/feed?limit=100');
+      if (!res.ok) return;
+
+      const data = await res.json().catch(() => ({}));
+      const freshPost = Array.isArray(data.posts)
+        ? data.posts.find((p) => p.id === postId)
+        : null;
+
+      if (freshPost) {
+        setActivePostSnapshot({
+          ...freshPost,
+          author: freshPost.authorName || freshPost.author || post?.author || 'Member',
+          body: freshPost.content || freshPost.body || post?.body || '',
+        });
+      }
+    } catch (e) {
+      console.warn('[Feed] failed to refresh post before opening comments', e);
+    }
   };
 
   const handleCloseComments = () => {
     setActivePostId(null);
+    setActivePostSnapshot(null);
   };
 
   const handleReplyInternal = (postId, text) => {
@@ -44,12 +71,23 @@ export default function PostList({
     onDelete?.(postId);
     if (postId === activePostId) {
       setActivePostId(null);
+      setActivePostSnapshot(null);
     }
   };
 
   const handleReactInternal = (postId, emoji) => {
     onReact?.(postId, emoji);
   };
+
+  // ✅ Keep modal post synced when parent posts update
+  useEffect(() => {
+    if (activePostId == null) return;
+
+    const updatedPost = safePosts.find((p) => p.id === activePostId) || null;
+    if (updatedPost) {
+      setActivePostSnapshot(updatedPost);
+    }
+  }, [safePosts, activePostId]);
 
   // ✅ View tracking: count a "view" when the comments modal opens (your current "open post" behavior)
   useEffect(() => {
