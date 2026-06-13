@@ -47,7 +47,7 @@ export default async function handler(req, res) {
       const authors = authorIds.length
         ? await prisma.user.findMany({
             where: { id: { in: authorIds } },
-            select: { id: true, slug: true, avatarUrl: true, image: true },
+            select: { id: true, slug: true, avatarUrl: true, image: true, headline: true },
           })
         : [];
 
@@ -57,6 +57,7 @@ export default async function handler(req, res) {
           {
             authorSlug: u.slug || null,
             authorAvatar: u.avatarUrl || u.image || null,
+			authorHeadline: u.headline || null,
           },
         ])
       );
@@ -65,6 +66,7 @@ export default async function handler(req, res) {
         ...p,
         authorSlug: authorMap[p.authorId]?.authorSlug || null,
         authorAvatar: authorMap[p.authorId]?.authorAvatar || null,
+		authorHeadline: authorMap[p.authorId]?.authorHeadline || null,
         hearthRecommendationCount: p._count?.hearthRecommendations || 0,
         currentUserRecommendedHearth: Array.isArray(p.hearthRecommendations) && p.hearthRecommendations.length > 0,
         hearthThreadId: Array.isArray(p.hearthThreads) && p.hearthThreads.length > 0 ? p.hearthThreads[0].id : null,
@@ -126,7 +128,7 @@ export default async function handler(req, res) {
       // Return the new post with the author's avatar + slug attached
       const author = await prisma.user.findUnique({
         where: { id: user.id },
-        select: { slug: true, avatarUrl: true, image: true },
+        select: { slug: true, avatarUrl: true, image: true, headline: true },
       });
 
       return res.status(201).json({
@@ -134,6 +136,7 @@ export default async function handler(req, res) {
           ...post,
           authorSlug: author?.slug || null,
           authorAvatar: author?.avatarUrl || author?.image || null,
+		  authorHeadline: author?.headline || null,
         },
       });
     } catch (err) {

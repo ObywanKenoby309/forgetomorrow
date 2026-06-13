@@ -257,13 +257,14 @@ export default function Feed() {
     }
 
     const newComment = {
-      userId: currentUserId || null,
-      byUserId: currentUserId || null,
-      by: currentUserName || 'You',
-      text: trimmed,
-      avatarUrl: currentUserAvatar || null,
-      at: new Date().toISOString(),
-    };
+  userId: currentUserId || null,
+  byUserId: currentUserId || null,
+  by: currentUserName || 'You',
+  text: trimmed,
+  avatarUrl: currentUserAvatar || null,
+  headline: session?.user?.headline || null,
+  at: new Date().toISOString(),
+};
 
     setPosts((prev) =>
       prev.map((p) =>

@@ -391,14 +391,20 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
               )}
 
               <div className="min-w-0">
-                <div className="truncate text-[15px] font-bold text-gray-950">
-                  {post.author}
-                </div>
-                <div className="mt-0.5 text-xs text-gray-500">
-                  {createdAtLabel} •{' '}
-                  {post.type === 'personal' ? 'Personal' : 'Business'}
-                </div>
-              </div>
+  <div className="truncate text-[15px] font-bold text-gray-950">
+    {post.author}
+  </div>
+
+  {post.authorHeadline && (
+    <div className="text-xs text-gray-500">
+      {post.authorHeadline}
+    </div>
+  )}
+
+  <div className="mt-0.5 text-xs text-gray-500">
+    {createdAtLabel} • {post.type === 'personal' ? 'Personal' : 'Business'}
+  </div>
+</div>
             </header>
 
             <div className="mt-4 max-h-[22vh] overflow-y-auto pr-1 text-[15px] leading-7 text-gray-800 sm:max-h-[26vh]">
@@ -587,16 +593,22 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <div className="text-sm font-bold text-gray-950">
-                                {c.by}
-                              </div>
+  <div className="text-sm font-bold text-gray-950">
+    {c.by}
+  </div>
 
-                              {c.at && (
-                                <div className="text-xs text-gray-400">
-                                  {new Date(c.at).toLocaleString()}
-                                </div>
-                              )}
-                            </div>
+  {c.headline && (
+    <div className="w-full text-xs text-gray-500">
+      {c.headline}
+    </div>
+  )}
+
+  {c.at && (
+    <div className="text-xs text-gray-400">
+      {new Date(c.at).toLocaleString()}
+    </div>
+  )}
+</div>
 
                             <div className="mt-2 whitespace-pre-wrap break-words text-[15px] leading-7 text-gray-800">
                               {c.text}

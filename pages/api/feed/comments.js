@@ -66,26 +66,23 @@ export default async function handler(req, res) {
       (user.email ? user.email.split('@')[0] : 'Someone');
 
     const avatarUrl = user.avatarUrl || user.image || null;
+	const headline = user.headline || null;
 
     const currentComments = Array.isArray(existing.comments)
       ? existing.comments
       : [];
 
     const newComment = {
-      // ✅ NEW: stable comment id for deep links + like targeting
-      id: makeCommentId(),
-
-      // 🔹 This is what the UI will use to open MemberActions for the commenter
-      authorId: viewerId,
-      by: displayName,
-      text: trimmed,
-      at: new Date().toISOString(),
-      avatarUrl, // used in UI for commenter avatar
-
-      // ✅ NEW: comment-like tracking (separate from emojis)
-      likes: 0,
-      likedBy: [],
-    };
+  id: makeCommentId(),
+  authorId: viewerId,
+  by: displayName,
+  text: trimmed,
+  at: new Date().toISOString(),
+  avatarUrl,
+  headline,
+  likes: 0,
+  likedBy: [],
+};
 
     const updated = await prisma.feedPost.update({
       where: { id: idNum },
