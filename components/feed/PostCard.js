@@ -4,6 +4,33 @@ import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
 import MemberAvatarActions from '@/components/member/MemberAvatarActions';
 
+function formatRelativeTime(dateInput) {
+  const date = new Date(dateInput);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 5) return 'Just now';
+  if (seconds < 60) return `${seconds}s`;
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+
+  const weeks = Math.floor(days / 7);
+  if (days < 35) return `${weeks}w`;
+
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo`;
+
+  const years = Math.floor(days / 365);
+  return `${years}y`;
+}
+
 export default function PostCard({
   post,
   onOpenComments,
@@ -407,11 +434,13 @@ export default function PostCard({
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-[#3a2418] truncate">{post.author}</div>
             {post.authorHeadline && (
-              <div className="w-full text-xs text-[#8a5d44]">
+              <div className="w-full text-xs text-[#8a5d44] line-clamp-1 sm:line-clamp-2" title={post.authorHeadline}>
                 {post.authorHeadline}
               </div>
             )}
-            <div className="text-xs text-[#a8775f] mt-0.5">{new Date(post.createdAt).toLocaleString()}</div>
+            <div className="text-xs text-[#a8775f] mt-0.5" title={new Date(post.createdAt).toLocaleString()}>
+              {formatRelativeTime(post.createdAt)}
+            </div>
 
             {/* Mobile-only signal pill, shown inline under the meta line */}
             {signalMeta.signalLabel && (
