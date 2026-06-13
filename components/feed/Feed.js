@@ -124,7 +124,7 @@ export default function Feed() {
       author: row.authorName || row.author || 'Member',
       authorAvatar: row.authorAvatar || null,
       authorSlug: row.authorSlug || null,
-	  authorHeadline: row.authorHeadline || null,
+      authorHeadline: row.authorHeadline || null,
       body,
       type: row.type ?? 'business',
       createdAt: new Date(row.createdAt).toISOString(),
@@ -252,38 +252,43 @@ export default function Feed() {
       }
 
       const data = await res.json().catch(() => ({}));
-const updatedPost = data?.post ? normalizeCommunityPost(data.post) : null;
+      const updatedPost = data?.post ? normalizeCommunityPost(data.post) : null;
 
-await logPostInteraction(postId, 'comment');
+      await logPostInteraction(postId, 'comment');
 
-if (updatedPost) {
-  setPosts((prev) =>
-    prev.map((p) => (p.id === postId ? updatedPost : p))
-  );
-  return;
-}
+      if (updatedPost) {
+        setPosts((prev) =>
+          prev.map((p) => (p.id === postId ? updatedPost : p))
+        );
+        return;
+      }
 
-    const newComment = {
-  userId: currentUserId || null,
-  authorId: currentUserId || null,
-  byUserId: currentUserId || null,
-  by: currentUserName || 'You',
-  text: trimmed,
-  avatarUrl: currentUserAvatar || null,
-  headline: session?.user?.headline || null,
-  at: new Date().toISOString(),
-};
+      const newComment = {
+        userId: currentUserId || null,
+        authorId: currentUserId || null,
+        byUserId: currentUserId || null,
+        by: currentUserName || 'You',
+        text: trimmed,
+        avatarUrl: currentUserAvatar || null,
+        headline: session?.user?.headline || null,
+        at: new Date().toISOString(),
+      };
 
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId
-          ? {
-              ...p,
-              comments: Array.isArray(p.comments) ? [...p.comments, newComment] : [newComment],
-            }
-          : p
-      )
-    );
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                comments: Array.isArray(p.comments)
+                  ? [...p.comments, newComment]
+                  : [newComment],
+              }
+            : p
+        )
+      );
+    } catch (err) {
+      console.error('Comment error:', err);
+    }
   };
 
   const handleReact = async (postId, emoji) => {
