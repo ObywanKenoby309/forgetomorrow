@@ -49,6 +49,21 @@ const SOCIAL_FIELDS = [
   { key: 'instagram', label: 'Instagram', placeholder: 'instagram.com/username', icon: '◉' },
 ];
 
+// Maps each mobile edit sheet to the Profile Signal Engine signal(s) it affects,
+// so the mobile Signals drawer can show only what's relevant to the section
+// currently being edited (filterKeys matches PROFILE_SIGNALS[].key in
+// lib/intelligence/profileSignalShared.js).
+const MOBILE_SIGNAL_FILTERS = {
+  about:      { keys: ['identity', 'narrative'], label: 'About' },
+  skills:     { keys: ['proof'],                  label: 'Skills' },
+  projects:   { keys: ['portfolio'],              label: 'Projects' },
+  education:  { keys: ['credentials'],            label: 'Education & Certifications' },
+  more:       { keys: ['language'],               label: 'Languages & Interests' },
+  connect:    { keys: ['visibility'],             label: 'Connect' },
+  prefs:      { keys: ['availability'],           label: 'Work Preferences' },
+  visibility: { keys: ['visibility'],             label: 'Profile Visibility' },
+};
+
 // Work status → color signal
 const STATUS_COLOR = {
   'Actively Looking': { bg: 'rgba(34,197,94,0.14)', border: 'rgba(34,197,94,0.35)', color: '#4ade80', dot: '#4ade80' },
@@ -364,7 +379,7 @@ const [profileVisibility,        setProfileVisibility]        = useState(
 
   // Profile Signals drawer persists across tab switches while editing —
   // pull it in/out as needed. It only auto-closes when edit mode ends.
-  useEffect(() => { if (!editMode) setShowSignalDrawer(false); }, [editMode]);
+  useEffect(() => { if (!editMode && !mobileSheet) setShowSignalDrawer(false); }, [editMode, mobileSheet]);
 
   async function handleCopyProfileUrl() {
     try {
@@ -600,6 +615,11 @@ flushPendingSaveRef.current = flushPendingSave;
   const hasCertificationsContent = Array.isArray(certifications) && certifications.length > 0;
   const hasProjectsContent = Array.isArray(projects) && projects.length > 0;
   const hasCustomSectionContent = Array.isArray(customSection) && customSection.length > 0;
+
+  // Which Profile Signal Engine signals are relevant to the mobile sheet
+  // currently open (used to scope the right-edge Signals drawer to "what
+  // the user is doing right now" instead of all 8 signals at once).
+  const activeSignalFilter = mobileSheet ? MOBILE_SIGNAL_FILTERS[mobileSheet] : null;
 
   const showRightColumn = editMode || hasEducationContent || hasCertificationsContent;
   const showProjectsCard = editMode || hasProjectsContent;
@@ -1657,10 +1677,12 @@ flushPendingSaveRef.current = flushPendingSave;
         </div>
 
         {/* ══ MOBILE PROFILE SIGNAL ENGINE — right-edge pull tab + side drawer ══ */}
-        {/* Persists across tabs while editing (does not auto-close on tab switch); */}
-        {/* docked above the bottom edit toolbar. Reuses liveProfileData /          */}
-        {/* handleApplyField from the desktop right rail — no duplicated logic.     */}
-        {isOwner && editMode && (
+        {/* On mobile, editing happens per-section via each tab's own "Edit" pill */}
+        {/* (mobileSheet), not the page-level "Edit Portfolio" toggle — so this    */}
+        {/* shows whenever either is active. Persists across tab switches; docked */}
+        {/* above the bottom edit toolbar. Reuses liveProfileData/handleApplyField */}
+        {/* from the desktop right rail — no duplicated logic.                     */}
+        {isOwner && (editMode || mobileSheet) && (
           <button
             type="button"
             className={`ft-signal-tab${showSignalDrawer ? ' open' : ''}`}
@@ -1672,18 +1694,25 @@ flushPendingSaveRef.current = flushPendingSave;
           </button>
         )}
 
-        {isOwner && editMode && showSignalDrawer && (
+        {isOwner && (editMode || mobileSheet) && showSignalDrawer && (
           <div className="ft-signal-drawer-backdrop open" onClick={() => setShowSignalDrawer(false)} />
         )}
 
-        {isOwner && editMode && signalDrawerMounted && (
+        {isOwner && (editMode || mobileSheet) && signalDrawerMounted && (
           <div className={`ft-signal-drawer${showSignalDrawer ? ' open' : ''}`}>
             <div className="ft-signal-drawer-handle-row">
-              <span className="ft-signal-drawer-title">Profile Signals</span>
+              <span className="ft-signal-drawer-title">
+                Profile Signals{activeSignalFilter ? ` — ${activeSignalFilter.label}` : ''}
+              </span>
               <button type="button" className="ft-signal-drawer-close" onClick={() => setShowSignalDrawer(false)}>✕</button>
             </div>
             <div className="ft-signal-drawer-body">
-              <ProfileSignalEngine profileData={liveProfileData} onApply={handleApplyField} />
+              <ProfileSignalEngine
+                profileData={liveProfileData}
+                onApply={handleApplyField}
+                filterKeys={activeSignalFilter?.keys || null}
+                filterLabel={activeSignalFilter?.label || null}
+              />
             </div>
           </div>
         )}

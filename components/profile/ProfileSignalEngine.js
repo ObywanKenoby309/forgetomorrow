@@ -1,629 +1,1283 @@
 // components/profile/ProfileSignalEngine.js
+
 //
+
 // ForgeTomorrow Profile Signal Engine
+
 // Live career signal mirror for the profile editor right rail — edit mode only.
+
 // Replaces the dumb ProfileStrengthRail checklist with real signal intelligence.
+
 //
+
 // Architecture:
+
 // - Runs 8 universal hiring signals against the seeker's live profile content
+
 // - Classifies each as Proven / Partial / Missing with recruiter-grade reasoning
+
 // - Each gap has inline AI Assist — generates specific copy, applies directly to profile
+
 // - Wired to /api/intelligence/context for full career context injection
+
 // - Updates live as the seeker edits (debounced, no full reload needed)
+
 //
+
 // Usage (in [slug].js, replaces ProfileStrengthRail in the right prop during editMode):
+
 // import ProfileSignalEngine from '@/components/profile/ProfileSignalEngine';
+
 // right={editMode ? <ProfileSignalEngine profileData={liveProfileData} onApply={handleApplyField} /> : <RightRailPlacementManager />}
 
+
+
 import { useEffect, useRef, useState } from 'react';
+
 import { safeArr, PROFILE_SIGNALS, classifySignals, statusConfig, overallVerdict } from '@/lib/intelligence/profileSignalShared';
 
+
+
 const ORANGE = '#FF7043';
+
 const SLATE = '#334155';
+
 const DARK = '#1E293B';
 
+
+
 const GLASS = {
+
   borderRadius: 14,
+
   border: '1px solid rgba(255,255,255,0.22)',
+
   background: 'rgba(255,255,255,0.58)',
+
   boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+
   backdropFilter: 'blur(10px)',
+
   WebkitBackdropFilter: 'blur(10px)',
+
 };
 
+
+
 // ─── AI Assist panel ──────────────────────────────────────────────────────────
+
 function AssistPanel({ signal, profileData, careerContext, onApply, onClose }) {
+
   const [busy, setBusy]           = useState(false);
+
   const [suggestions, setSuggestions] = useState([]);
+
   const [selected, setSelected]   = useState('');
+
   const [error, setError]         = useState('');
+
   const [notes, setNotes]         = useState('');
 
+
+
   const generate = async () => {
+
     setBusy(true);
+
     setError('');
+
     setSuggestions([]);
+
     try {
+
       const resp = await fetch('/api/ai/profile-development', {
+
         method: 'POST',
+
         headers: { 'Content-Type': 'application/json' },
+
         body: JSON.stringify({
+
           field: signal.field,
+
           profile: {
+
   headline: profileData.headline || '',
+
   aboutMe: profileData.aboutMe || '',
+
   skills: safeArr(profileData.skills).map(s => typeof s === 'string' ? s : s?.name || '').filter(Boolean),
+
   languages: safeArr(profileData.languages).map(l => typeof l === 'string' ? l : l?.name || '').filter(Boolean),
+
   education: safeArr(profileData.education),
+
   certifications: safeArr(profileData.certifications),
+
   projects: safeArr(profileData.projects),
+
   workPreferences: profileData.workPreferences || {},
+
   profileVisibility: profileData.profileVisibility || '',
+
   location: profileData.location || '',
+
 },
+
           careerContext: careerContext || null,
+
           signalContext: {
+
             signal: signal.key,
+
             gapReason: signal.gapReason,
+
             recruiterInterpretation: signal.recruiterInterpretation || '',
+
             currentStatus: signal.status,
+
           },
+
           notes: notes || null,
+
         }),
+
       });
+
       const json = await resp.json().catch(() => ({}));
+
       if (!resp.ok) throw new Error(json?.error || 'Generation failed');
+
       const suggs = Array.isArray(json?.suggestions) ? json.suggestions : [];
+
       if (!suggs.length) throw new Error('No suggestions returned');
+
       setSuggestions(suggs);
+
       setSelected(suggs[0]);
+
     } catch (e) {
+
       setError(e?.message || 'AI error');
+
     } finally {
+
       setBusy(false);
+
     }
+
   };
 
+
+
   return (
+
     <div style={{ display: 'grid', gap: 8 }}>
+
       {/* Context note */}
+
       <div style={{ padding: '8px 10px', borderRadius: 8, background: 'rgba(255,112,67,0.08)', border: '1px solid rgba(255,112,67,0.20)', fontSize: 11, color: '#9A3412', lineHeight: 1.4, fontWeight: 700 }}>
+
         {signal.gapReason}
+
       </div>
+
+
 
       {/* Optional context input */}
+
       <div style={{ display: 'grid', gap: 4 }}>
+
         <label style={{ fontSize: 10, fontWeight: 800, color: '#64748B', letterSpacing: 0.3 }}>OPTIONAL CONTEXT (targeting, role, goals)</label>
+
         <input
+
           value={notes}
+
           onChange={e => setNotes(e.target.value)}
+
           placeholder="e.g. targeting Director roles in enterprise SaaS, remote..."
+
           style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.12)', fontSize: 11, color: DARK, outline: 'none', fontFamily: 'inherit' }}
+
         />
+
       </div>
+
+
 
       {/* Generate button */}
+
       <button type="button" onClick={generate} disabled={busy}
+
         style={{ padding: '9px 14px', borderRadius: 999, border: 'none', background: busy ? 'rgba(255,112,67,0.50)' : ORANGE, color: 'white', fontWeight: 900, fontSize: 12, cursor: busy ? 'not-allowed' : 'pointer' }}>
+
         {busy ? 'Generating…' : suggestions.length ? 'Regenerate' : '⚡ Generate suggestions'}
+
       </button>
 
+
+
       {error && (
+
         <div style={{ padding: '8px 10px', borderRadius: 8, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.20)', fontSize: 11, color: '#991B1B', fontWeight: 700 }}>
+
           {error}
+
         </div>
+
       )}
+
+
 
       {/* Suggestion cards */}
+
       {suggestions.length > 0 && (
+
         <div style={{ display: 'grid', gap: 6 }}>
+
           <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', letterSpacing: 0.3 }}>SELECT A SUGGESTION</div>
+
           {suggestions.slice(0, 3).map((s, i) => (
+
             <button key={i} type="button" onClick={() => setSelected(s)}
+
               style={{
+
                 textAlign: 'left', padding: '9px 11px', borderRadius: 10, cursor: 'pointer',
+
                 border: selected === s ? `2px solid ${ORANGE}` : '1px solid rgba(0,0,0,0.10)',
+
                 background: selected === s ? 'rgba(255,112,67,0.06)' : 'rgba(255,255,255,0.86)',
+
                 fontSize: 11, color: DARK, lineHeight: 1.5, fontWeight: 600,
+
                 transition: 'all 0.15s',
+
               }}>
+
               <div style={{ fontSize: 9, fontWeight: 800, color: selected === s ? ORANGE : '#94A3B8', marginBottom: 3, letterSpacing: 0.3 }}>OPTION {i + 1}</div>
+
               {String(s).trim()}
+
             </button>
+
           ))}
+
         </div>
+
       )}
+
+
 
       {/* Editable draft */}
+
       {selected && (
+
         <div style={{ display: 'grid', gap: 4 }}>
+
           <label style={{ fontSize: 10, fontWeight: 800, color: '#64748B', letterSpacing: 0.3 }}>EDIT BEFORE APPLYING</label>
+
           {signal.field === 'aboutMe' ? (
+
             <textarea value={selected} onChange={e => setSelected(e.target.value)} rows={5}
+
               style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.12)', fontSize: 11, color: DARK, outline: 'none', fontFamily: 'inherit', resize: 'vertical', lineHeight: 1.5 }} />
+
           ) : (
+
             <input value={selected} onChange={e => setSelected(e.target.value)}
+
               style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.12)', fontSize: 11, color: DARK, outline: 'none', fontFamily: 'inherit' }} />
+
           )}
+
         </div>
+
       )}
 
+
+
       {/* Actions */}
+
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+
         <button type="button" onClick={onClose}
+
           style={{ padding: '7px 14px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.12)', background: 'white', color: SLATE, fontWeight: 800, fontSize: 11, cursor: 'pointer' }}>
+
           Cancel
+
         </button>
+
         {selected && onApply && (
+
           <button type="button" onClick={() => { onApply(signal.field, selected); onClose(); }}
+
             style={{ padding: '7px 14px', borderRadius: 999, border: 'none', background: ORANGE, color: 'white', fontWeight: 900, fontSize: 11, cursor: 'pointer' }}>
+
             ✓ Apply to Profile
+
           </button>
+
         )}
+
       </div>
+
     </div>
+
   );
+
 }
 
+
+
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ProfileSignalEngine({ profileData = {}, onApply, mode = 'seeker', readOnly = false, title = 'Profile Signal Engine', jobContext = null, }) {
+
+export default function ProfileSignalEngine({ profileData = {}, onApply, mode = 'seeker', readOnly = false, title = 'Profile Signal Engine', jobContext = null, filterKeys = null, filterLabel = null, }) {
+
   const [signals, setSignals]           = useState([]);
+
   const [verdict, setVerdict]           = useState(null);
+
   const [activeAssist, setActiveAssist] = useState(null); // signal key
+
   const [expandedSignal, setExpandedSignal] = useState(null);
+
   const [careerContext, setCareerContext] = useState(null);
+
   const debounceRef = useRef(null);
+
   const isReadOnly = readOnly || mode === 'recruiter';
+
     const hasJobContext = Boolean(
+
     jobContext?.jobDescription ||
+
     jobContext?.description ||
+
     jobContext?.title ||
+
     jobContext?.jobTitle
+
   );
 
+
+
   const signalModeLabel = hasJobContext
+
     ? 'Candidate Signal vs This Job'
+
     : 'General Candidate Signal';
 
+
+
   const jobLabel =
+
     jobContext?.title ||
+
     jobContext?.jobTitle ||
+
     'Selected Job';
 
+
+
   // Fetch unified career context once on mount
+
   useEffect(() => {
+
     fetch('/api/intelligence/context')
+
       .then(r => r.ok ? r.json() : null)
+
       .then(d => { if (d?.context) setCareerContext(d.context); })
+
       .catch(() => {});
+
   }, []);
 
+
+
   // Re-classify signals whenever profileData or careerContext changes (debounced)
+
 useEffect(() => {
+
   if (debounceRef.current) clearTimeout(debounceRef.current);
 
+
+
   debounceRef.current = setTimeout(() => {
+
     const mergedProfileData = {
+
       ...profileData,
 
+
+
       // Resume fallback from unified intelligence context
+
       primaryResume:
+
         profileData?.primaryResume ||
+
         careerContext?.resume ||
+
         careerContext?.primaryResume ||
+
         null,
 
+
+
       hasResume:
+
         Boolean(
+
           profileData?.primaryResume ||
+
           careerContext?.resume ||
+
           careerContext?.primaryResume ||
+
           careerContext?.maps?.sourceStatus?.hasResume
+
         ),
+
     };
+
+
 
     const classified = classifySignals(mergedProfileData, jobContext);
 
+
+
     setSignals(classified);
+
     setVerdict(overallVerdict(classified));
+
   }, 300);
 
+
+
   return () => {
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
+
   };
+
 }, [profileData, careerContext]);
 
+
+
   const proven  = signals.filter(s => s.status === 'direct').length;
+
   const partial = signals.filter(s => s.status === 'adjacent').length;
+
   const missing = signals.filter(s => s.status === 'missing').length;
 
+
+
+  // When filterKeys is provided (e.g. mobile drawer scoped to the section
+
+  // currently being edited), only show those signal bands below — the
+
+  // overall verdict/score above still reflects the full profile.
+
+  const hasFilter = Array.isArray(filterKeys) && filterKeys.length > 0;
+
+  const visibleSignals = hasFilter
+
+    ? signals.filter(sig => filterKeys.includes(sig.key))
+
+    : signals;
+
+
+
   return (
+
     <div style={{ display: 'grid', gap: 10 }}>
+
       {/* Header */}
+
       <div style={{ display: 'grid', gap: 3 }}>
+
   <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+
     {title}
+
   </div>
+
+
 
   <div style={{ fontSize: 11, fontWeight: 800, color: DARK, lineHeight: 1.35 }}>
+
     {hasJobContext ? `${signalModeLabel}: ${jobLabel}` : signalModeLabel}
+
   </div>
+
 </div>
+
+
 
       {/* Verdict card */}
+
 {verdict && (
+
   <div
+
     style={{
+
       padding: '14px 14px',
+
       borderRadius: 14,
+
       background: 'rgba(15,23,42,0.92)',
+
       border: `1px solid ${verdict.color}55`,
+
       boxShadow: `0 10px 24px rgba(0,0,0,0.16), 0 0 0 1px ${verdict.color}22`,
+
       display: 'grid',
+
       gap: 10,
+
     }}
+
   >
+
     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+
       <div>
+
         <div
+
           style={{
+
             fontSize: 9,
+
             fontWeight: 900,
+
             color: '#CBD5E1',
+
             letterSpacing: '0.10em',
+
             textTransform: 'uppercase',
+
             marginBottom: 4,
+
           }}
+
         >
+
           Live Profile Signal
+
         </div>
+
+
 
         <div style={{ fontWeight: 950, fontSize: 14, color: 'white', lineHeight: 1.15 }}>
+
           {verdict.label}
+
         </div>
+
+
 
         <div style={{ fontSize: 10, color: '#CBD5E1', marginTop: 5, lineHeight: 1.35, fontWeight: 600 }}>
+
           {isReadOnly
+
             ? 'Recruiter-visible signal is measured from this candidate profile and available portfolio data.'
+
             : 'Recruiter visibility is being measured from your live ForgeTomorrow identity.'}
+
         </div>
+
       </div>
+
+
 
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
+
         <div style={{ fontSize: 26, fontWeight: 950, color: verdict.color, lineHeight: 1 }}>
+
           {verdict.score}/8
+
         </div>
+
         <div style={{ fontSize: 9, color: '#CBD5E1', fontWeight: 800, marginTop: 3 }}>
+
           signals
+
         </div>
+
       </div>
+
     </div>
 
+
+
     <div
+
       style={{
+
         height: 7,
+
         borderRadius: 999,
+
         background: 'rgba(255,255,255,0.14)',
+
         overflow: 'hidden',
+
       }}
+
     >
+
       <div
+
         style={{
+
           width: `${Math.min(100, Math.max(0, (verdict.score / 8) * 100))}%`,
+
           height: '100%',
+
           borderRadius: 999,
+
           background: verdict.color,
+
         }}
+
       />
+
     </div>
+
+
 
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+
       <span style={{ fontSize: 9, fontWeight: 900, color: '#BBF7D0' }}>
+
         {proven} proven
+
       </span>
+
       <span style={{ fontSize: 9, fontWeight: 900, color: '#FDE68A' }}>
+
         {partial} partial
+
       </span>
+
       <span style={{ fontSize: 9, fontWeight: 900, color: '#FECACA' }}>
+
         {missing} missing
+
       </span>
+
     </div>
+
   </div>
+
 )}
+
+
 
 {verdict?.priority && (
+
   <div
+
     style={{
+
       borderRadius: 12,
+
       border: '1px solid rgba(255,112,67,0.22)',
+
       background: 'rgba(255,255,255,0.88)',
+
       padding: '12px 14px',
+
       display: 'grid',
+
       gap: 6,
+
       boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
+
     }}
+
   >
+
     <div
+
       style={{
+
         fontSize: 10,
+
         fontWeight: 900,
+
         color: ORANGE,
+
         letterSpacing: '0.08em',
+
         textTransform: 'uppercase',
+
       }}
+
     >
+
       Highest Leverage Improvement
+
     </div>
 
+
+
     <div
+
       style={{
+
         fontSize: 12,
+
         fontWeight: 800,
+
         color: DARK,
+
         lineHeight: 1.4,
+
       }}
+
     >
+
       {verdict.priority.label}
+
     </div>
 
+
+
     <div
+
       style={{
+
         fontSize: 11,
+
         color: '#475569',
+
         lineHeight: 1.45,
+
         fontWeight: 600,
+
       }}
+
     >
+
       {verdict.priority.gapReason}
+
     </div>
+
+
 
     {!isReadOnly && verdict.priority.field && (
+
       <button
+
         type="button"
+
         onClick={() => {
+
           setExpandedSignal(verdict.priority.key);
+
           setActiveAssist(verdict.priority.key);
+
         }}
+
         style={{
+
           marginTop: 2,
+
           width: 'fit-content',
+
           padding: '7px 12px',
+
           borderRadius: 999,
+
           border: 'none',
+
           background: ORANGE,
+
           color: 'white',
+
           fontSize: 11,
+
           fontWeight: 900,
+
           cursor: 'pointer',
+
         }}
+
       >
+
         ⚡ Improve This Signal
+
       </button>
+
     )}
+
   </div>
+
 )}
 
+
+
       {/* Signal bands */}
+
+{hasFilter && (
+
+  <div style={{ fontSize: 10, fontWeight: 900, color: '#64748B', letterSpacing: '0.10em', textTransform: 'uppercase', paddingTop: 2 }}>
+
+    {filterLabel ? `Signals for ${filterLabel}` : 'Relevant Signals'}
+
+  </div>
+
+)}
+
 <div style={{ display: 'grid', gap: 6 }}>
-  {signals.map(sig => {
+
+  {visibleSignals.map(sig => {
+
     const cfg = statusConfig(sig.status);
+
     const isOpen = activeAssist === sig.key;
+
     const isExpanded = expandedSignal === sig.key;
 
+
+
     return (
+
       <div
+
         key={sig.key}
+
         style={{
+
           borderRadius: 10,
+
           border: `1px solid ${cfg.color}33`,
+
           background: cfg.bg,
+
           overflow: 'hidden',
+
           transition: 'all 0.15s ease',
+
         }}
+
       >
+
         {/* Compact signal row */}
+
         <div
+
           onClick={() =>
+
             setExpandedSignal(isExpanded ? null : sig.key)
+
           }
+
           style={{
+
             padding: '9px 10px',
+
             cursor: 'pointer',
+
           }}
+
         >
+
           <div
+
             style={{
+
               display: 'flex',
+
               alignItems: 'center',
+
               justifyContent: 'space-between',
+
               gap: 8,
+
             }}
+
           >
+
             {/* LEFT */}
+
             <div
+
               style={{
+
                 display: 'flex',
+
                 alignItems: 'center',
+
                 gap: 7,
+
                 minWidth: 0,
+
                 flex: 1,
+
               }}
+
             >
+
               <span
+
                 style={{
+
                   fontSize: 11,
+
                   fontWeight: 900,
+
                   color: cfg.color,
+
                   flexShrink: 0,
+
                 }}
+
               >
+
                 {cfg.icon}
+
               </span>
 
+
+
               <div
+
                 style={{
+
                   minWidth: 0,
+
                   display: 'grid',
+
                   gap: 1,
+
                 }}
+
               >
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 800,
-                    color: DARK,
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {sig.label}
-                </div>
 
                 <div
+
                   style={{
-                    fontSize: 9,
-                    color: '#64748B',
+
+                    fontSize: 11,
+
+                    fontWeight: 800,
+
+                    color: DARK,
+
                     lineHeight: 1.2,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    maxWidth: 170,
+
                   }}
+
                 >
-                  {sig.status === 'direct'
-                    ? 'Recruiters can clearly validate this signal'
-                    : sig.gapReason}
+
+                  {sig.label}
+
                 </div>
+
+
+
+                <div
+
+                  style={{
+
+                    fontSize: 9,
+
+                    color: '#64748B',
+
+                    lineHeight: 1.2,
+
+                    whiteSpace: 'nowrap',
+
+                    overflow: 'hidden',
+
+                    textOverflow: 'ellipsis',
+
+                    maxWidth: 170,
+
+                  }}
+
+                >
+
+                  {sig.status === 'direct'
+
+                    ? 'Recruiters can clearly validate this signal'
+
+                    : sig.gapReason}
+
+                </div>
+
               </div>
+
             </div>
+
+
 
             {/* RIGHT */}
+
             <div
+
               style={{
+
                 display: 'flex',
+
                 alignItems: 'center',
+
                 gap: 5,
+
                 flexShrink: 0,
+
               }}
+
             >
-              <span
-                style={{
-                  fontSize: 9,
-                  fontWeight: 800,
-                  color: cfg.color,
-                  background: 'rgba(255,255,255,0.70)',
-                  padding: '2px 7px',
-                  borderRadius: 999,
-                  border: `1px solid ${cfg.color}44`,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {cfg.label}
-              </span>
 
               <span
+
                 style={{
-                  fontSize: 10,
-                  color: '#64748B',
-                  fontWeight: 900,
+
+                  fontSize: 9,
+
+                  fontWeight: 800,
+
+                  color: cfg.color,
+
+                  background: 'rgba(255,255,255,0.70)',
+
+                  padding: '2px 7px',
+
+                  borderRadius: 999,
+
+                  border: `1px solid ${cfg.color}44`,
+
+                  whiteSpace: 'nowrap',
+
                 }}
+
               >
-                {isExpanded ? '−' : '+'}
+
+                {cfg.label}
+
               </span>
+
+
+
+              <span
+
+                style={{
+
+                  fontSize: 10,
+
+                  color: '#64748B',
+
+                  fontWeight: 900,
+
+                }}
+
+              >
+
+                {isExpanded ? '−' : '+'}
+
+              </span>
+
             </div>
+
           </div>
+
+
 
           {/* Expanded content */}
+
           {isExpanded && (
+
             <div
+
               style={{
+
                 marginTop: 10,
+
                 display: 'grid',
+
                 gap: 10,
+
               }}
+
             >
+
               <div
+
                 style={{
+
                   fontSize: 10,
+
                   color: cfg.color,
+
                   fontWeight: 700,
+
                   lineHeight: 1.45,
+
                 }}
+
               >
+
                 {sig.description}
+
               </div>
 
+
+
             {sig.status !== 'direct' && (
+
 			  <div
+
 				style={{
+
 				  fontSize: 10,
+
 				  color: '#475569',
+
 				  lineHeight: 1.45,
+
 				  fontWeight: 600,
+
 				}}
+
 			  >
+
 				<strong>Recruiter interpretation:</strong> {sig.recruiterInterpretation || 'This signal needs more visible evidence before recruiters can fully validate it. Treat this as a signal-strength note, not an automatic disqualifier.'}
+
 			  </div>
+
 			)}
 
+
+
               {!isReadOnly && sig.field && sig.status !== 'direct' && (
+
                 <button
+
                   type="button"
+
                   onClick={(e) => {
+
                     e.stopPropagation();
+
                     setActiveAssist(isOpen ? null : sig.key);
+
                   }}
+
                   style={{
+
                     width: 'fit-content',
+
                     fontSize: 10,
+
                     fontWeight: 900,
+
                     color: ORANGE,
+
                     background: 'rgba(255,112,67,0.10)',
+
                     border: '1px solid rgba(255,112,67,0.25)',
+
                     borderRadius: 999,
+
                     padding: '5px 10px',
+
                     cursor: 'pointer',
+
                   }}
+
                 >
+
                   {isOpen ? 'Close AI Assist' : '⚡ AI Assist'}
+
                 </button>
+
               )}
+
             </div>
+
           )}
+
         </div>
+
+
 
         {/* Inline AI Assist panel */}
+
         {isOpen && (
+
           <div
+
             style={{
+
               borderTop: `1px solid ${cfg.color}22`,
+
               padding: '10px 10px',
+
               background: 'rgba(255,255,255,0.82)',
+
             }}
+
           >
+
             <AssistPanel
+
               signal={sig}
+
               profileData={profileData}
+
               careerContext={careerContext}
+
               onApply={onApply}
+
               onClose={() => setActiveAssist(null)}
+
             />
+
           </div>
+
         )}
+
       </div>
+
     );
+
   })}
+
 </div>
 
+
+
       {/* Intelligence note */}
+
       {isReadOnly ? (
+
         <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, lineHeight: 1.4, paddingTop: 2 }}>
+
           View only for recruiters. This does not modify the candidate profile.
+
         </div>
+
       ) : careerContext ? (
+
         <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, lineHeight: 1.4, paddingTop: 2 }}>
+
           ⚡ Powered by your ForgeTomorrow career intelligence — suggestions are calibrated to your full profile history, not generic advice.
+
         </div>
+
       ) : null}
+
     </div>
+
   );
+
 }
