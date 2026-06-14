@@ -113,8 +113,8 @@ export default function EnterpriseHeader({
   const defaultHeight = "h-14";
   const resolvedHeight = heightClass || defaultHeight;
   const defaultContainer = alignWithGrid
-    ? "w-full px-3 md:px-6"
-    : "max-w-7xl mx-auto px-4 md:px-6";
+  ? "w-full pl-3 pr-1 md:px-6"
+  : "max-w-7xl mx-auto pl-4 pr-1 md:px-6";
   const defaultLeft =
     "flex items-center gap-3 md:gap-4 min-w-0 pr-4 md:pr-6";
   const defaultNavGap = "gap-7 md:gap-8";
