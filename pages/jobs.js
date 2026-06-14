@@ -684,7 +684,7 @@ if (isMobile) {
 {/* ── Filter bar ── */}
 <div
   style={{
-    marginTop: -8,
+    marginTop: -10,
     position: 'relative',
     zIndex: 1,
   }}
