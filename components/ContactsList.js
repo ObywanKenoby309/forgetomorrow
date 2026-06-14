@@ -34,11 +34,15 @@ export default function ContactsList({
                 targetUserSlug={contact.slug}
                 targetName={name}
               >
-                <img
-                  src={imageSrc}
-                  alt={`${name} profile`}
-                  className="w-11 h-11 rounded-full border-2 border-[#FF7043] object-cover bg-gray-200 cursor-pointer flex-shrink-0"
-                />
+                <div className="flex-shrink-0" style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', border: '2px solid #FF7043', background: '#E2E8F0', cursor: 'pointer' }}>
+                  <img
+                    src={imageSrc}
+                    alt={`${name} profile`}
+                    width={44}
+                    height={44}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
               </MemberAvatarActions>
 
               <div className="min-w-0">
