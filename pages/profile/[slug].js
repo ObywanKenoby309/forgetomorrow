@@ -1688,6 +1688,7 @@ flushPendingSaveRef.current = flushPendingSave;
             className={`ft-signal-tab${showSignalDrawer ? ' open' : ''}`}
             onClick={() => { setSignalDrawerMounted(true); setShowSignalDrawer(v => !v); }}
             aria-label="Toggle Profile Signals panel"
+            style={{ display: 'none' }}
           >
             <span className="ft-signal-tab-arrow">{showSignalDrawer ? '›' : '‹'}</span>
             <span>✨ Signals</span>
@@ -1695,11 +1696,11 @@ flushPendingSaveRef.current = flushPendingSave;
         )}
 
         {isOwner && (editMode || mobileSheet) && showSignalDrawer && (
-          <div className="ft-signal-drawer-backdrop open" onClick={() => setShowSignalDrawer(false)} />
+          <div className="ft-signal-drawer-backdrop open" onClick={() => setShowSignalDrawer(false)} style={{ display: 'none' }} />
         )}
 
         {isOwner && (editMode || mobileSheet) && signalDrawerMounted && (
-          <div className={`ft-signal-drawer${showSignalDrawer ? ' open' : ''}`}>
+          <div className={`ft-signal-drawer${showSignalDrawer ? ' open' : ''}`} style={{ display: 'none' }}>
             <div className="ft-signal-drawer-handle-row">
               <span className="ft-signal-drawer-title">
                 Profile Signals{activeSignalFilter ? ` — ${activeSignalFilter.label}` : ''}
