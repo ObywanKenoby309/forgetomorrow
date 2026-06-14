@@ -1,5 +1,5 @@
 // pages/recruiter/explain.js
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Head from "next/head";
 
@@ -11,6 +11,20 @@ import { getTimeGreeting } from "@/lib/dashboardGreeting";
 
 // ✅ NEW: use the same drawer UX as Candidates
 import WhyCandidateDrawer from "../../components/recruiter/WhyCandidateDrawer";
+
+// ─── SSR-safe mobile hook ───────────────────────────────────────────────────
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === "undefined" ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
 
 const GLASS_WORKSPACE = {
   border: "1px solid rgba(255,255,255,0.22)",
@@ -30,6 +44,7 @@ const CARD = {
 
 export default function RecruiterExplainPage() {
   const { data: session, status } = useSession();
+  const isMobile = useIsMobile();
 
   const [resumeText, setResumeText] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -144,7 +159,7 @@ export default function RecruiterExplainPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
+                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
                 gap: 14,
               }}
             >

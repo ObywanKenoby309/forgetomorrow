@@ -17,9 +17,7 @@ const STORAGE_KEY = 'recruiterCalendar_live_v1';
 function CalendarRightRail({ selectedDate, dayEvents, onAdd, onEdit }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', marginBottom: -24 }}>
-        <RightRailPlacementManager />
-      </div>
+      <RightRailPlacementManager />
       <CalendarDayPanel
         selectedDate={selectedDate}
         events={dayEvents}

@@ -92,8 +92,8 @@ export default async function handler(
         return res.status(400).json({ error: "Image too large. Maximum 4MB." });
       }
 
-      // Upload to Supabase Storage — upsert so re-uploads replace cleanly
-      const storagePath = `avatars/${user.id}.${ext}`;
+      // Upload to Supabase Storage — path must start with userId to satisfy RLS
+      const storagePath = `${user.id}/avatar.${ext}`;
 
       const { error: uploadError } = await supabaseAdmin.storage
         .from(BUCKET)
@@ -107,7 +107,7 @@ export default async function handler(
         return res.status(500).json({ error: "Failed to upload avatar" });
       }
 
-      // Get the public URL (bucket must have public access enabled for avatars path)
+      // Get the public URL
       const { data: publicUrlData } = supabaseAdmin.storage
         .from(BUCKET)
         .getPublicUrl(storagePath);
@@ -140,7 +140,7 @@ export default async function handler(
         exts.map((ext) =>
           supabaseAdmin.storage
             .from(BUCKET)
-            .remove([`avatars/${user.id}.${ext}`])
+            .remove([`${user.id}/avatar.${ext}`])
         )
       );
 
