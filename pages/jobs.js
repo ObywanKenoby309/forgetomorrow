@@ -684,24 +684,23 @@ if (isMobile) {
 {/* ── Filter bar ── */}
 <div
   style={{
-    padding: '0 12px 12px',
-    marginTop: -8,
+    marginTop: -24,
     position: 'relative',
     zIndex: 1,
   }}
 >
-  <div
-    style={{
-      background: 'rgba(255,255,255,0.58)',
-      borderRadius: '0 0 24px 24px',
-      boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-      overflow: 'hidden',
-      border: '1px solid rgba(255,255,255,0.22)',
-      borderTop: 'none',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-    }}
-  >
+<div
+  style={{
+    background: 'rgba(255,255,255,0.58)',
+    borderRadius: '0 0 24px 24px',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+    overflow: 'hidden',
+    border: '1px solid rgba(255,255,255,0.22)',
+    borderTop: 'none',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+  }}
+>
     <JobSearchFilters isMobile={true} {...filterProps} />
   </div>
 </div>
