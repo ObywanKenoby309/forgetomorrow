@@ -683,17 +683,20 @@ useEffect(() => {
 {/* ── Filter bar ── */}
 <div
   style={{
-    padding: '0 16px 12px',
-    marginTop: -6,
+    padding: '0 12px 12px',
+    marginTop: -8,
   }}
 >
   <div
     style={{
-      background: 'rgba(255,255,255,0.92)',
+      background: 'linear-gradient(135deg, rgba(255,112,67,0.16), rgba(255,248,242,0.88))',
       borderRadius: '0 0 20px 20px',
-      boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
+      boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
       overflow: 'hidden',
-      border: '1px solid rgba(255,255,255,0.65)',
+      border: '1px solid rgba(255,255,255,0.55)',
+      borderTop: '1px solid rgba(255,112,67,0.16)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
     }}
   >
     <JobSearchFilters isMobile={true} {...filterProps} />
