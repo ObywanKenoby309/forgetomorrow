@@ -1007,7 +1007,7 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-sheet-close { background:rgba(255,255,255,0.10); border:none; color:rgba(255,255,255,0.60); width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; font-family:inherit; }
           .ft-sheet-body { flex:1; overflow-y:auto; padding:0 20px 24px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
           .ft-sheet-body::-webkit-scrollbar { display:none; }
-          .ft-sheet-save-row { padding:12px 20px; border-top:1px solid rgba(255,255,255,0.08); flex-shrink:0; }
+          .ft-sheet-save-row { padding:12px 20px; padding-bottom:calc(12px + 76px + env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,0.08); flex-shrink:0; }
           .ft-sheet-save-btn { width:100%; padding:14px; border-radius:12px; background:${ORANGE}; border:none; color:white; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; box-shadow:0 4px 14px rgba(255,112,67,0.40); }
           .ft-mobile-only  { display:none; }
           .ft-signal-tab, .ft-signal-drawer, .ft-signal-drawer-backdrop { display:none; }
