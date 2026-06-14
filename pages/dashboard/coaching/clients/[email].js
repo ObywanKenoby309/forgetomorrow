@@ -315,6 +315,8 @@ export default function ClientProfilePage() {
           .cp-details-grid { grid-template-columns: 1fr !important; }
           .cp-hero-grid { grid-template-columns: 1fr !important; text-align: center; }
           .cp-hero-avatar { margin: 0 auto; }
+          .cp-add-form-grid { grid-template-columns: 1fr !important; }
+          .cp-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         }
       `}</style>
 
@@ -482,7 +484,7 @@ export default function ClientProfilePage() {
 
           {/* Add doc form */}
           {showDocForm && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 10, marginBottom: 16, padding: 14, background: '#F8F9FA', borderRadius: 10, border: '1px solid #ECEFF1', alignItems: 'end' }}>
+            <div className="cp-add-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 10, marginBottom: 16, padding: 14, background: '#F8F9FA', borderRadius: 10, border: '1px solid #ECEFF1', alignItems: 'end' }}>
               <div>
                 <label style={labelStyle}>Title</label>
                 <input className="cp-input" value={docTitle} onChange={e => setDocTitle(e.target.value)} placeholder="Resume_v3.pdf" />

@@ -13,6 +13,20 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingTitleCard from '@/components/coaching/CoachingTitleCard';
+
+// ─── SSR-safe mobile hook ───────────────────────────────────────────────────
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
 // ─── Style constants (identical to coaching-dashboard) ────────────────────────
@@ -327,6 +341,7 @@ function SharedTab({ docs, loading }) {
           }}>
             {g.name}
           </div>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'rgba(250,250,250,0.8)' }}>
@@ -352,6 +367,7 @@ function SharedTab({ docs, loading }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       ))}
     </div>
@@ -575,6 +591,7 @@ function UploadModal({ clients, onClose, onUploaded, prefillFile = null }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function CoachingResourcesPage() {
   useSession();
+  const isMobile = useIsMobile();
 
   const [activeTab, setActiveTab] = useState('docs');
   const [docs, setDocs] = useState([]);
@@ -665,8 +682,8 @@ export default function CoachingResourcesPage() {
       <div style={{ width: '100%', padding: 0, margin: 0, paddingRight: 16, boxSizing: 'border-box' }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: `minmax(0,1fr) ${RIGHT_COL_WIDTH}px`,
-          gridTemplateRows: 'auto auto',
+          gridTemplateColumns: isMobile ? '1fr' : `minmax(0,1fr) ${RIGHT_COL_WIDTH}px`,
+          gridTemplateRows: isMobile ? 'auto' : 'auto auto',
           gap: GAP, width: '100%', minWidth: 0, boxSizing: 'border-box',
         }}>
 
@@ -679,7 +696,7 @@ export default function CoachingResourcesPage() {
 
           {/* Right rail */}
           <aside style={{
-            gridColumn: '2/3', gridRow: '1/3',
+            gridColumn: isMobile ? '1/2' : '2/3', gridRow: isMobile ? '3' : '1/3',
             display: 'flex', flexDirection: 'column', gap: GAP,
             alignSelf: 'stretch', boxSizing: 'border-box',
           }}>

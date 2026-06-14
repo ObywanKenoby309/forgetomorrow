@@ -3,6 +3,20 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 
+// ─── SSR-safe mobile hook ───────────────────────────────────────────────────
+function useIsMobile(breakpoint = 1100) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === "undefined" ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 // NEW component imports (additive)
 import HeaderBox from "@/components/recruiter/pools/HeaderBox";
 import RightRail from "@/components/recruiter/pools/RightRail";
@@ -37,6 +51,10 @@ export default function RecruiterPools() {
     }),
     []
   );
+
+  const isMobile = useIsMobile();
+  // Mobile step: 'pools' → 'entries' → 'detail'
+  const [mobileStep, setMobileStep] = useState("pools");
 
   const [loadingPools, setLoadingPools] = useState(true);
   const [loadingEntries, setLoadingEntries] = useState(false);
@@ -582,7 +600,7 @@ async function openFullProfileFromModal(entryArg) {
       rightVariant="light"
       activeNav="candidate-center"
     >
-      <section style={panelStyle} aria-label="Talent Pools working surface">
+      <section style={{ ...panelStyle, width: '100%', overflow: 'hidden', boxSizing: 'border-box' }} aria-label="Talent Pools working surface">
         <SectionTitle
           title="Pools workspace"
           subtitle="Pick a pool, scan candidates, and take action without jumping between pages."
@@ -715,17 +733,60 @@ async function openFullProfileFromModal(entryArg) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: focusedColumns,
+            gridTemplateColumns: isMobile ? "1fr" : focusedColumns,
             gap: 12,
             alignItems: "start",
             transition: "grid-template-columns 180ms ease",
             width: "100%",
             maxWidth: "100%",
+            overflowX: "hidden",
           }}
         >
-          {/* Left */}
+          {/* Mobile step nav */}
+          {isMobile && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0 8px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setMobileStep("pools")}
+                style={{
+                  fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: 999,
+                  border: mobileStep === "pools" ? "1px solid #FF7043" : "1px solid rgba(0,0,0,0.12)",
+                  background: mobileStep === "pools" ? "rgba(255,112,67,0.10)" : "rgba(255,255,255,0.80)",
+                  color: mobileStep === "pools" ? "#FF7043" : "#607D8B",
+                  cursor: "pointer",
+                }}
+              >Pools</button>
+              <span style={{ color: "#B0BEC5", fontSize: 12 }}>›</span>
+              <button
+                type="button"
+                onClick={() => selectedPoolId && setMobileStep("entries")}
+                style={{
+                  fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: 999,
+                  border: mobileStep === "entries" ? "1px solid #FF7043" : "1px solid rgba(0,0,0,0.12)",
+                  background: mobileStep === "entries" ? "rgba(255,112,67,0.10)" : "rgba(255,255,255,0.80)",
+                  color: mobileStep === "entries" ? "#FF7043" : selectedPoolId ? "#607D8B" : "#CFD8DC",
+                  cursor: selectedPoolId ? "pointer" : "default",
+                }}
+              >Candidates</button>
+              <span style={{ color: "#B0BEC5", fontSize: 12 }}>›</span>
+              <button
+                type="button"
+                onClick={() => selectedEntryId && setMobileStep("detail")}
+                style={{
+                  fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: 999,
+                  border: mobileStep === "detail" ? "1px solid #FF7043" : "1px solid rgba(0,0,0,0.12)",
+                  background: mobileStep === "detail" ? "rgba(255,112,67,0.10)" : "rgba(255,255,255,0.80)",
+                  color: mobileStep === "detail" ? "#FF7043" : selectedEntryId ? "#607D8B" : "#CFD8DC",
+                  cursor: selectedEntryId ? "pointer" : "default",
+                }}
+              >Detail</button>
+            </div>
+          )}
+
+          {/* Left — Pools list */}
+          {(!isMobile || mobileStep === "pools") && (
           <div
-            style={{ minWidth: 0, height: WORKSPACE_HEIGHT, overflowY: "auto" }}
+            style={{ minWidth: 0, height: isMobile ? "auto" : WORKSPACE_HEIGHT, overflowY: "auto" }}
             onMouseDown={() => setActivePane("pools")}
           >
             <PoolsList
@@ -737,13 +798,16 @@ async function openFullProfileFromModal(entryArg) {
                 setSelectedPoolId(id);
                 setSearch("");
                 setSelectedEntryId("");
+                if (isMobile) setMobileStep("entries");
               }}
             />
           </div>
+          )}
 
-          {/* Middle */}
+          {/* Middle — Entries list */}
+          {(!isMobile || mobileStep === "entries") && (
           <div
-            style={{ minWidth: 0, height: WORKSPACE_HEIGHT, overflowY: "auto" }}
+            style={{ minWidth: 0, height: isMobile ? "auto" : WORKSPACE_HEIGHT, overflowY: "auto" }}
             onMouseDown={() => setActivePane("entries")}
           >
             <PoolEntriesList
@@ -754,12 +818,17 @@ async function openFullProfileFromModal(entryArg) {
               search={search}
               setSearch={setSearch}
               selectedEntry={selectedEntry}
-              onSelectEntry={(id) => setSelectedEntryId(id)}
+              onSelectEntry={(id) => {
+                setSelectedEntryId(id);
+                if (isMobile) setMobileStep("detail");
+              }}
               compact={middleCompact}
             />
           </div>
+          )}
 
-          {/* Right */}
+          {/* Right — Detail panel */}
+          {(!isMobile || mobileStep === "detail") && (
           <div
             style={{
               ...panelStyle,
@@ -961,6 +1030,7 @@ async function openFullProfileFromModal(entryArg) {
               </div>
             )}
           </div>
+          )}
         </div>
       </section>
 

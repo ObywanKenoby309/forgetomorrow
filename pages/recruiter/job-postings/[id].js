@@ -5,6 +5,20 @@ import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import { PlanProvider } from "@/context/PlanContext";
 import Link from "next/link";
 
+// ─── SSR-safe mobile hook ───────────────────────────────────────────────────
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === "undefined" ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 // ✅ WHY inline info
 import WHYScoreInfo from "@/components/ai/WHYScoreInfo";
 
@@ -976,6 +990,7 @@ const STATUS_OPTIONS = [
 function AddCandidateModal({ jobId, onClose, onAdded }) {
   // Tab: "search" | "known" | "new"
   const [tab, setTab] = useState("search");
+  const isMobile = useIsMobile();
  
   // Shared fields
   const [source, setSource]   = useState("REFERRAL");
@@ -1358,7 +1373,7 @@ function AddCandidateModal({ jobId, onClose, onAdded }) {
                 This will create a new external candidate record in your organization's database.
               </div>
  
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
                 <div style={{ gridColumn: "1 / -1" }}>
                   <label style={labelStyle}>Full name <span style={{ color: "#FF7043" }}>*</span></label>
                   <input
@@ -1442,7 +1457,7 @@ function AddCandidateModal({ jobId, onClose, onAdded }) {
             flexDirection:"column",
             gap: 12,
           }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelStyle}>
                   Source <span style={{ color: "#FF7043" }}>*</span>
