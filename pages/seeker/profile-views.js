@@ -1,11 +1,241 @@
-// pages/seeker/profile-views.js — redirect shim
-import { useEffect } from 'react';
+// pages/seeker/profile-views.js
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
+import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar';
 
-export default function Redirect() {
-  const router = useRouter();
+// ─── SSR-safe mobile hook (matches seeker/contact-center.js) ───────────────
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(null);
   useEffect(() => {
-    router.replace('/seeker/contact-center?tab=profileViews');
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
+export default function ProfileViewsPage() {
+  const router = useRouter();
+  const chrome = String(router.query.chrome || '').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  const isMobile = useIsMobile();
+
+  const [views, setViews] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadViews = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/profile/views?limit=50');
+      if (!res.ok) {
+        console.error('profile/views full failed', await res.text());
+        setViews([]);
+        return;
+      }
+      const data = await res.json();
+      setViews(data.views || []);
+    } catch (err) {
+      console.error('profile/views full error', err);
+      setViews([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadViews();
   }, []);
-  return null;
+
+  const formatDateTime = (iso) => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString();
+    } catch {
+      return '';
+    }
+  };
+
+  const handleOpenViewerProfile = (view) => {
+    if (!view.viewer?.id || !view.viewer?.slug) return;
+    router.push(withChrome(`/profile/${view.viewer.slug}`));
+  };
+
+  const greeting = getTimeGreeting();
+  const contactCenterHref = withChrome('/seeker/contact-center');
+
+  const HeaderBox = (
+    <SeekerTitleCard
+      greeting={greeting}
+      title="Profile Views"
+      subtitle={
+        <>
+          See who has viewed your profile and when. No gatekeeping, no upgrades — just transparency.{' '}
+          <Link href={contactCenterHref} style={{ color: '#FF7043', fontWeight: 700 }}>
+            ← To Contact Center
+          </Link>
+        </>
+      }
+      isMobile={isMobile === true}
+    />
+  );
+
+  // Render nothing until we know which layout to show (avoids hydration flash)
+  if (isMobile === null) {
+    return (
+      <SeekerLayout
+        title="Profile Views | ForgeTomorrow"
+        header={HeaderBox}
+        right={<RightRailPlacementManager surfaceId="profile_views" />}
+        rightVariant="light"
+        activeNav="contacts"
+      />
+    );
+  }
+
+  return (
+    <SeekerLayout
+      title="Profile Views | ForgeTomorrow"
+      header={HeaderBox}
+      right={<RightRailPlacementManager surfaceId="profile_views" />}
+      rightVariant="light"
+      activeNav="contacts"
+    >
+      <ContactCenterToolbar currentTab="profileViews" />
+
+      <section
+        style={{
+          background: 'white',
+          borderRadius: 12,
+          padding: isMobile ? 12 : 16,
+          border: '1px solid #eee',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+          minWidth: 0,
+          overflowX: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
+          <h2 style={{ margin: 0, color: '#FF7043', fontSize: isMobile ? 17 : 20 }}>
+            Who&apos;s looking at you
+          </h2>
+          {!isMobile && (
+            <Link
+              href={contactCenterHref}
+              style={{ color: '#FF7043', fontWeight: 700, fontSize: 13 }}
+            >
+              ← Back to Contact Center
+            </Link>
+          )}
+        </div>
+
+        {loading ? (
+          <p style={{ color: '#607D8B', fontSize: 14 }}>Loading profile views…</p>
+        ) : views.length === 0 ? (
+          <p style={{ color: '#607D8B', fontSize: 14 }}>
+            No profile views yet. Once recruiters, coaches, or peers visit your profile,
+            you&apos;ll see them listed here.
+          </p>
+        ) : (
+          <ul
+            style={{
+              listStyle: 'none',
+              margin: 0,
+              padding: 0,
+              display: 'grid',
+              gap: 8,
+            }}
+          >
+            {views.map((v) => (
+              <li
+                key={v.id}
+                style={{
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  justifyContent: 'space-between',
+                  alignItems: isMobile ? 'flex-start' : 'center',
+                  gap: isMobile ? 6 : 0,
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  background: '#F9FAFB',
+                  minWidth: 0,
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <span
+                    style={{
+                      fontWeight: 600,
+                      color: v.viewer?.name ? '#111827' : '#6B7280',
+                      fontSize: 14,
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {v.viewer?.name || 'Anonymous ForgeTomorrow member'}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: '#6B7280',
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    Viewed your profile • {formatDateTime(v.createdAt)}
+                  </span>
+                </div>
+
+                {v.viewer?.id && v.viewer?.slug && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenViewerProfile(v)}
+                    style={{
+                      fontSize: 12,
+                      padding: '6px 10px',
+                      borderRadius: 999,
+                      border: '1px solid #e5e7eb',
+                      background: 'white',
+                      cursor: 'pointer',
+                      color: '#374151',
+                      fontWeight: 600,
+                      flexShrink: 0,
+                      alignSelf: isMobile ? 'flex-start' : 'center',
+                    }}
+                  >
+                    View profile
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {isMobile && (
+          <div style={{ marginTop: 12, fontSize: 13 }}>
+            <Link href={contactCenterHref} style={{ color: '#FF7043', fontWeight: 700 }}>
+              ← Back to Contact Center
+            </Link>
+          </div>
+        )}
+      </section>
+    </SeekerLayout>
+  );
 }
