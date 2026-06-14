@@ -782,7 +782,7 @@ export default function CandidateCenter() {
                   return <ExternalCompareModule />;
 
                 case "pools":
-                  return <TalentPoolsModule />;
+                  return <TalentPoolsModule expanded={siderailsCollapsed} />;
 
                 default:
                   return (

@@ -34,7 +34,7 @@ import {
   fmtShortDate,
 } from "@/components/recruiter/pools/utils";
 
-export default function TalentPoolsModule() {
+export default function TalentPoolsModule({ expanded = false }) {
   const router = useRouter();
   const isMobile = useIsMobile();
   const [mobileStep, setMobileStep] = useState("pools");
@@ -502,8 +502,12 @@ export default function TalentPoolsModule() {
     }
   }
 
-  const focusedColumns =
-    activePane === "entries"
+  // When siderails are collapsed, we have ~200px more space — use it
+  const focusedColumns = expanded
+    ? activePane === "entries"
+      ? "minmax(160px, 260px) minmax(0, 1fr) 460px"
+      : "minmax(380px, 520px) minmax(160px, 260px) 300px"
+    : activePane === "entries"
       ? "minmax(120px, 200px) minmax(0, 1fr) 360px"
       : "minmax(320px, 420px) minmax(120px, 200px) 220px";
 
@@ -685,7 +689,7 @@ export default function TalentPoolsModule() {
           gridTemplateColumns: isMobile ? "1fr" : focusedColumns,
           gap: 12,
           alignItems: "start",
-          transition: "grid-template-columns 180ms ease",
+          transition: "grid-template-columns 300ms ease",
           width: "100%",
           maxWidth: "100%",
           overflowX: "hidden",
