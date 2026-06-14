@@ -684,13 +684,13 @@ useEffect(() => {
 <div
   style={{
     padding: '0 12px 12px',
-    marginTop: -8,
+    marginTop: -18,
   }}
 >
   <div
     style={{
       background: 'linear-gradient(135deg, rgba(255,112,67,0.16), rgba(255,248,242,0.88))',
-      borderRadius: '0 0 20px 20px',
+      borderRadius: '0 0 24px 24px',
       boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
       overflow: 'hidden',
       border: '1px solid rgba(255,255,255,0.55)',
