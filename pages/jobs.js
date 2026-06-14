@@ -689,14 +689,14 @@ useEffect(() => {
 >
   <div
     style={{
-      background: 'linear-gradient(135deg, rgba(255,112,67,0.16), rgba(255,248,242,0.88))',
+      background: 'rgba(255,255,255,0.58)',
       borderRadius: '0 0 24px 24px',
       boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
       overflow: 'hidden',
-      border: '1px solid rgba(255,255,255,0.55)',
-      borderTop: '1px solid rgba(255,112,67,0.16)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
+      border: '1px solid rgba(255,255,255,0.22)',
+      borderTop: '1px solid rgba(255,255,255,0.18)',
+      backdropFilter: 'blur(10px)',
+      WebkitBackdropFilter: 'blur(10px)',
     }}
   >
     <JobSearchFilters isMobile={true} {...filterProps} />
