@@ -670,9 +670,10 @@ useEffect(() => {
 
   const greeting = getTimeGreeting();
 
-  if (isMobile) {
-    return (
-<div style={{ position: 'relative', zIndex: 2 }}>
+if (isMobile) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, paddingBottom: 100 }}>
+      <div style={{ position: 'relative', zIndex: 2 }}>
   <SeekerTitleCard
     greeting={greeting}
     title={`${totalJobCount.toLocaleString()} Opportunities`}
