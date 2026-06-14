@@ -10,6 +10,24 @@ const LABELS = {
   recruiter: 'Recruiting Striker',
 };
 
+const MOBILE_SUBTITLES = {
+  seeker: 'Career, jobs, profile, and resume guidance',
+  coach: 'Client sessions, planning, and coaching workflow',
+  recruiter: 'Hiring, candidates, jobs, and pipeline support',
+};
+
+const MOBILE_ICONS = {
+  seeker: '/icons/seeker-ai.png',
+  coach: '/icons/coach-ai.png',
+  recruiter: '/icons/recruiter-ai.png',
+};
+
+const MOBILE_ACCENTS = {
+  seeker: { bg: 'rgba(255,112,67,0.12)', border: 'rgba(255,112,67,0.30)' },
+  coach: { bg: 'rgba(66,165,245,0.12)', border: 'rgba(66,165,245,0.30)' },
+  recruiter: { bg: 'rgba(102,187,106,0.12)', border: 'rgba(102,187,106,0.30)' },
+};
+
 function safeMode(m) {
   const s = String(m || '').toLowerCase().trim();
   if (s === 'seeker') return 'seeker';
@@ -54,9 +72,28 @@ export default function AiWindowsHost({ allowedModes = [] }) {
   const [lastSeenAt, setLastSeenAt] = useState(() => ({}));
   const [unreadByMode, setUnreadByMode] = useState(() => ({}));
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleResize = () => {
+      const nextIsMobile = window.innerWidth < 1024;
+      setIsMobile(nextIsMobile);
+
+      if (!nextIsMobile) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // ✅ Refs so polling loop always reads fresh state (no stale closures)
@@ -153,6 +190,27 @@ export default function AiWindowsHost({ allowedModes = [] }) {
     },
     [allowed, bringToFront, markSeenNow]
   );
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (typeof window === 'undefined') return;
+
+    const handleOpenStriker = () => {
+      if (!allowed.length) return;
+
+      if (window.innerWidth < 1024) {
+        setMobileMenuOpen((v) => !v);
+        return;
+      }
+
+      if (allowed.length === 1) {
+        openMode(allowed[0]);
+      }
+    };
+
+    window.addEventListener('ft-open-striker', handleOpenStriker);
+    return () => window.removeEventListener('ft-open-striker', handleOpenStriker);
+  }, [allowed, mounted, openMode]);
 
   const closeMode = useCallback((mode) => {
     setWindows((w) => ({
@@ -283,9 +341,124 @@ export default function AiWindowsHost({ allowedModes = [] }) {
         isolation: 'isolate',
       }}
     >
-      <div style={{ pointerEvents: 'auto' }}>
-        <AiLauncher allowedModes={allowed} onOpenMode={openMode} badgeCount={unreadTotal} />
-      </div>
+      {isMobile && mobileMenuOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Close Striker menu"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              border: 'none',
+              background: 'transparent',
+              cursor: 'default',
+              pointerEvents: 'auto',
+            }}
+          />
+
+          <div
+            style={{
+              position: 'fixed',
+              top: 56,
+              right: 4,
+              width: 'min(292px, calc(100vw - 12px))',
+              borderRadius: 18,
+              border: '1px solid rgba(255,255,255,0.22)',
+              background: 'rgba(255,255,255,0.96)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              boxShadow: '0 18px 44px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.10)',
+              padding: '10px 8px',
+              boxSizing: 'border-box',
+              pointerEvents: 'auto',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 900,
+                color: '#90A4AE',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                padding: '0 8px 8px',
+                borderBottom: '1px solid rgba(0,0,0,0.06)',
+                marginBottom: 8,
+              }}
+            >
+              Choose Striker
+            </div>
+
+            <div style={{ display: 'grid', gap: 7 }}>
+              {allowed.map((mode) => {
+                const iconSrc = MOBILE_ICONS[mode] || '/icons/the-striker.png';
+                const accent = MOBILE_ACCENTS[mode] || MOBILE_ACCENTS.seeker;
+
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => {
+                      openMode(mode);
+                      setMobileMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      borderRadius: 14,
+                      border: `1px solid ${accent.border}`,
+                      background: accent.bg,
+                      color: '#112033',
+                      padding: '10px 10px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 12,
+                        background: 'rgba(255,255,255,0.88)',
+                        border: `1px solid ${accent.border}`,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flex: '0 0 auto',
+                      }}
+                    >
+                      <img
+                        src={iconSrc}
+                        alt=""
+                        aria-hidden="true"
+                        style={{ width: 25, height: 25, objectFit: 'contain', borderRadius: 8 }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'grid', gap: 2, minWidth: 0 }}>
+                      <span style={{ fontSize: 13, fontWeight: 900, color: '#112033', lineHeight: 1.15 }}>
+                        {LABELS[mode] || 'Striker'}
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#607D8B', lineHeight: 1.25 }}>
+                        {MOBILE_SUBTITLES[mode] || ''}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {!isMobile && (
+        <div style={{ pointerEvents: 'auto' }}>
+          <AiLauncher allowedModes={allowed} onOpenMode={openMode} badgeCount={unreadTotal} />
+        </div>
+      )}
 
       {allowed.map((mode) => {
         const st = windows?.[mode];

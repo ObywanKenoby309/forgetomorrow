@@ -15,7 +15,7 @@ import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 import { SessionProvider, useSession } from 'next-auth/react';
 
-// ✅ Global Desktop Striker host (rendered on all internal pages)
+// ✅ Global Striker host (rendered on all internal pages)
 import AiWindowsHost from '@/components/ai/AiWindowsHost';
 
 function RouteTracker() {
@@ -89,20 +89,6 @@ function GlobalStriker({ enabled }) {
     return ['seeker'];
   }, [enabled, planLoaded, tier, role]);
 
-  // Desktop only
-  const [isMobile, setIsMobile] = useState(true);
-  useEffect(() => {
-    const handleResize = () => {
-      if (typeof window !== 'undefined') {
-        setIsMobile(window.innerWidth < 1024);
-      }
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  if (isMobile) return null;
   if (!allowedModes.length) return null;
 
   return <AiWindowsHost allowedModes={allowedModes} />;
@@ -392,7 +378,7 @@ function AppShell({ Component, pageProps }) {
                 {renderLandingHeader && <LandingHeader />}
                 {isUniversalPage && <UniversalHeader />}
 
-                {/* ✅ Global Striker (desktop) for all internal pages, gated by tier/role */}
+                {/* ✅ Global Striker for all internal pages, gated by tier/role */}
                 <GlobalStriker enabled={shouldShowGlobalStriker} />
 
                 <Component {...pageProps} />

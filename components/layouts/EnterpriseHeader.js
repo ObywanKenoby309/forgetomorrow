@@ -178,6 +178,17 @@ export default function EnterpriseHeader({
   const resolvedSupportHref = buildUrlWithContext(supportHref);
   const resolvedImpersonateHref = buildUrlWithContext("/admin/impersonate");
 
+  const showMobileStriker =
+    !publicVariant &&
+    showUserMenu &&
+    !!normalizedPlan &&
+    normalizedPlan !== "FREE";
+
+  const openMobileStriker = () => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new CustomEvent("ft-open-striker"));
+  };
+
   return (
     <>
       <GlobalSearchOverlay
@@ -439,18 +450,21 @@ export default function EnterpriseHeader({
               </svg>
             </button>
 			
-			<button
-    type="button"
-    aria-label="Open Striker"
-    className="p-2 rounded-md hover:bg-[#333] focus-visible:ring-2 focus-visible:ring-orange-500"
-  >
-    <img
-      src="/icons/the-striker.png"
-      alt=""
-      aria-hidden="true"
-      className="h-7 w-7 rounded-full object-contain"
-    />
-  </button>		
+            {showMobileStriker && (
+              <button
+                type="button"
+                aria-label="Open Striker"
+                onClick={openMobileStriker}
+                className="p-2 rounded-md hover:bg-[#333] focus-visible:ring-2 focus-visible:ring-orange-500"
+              >
+                <img
+                  src="/icons/the-striker.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="h-7 w-7 rounded-full object-contain"
+                />
+              </button>
+            )}
           </div>
         </nav>
       </header>
