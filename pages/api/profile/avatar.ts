@@ -18,7 +18,7 @@ type AvatarResponse = {
   avatarUrl: string | null;
 };
 
-const BUCKET = "forge-docs";
+const BUCKET = "forge-avatars";
 const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/jpg":  "jpg",
@@ -92,8 +92,8 @@ export default async function handler(
         return res.status(400).json({ error: "Image too large. Maximum 4MB." });
       }
 
-      // Upload to Supabase Storage — path must start with userId to satisfy RLS
-      const storagePath = `${user.id}/avatar.${ext}`;
+      // Dedicated bucket - simple path, upsert replaces on re-upload
+      const storagePath = `${user.id}.${ext}`;
 
       const { error: uploadError } = await supabaseAdmin.storage
         .from(BUCKET)
@@ -140,7 +140,7 @@ export default async function handler(
         exts.map((ext) =>
           supabaseAdmin.storage
             .from(BUCKET)
-            .remove([`${user.id}/avatar.${ext}`])
+            .remove([`${user.id}.${ext}`])
         )
       );
 
