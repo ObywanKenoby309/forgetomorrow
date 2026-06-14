@@ -2,6 +2,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 
+// ─── SSR-safe mobile hook ───────────────────────────────────────────────────
+function useIsMobile(breakpoint = 1100) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === "undefined" ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 import SectionTitle from "@/components/recruiter/pools/SectionTitle";
 import PoolsList from "@/components/recruiter/pools/PoolsList";
 import PoolEntriesList from "@/components/recruiter/pools/PoolEntriesList";
@@ -22,6 +36,8 @@ import {
 
 export default function TalentPoolsModule() {
   const router = useRouter();
+  const isMobile = useIsMobile();
+  const [mobileStep, setMobileStep] = useState("pools");
 
   const panelStyle = useMemo(
     () => ({
@@ -628,16 +644,44 @@ export default function TalentPoolsModule() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: focusedColumns,
+          gridTemplateColumns: isMobile ? "1fr" : focusedColumns,
           gap: 12,
           alignItems: "start",
           transition: "grid-template-columns 180ms ease",
           width: "100%",
           maxWidth: "100%",
+          overflowX: "hidden",
         }}
       >
+        {/* Mobile step nav */}
+        {isMobile && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0 8px", flexWrap: "wrap" }}>
+            <button type="button" onClick={() => setMobileStep("pools")}
+              style={{ fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: 999,
+                border: mobileStep === "pools" ? "1px solid #FF7043" : "1px solid rgba(0,0,0,0.12)",
+                background: mobileStep === "pools" ? "rgba(255,112,67,0.10)" : "rgba(255,255,255,0.80)",
+                color: mobileStep === "pools" ? "#FF7043" : "#607D8B", cursor: "pointer" }}>Pools</button>
+            <span style={{ color: "#B0BEC5", fontSize: 12 }}>›</span>
+            <button type="button" onClick={() => selectedPoolId && setMobileStep("entries")}
+              style={{ fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: 999,
+                border: mobileStep === "entries" ? "1px solid #FF7043" : "1px solid rgba(0,0,0,0.12)",
+                background: mobileStep === "entries" ? "rgba(255,112,67,0.10)" : "rgba(255,255,255,0.80)",
+                color: mobileStep === "entries" ? "#FF7043" : selectedPoolId ? "#607D8B" : "#CFD8DC",
+                cursor: selectedPoolId ? "pointer" : "default" }}>Candidates</button>
+            <span style={{ color: "#B0BEC5", fontSize: 12 }}>›</span>
+            <button type="button" onClick={() => selectedEntryId && setMobileStep("detail")}
+              style={{ fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: 999,
+                border: mobileStep === "detail" ? "1px solid #FF7043" : "1px solid rgba(0,0,0,0.12)",
+                background: mobileStep === "detail" ? "rgba(255,112,67,0.10)" : "rgba(255,255,255,0.80)",
+                color: mobileStep === "detail" ? "#FF7043" : selectedEntryId ? "#607D8B" : "#CFD8DC",
+                cursor: selectedEntryId ? "pointer" : "default" }}>Detail</button>
+          </div>
+        )}
+
+        {/* Left — Pools list */}
+        {(!isMobile || mobileStep === "pools") && (
         <div
-          style={{ minWidth: 0, height: WORKSPACE_HEIGHT, overflowY: "auto" }}
+          style={{ minWidth: 0, height: isMobile ? "auto" : WORKSPACE_HEIGHT, overflowY: "auto" }}
           onMouseDown={() => setActivePane("pools")}
         >
           <PoolsList
@@ -649,12 +693,16 @@ export default function TalentPoolsModule() {
               setSelectedPoolId(id);
               setSearch("");
               setSelectedEntryId("");
+              if (isMobile) setMobileStep("entries");
             }}
           />
         </div>
+        )}
 
+        {/* Middle — Entries list */}
+        {(!isMobile || mobileStep === "entries") && (
         <div
-          style={{ minWidth: 0, height: WORKSPACE_HEIGHT, overflowY: "auto" }}
+          style={{ minWidth: 0, height: isMobile ? "auto" : WORKSPACE_HEIGHT, overflowY: "auto" }}
           onMouseDown={() => setActivePane("entries")}
         >
           <PoolEntriesList
@@ -665,11 +713,17 @@ export default function TalentPoolsModule() {
             search={search}
             setSearch={setSearch}
             selectedEntry={selectedEntry}
-            onSelectEntry={(id) => setSelectedEntryId(id)}
+            onSelectEntry={(id) => {
+              setSelectedEntryId(id);
+              if (isMobile) setMobileStep("detail");
+            }}
             compact={middleCompact}
           />
         </div>
+        )}
 
+        {/* Right — Detail panel */}
+        {(!isMobile || mobileStep === "detail") && (
         <div
           style={{
             ...panelStyle,
@@ -871,6 +925,7 @@ export default function TalentPoolsModule() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {showProfileModal && selectedCandidate && (
