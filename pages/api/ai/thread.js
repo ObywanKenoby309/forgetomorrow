@@ -91,7 +91,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const mode = normalizeMode(req.query?.mode);
+  // Mode can come from query string (GET) or request body (POST reset)
+  const mode = normalizeMode(req.query?.mode || req.body?.mode);
   if (!mode) return res.status(400).json({ error: "Invalid mode" });
 
   const user = await resolveEffectiveUser(prisma, req, session);
