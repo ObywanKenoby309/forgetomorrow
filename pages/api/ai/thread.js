@@ -26,6 +26,79 @@ function normalizeMode(input) {
   return "";
 }
 
+function getFirstName(user, session) {
+  const direct =
+    user?.firstName ||
+    session?.user?.firstName ||
+    session?.user?.name ||
+    "";
+
+  const cleaned = String(direct || "").trim();
+  if (cleaned) return cleaned.split(/\s+/)[0];
+
+  const emailName = String(user?.email || session?.user?.email || "")
+    .split("@")[0]
+    .replace(/[._-]+/g, " ")
+    .trim();
+
+  if (emailName) {
+    return emailName
+      .split(/\s+/)[0]
+      .replace(/^\w/, (c) => c.toUpperCase());
+  }
+
+  return "there";
+}
+
+function buildWelcomeMessage(mode, user, session) {
+  const firstName = getFirstName(user, session);
+
+  if (mode === "COACH") {
+    return (
+      `Hello, ${firstName}. I am the Coach Striker, your assistant in reaching outcomes on ForgeTomorrow.\n\n` +
+      "I can help you navigate coaching tools, support client workflows, prepare sessions, review profiles, and identify the next best action for the person you're helping.\n\n" +
+      "Tell me what you're trying to accomplish and I'll help guide you there."
+    );
+  }
+
+  if (mode === "RECRUITER") {
+    return (
+      `Hello, ${firstName}. I am the Recruiter Striker, your assistant in reaching outcomes on ForgeTomorrow.\n\n` +
+      "I can help you navigate recruiting tools, evaluate candidates, understand hiring workflows, review evidence, and move from search to confident action.\n\n" +
+      "Tell me what you're trying to accomplish and I'll help guide you there."
+    );
+  }
+
+  return (
+    `Hello, ${firstName}. I am the Seeker Striker, your assistant in reaching outcomes on ForgeTomorrow.\n\n` +
+    "I can help you navigate the platform, understand available tools, complete tasks, improve your profile, evaluate opportunities, and identify the next best step toward your goal.\n\n" +
+    "Tell me what you're trying to accomplish and I'll help guide you there."
+  );
+}
+
+async function seedWelcomeMessage(threadId, mode, user, session) {
+  if (!threadId) return;
+
+  const existing = await prisma.aiMessage.findFirst({
+    where: { threadId },
+    select: { id: true },
+  });
+
+  if (existing?.id) return;
+
+  await prisma.aiMessage.create({
+    data: {
+      threadId,
+      role: "assistant",
+      content: buildWelcomeMessage(mode, user, session),
+      metadata: {
+        kind: "striker_welcome",
+        mode,
+      },
+    },
+  });
+}
+
 // Policy: impersonation allowed ONLY for recruiter accounts (via SD ticket process)
 // Implementation: only Platform Admin + ft_imp cookie + target user role RECRUITER.
 async function resolveEffectiveUser(prisma, req, session) {
@@ -58,7 +131,7 @@ async function resolveEffectiveUser(prisma, req, session) {
   if (effectiveUserId) {
     const u = await prisma.user.findUnique({
       where: { id: effectiveUserId },
-      select: { id: true, email: true, role: true, plan: true },
+      select: { id: true, email: true, firstName: true, name: true, role: true, plan: true },
     });
 
     // ✅ HARD RULE: only impersonate recruiters
@@ -70,7 +143,7 @@ async function resolveEffectiveUser(prisma, req, session) {
 
   const u = await prisma.user.findUnique({
     where: { email: sessionEmail },
-    select: { id: true, email: true, role: true, plan: true },
+    select: { id: true, email: true, firstName: true, name: true, role: true, plan: true },
   });
 
   return u?.id ? u : null;
@@ -112,16 +185,31 @@ export default async function handler(req, res) {
     }
 
     try {
-      await prisma.aiThread.updateMany({
+      const existingThreads = await prisma.aiThread.findMany({
         where: {
           userId: user.id,
           mode,
         },
-        data: {
-          mode: `${mode}_ARCHIVED_${Date.now()}`,
-          updatedAt: new Date(),
-        },
+        select: { id: true },
       });
+
+      if (existingThreads.length > 0) {
+        await prisma.aiMessage.deleteMany({
+          where: {
+            threadId: {
+              in: existingThreads.map((thread) => thread.id),
+            },
+          },
+        });
+
+        await prisma.aiThread.deleteMany({
+          where: {
+            id: {
+              in: existingThreads.map((thread) => thread.id),
+            },
+          },
+        });
+      }
 
       const newThread = await prisma.aiThread.create({
         data: {
@@ -136,6 +224,8 @@ export default async function handler(req, res) {
         },
       });
 
+      await seedWelcomeMessage(newThread.id, mode, user, session);
+
       return res.status(200).json({
         ok: true,
         thread: newThread,
@@ -147,12 +237,27 @@ export default async function handler(req, res) {
   }
 
   try {
-    const thread = await prisma.aiThread.upsert({
+    let thread = await prisma.aiThread.findUnique({
       where: { userId_mode_unique: { userId: user.id, mode } },
-      update: { updatedAt: new Date() },
-      create: { userId: user.id, mode },
       select: { id: true, mode: true, createdAt: true, updatedAt: true },
     });
+
+    if (!thread?.id) {
+      thread = await prisma.aiThread.create({
+        data: { userId: user.id, mode },
+        select: { id: true, mode: true, createdAt: true, updatedAt: true },
+      });
+
+      await seedWelcomeMessage(thread.id, mode, user, session);
+    } else {
+      thread = await prisma.aiThread.update({
+        where: { id: thread.id },
+        data: { updatedAt: new Date() },
+        select: { id: true, mode: true, createdAt: true, updatedAt: true },
+      });
+
+      await seedWelcomeMessage(thread.id, mode, user, session);
+    }
 
     return res.status(200).json({ thread });
   } catch (err) {

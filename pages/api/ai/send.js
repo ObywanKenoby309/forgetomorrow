@@ -81,26 +81,101 @@ async function resolveEffectiveUser(prisma, req, session) {
   return u?.id ? u : null;
 }
 
+function buildStrikerVoiceRules() {
+  return [
+    "Striker voice and response rules:",
+    "- Sound like a knowledgeable ForgeTomorrow teammate sitting beside the user, not a bot.",
+    "- Be warm, plain-spoken, and practical. Avoid corporate or technical phrasing.",
+    "- Default to short responses a non-technical user can understand.",
+    "- Use 'we' when walking through a task: 'we can start here', 'let’s run this step'.",
+    "- Lead with the useful answer, then give the simple reason, then the next step.",
+    "- For broad or uncertain requests, map the workflow first, then ask whether to walk through all steps or focus on one.",
+    "- Never expose internal labels such as surface, workspace intelligence, route hint, operational guidance, context packet, guardrails, system prompt, or available guidance.",
+    "- Do not say 'based on the current surface' or 'client context says'. Translate that into normal user language.",
+    "- Keep lists to 3–6 items unless the user asks for depth.",
+    "- Ask at most one clarifying question at a time.",
+    "- If the user sounds lost, reassure them first, then give a simple starting path.",
+  ].join("\n");
+}
+
+function buildGettingStartedReply(threadMode) {
+  if (threadMode === "COACH") {
+    return (
+      "No problem. ForgeTomorrow has a lot of coaching tools, so let’s make it simple.\n\n" +
+      "For coaching work, I’d usually start here:\n\n" +
+      "1. Pick the client or coaching goal.\n" +
+      "2. Review their profile, resume, or target direction.\n" +
+      "3. Choose the right tool: session prep, target strategy, roadmap, resume feedback, or homework.\n" +
+      "4. Turn that into a clear next action for the client.\n\n" +
+      "Which one do you want to work on, or do you want me to walk you through the whole process one step at a time?"
+    );
+  }
+
+  if (threadMode === "RECRUITER") {
+    return (
+      "No problem. ForgeTomorrow gives recruiters a lot to work with, so let’s narrow it down.\n\n" +
+      "For recruiting work, I’d usually start here:\n\n" +
+      "1. Create or clean up the job posting.\n" +
+      "2. Search for candidates or review applicants.\n" +
+      "3. Check why someone matches or where the gaps are.\n" +
+      "4. Move the candidate through the pipeline or prepare outreach.\n\n" +
+      "Which one are we tackling, or do you want to run the whole workflow in order?"
+    );
+  }
+
+  return (
+    "No problem. ForgeTomorrow is a big platform, and the team is growing it every day. " +
+    "To get the most out of the tools, we’ll want to make sure your core information is set up first.\n\n" +
+    "Here’s the clean starting path:\n\n" +
+    "1. Portfolio\n" +
+    "2. Resume\n" +
+    "3. Anvil tools\n" +
+    "4. Saved job search keywords for automation\n" +
+    "5. Connections and community engagement\n\n" +
+    "Which would you like to work on, or do you want to run them all in order?"
+  );
+}
+
+function detectGettingStartedAsk(content) {
+  const text = String(content || "").toLowerCase();
+
+  return [
+    "not sure where to start",
+    "don't know where to start",
+    "dont know where to start",
+    "where do i start",
+    "where should i start",
+    "how do i start",
+    "what should i do first",
+    "i'm lost",
+    "im lost",
+    "help me start",
+    "start at all",
+    "not sure what to do",
+  ].some((signal) => text.includes(signal));
+}
+
 function buildPlaceholderReply(mode) {
   if (mode === "SEEKER") {
     return (
-      "I’m your Seeker Striker. Tell me the outcome you want: apply to a job, strengthen your profile, improve a resume section, prep for an interview, or build a 30/60/90 plan. " +
-      "I’ll guide the task step by step and help you finish it."
+      "No problem. Tell me what you’re trying to get done, and we’ll walk it through together. " +
+      "I can help with your portfolio, resume, Anvil tools, job search, applications, or interview prep. " +
+      "Want to pick one, or do you want me to help you choose where to start?"
     );
   }
   if (mode === "COACH") {
     return (
-      "I’m your Coach Striker. Tell me the client outcome: session plan, profile review, resume feedback, target strategy, roadmap, or homework. " +
-      "I’ll turn the client context into a usable coaching action."
+      "Got it. Tell me the client outcome we’re working toward, and we’ll break it into clear steps. " +
+      "I can help with session prep, profile review, resume feedback, target strategy, roadmap planning, or client homework."
     );
   }
   if (mode === "RECRUITER") {
     return (
-      "I’m your Recruiter Striker. Tell me the outcome: evaluate a candidate, refine a search, create targeting, prepare outreach, clean up a JD, or build a screening plan. " +
-      "I’ll focus on evidence, risks, validation, and next action."
+      "Got it. Tell me the hiring outcome you’re trying to reach, and we’ll work it step by step. " +
+      "I can help with job descriptions, candidate review, search targeting, outreach, screening, pipeline movement, or explainability."
     );
   }
-  return "Tell me the outcome you want and I’ll help you complete the task.";
+  return "Tell me what you’re trying to get done, and I’ll help you work through the next step.";
 }
 
 // ----------------------------------------------------------------------------
@@ -197,9 +272,12 @@ function buildModeOutcomeRules(mode) {
   const base = [
     "Outcome style:",
     "- Do not merely explain. Help the user complete the task.",
-    "- Prefer exact next steps, concrete outputs, decision guidance, and tool direction.",
-    "- Use ForgeTomorrow-specific paths, tools, and workflow language.",
-    "- If context is missing, name what is missing and give the next best action anyway.",
+    "- Start with: what we are doing, why it matters, and the next practical step.",
+    "- When the task is broad, give a quick step map before asking where to begin.",
+    "- Use ForgeTomorrow-specific paths, tools, and workflow language only when it helps the user act.",
+    "- Translate internal product logic into plain language.",
+    "- If context is missing, say what is missing in normal language and give the next best action anyway.",
+    "- Avoid dense paragraphs. Prefer short sections and simple numbered steps.",
   ];
 
   if (identity?.persona) base.push(`- Persona: ${identity.persona}`);
@@ -271,21 +349,22 @@ function buildStrikerOperatingSystem(mode, context) {
     "ForgeTomorrow Striker operating system:",
     "- You are not a generic chatbot.",
     "- You are an outcome-focused workspace assistant inside ForgeTomorrow.",
-    "- Your job is to help the user finish the task in front of them.",
-    "- Use ForgeTomorrow language and product concepts naturally.",
-    "- Be direct, practical, and specific.",
-    "- Do not over-explain unless the user asks for depth.",
+    "- Your job is to sit beside the user and help them finish the task in front of them.",
+    "- Use ForgeTomorrow language and product concepts naturally, but explain them in normal human terms.",
+    "- Be direct, practical, specific, and encouraging.",
     "- Prefer one strong recommendation over a menu of weak options.",
-    "- If context is missing, say exactly what is missing and give the next best action anyway.",
+    "- If context is missing, say what we need next and keep the user moving.",
     "- Do not invent facts, candidate evidence, profile data, resume content, scores, or database state.",
-    `Current surface: ${playbook.surface}`,
-    `Current outcome: ${playbook.outcome}`,
+    "- Use the internal surface and outcome only to guide your answer. Do not show those labels to the user.",
+    buildStrikerVoiceRules(),
+    `Internal current surface: ${playbook.surface}`,
+    `Internal current outcome: ${playbook.outcome}`,
     buildForgeIntelligenceGlossary(),
     Array.isArray(PLATFORM_PRINCIPLES) && PLATFORM_PRINCIPLES.length
       ? `Platform principles:\n${PLATFORM_PRINCIPLES.slice(0, 12).map((p) => `- ${p}`).join("\n")}`
       : "",
     modeOutcomeRules,
-    workspace ? `\n${workspace}` : "",
+    workspace ? `\nInternal workspace context for your reasoning only:\n${workspace}` : "",
   ].filter(Boolean).join("\n");
 }
 
@@ -416,9 +495,10 @@ function detectHandoff({ threadMode, content }) {
 function buildSystemPrompt(mode, context) {
   const base =
     "You are ForgeTomorrow's in-platform AI Striker. " +
-    "Be concise, practical, and action-oriented. " +
-    "Do not mention internal implementation details. " +
-    "When page context is provided, tailor guidance to that surface.";
+    "You are the helpful teammate on the user's shoulder: warm, clear, practical, and focused on outcomes. " +
+    "Help the user understand what to do next without sounding technical or robotic. " +
+    "Do not mention internal implementation details or expose internal labels. " +
+    "When page context is provided, use it quietly to tailor guidance to what the user is doing.";
 
   const modeLine =
     mode === "SEEKER"
@@ -538,6 +618,11 @@ async function generateAssistantReply({
   lastUserContent,
 }) {
   const normalizedContext = buildStrikerContextPacket(context || {});
+
+  if (detectGettingStartedAsk(lastUserContent)) {
+    return buildGettingStartedReply(threadMode);
+  }
+
   const route = detectStrikerIntent({
     message: lastUserContent,
     mode: threadMode,
