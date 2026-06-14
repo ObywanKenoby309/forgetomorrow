@@ -1575,7 +1575,7 @@ flushPendingSaveRef.current = flushPendingSave;
                         </div>
                         {isOwner && <div className="ft-mobile-edit-row"><span style={{ fontSize:12, color:'var(--forge-muted)' }}>Summary</span><button type="button" className="ft-mobile-edit-btn" onClick={() => setMobileSheet('about')}>✎ Edit</button></div>}
                         {(aboutMe || headline) && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Summary</div><div className="ft-mobile-card-text">{aboutMe || headline}</div></div>}
-                        {(location || status) && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Details</div><div className="ft-mobile-card-text">{location ? `Location: ${location}` : ''}{location && status ? '\n' : ''}{status ? `Status: ${status}` : ''}</div></div>}
+                        {status && <div className="ft-mobile-card"><div className="ft-mobile-card-label">Details</div><div className="ft-mobile-card-text">{`Status: ${status}`}</div></div>}
                       </div>
 
                       {/* Skills */}
@@ -1688,7 +1688,6 @@ flushPendingSaveRef.current = flushPendingSave;
             className={`ft-signal-tab${showSignalDrawer ? ' open' : ''}`}
             onClick={() => { setSignalDrawerMounted(true); setShowSignalDrawer(v => !v); }}
             aria-label="Toggle Profile Signals panel"
-            style={{ display: 'none' }}
           >
             <span className="ft-signal-tab-arrow">{showSignalDrawer ? '›' : '‹'}</span>
             <span>✨ Signals</span>
@@ -1696,11 +1695,11 @@ flushPendingSaveRef.current = flushPendingSave;
         )}
 
         {isOwner && (editMode || mobileSheet) && showSignalDrawer && (
-          <div className="ft-signal-drawer-backdrop open" onClick={() => setShowSignalDrawer(false)} style={{ display: 'none' }} />
+          <div className="ft-signal-drawer-backdrop open" onClick={() => setShowSignalDrawer(false)} />
         )}
 
         {isOwner && (editMode || mobileSheet) && signalDrawerMounted && (
-          <div className={`ft-signal-drawer${showSignalDrawer ? ' open' : ''}`} style={{ display: 'none' }}>
+          <div className={`ft-signal-drawer${showSignalDrawer ? ' open' : ''}`}>
             <div className="ft-signal-drawer-handle-row">
               <span className="ft-signal-drawer-title">
                 Profile Signals{activeSignalFilter ? ` — ${activeSignalFilter.label}` : ''}
@@ -2346,7 +2345,7 @@ function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullN
             <input className="ft-inline-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" style={{ flex:1, minWidth:140, fontSize:12 }} />
           </div>
         ) : (
-          <div className="ft-meta-row">
+          <div className="ft-meta-row ft-desktop-only">
             {location && <span className="ft-meta-chip"><svg width="11" height="13" fill="none" viewBox="0 0 11 13" style={{ opacity:0.75 }}><path d="M5.5 0A4.5 4.5 0 001 4.5C1 8.25 5.5 13 5.5 13S10 8.25 10 4.5A4.5 4.5 0 005.5 0zm0 6.25A1.75 1.75 0 113.75 4.5 1.752 1.752 0 015.5 6.25z" fill="currentColor" /></svg>{location}</span>}
           </div>
         )}

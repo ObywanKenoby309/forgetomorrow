@@ -408,7 +408,7 @@ export default function EnterpriseHeader({
             )}
           </div>
 
-          <div className="md:hidden flex justify-end">
+          <div className="md:hidden flex items-center justify-end gap-2">
             <button
               onClick={() => setOpenMobile((v) => !v)}
               aria-label="Toggle menu"
@@ -438,6 +438,19 @@ export default function EnterpriseHeader({
                 )}
               </svg>
             </button>
+			
+			<button
+    type="button"
+    aria-label="Open Striker"
+    className="p-2 rounded-md hover:bg-[#333] focus-visible:ring-2 focus-visible:ring-orange-500"
+  >
+    <img
+      src="/icons/the-striker.png"
+      alt=""
+      aria-hidden="true"
+      className="h-7 w-7 rounded-full object-contain"
+    />
+  </button>		
           </div>
         </nav>
       </header>
