@@ -3,6 +3,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 
+// ─── SSR-safe mobile hook ───────────────────────────────────────────────────
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const ORANGE = '#FF7043';
 const DARK = '#1E293B';
 const SLATE = '#334155';
@@ -282,6 +296,7 @@ function ResultCard({
 
 export default function IdentityPage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   const chrome =
     String(router.query.chrome || '').toLowerCase() ||
@@ -693,8 +708,9 @@ export default function IdentityPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns:
-                  'minmax(0, 1fr) minmax(280px, 340px)',
+                gridTemplateColumns: isMobile
+                  ? '1fr'
+                  : 'minmax(0, 1fr) minmax(280px, 340px)',
                 gap: 14,
                 alignItems: 'start',
               }}
@@ -769,8 +785,9 @@ export default function IdentityPage() {
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns:
-                        'repeat(2, minmax(0, 1fr))',
+                      gridTemplateColumns: isMobile
+                        ? '1fr'
+                        : 'repeat(2, minmax(0, 1fr))',
                       gap: 12,
                     }}
                   >
@@ -1263,8 +1280,9 @@ export default function IdentityPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns:
-                  'minmax(280px, 340px) minmax(0, 1fr)',
+                gridTemplateColumns: isMobile
+                  ? '1fr'
+                  : 'minmax(280px, 340px) minmax(0, 1fr)',
                 gap: 14,
               }}
             >
@@ -1273,7 +1291,7 @@ export default function IdentityPage() {
                   ...GLASS,
                   padding: 14,
                   alignSelf: 'start',
-                  position: 'sticky',
+                  position: isMobile ? 'static' : 'sticky',
                   top: 16,
                 }}
               >
@@ -1619,8 +1637,9 @@ export default function IdentityPage() {
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns:
-                        'repeat(3, minmax(0, 1fr))',
+                      gridTemplateColumns: isMobile
+                        ? '1fr'
+                        : 'repeat(3, minmax(0, 1fr))',
                       gap: 8,
                     }}
                   >
