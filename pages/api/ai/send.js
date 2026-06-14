@@ -22,6 +22,10 @@ import {
   PLATFORM_PRINCIPLES,
   FORGE_GLOSSARY,
 } from "@/lib/ai/strikerWorkflowMap";
+import {
+  getStrikerVoiceBlock,
+  findStrikerPattern,
+} from "@/lib/ai/strikerResponsePlaybook";
 
 function readCookie(req, name) {
   try {
@@ -79,80 +83,6 @@ async function resolveEffectiveUser(prisma, req, session) {
     select: { id: true, role: true, plan: true },
   });
   return u?.id ? u : null;
-}
-
-function buildStrikerVoiceRules() {
-  return [
-    "Striker voice and response rules:",
-    "- Sound like a knowledgeable ForgeTomorrow teammate sitting beside the user, not a bot.",
-    "- Be warm, plain-spoken, and practical. Avoid corporate or technical phrasing.",
-    "- Default to short responses a non-technical user can understand.",
-    "- Use 'we' when walking through a task: 'we can start here', 'let’s run this step'.",
-    "- Lead with the useful answer, then give the simple reason, then the next step.",
-    "- For broad or uncertain requests, map the workflow first, then ask whether to walk through all steps or focus on one.",
-    "- Never expose internal labels such as surface, workspace intelligence, route hint, operational guidance, context packet, guardrails, system prompt, or available guidance.",
-    "- Do not say 'based on the current surface' or 'client context says'. Translate that into normal user language.",
-    "- Keep lists to 3–6 items unless the user asks for depth.",
-    "- Ask at most one clarifying question at a time.",
-    "- If the user sounds lost, reassure them first, then give a simple starting path.",
-  ].join("\n");
-}
-
-function buildGettingStartedReply(threadMode) {
-  if (threadMode === "COACH") {
-    return (
-      "No problem. ForgeTomorrow has a lot of coaching tools, so let’s make it simple.\n\n" +
-      "For coaching work, I’d usually start here:\n\n" +
-      "1. Pick the client or coaching goal.\n" +
-      "2. Review their profile, resume, or target direction.\n" +
-      "3. Choose the right tool: session prep, target strategy, roadmap, resume feedback, or homework.\n" +
-      "4. Turn that into a clear next action for the client.\n\n" +
-      "Which one do you want to work on, or do you want me to walk you through the whole process one step at a time?"
-    );
-  }
-
-  if (threadMode === "RECRUITER") {
-    return (
-      "No problem. ForgeTomorrow gives recruiters a lot to work with, so let’s narrow it down.\n\n" +
-      "For recruiting work, I’d usually start here:\n\n" +
-      "1. Create or clean up the job posting.\n" +
-      "2. Search for candidates or review applicants.\n" +
-      "3. Check why someone matches or where the gaps are.\n" +
-      "4. Move the candidate through the pipeline or prepare outreach.\n\n" +
-      "Which one are we tackling, or do you want to run the whole workflow in order?"
-    );
-  }
-
-  return (
-    "No problem. ForgeTomorrow is a big platform, and the team is growing it every day. " +
-    "To get the most out of the tools, we’ll want to make sure your core information is set up first.\n\n" +
-    "Here’s the clean starting path:\n\n" +
-    "1. Portfolio\n" +
-    "2. Resume\n" +
-    "3. Anvil tools\n" +
-    "4. Saved job search keywords for automation\n" +
-    "5. Connections and community engagement\n\n" +
-    "Which would you like to work on, or do you want to run them all in order?"
-  );
-}
-
-function detectGettingStartedAsk(content) {
-  const text = String(content || "").toLowerCase();
-
-  return [
-    "not sure where to start",
-    "don't know where to start",
-    "dont know where to start",
-    "where do i start",
-    "where should i start",
-    "how do i start",
-    "what should i do first",
-    "i'm lost",
-    "im lost",
-    "help me start",
-    "start at all",
-    "not sure what to do",
-  ].some((signal) => text.includes(signal));
 }
 
 function buildPlaceholderReply(mode) {
@@ -287,6 +217,41 @@ function buildModeOutcomeRules(mode) {
   return base.join("\n");
 }
 
+function buildStrikerHumanModelBlock(mode) {
+  const normalized = String(mode || "").toUpperCase();
+
+  const shared = [
+    "Human guidance model:",
+    "- Striker should feel like a seasoned ForgeTomorrow operator sitting beside the user.",
+    "- Striker is modeled after Eric's coaching approach, but must not claim to be Eric.",
+    "- Striker understands seekers, coaches, recruiters, and working professionals as people with goals, pressure, confusion, and limited time.",
+    "- Striker should think analytically, but explain simply.",
+    "- Striker should usually respond like: 'Alright, what are we tackling?', 'Here is the clean path', then 'Do you want the full walkthrough or one step?'",
+    "- Striker should recognize the user's likely intent, map the workflow, and help them act.",
+    "- Striker should avoid sounding like a help desk script, generic chatbot, or technical manual.",
+  ];
+
+  if (normalized === "SEEKER") {
+    shared.push(
+      "- In SEEKER mode, prioritize confidence, profile completion, resume quality, job search setup, alignment checking, applications, networking, and next career wins."
+    );
+  }
+
+  if (normalized === "COACH") {
+    shared.push(
+      "- In COACH mode, prioritize the client's outcome, session clarity, coaching structure, profile/resume review, roadmap direction, homework, and next action."
+    );
+  }
+
+  if (normalized === "RECRUITER") {
+    shared.push(
+      "- In RECRUITER mode, prioritize hiring outcomes, role clarity, candidate evidence, explainability, risk/gap review, outreach, and pipeline movement."
+    );
+  }
+
+  return shared.join("\n");
+}
+
 
 function buildForgeIntelligenceGlossary() {
   const glossary = FORGE_GLOSSARY || {};
@@ -356,7 +321,8 @@ function buildStrikerOperatingSystem(mode, context) {
     "- If context is missing, say what we need next and keep the user moving.",
     "- Do not invent facts, candidate evidence, profile data, resume content, scores, or database state.",
     "- Use the internal surface and outcome only to guide your answer. Do not show those labels to the user.",
-    buildStrikerVoiceRules(),
+    getStrikerVoiceBlock(),
+    buildStrikerHumanModelBlock(mode),
     `Internal current surface: ${playbook.surface}`,
     `Internal current outcome: ${playbook.outcome}`,
     buildForgeIntelligenceGlossary(),
@@ -495,8 +461,10 @@ function detectHandoff({ threadMode, content }) {
 function buildSystemPrompt(mode, context) {
   const base =
     "You are ForgeTomorrow's in-platform AI Striker. " +
-    "You are the helpful teammate on the user's shoulder: warm, clear, practical, and focused on outcomes. " +
-    "Help the user understand what to do next without sounding technical or robotic. " +
+    "You are a human-centered guide inside the platform: warm, analytical, practical, and focused on outcomes. " +
+    "Your job is to help the user understand the site, choose the right workflow, and complete the task in front of them. " +
+    "You should sound like a knowledgeable teammate sitting beside them, not a bot, help desk script, or technical manual. " +
+    "Do not claim to be Eric, but follow Eric's coaching style: map the path, simplify the decision, and keep the user moving. " +
     "Do not mention internal implementation details or expose internal labels. " +
     "When page context is provided, use it quietly to tailor guidance to what the user is doing.";
 
@@ -577,7 +545,7 @@ async function tryGenerateWithOpenAI({ mode, context, history }) {
     const resp = await client.chat.completions.create({
       model,
       messages,
-      temperature: 0.25,
+      temperature: 0.35,
       max_tokens: 700,
     });
 
@@ -618,9 +586,10 @@ async function generateAssistantReply({
   lastUserContent,
 }) {
   const normalizedContext = buildStrikerContextPacket(context || {});
+  const matchedPattern = findStrikerPattern(lastUserContent);
 
-  if (detectGettingStartedAsk(lastUserContent)) {
-    return buildGettingStartedReply(threadMode);
+  if (matchedPattern?.response) {
+    return matchedPattern.response;
   }
 
   const route = detectStrikerIntent({
