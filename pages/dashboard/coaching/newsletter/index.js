@@ -3,10 +3,24 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import CoachingSidebar from '../../../../components/coaching/CoachingSidebar';
 
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const STORAGE_KEY = 'coachNewsletters_v1';
 
 export default function CoachingNewsletterComposerPage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   // --- Mock clients (same style as elsewhere) ---
   const clients = [
@@ -76,14 +90,14 @@ export default function CoachingNewsletterComposerPage() {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '300px 1fr',
+        gridTemplateColumns: isMobile ? '1fr' : '300px 1fr',
         gap: '20px',
-        padding: '120px 20px 20px',
+        padding: isMobile ? '80px 16px 20px' : '120px 20px 20px',
         minHeight: '100vh',
         backgroundColor: '#ECEFF1',
       }}
     >
-      <CoachingSidebar active="resources" />
+      {!isMobile && <CoachingSidebar active="resources" />}
 
       <main style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div style={{ maxWidth: 860 }}>
@@ -115,7 +129,7 @@ export default function CoachingNewsletterComposerPage() {
               border: '1px solid #eee',
             }}
           >
-            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 12, alignItems: 'center' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '180px 1fr', gap: 12, alignItems: 'center' }}>
               <strong>Recipients</strong>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {['All', 'Status', 'Manual'].map(mode => (
@@ -159,7 +173,7 @@ export default function CoachingNewsletterComposerPage() {
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(2, minmax(0,1fr))',
+                      gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0,1fr))',
                       gap: 8,
                     }}
                   >

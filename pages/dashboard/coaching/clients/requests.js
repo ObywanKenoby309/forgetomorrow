@@ -5,6 +5,19 @@ import { useRouter } from 'next/router';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingRightColumn from '@/components/coaching/CoachingRightColumn';
 
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const REQUESTS_KEY = 'coachClientRequests_v1';
 
 function readRequests() {
@@ -36,6 +49,7 @@ function fmt(ts) {
 
 export default function ClientRequestsPage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [all, setAll] = useState([]);
   const [q, setQ] = useState('');
   const [tab, setTab] = useState('pending'); // 'pending' | 'approved' | 'declined'
@@ -194,7 +208,8 @@ export default function ClientRequestsPage() {
                 border: '1px solid #ccc',
                 borderRadius: 8,
                 padding: '8px 10px',
-                minWidth: 240,
+                minWidth: isMobile ? 0 : 240,
+                width: isMobile ? '100%' : 'auto',
               }}
             />
             <Link
@@ -227,7 +242,7 @@ export default function ClientRequestsPage() {
                 id={`req-${r.id}`}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'minmax(200px, 1fr) 1fr 220px',
+                  gridTemplateColumns: isMobile ? '1fr' : 'minmax(200px, 1fr) 1fr 220px',
                   alignItems: 'center',
                   gap: 12,
                   background: 'white',

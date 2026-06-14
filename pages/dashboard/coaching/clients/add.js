@@ -5,6 +5,19 @@ import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingRightColumn from '@/components/coaching/CoachingRightColumn';
 import { getSettings, upsertClientFollowUp } from '@/lib/coaching/followups';
 
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const CLIENTS_KEY = 'coachClients_v1';
 
 function readJSON(key, fallback) {
@@ -22,6 +35,7 @@ function writeJSON(key, value) {
 }
 
 export default function AddClientPage() {
+  const isMobile = useIsMobile();
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -141,7 +155,7 @@ export default function AddClientPage() {
             border: '1px solid #eee',
           }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
             <div>
               <label style={labelStyle}>Name</label>
               <input value={form.name} onChange={onChange('name')} style={inputStyle} />
