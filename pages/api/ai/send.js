@@ -195,6 +195,301 @@ function buildSurfacePlaybook({ mode, context }) {
   };
 }
 
+const STRIKER_PAGE_GUIDES = {
+  anvil: {
+    short: "You're currently in The Anvil, your professional workshop on ForgeTomorrow.",
+    purpose:
+      "This area helps you strengthen your career materials, make better career decisions, and prepare for future opportunities.",
+    details: [
+      "Build or improve a resume and cover letter",
+      "Strengthen your ForgeTomorrow portfolio",
+      "Prepare for compensation or offer negotiations",
+      "Explore career growth or pivot opportunities",
+      "Complete your Professional Operating Profile",
+      "Plan projects that support promotion and visibility",
+    ],
+  },
+
+  jobs: {
+    short: "You're currently in Apply to Jobs.",
+    purpose:
+      "This area helps you discover opportunities, check alignment, and manage applications.",
+    details: [
+      "Search opportunities",
+      "Review alignment before spending time applying",
+      "Improve resumes before applying",
+      "Track applications",
+      "Save searches and keywords",
+      "Pin opportunities for later review",
+    ],
+  },
+
+  portfolio: {
+    short: "You're currently in your ForgeTomorrow portfolio.",
+    purpose:
+      "This area helps you show your professional story, experience, skills, projects, education, and signals in one place.",
+    details: [
+      "Strengthen your headline and summary",
+      "Add experience, projects, education, and certifications",
+      "Show work preferences and professional signals",
+      "Review how your profile appears to others",
+      "Improve how recruiters, coaches, and connections understand your value",
+    ],
+  },
+
+  resume: {
+    short: "You're currently in the Resume workspace.",
+    purpose:
+      "This area helps you build, improve, align, and export career materials for specific opportunities.",
+    details: [
+      "Create or update a resume",
+      "Choose the right format",
+      "Tailor your resume to a role",
+      "Check alignment before applying",
+      "Export your materials when you're ready",
+    ],
+  },
+
+  forgeVault: {
+    short: "You're currently in ForgeVault.",
+    purpose:
+      "This area helps you organize and reuse important career documents and generated outputs.",
+    details: [
+      "Store career documents",
+      "Review generated outputs",
+      "Share documents when needed",
+      "Access files across coaching, recruiting, and career workflows",
+    ],
+  },
+
+  foundry: {
+    short: "You're currently in Foundry.",
+    purpose:
+      "This area helps people meet, collaborate, and work together inside ForgeTomorrow.",
+    details: [
+      "Host or join meetings",
+      "Invite the right people",
+      "Use chat and shared files during the session",
+      "Keep follow-up work connected to ForgeTomorrow",
+    ],
+  },
+
+  roadmap: {
+    short: "You're currently in the Career Roadmap area.",
+    purpose:
+      "This area helps you turn a career goal into a practical plan with clear next steps.",
+    details: [
+      "Define your target direction",
+      "Review strengths and gaps",
+      "Build a 30/60/90 plan",
+      "Track progress toward your next career move",
+    ],
+  },
+
+  coaching: {
+    short: "You're currently in the Coaching workspace.",
+    purpose:
+      "This area helps coaches support clients with clearer planning, feedback, sessions, and next actions.",
+    details: [
+      "Review client information",
+      "Prepare sessions",
+      "Build target strategy or roadmap guidance",
+      "Assign homework or next steps",
+      "Track coaching progress",
+    ],
+  },
+
+  recruiter: {
+    short: "You're currently in the Recruiter workspace.",
+    purpose:
+      "This area helps recruiters move from role needs to explainable hiring action.",
+    details: [
+      "Create or manage job postings",
+      "Search and review candidates",
+      "Understand why someone matches",
+      "Identify missing evidence or risks",
+      "Move candidates through the pipeline",
+    ],
+  },
+
+  candidateCenter: {
+    short: "You're currently in Candidate Center.",
+    purpose:
+      "This area helps recruiters review candidates, understand fit, and decide the next hiring action.",
+    details: [
+      "Review candidate profiles",
+      "Compare candidate evidence against the role",
+      "Understand strengths and gaps",
+      "Prepare outreach or screening",
+      "Move the candidate through the pipeline",
+    ],
+  },
+
+  spark: {
+    short: "You're currently in The Spark.",
+    purpose:
+      "This area helps you communicate with people connected to your work on ForgeTomorrow.",
+    details: [
+      "Read and send messages",
+      "Continue professional conversations",
+      "Follow up with coaches, recruiters, seekers, or connections",
+      "Keep communication tied to your workflow",
+    ],
+  },
+
+  general: {
+    short: "You're currently inside ForgeTomorrow.",
+    purpose:
+      "This area is part of the platform built to help professionals move from confusion to clear action.",
+    details: [
+      "Understand where you are",
+      "Choose the right workflow",
+      "Find the next useful tool",
+      "Work through the task step by step",
+    ],
+  },
+};
+
+function detectOrientationAsk(content) {
+  const text = String(content || "").toLowerCase();
+
+  return [
+    "where am i",
+    "where are we",
+    "what page",
+    "what is this page",
+    "what's this page",
+    "whats this page",
+    "what is this",
+    "what's this",
+    "whats this",
+    "what is this about",
+    "what's this about",
+    "whats this about",
+    "what does this do",
+    "what is this for",
+    "what's this for",
+    "whats this for",
+    "why would i use this",
+    "explain this page",
+    "explain where i am",
+  ].some((signal) => text.includes(signal));
+}
+
+function detectOrientationExpand(content) {
+  const text = String(content || "").trim().toLowerCase();
+
+  return [
+    "yes",
+    "yeah",
+    "yep",
+    "sure",
+    "please",
+    "tell me more",
+    "talk through",
+    "walk me through",
+    "what's offered",
+    "whats offered",
+    "what can i do here",
+    "show me",
+  ].some((signal) => text === signal || text.includes(signal));
+}
+
+function detectOrientationExit(content) {
+  const text = String(content || "").trim().toLowerCase();
+
+  return [
+    "no",
+    "nope",
+    "not now",
+    "i'm good",
+    "im good",
+    "all good",
+    "that's all",
+    "thats all",
+    "just checking",
+    "just curious",
+  ].some((signal) => text === signal || text.includes(signal));
+}
+
+function wasOrientationPrompt(content) {
+  const text = String(content || "").toLowerCase();
+  return text.includes("would you like to talk through") || text.includes("would you like to discuss");
+}
+
+function resolvePageGuideKey(context, threadMode) {
+  const ctx = buildStrikerContextPacket(context || {});
+  const haystack = [
+    ctx.surface,
+    ctx.pathname,
+    ctx.asPath,
+    ctx.route,
+    ctx.page,
+    ctx.currentPage,
+  ].map((v) => String(v || "").toLowerCase()).join(" ");
+
+  if (haystack.includes("anvil")) return "anvil";
+  if (haystack.includes("forge-vault") || haystack.includes("forgevault") || haystack.includes("vault")) return "forgeVault";
+  if (haystack.includes("foundry")) return "foundry";
+  if (haystack.includes("roadmap")) return "roadmap";
+  if (haystack.includes("profile") || haystack.includes("portfolio")) return "portfolio";
+  if (haystack.includes("resume")) return "resume";
+  if (haystack.includes("job") || haystack.includes("opportunit")) return "jobs";
+  if (haystack.includes("candidate")) return "candidateCenter";
+  if (haystack.includes("spark") || haystack.includes("signal") || haystack.includes("messag")) return "spark";
+  if (haystack.includes("coach")) return "coaching";
+  if (haystack.includes("recruit")) return "recruiter";
+
+  if (threadMode === "COACH") return "coaching";
+  if (threadMode === "RECRUITER") return "recruiter";
+  return "general";
+}
+
+function getPageGuide(context, threadMode) {
+  const key = resolvePageGuideKey(context, threadMode);
+  return STRIKER_PAGE_GUIDES[key] || STRIKER_PAGE_GUIDES.general;
+}
+
+function buildOrientationReply(guide) {
+  return [
+    guide.short,
+    "",
+    guide.purpose,
+    "",
+    "Would you like to talk through what's offered here?",
+  ].join("\n");
+}
+
+function buildOrientationExpandedReply(guide) {
+  return [
+    "Absolutely.",
+    "",
+    "From here, we can:",
+    "",
+    ...guide.details.map((item) => `- ${item}`),
+    "",
+    "What are you trying to accomplish today?",
+    "I'll point you to the right tool and walk you through it step by step.",
+  ].join("\n");
+}
+
+function buildOrientationExitReply() {
+  return "Understood. I'm standing by if you need anything else.";
+}
+
+function isInternalLeakingReply(reply) {
+  const text = String(reply || "").toLowerCase();
+
+  return [
+    "current workspace:",
+    "surface goal:",
+    "available guidance:",
+    "useful next places:",
+    "workspace intelligence:",
+    "recommended operating actions:",
+  ].some((signal) => text.includes(signal));
+}
+
 function buildModeOutcomeRules(mode) {
   const normalized = String(mode || "").toUpperCase();
   const identity = ROLE_IDENTITY?.[normalized];
@@ -586,6 +881,28 @@ async function generateAssistantReply({
   lastUserContent,
 }) {
   const normalizedContext = buildStrikerContextPacket(context || {});
+  const pageGuide = getPageGuide(normalizedContext, threadMode);
+
+  if (detectOrientationAsk(lastUserContent)) {
+    return buildOrientationReply(pageGuide);
+  }
+
+  if (detectOrientationExpand(lastUserContent) || detectOrientationExit(lastUserContent)) {
+    const lastAssistant = await prisma.aiMessage.findFirst({
+      where: { threadId, role: "assistant" },
+      orderBy: { createdAt: "desc" },
+      select: { content: true },
+    });
+
+    if (wasOrientationPrompt(lastAssistant?.content)) {
+      if (detectOrientationExit(lastUserContent)) {
+        return buildOrientationExitReply();
+      }
+
+      return buildOrientationExpandedReply(pageGuide);
+    }
+  }
+
   const matchedPattern = findStrikerPattern(lastUserContent);
 
   if (matchedPattern?.response) {
@@ -605,7 +922,9 @@ async function generateAssistantReply({
     message: lastUserContent,
   });
 
-  if (operationalReply) return operationalReply;
+  if (operationalReply && !isInternalLeakingReply(operationalReply)) {
+    return operationalReply;
+  }
 
   // ✅ Forge-specific direct answers BEFORE generic model generation
   const direct = buildDirectForgeAnswer({ threadMode, content: lastUserContent, context: normalizedContext });
