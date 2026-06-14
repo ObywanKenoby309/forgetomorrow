@@ -1,5 +1,5 @@
 // components/recruiter/modules/TalentPoolsModule.js
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 
 // ─── SSR-safe mobile hook ───────────────────────────────────────────────────
@@ -513,36 +513,74 @@ export default function TalentPoolsModule() {
   const canOpenSelected = Boolean(String(selectedEntry?.candidateUserId || "").trim());
 
   return (
-    <section style={panelStyle} aria-label="Talent Pools working surface">
-      <SectionTitle
-        title="Pools workspace"
-        subtitle="Pick a pool, scan candidates, and take action without jumping between pages."
-        right={
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              justifyContent: "flex-end",
-            }}
-          >
-            <SecondaryButton
-              onClick={() => setShowCreate(true)}
-              disabled={saving}
-            >
-              New pool
+    <section style={{ ...panelStyle, overflow: 'hidden', width: '100%', boxSizing: 'border-box' }} aria-label="Talent Pools working surface">
+
+      {/* ── Header — stacks on mobile, side-by-side on desktop ── */}
+      {isMobile ? (
+        <div style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
+          {/* Title + subtitle full width */}
+          <div>
+            <div style={{ fontWeight: 900, color: '#37474F', fontSize: 15, lineHeight: 1.2 }}>
+              Pools workspace
+            </div>
+            <div style={{ color: '#607D8B', fontSize: 12, marginTop: 4, lineHeight: 1.4 }}>
+              Pick a pool, scan candidates, and take action.
+            </div>
+          </div>
+
+          {/* Action buttons below title */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <SecondaryButton onClick={() => setShowCreate(true)} disabled={saving}>
+              + New pool
             </SecondaryButton>
-            <PrimaryButton
-              onClick={openPicker}
-              disabled={saving || !selectedPoolId}
-            >
+            <PrimaryButton onClick={openPicker} disabled={saving || !selectedPoolId}>
               Add candidates
             </PrimaryButton>
           </div>
-        }
-      />
 
-      <div style={{ height: 12 }} />
+          {/* Breadcrumb nav — immediately visible, above the fold */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingTop: 2 }}>
+            {[
+              { key: 'pools', label: 'Pools', enabled: true },
+              { key: 'entries', label: 'Candidates', enabled: !!selectedPoolId },
+              { key: 'detail', label: 'Detail', enabled: !!selectedEntryId },
+            ].map((step, i) => (
+              <React.Fragment key={step.key}>
+                {i > 0 && <span style={{ color: '#B0BEC5', fontSize: 11 }}>›</span>}
+                <button
+                  type="button"
+                  onClick={() => step.enabled && setMobileStep(step.key)}
+                  style={{
+                    fontSize: 12, fontWeight: 700,
+                    padding: '5px 12px', borderRadius: 999,
+                    border: mobileStep === step.key ? '1px solid #FF7043' : '1px solid rgba(0,0,0,0.12)',
+                    background: mobileStep === step.key ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.80)',
+                    color: mobileStep === step.key ? '#FF7043' : step.enabled ? '#607D8B' : '#CFD8DC',
+                    cursor: step.enabled ? 'pointer' : 'default',
+                  }}
+                >
+                  {step.label}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <SectionTitle
+          title="Pools workspace"
+          subtitle="Pick a pool, scan candidates, and take action without jumping between pages."
+          right={
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <SecondaryButton onClick={() => setShowCreate(true)} disabled={saving}>
+                New pool
+              </SecondaryButton>
+              <PrimaryButton onClick={openPicker} disabled={saving || !selectedPoolId}>
+                Add candidates
+              </PrimaryButton>
+            </div>
+          }
+        />
+      )}
 
       {error ? (
         <div
@@ -653,31 +691,6 @@ export default function TalentPoolsModule() {
           overflowX: "hidden",
         }}
       >
-        {/* Mobile step nav */}
-        {isMobile && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0 8px", flexWrap: "wrap" }}>
-            <button type="button" onClick={() => setMobileStep("pools")}
-              style={{ fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: 999,
-                border: mobileStep === "pools" ? "1px solid #FF7043" : "1px solid rgba(0,0,0,0.12)",
-                background: mobileStep === "pools" ? "rgba(255,112,67,0.10)" : "rgba(255,255,255,0.80)",
-                color: mobileStep === "pools" ? "#FF7043" : "#607D8B", cursor: "pointer" }}>Pools</button>
-            <span style={{ color: "#B0BEC5", fontSize: 12 }}>›</span>
-            <button type="button" onClick={() => selectedPoolId && setMobileStep("entries")}
-              style={{ fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: 999,
-                border: mobileStep === "entries" ? "1px solid #FF7043" : "1px solid rgba(0,0,0,0.12)",
-                background: mobileStep === "entries" ? "rgba(255,112,67,0.10)" : "rgba(255,255,255,0.80)",
-                color: mobileStep === "entries" ? "#FF7043" : selectedPoolId ? "#607D8B" : "#CFD8DC",
-                cursor: selectedPoolId ? "pointer" : "default" }}>Candidates</button>
-            <span style={{ color: "#B0BEC5", fontSize: 12 }}>›</span>
-            <button type="button" onClick={() => selectedEntryId && setMobileStep("detail")}
-              style={{ fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: 999,
-                border: mobileStep === "detail" ? "1px solid #FF7043" : "1px solid rgba(0,0,0,0.12)",
-                background: mobileStep === "detail" ? "rgba(255,112,67,0.10)" : "rgba(255,255,255,0.80)",
-                color: mobileStep === "detail" ? "#FF7043" : selectedEntryId ? "#607D8B" : "#CFD8DC",
-                cursor: selectedEntryId ? "pointer" : "default" }}>Detail</button>
-          </div>
-        )}
-
         {/* Left — Pools list */}
         {(!isMobile || mobileStep === "pools") && (
         <div
