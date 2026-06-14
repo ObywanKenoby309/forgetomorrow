@@ -683,8 +683,8 @@ useEffect(() => {
 {/* ── Filter bar ── */}
 <div
   style={{
-    padding: '0 12px 12px',
-    marginTop: -18,
+    padding: '0 4px 12px',
+    marginTop: -28,
   }}
 >
   <div
@@ -694,7 +694,7 @@ useEffect(() => {
       boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
       overflow: 'hidden',
       border: '1px solid rgba(255,255,255,0.22)',
-      borderTop: '1px solid rgba(255,255,255,0.18)',
+      borderTop: 'none)',
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
     }}
