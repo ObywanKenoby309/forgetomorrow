@@ -672,19 +672,21 @@ useEffect(() => {
 
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0, paddingBottom: 100 }}>
-
-<SeekerTitleCard
-  greeting={greeting}
-  title={`${totalJobCount.toLocaleString()} Opportunities`}
-  subtitle="Ranked against your profile and preferences."
-/>
+<div style={{ position: 'relative', zIndex: 2 }}>
+  <SeekerTitleCard
+    greeting={greeting}
+    title={`${totalJobCount.toLocaleString()} Opportunities`}
+    subtitle="Ranked against your profile and preferences."
+  />
+</div>
 
 {/* ── Filter bar ── */}
 <div
   style={{
-    padding: '0 4px 12px',
-    marginTop: -28,
+    padding: '0 12px 12px',
+    marginTop: -8,
+    position: 'relative',
+    zIndex: 1,
   }}
 >
   <div
@@ -694,7 +696,7 @@ useEffect(() => {
       boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
       overflow: 'hidden',
       border: '1px solid rgba(255,255,255,0.22)',
-      borderTop: 'none)',
+      borderTop: 'none',
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
     }}
