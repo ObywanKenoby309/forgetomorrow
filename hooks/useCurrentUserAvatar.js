@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 
 /**
- * Minimal hook to get the current user's avatar URL.
+ * Minimal hook to get the current user's avatar URL, display name, and initials.
  * Prefer session payload for instant UI; fallback to /api/auth/me only if needed.
  *
  * RULE: do not mark "loading=false" unless we are certain:
@@ -13,6 +13,30 @@ import { useSession } from "next-auth/react";
  *
  * If /api/auth/me errors or returns non-OK, stay loading so UI shows skeleton (no letters).
  */
+
+function computeInitials(user) {
+  if (!user) return "FT";
+  const first = String(user.firstName || "").trim();
+  const last  = String(user.lastName  || "").trim();
+  if (first && last)  return (first[0] + last[0]).toUpperCase();
+  if (first)          return first.slice(0, 2).toUpperCase();
+  const full = String(user.name || user.email || "").trim();
+  if (full) {
+    const parts = full.split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return full.slice(0, 2).toUpperCase();
+  }
+  return "FT";
+}
+
+function computeDisplayName(user) {
+  if (!user) return "";
+  const first = String(user.firstName || "").trim();
+  const last  = String(user.lastName  || "").trim();
+  if (first || last) return `${first} ${last}`.trim();
+  return String(user.name || "").trim();
+}
+
 export function useCurrentUserAvatar() {
   const sessionHook = typeof useSession === "function" ? useSession() : null;
   const status = sessionHook?.status || "loading";
@@ -26,6 +50,7 @@ export function useCurrentUserAvatar() {
 
   // ✅ Initialize from session immediately to avoid first-paint null → later avatar "pop"
   const [avatarUrl, setAvatarUrl] = useState(sessionAvatarUrl);
+  const [userData, setUserData] = useState(null);
 
   // ✅ "loading" means: we have NOT conclusively determined avatar vs no-avatar yet
   const [loading, setLoading] = useState(status === "loading");
@@ -48,6 +73,7 @@ export function useCurrentUserAvatar() {
 
         // ✅ /api/auth/me returned OK: we are now certain (avatar or no avatar)
         setAvatarUrl(url);
+        setUserData(data?.user || null);
         setLoading(false);
       } catch {
         // ❗ Not sure. Keep loading=true (skeleton) so we never flash a letter.
@@ -69,6 +95,7 @@ export function useCurrentUserAvatar() {
 
     if (status === "unauthenticated") {
       setAvatarUrl(null);
+      setUserData(null);
       setLoading(false);
       return;
     }
@@ -76,7 +103,8 @@ export function useCurrentUserAvatar() {
     // ✅ If session already has avatar, use it immediately and stop loading (certain)
     if (sessionAvatarUrl) {
       setAvatarUrl(sessionAvatarUrl);
-      setLoading(false);
+      // Still fetch to get name/initials from full user record
+      fetchCurrentUser();
       return;
     }
 
@@ -90,5 +118,8 @@ export function useCurrentUserAvatar() {
     };
   }, [status, sessionAvatarUrl]);
 
-  return { avatarUrl, loading };
+  const initials = useMemo(() => computeInitials(userData), [userData]);
+  const displayName = useMemo(() => computeDisplayName(userData), [userData]);
+
+  return { avatarUrl, loading, initials, displayName };
 }
