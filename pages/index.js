@@ -229,6 +229,18 @@ export default function Home() {
             border-right: 1px solid var(--border);
           }
 
+          @media (max-width: 768px) {
+            .problem-col { padding: 28px 20px 32px; }
+            .problem-col:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+            .problem-section { padding: 72px 16px; }
+            .showcase-section { padding: 80px 16px; }
+            .capability-section { padding: 0 16px 72px; }
+            .audience-section { padding: 72px 16px; }
+            .final-cta-section { padding: 80px 16px; }
+            .audience-card { padding: 28px 22px 24px; }
+            .hero { padding: 0 16px; min-height: 88vh; }
+          }
+
           .problem-col-label {
             font-size: 11px;
             font-weight: 700;

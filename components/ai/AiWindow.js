@@ -377,13 +377,14 @@ export default function AiWindow({
             onClick={onMinimize}
             aria-label="Minimize"
             style={{
-              border: '1px solid rgba(0,0,0,0.10)',
-              background: 'rgba(255,255,255,0.9)',
-              borderRadius: 10,
-              padding: '6px 8px',
-              cursor: 'pointer',
-              fontWeight: 900,
-            }}
+			  border: '1px solid rgba(17,32,51,0.18)',
+			  background: 'rgba(255,255,255,0.9)',
+			  borderRadius: 10,
+			  padding: '6px 8px',
+			  cursor: 'pointer',
+			  fontWeight: 900,
+			  color: '#112033',
+			}}
           >
             –
           </button>
@@ -393,13 +394,14 @@ export default function AiWindow({
             onClick={onClose}
             aria-label="Close"
             style={{
-              border: '1px solid rgba(0,0,0,0.10)',
-              background: 'rgba(255,255,255,0.9)',
-              borderRadius: 10,
-              padding: '6px 9px',
-              cursor: 'pointer',
-              fontWeight: 900,
-            }}
+			  border: '1px solid rgba(17,32,51,0.18)',
+			  background: 'rgba(255,255,255,0.9)',
+			  borderRadius: 10,
+			  padding: '6px 8px',
+			  cursor: 'pointer',
+			  fontWeight: 900,
+			  color: '#112033',
+			}}
           >
             ×
           </button>

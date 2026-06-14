@@ -53,6 +53,16 @@ const STATS = [
 ];
 
 function AdvertiseContent({ isInternal }) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < 640
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   const [form, setForm] = useState({
     contactName: '',
     contactEmail: '',
@@ -634,7 +644,7 @@ function AdvertiseContent({ isInternal }) {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: isInternal ? '1fr 1fr' : '1fr 1fr',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
                   gap: 14,
                 }}
               >
@@ -658,7 +668,7 @@ function AdvertiseContent({ isInternal }) {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: isInternal ? '1fr 1fr' : '1fr 1fr',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
                   gap: 14,
                 }}
               >

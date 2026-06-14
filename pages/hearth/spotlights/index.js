@@ -17,6 +17,20 @@ import SpotlightFilters from '@/components/spotlights/SpotlightFilters';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 
+// ─── SSR-safe mobile hook ────────────────────────────────────────────────────
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const glassBase = {
   background: 'rgba(255,255,255,0.78)',
   border: '1px solid rgba(255,255,255,0.55)',
@@ -344,6 +358,7 @@ function PageHeader() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function HearthSpotlightsPage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   const [spotlights, setSpotlights] = useState([]);
   const [selected, setSelected]     = useState(null);
@@ -454,6 +469,25 @@ export default function HearthSpotlightsPage() {
         )}
 
         {!loading && !error && filtered.length > 0 && (
+          isMobile ? (
+            // Mobile: single column — list then detail below on selection
+            <div style={{ display: 'grid', gap: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {filtered.map((s) => (
+                  <SpotlightCard
+                    key={s.id}
+                  spotlight={s}
+                  selected={selected?.id === s.id}
+                  onSelect={setSelected}
+                />
+              ))}
+            </div>
+            {selected && (
+              <SpotlightDetail spotlight={selected} />
+            )}
+          </div>
+          ) : (
+          // Desktop: two-column list + sticky detail
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'minmax(0,1.8fr) minmax(0,1.5fr)',
@@ -485,6 +519,7 @@ export default function HearthSpotlightsPage() {
               }
             </div>
           </div>
+          )
         )}
       </PageShell>
 

@@ -742,9 +742,19 @@ function VaultRow({ doc, isMobile, showWorkspace }) {
 
         <div style={{
           flexShrink: 0, width: isMobile ? 'auto' : 110,
-          paddingLeft: isMobile ? 44 : 12, display: 'flex', alignItems: 'center',
+          paddingLeft: isMobile ? 44 : 12, display: 'flex', alignItems: 'center', gap: 6,
         }}>
           <DownloadButton doc={doc} />
+          {isMobile && (
+            <button
+              onClick={() => setPanelOpen(true)}
+              style={{
+                fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
+                border: '1px solid rgba(0,0,0,0.12)', background: 'transparent',
+                color: '#546E7A', cursor: 'pointer', whiteSpace: 'nowrap',
+              }}
+            >+ Share</button>
+          )}
         </div>
 
         {!isMobile && (
@@ -1526,9 +1536,9 @@ export default function ForgeVaultPage() {
   const greeting = getTimeGreeting();
 
   const TAB_CONFIG = [
-    { key: 'forge',   label: 'Forge Documents',    icon: '⚒️'  },
-    { key: 'uploads', label: 'Uploaded Documents',  icon: '📁'  },
-    { key: 'shared',  label: 'Shared With Me',      icon: '📬'  },
+    { key: 'forge',   label: 'Forge Documents',    mobileLabel: 'Forge',    icon: '⚒️'  },
+    { key: 'uploads', label: 'Uploaded Documents',  mobileLabel: 'Uploads',  icon: '📁'  },
+    { key: 'shared',  label: 'Shared With Me',      mobileLabel: 'Shared',   icon: '📬'  },
   ];
 
   const tabStyle = (key) => ({
@@ -1581,7 +1591,7 @@ export default function ForgeVaultPage() {
             {TAB_CONFIG.map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={tabStyle(tab.key)}>
                 <span>{tab.icon}</span>
-                <span>{tab.label}</span>
+                <span>{isMobile ? tab.mobileLabel : tab.label}</span>
               </button>
             ))}
           </div>

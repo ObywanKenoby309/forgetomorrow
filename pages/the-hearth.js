@@ -14,6 +14,20 @@ import SpotlightFilters from '@/components/spotlights/SpotlightFilters';
 import { SpotlightCard, SpotlightDetail } from '@/components/spotlights/SpotlightCardUI';
 import SpotlightResourceCard from '@/components/spotlights/SpotlightResourceCard';
 
+// ─── SSR-safe mobile hook ────────────────────────────────────────────────────
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = React.useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < breakpoint
+  );
+  React.useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const GLASS = {
   borderRadius: 14,
   border: '1px solid rgba(255,255,255,0.22)',
@@ -36,6 +50,7 @@ const ORANGE_HEADING_LIFT = {
 };
 
 function HearthModuleShell({ title, subtitle, children, onBack, coachAction = null }) {
+  const isMobile = useIsMobile();
   return (
     <section style={{ ...GLASS, padding: 24, display: 'grid', gap: 16 }}>
       <button
@@ -54,7 +69,7 @@ function HearthModuleShell({ title, subtitle, children, onBack, coachAction = nu
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: coachAction ? 'minmax(0,1fr) 280px' : '1fr',
+          gridTemplateColumns: coachAction && !isMobile ? 'minmax(0,1fr) 280px' : '1fr',
           gap: 16,
           alignItems: 'start',
         }}
@@ -85,6 +100,7 @@ function HearthModuleShell({ title, subtitle, children, onBack, coachAction = nu
 
 // ─── Mentorship Module — uses shared SpotlightCard + SpotlightDetail ────────
 function MentorshipModule() {
+  const isMobile = useIsMobile();
   const [spotlights, setSpotlights] = useState([]);
   const [selected, setSelected]     = useState(null);
   const [filters, setFilters]       = useState(null);
@@ -210,7 +226,7 @@ function MentorshipModule() {
           </div>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(0,1.8fr) minmax(0,1.5fr)',
+            gridTemplateColumns: isMobile ? '1fr' : 'minmax(0,1.8fr) minmax(0,1.5fr)',
             gap: 14, alignItems: 'flex-start',
           }}>
             <div style={{
