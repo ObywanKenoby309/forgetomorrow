@@ -1044,3 +1044,4 @@ async function openFullProfileFromModal(entryArg) {
 
 </RecruiterLayout>
   );
+}
