@@ -1,19 +1,30 @@
 // pages/api/profile/avatar.ts
+// Uploads avatar to Supabase Storage (forge-docs bucket) and saves the public URL.
+// Replaces the Phase 1 base64-in-DB approach which caused JWT bloat and session failures.
+
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
+import { supabaseAdmin } from "@/lib/storage";
 
 export const config = {
   api: {
-    // ✅ Fix 413 Payload Too Large for base64/dataURL avatar uploads
-    // Adjust if needed, but keep reasonable since we're storing in DB for now.
-    bodyParser: { sizeLimit: "4mb" },
+    bodyParser: { sizeLimit: "6mb" },
   },
 };
 
 type AvatarResponse = {
   avatarUrl: string | null;
+};
+
+const BUCKET = "forge-docs";
+const ALLOWED_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/jpg":  "jpg",
+  "image/png":  "png",
+  "image/webp": "webp",
+  "image/gif":  "gif",
 };
 
 export default async function handler(
@@ -39,12 +50,12 @@ export default async function handler(
     return res.status(404).json({ error: "User not found" });
   }
 
-  const userId = user.id;
-
+  // ── GET ──────────────────────────────────────────────────────────────────
   if (req.method === "GET") {
     return res.status(200).json({ avatarUrl: user.avatarUrl || null });
   }
 
+  // ── POST — upload new avatar ──────────────────────────────────────────────
   if (req.method === "POST") {
     try {
       const { avatarDataUrl } = (req.body || {}) as {
@@ -52,51 +63,97 @@ export default async function handler(
       };
 
       if (!avatarDataUrl || typeof avatarDataUrl !== "string") {
-        return res
-          .status(400)
-          .json({ error: "avatarDataUrl (data URL) is required" });
+        return res.status(400).json({ error: "avatarDataUrl is required" });
       }
 
-      // Very basic sanity check – Phase 1 (we can tighten later)
       if (!avatarDataUrl.startsWith("data:image/")) {
-        return res
-          .status(400)
-          .json({ error: "Invalid avatar format. Must be image data URL." });
+        return res.status(400).json({ error: "Invalid image format" });
       }
 
-      // Optional size guard – keep below our API sizeLimit headroom
-      // (data URLs expand size; 3.2M chars is a reasonable ceiling under 4mb parsing)
-      if (avatarDataUrl.length > 3_200_000) {
-        return res.status(400).json({
-          error: "Avatar is too large. Please upload a smaller image.",
+      // Parse the data URL: data:image/jpeg;base64,<data>
+      const matches = avatarDataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+      if (!matches) {
+        return res.status(400).json({ error: "Malformed data URL" });
+      }
+
+      const mimeType = matches[1].toLowerCase();
+      const base64Data = matches[2];
+      const ext = ALLOWED_TYPES[mimeType];
+
+      if (!ext) {
+        return res.status(400).json({ error: "Unsupported image type. Use JPEG, PNG, WebP, or GIF." });
+      }
+
+      // Convert base64 → Buffer
+      const buffer = Buffer.from(base64Data, "base64");
+
+      // Reasonable size cap: 4MB uncompressed
+      if (buffer.length > 4 * 1024 * 1024) {
+        return res.status(400).json({ error: "Image too large. Maximum 4MB." });
+      }
+
+      // Upload to Supabase Storage — upsert so re-uploads replace cleanly
+      const storagePath = `avatars/${user.id}.${ext}`;
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from(BUCKET)
+        .upload(storagePath, buffer, {
+          contentType: mimeType,
+          upsert: true,
         });
+
+      if (uploadError) {
+        console.error("[profile/avatar] Supabase upload error", uploadError);
+        return res.status(500).json({ error: "Failed to upload avatar" });
       }
 
-      const updated = await prisma.user.update({
-        where: { id: userId },
-        data: { avatarUrl: avatarDataUrl },
-        select: { avatarUrl: true },
+      // Get the public URL (bucket must have public access enabled for avatars path)
+      const { data: publicUrlData } = supabaseAdmin.storage
+        .from(BUCKET)
+        .getPublicUrl(storagePath);
+
+      const avatarUrl = publicUrlData?.publicUrl || null;
+
+      if (!avatarUrl) {
+        return res.status(500).json({ error: "Could not resolve public URL" });
+      }
+
+      // Save the short public URL (not base64) to the DB
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { avatarUrl },
       });
 
-      return res.status(200).json({ avatarUrl: updated.avatarUrl || null });
+      return res.status(200).json({ avatarUrl });
     } catch (err) {
       console.error("[profile/avatar] POST error", err);
       return res.status(500).json({ error: "Failed to save avatar" });
     }
   }
 
+  // ── DELETE — remove avatar ────────────────────────────────────────────────
   if (req.method === "DELETE") {
     try {
-      const updated = await prisma.user.update({
-        where: { id: userId },
+      // Best-effort delete from storage (try all common extensions)
+      const exts = ["jpg", "png", "webp", "gif"];
+      await Promise.allSettled(
+        exts.map((ext) =>
+          supabaseAdmin.storage
+            .from(BUCKET)
+            .remove([`avatars/${user.id}.${ext}`])
+        )
+      );
+
+      // Clear the DB field
+      await prisma.user.update({
+        where: { id: user.id },
         data: { avatarUrl: null },
-        select: { avatarUrl: true },
       });
 
-      return res.status(200).json({ avatarUrl: updated.avatarUrl || null });
+      return res.status(200).json({ avatarUrl: null });
     } catch (err) {
       console.error("[profile/avatar] DELETE error", err);
-      return res.status(500).json({ error: "Failed to delete avatar" });
+      return res.status(500).json({ error: "Failed to remove avatar" });
     }
   }
 
