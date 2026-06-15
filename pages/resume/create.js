@@ -14,11 +14,12 @@ import SignalResumeTestTemplate from '@/components/resume-form/templates/SignalR
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
 import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
-import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton';
-import ReverseResumeTemplate from '@/components/resume-form/templates/ReverseResumeTemplate';
-import HybridResumeTemplate from '@/components/resume-form/templates/HybridResumeTemplate';
+
 
 const ForgeHammerPanel = dynamic(() => import('@/components/hammer/ForgeHammerPanel'), { ssr: false });
+const ReverseATSButton = dynamic(() => import('@/components/resume-form/export/ReverseATSButton'), { ssr: false });
+const HybridATSButton = dynamic(() => import('@/components/resume-form/export/HybridATSButton'), { ssr: false });
+const DesignedPDFButton = dynamic(() => import('@/components/resume-form/export/DesignedPDFButton'), { ssr: false });
 
 // ─── SSR-safe mobile hook ─────────────────────────────────────────────────────
 function useIsMobile(bp = 1100) {
@@ -1215,6 +1216,7 @@ export default function CreateResumePage() {
             />
           </div>
         )}
+      </div>
       </div>
 
       {/* Toast */}
