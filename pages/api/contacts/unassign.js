@@ -30,8 +30,9 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    const scopeKey = user.accountKey || user.id;
-    const isOrgScoped = !!user.accountKey;
+    const personalKey = userId;
+    const orgKey = user.accountKey || userId;
+    const allowedKeys = [...new Set([personalKey, orgKey])];
 
     const contactId = normalizeValue(req.body?.contactId);
     const categoryId = normalizeValue(req.body?.categoryId);
@@ -40,53 +41,23 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'contactId and categoryId are required' });
     }
 
-    let existingContact = null;
-
-    if (isOrgScoped) {
-      const orgMembers = await prisma.organizationMember.findMany({
-        where: { accountKey: scopeKey },
-        select: { userId: true },
-      });
-
-      const orgUserIds = [
-        ...new Set(orgMembers.map((m) => String(m.userId || '')).filter(Boolean)),
-      ];
-
-      existingContact = orgUserIds.length
-        ? await prisma.contact.findFirst({
-            where: {
-              userId: { in: orgUserIds },
-              OR: [
-                { id: contactId },
-                { contactUserId: contactId },
-              ],
-            },
-            select: { id: true, contactUserId: true, userId: true },
-          })
-        : null;
-    } else {
-      existingContact = await prisma.contact.findFirst({
-        where: {
-          userId,
-          OR: [
-            { id: contactId },
-            { contactUserId: contactId },
-          ],
-        },
-        select: { id: true, contactUserId: true, userId: true },
-      });
-    }
+    // ── Resolve contact — always personal ────────────────────────────────────
+    const existingContact = await prisma.contact.findFirst({
+      where: {
+        userId,
+        OR: [{ id: contactId }, { contactUserId: contactId }],
+      },
+      select: { id: true, contactUserId: true, userId: true },
+    });
 
     if (!existingContact) {
       return res.status(404).json({ error: 'Contact not found' });
     }
 
+    // ── Resolve category — search both personal and org scope ─────────────────
     const category = await prisma.contactCategory.findFirst({
-      where: {
-        id: categoryId,
-        accountKey: scopeKey,
-      },
-      select: { id: true, name: true, parentCategoryId: true },
+      where: { id: categoryId, accountKey: { in: allowedKeys } },
+      select: { id: true, name: true, parentCategoryId: true, accountKey: true },
     });
 
     if (!category) {
@@ -95,7 +66,6 @@ export default async function handler(req, res) {
 
     const deleted = await prisma.contactCategoryAssignment.deleteMany({
       where: {
-        accountKey: scopeKey,
         contactId: existingContact.id,
         categoryId: category.id,
       },

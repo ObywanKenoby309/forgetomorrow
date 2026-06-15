@@ -1,12 +1,7 @@
 // pages/api/contacts/assign.js
 // Assigns a contact to a category.
-// Scope: org-level for recruiters (accountKey), personal for everyone else (userId).
-//
-// Root / sibling enforcement rules:
-//   Personal / Clients roots → one bucket at a time within that root
-//   Candidates root → child buckets only (jobs), multi-bucket
-//   Talent Pools root → root or child allowed, multi-bucket
-
+// Categories can be personal (accountKey = userId) or org-shared (accountKey = orgKey).
+// We search both scopes when resolving categories.
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
@@ -21,22 +16,16 @@ function normalizeValue(v) {
   return String(v || '').trim();
 }
 
-async function getRootCategory(categoryId, scopeKey) {
+async function getRootCategory(categoryId, allowedKeys) {
   let current = await prisma.contactCategory.findFirst({
-    where: {
-      id: categoryId,
-      accountKey: scopeKey,
-    },
-    select: { id: true, name: true, parentCategoryId: true },
+    where: { id: categoryId, accountKey: { in: allowedKeys } },
+    select: { id: true, name: true, parentCategoryId: true, accountKey: true },
   });
 
   while (current?.parentCategoryId) {
     current = await prisma.contactCategory.findFirst({
-      where: {
-        id: current.parentCategoryId,
-        accountKey: scopeKey,
-      },
-      select: { id: true, name: true, parentCategoryId: true },
+      where: { id: current.parentCategoryId, accountKey: { in: allowedKeys } },
+      select: { id: true, name: true, parentCategoryId: true, accountKey: true },
     });
   }
 
@@ -57,18 +46,18 @@ export default async function handler(req, res) {
   const userId = session.user.id;
 
   try {
-const user = await prisma.user.findUnique({
-  where: { id: userId },
-  select: { id: true, accountKey: true, role: true },
-});
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, accountKey: true, role: true },
+    });
 
-if (!user) {
-  return res.status(401).json({ error: 'User not found' });
-}
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
 
-const scopeKey = user.accountKey || user.id;
-// Any org-backed user should use org-scoped contact assignment here.
-const isOrgScoped = !!user.accountKey;
+    const personalKey = userId;
+    const orgKey = user.accountKey || userId;
+    const allowedKeys = [...new Set([personalKey, orgKey])];
 
     const contactId = normalizeValue(req.body?.contactId);
     const categoryId = normalizeValue(req.body?.categoryId);
@@ -77,45 +66,14 @@ const isOrgScoped = !!user.accountKey;
       return res.status(400).json({ error: 'contactId and categoryId are required' });
     }
 
-    // ── Resolve Contact row ───────────────────────────────────────────────────
-    // Recruiters use org/shared contacts by accountKey.
-    // Everyone else stays personal by userId.
-    let existingContact = null;
-
-if (isOrgScoped) {
-  const orgMembers = await prisma.organizationMember.findMany({
-    where: { accountKey: scopeKey },
-    select: { userId: true },
-  });
-
-  const orgUserIds = [
-    ...new Set(orgMembers.map((m) => String(m.userId || '')).filter(Boolean)),
-  ];
-
-  existingContact = orgUserIds.length
-    ? await prisma.contact.findFirst({
-        where: {
-          userId: { in: orgUserIds },
-          OR: [
-            { id: contactId },
-            { contactUserId: contactId },
-          ],
-        },
-        select: { id: true, contactUserId: true, userId: true },
-      })
-    : null;
-} else {
-  existingContact = await prisma.contact.findFirst({
-    where: {
-      userId,
-      OR: [
-        { id: contactId },
-        { contactUserId: contactId },
-      ],
-    },
-    select: { id: true, contactUserId: true, userId: true },
-  });
-}
+    // ── Resolve Contact — always personal ────────────────────────────────────
+    const existingContact = await prisma.contact.findFirst({
+      where: {
+        userId,
+        OR: [{ id: contactId }, { contactUserId: contactId }],
+      },
+      select: { id: true, contactUserId: true, userId: true },
+    });
 
     if (!existingContact) {
       return res.status(404).json({ error: 'Contact not found' });
@@ -123,21 +81,20 @@ if (isOrgScoped) {
 
     const resolvedContactId = existingContact.id;
 
-    // ── Validate category belongs to this scope ───────────────────────────────
+    // ── Validate category — search both personal and org scope ────────────────
     const category = await prisma.contactCategory.findFirst({
-      where: {
-        id: categoryId,
-        accountKey: scopeKey,
-      },
-      select: { id: true, name: true, parentCategoryId: true },
+      where: { id: categoryId, accountKey: { in: allowedKeys } },
+      select: { id: true, name: true, parentCategoryId: true, accountKey: true },
     });
 
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }
 
-    // ── Determine root and enforce correct bucket rules ───────────────────────
-    const rootCategory = await getRootCategory(category.id, scopeKey);
+    const categoryScope = category.accountKey; // use the category's own scope for assignment
+
+    // ── Determine root and enforce bucket rules ───────────────────────────────
+    const rootCategory = await getRootCategory(category.id, allowedKeys);
 
     if (!rootCategory?.id) {
       return res.status(404).json({ error: 'Root category not found' });
@@ -147,12 +104,11 @@ if (isOrgScoped) {
     const isSingleBucket = SINGLE_BUCKET_ROOTS.includes(rootName);
     const isMultiBucket = MULTI_BUCKET_ROOTS.includes(rootName);
 
-    // Defensive guard: if neither, just treat it as single bucket.
     if (isSingleBucket || (!isMultiBucket && !isSingleBucket)) {
       // Remove all other assignments in this same root tree
       const sameRootCategories = await prisma.contactCategory.findMany({
         where: {
-          accountKey: scopeKey,
+          accountKey: rootCategory.accountKey,
           OR: [
             { id: rootCategory.id },
             { parentCategoryId: rootCategory.id },
@@ -168,7 +124,6 @@ if (isOrgScoped) {
       if (sameRootIds.length) {
         await prisma.contactCategoryAssignment.deleteMany({
           where: {
-            accountKey: scopeKey,
             contactId: resolvedContactId,
             categoryId: { in: sameRootIds },
           },
@@ -180,35 +135,28 @@ if (isOrgScoped) {
     const assignment = await prisma.contactCategoryAssignment.upsert({
       where: {
         accountKey_contactId_categoryId: {
-          accountKey: scopeKey,
+          accountKey: categoryScope,
           contactId: resolvedContactId,
           categoryId: category.id,
         },
       },
-      update: {
-        userId,
-      },
+      update: { userId },
       create: {
-        accountKey: scopeKey,
+        accountKey: categoryScope,
         userId,
         contactId: resolvedContactId,
         categoryId: category.id,
       },
     });
 
-    return res.status(200).json({
-      ok: true,
-      assignment,
-      category,
-      rootCategory,
-    });
+    return res.status(200).json({ ok: true, assignment, category, rootCategory });
   } catch (err) {
     console.error('contacts/assign error:', err);
-	return res.status(500).json({
-	error: 'Internal server error',
-	detail: err?.message || null,
-	code: err?.code || null,
-	meta: err?.meta || null,
-   });
+    return res.status(500).json({
+      error: 'Internal server error',
+      detail: err?.message || null,
+      code: err?.code || null,
+      meta: err?.meta || null,
+    });
   }
 }
