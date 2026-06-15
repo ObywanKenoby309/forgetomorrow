@@ -3,8 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
-// Personal is always private to the individual.
-// Recruiter org categories (Candidates, Talent Pools, Jobs) are shared by accountKey.
+// Recruiter org categories seed under accountKey — shared with the whole team.
+// Personal always seeds under userId — private to the individual.
 // Coach categories are personal.
 const RECRUITER_ORG_ROOTS = ['Candidates', 'Talent Pools'];
 const COACH_PERSONAL_ROOTS = ['Clients'];
@@ -52,33 +52,31 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    const personalKey = userId;                          // always private to this user
-    const orgKey = user.accountKey || userId;            // shared within recruiter org
+    const personalKey = userId;                // always private to this individual
+    const orgKey = user.accountKey || userId;  // shared within recruiter org
     const role = String(user.role || 'SEEKER').toUpperCase();
     const isRecruiter = role === 'RECRUITER';
     const isCoach = role === 'COACH';
 
     // ── 1) Seed categories ────────────────────────────────────────────────────
-    // Personal always seeds under userId (never shared with org)
+    // Personal always seeds under userId (never visible to org teammates)
     await ensureRootCategory({ scopeKey: personalKey, userId, name: 'Personal' });
 
-    // Recruiter org categories seed under accountKey (shared with the team)
     if (isRecruiter && user.accountKey) {
       for (const name of RECRUITER_ORG_ROOTS) {
         await ensureRootCategory({ scopeKey: orgKey, userId, name });
       }
     }
 
-    // Coach categories are personal
     if (isCoach) {
       for (const name of COACH_PERSONAL_ROOTS) {
         await ensureRootCategory({ scopeKey: personalKey, userId, name });
       }
     }
 
-    // ── 2) Contacts — always personal, never org-shared ───────────────────────
-    // A recruiter's personal contacts are theirs alone.
-    // Candidate pipeline data lives in the recruiter candidate/pipeline APIs.
+    // ── 2) Contacts — always personal ────────────────────────────────────────
+    // A recruiter's personal network (who they're connected with as a person)
+    // is private. Candidate pipeline contacts live in the org category assignments.
     const contactRows = await prisma.contact.findMany({
       where: { userId },
       include: {
@@ -93,7 +91,7 @@ export default async function handler(req, res) {
     });
 
     const contacts = [];
-    const contactIdSet = new Set();
+    const personalContactIds = new Set();
 
     for (const c of contactRows) {
       const other = c.contactUser;
@@ -107,14 +105,14 @@ export default async function handler(req, res) {
         status: other?.status || '',
         avatarUrl: other?.avatarUrl || other?.image || null,
       });
-      contactIdSet.add(String(c.id));
+      personalContactIds.add(String(c.id));
     }
 
     // ── 3) Categories ─────────────────────────────────────────────────────────
-    // Recruiters see: org-shared categories (Candidates, Talent Pools, Jobs)
-    //                 + their own Personal category
-    // Everyone else: only their personal categories
+    // Recruiters see org categories (Candidates, Jobs, Talent Pools — shared)
+    // plus their own Personal category. Everyone else sees only personal.
     let categories = [];
+    let orgCategoryIds = new Set();
 
     if (isRecruiter && user.accountKey) {
       const [orgCats, personalCats] = await Promise.all([
@@ -129,6 +127,10 @@ export default async function handler(req, res) {
           select: { id: true, name: true, parentCategoryId: true, accountKey: true, createdAt: true },
         }),
       ]);
+
+      // Track which category IDs belong to the org scope
+      for (const cat of orgCats) orgCategoryIds.add(cat.id);
+
       const seen = new Set();
       for (const cat of [...orgCats, ...personalCats]) {
         if (!seen.has(cat.id)) { seen.add(cat.id); categories.push(cat); }
@@ -141,17 +143,36 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── 4) Assignments — only for contacts this user personally owns ──────────
+    // ── 4) Assignments — scope-aware ──────────────────────────────────────────
+    // Org categories (Candidates, Jobs, Talent Pools): show ALL assignments
+    //   so every recruiter sees the same applicants per job.
+    // Personal category: only show assignments for this user's own contacts.
     const categoryIds = categories.map(c => c.id);
-    const assignments = categoryIds.length === 0 || contactIdSet.size === 0
-      ? []
-      : await prisma.contactCategoryAssignment.findMany({
-          where: {
-            categoryId: { in: categoryIds },
-            contactId: { in: Array.from(contactIdSet) },
-          },
+    let assignments = [];
+
+    if (categoryIds.length > 0) {
+      const orgCatIds = categoryIds.filter(id => orgCategoryIds.has(id));
+      const personalCatIds = categoryIds.filter(id => !orgCategoryIds.has(id));
+
+      const [orgAssignments, personalAssignments] = await Promise.all([
+        // Org categories: all assignments regardless of who added the contact
+        orgCatIds.length === 0 ? [] : prisma.contactCategoryAssignment.findMany({
+          where: { categoryId: { in: orgCatIds } },
           select: { id: true, contactId: true, categoryId: true, accountKey: true, userId: true },
-        });
+        }),
+        // Personal categories: only assignments for this user's own contacts
+        personalCatIds.length === 0 || personalContactIds.size === 0 ? [] :
+          prisma.contactCategoryAssignment.findMany({
+            where: {
+              categoryId: { in: personalCatIds },
+              contactId: { in: Array.from(personalContactIds) },
+            },
+            select: { id: true, contactId: true, categoryId: true, accountKey: true, userId: true },
+          }),
+      ]);
+
+      assignments = [...orgAssignments, ...personalAssignments];
+    }
 
     // ── 5) Incoming contact requests ──────────────────────────────────────────
     const incomingRequests = await prisma.contactRequest.findMany({
