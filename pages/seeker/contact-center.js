@@ -407,6 +407,10 @@ export default function SeekerContactCenter() {
                   {contacts.length > 5 && (
                     <p style={{ color: '#607D8B', fontSize: 13, marginTop: 8 }}>Showing 5 of {contacts.length}.</p>
                   )}
+                  <button type="button" onClick={() => router.push(withChrome('/seeker/contacts'))}
+                    style={{ color: '#FF7043', fontWeight: 800, fontSize: 13, marginTop: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', display: 'block' }}>
+                    View all contacts →
+                  </button>
                 </div>
               </CollapsibleCard>
 
@@ -486,7 +490,7 @@ export default function SeekerContactCenter() {
                 {contacts.length > 5 && (
                   <p style={{ color: '#607D8B', fontSize: 13, marginTop: 8 }}>Showing 5 of {contacts.length}.</p>
                 )}
-                <button type="button" onClick={() => setActiveTab('contacts')}
+                <button type="button" onClick={() => router.push(withChrome('/seeker/contacts'))}
                   style={{ color: '#FF7043', fontWeight: 800, marginTop: 'auto', paddingTop: 12, display: 'block', background: 'none', border: 'none', cursor: 'pointer', padding: 0, paddingTop: 12, fontFamily: 'inherit', textAlign: 'left' }}>
                   View all contacts →
                 </button>
