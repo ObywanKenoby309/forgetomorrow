@@ -316,9 +316,12 @@ function AppShell({ Component, pageProps }) {
   return (
     <>
       <Head>
-        <title>ForgeTomorrow</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </Head>
+  <title>ForgeTomorrow</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon-512.png" />
+  <meta name="theme-color" content="#FF7043" />
+</Head>
 
       {shouldLoadCookieScript && (
         <Script
