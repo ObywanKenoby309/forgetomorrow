@@ -685,13 +685,77 @@ function VaultRow({ doc, isMobile, showWorkspace }) {
   const meta = TYPE_META[doc.type] || { bg: 'rgba(0,0,0,0.05)', color: '#546E7A' };
   const [panelOpen, setPanelOpen] = useState(false);
 
+  if (isMobile) {
+    return (
+      <>
+        <div style={{
+          padding: '12px 14px',
+          borderBottom: '1px solid rgba(0,0,0,0.05)',
+          display: 'flex', flexDirection: 'column', gap: 8,
+        }}>
+          {/* Row 1: icon + name + subtitle */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+              background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: 15, lineHeight: 1 }}>{TYPE_ICON[doc.type] || '📄'}</span>
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{
+                fontSize: 13, fontWeight: 800, color: '#112033',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {doc.name}
+              </div>
+              {doc.subtitle && (
+                <div style={{ fontSize: 11, color: '#78909C', fontWeight: 600, marginTop: 1 }}>
+                  {doc.subtitle}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Row 2: pills + date on left, actions on right */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            {/* Left: pills + date */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5, minWidth: 0 }}>
+              {showWorkspace
+                ? <WorkspaceBadge workspace={doc.workspace} />
+                : <CategoryLabel type={doc.type} workspace={doc.workspace} />
+              }
+              <TypeLabel type={doc.type} />
+              <span style={{ fontSize: 11, color: '#90A4AE', fontWeight: 600 }}>
+                {formatDate(doc.date)}
+              </span>
+            </div>
+
+            {/* Right: action buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <DownloadButton doc={doc} />
+              <button
+                onClick={() => setPanelOpen(true)}
+                style={{
+                  fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
+                  border: '1px solid rgba(0,0,0,0.12)', background: 'transparent',
+                  color: '#546E7A', cursor: 'pointer', whiteSpace: 'nowrap',
+                }}
+              >+ Share</button>
+            </div>
+          </div>
+        </div>
+        {panelOpen && <SharePanel doc={doc} onClose={() => setPanelOpen(false)} />}
+      </>
+    );
+  }
+
+  // ── Desktop layout (unchanged) ──────────────────────────────────────────────
   return (
     <>
       <div
         style={{
-          display: 'flex', alignItems: isMobile ? 'flex-start' : 'center',
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? 10 : 0, padding: '11px 14px',
+          display: 'flex', alignItems: 'center', flexDirection: 'row',
+          gap: 0, padding: '11px 14px',
           borderBottom: '1px solid rgba(0,0,0,0.05)', transition: 'background 120ms ease',
         }}
         onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.55)'}
@@ -707,8 +771,7 @@ function VaultRow({ doc, isMobile, showWorkspace }) {
           <div style={{ minWidth: 0 }}>
             <div style={{
               fontSize: 13, fontWeight: 800, color: '#112033',
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              maxWidth: isMobile ? '75vw' : 300,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 300,
             }}>
               {doc.name}
             </div>
@@ -720,11 +783,7 @@ function VaultRow({ doc, isMobile, showWorkspace }) {
           </div>
         </div>
 
-        <div style={{
-          flexShrink: 0, width: isMobile ? 'auto' : 150,
-          paddingLeft: isMobile ? 44 : 0,
-          display: 'flex', flexDirection: 'column', gap: 3,
-        }}>
+        <div style={{ flexShrink: 0, width: 150, display: 'flex', flexDirection: 'column', gap: 3 }}>
           {showWorkspace
             ? <WorkspaceBadge workspace={doc.workspace} />
             : <CategoryLabel type={doc.type} workspace={doc.workspace} />
@@ -732,51 +791,28 @@ function VaultRow({ doc, isMobile, showWorkspace }) {
           <TypeLabel type={doc.type} />
         </div>
 
-        <div style={{
-          flexShrink: 0, width: isMobile ? 'auto' : 100,
-          paddingLeft: isMobile ? 44 : 0,
-          fontSize: 11, color: '#546E7A', fontWeight: 600,
-        }}>
+        <div style={{ flexShrink: 0, width: 100, fontSize: 11, color: '#546E7A', fontWeight: 600 }}>
           {formatDate(doc.date)}
         </div>
 
-        <div style={{
-          flexShrink: 0, width: isMobile ? 'auto' : 110,
-          paddingLeft: isMobile ? 44 : 12, display: 'flex', alignItems: 'center', gap: 6,
-        }}>
+        <div style={{ flexShrink: 0, width: 110, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
           <DownloadButton doc={doc} />
-          {isMobile && (
-            <button
-              onClick={() => setPanelOpen(true)}
-              style={{
-                fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
-                border: '1px solid rgba(0,0,0,0.12)', background: 'transparent',
-                color: '#546E7A', cursor: 'pointer', whiteSpace: 'nowrap',
-              }}
-            >+ Share</button>
-          )}
         </div>
 
-        {!isMobile && (
-          <div style={{
-            flexShrink: 0, width: 110, paddingLeft: 12,
-            display: 'flex', alignItems: 'center',
-          }}>
-            <button
-              onClick={() => setPanelOpen(true)}
-              style={{
-                fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
-                border: '1px solid rgba(0,0,0,0.12)', background: 'transparent',
-                color: '#546E7A', cursor: 'pointer', whiteSpace: 'nowrap',
-                transition: 'all 120ms ease',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,112,67,0.08)'; e.currentTarget.style.color = '#FF7043'; e.currentTarget.style.borderColor = 'rgba(255,112,67,0.30)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#546E7A'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; }}
-            >
-              + Share
-            </button>
-          </div>
-        )}
+        <div style={{ flexShrink: 0, width: 110, paddingLeft: 12, display: 'flex', alignItems: 'center' }}>
+          <button
+            onClick={() => setPanelOpen(true)}
+            style={{
+              fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8,
+              border: '1px solid rgba(0,0,0,0.12)', background: 'transparent',
+              color: '#546E7A', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 120ms ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,112,67,0.08)'; e.currentTarget.style.color = '#FF7043'; e.currentTarget.style.borderColor = 'rgba(255,112,67,0.30)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#546E7A'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; }}
+          >
+            + Share
+          </button>
+        </div>
       </div>
       {panelOpen && <SharePanel doc={doc} onClose={() => setPanelOpen(false)} />}
     </>

@@ -3,6 +3,33 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { resolveSurface, getDefaultRailSlotsForSurface } from '@/lib/ads/surfaceMap';
 
+// ─── Mobile ad allowlist ───────────────────────────────────────────────────────
+//
+// On mobile the right rail collapses into the page flow, so ads only show on
+// surfaces where they add value at mobile widths. Add or remove surfaceId strings
+// here to control which pages show ads on mobile. Desktop is unaffected.
+//
+const MOBILE_ALLOWED_SURFACES = [
+  'seeker_dashboard',
+  'seeker_feed',
+  'seeker_hearth',
+  'platform_search',
+  // Add more surfaceId strings here to enable mobile ads on additional pages.
+  // Example: 'contact_center', 'seeker_profile', 'recruiter_dashboard'
+];
+
+// ─── SSR-safe mobile hook ─────────────────────────────────────────────────────
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CAROUSEL_INTERVAL_MS = 5000; // 5 seconds — premium, not anxious
@@ -363,6 +390,7 @@ export default function RightRailPlacementManager({
   allowUnknownSurface = false,
 }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   const surface = useMemo(() => {
     const path = router?.asPath || router?.pathname || '/';
@@ -434,6 +462,9 @@ export default function RightRailPlacementManager({
 
   // ── Nothing to show ──
   if (!shouldRender) return null;
+
+  // ── Mobile gate — only show on explicitly allowed surfaces ──
+  if (isMobile && !MOBILE_ALLOWED_SURFACES.includes(surfaceId)) return null;
 
   // ── Silent load — no flash card ──
   if (loading) return null;

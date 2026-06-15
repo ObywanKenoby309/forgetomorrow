@@ -20,6 +20,18 @@ import HybridResumeTemplate from '@/components/resume-form/templates/HybridResum
 
 const ForgeHammerPanel = dynamic(() => import('@/components/hammer/ForgeHammerPanel'), { ssr: false });
 
+// ─── SSR-safe mobile hook ─────────────────────────────────────────────────────
+function useIsMobile(bp = 1100) {
+  const [v, setV] = useState(false);
+  useEffect(() => {
+    const check = () => setV(window.innerWidth < bp);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [bp]);
+  return v;
+}
+
 const ORANGE = '#FF7043';
 const MAX_RESUMES = 4;
 
@@ -118,6 +130,8 @@ export default function CreateResumePage() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [saveState, setSaveState] = useState('idle');
   const [resumeUploadState, setResumeUploadState] = useState('idle'); // idle | uploading | done | error
+  const isMobile = useIsMobile();
+  const [hammerOpen, setHammerOpen] = useState(false);
 
   // ─── Resume data ──────────────────────────────────────────────────────────
   const resumeData = {
@@ -652,11 +666,56 @@ export default function CreateResumePage() {
         @media (max-width: 1100px) {
           .ft-rb-main { grid-template-columns: 1fr !important; }
           .ft-rb-toprow { grid-template-columns: 1fr !important; }
-          .ft-ad-rail-outer { width: 100% !important; height: auto !important; }
-          .ft-ad-rail-inner { width: 100% !important; transform: none !important; }
-          .ft-rb-intel-rail { position: static !important; top: auto !important; }
+          .ft-ad-rail-outer { display: none !important; }
+          .ft-rb-intel-rail { display: none !important; }
+          .ft-rb-status-col { display: none !important; }
           .ft-rb-toolbar-row { grid-template-columns: 1fr !important; }
-          .ft-rb-status-col { width: 100% !important; }
+        }
+
+        /* ─── Hammer pull-tab (mobile only) ──────────────────────────── */
+        .ft-hammer-tab {
+          display: none;
+        }
+        @media (max-width: 1100px) {
+          .ft-hammer-tab {
+            display: flex;
+            position: fixed; right: 0; top: 50%; transform: translateY(-50%);
+            z-index: 220;
+            flex-direction: column; align-items: center; gap: 4px;
+            padding: 12px 6px; border-radius: 12px 0 0 12px; border: none;
+            background: linear-gradient(135deg, ${ORANGE}, #FF8A65);
+            color: #fff; font-family: inherit; font-size: 10px; font-weight: 800;
+            letter-spacing: 0.04em; cursor: pointer; writing-mode: vertical-rl;
+            text-orientation: mixed;
+            box-shadow: -6px 0 20px rgba(255,112,67,0.40);
+            transition: right 0.3s cubic-bezier(0.32,0.72,0,1), background 0.15s;
+          }
+          .ft-hammer-tab.open {
+            right: min(85vw, 380px);
+            background: rgba(13,27,42,0.94); color: ${ORANGE};
+            border: 1px solid rgba(255,112,67,0.45); border-right: none;
+            box-shadow: -6px 0 20px rgba(0,0,0,0.35);
+          }
+          .ft-hammer-tab-arrow { writing-mode: horizontal-tb; font-size: 13px; }
+          .ft-hammer-backdrop {
+            position: fixed; inset: 0; z-index: 218;
+            background: rgba(0,0,0,0.50); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+            opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+          }
+          .ft-hammer-backdrop.open { opacity: 1; pointer-events: all; }
+          .ft-hammer-drawer {
+            position: fixed; top: 0; right: 0; bottom: 0; z-index: 219;
+            width: min(85vw, 380px); max-width: 100vw;
+            background: rgba(10,18,30,0.98); border-left: 1px solid rgba(255,255,255,0.10);
+            box-shadow: -12px 0 40px rgba(0,0,0,0.50);
+            display: flex; flex-direction: column;
+            padding-top: env(safe-area-inset-top, 14px);
+            padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 80px);
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+            overflow-y: auto;
+          }
+          .ft-hammer-drawer.open { transform: translateX(0); }
         }
       `}</style>
 
@@ -709,8 +768,8 @@ export default function CreateResumePage() {
                   <div style={{...TOOL_GROUP}}>
                     <span style={GROUP_LABEL}>Export</span>
                     {isHybrid
-                      ? <HybridATSButton data={resumeData}><div style={{background:'#0F766E',color:'white',padding:'5px 11px',borderRadius:999,fontWeight:900,fontSize:12,cursor:'pointer'}}>ATS PDF</div></HybridATSButton>
-                      : <ReverseATSButton data={resumeData}><div style={{background:'#0F766E',color:'white',padding:'5px 11px',borderRadius:999,fontWeight:900,fontSize:12,cursor:'pointer'}}>ATS PDF</div></ReverseATSButton>}
+                      ? <HybridATSButton data={resumeData}><div style={{background:'#0F766E',color:'white',padding:'5px 11px',borderRadius:999,fontWeight:900,fontSize:12,cursor:'pointer'}}>Clean PDF</div></HybridATSButton>
+                      : <ReverseATSButton data={resumeData}><div style={{background:'#0F766E',color:'white',padding:'5px 11px',borderRadius:999,fontWeight:900,fontSize:12,cursor:'pointer'}}>Clean PDF</div></ReverseATSButton>}
                     <DesignedPDFButton data={resumeData} template={isHybrid?'hybrid':'reverse'}>
                       <div style={{background:ORANGE,color:'white',padding:'5px 11px',borderRadius:999,fontWeight:900,fontSize:12,cursor:'pointer'}}>Designed PDF</div>
                     </DesignedPDFButton>
@@ -728,30 +787,24 @@ export default function CreateResumePage() {
                     <input ref={resumeFileInputRef} type="file" accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
                       onChange={(e)=>{const f=e.target.files?.[0];if(f) handleResumeFile(f);}}
                       style={{display:'none'}}/>
-                  </div>
-
-                </div>
-
-                {/* RIGHT — Status + Next Step, stacked, fixed width */}
-                <div className="ft-rb-status-col" style={{display:'grid',gap:6,width:140,flexShrink:0}}>
-
-                  {/* Status — ring only, label on hover */}
-                  <div style={{...TOOL_GROUP,flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'8px 10px',textAlign:'center'}}>
-                    <span style={GROUP_LABEL}>Status</span>
-                    <div title={statusLabel} style={{position:'relative',width:38,height:38,cursor:'default'}}>
-                      <svg width="38" height="38" viewBox="0 0 38 38">
-                        <circle cx="19" cy="19" r="15" fill="none" stroke="#E5E7EB" strokeWidth="3"/>
-                        <circle cx="19" cy="19" r="15" fill="none" stroke={statusLabel==='Ready to Send'?'#10B981':statusLabel==='Targeted'?'#0EA5E9':statusLabel==='Usable'?ORANGE:'#CBD5E1'} strokeWidth="3"
-                          strokeDasharray={`${(progress/100)*94.2} 94.2`} strokeLinecap="round"
-                          style={{transition:'stroke-dasharray 0.5s ease',transformOrigin:'center',transform:'rotate(-90deg)'}}/>
-                      </svg>
-                      <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:900,color:'#374151'}}>{progress}%</span>
+                    {/* Status mini-ring + Cover Letter — inline, secondary */}
+                    <div style={{width:1,height:18,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
+                    <div title={statusLabel} style={{display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
+                      <div style={{position:'relative',width:22,height:22,flexShrink:0}}>
+                        <svg width="22" height="22" viewBox="0 0 22 22">
+                          <circle cx="11" cy="11" r="8" fill="none" stroke="#E5E7EB" strokeWidth="2.5"/>
+                          <circle cx="11" cy="11" r="8" fill="none"
+                            stroke={statusLabel==='Ready to Send'?'#10B981':statusLabel==='Targeted'?'#0EA5E9':statusLabel==='Usable'?ORANGE:'#CBD5E1'}
+                            strokeWidth="2.5"
+                            strokeDasharray={`${(progress/100)*50.3} 50.3`}
+                            strokeLinecap="round"
+                            style={{transformOrigin:'center',transform:'rotate(-90deg)'}}/>
+                        </svg>
+                        <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:6,fontWeight:900,color:'#374151'}}>{progress}%</span>
+                      </div>
+                      <span style={{fontSize:10,fontWeight:700,color:'#64748B',whiteSpace:'nowrap'}}>{statusLabel}</span>
                     </div>
-                  </div>
-
-                  {/* Next Step */}
-                  <div style={{...TOOL_GROUP,flexDirection:'column',alignItems:'center',gap:5,padding:'8px 10px',textAlign:'center'}}>
-                    <span style={GROUP_LABEL}>Next Step</span>
+                    <div style={{width:1,height:18,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
                     <button
                       type="button"
                       onClick={()=>{
@@ -759,16 +812,15 @@ export default function CreateResumePage() {
                         params.set('fresh','1');
                         if(chrome) params.set('chrome',chrome);
                         if(router.query.jobId) params.set('jobId',String(router.query.jobId));
-                        router.push(`/cover/create${params.toString()?`?${params.toString()}`:''}`)
+                        router.push(`/cover/create${params.toString()?`?${params.toString()}`:''}`);
                       }}
-                      style={{...PILL_BUTTON,background:'rgba(255,112,67,0.10)',color:ORANGE,border:`1px solid rgba(255,112,67,0.30)`,fontWeight:900,fontSize:11,padding:'5px 8px',width:'100%',textAlign:'center'}}
+                      style={{...PILL_BUTTON,background:'rgba(255,112,67,0.08)',color:ORANGE,border:`1px solid rgba(255,112,67,0.25)`,fontWeight:800,fontSize:11,padding:'4px 8px',whiteSpace:'nowrap'}}
                       title="Write a cover letter using this resume"
                     >
                       ✍️ Cover Letter →
                     </button>
                   </div>
 
-                </div>
               </div>
             </div>
           </div>
@@ -807,13 +859,15 @@ export default function CreateResumePage() {
             </div>
           </div>
 
-          {/* FORGE HAMMER — permanent right rail */}
+
+          {/* ── Shared Hammer content (desktop rail + mobile drawer) ──────────── */}
+          {/* FORGE HAMMER — desktop right rail (hidden on mobile via CSS) */}
           {!isFocusMode&&(
             <div className="ft-rb-intel-rail" style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:20,alignSelf:'start'}}>
               <div style={{...GLASS_CARD,overflow:'hidden'}}>
                 <div style={{padding:'12px 16px',background:'linear-gradient(135deg, rgba(255,112,67,0.15), rgba(255,112,67,0.05))',borderBottom:'1px solid rgba(255,112,67,0.15)'}}>
                   <div style={{fontWeight:900,fontSize:15,color:ORANGE}}>🔨 The Forge Hammer</div>
-                  <div style={{fontSize:11,color:'#64748B',fontWeight:600,marginTop:2}}>AI hammer + resume steel + job fire</div>
+                  <div style={{fontSize:11,color:'#64748B',fontWeight:600,marginTop:2}}>AI resume intelligence + job fire</div>
                 </div>
                 <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(0,0,0,0.06)'}}>
                   {atsPack ? (
@@ -865,9 +919,7 @@ export default function CreateResumePage() {
                     jobMeta={fireMeta||null}
                     whyScore={incomingWhyScore}
                     onAddSkill={(k)=>{setSkills((s)=>[...s,k]);triggerAutoSave();}}
-                    onAddSummary={(k)=>{setSummary((s)=>(s?`${s}
-
-${k}`:k));triggerAutoSave();}}
+                    onAddSummary={(k)=>{setSummary((s)=>(s?`${s}\n\n${k}`:k));triggerAutoSave();}}
                     onAddBullet={(k)=>{
                       const lastExp=experiences[experiences.length-1];
                       if(lastExp){setExperiences((exp)=>exp.map((e,i)=>i===exp.length-1?{...e,bullets:[...(e.bullets||[]),k]}:e));triggerAutoSave();}
@@ -878,6 +930,95 @@ ${k}`:k));triggerAutoSave();}}
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Mobile Hammer pull-tab + drawer ───────────────────────────────────── */}
+      {/* Pull tab — fixed to right edge, vertically centered */}
+      <button
+        type="button"
+        className={`ft-hammer-tab${hammerOpen?' open':''}`}
+        onClick={()=>setHammerOpen(o=>!o)}
+        aria-label="Toggle Forge Hammer"
+      >
+        <span className="ft-hammer-tab-arrow">{hammerOpen?'‹':'›'}</span>
+        🔨
+        <span>Hammer</span>
+      </button>
+
+      {/* Backdrop */}
+      <div
+        className={`ft-hammer-backdrop${hammerOpen?' open':''}`}
+        onClick={()=>setHammerOpen(false)}
+      />
+
+      {/* Drawer */}
+      <div className={`ft-hammer-drawer${hammerOpen?' open':''}`}>
+        {/* Drawer header */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px 12px',borderBottom:'1px solid rgba(255,255,255,0.08)',flexShrink:0}}>
+          <div>
+            <div style={{fontWeight:900,fontSize:16,color:ORANGE}}>🔨 The Forge Hammer</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.50)',marginTop:2}}>AI resume intelligence + job fire</div>
+          </div>
+          <button onClick={()=>setHammerOpen(false)} style={{background:'rgba(255,255,255,0.08)',border:'none',color:'rgba(255,255,255,0.60)',width:30,height:30,borderRadius:'50%',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontFamily:'inherit'}}>×</button>
+        </div>
+
+        {/* Job fire status */}
+        <div style={{padding:'14px 20px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+          {atsPack ? (
+            <>
+              <div style={{fontWeight:800,fontSize:13,color:'#60A5FA',marginBottom:4}}>🔥 Job fire loaded</div>
+              {atsJobMeta&&<div style={{fontSize:13,color:'rgba(255,255,255,0.85)',marginBottom:4}}><strong>{atsJobMeta.title}</strong>{atsJobMeta.company?` at ${atsJobMeta.company}`:''}</div>}
+              {hasRealAts&&atsPack.ats?.score!==undefined&&<div style={{fontSize:12,color:'rgba(255,255,255,0.60)'}}>Match: <strong style={{color:'white'}}>{atsPack.ats.score}%</strong></div>}
+            </>
+          ) : jd ? (
+            <>
+              <div style={{fontWeight:800,fontSize:13,color:'#60A5FA',marginBottom:4}}>🔥 Job fire loaded</div>
+              <div style={{fontSize:12,color:'rgba(255,255,255,0.80)'}}><strong>{fireTitle}</strong>{fireMeta?.company?` at ${fireMeta.company}`:''}</div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.50)',marginTop:4}}>Match insights and keyword coverage are active.</div>
+            </>
+          ) : (
+            <>
+              <div style={{fontWeight:800,fontSize:13,color:ORANGE,marginBottom:6}}>🔥 Add the fire.</div>
+              <div style={{fontSize:12,color:'rgba(255,255,255,0.60)',lineHeight:1.6}}>Drop or upload a job description to unlock match insights, keyword coverage, and tailored AI guidance.</div>
+            </>
+          )}
+          {(jd||atsPack)&&<button type="button" onClick={clearJobFire} style={{marginTop:8,background:'transparent',border:'none',color:'#F87171',fontWeight:800,fontSize:12,cursor:'pointer',textDecoration:'underline',padding:0,fontFamily:'inherit'}}>Clear loaded job</button>}
+        </div>
+
+        {/* Upload zone */}
+        <div style={{padding:'14px 20px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+          <button
+            type="button"
+            onClick={()=>{if(fileInputRef.current){fileInputRef.current.value='';fileInputRef.current.click();}}}
+            style={{width:'100%',padding:'14px',border:'2px dashed rgba(144,202,249,0.40)',borderRadius:12,textAlign:'center',background:'rgba(255,255,255,0.04)',cursor:'pointer',color:'rgba(255,255,255,0.70)',fontSize:12,fontWeight:800,fontFamily:'inherit'}}
+          >
+            {jdLoading?'Processing…':jd?'↑ Upload new job description':'↑ Upload job description'}
+          </button>
+          {jdStatus&&<div style={{marginTop:8,fontSize:11,fontWeight:700,color:jdStatus.startsWith('Failed')?'#F87171':'#60A5FA',textAlign:'center'}}>{jdStatus}</div>}
+        </div>
+
+        {/* ForgeHammerPanel */}
+        {jd&&(
+          <div style={{padding:'14px 20px'}}>
+            <ForgeHammerPanel
+              jdText={jd}
+              resumeData={resumeData}
+              summary={summary}
+              skills={skills}
+              experiences={experiences}
+              education={educationList}
+              jobMeta={fireMeta||null}
+              whyScore={incomingWhyScore}
+              onAddSkill={(k)=>{setSkills((s)=>[...s,k]);triggerAutoSave();setHammerOpen(false);}}
+              onAddSummary={(k)=>{setSummary((s)=>(s?`${s}\n\n${k}`:k));triggerAutoSave();setHammerOpen(false);}}
+              onAddBullet={(k)=>{
+                const lastExp=experiences[experiences.length-1];
+                if(lastExp){setExperiences((exp)=>exp.map((e,i)=>i===exp.length-1?{...e,bullets:[...(e.bullets||[]),k]}:e));triggerAutoSave();setHammerOpen(false);}
+              }}
+            />
+          </div>
+        )}
+      </div>
       </div>
 
       {/* Toast */}
