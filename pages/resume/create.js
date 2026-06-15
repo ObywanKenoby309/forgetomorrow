@@ -670,6 +670,7 @@ export default function CreateResumePage() {
           .ft-rb-intel-rail { display: none !important; }
           .ft-rb-status-col { display: none !important; }
           .ft-rb-toolbar-row { grid-template-columns: 1fr !important; }
+          .ft-rb-toolbar-inner { min-width: 0 !important; overflow: hidden !important; }
         }
 
         /* ─── Hammer pull-tab (mobile only) ──────────────────────────── */
@@ -681,22 +682,21 @@ export default function CreateResumePage() {
             display: flex;
             position: fixed; right: 0; top: 50%; transform: translateY(-50%);
             z-index: 220;
-            flex-direction: column; align-items: center; gap: 4px;
-            padding: 12px 6px; border-radius: 12px 0 0 12px; border: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            width: 32px; padding: 14px 0;
+            border-radius: 10px 0 0 10px; border: none;
             background: linear-gradient(135deg, ${ORANGE}, #FF8A65);
-            color: #fff; font-family: inherit; font-size: 10px; font-weight: 800;
-            letter-spacing: 0.04em; cursor: pointer; writing-mode: vertical-rl;
-            text-orientation: mixed;
-            box-shadow: -6px 0 20px rgba(255,112,67,0.40);
+            color: #fff; font-family: inherit; font-size: 18px;
+            cursor: pointer;
+            box-shadow: -4px 0 16px rgba(255,112,67,0.45);
             transition: right 0.3s cubic-bezier(0.32,0.72,0,1), background 0.15s;
           }
           .ft-hammer-tab.open {
             right: min(85vw, 380px);
-            background: rgba(13,27,42,0.94); color: ${ORANGE};
-            border: 1px solid rgba(255,112,67,0.45); border-right: none;
+            background: rgba(13,27,42,0.94);
             box-shadow: -6px 0 20px rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,112,67,0.45); border-right: none;
           }
-          .ft-hammer-tab-arrow { writing-mode: horizontal-tb; font-size: 13px; }
           .ft-hammer-backdrop {
             position: fixed; inset: 0; z-index: 218;
             background: rgba(0,0,0,0.50); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
@@ -723,18 +723,18 @@ export default function CreateResumePage() {
 
         {/* TOP: title + command card | compact ad rail — ad no longer controls page spacing */}
         <div className="ft-rb-toprow" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,alignItems:'start',marginBottom:8,width:'100%'}}>
-          <div style={{minWidth:0,display:'grid',gap:8}}>
+          <div style={{minWidth:0, overflow:'hidden', display:'grid', gap:8}}>
             <SeekerTitleCard
               greeting={greeting}
               title="Resume Builder"
               subtitle="Build your resume once. Export anywhere. Reverse Chronological and Hybrid for traditional markets — ForgeFormat for people with real careers."
             />
-            <div style={{...GLASS_CARD,padding:'12px 14px'}}>
+            <div style={{...GLASS_CARD, padding:'12px 14px', minWidth:0, overflow:'hidden'}}>
               {/* Two-column: left = 3 uniform rows, right = Status + Next Step stacked */}
               <div className="ft-rb-toolbar-row" style={{display:'grid',gridTemplateColumns:'1fr auto',gap:10,alignItems:'start'}}>
 
                 {/* LEFT — three rows, all same width */}
-                <div style={{display:'grid',gap:6}}>
+                <div className="ft-rb-toolbar-inner" style={{display:'grid',gap:6,minWidth:0}}>
 
                   {/* Row 1: Resume */}
                   <div style={{...TOOL_GROUP}}>
@@ -940,9 +940,7 @@ export default function CreateResumePage() {
         onClick={()=>setHammerOpen(o=>!o)}
         aria-label="Toggle Forge Hammer"
       >
-        <span className="ft-hammer-tab-arrow">{hammerOpen?'‹':'›'}</span>
         🔨
-        <span>Hammer</span>
       </button>
 
       {/* Backdrop */}
