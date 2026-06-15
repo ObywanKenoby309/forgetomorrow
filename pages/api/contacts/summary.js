@@ -67,8 +67,8 @@ export default async function handler(req, res) {
 
     const scopeKey = user.accountKey || user.id;
     const role = String(user.role || 'SEEKER').toUpperCase();
-    const isRecruiter = role === 'RECRUITER';
     const isCoach = role === 'COACH';
+    const isRecruiter = role === 'RECRUITER';
 
     // ── 1) Seed system root categories for this scope ─────────────────────────
     const rootsToSeed = [
@@ -82,124 +82,46 @@ export default async function handler(req, res) {
     }
 
     // ── 2) Contacts ───────────────────────────────────────────────────────────
-    // Recruiter contact center is org-shared.
-    // Everyone else stays personal.
-    let contactRows = [];
-
-    if (isRecruiter && user.accountKey) {
-  const orgMembers = await prisma.organizationMember.findMany({
-    where: { accountKey: user.accountKey },
-    select: { userId: true },
-  });
-
-  const orgUserIds = [
-    ...new Set(orgMembers.map((m) => String(m.userId || '')).filter(Boolean)),
-  ];
-
-  contactRows =
-    orgUserIds.length === 0
-      ? []
-      : await prisma.contact.findMany({
-          where: {
-            userId: { in: orgUserIds },
-          },
-          include: {
-            contactUser: {
-              select: {
-                id: true,
-                slug: true,
-                name: true,
-                firstName: true,
-                lastName: true,
-                headline: true,
-                location: true,
-                status: true,
-                avatarUrl: true,
-                image: true,
-              },
-            },
-          },
-          orderBy: [{ createdAt: 'asc' }],
-        });
-} else {
-      contactRows = await prisma.contact.findMany({
-        where: { userId },
-        include: {
-          contactUser: {
-            select: {
-              id: true,
-              slug: true,
-              name: true,
-              firstName: true,
-              lastName: true,
-              headline: true,
-              location: true,
-              status: true,
-              avatarUrl: true,
-              image: true,
-            },
+    // Contacts are always personal — scoped to the individual user regardless of role.
+    // Org-shared data belongs in candidate/pipeline APIs, not the personal contact center.
+    const contactRows = await prisma.contact.findMany({
+      where: { userId },
+      include: {
+        contactUser: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            headline: true,
+            location: true,
+            status: true,
+            avatarUrl: true,
+            image: true,
           },
         },
-        orderBy: [{ createdAt: 'asc' }],
-      });
-    }
+      },
+      orderBy: [{ createdAt: 'asc' }],
+    });
 
-    // Build canonical org-shared contacts for recruiters:
-    // one visible contact per contactUserId, while preserving assignment mapping.
+    // Build contacts from personal rows — one entry per contact relationship.
     const contacts = [];
     const contactIdToCanonicalId = new Map();
 
-    if (isRecruiter && user.accountKey) {
-      const rowsByContactUserId = new Map();
-
-      for (const row of contactRows) {
-        const key = String(row.contactUserId || '');
-        if (!key) continue;
-        if (!rowsByContactUserId.has(key)) rowsByContactUserId.set(key, []);
-        rowsByContactUserId.get(key).push(row);
-      }
-
-      for (const rows of rowsByContactUserId.values()) {
-        // Prefer the new org-shared contact row first.
-        // If not present, fall back to current recruiter's legacy row, then first row.
-        const preferred =
-          rows.find((r) => String(r.userId) === String(userId)) ||
-          rows[0];
-
-        const other = preferred.contactUser;
-        const canonicalId = preferred.id;
-
-        contacts.push({
-          id: canonicalId, // canonical shared contact id for the UI
-          userId: preferred.contactUserId,
-          slug: other?.slug || null,
-          name: buildDisplayName(other),
-          headline: other?.headline || '',
-          location: other?.location || '',
-          status: other?.status || '',
-          avatarUrl: other?.avatarUrl || other?.image || null,
-        });
-
-        for (const row of rows) {
-          contactIdToCanonicalId.set(String(row.id), canonicalId);
-        }
-      }
-    } else {
-      for (const c of contactRows) {
-        const other = c.contactUser;
-        contacts.push({
-          id: c.id,
-          userId: c.contactUserId,
-          slug: other?.slug || null,
-          name: buildDisplayName(other),
-          headline: other?.headline || '',
-          location: other?.location || '',
-          status: other?.status || '',
-          avatarUrl: other?.avatarUrl || other?.image || null,
-        });
-
-        contactIdToCanonicalId.set(String(c.id), c.id);
-      }
+    for (const c of contactRows) {
+      const other = c.contactUser;
+      contacts.push({
+        id: c.id,
+        userId: c.contactUserId,
+        slug: other?.slug || null,
+        name: buildDisplayName(other),
+        headline: other?.headline || '',
+        location: other?.location || '',
+        status: other?.status || '',
+        avatarUrl: other?.avatarUrl || other?.image || null,
+      });
+      contactIdToCanonicalId.set(String(c.id), c.id);
     }
 
     // ── 3) Categories — scoped by accountKey (org or personal) ───────────────
@@ -227,30 +149,8 @@ export default async function handler(req, res) {
       },
     });
 
-    // For recruiter shared contact center, remap all duplicate recruiter-specific
-    // contact rows to the single canonical shared contact id and dedupe.
-    let assignments = rawAssignments;
-
-    if (isRecruiter && user.accountKey) {
-      const deduped = new Map();
-
-      for (const row of rawAssignments) {
-        const canonicalContactId =
-          contactIdToCanonicalId.get(String(row.contactId)) || null;
-
-        if (!canonicalContactId) continue;
-
-        const key = `${canonicalContactId}::${row.categoryId}`;
-        if (!deduped.has(key)) {
-          deduped.set(key, {
-            ...row,
-            contactId: canonicalContactId,
-          });
-        }
-      }
-
-      assignments = Array.from(deduped.values());
-    }
+    // Assignments use the personal contact IDs directly.
+    const assignments = rawAssignments;
 
     // ── 5) Incoming contact requests ──────────────────────────────────────────
     const incomingRequests = await prisma.contactRequest.findMany({
