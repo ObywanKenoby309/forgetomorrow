@@ -207,6 +207,7 @@ function TargetingDrawer({
 
   return (
     <>
+      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
@@ -217,51 +218,52 @@ function TargetingDrawer({
           backdropFilter: open ? "blur(4px)" : "none",
           pointerEvents: open ? "auto" : "none",
           opacity: open ? 1 : 0,
-          transition: "opacity 0.28s ease, backdrop-filter 0.28s ease",
+          transition: "opacity 0.28s ease",
         }}
       />
 
+      {/* Bottom sheet */}
       <div
         style={{
           position: "fixed",
-          top: 56,
+          left: 0,
           right: 0,
           bottom: 0,
           zIndex: 50,
-          width: "min(580px, 100vw)",
-          maxWidth: "100vw",
+          maxHeight: "88vh",
           display: "flex",
           flexDirection: "column",
-          background: "rgba(252,252,253,0.97)",
+          background: "rgba(252,252,253,0.98)",
           backdropFilter: "blur(24px)",
-          borderLeft: "1px solid rgba(255,112,67,0.12)",
-          boxShadow: "-24px 0 80px rgba(0,0,0,0.20)",
-          transform: open ? "translateX(0)" : "translateX(100%)",
+          borderTop: "1px solid rgba(255,112,67,0.12)",
+          borderRadius: "20px 20px 0 0",
+          boxShadow: "0 -24px 80px rgba(0,0,0,0.20)",
+          transform: open ? "translateY(0)" : "translateY(100%)",
           transition: "transform 0.32s cubic-bezier(0.4,0,0.2,1)",
         }}
       >
+        {/* Handle bar */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 4px" }}>
+          <div style={{ width: 36, height: 4, borderRadius: 999, background: "rgba(0,0,0,0.12)" }} />
+        </div>
+
+        {/* Header */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "16px 20px",
+            padding: "8px 20px 14px",
             borderBottom: "1px solid rgba(0,0,0,0.07)",
-            background: "rgba(255,255,255,0.80)",
             flexShrink: 0,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <div
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
+                width: 34, height: 34, borderRadius: 10,
                 background: "linear-gradient(135deg,#FF7043,#FF8A65)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
               }}
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -280,17 +282,7 @@ function TargetingDrawer({
                   Targeting & Automation
                 </span>
                 {activeFilterCount > 0 && (
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      padding: "2px 8px",
-                      borderRadius: 999,
-                      background: "rgba(255,112,67,0.10)",
-                      color: "#FF7043",
-                      border: "1px solid rgba(255,112,67,0.22)",
-                    }}
-                  >
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "rgba(255,112,67,0.10)", color: "#FF7043", border: "1px solid rgba(255,112,67,0.22)" }}>
                     {activeFilterCount} active
                   </span>
                 )}
@@ -303,18 +295,7 @@ function TargetingDrawer({
 
           <button
             onClick={onClose}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              border: "1px solid rgba(0,0,0,0.08)",
-              background: "transparent",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#64748b",
-            }}
+            style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", fontFamily: "inherit" }}
             aria-label="Close targeting panel"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -323,15 +304,13 @@ function TargetingDrawer({
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", minWidth: 0 }}>
+        {/* Scrollable content */}
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", minWidth: 0, paddingBottom: "env(safe-area-inset-bottom)" }}>
           <CandidateTargetingPanel
             filters={filters}
             setFilters={setFilters}
             automation={automation}
-            onFindCandidates={() => {
-              onFindCandidates();
-              onClose();
-            }}
+            onFindCandidates={() => { onFindCandidates(); onClose(); }}
             onClearTargeting={onClearTargeting}
             manualSearching={manualSearching}
             isLoading={isLoading}
