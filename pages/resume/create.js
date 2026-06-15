@@ -1216,7 +1216,6 @@ export default function CreateResumePage() {
           </div>
         )}
       </div>
-      </div>
 
       {/* Toast */}
       {showToast&&(
