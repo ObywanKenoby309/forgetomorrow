@@ -141,15 +141,18 @@ function buildTiles(isEnterprise) {
   ];
 }
 
-function WorkspaceModuleShell({ title, subtitle, onBack, children }) {
+function WorkspaceModuleShell({ title, subtitle, onBack, children, isMobile = false }) {
   return (
     <section
       style={{
         ...GLASS,
-        padding: 24,
+        padding: isMobile ? 14 : 24,
         display: "grid",
         gap: 16,
         width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        overflowX: "hidden",
       }}
     >
       <button
@@ -167,6 +170,7 @@ function WorkspaceModuleShell({ title, subtitle, onBack, children }) {
           width: "fit-content",
           fontWeight: 800,
           padding: 0,
+          fontFamily: "inherit",
         }}
       >
         ← Return to Main
@@ -177,15 +181,16 @@ function WorkspaceModuleShell({ title, subtitle, onBack, children }) {
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
-          gap: 22,
+          gap: 16,
           flexWrap: "wrap",
+          minWidth: 0,
         }}
       >
-        <div style={{ minWidth: 260, flex: "1 1 420px", display: "grid", gap: 8 }}>
+        <div style={{ minWidth: 0, flex: "1 1 0", display: "grid", gap: 8 }}>
           <h2
             style={{
               margin: 0,
-              fontSize: 22,
+              fontSize: isMobile ? 18 : 22,
               color: ORANGE,
               lineHeight: 1.2,
               letterSpacing: "-0.01em",
@@ -194,12 +199,12 @@ function WorkspaceModuleShell({ title, subtitle, onBack, children }) {
           >
             {title}
           </h2>
-          <p style={{ margin: 0, color: "#546E7A", fontSize: 15, lineHeight: 1.6 }}>
+          <p style={{ margin: 0, color: "#546E7A", fontSize: isMobile ? 13 : 15, lineHeight: 1.6 }}>
             {subtitle}
           </p>
         </div>
 
-        {title === "Internal Candidate Search" && <MatchScoreMiniGuide />}
+        {!isMobile && title === "Internal Candidate Search" && <MatchScoreMiniGuide />}
       </div>
 
       {children}
@@ -772,6 +777,7 @@ export default function CandidateCenter() {
             title={activeTile?.title || "Candidate Tool"}
             subtitle={activeTile?.subtitle || ""}
             onBack={() => setActiveModule(null)}
+            isMobile={isMobile}
           >
             {(() => {
               switch (activeModule) {
