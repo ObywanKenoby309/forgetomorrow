@@ -210,7 +210,7 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
     paddingTop: 6,
     paddingLeft: 10,
     paddingRight: 10,
-    paddingBottom: 'calc(10px + env(safe-area-inset-bottom))',
+    paddingBottom: 'calc(4px + env(safe-area-inset-bottom))',
     display: 'grid',
     gridTemplateColumns: 'repeat(5, 1fr)',
     gap: 6,
