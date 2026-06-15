@@ -480,14 +480,18 @@ export default function SeekerContactCenter() {
             </section>
 
             <section style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', marginBottom: 12 }}>
-              <section style={{ ...WHITE_CARD, padding: 16 }}>
+              <section style={{ ...WHITE_CARD, padding: 16, display: 'flex', flexDirection: 'column' }}>
                 <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 8, fontSize: 18, lineHeight: 1.25, ...ORANGE_HEADING_LIFT }}>Contacts</h2>
                 <ContactsList contacts={contacts.slice(0, 5)} onViewProfile={handleViewProfile} onDisconnect={handleDisconnect} loading={coreLoading} />
                 {contacts.length > 5 && (
                   <p style={{ color: '#607D8B', fontSize: 13, marginTop: 8 }}>Showing 5 of {contacts.length}.</p>
                 )}
+                <button type="button" onClick={() => setActiveTab('contacts')}
+                  style={{ color: '#FF7043', fontWeight: 800, marginTop: 'auto', paddingTop: 12, display: 'block', background: 'none', border: 'none', cursor: 'pointer', padding: 0, paddingTop: 12, fontFamily: 'inherit', textAlign: 'left' }}>
+                  View all contacts →
+                </button>
               </section>
-              <section style={{ ...WHITE_CARD, padding: 16 }}>
+              <section style={{ ...WHITE_CARD, padding: 16, display: 'flex', flexDirection: 'column' }}>
                 <h2 style={{ color: '#FF7043', marginTop: 0, fontSize: 18, lineHeight: 1.25, ...ORANGE_HEADING_LIFT }}>Recent Profile Views</h2>
                 {pvPreview.length === 0
                   ? <p style={{ color: '#607D8B', fontSize: 14 }}>No profile views yet.</p>
@@ -503,7 +507,7 @@ export default function SeekerContactCenter() {
                   )
                 }
                 <button type="button" onClick={() => setActiveTab('profileViews')}
-                  style={{ color: '#FF7043', fontWeight: 800, marginTop: 8, display: 'block', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                  style={{ color: '#FF7043', fontWeight: 800, marginTop: 'auto', paddingTop: 12, display: 'block', background: 'none', border: 'none', cursor: 'pointer', padding: 0, paddingTop: 12, fontFamily: 'inherit', textAlign: 'left' }}>
                   View all profile views →
                 </button>
               </section>
