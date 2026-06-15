@@ -1,6 +1,6 @@
 {
   "name": "ForgeTomorrow",
-  "short_name": "Forge",
+  "short_name": "ForgeTomorrow",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
