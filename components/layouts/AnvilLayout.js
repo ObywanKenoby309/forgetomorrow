@@ -525,7 +525,7 @@ export default function AnvilLayout({
             style={{
               position: 'relative',
               zIndex: 1,
-              width: 'min(760px, 100%)',
+              width: 'min(320px, 30%)',
               maxHeight: '82vh',
               borderTopLeftRadius: 18,
               borderTopRightRadius: 18,
