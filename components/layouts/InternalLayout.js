@@ -494,75 +494,56 @@ export default function InternalLayout({
       </div>
 
       {isMobile && mobileToolsOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 99999,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-end',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setMobileToolsOpen(false)}
-            aria-label="Dismiss Tools"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              border: 'none',
-              background: 'rgba(0,0,0,0.55)',
-              cursor: 'pointer',
-            }}
-          />
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              width: 'min(760px, 100%)',
-              maxHeight: '82vh',
-              borderTopLeftRadius: 18,
-              borderTopRightRadius: 18,
-              border: '1px solid rgba(255,255,255,0.22)',
-              background: 'rgba(255,255,255,0.92)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              padding: 16,
-              boxSizing: 'border-box',
-              overflowY: 'auto',
-              boxShadow: '0 -10px 26px rgba(0,0,0,0.22)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 12,
-              }}
-            >
-              <div style={{ fontSize: 14, fontWeight: 800, color: '#112033' }}>Tools</div>
-              <button
-                type="button"
-                onClick={() => setMobileToolsOpen(false)}
-                aria-label="Close Tools"
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: 22,
-                  lineHeight: 1,
-                  color: '#546E7A',
-                }}
-              >
-                ×
-              </button>
-            </div>
-            {left ?? <SidebarComp {...sidebarProps} />}
-          </div>
-        </div>
-      )}
+  <div
+    style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 99999,
+      display: 'flex',
+      justifyContent: 'flex-start',
+      alignItems: 'flex-end',
+      paddingLeft: 0,
+      pointerEvents: 'auto',
+    }}
+  >
+    <button
+      type="button"
+      onClick={() => setMobileToolsOpen(false)}
+      aria-label="Dismiss Tools"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        border: 'none',
+        background: 'rgba(0,0,0,0.38)',
+        cursor: 'pointer',
+      }}
+    />
+
+    <div
+      style={{
+        position: 'relative',
+        zIndex: 1,
+        width: 'min(320px, 30vw)',
+        minWidth: 240,
+        maxWidth: 280,
+        maxHeight: '72vh',
+        marginBottom: 'calc(70px + env(safe-area-inset-bottom))',
+        borderTopRightRadius: 18,
+        borderBottomRightRadius: 18,
+        border: '1px solid rgba(255,255,255,0.22)',
+        background: 'rgba(255,255,255,0.94)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        padding: '10px 10px 12px',
+        boxSizing: 'border-box',
+        overflowY: 'auto',
+        boxShadow: '10px -10px 26px rgba(0,0,0,0.22)',
+      }}
+    >
+      {left ?? <SidebarComp {...sidebarProps} />}
+    </div>
+  </div>
+)}
     </>
   );
 }
