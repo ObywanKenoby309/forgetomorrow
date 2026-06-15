@@ -5,6 +5,10 @@ import { prisma } from '@/lib/prisma';
 
 const PROTECTED_ROOT_NAMES = ['personal', 'candidates', 'clients', 'talent pools'];
 
+// Only these roots are org-shared for recruiters (seeded under accountKey).
+// ALL user-created categories are personal (scoped to userId), never org-shared.
+const ORG_SHARED_ROOTS = ['candidates', 'talent pools'];
+
 function normalizeName(name) {
   return String(name || '').trim();
 }
@@ -20,14 +24,15 @@ export default async function handler(req, res) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, accountKey: true },
+      select: { id: true, accountKey: true, role: true },
     });
 
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    const scopeKey = user.accountKey || user.id;
+    const personalKey = userId;
+    const orgKey = user.accountKey || userId;
 
     if (req.method === 'POST') {
       const name = normalizeName(req.body?.name);
@@ -39,29 +44,32 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Category name is required' });
       }
 
-      // If caller provides a parent, make sure it belongs to this same scope
+      // Determine scope: children inherit their parent's scope.
+      // Top-level user-created categories are always personal.
+      let scopeKey = personalKey;
+
       if (parentCategoryId) {
         const parent = await prisma.contactCategory.findFirst({
           where: {
             id: parentCategoryId,
-            accountKey: scopeKey,
+            accountKey: { in: [personalKey, orgKey] },
           },
-          select: { id: true },
+          select: { id: true, accountKey: true },
         });
 
         if (!parent) {
           return res.status(404).json({ error: 'Parent category not found' });
         }
+
+        // Child inherits parent scope (e.g. job subcategory under Candidates → org-scoped)
+        scopeKey = parent.accountKey;
       }
 
       const existing = await prisma.contactCategory.findFirst({
         where: {
           accountKey: scopeKey,
           parentCategoryId,
-          name: {
-            equals: name,
-            mode: 'insensitive',
-          },
+          name: { equals: name, mode: 'insensitive' },
         },
       });
 
@@ -70,12 +78,7 @@ export default async function handler(req, res) {
       }
 
       const category = await prisma.contactCategory.create({
-        data: {
-          userId,
-          accountKey: scopeKey,
-          name,
-          parentCategoryId,
-        },
+        data: { userId, accountKey: scopeKey, name, parentCategoryId },
       });
 
       return res.status(200).json({ ok: true, category });
@@ -93,16 +96,16 @@ export default async function handler(req, res) {
 
       if (categoryId) {
         category = await prisma.contactCategory.findFirst({
-          where: { id: categoryId, accountKey: scopeKey },
+          where: {
+            id: categoryId,
+            accountKey: { in: [personalKey, orgKey] },
+          },
         });
       } else {
         category = await prisma.contactCategory.findFirst({
           where: {
-            accountKey: scopeKey,
-            name: {
-              equals: name,
-              mode: 'insensitive',
-            },
+            accountKey: { in: [personalKey, orgKey] },
+            name: { equals: name, mode: 'insensitive' },
           },
         });
       }
@@ -118,12 +121,9 @@ export default async function handler(req, res) {
       if (isProtectedRoot) {
         const sameNamedRoots = await prisma.contactCategory.count({
           where: {
-            accountKey: scopeKey,
+            accountKey: category.accountKey,
             parentCategoryId: null,
-            name: {
-              equals: category.name,
-              mode: 'insensitive',
-            },
+            name: { equals: category.name, mode: 'insensitive' },
           },
         });
 
@@ -132,12 +132,8 @@ export default async function handler(req, res) {
         }
 
         const [childCount, assignmentCount] = await Promise.all([
-          prisma.contactCategory.count({
-            where: { parentCategoryId: category.id },
-          }),
-          prisma.contactCategoryAssignment.count({
-            where: { categoryId: category.id },
-          }),
+          prisma.contactCategory.count({ where: { parentCategoryId: category.id } }),
+          prisma.contactCategoryAssignment.count({ where: { categoryId: category.id } }),
         ]);
 
         if (childCount > 0 || assignmentCount > 0) {
@@ -145,14 +141,9 @@ export default async function handler(req, res) {
         }
       }
 
-      await prisma.contactCategory.delete({
-        where: { id: category.id },
-      });
+      await prisma.contactCategory.delete({ where: { id: category.id } });
 
-      return res.status(200).json({
-        ok: true,
-        deletedCategoryId: category.id,
-      });
+      return res.status(200).json({ ok: true, deletedCategoryId: category.id });
     }
 
     res.setHeader('Allow', 'POST, DELETE');
