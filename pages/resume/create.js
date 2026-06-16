@@ -663,7 +663,7 @@ export default function CreateResumePage() {
     <ResumeBuilderLayout title="Resume Builder | ForgeTomorrow">
       <style jsx global>{`
         html, body { overflow-x: hidden; }
-        @media (max-width: 900px) {
+        @media (max-width: 1100px) {
           .ft-rb-main { grid-template-columns: 1fr !important; }
           .ft-rb-toprow { grid-template-columns: 1fr !important; }
           .ft-ad-rail-outer { display: none !important; }
@@ -843,7 +843,7 @@ export default function CreateResumePage() {
         </div>
 
         {/* RESUME + HAMMER GRID — full width, no ad rail competing */}
-        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(760px,1fr) 340px',gap:12,alignItems:'start'}}>
+        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0,1fr) 340px',gap:12,alignItems:'start',width:'100%',maxWidth:'100%',overflow:'hidden'}}>
 
           {/* CENTER: Resume */}
           <div style={{...GLASS_CARD,overflow:'hidden',minWidth:0,width:'100%'}}>
