@@ -6,37 +6,27 @@ import SeekerLayout from '@/components/layouts/SeekerLayout';
 import PushNotificationToggle from '@/components/notifications/PushNotificationToggle';
 
 // ── Style tokens ─────────────────────────────────────────────
-const ORANGE = '#FF7043';
-const ORANGE_DARK = '#F4511E';
-const TEXT = '#F8FAFC';
-const TEXT_SOFT = 'rgba(248,250,252,0.88)';
-const MUTED = 'rgba(226,232,240,0.74)';
-const MUTED_DARK = '#223043';
-const PANEL = 'rgba(15,31,48,0.62)';
-const PANEL_LIGHT = 'rgba(255,255,255,0.13)';
-const PANEL_ROW = 'rgba(255,255,255,0.10)';
-
 const GLASS = {
-  borderRadius: 18,
-  border: '1px solid rgba(255,255,255,0.22)',
-  background: PANEL,
-  boxShadow: '0 18px 46px rgba(0,0,0,0.28)',
-  backdropFilter: 'blur(14px)',
-  WebkitBackdropFilter: 'blur(14px)',
-};
-
-const GLASS_LIGHT = {
   borderRadius: 14,
-  border: '1px solid rgba(255,255,255,0.18)',
-  background: PANEL_ROW,
-  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 20px rgba(0,0,0,0.14)',
+  border: '1px solid rgba(255,255,255,0.20)',
+  background: 'rgba(255,255,255,0.42)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
   backdropFilter: 'blur(10px)',
   WebkitBackdropFilter: 'blur(10px)',
 };
 
+const GLASS_LIGHT = {
+  borderRadius: 12,
+  border: '1px solid rgba(255,255,255,0.20)',
+  background: 'rgba(255,255,255,0.28)',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)',
+};
+
 const DIVIDER = {
   border: 'none',
-  borderTop: '1px solid rgba(255,255,255,0.12)',
+  borderTop: '1px solid rgba(15,23,42,0.10)',
   margin: '4px 0',
 };
 
@@ -48,15 +38,14 @@ const DANGER_DIVIDER = {
 
 const LABEL = {
   fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
-  textTransform: 'uppercase', color: 'rgba(226,232,240,0.72)',
+  textTransform: 'uppercase', color: '#425466',
   marginBottom: 6, display: 'block',
 };
 
 const SETTINGS_BACKGROUND_IMAGE = '/images/profile-fallbacks/profile-default-wallpaper.png';
 
 // Fixed height for ALL carousel cards — no jumping arrows
-const CARD_HEIGHT = 390;
-const CARD_HEIGHT_MOBILE = 430;
+const CARD_HEIGHT = 360;
 
 // ── Support URL — respects chrome param ─────────────────────
 function getSupportUrl() {
@@ -87,9 +76,9 @@ function LockedField({ label, value }) {
         <div style={{
           padding: '10px 36px 10px 14px',
           borderRadius: 10,
-          border: '1px solid rgba(255,255,255,0.16)',
-          background: 'rgba(255,255,255,0.10)',
-          fontSize: 14, color: TEXT_SOFT,
+          border: '1px solid rgba(255,255,255,0.18)',
+          background: 'rgba(255,255,255,0.14)',
+          fontSize: 14, color: '#485B6D',
           cursor: 'not-allowed', userSelect: 'none',
         }}>
           {value}
@@ -115,7 +104,7 @@ function PillBtn({ children, onClick, variant = 'ghost', type = 'button', disabl
   };
   const variants = {
     primary: { background: 'linear-gradient(135deg,#FF7043,#F4511E)', color: '#fff', boxShadow: '0 4px 16px rgba(255,112,67,0.45)' },
-    ghost:   { background: 'rgba(255,255,255,0.12)', color: TEXT_SOFT, border: '1px solid rgba(255,255,255,0.16)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)' },
+    ghost:   { background: 'rgba(255,255,255,0.22)', color: '#1C2A38', border: '1px solid rgba(15,23,42,0.12)' },
     danger:  { background: 'rgba(183,28,28,0.25)', color: '#EF9A9A', border: '1px solid rgba(239,154,154,0.35)' },
   };
   return (
@@ -134,7 +123,7 @@ function Toggle({ value, onChange }) {
       onClick={() => onChange(!value)}
       style={{
         flexShrink: 0, width: 44, height: 24, borderRadius: 999,
-        background: value ? 'linear-gradient(135deg,#FF7043,#F4511E)' : 'rgba(148,163,184,0.30)' ,
+        background: value ? 'linear-gradient(135deg,#FF7043,#F4511E)' : 'rgba(0,0,0,0.12)',
         border: 'none', cursor: 'pointer', position: 'relative',
         transition: 'background 0.2s ease',
         boxShadow: value ? '0 2px 8px rgba(255,112,67,0.4)' : 'none',
@@ -156,10 +145,10 @@ function SectionLabel({ children }) {
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10,
       fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
-      textTransform: 'uppercase', color: ORANGE, marginBottom: 12,
+      textTransform: 'uppercase', color: '#8F4D32', marginBottom: 12,
     }}>
       {children}
-      <div style={{ flex: 1, height: 1, background: 'linear-gradient(to right,rgba(255,112,67,0.70),transparent)', borderRadius: 1 }} />
+      <div style={{ flex: 1, height: 1, background: 'linear-gradient(to right,rgba(166,90,58,0.45),transparent)', borderRadius: 1 }} />
     </div>
   );
 }
@@ -169,10 +158,10 @@ function ComingSoonRow({ title, description }) {
   return (
     <div style={{ ...GLASS_LIGHT, padding: '14px 16px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT }}>{title}</p>
-        {description && <p style={{ margin: '3px 0 0', fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{description}</p>}
+        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#162433' }}>{title}</p>
+        {description && <p style={{ margin: '3px 0 0', fontSize: 12, color: '#485B6D', lineHeight: 1.5 }}>{description}</p>}
       </div>
-      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.14)', color: MUTED, background: 'rgba(255,255,255,0.10)', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(15,23,42,0.10)', color: '#55687A', background: 'rgba(255,255,255,0.18)', whiteSpace: 'nowrap' }}>
         Coming soon
       </span>
     </div>
@@ -199,12 +188,12 @@ function PasswordChangeRow({ email }) {
         {status === 'sent' ? '✓ Reset email sent' : '🔑 Change password'}
       </PillBtn>
       {status === 'sent' && (
-        <p style={{ margin: 0, fontSize: 12, color: '#80CBC4', background: 'rgba(20,184,166,0.14)', border: '1px solid rgba(0,150,136,0.25)', borderRadius: 8, padding: '8px 12px', lineHeight: 1.55 }}>
+        <p style={{ margin: 0, fontSize: 12, color: '#80CBC4', background: 'rgba(0,150,136,0.12)', border: '1px solid rgba(0,150,136,0.25)', borderRadius: 8, padding: '8px 12px', lineHeight: 1.55 }}>
           ✓ A reset link has been sent to <strong>{email}</strong>. Expires in 15 minutes.
         </p>
       )}
       {status === 'error' && (
-        <p style={{ margin: 0, fontSize: 12, color: '#EF9A9A', background: 'rgba(183,28,28,0.16)', border: '1px solid rgba(239,154,154,0.25)', borderRadius: 8, padding: '8px 12px', lineHeight: 1.55 }}>
+        <p style={{ margin: 0, fontSize: 12, color: '#EF9A9A', background: 'rgba(183,28,28,0.12)', border: '1px solid rgba(239,154,154,0.25)', borderRadius: 8, padding: '8px 12px', lineHeight: 1.55 }}>
           Something went wrong.{' '}
           <a href={getSupportUrl()} style={{ color: '#EF9A9A', fontWeight: 600 }}>Submit a ticket</a> and we'll help you out.
         </p>
@@ -250,9 +239,9 @@ function BillingCard({ plan, onManageBilling }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <SectionLabel>Current plan</SectionLabel>
-      <div style={{ ...GLASS_LIGHT, padding: '14px 18px', borderLeft: `3px solid ${ORANGE}` }}>
-        <p style={{ margin: 0, fontSize: 11, color: MUTED, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Plan</p>
-        <p style={{ margin: '4px 0 0', fontSize: 24, fontWeight: 900, color: TEXT, letterSpacing: '-0.01em' }}>{plan}</p>
+      <div style={{ ...GLASS_LIGHT, padding: '14px 18px', borderLeft: '3px solid #C86A43' }}>
+        <p style={{ margin: 0, fontSize: 11, color: '#485B6D', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Plan</p>
+        <p style={{ margin: '4px 0 0', fontSize: 24, fontWeight: 900, color: '#1B2937', letterSpacing: '-0.01em' }}>{plan}</p>
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <PillBtn variant="primary" onClick={onManageBilling}>💳 Manage billing</PillBtn>
@@ -260,10 +249,10 @@ function BillingCard({ plan, onManageBilling }) {
       </div>
       <hr style={DIVIDER} />
       <div>
-        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: TEXT }}>Invoices &amp; receipts</p>
-        <p style={{ margin: 0, fontSize: 12, color: MUTED, lineHeight: 1.6 }}>
+        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: '#162433' }}>Invoices &amp; receipts</p>
+        <p style={{ margin: 0, fontSize: 12, color: '#485B6D', lineHeight: 1.6 }}>
           Billing history will appear here once fully connected.{' '}
-          <a href={getSupportUrl()} style={{ color: ORANGE, textDecoration: 'none', fontWeight: 600 }}>
+          <a href={getSupportUrl()} style={{ color: '#C86A43', textDecoration: 'none', fontWeight: 600 }}>
             Submit a ticket
           </a>{' '}
           if you need help with a payment.
@@ -279,8 +268,8 @@ function PrivacyCard() {
       <SectionLabel>Your data</SectionLabel>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '4px 0' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT }}>Download my data</p>
-          <p style={{ margin: '3px 0 0', fontSize: 12, color: MUTED, lineHeight: 1.55 }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#162433' }}>Download my data</p>
+          <p style={{ margin: '3px 0 0', fontSize: 12, color: '#485B6D', lineHeight: 1.55 }}>
             Request a copy of the personal data associated with your ForgeTomorrow account.
           </p>
         </div>
@@ -288,7 +277,7 @@ function PrivacyCard() {
       </div>
       <hr style={DIVIDER} />
       <SectionLabel>Danger zone</SectionLabel>
-      <div style={{ borderRadius: 12, border: '1px solid rgba(239,154,154,0.15)', background: 'rgba(127,29,29,0.24)', padding: '14px 16px' }}>
+      <div style={{ borderRadius: 12, border: '1px solid rgba(239,154,154,0.15)', background: 'rgba(40,10,10,0.40)', padding: '14px 16px' }}>
         <DeleteAccountRow />
       </div>
     </div>
@@ -313,17 +302,91 @@ function SecurityCard() {
 
 function NotificationsCard() {
   const [emailUpdates, setEmailUpdates] = useState(true);
+  const [loadingPrefs, setLoadingPrefs] = useState(true);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [prefStatus, setPrefStatus] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadNotificationSettings() {
+      setLoadingPrefs(true);
+      setPrefStatus('');
+
+      try {
+        const res = await fetch('/api/settings/notifications', { method: 'GET' });
+
+        if (!res.ok) {
+          throw new Error('Could not load notification settings.');
+        }
+
+        const data = await res.json();
+
+        if (!cancelled) {
+          setEmailUpdates(data?.settings?.emailUpdates !== false);
+        }
+      } catch {
+        if (!cancelled) {
+          setPrefStatus('Could not load saved notification settings.');
+        }
+      } finally {
+        if (!cancelled) setLoadingPrefs(false);
+      }
+    }
+
+    loadNotificationSettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleEmailUpdatesChange(nextValue) {
+    const previousValue = emailUpdates;
+
+    setEmailUpdates(nextValue);
+    setSavingPrefs(true);
+    setPrefStatus('');
+
+    try {
+      const res = await fetch('/api/settings/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailUpdates: nextValue }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Could not save notification settings.');
+      }
+
+      const data = await res.json();
+      setEmailUpdates(data?.settings?.emailUpdates !== false);
+      setPrefStatus('Saved across devices.');
+      setTimeout(() => setPrefStatus(''), 2200);
+    } catch {
+      setEmailUpdates(previousValue);
+      setPrefStatus('Could not save. Try again.');
+    } finally {
+      setSavingPrefs(false);
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <SectionLabel>Notifications</SectionLabel>
       <div style={{ ...GLASS_LIGHT, padding: '14px 16px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT }}>Email updates &amp; product news</p>
-          <p style={{ margin: '3px 0 0', fontSize: 12, color: MUTED, lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#162433' }}>Email updates &amp; product news</p>
+          <p style={{ margin: '3px 0 0', fontSize: 12, color: '#485B6D', lineHeight: 1.5 }}>
             New features, product changes, and important account notices.
           </p>
+          {(loadingPrefs || savingPrefs || prefStatus) && (
+            <p style={{ margin: '6px 0 0', fontSize: 11, color: prefStatus?.startsWith?.('Could not') ? '#B91C1C' : '#64748B', lineHeight: 1.4, fontWeight: 700 }}>
+              {loadingPrefs ? 'Loading saved preference…' : savingPrefs ? 'Saving…' : prefStatus}
+            </p>
+          )}
         </div>
-        <Toggle value={emailUpdates} onChange={setEmailUpdates} />
+        <Toggle value={emailUpdates} onChange={handleEmailUpdatesChange} />
       </div>
       <PushNotificationToggle />
     </div>
@@ -339,7 +402,6 @@ const CARDS = [
 ];
 
 function Carousel({ plan, onManageBilling }) {
-  const isMobile = useIsMobile(768);
   const [active, setActive] = useState(0);
   const [sliding, setSliding] = useState(false);
   const [direction, setDirection] = useState(null); // 'left' | 'right'
@@ -434,19 +496,18 @@ function Carousel({ plan, onManageBilling }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 0 : 10, position: 'relative' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <button
           type="button"
           aria-label="Previous"
           onClick={() => goTo(active - 1, 'right')}
           style={{
             flexShrink: 0,
-            width: isMobile ? 42 : 36, height: isMobile ? 42 : 36, borderRadius: '50%',
-            position: isMobile ? 'absolute' : 'static', left: isMobile ? -8 : 'auto', zIndex: 4,
-            background: 'rgba(15,31,48,0.74)',
-            border: '1px solid rgba(255,255,255,0.20)',
-            color: TEXT,
+            width: 36, height: 36, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.58)',
+            border: '1px solid rgba(255,255,255,0.16)',
+            color: '#1C2A38',
             cursor: 'pointer',
             fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.18s', backdropFilter: 'blur(8px)',
@@ -459,25 +520,25 @@ function Carousel({ plan, onManageBilling }) {
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
-          <div style={{ ...getSlideStyle(), paddingLeft: isMobile ? 8 : 32, paddingRight: isMobile ? 8 : 32 }}>
+          <div style={{ ...getSlideStyle(), paddingLeft: 32, paddingRight: 32 }}>
             <div style={{
               ...GLASS,
-              padding: isMobile ? '22px 18px' : '22px 24px',
-              height: isMobile ? CARD_HEIGHT_MOBILE : CARD_HEIGHT,
+              padding: '22px 24px',
+              height: CARD_HEIGHT,
               boxSizing: 'border-box',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexShrink: 0 }}>
-                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: TEXT, letterSpacing: '-0.01em' }}>
+                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#162433', letterSpacing: '-0.01em' }}>
                   {CARDS[displayed].label}
                 </h2>
-                <span style={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>
+                <span style={{ fontSize: 12, color: '#485B6D', fontWeight: 500 }}>
                   {active + 1} / {CARDS.length}
                 </span>
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', paddingRight: isMobile ? 4 : 2 }}>
+              <div style={{ flex: 1, overflowY: 'auto', paddingRight: 2 }}>
                 {cardContent(displayed)}
               </div>
             </div>
@@ -486,8 +547,8 @@ function Carousel({ plan, onManageBilling }) {
           <div
             aria-hidden="true"
             style={{
-              position: 'absolute', top: 0, left: 0, bottom: 0, width: isMobile ? 14 : 28,
-              background: 'rgba(255,255,255,0.12)',
+              position: 'absolute', top: 0, left: 0, bottom: 0, width: 28,
+              background: 'rgba(255,255,255,0.30)',
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
               borderRadius: '16px 0 0 16px',
@@ -500,8 +561,8 @@ function Carousel({ plan, onManageBilling }) {
           <div
             aria-hidden="true"
             style={{
-              position: 'absolute', top: 0, right: 0, bottom: 0, width: isMobile ? 14 : 28,
-              background: 'rgba(255,255,255,0.12)',
+              position: 'absolute', top: 0, right: 0, bottom: 0, width: 28,
+              background: 'rgba(255,255,255,0.30)',
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
               borderRadius: '0 16px 16px 0',
@@ -518,11 +579,10 @@ function Carousel({ plan, onManageBilling }) {
           onClick={() => goTo(active + 1, 'left')}
           style={{
             flexShrink: 0,
-            width: isMobile ? 42 : 36, height: isMobile ? 42 : 36, borderRadius: '50%',
-            position: isMobile ? 'absolute' : 'static', right: isMobile ? -8 : 'auto', zIndex: 4,
-            background: 'rgba(15,31,48,0.74)',
-            border: '1px solid rgba(255,255,255,0.20)',
-            color: TEXT,
+            width: 36, height: 36, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.58)',
+            border: '1px solid rgba(255,255,255,0.16)',
+            color: '#1C2A38',
             cursor: 'pointer',
             fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.18s', backdropFilter: 'blur(8px)',
@@ -541,7 +601,7 @@ function Carousel({ plan, onManageBilling }) {
             style={{
               width: i === active ? 24 : 8,
               height: 8, borderRadius: 999, border: 'none', padding: 0,
-              background: i === active ? ORANGE : 'rgba(226,232,240,0.28)' ,
+              background: i === active ? '#C86A43' : 'rgba(15,23,42,0.18)',
               cursor: i === active ? 'default' : 'pointer',
               transition: 'all 0.25s ease',
             }}
@@ -618,8 +678,8 @@ function SettingsContent() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: isMobile ? 100 : 40 }}>
       <header style={{
         ...GLASS,
-        padding: isMobile ? '22px 24px' : '22px 32px',
-        textAlign: isMobile ? 'left' : 'center',
+        padding: isMobile ? '20px 18px' : '22px 32px',
+        textAlign: 'center',
         borderTop: '2px solid rgba(200,106,67,0.42)',
         position: 'relative', overflow: 'hidden',
       }}>
@@ -630,19 +690,19 @@ function SettingsContent() {
         }} />
         <h1 style={{
           margin: 0, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1.1,
-          fontSize: isMobile ? 34 : 30, color: TEXT,
+          fontSize: isMobile ? 24 : 30, color: '#1B2937',
         }}>
           Settings
         </h1>
-        <p style={{ margin: '6px 0 0', color: MUTED, fontSize: isMobile ? 16 : 14 }}>
+        <p style={{ margin: '6px 0 0', color: '#485B6D', fontSize: isMobile ? 12 : 14 }}>
           Manage your account, privacy, and billing in one place.
         </p>
       </header>
 
       <section style={{ ...GLASS, padding: isMobile ? '20px 18px' : '22px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0, fontSize: isMobile ? 15 : 17, fontWeight: 800, color: TEXT, letterSpacing: '-0.01em' }}>Account</h2>
-          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(200,106,67,0.34)', color: ORANGE, background: 'rgba(255,112,67,0.12)' }}>Core</span>
+          <h2 style={{ margin: 0, fontSize: isMobile ? 15 : 17, fontWeight: 800, color: '#162433', letterSpacing: '-0.01em' }}>Account</h2>
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(200,106,67,0.34)', color: '#8F4D32', background: 'rgba(200,106,67,0.10)' }}>Core</span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: isMobile ? 10 : 14 }}>
@@ -650,9 +710,9 @@ function SettingsContent() {
           <LockedField label="Name" value={name} />
         </div>
 
-        <p style={{ margin: 0, fontSize: 12, color: TEXT_SOFT, lineHeight: 1.6, background: 'rgba(255,255,255,0.10)', borderRadius: 8, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.10)' }}>
+        <p style={{ margin: 0, fontSize: 12, color: '#223043', lineHeight: 1.6, background: 'rgba(255,255,255,0.16)', borderRadius: 8, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.10)' }}>
           🔒 To help prevent fraud, your name and email are set during account creation and cannot be changed here. To update either, please{' '}
-          <a href={getSupportUrl()} style={{ color: ORANGE, textDecoration: 'none', fontWeight: 600 }}>submit a ticket through the Support Center</a>.
+          <a href={getSupportUrl()} style={{ color: '#C86A43', textDecoration: 'none', fontWeight: 600 }}>submit a ticket through the Support Center</a>.
         </p>
 
         <hr style={DIVIDER} />
@@ -665,7 +725,7 @@ function SettingsContent() {
 
       <Carousel plan={plan} onManageBilling={handleManageBilling} />
 
-      <p style={{ textAlign: 'center', fontSize: 12, color: MUTED, marginTop: 4 }}>
+      <p style={{ textAlign: 'center', fontSize: 12, color: '#55687A', marginTop: 4 }}>
         ForgeTomorrow · The future of careers and networking.
       </p>
     </div>
