@@ -117,7 +117,7 @@ function DropdownMenu({ id, label, openMenu, setOpenMenu, align = 'left', childr
             top: coords.top,
             left: coords.left,
             right: coords.right,
-            minWidth: Math.max(coords.minWidth, 190),
+            minWidth: Math.max(coords.minWidth, 170),
           }}
           onClick={() => setOpenMenu(null)}
         >
@@ -174,7 +174,7 @@ export default function CoverLetterPage() {
   const [isEditMode, setIsEditMode] = useState(true);
   const [saveState, setSaveState] = useState('idle');
   const [hammerOpen, setHammerOpen] = useState(false);
-  const [openMenu, setOpenMenu] = useState(null); // 'actions' | 'view' | 'export' | null
+  const [openMenu, setOpenMenu] = useState(null); // 'actions' | 'view' | 'export' | 'info' | null
 
   const letterData = {
     fullName: formData?.fullName || formData?.name || 'Your Name',
@@ -651,7 +651,7 @@ export default function CoverLetterPage() {
           color: #C2410C;
         }
         .ft-menu-panel-portal {
-          z-index: 9999;
+          z-index: 217;
           display: grid;
           gap: 6px;
           padding: 8px;
@@ -711,7 +711,8 @@ export default function CoverLetterPage() {
             font-size: 12px;
           }
           .ft-menu-panel-portal {
-            min-width: min(260px, 92vw) !important;
+            min-width: min(190px, 86vw) !important;
+            max-width: 86vw !important;
           }
           .ft-status-inline {
             flex: 1 1 auto;
@@ -788,7 +789,7 @@ export default function CoverLetterPage() {
             <SeekerTitleCard
               greeting={greetingText}
               title="Cover Letter Builder"
-              subtitle="1 letter. 3 bullets. 100% tailored. No generic paragraphs. Only your real wins. Beats 3-paragraph letters every time."
+              subtitle="Build targeted cover letters using your real experience and job-specific intelligence."
             />
             <div style={{ ...GLASS_CARD, padding: '12px 14px', minWidth: 0, overflow: 'visible' }}>
               <div className="ft-compact-toolbar">
@@ -803,51 +804,24 @@ export default function CoverLetterPage() {
                     <button type="button" onClick={handleSaveClick} style={{ background: '#16A34A', color: 'white', borderColor: 'rgba(22,163,74,0.28)' }}>
                       {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? '✓ Saved' : 'Save Cover'}
                     </button>
+                    <button type="button" onClick={() => router.push(withChrome('/resume/create'))}>← Resume Builder</button>
                   </DropdownMenu>
 
-                  <DropdownMenu id="view" label={isFocusMode ? 'Focus' : isEditMode ? 'Edit' : 'Preview'} openMenu={openMenu} setOpenMenu={setOpenMenu}>
+                  <DropdownMenu id="view" label={isFocusMode ? 'Focus' : isEditMode ? 'Edit' : 'Preview'} align="right" openMenu={openMenu} setOpenMenu={setOpenMenu}>
                     <button type="button" onClick={() => setIsEditMode(true)} style={isEditMode ? { color: '#C2410C', borderColor: 'rgba(255,112,67,0.30)', background: 'rgba(255,112,67,0.08)' } : {}}>✏️ Edit</button>
                     <button type="button" onClick={() => setIsEditMode(false)} style={!isEditMode ? { color: '#C2410C', borderColor: 'rgba(255,112,67,0.30)', background: 'rgba(255,112,67,0.08)' } : {}}>👁 Preview</button>
                     <button type="button" onClick={() => setIsFocusMode((v) => !v)} style={isFocusMode ? { color: '#C2410C', borderColor: 'rgba(255,112,67,0.30)', background: 'rgba(255,112,67,0.08)' } : {}}>{isFocusMode ? '← Exit Focus' : '🎯 Focus'}</button>
                   </DropdownMenu>
 
-                  <DropdownMenu id="export" label="Export / Info" align="right" openMenu={openMenu} setOpenMenu={setOpenMenu}>
+                  <DropdownMenu id="export" label="Export" align="right" openMenu={openMenu} setOpenMenu={setOpenMenu}>
                     <CoverPDFButton templateId="cover-pdf" data={letterData}>
                       <div className="ft-menu-action" style={{ background: ORANGE, color: 'white', borderColor: 'rgba(255,112,67,0.28)' }}>↓ Designed PDF</div>
                     </CoverPDFButton>
-                    <button type="button" onClick={() => setShowPhilosophy((v) => !v)} style={showPhilosophy ? { color: '#C2410C', borderColor: 'rgba(255,112,67,0.30)', background: 'rgba(255,112,67,0.08)' } : {}}>ℹ️ Philosophy</button>
                   </DropdownMenu>
 
-                  <div title={coverStatus} className="ft-status-inline">
-                    <div style={{ position: 'relative', width: 22, height: 22, flexShrink: 0 }}>
-                      <svg width="22" height="22" viewBox="0 0 22 22">
-                        <circle cx="11" cy="11" r="8" fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
-                        <circle
-                          cx="11"
-                          cy="11"
-                          r="8"
-                          fill="none"
-                          stroke={coverStatus === 'Targeted' ? '#0EA5E9' : coverStatus === 'In Progress' ? ORANGE : '#CBD5E1'}
-                          strokeWidth="2.5"
-                          strokeDasharray={`${(progress / 100) * 50.3} 50.3`}
-                          strokeLinecap="round"
-                          style={{ transformOrigin: 'center', transform: 'rotate(-90deg)' }}
-                        />
-                      </svg>
-                      <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 6, fontWeight: 900, color: '#374151' }}>{progress}%</span>
-                    </div>
-                    <span style={{ fontSize: 10, fontWeight: 800, color: '#64748B' }}>{coverStatus}</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="ft-resume-inline"
-                    onClick={() => router.push(withChrome('/resume/create'))}
-                    style={{ ...PILL_BUTTON, background: 'rgba(255,112,67,0.08)', color: ORANGE, border: `1px solid rgba(255,112,67,0.25)`, fontWeight: 900, fontSize: 11, padding: '6px 11px', whiteSpace: 'nowrap', flex: '0 0 auto' }}
-                    title="Return to Resume Builder"
-                  >
-                    ← Resume
-                  </button>
+                  <DropdownMenu id="info" label="Info" align="right" openMenu={openMenu} setOpenMenu={setOpenMenu}>
+                    <button type="button" onClick={() => setShowPhilosophy((v) => !v)} style={showPhilosophy ? { color: '#C2410C', borderColor: 'rgba(255,112,67,0.30)', background: 'rgba(255,112,67,0.08)' } : {}}>ℹ️ Philosophy</button>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>
