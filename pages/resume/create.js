@@ -836,10 +836,10 @@ export default function CreateResumePage() {
         </div>
 
         {/* RESUME + HAMMER GRID — full width, no ad rail competing */}
-        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0,1fr) 340px',gap:8,alignItems:'start'}}>
+        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(760px,1fr) 340px',gap:12,alignItems:'start'}}>
 
           {/* CENTER: Resume */}
-          <div style={{...GLASS_CARD,overflow:'hidden'}}>
+          <div style={{...GLASS_CARD,overflow:'hidden',minWidth:0,width:'100%'}}>
             <div style={{padding:'10px 16px',background:'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',color:'white',fontWeight:900,fontSize:13,letterSpacing:0.4,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               <span>{isEditMode?'✏️ LIVE RESUME EDITOR':'👁 RESUME PREVIEW'}</span>
               {isEditMode&&<span style={{fontSize:11,fontWeight:600,opacity:0.75}}>
@@ -1017,7 +1017,7 @@ export default function CreateResumePage() {
           </div>
         )}
       </div>
-
+      </div>
 
       {/* Toast */}
       {showToast&&(
