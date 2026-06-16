@@ -2,6 +2,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notifications/writer";
 
 function displayName(u) {
   const full = [u?.firstName, u?.lastName].filter(Boolean).join(" ").trim();
@@ -234,49 +235,26 @@ export default async function handler(req, res) {
       const dedupeKey = `${scope}:conversation:${entityId}`;
 
       if (recipientIds.length > 0) {
-        await prisma.$transaction(
+        await Promise.all(
           recipientIds.map((rid) =>
-            prisma.notification.upsert({
-              where: {
-                userId_dedupeKey: {
-                  userId: rid,
-                  dedupeKey,
-                },
+            createNotification({
+              userId: rid,
+              actorUserId: meId,
+              scope,
+              category: "MESSAGING",
+              entityType: "CONVERSATION",
+              entityId,
+              dedupeKey,
+              title: `New message from ${senderName}`,
+              body: snippet || null,
+              requiresAction: true,
+              metadata: {
+                conversationId: entityId,
+                messageId: String(created.id),
+                channel: channelStr || null,
               },
-              create: {
-                userId: rid,
-                actorUserId: meId,
-                scope,
-                category: "MESSAGING",
-                entityType: "CONVERSATION",
-                entityId,
-                dedupeKey,
-                title: `New message from ${senderName}`,
-                body: snippet || null,
-                requiresAction: true,
-                readAt: null,
-                metadata: {
-                  conversationId: entityId,
-                  messageId: String(created.id),
-                  channel: channelStr || null,
-                },
-              },
-              update: {
-                actorUserId: meId,
-                scope,
-                category: "MESSAGING",
-                entityType: "CONVERSATION",
-                entityId,
-                title: `New message from ${senderName}`,
-                body: snippet || null,
-                requiresAction: true,
-                readAt: null,
-                metadata: {
-                  conversationId: entityId,
-                  messageId: String(created.id),
-                  channel: channelStr || null,
-                },
-              },
+              pushUrl: "/seeker/messages",
+              forcePush: true,
             })
           )
         );

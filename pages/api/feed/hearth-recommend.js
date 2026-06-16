@@ -2,6 +2,7 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
+import { createNotification } from '@/lib/notifications/writer';
 
 const HEARTH_RECOMMENDATION_THRESHOLD = 5;
 
@@ -65,44 +66,25 @@ export default async function handler(req, res) {
 
       if (postAuthor?.id) {
         const preview = getBodyPreview(post.content).slice(0, 140);
-        await prisma.notification.upsert({
-          where: {
-            userId_dedupeKey: {
-              userId: postAuthor.id,
-              dedupeKey: `feed-hearth-recommend:${idNum}`,
-            },
+        await createNotification({
+          userId: postAuthor.id,
+          actorUserId: session.user.id,
+          category: 'SOCIAL',
+          scope: getScopeForUser(postAuthor),
+          entityType: 'FEED_POST',
+          entityId: String(idNum),
+          dedupeKey: `feed-hearth-recommend:${idNum}`,
+          title: 'Your post was recommended for the Hearth',
+          body: `${count} members recommended continuing this discussion in the Hearth.`,
+          requiresAction: true,
+          metadata: {
+            postId: idNum,
+            recommendationCount: count,
+            threshold: HEARTH_RECOMMENDATION_THRESHOLD,
+            preview,
+            action: 'branch_to_hearth',
           },
-          update: {
-            title: 'Your post was recommended for the Hearth',
-            body: `${count} members recommended continuing this discussion in the Hearth.`,
-            readAt: null,
-            metadata: {
-              postId: idNum,
-              recommendationCount: count,
-              threshold: HEARTH_RECOMMENDATION_THRESHOLD,
-              preview,
-              action: 'branch_to_hearth',
-            },
-          },
-          create: {
-            userId: postAuthor.id,
-            actorUserId: session.user.id,
-            category: 'SOCIAL',
-            scope: getScopeForUser(postAuthor),
-            entityType: 'FEED_POST',
-            entityId: String(idNum),
-            dedupeKey: `feed-hearth-recommend:${idNum}`,
-            title: 'Your post was recommended for the Hearth',
-            body: `${count} members recommended continuing this discussion in the Hearth.`,
-            requiresAction: true,
-            metadata: {
-              postId: idNum,
-              recommendationCount: count,
-              threshold: HEARTH_RECOMMENDATION_THRESHOLD,
-              preview,
-              action: 'branch_to_hearth',
-            },
-          },
+          pushUrl: '/feed',
         });
       }
     }

@@ -10,6 +10,7 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
+import { createNotification } from '@/lib/notifications/writer';
 
 function safe(value, fallback = '') {
   return String(value || '').trim() || fallback;
@@ -138,27 +139,26 @@ export default async function handler(req, res) {
     // Fire notification — non-blocking
     try {
       const scope = scopeForRole(recipient.role);
-      await prisma.notification.create({
-        data: {
-          userId: toUserId,
-          actorUserId: fromUserId,
-          category: 'VAULT',
-          scope,
-          entityType: 'VAULT_SHARE',
-          entityId: share.id,
-          dedupeKey: `vault_share_${share.id}`,
-          title: `${senderName} shared a document with you`,
-          body: safe(fileName, 'A document'),
-          requiresAction: true,
-          metadata: {
-            shareId: share.id,
-            fileName: share.fileName,
-            downloadUrl: share.downloadUrl,
-            fromUserId,
-            senderName,
-            message: share.message || null,
-          },
+      await createNotification({
+        userId: toUserId,
+        actorUserId: fromUserId,
+        category: 'VAULT',
+        scope,
+        entityType: 'VAULT_SHARE',
+        entityId: share.id,
+        dedupeKey: `vault_share_${share.id}`,
+        title: `${senderName} shared a document with you`,
+        body: safe(fileName, 'A document'),
+        requiresAction: true,
+        metadata: {
+          shareId: share.id,
+          fileName: share.fileName,
+          downloadUrl: share.downloadUrl,
+          fromUserId,
+          senderName,
+          message: share.message || null,
         },
+        pushUrl: '/dashboard/forge-vault',
       });
     } catch (notifErr) {
       console.error('[vault/share] notification write failed (non-blocking):', notifErr);

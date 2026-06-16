@@ -2,6 +2,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "./auth/[...nextauth]";
 import prisma from "@/lib/prisma";
+import { createNotification } from "@/lib/notifications/writer";
 
 async function getCurrentUserId(req, res) {
   const session = await getServerSession(req, res, authOptions);
@@ -276,52 +277,28 @@ async function handlePost(req, res, userId) {
 
       const bodyPreview = safeSnippet(`${senderName}: ${messageText}`, 180);
 
-      // Upsert one notification per conversation per scope (Option A)
+      // One notification row per conversation per scope (Option A), but push fires every message
       await Promise.all(
         recipients.map((r) =>
-          prisma.notification.upsert({
-            where: {
-              userId_dedupeKey: {
-                userId: r.userId,
-                dedupeKey,
-              },
+          createNotification({
+            userId: r.userId,
+            actorUserId: userId,
+            category: "MESSAGING",
+            scope,
+            entityType: "CONVERSATION",
+            entityId: String(convId),
+            dedupeKey,
+            requiresAction: true,
+            title: "New message",
+            body: bodyPreview,
+            metadata: {
+              conversationId: convId,
+              channel: convChannel || null,
+              senderId: userId,
+              senderName,
             },
-            create: {
-              userId: r.userId,
-              actorUserId: userId,
-              category: "MESSAGING",
-              scope,
-              entityType: "CONVERSATION",
-              entityId: String(convId),
-              dedupeKey,
-              requiresAction: true,
-              title: "New message",
-              body: bodyPreview,
-              metadata: {
-                conversationId: convId,
-                channel: convChannel || null,
-                senderId: userId,
-                senderName,
-              },
-              readAt: null,
-            },
-            update: {
-              actorUserId: userId,
-              category: "MESSAGING",
-              scope,
-              entityType: "CONVERSATION",
-              entityId: String(convId),
-              requiresAction: true,
-              title: "New message",
-              body: bodyPreview,
-              metadata: {
-                conversationId: convId,
-                channel: convChannel || null,
-                senderId: userId,
-                senderName,
-              },
-              readAt: null, // re-open if previously cleared
-            },
+            pushUrl: "/seeker/messages",
+            forcePush: true,
           })
         )
       );

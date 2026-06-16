@@ -14,6 +14,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
+import { createNotification } from '@/lib/notifications/writer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -124,18 +125,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ? `${requesterUser.firstName} ${requesterUser.lastName || ''}`.trim()
           : requesterUser?.name || 'Someone';
 
-      await prisma.notification.create({
-        data: {
-          userId:     coachId,
-          scope:      'COACH',
-          category:   'CALENDAR',
-          title:      'New session request',
-          body:       `${requesterName} has requested a coaching session with you.`,
-          entityType: 'APPOINTMENT_REQUEST',
-          entityId:   appt.id,
-          dedupeKey:  `appointment_request_${appt.id}`,
-          metadata:   { actionUrl: '/dashboard/coaching/sessions', appointmentRequestId: appt.id },
-        },
+      await createNotification({
+        userId:     coachId,
+        scope:      'COACH',
+        category:   'CALENDAR',
+        title:      'New session request',
+        body:       `${requesterName} has requested a coaching session with you.`,
+        entityType: 'APPOINTMENT_REQUEST',
+        entityId:   appt.id,
+        dedupeKey:  `appointment_request_${appt.id}`,
+        metadata:   { actionUrl: '/dashboard/coaching/sessions', appointmentRequestId: appt.id },
+        pushUrl:    '/dashboard/coaching/sessions',
       });
     } catch (notifyErr) {
       console.error('[appointments/request] notification failed:', notifyErr);
