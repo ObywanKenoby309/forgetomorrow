@@ -928,6 +928,12 @@ export default function CreateResumePage() {
         .ft-hammer-tab {
           display: none;
         }
+        .ft-hammer-backdrop {
+          display: none;
+        }
+        .ft-hammer-drawer {
+          display: none;
+        }
         @media (max-width: 1100px) {
           .ft-hammer-tab {
             display: flex;
@@ -949,6 +955,7 @@ export default function CreateResumePage() {
             border: 1px solid rgba(255,112,67,0.45); border-right: none;
           }
           .ft-hammer-backdrop {
+            display: block;
             position: fixed; inset: 0; z-index: 218;
             background: rgba(0,0,0,0.50); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
