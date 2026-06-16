@@ -940,7 +940,7 @@ export default function CreateResumePage() {
             position: fixed; right: 0; top: 50%; transform: translateY(-50%);
             z-index: 220;
             flex-direction: column; align-items: center; justify-content: center;
-            width: 32px; padding: 14px 0;
+            width: 42px; height: 72, padding: 0;
             border-radius: 10px 0 0 10px; border: none;
             background: linear-gradient(135deg, ${ORANGE}, #FF8A65);
             color: #fff; font-family: inherit; font-size: 18px;
@@ -1199,13 +1199,22 @@ export default function CreateResumePage() {
       {/* ── Mobile Hammer pull-tab + drawer ───────────────────────────────────── */}
       {/* Pull tab — fixed to right edge, vertically centered */}
       <button
-        type="button"
-        className={`ft-hammer-tab${hammerOpen?' open':''}`}
-        onClick={()=>setHammerOpen(o=>!o)}
-        aria-label="Toggle Forge Hammer"
-      >
-        🔨
-      </button>
+  type="button"
+  className={`ft-hammer-tab${hammerOpen?' open':''}`}
+  onClick={()=>setHammerOpen(o=>!o)}
+  aria-label="Toggle Forge Hammer"
+>
+  <img
+    src="/icons/hammer-tab.png"
+    alt="Forge Hammer"
+    style={{
+      width: 22,
+      height: 22,
+      objectFit: 'contain',
+      display: 'block',
+    }}
+  />
+</button>
 
       {/* Backdrop */}
       <div
