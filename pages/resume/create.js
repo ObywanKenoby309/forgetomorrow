@@ -677,6 +677,7 @@ export default function CreateResumePage() {
         .ft-hammer-tab {
           display: none;
         }
+        .ft-hammer-drawer { display: none; }
         @media (max-width: 1100px) {
           .ft-hammer-tab {
             display: flex;
