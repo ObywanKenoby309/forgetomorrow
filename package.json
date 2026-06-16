@@ -67,6 +67,7 @@
     "react-is": "^19.2.0",
     "react-markdown": "^10.1.0",
     "recharts": "^3.1.2",
+    "sharp": "^0.35.1",
     "speakeasy": "^2.0.0",
     "stripe": "^19.3.1",
     "web-push": "^3.6.7",
