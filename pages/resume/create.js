@@ -4,33 +4,21 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
+import ResumeBuilderLayout from '@/components/layouts/ResumeBuilderLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import { ResumeContext } from '@/context/ResumeContext';
 import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
 import { uploadJD } from '@/lib/jd/uploadToApi';
 import SignalResumeTestTemplate from '@/components/resume-form/templates/SignalResumeTestTemplate';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
+import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
+import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton';
 import ReverseResumeTemplate from '@/components/resume-form/templates/ReverseResumeTemplate';
 import HybridResumeTemplate from '@/components/resume-form/templates/HybridResumeTemplate';
 
 const ForgeHammerPanel = dynamic(() => import('@/components/hammer/ForgeHammerPanel'), { ssr: false });
-const ReverseATSButton = dynamic(() => import('@/components/resume-form/export/ReverseATSButton'), { ssr: false });
-const HybridATSButton = dynamic(() => import('@/components/resume-form/export/HybridATSButton'), { ssr: false });
-const DesignedPDFButton = dynamic(() => import('@/components/resume-form/export/DesignedPDFButton'), { ssr: false });
-
-function ResumeBuildIsolationShell({ children }) {
-  return (
-    <main style={{ minHeight: '100vh', padding: 16 }}>
-      {children}
-    </main>
-  );
-}
-
-function RightRailPlacementManagerPlaceholder() {
-  return (
-    <div style={{ width: '100%', height: 295, borderRadius: 14, background: 'rgba(255,255,255,0.55)', border: '1px solid rgba(15,23,42,0.08)' }} />
-  );
-}
 
 // ─── SSR-safe mobile hook ─────────────────────────────────────────────────────
 function useIsMobile(bp = 1100) {
@@ -144,7 +132,6 @@ export default function CreateResumePage() {
   const [resumeUploadState, setResumeUploadState] = useState('idle'); // idle | uploading | done | error
   const isMobile = useIsMobile();
   const [hammerOpen, setHammerOpen] = useState(false);
-  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
 
   // ─── Resume data ──────────────────────────────────────────────────────────
   const resumeData = {
@@ -673,7 +660,7 @@ export default function CreateResumePage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <ResumeBuildIsolationShell>
+    <ResumeBuilderLayout title="Resume Builder | ForgeTomorrow">
       <style jsx global>{`
         html, body { overflow-x: hidden; }
         @media (max-width: 1100px) {
@@ -684,37 +671,6 @@ export default function CreateResumePage() {
           .ft-rb-status-col { display: none !important; }
           .ft-rb-toolbar-row { grid-template-columns: 1fr !important; }
           .ft-rb-toolbar-inner { min-width: 0 !important; overflow: hidden !important; }
-        }
-
-        /* ─── Mobile More sheet ───────────────────────────────────────── */
-        .ft-more-backdrop {
-          display: none;
-        }
-        .ft-more-sheet {
-          display: none;
-        }
-        @media (max-width: 1100px) {
-          .ft-more-backdrop {
-            display: block;
-            position: fixed; inset: 0; z-index: 230;
-            background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-            opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
-          }
-          .ft-more-backdrop.open { opacity: 1; pointer-events: all; }
-          .ft-more-sheet {
-            display: flex;
-            position: fixed; left: 0; right: 0; bottom: 0; z-index: 231;
-            flex-direction: column;
-            background: rgba(252,252,253,0.99);
-            border-radius: 20px 20px 0 0;
-            border-top: 1px solid rgba(255,112,67,0.15);
-            box-shadow: 0 -24px 60px rgba(0,0,0,0.20);
-            max-height: 80vh;
-            transform: translateY(100%);
-            transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
-            padding-bottom: env(safe-area-inset-bottom, 16px);
-          }
-          .ft-more-sheet.open { transform: translateY(0); }
         }
 
         /* ─── Hammer pull-tab (mobile only) ──────────────────────────── */
@@ -774,94 +730,7 @@ export default function CreateResumePage() {
               subtitle="Build your resume once. Export anywhere. Reverse Chronological and Hybrid for traditional markets — ForgeFormat for people with real careers."
             />
             <div style={{...GLASS_CARD, padding:'12px 14px', minWidth:0, overflow:'hidden'}}>
-
-              {/* ── MOBILE TOOLBAR (≤1100px) ─────────────────────────────────── */}
-              {isMobile && (
-                <div style={{display:'flex',flexDirection:'column',gap:8}}>
-
-                  {/* Row 1: Draft selector + Save */}
-                  <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
-                    <select
-                      value={selectedResumeId}
-                      onChange={(e)=>setSelectedResumeId(e.target.value)}
-                      style={{flex:1,minWidth:0,height:34,borderRadius:10,border:'1px solid rgba(0,0,0,0.12)',background:'rgba(255,255,255,0.90)',padding:'0 10px',fontSize:13,fontWeight:700,color:'#334155',outline:'none'}}
-                    >
-                      {existingResumes.length===0
-                        ? <option value="">No saved resumes yet</option>
-                        : existingResumes.map((r)=>(
-                          <option key={r.id} value={String(r.id)}>
-                            {r.name||r.resumeName||'Untitled'}{r.isPrimary?' ⭐':''}
-                          </option>
-                        ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={handleSaveClick}
-                      style={{flexShrink:0,background:'#16A34A',color:'white',padding:'7px 14px',borderRadius:10,fontWeight:900,fontSize:13,border:'none',cursor:'pointer',whiteSpace:'nowrap'}}
-                    >
-                      {saveState==='saving'?'Saving…':saveState==='saved'?'✓ Saved':'Save'}
-                    </button>
-                  </div>
-
-                  {/* Row 2: Workspace mode + More */}
-                  <div style={{display:'flex',alignItems:'center',gap:6}}>
-                    <button
-                      type="button"
-                      onClick={()=>{setPreviewMode('standard');setIsEditMode(true);}}
-                      style={{flex:1,padding:'8px 4px',borderRadius:10,border:isEditMode&&previewMode==='standard'?`1.5px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:isEditMode&&previewMode==='standard'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:isEditMode&&previewMode==='standard'?'#C2410C':'#334155',fontWeight:800,fontSize:13,cursor:'pointer',fontFamily:'inherit'}}
-                    >✏️ Edit</button>
-                    <button
-                      type="button"
-                      onClick={()=>{setPreviewMode('standard');setIsEditMode(false);}}
-                      style={{flex:1,padding:'8px 4px',borderRadius:10,border:!isEditMode&&previewMode==='standard'?`1.5px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:!isEditMode&&previewMode==='standard'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:!isEditMode&&previewMode==='standard'?'#C2410C':'#334155',fontWeight:800,fontSize:13,cursor:'pointer',fontFamily:'inherit'}}
-                    >👁 Preview</button>
-                    <button
-                      type="button"
-                      onClick={()=>setIsFocusMode(v=>!v)}
-                      style={{flex:1,padding:'8px 4px',borderRadius:10,border:isFocusMode?`1.5px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:isFocusMode?'rgba(255,112,67,0.12)':'rgba(255,255,255,0.80)',color:isFocusMode?'#C2410C':'#334155',fontWeight:800,fontSize:13,cursor:'pointer',fontFamily:'inherit'}}
-                    >{isFocusMode?'← Exit':'🎯 Focus'}</button>
-                    <button
-                      type="button"
-                      onClick={()=>setMoreSheetOpen(true)}
-                      style={{flexShrink:0,padding:'8px 12px',borderRadius:10,border:'1px solid rgba(0,0,0,0.12)',background:'rgba(255,255,255,0.80)',color:'#334155',fontWeight:900,fontSize:15,cursor:'pointer',fontFamily:'inherit'}}
-                    >⋯</button>
-                  </div>
-
-                  {/* Status mini + Cover Letter — compact row */}
-                  <div style={{display:'flex',alignItems:'center',gap:10,paddingTop:2}}>
-                    <div style={{display:'flex',alignItems:'center',gap:5}}>
-                      <div style={{position:'relative',width:20,height:20,flexShrink:0}}>
-                        <svg width="20" height="20" viewBox="0 0 20 20">
-                          <circle cx="10" cy="10" r="7" fill="none" stroke="#E5E7EB" strokeWidth="2.5"/>
-                          <circle cx="10" cy="10" r="7" fill="none"
-                            stroke={statusLabel==='Ready to Send'?'#10B981':statusLabel==='Targeted'?'#0EA5E9':statusLabel==='Usable'?ORANGE:'#CBD5E1'}
-                            strokeWidth="2.5"
-                            strokeDasharray={`${(progress/100)*44} 44`}
-                            strokeLinecap="round"
-                            style={{transformOrigin:'center',transform:'rotate(-90deg)'}}/>
-                        </svg>
-                        <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:5,fontWeight:900,color:'#374151'}}>{progress}%</span>
-                      </div>
-                      <span style={{fontSize:11,fontWeight:700,color:'#64748B'}}>{statusLabel}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={()=>{
-                        const params=new URLSearchParams();
-                        params.set('fresh','1');
-                        if(chrome) params.set('chrome',chrome);
-                        if(router.query.jobId) params.set('jobId',String(router.query.jobId));
-                        router.push(`/cover/create${params.toString()?`?${params.toString()}`:''}`)
-                      }}
-                      style={{fontSize:12,fontWeight:800,padding:'4px 10px',borderRadius:8,border:`1px solid rgba(255,112,67,0.25)`,background:'rgba(255,112,67,0.08)',color:ORANGE,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}
-                    >✍️ Cover Letter →</button>
-                  </div>
-
-                </div>
-              )}
-
-              {/* ── DESKTOP TOOLBAR (>1100px) — unchanged ────────────────────── */}
-              {!isMobile && (
+              {/* Two-column: left = 3 uniform rows, right = Status + Next Step stacked */}
               <div className="ft-rb-toolbar-row" style={{display:'grid',gridTemplateColumns:'1fr auto',gap:10,alignItems:'start'}}>
 
                 {/* LEFT — three rows, all same width */}
@@ -954,93 +823,13 @@ export default function CreateResumePage() {
 
               </div>
             </div>
-              )} {/* end !isMobile desktop toolbar */}
-
-            </div> {/* end GLASS_CARD toolbar */}
-
-            {/* ── More bottom sheet (mobile) ─────────────────────────────────── */}
-            <div className={`ft-more-backdrop${moreSheetOpen?' open':''}`} onClick={()=>setMoreSheetOpen(false)} />
-            <div className={`ft-more-sheet${moreSheetOpen?' open':''}`}>
-              {/* Handle */}
-              <div style={{display:'flex',justifyContent:'center',padding:'12px 0 4px'}}>
-                <div style={{width:36,height:4,borderRadius:999,background:'rgba(0,0,0,0.12)'}}/>
-              </div>
-              {/* Header */}
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 20px 14px',borderBottom:'1px solid rgba(0,0,0,0.07)'}}>
-                <span style={{fontWeight:900,fontSize:16,color:'#112033'}}>More Options</span>
-                <button onClick={()=>setMoreSheetOpen(false)} style={{background:'rgba(0,0,0,0.06)',border:'none',width:30,height:30,borderRadius:'50%',cursor:'pointer',fontSize:16,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
-              </div>
-              {/* Scrollable content */}
-              <div style={{overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'16px 20px',display:'grid',gap:20}}>
-
-                {/* FORMAT */}
-                <div>
-                  <div style={{fontSize:10,fontWeight:900,color:'#94A3B8',letterSpacing:'0.06em',marginBottom:10}}>FORMAT</div>
-                  <div style={{display:'grid',gap:8}}>
-                    {[
-                      {label:'Reverse Chronological',active:!isHybrid&&previewMode!=='signal-test',onClick:()=>router.push(buildResumeCreateHref('reverse'))},
-                      {label:'Hybrid',active:isHybrid&&previewMode!=='signal-test',onClick:()=>router.push(buildResumeCreateHref('hybrid'))},
-                      {label:'ForgeFormat',active:previewMode==='signal-test',onClick:()=>setPreviewMode('signal-test')},
-                    ].map(({label,active,onClick})=>(
-                      <button key={label} type="button"
-                        onClick={()=>{onClick();setMoreSheetOpen(false);}}
-                        style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderRadius:12,border:`1.5px solid ${active?ORANGE:'rgba(0,0,0,0.08)'}`,background:active?'rgba(255,112,67,0.08)':'white',color:active?'#C2410C':'#334155',fontWeight:active?900:600,fontSize:14,cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}
-                      >
-                        <span style={{width:18,height:18,borderRadius:'50%',border:`2px solid ${active?ORANGE:'#CBD5E1'}`,background:active?ORANGE:'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
-                          {active&&<span style={{width:8,height:8,borderRadius:'50%',background:'white',display:'block'}}/>}
-                        </span>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* EXPORT */}
-                <div>
-                  <div style={{fontSize:10,fontWeight:900,color:'#94A3B8',letterSpacing:'0.06em',marginBottom:10}}>EXPORT</div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                    {isHybrid
-                      ? <HybridATSButton data={resumeData}><div onClick={()=>setMoreSheetOpen(false)} style={{background:'#0F766E',color:'white',padding:'12px',borderRadius:12,fontWeight:900,fontSize:13,cursor:'pointer',textAlign:'center'}}>↓ Clean PDF</div></HybridATSButton>
-                      : <ReverseATSButton data={resumeData}><div onClick={()=>setMoreSheetOpen(false)} style={{background:'#0F766E',color:'white',padding:'12px',borderRadius:12,fontWeight:900,fontSize:13,cursor:'pointer',textAlign:'center'}}>↓ Clean PDF</div></ReverseATSButton>}
-                    <DesignedPDFButton data={resumeData} template={isHybrid?'hybrid':'reverse'}>
-                      <div onClick={()=>setMoreSheetOpen(false)} style={{background:ORANGE,color:'white',padding:'12px',borderRadius:12,fontWeight:900,fontSize:13,cursor:'pointer',textAlign:'center'}}>↓ Designed PDF</div>
-                    </DesignedPDFButton>
-                  </div>
-                </div>
-
-                {/* MANAGE */}
-                <div>
-                  <div style={{fontSize:10,fontWeight:900,color:'#94A3B8',letterSpacing:'0.06em',marginBottom:10}}>MANAGE</div>
-                  <div style={{display:'grid',gap:8}}>
-                    <button type="button" onClick={()=>{handleLoadSelectedResume();setMoreSheetOpen(false);}}
-                      style={{padding:'12px 14px',borderRadius:12,border:'1px solid rgba(0,0,0,0.10)',background:'white',color:'#334155',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}>
-                      Load Selected Draft
-                    </button>
-                    <button type="button" onClick={()=>{handleCreateNewResume();setMoreSheetOpen(false);}}
-                      style={{padding:'12px 14px',borderRadius:12,border:'1px solid rgba(255,112,67,0.25)',background:'rgba(255,112,67,0.06)',color:'#C2410C',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}>
-                      + New Draft
-                    </button>
-                    <button type="button"
-                      onClick={()=>{setMoreSheetOpen(false);if(resumeFileInputRef.current){resumeFileInputRef.current.value='';resumeFileInputRef.current.click();}}}
-                      disabled={resumeUploadState==='uploading'}
-                      style={{padding:'12px 14px',borderRadius:12,border:'1px solid rgba(0,0,0,0.10)',background:resumeUploadState==='done'?'#0F766E':resumeUploadState==='error'?'#B91C1C':'white',color:resumeUploadState==='idle'?'#334155':'white',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}
-                    >
-                      {resumeUploadState==='uploading'?'Importing…':resumeUploadState==='done'?'✓ Imported':'↑ Import Resume'}
-                    </button>
-                    <input ref={resumeFileInputRef} type="file" accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
-                      onChange={(e)=>{const f=e.target.files?.[0];if(f) handleResumeFile(f);}}
-                      style={{display:'none'}}/>
-                  </div>
-                </div>
-
-              </div>
-            </div>
+          </div>
 
           {/* AD RAIL — beside title + command card only, without forcing a tall spacer */}
           {!isFocusMode&&(
             <div className="ft-ad-rail-outer" style={{width:'220px',height:295,flexShrink:0,overflow:'hidden',borderRadius:14}}>
               <div className="ft-ad-rail-inner" style={{width:280,transform:'scale(0.78)',transformOrigin:'top left'}}>
-                <RightRailPlacementManagerPlaceholder/>
+                <RightRailPlacementManager slot="right_rail_1"/>
               </div>
             </div>
           )}
@@ -1238,6 +1027,6 @@ export default function CreateResumePage() {
       )}
 
       {saveModal}
-    </ResumeBuildIsolationShell>
+    </ResumeBuilderLayout>
   );
 }
