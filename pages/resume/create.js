@@ -940,7 +940,7 @@ export default function CreateResumePage() {
             position: fixed; right: 0; top: 50%; transform: translateY(-50%);
             z-index: 220;
             flex-direction: column; align-items: center; justify-content: center;
-            width: 22px; height: 110px; padding: 0;
+            width: 42px; height: 140px; padding: 0;
             border-radius: 10px 0 0 10px; border: none;
             background: linear-gradient(135deg, ${ORANGE}, #FF8A65);
             color: #fff; font-family: inherit; font-size: 18px;
@@ -1208,8 +1208,8 @@ export default function CreateResumePage() {
   src="/icons/hammer-tab.png"
   alt="Forge Hammer"
   style={{
-    width: '80%',
-    height: '80%',
+    width: '100%',
+    height: '100%',
     objectFit: 'contain',
     display: 'block',
   }}
