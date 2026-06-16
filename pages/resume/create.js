@@ -843,7 +843,7 @@ export default function CreateResumePage() {
         </div>
 
         {/* RESUME + HAMMER GRID — full width, no ad rail competing */}
-        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0,1fr) 340px',gap:12,alignItems:'start',width:'100%',maxWidth:'100%',overflow:'hidden'}}>
+        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0,1fr) 340px',gap:12,alignItems:'start',width:'100%',maxWidth:'100%'}}>
 
           {/* CENTER: Resume */}
           <div style={{...GLASS_CARD,overflow:'hidden',minWidth:0,width:'100%'}}>
