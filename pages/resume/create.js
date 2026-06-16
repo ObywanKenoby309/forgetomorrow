@@ -787,24 +787,30 @@ export default function CreateResumePage() {
                     <input ref={resumeFileInputRef} type="file" accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
                       onChange={(e)=>{const f=e.target.files?.[0];if(f) handleResumeFile(f);}}
                       style={{display:'none'}}/>
-                    {/* Status mini-ring + Cover Letter — inline, secondary */}
-                    <div style={{width:1,height:18,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
-                    <div title={statusLabel} style={{display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
-                      <div style={{position:'relative',width:22,height:22,flexShrink:0}}>
-                        <svg width="22" height="22" viewBox="0 0 22 22">
-                          <circle cx="11" cy="11" r="8" fill="none" stroke="#E5E7EB" strokeWidth="2.5"/>
-                          <circle cx="11" cy="11" r="8" fill="none"
-                            stroke={statusLabel==='Ready to Send'?'#10B981':statusLabel==='Targeted'?'#0EA5E9':statusLabel==='Usable'?ORANGE:'#CBD5E1'}
-                            strokeWidth="2.5"
-                            strokeDasharray={`${(progress/100)*50.3} 50.3`}
-                            strokeLinecap="round"
-                            style={{transformOrigin:'center',transform:'rotate(-90deg)'}}/>
-                        </svg>
-                        <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:6,fontWeight:900,color:'#374151'}}>{progress}%</span>
-                      </div>
-                      <span style={{fontSize:10,fontWeight:700,color:'#64748B',whiteSpace:'nowrap'}}>{statusLabel}</span>
+                  </div>
+
+                </div>
+
+                {/* RIGHT — Status + Next Step, stacked, fixed width */}
+                <div className="ft-rb-status-col" style={{display:'grid',gap:6,width:140,flexShrink:0}}>
+
+                  {/* Status — ring only */}
+                  <div style={{...TOOL_GROUP,flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'8px 10px',textAlign:'center'}}>
+                    <span style={GROUP_LABEL}>Status</span>
+                    <div title={statusLabel} style={{position:'relative',width:38,height:38,cursor:'default'}}>
+                      <svg width="38" height="38" viewBox="0 0 38 38">
+                        <circle cx="19" cy="19" r="15" fill="none" stroke="#E5E7EB" strokeWidth="3"/>
+                        <circle cx="19" cy="19" r="15" fill="none" stroke={statusLabel==='Ready to Send'?'#10B981':statusLabel==='Targeted'?'#0EA5E9':statusLabel==='Usable'?ORANGE:'#CBD5E1'} strokeWidth="3"
+                          strokeDasharray={`${(progress/100)*94.2} 94.2`} strokeLinecap="round"
+                          style={{transition:'stroke-dasharray 0.5s ease',transformOrigin:'center',transform:'rotate(-90deg)'}}/>
+                      </svg>
+                      <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:900,color:'#374151'}}>{progress}%</span>
                     </div>
-                    <div style={{width:1,height:18,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
+                  </div>
+
+                  {/* Next Step */}
+                  <div style={{...TOOL_GROUP,flexDirection:'column',alignItems:'center',gap:5,padding:'8px 10px',textAlign:'center'}}>
+                    <span style={GROUP_LABEL}>Next Step</span>
                     <button
                       type="button"
                       onClick={()=>{
@@ -814,13 +820,14 @@ export default function CreateResumePage() {
                         if(router.query.jobId) params.set('jobId',String(router.query.jobId));
                         router.push(`/cover/create${params.toString()?`?${params.toString()}`:''}`);
                       }}
-                      style={{...PILL_BUTTON,background:'rgba(255,112,67,0.08)',color:ORANGE,border:`1px solid rgba(255,112,67,0.25)`,fontWeight:800,fontSize:11,padding:'4px 8px',whiteSpace:'nowrap'}}
+                      style={{...PILL_BUTTON,background:'rgba(255,112,67,0.10)',color:ORANGE,border:`1px solid rgba(255,112,67,0.30)`,fontWeight:900,fontSize:11,padding:'5px 8px',width:'100%',textAlign:'center'}}
                       title="Write a cover letter using this resume"
                     >
                       ✍️ Cover Letter →
                     </button>
                   </div>
 
+                </div>
               </div>
             </div>
           </div>
@@ -1016,7 +1023,6 @@ export default function CreateResumePage() {
             />
           </div>
         )}
-      </div>
       </div>
 
       {/* Toast */}
