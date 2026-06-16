@@ -1,8 +1,55 @@
 // pages/index.js — ForgeTomorrow homepage v2 — product-first, premium dark SaaS
 import Head from 'next/head';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+
+function getDashboardPath(user) {
+  const role = String(user?.role || '').toUpperCase();
+
+  if (role === 'ADMIN' || role === 'SITE_ADMIN') return '/admin';
+  if (role === 'RECRUITER') return '/recruiter/dashboard';
+  if (role === 'COACH') return '/coaching-dashboard';
+
+  return '/seeker-dashboard';
+}
 
 export default function Home() {
+  const router = useRouter();
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function routeSignedInUser() {
+      try {
+        const res = await fetch('/api/auth/me', { method: 'GET' });
+        if (!res.ok) {
+          if (!cancelled) setCheckingSession(false);
+          return;
+        }
+
+        const data = await res.json();
+        const user = data?.user || null;
+
+        if (!cancelled && user) {
+          router.replace(getDashboardPath(user));
+          return;
+        }
+      } catch {
+        // Logged-out public homepage should still render if the check fails.
+      }
+
+      if (!cancelled) setCheckingSession(false);
+    }
+
+    routeSignedInUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
   return (
     <>
       <Head>
@@ -565,6 +612,12 @@ export default function Home() {
       </Head>
 
       <main>
+
+        {checkingSession && (
+          <div aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(10,10,11,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FF7043', fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12 }}>
+            Opening ForgeTomorrow…
+          </div>
+        )}
 
         {/* ── HERO ─────────────────────────────────────────────────── */}
         <section className="hero">
