@@ -30,6 +30,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
+import { createNotification } from '@/lib/notifications/writer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -107,18 +108,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Notify seeker
       try {
-        await prisma.notification.create({
-          data: {
-            userId:     requesterId,
-            scope:      'SEEKER',
-            category:   'CALENDAR',
-            title:      'Session request declined',
-            body:       `${coachName} was unable to accept your session request at this time.`,
-            entityType: 'APPOINTMENT_REQUEST',
-            entityId:   appt.id,
-            dedupeKey:  `appt_declined_${appt.id}`,
-            metadata:   { actionUrl: '/the-hearth?module=mentorship' },
-          },
+        await createNotification({
+          userId:     requesterId,
+          scope:      'SEEKER',
+          category:   'CALENDAR',
+          title:      'Session request declined',
+          body:       `${coachName} was unable to accept your session request at this time.`,
+          entityType: 'APPOINTMENT_REQUEST',
+          entityId:   appt.id,
+          dedupeKey:  `appt_declined_${appt.id}`,
+          metadata:   { actionUrl: '/the-hearth?module=mentorship' },
+          pushUrl:    '/the-hearth?module=mentorship',
         });
       } catch (e) {
         console.error('[appointments/respond] decline notify failed:', e);
@@ -149,22 +149,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           weekday: 'short', month: 'short', day: 'numeric',
           hour: 'numeric', minute: '2-digit',
         });
-        await prisma.notification.create({
-          data: {
-            userId:     requesterId,
-            scope:      'SEEKER',
-            category:   'CALENDAR',
-            title:      'Coach suggested a new time',
-            body:       `${coachName} proposed ${friendlyTime} for your session.`,
-            entityType: 'APPOINTMENT_REQUEST',
-            entityId:   appt.id,
-            dedupeKey:  `appt_suggested_${appt.id}_${suggestedDate.getTime()}`,
-            metadata:   {
-              actionUrl:     '/dashboard/appointments',
-              suggestedTime: suggestedTime,
-              coachNotes:    coachNotes?.trim() || null,
-            },
+        await createNotification({
+          userId:     requesterId,
+          scope:      'SEEKER',
+          category:   'CALENDAR',
+          title:      'Coach suggested a new time',
+          body:       `${coachName} proposed ${friendlyTime} for your session.`,
+          entityType: 'APPOINTMENT_REQUEST',
+          entityId:   appt.id,
+          dedupeKey:  `appt_suggested_${appt.id}_${suggestedDate.getTime()}`,
+          metadata:   {
+            actionUrl:     '/dashboard/appointments',
+            suggestedTime: suggestedTime,
+            coachNotes:    coachNotes?.trim() || null,
           },
+          pushUrl:    '/dashboard/appointments',
         });
       } catch (e) {
         console.error('[appointments/respond] suggest notify failed:', e);
@@ -304,22 +303,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         weekday: 'short', month: 'short', day: 'numeric',
         hour: 'numeric', minute: '2-digit',
       });
-      await prisma.notification.create({
-        data: {
-          userId:     requesterId,
-          scope:      'SEEKER',
-          category:   'CALENDAR',
-          title:      'Session confirmed!',
-          body:       `${coachName} confirmed your session for ${friendlyTime}.`,
-          entityType: 'APPOINTMENT_REQUEST',
-          entityId:   appt.id,
-          dedupeKey:  `appt_confirmed_${appt.id}`,
-          metadata:   {
-            actionUrl:      '/dashboard/coaching/sessions',
-            conversationId: result.conversationId,
-            sessionId:      result.coachingSession.id,
-          },
+      await createNotification({
+        userId:     requesterId,
+        scope:      'SEEKER',
+        category:   'CALENDAR',
+        title:      'Session confirmed!',
+        body:       `${coachName} confirmed your session for ${friendlyTime}.`,
+        entityType: 'APPOINTMENT_REQUEST',
+        entityId:   appt.id,
+        dedupeKey:  `appt_confirmed_${appt.id}`,
+        metadata:   {
+          actionUrl:      '/dashboard/coaching/sessions',
+          conversationId: result.conversationId,
+          sessionId:      result.coachingSession.id,
         },
+        pushUrl:    '/dashboard/coaching/sessions',
       });
     } catch (e) {
       console.error('[appointments/respond] confirm notify failed:', e);
