@@ -18,6 +18,7 @@ import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
 
 // ✅ Mobile bottom bar (Tools opens sidebar sheet on mobile)
 import MobileBottomBar from '@/components/mobile/MobileBottomBar';
+import PushPermissionPrompt from '@/components/notifications/PushPermissionPrompt';
 
 const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
 
@@ -421,6 +422,8 @@ export default function SeekerLayout({
       <Head>
         <title>{title}</title>
       </Head>
+
+      <PushPermissionPrompt />
 
       <div style={backgroundStyle}>
         <HeaderComp />

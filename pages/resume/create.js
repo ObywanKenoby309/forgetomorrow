@@ -82,6 +82,90 @@ const PILL_BUTTON = {
 };
 
 
+// ─── Portal-based dropdown menu ─────────────────────────────────────────────
+// Escapes any ancestor stacking context (GLASS_CARD's backdrop-filter, grid
+// containers, etc.) by rendering into document.body. Shared `openMenu` state
+// means opening one menu always closes any other that's open.
+function DropdownMenu({ id, label, openMenu, setOpenMenu, align = 'left', children }) {
+  const anchorRef = useRef(null);
+  const panelRef = useRef(null);
+  const [coords, setCoords] = useState(null);
+  const isOpen = openMenu === id;
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function place() {
+      const el = anchorRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom + 7,
+        left: align === 'right' ? undefined : rect.left,
+        right: align === 'right' ? window.innerWidth - rect.right : undefined,
+        minWidth: rect.width,
+      });
+    }
+
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [isOpen, align]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function onClickOutside(e) {
+      if (anchorRef.current?.contains(e.target)) return;
+      if (panelRef.current?.contains(e.target)) return;
+      setOpenMenu(null);
+    }
+    function onEscape(e) {
+      if (e.key === 'Escape') setOpenMenu(null);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onEscape);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onEscape);
+    };
+  }, [isOpen, setOpenMenu]);
+
+  return (
+    <div className="ft-menu" ref={anchorRef}>
+      <button
+        type="button"
+        className="ft-menu-summary"
+        onClick={() => setOpenMenu(isOpen ? null : id)}
+        aria-expanded={isOpen}
+      >
+        {label} <span style={{ display: 'inline-block', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }}>▾</span>
+      </button>
+
+      {isOpen && coords && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={panelRef}
+          className="ft-menu-panel-portal"
+          style={{
+            position: 'fixed',
+            top: coords.top,
+            left: coords.left,
+            right: coords.right,
+            minWidth: Math.max(coords.minWidth, 190),
+          }}
+          onClick={() => setOpenMenu(null)}
+        >
+          {children}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 export default function CreateResumePage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
@@ -133,6 +217,7 @@ export default function CreateResumePage() {
   const isMobile = useIsMobile();
   const [hammerOpen, setHammerOpen] = useState(false);
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState(null); // 'loadSave' | 'format' | 'workspace' | 'export' | null
 
   // ─── Resume data ──────────────────────────────────────────────────────────
   const resumeData = {
@@ -706,8 +791,7 @@ export default function CreateResumePage() {
           position: relative;
           flex: 0 0 auto;
         }
-        .ft-menu summary {
-          list-style: none;
+        .ft-menu-summary {
           border-radius: 999px;
           padding: 6px 12px;
           font-size: 12px;
@@ -719,34 +803,26 @@ export default function CreateResumePage() {
           user-select: none;
           white-space: nowrap;
           box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+          font-family: inherit;
         }
-        .ft-menu summary::-webkit-details-marker { display: none; }
-        .ft-menu[open] summary {
+        .ft-menu-summary[aria-expanded="true"] {
           border-color: rgba(255,112,67,0.36);
           background: rgba(255,112,67,0.10);
           color: #C2410C;
         }
-        .ft-menu-panel {
-          position: absolute;
-          left: 0;
-          top: calc(100% + 7px);
-          z-index: 500;
-          min-width: 190px;
+        .ft-menu-panel-portal {
+          z-index: 9999;
           display: grid;
           gap: 6px;
           padding: 8px;
           border-radius: 14px;
           border: 1px solid rgba(255,255,255,0.28);
-          background: rgba(255,255,255,0.96);
-          box-shadow: 0 18px 45px rgba(15,23,42,0.22);
+          background: rgba(255,255,255,0.98);
+          box-shadow: 0 18px 45px rgba(15,23,42,0.28);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
         }
-        .ft-menu-panel.right {
-          left: auto;
-          right: 0;
-        }
-        .ft-menu-panel button,
+        .ft-menu-panel-portal button,
         .ft-menu-action {
           width: 100%;
           text-align: left;
@@ -760,7 +836,7 @@ export default function CreateResumePage() {
           cursor: pointer;
           font-family: inherit;
         }
-        .ft-menu-panel button:hover,
+        .ft-menu-panel-portal button:hover,
         .ft-menu-action:hover {
           background: rgba(255,112,67,0.08);
           border-color: rgba(255,112,67,0.22);
@@ -788,17 +864,14 @@ export default function CreateResumePage() {
             flex: 1 1 calc(50% - 8px);
             min-width: 132px;
           }
-          .ft-menu summary {
+          .ft-menu-summary {
             width: 100%;
             text-align: center;
             padding: 8px 9px;
             font-size: 12px;
           }
-          .ft-menu-panel,
-          .ft-menu-panel.right {
-            left: 0;
-            right: auto;
-            min-width: min(260px, 92vw);
+          .ft-menu-panel-portal {
+            min-width: min(260px, 92vw) !important;
           }
           .ft-status-inline {
             flex: 1 1 auto;
@@ -919,38 +992,27 @@ export default function CreateResumePage() {
                     </select>
                   </div>
 
-                  <details className="ft-menu">
-                    <summary>Load / Save ▾</summary>
-                    <div className="ft-menu-panel">
+                  <DropdownMenu id="loadSave" label="Load / Save" openMenu={openMenu} setOpenMenu={setOpenMenu}>
                       <button type="button" onClick={handleLoadSelectedResume}>Load Selected Resume</button>
                       <button type="button" onClick={handleCreateNewResume}>New Draft</button>
                       <button type="button" onClick={handleSaveClick} style={{background:'#16A34A',color:'white',borderColor:'rgba(22,163,74,0.28)'}}>
                         {saveState==='saving'?'Saving…':saveState==='saved'?'✓ Saved':'Save / Manage'}
                       </button>
-                    </div>
-                  </details>
+                  </DropdownMenu>
 
-                  <details className="ft-menu">
-                    <summary>{previewMode==='signal-test'?'ForgeFormat':isHybrid?'Hybrid':'Reverse'} ▾</summary>
-                    <div className="ft-menu-panel">
+                  <DropdownMenu id="format" label={previewMode==='signal-test'?'ForgeFormat':isHybrid?'Hybrid':'Reverse'} openMenu={openMenu} setOpenMenu={setOpenMenu}>
                       <button type="button" onClick={()=>router.push(buildResumeCreateHref('reverse'))} style={!isHybrid&&previewMode!=='signal-test'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>Reverse</button>
                       <button type="button" onClick={()=>router.push(buildResumeCreateHref('hybrid'))} style={isHybrid&&previewMode!=='signal-test'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>Hybrid</button>
                       <button type="button" onClick={()=>setPreviewMode('signal-test')} style={previewMode==='signal-test'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>ForgeFormat</button>
-                    </div>
-                  </details>
+                  </DropdownMenu>
 
-                  <details className="ft-menu">
-                    <summary>{isFocusMode?'Focus':isEditMode?'Edit':'Preview'} ▾</summary>
-                    <div className="ft-menu-panel">
+                  <DropdownMenu id="workspace" label={isFocusMode?'Focus':isEditMode?'Edit':'Preview'} openMenu={openMenu} setOpenMenu={setOpenMenu}>
                       <button type="button" onClick={()=>{setPreviewMode('standard');setIsEditMode(true);}} style={isEditMode&&previewMode==='standard'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>✏️ Edit</button>
                       <button type="button" onClick={()=>{setPreviewMode('standard');setIsEditMode(false);}} style={!isEditMode&&previewMode==='standard'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>👁 Preview</button>
                       <button type="button" onClick={()=>setIsFocusMode((v)=>!v)} style={isFocusMode?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>{isFocusMode?'← Exit Focus':'🎯 Focus'}</button>
-                    </div>
-                  </details>
+                  </DropdownMenu>
 
-                  <details className="ft-menu">
-                    <summary>Export / Import ▾</summary>
-                    <div className="ft-menu-panel right">
+                  <DropdownMenu id="export" label="Export / Import" align="right" openMenu={openMenu} setOpenMenu={setOpenMenu}>
                       {isHybrid
                         ? <HybridATSButton data={resumeData}><div className="ft-menu-action" style={{background:'#0F766E',color:'white',borderColor:'rgba(15,118,110,0.28)'}}>↓ Clean PDF</div></HybridATSButton>
                         : <ReverseATSButton data={resumeData}><div className="ft-menu-action" style={{background:'#0F766E',color:'white',borderColor:'rgba(15,118,110,0.28)'}}>↓ Clean PDF</div></ReverseATSButton>}
@@ -959,7 +1021,7 @@ export default function CreateResumePage() {
                       </DesignedPDFButton>
                       <button
                         type="button"
-                        onClick={()=>{if(resumeFileInputRef.current){resumeFileInputRef.current.value='';resumeFileInputRef.current.click();}}}
+                        onClick={(e)=>{e.stopPropagation();if(resumeFileInputRef.current){resumeFileInputRef.current.value='';resumeFileInputRef.current.click();}}}
                         disabled={resumeUploadState==='uploading'}
                         style={{background:resumeUploadState==='done'?'#0F766E':resumeUploadState==='error'?'#B91C1C':'rgba(255,255,255,0.88)',color:resumeUploadState==='idle'?'#334155':'white',cursor:resumeUploadState==='uploading'?'not-allowed':'pointer',opacity:resumeUploadState==='uploading'?0.7:1}}
                       >
@@ -968,8 +1030,7 @@ export default function CreateResumePage() {
                       <input ref={resumeFileInputRef} type="file" accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
                         onChange={(e)=>{const f=e.target.files?.[0];if(f) handleResumeFile(f);}}
                         style={{display:'none'}}/>
-                    </div>
-                  </details>
+                  </DropdownMenu>
 
                   <div title={statusLabel} className="ft-status-inline">
                     <div style={{position:'relative',width:22,height:22,flexShrink:0}}>
@@ -1022,9 +1083,23 @@ export default function CreateResumePage() {
 
           {/* CENTER: Resume */}
           <div style={{...GLASS_CARD,overflow:'hidden'}}>
-            <div style={{padding:'10px 16px',background:'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',color:'white',fontWeight:900,fontSize:13,letterSpacing:0.4,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <span>{isEditMode?'✏️ LIVE RESUME EDITOR':'👁 RESUME PREVIEW'}</span>
-              {isEditMode&&<span style={{fontSize:11,fontWeight:600,opacity:0.75}}>
+            <div style={{
+              padding:'12px 18px',
+              background:'linear-gradient(135deg, rgba(255,112,67,0.16), rgba(255,138,101,0.06))',
+              borderBottom:'1px solid rgba(255,112,67,0.15)',
+              color:'#7A3C1E',
+              fontWeight:900,
+              fontSize:13,
+              letterSpacing:0.3,
+              display:'flex',
+              alignItems:'center',
+              justifyContent:'space-between',
+            }}>
+              <span style={{display:'flex',alignItems:'center',gap:7}}>
+                <span style={{fontSize:15}}>{isEditMode?'✏️':'👁'}</span>
+                {isEditMode?'Live Resume Editor':'Resume Preview'}
+              </span>
+              {isEditMode&&<span style={{fontSize:11,fontWeight:700,color:'#9A5A36',opacity:0.85}}>
                 {saveState==='saving'?'Auto-saving…':saveState==='saved'?'✓ Auto-saved':saveState==='error'?'Auto-save failed':'Click any section to edit'}
               </span>}
             </div>

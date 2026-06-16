@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import PushNotificationToggle from '@/components/notifications/PushNotificationToggle';
 
 // ── Style tokens ─────────────────────────────────────────────
 const GLASS = {
@@ -313,10 +314,7 @@ function NotificationsCard() {
         </div>
         <Toggle value={emailUpdates} onChange={setEmailUpdates} />
       </div>
-      <ComingSoonRow
-        title="Mobile push notifications"
-        description="Get notified on your phone for messages and activity."
-      />
+      <PushNotificationToggle />
     </div>
   );
 }
