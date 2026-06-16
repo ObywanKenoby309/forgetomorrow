@@ -8,8 +8,6 @@ import ResumeBuilderLayout from '@/components/layouts/ResumeBuilderLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import { ResumeContext } from '@/context/ResumeContext';
-import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
-import { uploadJD } from '@/lib/jd/uploadToApi';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
 const ForgeHammerPanel = dynamic(() => import('@/components/hammer/ForgeHammerPanel'), { ssr: false });
@@ -19,6 +17,23 @@ const DesignedPDFButton = dynamic(() => import('@/components/resume-form/export/
 const SignalResumeTestTemplate = dynamic(() => import('@/components/resume-form/templates/SignalResumeTestTemplate'), { ssr: false });
 const ReverseResumeTemplate = dynamic(() => import('@/components/resume-form/templates/ReverseResumeTemplate'), { ssr: false });
 const HybridResumeTemplate = dynamic(() => import('@/components/resume-form/templates/HybridResumeTemplate'), { ssr: false });
+
+let jdIngestModulePromise;
+let jdUploadModulePromise;
+
+const loadJdIngest = () => {
+  if (!jdIngestModulePromise) {
+    jdIngestModulePromise = import('@/lib/jd/ingest');
+  }
+  return jdIngestModulePromise;
+};
+
+const loadJdUpload = () => {
+  if (!jdUploadModulePromise) {
+    jdUploadModulePromise = import('@/lib/jd/uploadToApi');
+  }
+  return jdUploadModulePromise;
+};
 
 // ─── SSR-safe mobile hook ─────────────────────────────────────────────────────
 function useIsMobile(bp = 1100) {
@@ -437,7 +452,7 @@ export default function CreateResumePage() {
             if(typeof pack?.whyScore === 'number') setIncomingWhyScore(pack.whyScore);
             else setIncomingWhyScore(null);
             if(pack?.job) setAtsJobMeta({title:pack.job.title||'',company:pack.job.company||'',location:pack.job.location||''});
-            if(pack?.job?.description&&!jd){const clean=normalizeJobText(pack.job.description);setJd(clean);await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT,clean);setJdStatus('Loaded: Job fire from ATS context');applied=true;}
+            if(pack?.job?.description&&!jd){const { normalizeJobText } = await loadJdIngest();const clean=normalizeJobText(pack.job.description);setJd(clean);await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT,clean);setJdStatus('Loaded: Job fire from ATS context');applied=true;}
           }
         }catch{}
       }
@@ -470,6 +485,8 @@ export default function CreateResumePage() {
     if(!file) return;
     setJdLoading(true); setJdStatus('Processing…');
     try{
+      const { extractTextFromFile, normalizeJobText } = await loadJdIngest();
+      const { uploadJD } = await loadJdUpload();
       let raw=await extractTextFromFile(file);
       if(!raw||!String(raw).trim()) raw=await uploadJD(file);
       const clean=normalizeJobText(raw);
@@ -484,6 +501,8 @@ export default function CreateResumePage() {
     if (!file) return;
     setResumeUploadState('uploading');
     try {
+      const { extractTextFromFile } = await loadJdIngest();
+
       // Extract text from the uploaded resume file
       let raw = await extractTextFromFile(file);
       if (!raw || !String(raw).trim()) {
