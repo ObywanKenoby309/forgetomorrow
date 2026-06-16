@@ -948,6 +948,7 @@ model User {
   newsletterSubscriptions        NewsletterSubscription[]
   ownedNewsletters               Newsletter[]
   notifications                  Notification[]
+  pushSubscriptions              PushSubscription[]
   offers                         Offer[]
   organizationMemberships        OrganizationMember[]             @relation("UserOrganizationMembers")
   ownedOrganizations             Organization[]                   @relation("OrganizationOwner")
@@ -1399,6 +1400,20 @@ model Notification {
   @@index([category])
   @@index([createdAt])
   @@map("notifications")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Conversation {

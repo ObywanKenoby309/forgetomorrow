@@ -132,6 +132,7 @@ export default function CreateResumePage() {
   const [resumeUploadState, setResumeUploadState] = useState('idle'); // idle | uploading | done | error
   const isMobile = useIsMobile();
   const [hammerOpen, setHammerOpen] = useState(false);
+  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
 
   // ─── Resume data ──────────────────────────────────────────────────────────
   const resumeData = {
@@ -663,6 +664,152 @@ export default function CreateResumePage() {
     <ResumeBuilderLayout title="Resume Builder | ForgeTomorrow">
       <style jsx global>{`
         html, body { overflow-x: hidden; }
+        .ft-compact-toolbar {
+          display: grid;
+          gap: 8px;
+          width: 100%;
+          min-width: 0;
+        }
+        .ft-toolbar-main-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          width: 100%;
+          min-width: 0;
+        }
+        .ft-resume-select-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex: 1 1 340px;
+          min-width: 260px;
+          padding: 6px 8px;
+          border-radius: 14px;
+          background: rgba(255,255,255,0.46);
+          border: 1px solid rgba(15,23,42,0.07);
+        }
+        .ft-resume-select-group select {
+          flex: 1 1 auto;
+          min-width: 0;
+          height: 30px;
+          border-radius: 999px;
+          border: 1px solid rgba(0,0,0,0.10);
+          background: rgba(255,255,255,0.88);
+          padding: 0 10px;
+          font-size: 12px;
+          font-weight: 800;
+          color: #334155;
+          outline: none;
+        }
+        .ft-menu {
+          position: relative;
+          flex: 0 0 auto;
+        }
+        .ft-menu summary {
+          list-style: none;
+          border-radius: 999px;
+          padding: 6px 12px;
+          font-size: 12px;
+          border: 1px solid rgba(0,0,0,0.12);
+          background: rgba(255,255,255,0.84);
+          color: #334155;
+          font-weight: 900;
+          cursor: pointer;
+          user-select: none;
+          white-space: nowrap;
+          box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+        }
+        .ft-menu summary::-webkit-details-marker { display: none; }
+        .ft-menu[open] summary {
+          border-color: rgba(255,112,67,0.36);
+          background: rgba(255,112,67,0.10);
+          color: #C2410C;
+        }
+        .ft-menu-panel {
+          position: absolute;
+          left: 0;
+          top: calc(100% + 7px);
+          z-index: 500;
+          min-width: 190px;
+          display: grid;
+          gap: 6px;
+          padding: 8px;
+          border-radius: 14px;
+          border: 1px solid rgba(255,255,255,0.28);
+          background: rgba(255,255,255,0.96);
+          box-shadow: 0 18px 45px rgba(15,23,42,0.22);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+        }
+        .ft-menu-panel.right {
+          left: auto;
+          right: 0;
+        }
+        .ft-menu-panel button,
+        .ft-menu-action {
+          width: 100%;
+          text-align: left;
+          border-radius: 10px;
+          border: 1px solid rgba(15,23,42,0.08);
+          background: rgba(255,255,255,0.88);
+          color: #334155;
+          padding: 8px 10px;
+          font-size: 12px;
+          font-weight: 850;
+          cursor: pointer;
+          font-family: inherit;
+        }
+        .ft-menu-panel button:hover,
+        .ft-menu-action:hover {
+          background: rgba(255,112,67,0.08);
+          border-color: rgba(255,112,67,0.22);
+          color: #C2410C;
+        }
+        .ft-status-inline {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          flex: 0 0 auto;
+          padding: 5px 9px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.62);
+          border: 1px solid rgba(15,23,42,0.08);
+          white-space: nowrap;
+        }
+        @media (max-width: 1100px) {
+          .ft-toolbar-main-row { gap: 7px; }
+          .ft-resume-select-group {
+            flex: 1 1 100%;
+            min-width: 0;
+            width: 100%;
+          }
+          .ft-menu {
+            flex: 1 1 calc(50% - 8px);
+            min-width: 132px;
+          }
+          .ft-menu summary {
+            width: 100%;
+            text-align: center;
+            padding: 8px 9px;
+            font-size: 12px;
+          }
+          .ft-menu-panel,
+          .ft-menu-panel.right {
+            left: 0;
+            right: auto;
+            min-width: min(260px, 92vw);
+          }
+          .ft-status-inline {
+            flex: 1 1 auto;
+            justify-content: center;
+          }
+          .ft-cover-inline {
+            flex: 1 1 auto !important;
+            text-align: center !important;
+            justify-content: center;
+          }
+        }
         @media (max-width: 1100px) {
           .ft-rb-main { grid-template-columns: 1fr !important; }
           .ft-rb-toprow { grid-template-columns: 1fr !important; }
@@ -673,11 +820,41 @@ export default function CreateResumePage() {
           .ft-rb-toolbar-inner { min-width: 0 !important; overflow: hidden !important; }
         }
 
+        /* ─── Mobile More sheet ───────────────────────────────────────── */
+        .ft-more-backdrop {
+          display: none;
+        }
+        .ft-more-sheet {
+          display: none;
+        }
+        @media (max-width: 1100px) {
+          .ft-more-backdrop {
+            display: block;
+            position: fixed; inset: 0; z-index: 230;
+            background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+          }
+          .ft-more-backdrop.open { opacity: 1; pointer-events: all; }
+          .ft-more-sheet {
+            display: flex;
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 231;
+            flex-direction: column;
+            background: rgba(252,252,253,0.99);
+            border-radius: 20px 20px 0 0;
+            border-top: 1px solid rgba(255,112,67,0.15);
+            box-shadow: 0 -24px 60px rgba(0,0,0,0.20);
+            max-height: 80vh;
+            transform: translateY(100%);
+            transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
+            padding-bottom: env(safe-area-inset-bottom, 16px);
+          }
+          .ft-more-sheet.open { transform: translateY(0); }
+        }
+
         /* ─── Hammer pull-tab (mobile only) ──────────────────────────── */
         .ft-hammer-tab {
           display: none;
         }
-        .ft-hammer-drawer { display: none; }
         @media (max-width: 1100px) {
           .ft-hammer-tab {
             display: flex;
@@ -724,110 +901,107 @@ export default function CreateResumePage() {
 
         {/* TOP: title + command card | compact ad rail — ad no longer controls page spacing */}
         <div className="ft-rb-toprow" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'1fr 220px',gap:12,alignItems:'start',marginBottom:8,width:'100%'}}>
-          <div style={{minWidth:0, overflow:'hidden', display:'grid', gap:8}}>
+          <div style={{minWidth:0, overflow:'visible', display:'grid', gap:8}}>
             <SeekerTitleCard
               greeting={greeting}
               title="Resume Builder"
               subtitle="Build your resume once. Export anywhere. Reverse Chronological and Hybrid for traditional markets — ForgeFormat for people with real careers."
             />
-            <div style={{...GLASS_CARD, padding:'12px 14px', minWidth:0, overflow:'hidden'}}>
-              {/* Two-column: left = 3 uniform rows, right = Status + Next Step stacked */}
-              <div className="ft-rb-toolbar-row" style={{display:'grid',gridTemplateColumns:'1fr auto',gap:10,alignItems:'start'}}>
+            <div style={{...GLASS_CARD, padding:'12px 14px', minWidth:0, overflow:'visible'}}>
 
-                {/* LEFT — three rows, all same width */}
-                <div className="ft-rb-toolbar-inner" style={{display:'grid',gap:6,minWidth:0}}>
-
-                  {/* Row 1: Resume */}
-                  <div style={{...TOOL_GROUP}}>
+              <div className="ft-compact-toolbar">
+                <div className="ft-toolbar-main-row">
+                  <div className="ft-resume-select-group">
                     <span style={GROUP_LABEL}>Resume</span>
-                    <select value={selectedResumeId} onChange={(e)=>setSelectedResumeId(e.target.value)}
-                      style={{flex:1,minWidth:0,height:30,borderRadius:999,border:'1px solid rgba(0,0,0,0.10)',background:'rgba(255,255,255,0.88)',padding:'0 10px',fontSize:12,fontWeight:800,color:'#334155',outline:'none'}}>
+                    <select value={selectedResumeId} onChange={(e)=>setSelectedResumeId(e.target.value)}>
                       {existingResumes.length===0?<option value="">No saved resumes yet</option>
                         :existingResumes.map((r)=><option key={r.id} value={String(r.id)}>{r.name||r.resumeName||'Untitled Resume'}{r.isPrimary?' ⭐':''}</option>)}
                     </select>
-                    <button type="button" onClick={handleLoadSelectedResume} style={PILL_BUTTON}>Load</button>
-                    <button type="button" onClick={handleCreateNewResume} style={{...PILL_BUTTON,border:'1px solid rgba(255,112,67,0.28)',color:'#C2410C',background:'rgba(255,112,67,0.08)'}}>New Draft</button>
-                    <button type="button" onClick={handleSaveClick} style={{background:'#16A34A',color:'white',padding:'6px 13px',borderRadius:999,fontWeight:900,fontSize:12,border:'none',cursor:'pointer',whiteSpace:'nowrap'}}>
-                      {saveState==='saving'?'Saving…':saveState==='saved'?'✓ Saved':'Save / Manage'}
-                    </button>
                   </div>
 
-                  {/* Row 2: Format + Workspace */}
-                  <div style={{...TOOL_GROUP}}>
-                    <span style={GROUP_LABEL}>Format</span>
-                    <button onClick={()=>router.push(buildResumeCreateHref('reverse'))} style={{...PILL_BUTTON,padding:'4px 10px',border:!isHybrid&&previewMode!=='signal-test'?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:!isHybrid&&previewMode!=='signal-test'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:!isHybrid&&previewMode!=='signal-test'?'#C2410C':'#64748B',fontWeight:!isHybrid&&previewMode!=='signal-test'?900:700}}>Reverse</button>
-                    <button onClick={()=>router.push(buildResumeCreateHref('hybrid'))} style={{...PILL_BUTTON,padding:'4px 10px',border:isHybrid&&previewMode!=='signal-test'?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:isHybrid&&previewMode!=='signal-test'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:isHybrid&&previewMode!=='signal-test'?'#C2410C':'#64748B',fontWeight:isHybrid&&previewMode!=='signal-test'?900:700}}>Hybrid</button>
-                    <button type="button" onClick={()=>setPreviewMode('signal-test')} style={{...PILL_BUTTON,padding:'4px 10px',border:previewMode==='signal-test'?`1px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.10)',background:previewMode==='signal-test'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.70)',color:previewMode==='signal-test'?'#C2410C':'#475569',fontWeight:previewMode==='signal-test'?900:800}}>ForgeFormat</button>
-                    <div style={{width:1,height:18,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
-                    <span style={GROUP_LABEL}>Workspace</span>
-                    <button type="button" onClick={()=>{setPreviewMode('standard');setIsEditMode(true);}} style={{...PILL_BUTTON,padding:'4px 10px',border:isEditMode&&previewMode==='standard'?`1px solid rgba(255,112,67,0.40)`:'1px solid rgba(0,0,0,0.12)',background:isEditMode&&previewMode==='standard'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:isEditMode&&previewMode==='standard'?'#C2410C':'#334155'}}>✏️ Edit</button>
-                    <button type="button" onClick={()=>{setPreviewMode('standard');setIsEditMode(false);}} style={{...PILL_BUTTON,padding:'4px 10px',border:!isEditMode&&previewMode==='standard'?`1px solid rgba(255,112,67,0.40)`:'1px solid rgba(0,0,0,0.12)',background:!isEditMode&&previewMode==='standard'?'rgba(255,112,67,0.10)':'rgba(255,255,255,0.80)',color:!isEditMode&&previewMode==='standard'?'#C2410C':'#334155'}}>👁 Preview</button>
-                    <button type="button" onClick={()=>setIsFocusMode((v)=>!v)} style={{...PILL_BUTTON,padding:'4px 10px',border:isFocusMode?`2px solid ${ORANGE}`:'1px solid rgba(0,0,0,0.12)',background:isFocusMode?'rgba(255,112,67,0.12)':'rgba(255,255,255,0.80)',color:isFocusMode?'#C2410C':'#334155',transition:'all 0.2s'}}>{isFocusMode?'← Exit Focus':'🎯 Focus'}</button>
-                  </div>
-
-                  {/* Row 3: Export + Import */}
-                  <div style={{...TOOL_GROUP}}>
-                    <span style={GROUP_LABEL}>Export</span>
-                    {isHybrid
-                      ? <HybridATSButton data={resumeData}><div style={{background:'#0F766E',color:'white',padding:'5px 11px',borderRadius:999,fontWeight:900,fontSize:12,cursor:'pointer'}}>Clean PDF</div></HybridATSButton>
-                      : <ReverseATSButton data={resumeData}><div style={{background:'#0F766E',color:'white',padding:'5px 11px',borderRadius:999,fontWeight:900,fontSize:12,cursor:'pointer'}}>Clean PDF</div></ReverseATSButton>}
-                    <DesignedPDFButton data={resumeData} template={isHybrid?'hybrid':'reverse'}>
-                      <div style={{background:ORANGE,color:'white',padding:'5px 11px',borderRadius:999,fontWeight:900,fontSize:12,cursor:'pointer'}}>Designed PDF</div>
-                    </DesignedPDFButton>
-                    <div style={{width:1,height:18,background:'rgba(0,0,0,0.10)',margin:'0 2px',flexShrink:0}}/>
-                    <span style={GROUP_LABEL}>Import</span>
-                    <button
-                      type="button"
-                      onClick={()=>{if(resumeFileInputRef.current){resumeFileInputRef.current.value='';resumeFileInputRef.current.click();}}}
-                      disabled={resumeUploadState==='uploading'}
-                      style={{...PILL_BUTTON,background:resumeUploadState==='done'?'#0F766E':resumeUploadState==='error'?'#B91C1C':'rgba(255,255,255,0.80)',color:resumeUploadState==='idle'?'#334155':'white',cursor:resumeUploadState==='uploading'?'not-allowed':'pointer',opacity:resumeUploadState==='uploading'?0.7:1}}
-                      title="Upload an existing resume to auto-fill the builder"
-                    >
-                      {resumeUploadState==='uploading'?'Importing…':resumeUploadState==='done'?'✓ Imported':'↑ Import Resume'}
-                    </button>
-                    <input ref={resumeFileInputRef} type="file" accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
-                      onChange={(e)=>{const f=e.target.files?.[0];if(f) handleResumeFile(f);}}
-                      style={{display:'none'}}/>
-                  </div>
-
-                </div>
-
-                {/* RIGHT — Status + Next Step, stacked, fixed width */}
-                <div className="ft-rb-status-col" style={{display:'grid',gap:6,width:140,flexShrink:0}}>
-
-                  {/* Status — ring only */}
-                  <div style={{...TOOL_GROUP,flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'8px 10px',textAlign:'center'}}>
-                    <span style={GROUP_LABEL}>Status</span>
-                    <div title={statusLabel} style={{position:'relative',width:38,height:38,cursor:'default'}}>
-                      <svg width="38" height="38" viewBox="0 0 38 38">
-                        <circle cx="19" cy="19" r="15" fill="none" stroke="#E5E7EB" strokeWidth="3"/>
-                        <circle cx="19" cy="19" r="15" fill="none" stroke={statusLabel==='Ready to Send'?'#10B981':statusLabel==='Targeted'?'#0EA5E9':statusLabel==='Usable'?ORANGE:'#CBD5E1'} strokeWidth="3"
-                          strokeDasharray={`${(progress/100)*94.2} 94.2`} strokeLinecap="round"
-                          style={{transition:'stroke-dasharray 0.5s ease',transformOrigin:'center',transform:'rotate(-90deg)'}}/>
-                      </svg>
-                      <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:900,color:'#374151'}}>{progress}%</span>
+                  <details className="ft-menu">
+                    <summary>Load / Save ▾</summary>
+                    <div className="ft-menu-panel">
+                      <button type="button" onClick={handleLoadSelectedResume}>Load Selected Resume</button>
+                      <button type="button" onClick={handleCreateNewResume}>New Draft</button>
+                      <button type="button" onClick={handleSaveClick} style={{background:'#16A34A',color:'white',borderColor:'rgba(22,163,74,0.28)'}}>
+                        {saveState==='saving'?'Saving…':saveState==='saved'?'✓ Saved':'Save / Manage'}
+                      </button>
                     </div>
+                  </details>
+
+                  <details className="ft-menu">
+                    <summary>{previewMode==='signal-test'?'ForgeFormat':isHybrid?'Hybrid':'Reverse'} ▾</summary>
+                    <div className="ft-menu-panel">
+                      <button type="button" onClick={()=>router.push(buildResumeCreateHref('reverse'))} style={!isHybrid&&previewMode!=='signal-test'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>Reverse</button>
+                      <button type="button" onClick={()=>router.push(buildResumeCreateHref('hybrid'))} style={isHybrid&&previewMode!=='signal-test'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>Hybrid</button>
+                      <button type="button" onClick={()=>setPreviewMode('signal-test')} style={previewMode==='signal-test'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>ForgeFormat</button>
+                    </div>
+                  </details>
+
+                  <details className="ft-menu">
+                    <summary>{isFocusMode?'Focus':isEditMode?'Edit':'Preview'} ▾</summary>
+                    <div className="ft-menu-panel">
+                      <button type="button" onClick={()=>{setPreviewMode('standard');setIsEditMode(true);}} style={isEditMode&&previewMode==='standard'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>✏️ Edit</button>
+                      <button type="button" onClick={()=>{setPreviewMode('standard');setIsEditMode(false);}} style={!isEditMode&&previewMode==='standard'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>👁 Preview</button>
+                      <button type="button" onClick={()=>setIsFocusMode((v)=>!v)} style={isFocusMode?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>{isFocusMode?'← Exit Focus':'🎯 Focus'}</button>
+                    </div>
+                  </details>
+
+                  <details className="ft-menu">
+                    <summary>Export / Import ▾</summary>
+                    <div className="ft-menu-panel right">
+                      {isHybrid
+                        ? <HybridATSButton data={resumeData}><div className="ft-menu-action" style={{background:'#0F766E',color:'white',borderColor:'rgba(15,118,110,0.28)'}}>↓ Clean PDF</div></HybridATSButton>
+                        : <ReverseATSButton data={resumeData}><div className="ft-menu-action" style={{background:'#0F766E',color:'white',borderColor:'rgba(15,118,110,0.28)'}}>↓ Clean PDF</div></ReverseATSButton>}
+                      <DesignedPDFButton data={resumeData} template={isHybrid?'hybrid':'reverse'}>
+                        <div className="ft-menu-action" style={{background:ORANGE,color:'white',borderColor:'rgba(255,112,67,0.28)'}}>↓ Designed PDF</div>
+                      </DesignedPDFButton>
+                      <button
+                        type="button"
+                        onClick={()=>{if(resumeFileInputRef.current){resumeFileInputRef.current.value='';resumeFileInputRef.current.click();}}}
+                        disabled={resumeUploadState==='uploading'}
+                        style={{background:resumeUploadState==='done'?'#0F766E':resumeUploadState==='error'?'#B91C1C':'rgba(255,255,255,0.88)',color:resumeUploadState==='idle'?'#334155':'white',cursor:resumeUploadState==='uploading'?'not-allowed':'pointer',opacity:resumeUploadState==='uploading'?0.7:1}}
+                      >
+                        {resumeUploadState==='uploading'?'Importing…':resumeUploadState==='done'?'✓ Imported':'↑ Import Resume'}
+                      </button>
+                      <input ref={resumeFileInputRef} type="file" accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
+                        onChange={(e)=>{const f=e.target.files?.[0];if(f) handleResumeFile(f);}}
+                        style={{display:'none'}}/>
+                    </div>
+                  </details>
+
+                  <div title={statusLabel} className="ft-status-inline">
+                    <div style={{position:'relative',width:22,height:22,flexShrink:0}}>
+                      <svg width="22" height="22" viewBox="0 0 22 22">
+                        <circle cx="11" cy="11" r="8" fill="none" stroke="#E5E7EB" strokeWidth="2.5"/>
+                        <circle cx="11" cy="11" r="8" fill="none"
+                          stroke={statusLabel==='Ready to Send'?'#10B981':statusLabel==='Targeted'?'#0EA5E9':statusLabel==='Usable'?ORANGE:'#CBD5E1'}
+                          strokeWidth="2.5"
+                          strokeDasharray={`${(progress/100)*50.3} 50.3`}
+                          strokeLinecap="round"
+                          style={{transformOrigin:'center',transform:'rotate(-90deg)'}}/>
+                      </svg>
+                      <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:6,fontWeight:900,color:'#374151'}}>{progress}%</span>
+                    </div>
+                    <span style={{fontSize:10,fontWeight:800,color:'#64748B'}}>{statusLabel}</span>
                   </div>
 
-                  {/* Next Step */}
-                  <div style={{...TOOL_GROUP,flexDirection:'column',alignItems:'center',gap:5,padding:'8px 10px',textAlign:'center'}}>
-                    <span style={GROUP_LABEL}>Next Step</span>
-                    <button
-                      type="button"
-                      onClick={()=>{
-                        const params=new URLSearchParams();
-                        params.set('fresh','1');
-                        if(chrome) params.set('chrome',chrome);
-                        if(router.query.jobId) params.set('jobId',String(router.query.jobId));
-                        router.push(`/cover/create${params.toString()?`?${params.toString()}`:''}`);
-                      }}
-                      style={{...PILL_BUTTON,background:'rgba(255,112,67,0.10)',color:ORANGE,border:`1px solid rgba(255,112,67,0.30)`,fontWeight:900,fontSize:11,padding:'5px 8px',width:'100%',textAlign:'center'}}
-                      title="Write a cover letter using this resume"
-                    >
-                      ✍️ Cover Letter →
-                    </button>
-                  </div>
-
+                  <button
+                    type="button"
+                    className="ft-cover-inline"
+                    onClick={()=>{
+                      const params=new URLSearchParams();
+                      params.set('fresh','1');
+                      if(chrome) params.set('chrome',chrome);
+                      if(router.query.jobId) params.set('jobId',String(router.query.jobId));
+                      router.push(`/cover/create${params.toString()?`?${params.toString()}`:''}`);
+                    }}
+                    style={{...PILL_BUTTON,background:'rgba(255,112,67,0.08)',color:ORANGE,border:`1px solid rgba(255,112,67,0.25)`,fontWeight:900,fontSize:11,padding:'6px 11px',whiteSpace:'nowrap',flex:'0 0 auto'}}
+                    title="Write a cover letter using this resume"
+                  >
+                    ✍️ Cover Letter →
+                  </button>
                 </div>
               </div>
             </div>
@@ -844,10 +1018,10 @@ export default function CreateResumePage() {
         </div>
 
         {/* RESUME + HAMMER GRID — full width, no ad rail competing */}
-        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0,1fr) 340px',gap:12,alignItems:'start',width:'100%',maxWidth:'100%'}}>
+        <div className="ft-rb-main" style={{display:'grid',gridTemplateColumns:isFocusMode?'1fr':'minmax(0,1fr) 340px',gap:8,alignItems:'start'}}>
 
           {/* CENTER: Resume */}
-          <div style={{...GLASS_CARD,overflow:'hidden',minWidth:0,width:'100%'}}>
+          <div style={{...GLASS_CARD,overflow:'hidden'}}>
             <div style={{padding:'10px 16px',background:'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',color:'white',fontWeight:900,fontSize:13,letterSpacing:0.4,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               <span>{isEditMode?'✏️ LIVE RESUME EDITOR':'👁 RESUME PREVIEW'}</span>
               {isEditMode&&<span style={{fontSize:11,fontWeight:600,opacity:0.75}}>
