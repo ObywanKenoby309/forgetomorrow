@@ -4,36 +4,33 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import ResumeBuilderLayout from '@/components/layouts/ResumeBuilderLayout';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 import { ResumeContext } from '@/context/ResumeContext';
-import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
+import { uploadJD } from '@/lib/jd/uploadToApi';
+import SignalResumeTestTemplate from '@/components/resume-form/templates/SignalResumeTestTemplate';
+import ReverseResumeTemplate from '@/components/resume-form/templates/ReverseResumeTemplate';
+import HybridResumeTemplate from '@/components/resume-form/templates/HybridResumeTemplate';
 
 const ForgeHammerPanel = dynamic(() => import('@/components/hammer/ForgeHammerPanel'), { ssr: false });
 const ReverseATSButton = dynamic(() => import('@/components/resume-form/export/ReverseATSButton'), { ssr: false });
 const HybridATSButton = dynamic(() => import('@/components/resume-form/export/HybridATSButton'), { ssr: false });
 const DesignedPDFButton = dynamic(() => import('@/components/resume-form/export/DesignedPDFButton'), { ssr: false });
-const SignalResumeTestTemplate = dynamic(() => import('@/components/resume-form/templates/SignalResumeTestTemplate'), { ssr: false });
-const ReverseResumeTemplate = dynamic(() => import('@/components/resume-form/templates/ReverseResumeTemplate'), { ssr: false });
-const HybridResumeTemplate = dynamic(() => import('@/components/resume-form/templates/HybridResumeTemplate'), { ssr: false });
 
-let jdIngestModulePromise;
-let jdUploadModulePromise;
+function ResumeBuildIsolationShell({ children }) {
+  return (
+    <main style={{ minHeight: '100vh', padding: 16 }}>
+      {children}
+    </main>
+  );
+}
 
-const loadJdIngest = () => {
-  if (!jdIngestModulePromise) {
-    jdIngestModulePromise = import('@/lib/jd/ingest');
-  }
-  return jdIngestModulePromise;
-};
-
-const loadJdUpload = () => {
-  if (!jdUploadModulePromise) {
-    jdUploadModulePromise = import('@/lib/jd/uploadToApi');
-  }
-  return jdUploadModulePromise;
-};
+function RightRailPlacementManagerPlaceholder() {
+  return (
+    <div style={{ width: '100%', height: 295, borderRadius: 14, background: 'rgba(255,255,255,0.55)', border: '1px solid rgba(15,23,42,0.08)' }} />
+  );
+}
 
 // ─── SSR-safe mobile hook ─────────────────────────────────────────────────────
 function useIsMobile(bp = 1100) {
@@ -452,7 +449,7 @@ export default function CreateResumePage() {
             if(typeof pack?.whyScore === 'number') setIncomingWhyScore(pack.whyScore);
             else setIncomingWhyScore(null);
             if(pack?.job) setAtsJobMeta({title:pack.job.title||'',company:pack.job.company||'',location:pack.job.location||''});
-            if(pack?.job?.description&&!jd){const { normalizeJobText } = await loadJdIngest();const clean=normalizeJobText(pack.job.description);setJd(clean);await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT,clean);setJdStatus('Loaded: Job fire from ATS context');applied=true;}
+            if(pack?.job?.description&&!jd){const clean=normalizeJobText(pack.job.description);setJd(clean);await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT,clean);setJdStatus('Loaded: Job fire from ATS context');applied=true;}
           }
         }catch{}
       }
@@ -485,8 +482,6 @@ export default function CreateResumePage() {
     if(!file) return;
     setJdLoading(true); setJdStatus('Processing…');
     try{
-      const { extractTextFromFile, normalizeJobText } = await loadJdIngest();
-      const { uploadJD } = await loadJdUpload();
       let raw=await extractTextFromFile(file);
       if(!raw||!String(raw).trim()) raw=await uploadJD(file);
       const clean=normalizeJobText(raw);
@@ -501,8 +496,6 @@ export default function CreateResumePage() {
     if (!file) return;
     setResumeUploadState('uploading');
     try {
-      const { extractTextFromFile } = await loadJdIngest();
-
       // Extract text from the uploaded resume file
       let raw = await extractTextFromFile(file);
       if (!raw || !String(raw).trim()) {
@@ -680,7 +673,7 @@ export default function CreateResumePage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <ResumeBuilderLayout title="Resume Builder | ForgeTomorrow">
+    <ResumeBuildIsolationShell>
       <style jsx global>{`
         html, body { overflow-x: hidden; }
         @media (max-width: 1100px) {
@@ -1047,7 +1040,7 @@ export default function CreateResumePage() {
           {!isFocusMode&&(
             <div className="ft-ad-rail-outer" style={{width:'220px',height:295,flexShrink:0,overflow:'hidden',borderRadius:14}}>
               <div className="ft-ad-rail-inner" style={{width:280,transform:'scale(0.78)',transformOrigin:'top left'}}>
-                <RightRailPlacementManager slot="right_rail_1"/>
+                <RightRailPlacementManagerPlaceholder/>
               </div>
             </div>
           )}
@@ -1245,6 +1238,6 @@ export default function CreateResumePage() {
       )}
 
       {saveModal}
-    </ResumeBuilderLayout>
+    </ResumeBuildIsolationShell>
   );
 }
