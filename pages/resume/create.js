@@ -663,7 +663,7 @@ export default function CreateResumePage() {
     <ResumeBuilderLayout title="Resume Builder | ForgeTomorrow">
       <style jsx global>{`
         html, body { overflow-x: hidden; }
-        @media (max-width: 1100px) {
+        @media (max-width: 900px) {
           .ft-rb-main { grid-template-columns: 1fr !important; }
           .ft-rb-toprow { grid-template-columns: 1fr !important; }
           .ft-ad-rail-outer { display: none !important; }
