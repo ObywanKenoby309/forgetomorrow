@@ -170,6 +170,58 @@ function JobCarousel({ withChrome }) {
   );
 }
 
+
+function ConnectedJobsPanel({ withChrome, isMobile = false, style = {} }) {
+  return (
+    <section style={{ ...GLASS, padding: isMobile ? 12 : 16, ...style }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+          gap: isMobile ? 10 : 14,
+          alignItems: 'stretch',
+        }}
+      >
+        <div
+          style={{
+            minWidth: 0,
+            paddingRight: isMobile ? 0 : 14,
+            borderRight: isMobile ? '1px solid rgba(255,255,255,0.22)' : '1px solid rgba(255,255,255,0.26)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: isMobile ? 12 : 16, fontWeight: 900, color: '#FF7043', lineHeight: 1.25, ...ORANGE_HEADING_LIFT }}>
+              Recommended
+            </span>
+            <Link
+              href={withChrome('/jobs')}
+              style={{ fontSize: isMobile ? 10 : 12, fontWeight: 800, color: '#FF7043', textDecoration: 'none', whiteSpace: 'nowrap' }}
+            >
+              Jobs →
+            </Link>
+          </div>
+          <RecommendedJobsPreview compact autoRotateMobile={isMobile} />
+        </div>
+
+        <div style={{ minWidth: 0, paddingLeft: isMobile ? 0 : 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: isMobile ? 12 : 16, fontWeight: 900, color: '#FF7043', lineHeight: 1.25, ...ORANGE_HEADING_LIFT }}>
+              Pinned
+            </span>
+            <Link
+              href={withChrome('/seeker/pinned-jobs')}
+              style={{ fontSize: isMobile ? 10 : 12, fontWeight: 800, color: '#FF7043', textDecoration: 'none', whiteSpace: 'nowrap' }}
+            >
+              Saved →
+            </Link>
+          </div>
+          <PinnedJobsPreview compact autoRotateMobile={isMobile} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── Desktop Action Tile ──────────────────────────────────────────────────────
 function ActionTile({ title, emptyText, items, href, withChrome, style }) {
   const list = Array.isArray(items) ? items : [];
@@ -481,8 +533,8 @@ export default function SeekerDashboard() {
               </div>
             </section>
 
-            {/* 5. Carousel — Recommended Jobs ↔ Pinned Jobs */}
-            <JobCarousel withChrome={withChrome} />
+            {/* 5. Connected jobs panel — Recommended + Pinned */}
+            <ConnectedJobsPanel withChrome={withChrome} isMobile />
 
             {/* 6. Pipeline + Next Steps — recruiter-style small side-by-side cards */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: GAP }}>
@@ -705,72 +757,13 @@ export default function SeekerDashboard() {
             <div style={{
               gridColumn: '1 / -1', gridRow: '4',
               display: 'grid',
-              gridTemplateColumns: 'minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)',
+              gridTemplateColumns: 'minmax(0, 10fr) minmax(0, 3fr)',
               gap: GAP,
               marginLeft: -252,
               position: 'relative',
               zIndex: 11,
             }}>
-              <section style={{ ...GLASS, padding: 16 }}>
-                <div className="flex items-center justify-between mb-4">
-                  <h2
-                    style={{
-                      fontSize: 18,
-                      color: '#FF7043',
-                      lineHeight: 1.25,
-                      letterSpacing: '-0.01em',
-                      margin: 0,
-                      ...ORANGE_HEADING_LIFT,
-                    }}
-                  >
-                    New Matches
-                  </h2>
-                  <Link
-                    href={withChrome('/jobs')}
-                    style={{
-                      color: '#FF7043',
-                      fontWeight: 800,
-                      fontSize: 13,
-                      lineHeight: 1.2,
-                      textDecoration: 'none',
-                      ...ORANGE_HEADING_LIFT,
-                    }}
-                  >
-                    View all
-                  </Link>
-                </div>
-                <RecommendedJobsPreview />
-              </section>
-               <section style={{ ...GLASS, padding: 16 }}>
-                <div className="flex items-center justify-between mb-4">
-                  <h2
-                    style={{
-                      fontSize: 18,
-                      color: '#FF7043',
-                      lineHeight: 1.25,
-                      letterSpacing: '-0.01em',
-                      margin: 0,
-                      ...ORANGE_HEADING_LIFT,
-                    }}
-                  >
-                    Your Next Yes
-                  </h2>
-                  <Link
-                    href={withChrome('/seeker/pinned-jobs')}
-                    style={{
-                      color: '#FF7043',
-                      fontWeight: 800,
-                      fontSize: 13,
-                      lineHeight: 1.2,
-                      textDecoration: 'none',
-                      ...ORANGE_HEADING_LIFT,
-                    }}
-                  >
-                    View all
-                  </Link>
-                </div>
-                <PinnedJobsPreview />
-              </section>
+              <ConnectedJobsPanel withChrome={withChrome} style={{ minWidth: 0 }} />
                <section style={{ ...GLASS, padding: 16 }}>
                 <div className="flex items-center justify-between mb-4">
                   <h3

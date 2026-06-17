@@ -69,7 +69,7 @@ function JobCard({ job }) {
   );
 }
 
-export default function RecommendedJobsPreview() {
+export default function RecommendedJobsPreview({ compact = false, autoRotateMobile = false }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -100,6 +100,15 @@ export default function RecommendedJobsPreview() {
     }
   }, [activeIndex, jobs.length]);
 
+
+  useEffect(() => {
+    if (!isMobile || !autoRotateMobile || jobs.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setActiveIndex((idx) => (idx + 1) % jobs.length);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, [autoRotateMobile, isMobile, jobs.length]);
+
   const goPrevious = () => {
     if (jobs.length <= 1) return;
     setActiveIndex((idx) => (idx - 1 + jobs.length) % jobs.length);
@@ -126,7 +135,7 @@ export default function RecommendedJobsPreview() {
 
   if (loading) {
     return (
-      <div className="recommendedJobsShell">
+      <div className={`recommendedJobsShell ${compact ? "compact" : ""}`}>
         <div className="recommendedJobsLoading">Loading opportunities...</div>
         <style jsx>{styles}</style>
       </div>
@@ -141,7 +150,7 @@ export default function RecommendedJobsPreview() {
     const activeJob = jobs[activeIndex] || jobs[0];
 
     return (
-      <div className="recommendedJobsShell">
+      <div className={`recommendedJobsShell ${compact ? "compact" : ""}`}>
         <div
           className="recommendedJobsSingle"
           onTouchStart={handleTouchStart}
@@ -181,9 +190,9 @@ export default function RecommendedJobsPreview() {
   }
 
   return (
-    <div className="recommendedJobsShell">
+    <div className={`recommendedJobsShell ${compact ? "compact" : ""}`}>
       <div className="recommendedJobsGrid" aria-label="Recommended job matches">
-        {jobs.map((job) => (
+        {(compact ? jobs.slice(0, 3) : jobs).map((job) => (
           <JobCard key={job.id} job={job} />
         ))}
       </div>
@@ -222,6 +231,16 @@ const styles = `
     gap: 12px;
     width: 100%;
     min-width: 0;
+  }
+
+  .recommendedJobsShell.compact .recommendedJobsGrid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .recommendedJobsShell.compact .recommendedJobCard {
+    background: rgba(255,255,255,0.64);
+    box-shadow: 0 6px 16px rgba(15,23,42,0.07);
   }
 
   .recommendedJobsSingle {
