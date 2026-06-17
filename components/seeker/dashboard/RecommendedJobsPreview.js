@@ -100,7 +100,6 @@ export default function RecommendedJobsPreview({ compact = false, autoRotateMobi
     }
   }, [activeIndex, jobs.length]);
 
-
   useEffect(() => {
     if (!isMobile || !autoRotateMobile || jobs.length <= 1) return;
     const timer = window.setInterval(() => {
@@ -135,7 +134,7 @@ export default function RecommendedJobsPreview({ compact = false, autoRotateMobi
 
   if (loading) {
     return (
-      <div className={`recommendedJobsShell ${compact ? "compact" : ""}`}>
+      <div className={`recommendedJobsShell ${compact ? 'compact' : ''}`}>
         <div className="recommendedJobsLoading">Loading opportunities...</div>
         <style jsx>{styles}</style>
       </div>
@@ -150,7 +149,7 @@ export default function RecommendedJobsPreview({ compact = false, autoRotateMobi
     const activeJob = jobs[activeIndex] || jobs[0];
 
     return (
-      <div className={`recommendedJobsShell ${compact ? "compact" : ""}`}>
+      <div className={`recommendedJobsShell ${compact ? 'compact' : ''}`}>
         <div
           className="recommendedJobsSingle"
           onTouchStart={handleTouchStart}
@@ -190,7 +189,7 @@ export default function RecommendedJobsPreview({ compact = false, autoRotateMobi
   }
 
   return (
-    <div className={`recommendedJobsShell ${compact ? "compact" : ""}`}>
+    <div className={`recommendedJobsShell ${compact ? 'compact' : ''}`}>
       <div className="recommendedJobsGrid" aria-label="Recommended job matches">
         {(compact ? jobs.slice(0, 3) : jobs).map((job) => (
           <JobCard key={job.id} job={job} />

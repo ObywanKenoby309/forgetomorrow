@@ -170,7 +170,6 @@ function JobCarousel({ withChrome }) {
   );
 }
 
-
 function ConnectedJobsPanel({ withChrome, isMobile = false, style = {} }) {
   return (
     <section style={{ ...GLASS, padding: isMobile ? 12 : 16, ...style }}>
@@ -221,6 +220,7 @@ function ConnectedJobsPanel({ withChrome, isMobile = false, style = {} }) {
     </section>
   );
 }
+
 
 // ─── Desktop Action Tile ──────────────────────────────────────────────────────
 function ActionTile({ title, emptyText, items, href, withChrome, style }) {
@@ -546,48 +546,57 @@ export default function SeekerDashboard() {
             {/* 4. Connected jobs panel — Recommended + Pinned */}
             <ConnectedJobsPanel withChrome={withChrome} isMobile />
 
-{/* 5. Profile Performance — health snapshot style */}
-<section style={{ ...GLASS, padding: 16 }}>
-  <div
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 10,
-    }}
-  >
-    <span style={{ fontSize: 14, fontWeight: 800, color: '#112033' }}>
-      Profile Health
-    </span>
-    <Link
-      href={withChrome('/seeker/profile')}
-      style={{
-        fontSize: 11,
-        fontWeight: 700,
-        color: '#FF7043',
-        textDecoration: 'none',
-      }}
-    >
-      Full analytics →
-    </Link>
-  </div>
+            {/* 5. Activity + Profile Health — tracker with health snapshot */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 2fr) minmax(110px, 0.82fr)',
+                gap: GAP,
+                alignItems: 'stretch',
+              }}
+            >
+              <section style={{ ...GLASS, padding: 14, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Activity</span>
+                  <Link href={withChrome('/seeker/applications')}
+                    style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
+                    History →
+                  </Link>
+                </div>
 
-  <ProfilePerformanceTeaser />
-</section>
+                <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
+              </section>
 
-{/* 6. Activity — tracker at a glance */}
-<section style={{ ...GLASS, padding: 14 }}>
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-    <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Activity</span>
-    <Link href={withChrome('/seeker/applications')}
-      style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
-      History →
-    </Link>
-  </div>
+              <section style={{ ...GLASS, padding: 12, minWidth: 0 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 10,
+                    gap: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 12, fontWeight: 900, color: '#112033', lineHeight: 1.15 }}>
+                    Profile Health
+                  </span>
+                  <Link
+                    href={withChrome('/seeker/profile')}
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 800,
+                      color: '#FF7043',
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    →
+                  </Link>
+                </div>
 
-  <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-</section>
-
+                <ProfilePerformanceTeaser layout="vertical" compact />
+              </section>
+            </div>
           </div>
         </SeekerLayout>
       </>
@@ -720,13 +729,72 @@ export default function SeekerDashboard() {
             <div style={{
               gridColumn: '1 / -1', gridRow: '4',
               display: 'grid',
-              gridTemplateColumns: 'minmax(0, 10fr) minmax(0, 3fr)',
+              gridTemplateColumns: 'minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)',
               gap: GAP,
               marginLeft: -252,
               position: 'relative',
               zIndex: 11,
             }}>
-              <ConnectedJobsPanel withChrome={withChrome} style={{ minWidth: 0 }} />
+              <section style={{ ...GLASS, padding: 16 }}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2
+                    style={{
+                      fontSize: 18,
+                      color: '#FF7043',
+                      lineHeight: 1.25,
+                      letterSpacing: '-0.01em',
+                      margin: 0,
+                      ...ORANGE_HEADING_LIFT,
+                    }}
+                  >
+                    New Matches
+                  </h2>
+                  <Link
+                    href={withChrome('/jobs')}
+                    style={{
+                      color: '#FF7043',
+                      fontWeight: 800,
+                      fontSize: 13,
+                      lineHeight: 1.2,
+                      textDecoration: 'none',
+                      ...ORANGE_HEADING_LIFT,
+                    }}
+                  >
+                    View all
+                  </Link>
+                </div>
+                <RecommendedJobsPreview />
+              </section>
+               <section style={{ ...GLASS, padding: 16 }}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2
+                    style={{
+                      fontSize: 18,
+                      color: '#FF7043',
+                      lineHeight: 1.25,
+                      letterSpacing: '-0.01em',
+                      margin: 0,
+                      ...ORANGE_HEADING_LIFT,
+                    }}
+                  >
+                    Your Next Yes
+                  </h2>
+                  <Link
+                    href={withChrome('/seeker/pinned-jobs')}
+                    style={{
+                      color: '#FF7043',
+                      fontWeight: 800,
+                      fontSize: 13,
+                      lineHeight: 1.2,
+                      textDecoration: 'none',
+                      ...ORANGE_HEADING_LIFT,
+                    }}
+                  >
+                    View all
+                  </Link>
+                </div>
+                <PinnedJobsPreview />
+              </section>
                <section style={{ ...GLASS, padding: 16 }}>
                 <div className="flex items-center justify-between mb-4">
                   <h3
