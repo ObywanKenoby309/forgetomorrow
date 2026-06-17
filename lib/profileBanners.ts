@@ -6,4 +6,5 @@ export const profileBanners = [
   { key: "illuminate_network", name: "Illuminate Network", desc: "Blue stars connecting", src: "/profile-banners/Illuminate_Network.png" },
   { key: "journey_continues", name: "The Journey Continues", desc: "Road and green fields", src: "/profile-banners/Journey_Continues.png" },
   { key: "lead_purpose", name: "Lead with Purpose", desc: "Sunrise in mountains", src: "/profile-banners/Lead_Purpose.png" },
+  { key: "creation", name: "Creation", desc: "Canvas with painted brush strokes", src: "/profile-banners/Creation.jpg" },
 ];
