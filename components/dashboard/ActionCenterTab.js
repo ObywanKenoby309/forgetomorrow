@@ -84,6 +84,7 @@ export default function ActionCenterTab({ scope, withChrome, tileDefs, pickBucke
   const sortedTiles = [...tiles].sort((a, b) => (b.items.length > 0 ? 1 : 0) - (a.items.length > 0 ? 1 : 0));
   const totalActions = tiles.reduce((sum, t) => sum + t.items.length, 0);
   const hasActions = totalActions > 0;
+  const tabImageSrc = hasActions ? '/icons/action-center-tab.png' : '/icons/action-center-tab-gray.png';
 
   const resolvedAllHref = allHref || withChrome(`/action-center?scope=${scope}`);
 
@@ -126,7 +127,7 @@ export default function ActionCenterTab({ scope, withChrome, tileDefs, pickBucke
         }}
       >
         <img
-          src="/icons/action-center-tab.png"
+          src={tabImageSrc}
           alt="Action Center"
           style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
         />
