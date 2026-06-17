@@ -432,26 +432,28 @@ export default function RecruiterLayout({
     />
 
     <div
-      style={{
-        position: 'relative',
-        zIndex: 1,
-        width: 'min(320px, 30vw)',
-        minWidth: 240,
-        maxWidth: 280,
-        maxHeight: '72vh',
-        marginBottom: 'calc(70px + env(safe-area-inset-bottom))',
-        borderTopRightRadius: 18,
-        borderBottomRightRadius: 18,
-        border: '1px solid rgba(255,255,255,0.22)',
-        background: 'rgba(255,255,255,0.94)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        padding: '10px 10px 12px',
-        boxSizing: 'border-box',
-        overflowY: 'auto',
-        boxShadow: '10px -10px 26px rgba(0,0,0,0.22)',
-      }}
-    >
+  style={{
+    position: 'relative',
+    zIndex: 1,
+    width: 'min(320px, 30vw)',
+    minWidth: 240,
+    maxWidth: 280,
+    maxHeight: '82vh',
+    marginBottom: 'calc(70px + env(safe-area-inset-bottom))',
+    borderTopRightRadius: 18,
+    borderBottomRightRadius: 18,
+    border: '1px solid rgba(255,255,255,0.18)',
+    background: 'linear-gradient(180deg, rgba(13,27,42,0.96), rgba(18,32,48,0.92))',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    padding: '10px 10px 12px',
+    boxSizing: 'border-box',
+    overflowY: 'auto',
+    scrollbarWidth: 'none',
+	msOverflowStyle: 'none',
+    boxShadow: '14px -14px 38px rgba(0,0,0,0.38)',
+  }}
+>
       <RecruiterSidebar
         active={activeNav}
         role={resolvedRole}
