@@ -149,10 +149,22 @@ function JobCarousel({ withChrome }) {
       </div>
 
       {/* Slide content */}
-      <div style={{ ...WHITE_CARD, padding: 12, minHeight: 120 }}
+      <div
+        style={{
+          minHeight: 120,
+          borderRadius: 12,
+          overflow: 'hidden',
+        }}
         onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}>
-        {active === 'recommended' ? <RecommendedJobsPreview /> : <PinnedJobsPreview />}
+        onTouchEnd={handleTouchEnd}
+      >
+        {active === 'recommended' ? (
+          <RecommendedJobsPreview />
+        ) : (
+          <div style={{ ...WHITE_CARD, padding: 12 }}>
+            <PinnedJobsPreview />
+          </div>
+        )}
       </div>
     </section>
   );
