@@ -40,11 +40,23 @@ const stageKey = (stage) =>
     'Closed Out': 'info',
   }[stage] || 'info');
 
+// Mirrors the lock rule already enforced in ApplicationForm.js: any
+// application tied to a real job posting (jobId), once past Pinned, is
+// recruiter-controlled — the backend rejects manual status changes on it.
+function isApplicationLocked(job, stage) {
+  if (!job) return false;
+  if (job.locked === true || job.isRecruiterControlled === true) return true;
+  return Boolean(job.jobId) && stage !== 'Pinned';
+}
+
 function SortableCard({ job, stage, onView, onEdit, onDelete, onMove, onOpenPrep }) {
   if (!job || !job.id) return null;
 
+  const locked = isApplicationLocked(job, stage);
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: job.id,
+    disabled: locked,
   });
 
   const style = {
@@ -67,6 +79,7 @@ function SortableCard({ job, stage, onView, onEdit, onDelete, onMove, onOpenPrep
         onOpenPrep={onOpenPrep}
         dragListeners={listeners}
         dragAttributes={attributes}
+        locked={locked}
       />
     </div>
   );
@@ -80,27 +93,49 @@ function SortableCard({ job, stage, onView, onEdit, onDelete, onMove, onOpenPrep
 function MiniSortableCard({ job, stage, accent, onView }) {
   if (!job || !job.id) return null;
 
+  const locked = isApplicationLocked(job, stage);
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: job.id,
+    disabled: locked,
   });
 
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
     opacity: isDragging ? 0 : 1,
+    // ✅ Without this, Android's native touch-scroll grabs the gesture
+    // before TouchSensor's hold-to-drag delay ever gets a chance to fire —
+    // the card never even starts dragging, regardless of lock state.
+    touchAction: 'none',
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} onClick={() => onView && onView(job, stage)}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...(locked ? {} : { ...attributes, ...listeners })}
+      onClick={() => onView && onView(job, stage)}
+    >
       <div
         style={{
           borderRadius: 8,
           overflow: 'hidden',
           background: '#ffffff',
           boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-          cursor: 'pointer',
+          cursor: locked ? 'default' : 'pointer',
+          opacity: locked ? 0.72 : 1,
+          position: 'relative',
         }}
       >
+        {locked && (
+          <span
+            title="Managed by the recruiter — moves automatically with the job pipeline"
+            style={{ position: 'absolute', top: 2, right: 2, fontSize: 8, lineHeight: 1 }}
+          >
+            🔒
+          </span>
+        )}
         <div style={{ height: 3, background: accent }} />
         <div style={{ minHeight: 35, display: 'flex', alignItems: 'center', padding: '4px 5px' }}>
           <span
@@ -690,7 +725,7 @@ export default function ApplicationsBoard({
                     </div>
 
                     <DroppableColumn id={columnId}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minHeight: 50 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minHeight: 50, touchAction: 'pan-y' }}>
                         {items.length > 0 ? (
                           <SortableContext items={items.map((j) => j.id)} strategy={verticalListSortingStrategy}>
                             {items.map((job) => (

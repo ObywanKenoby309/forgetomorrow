@@ -69,6 +69,7 @@ export default function ApplicationCard({
   onOpenPrep,
   dragListeners,
   dragAttributes,
+  locked = false,
 }) {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 1024 : false
@@ -167,7 +168,23 @@ export default function ApplicationCard({
 
           {/* Left: move + view + edit + delete */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            {isMobile ? (
+            {locked ? (
+              <div
+                title="Managed by the recruiter — moves automatically with the job pipeline"
+                style={{
+                  width: 30,
+                  height: 30,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#90A4AE',
+                  fontSize: 14,
+                  flexShrink: 0,
+                }}
+              >
+                🔒
+              </div>
+            ) : isMobile ? (
               <>
                 <IconBtn
                   onClick={() => setShowMoveSelect(prev => !prev)}
