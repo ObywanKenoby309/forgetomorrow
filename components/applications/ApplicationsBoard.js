@@ -404,29 +404,16 @@ export default function ApplicationsBoard({
     })
   );
 
-  const wrapStyle = isMobile
-    ? {
-        background: 'rgba(255,255,255,0.72)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255,255,255,0.4)',
-        borderRadius: 16,
-        padding: compact ? 10 : 8,
-        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-        width: '100%',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-      }
-    : {
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
-        padding: compact ? 10 : 8,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        width: '100%',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-      };
+  const wrapStyle = {
+    background: 'transparent',
+    border: 'none',
+    borderRadius: 0,
+    padding: 0,
+    boxShadow: 'none',
+    width: '100%',
+    boxSizing: 'border-box',
+    overflow: 'visible',
+  };
 
   const columnStyle = {
     background: 'white',
@@ -536,15 +523,8 @@ export default function ApplicationsBoard({
             flexDirection: isMobile ? 'column' : 'row',
           }}
         >
-          <h2
-            style={{
-              color: '#FF7043',
-              margin: 0,
-              fontSize: compact ? '1.05rem' : '1.25rem',
-            }}
-          >
-            {title}
-          </h2>
+          {/* Title intentionally omitted — the page's SeekerTitleCard
+              already renders "Applications" above this on every device. */}
 
           <div
             style={{

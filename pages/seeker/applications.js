@@ -95,6 +95,15 @@ export default function SeekerApplicationsPage() {
   const [prepOpen, setPrepOpen] = useState(false);
   const [prepApplication, setPrepApplication] = useState(null);
 
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 1024 : false
+  );
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -573,7 +582,7 @@ const HeaderBox = (
   activeNav="jobs"
 >
       <div style={{ marginTop: 0 }}>
-        <section style={{ ...WHITE_CARD, padding: 16, marginTop: 0 }}>
+        <section style={{ padding: 0, marginTop: 0 }}>
           <ApplicationsBoard
             key={JSON.stringify(tracker)}
             stagesData={tracker}
@@ -590,13 +599,15 @@ const HeaderBox = (
                   backgroundColor: '#FF7043',
                   color: 'white',
                   border: 'none',
-                  padding: '10px 14px',
+                  padding: isMobile ? '7px 12px' : '10px 14px',
                   borderRadius: 8,
                   fontWeight: 700,
+                  fontSize: isMobile ? 12.5 : 14,
                   cursor: 'pointer',
                   width: 'auto',
                   maxWidth: '100%',
                   alignSelf: 'flex-start',
+                  boxShadow: isMobile ? '0 4px 10px rgba(255,112,67,0.3)' : 'none',
                 }}
               >
                 + Add Application
