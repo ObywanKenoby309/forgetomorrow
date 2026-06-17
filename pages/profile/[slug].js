@@ -814,25 +814,40 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-asset-none { padding:5px 12px; border-radius:999px; flex-shrink:0; border:1px solid rgba(255,255,255,0.20); background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.70); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; transition:background 0.15s; }
           .ft-asset-none.selected { border-color:${ORANGE}; color:${ORANGE}; }
           .ft-asset-none:hover:not(.selected) { background:rgba(255,255,255,0.14); }
-          .ft-asset-picker { display:grid; gap:12px; margin-bottom:12px; }
-          .ft-asset-picker-top { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; }
+          .ft-asset-picker-wrap { position:relative; display:grid; gap:10px; margin-bottom:12px; }
+          .ft-asset-basic-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+          .ft-asset-basic-thumb { width:84px; height:42px; border-radius:12px; padding:2px; border:2px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.07); cursor:pointer; transition:border-color 0.15s, transform 0.15s, background 0.15s; overflow:hidden; }
+          .ft-asset-basic-thumb:hover { transform:translateY(-1px); border-color:rgba(255,112,67,0.42); background:rgba(255,112,67,0.08); }
+          .ft-asset-basic-thumb.selected { border-color:${ORANGE}; box-shadow:0 0 0 2px rgba(255,112,67,0.18); }
+          .ft-asset-basic-thumb img { width:100%; height:100%; border-radius:9px; object-fit:cover; display:block; }
+          .ft-asset-more-btn { height:42px; padding:0 16px; border-radius:12px; border:1px solid rgba(255,112,67,0.36); background:rgba(255,112,67,0.14); color:${ORANGE}; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit; white-space:nowrap; }
+          .ft-asset-more-btn:hover { background:rgba(255,112,67,0.22); }
+          .ft-asset-popover-backdrop { position:fixed; inset:0; z-index:260; background:rgba(0,0,0,0.50); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+          .ft-asset-popover { position:fixed; z-index:261; left:50%; top:50%; transform:translate(-50%,-50%); width:min(760px, calc(100vw - 28px)); max-height:min(78vh, 720px); display:flex; flex-direction:column; background:rgba(10,18,30,0.98); border:1px solid rgba(255,255,255,0.14); border-radius:18px; box-shadow:0 28px 80px rgba(0,0,0,0.62); overflow:hidden; }
+          .ft-asset-popover-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:16px 18px 12px; border-bottom:1px solid rgba(255,255,255,0.08); }
+          .ft-asset-popover-title { font-size:14px; font-weight:900; color:var(--white); }
+          .ft-asset-popover-sub { margin-top:3px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.42); }
+          .ft-asset-popover-close { width:30px; height:30px; border-radius:999px; border:none; background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.62); cursor:pointer; font-family:inherit; font-size:16px; }
+          .ft-asset-popover-body { padding:14px 18px; display:grid; gap:12px; overflow:hidden; min-height:0; }
           .ft-asset-search { width:100%; min-width:0; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16); border-radius:10px; color:var(--white); font-family:inherit; font-size:13px; outline:none; padding:9px 12px; }
           .ft-asset-search:focus { border-color:rgba(255,112,67,0.55); box-shadow:0 0 0 3px rgba(255,112,67,0.12); }
           .ft-asset-search::placeholder { color:rgba(255,255,255,0.28); }
-          .ft-asset-count { font-size:11px; font-weight:700; color:rgba(255,255,255,0.42); white-space:nowrap; }
-          .ft-asset-categories { display:flex; gap:8px; flex-wrap:wrap; }
+          .ft-asset-categories { display:flex; gap:8px; flex-wrap:wrap; max-height:72px; overflow-y:auto; padding-right:3px; }
           .ft-asset-category-btn { padding:5px 11px; border-radius:999px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.58); font-family:inherit; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s; }
           .ft-asset-category-btn:hover { border-color:rgba(255,112,67,0.38); color:${ORANGE}; background:rgba(255,112,67,0.10); }
           .ft-asset-category-btn.active { border-color:rgba(255,112,67,0.55); color:${ORANGE}; background:rgba(255,112,67,0.16); }
-          .ft-asset-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(132px, 1fr)); gap:10px; max-height:360px; overflow-y:auto; padding-right:4px; scrollbar-width:thin; scrollbar-color:rgba(255,112,67,0.3) transparent; }
-          .ft-asset-card { position:relative; overflow:hidden; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.05); cursor:pointer; padding:0; text-align:left; font-family:inherit; transition:border-color 0.15s, transform 0.15s, background 0.15s; }
+          .ft-asset-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(136px, 1fr)); gap:10px; overflow-y:auto; min-height:0; max-height:42vh; padding-right:4px; scrollbar-width:thin; scrollbar-color:rgba(255,112,67,0.3) transparent; }
+          .ft-asset-card { border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.05); cursor:pointer; padding:0; text-align:left; font-family:inherit; overflow:hidden; transition:border-color 0.15s, transform 0.15s, background 0.15s; }
           .ft-asset-card:hover { transform:translateY(-1px); border-color:rgba(255,112,67,0.42); background:rgba(255,112,67,0.08); }
           .ft-asset-card.selected { border-color:${ORANGE}; box-shadow:0 0 0 2px rgba(255,112,67,0.22); }
-          .ft-asset-card-img { width:100%; height:74px; object-fit:cover; display:block; background:rgba(255,255,255,0.06); }
-          .ft-asset-card-body { padding:8px 9px 9px; min-height:54px; }
-          .ft-asset-card-name { font-size:11px; font-weight:800; color:rgba(255,255,255,0.86); line-height:1.25; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+          .ft-asset-card-img { width:100%; height:56px; object-fit:cover; display:block; background:rgba(255,255,255,0.06); }
+          .ft-asset-card-body { padding:7px 8px 8px; }
+          .ft-asset-card-name { font-size:11px; font-weight:800; color:rgba(255,255,255,0.86); line-height:1.22; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
           .ft-asset-card-meta { font-size:9px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,112,67,0.72); margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
           .ft-asset-empty { font-size:12px; font-weight:600; color:rgba(255,255,255,0.42); padding:10px 2px; }
+          .ft-asset-popover-foot { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px 16px; border-top:1px solid rgba(255,255,255,0.08); }
+          .ft-asset-selected-label { min-width:0; font-size:12px; font-weight:700; color:rgba(255,255,255,0.54); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+          .ft-asset-save-btn { padding:9px 18px; border-radius:999px; background:${ORANGE}; border:none; color:#fff; font-size:13px; font-weight:900; cursor:pointer; font-family:inherit; box-shadow:0 4px 14px rgba(255,112,67,0.34); }
           .ft-slider-row { display:grid; gap:6px; margin-top:12px; }
           .ft-slider-label { font-size:11px; font-weight:600; color:rgba(255,255,255,0.60); }
           .ft-slider { width:100%; accent-color:${ORANGE}; }
@@ -2147,84 +2162,171 @@ flushPendingSaveRef.current = flushPendingSave;
 
 
 function AssetPicker({ type, items = [], selectedSrc, onSelect, noneLabel, noneSelected, onNone }) {
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const [pendingSrc, setPendingSrc] = useState(selectedSrc || '');
 
-  const categories = useMemo(() => getAssetCategoryList(items), [items]);
+  const defaultItems = useMemo(() => items.slice(0, 7), [items]);
+
+  const categories = useMemo(() => {
+    return Array.from(new Set(items.map(item => item?.category).filter(Boolean)));
+  }, [items]);
+
   const filteredItems = useMemo(() => {
+    const q = String(query || '').trim().toLowerCase();
     return items.filter(item => {
-      const categoryMatches = activeCategory === 'All' || item.category === activeCategory;
-      return categoryMatches && assetMatchesSearch(item, query);
+      const categoryMatches = activeCategory === 'All' || item?.category === activeCategory;
+      const haystack = [
+        item?.name,
+        item?.desc,
+        item?.category,
+        ...(Array.isArray(item?.tags) ? item.tags : []),
+      ].filter(Boolean).join(' ').toLowerCase();
+      return categoryMatches && (!q || haystack.includes(q));
     });
   }, [items, activeCategory, query]);
 
+  const pendingAsset = useMemo(() => {
+    if (!pendingSrc) return null;
+    return items.find(item => item.src === pendingSrc) || null;
+  }, [items, pendingSrc]);
+
+  useEffect(() => {
+    if (open) setPendingSrc(selectedSrc || '');
+  }, [open, selectedSrc]);
+
+  const handleDefaultSelect = () => {
+    onNone?.();
+  };
+
+  const handleSave = () => {
+    if (pendingSrc) onSelect(pendingSrc);
+    else onNone?.();
+    setOpen(false);
+  };
+
   return (
-    <div className="ft-asset-picker">
-      <div className="ft-asset-picker-top">
-        <input
-          className="ft-asset-search"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder={`Search ${type === 'banner' ? 'banners' : 'wallpapers'}…`}
-          aria-label={`Search ${type === 'banner' ? 'banners' : 'wallpapers'}`}
-        />
-        <span className="ft-asset-count">{filteredItems.length} shown</span>
-      </div>
-
-      <div className="ft-asset-categories" aria-label={`${type} categories`}>
+    <div className="ft-asset-picker-wrap">
+      <div className="ft-asset-basic-row">
         <button
           type="button"
-          className={`ft-asset-category-btn${activeCategory === 'All' ? ' active' : ''}`}
-          onClick={() => setActiveCategory('All')}
+          className={`ft-asset-none${noneSelected ? ' selected' : ''}`}
+          onClick={handleDefaultSelect}
         >
-          All
-        </button>
-        {categories.map(category => (
-          <button
-            key={category}
-            type="button"
-            className={`ft-asset-category-btn${activeCategory === category ? ' active' : ''}`}
-            onClick={() => setActiveCategory(category)}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
-
-      <div className="ft-asset-grid">
-        <button
-          type="button"
-          className={`ft-asset-card${noneSelected ? ' selected' : ''}`}
-          onClick={onNone}
-        >
-          <div className="ft-asset-card-img" style={{ display:'grid', placeItems:'center', background:'rgba(255,255,255,0.06)', color:'rgba(255,255,255,0.46)', fontSize:12, fontWeight:800 }}>
-            {noneLabel}
-          </div>
-          <div className="ft-asset-card-body">
-            <div className="ft-asset-card-name">{noneLabel}</div>
-            <div className="ft-asset-card-meta">System Default</div>
-          </div>
+          {noneLabel}
         </button>
 
-        {filteredItems.map(asset => (
+        {defaultItems.map(asset => (
           <button
             key={asset.key}
             type="button"
-            className={`ft-asset-card${selectedSrc === asset.src ? ' selected' : ''}`}
+            className={`ft-asset-basic-thumb${selectedSrc === asset.src ? ' selected' : ''}`}
             onClick={() => onSelect(asset.src)}
             title={asset.desc || asset.name}
+            aria-label={`Select ${asset.name}`}
           >
-            <img className="ft-asset-card-img" src={asset.src} alt={asset.name} loading="lazy" />
-            <div className="ft-asset-card-body">
-              <div className="ft-asset-card-name">{asset.name}</div>
-              <div className="ft-asset-card-meta">{asset.category || 'Profile Asset'}</div>
-            </div>
+            <img src={asset.src} alt={asset.name} loading="lazy" />
           </button>
         ))}
+
+        <button type="button" className="ft-asset-more-btn" onClick={() => setOpen(true)}>
+          More…
+        </button>
       </div>
 
-      {filteredItems.length === 0 && (
-        <div className="ft-asset-empty">No {type === 'banner' ? 'banners' : 'wallpapers'} match that search.</div>
+      {open && (
+        <>
+          <div className="ft-asset-popover-backdrop" onClick={() => setOpen(false)} />
+          <div className="ft-asset-popover" role="dialog" aria-modal="true" aria-label={`Choose ${type === 'banner' ? 'banner' : 'wallpaper'}`}>
+            <div className="ft-asset-popover-head">
+              <div>
+                <div className="ft-asset-popover-title">
+                  Choose {type === 'banner' ? 'Banner' : 'Wallpaper'}
+                </div>
+                <div className="ft-asset-popover-sub">
+                  Search, filter by category, select one, then save.
+                </div>
+              </div>
+              <button type="button" className="ft-asset-popover-close" onClick={() => setOpen(false)}>×</button>
+            </div>
+
+            <div className="ft-asset-popover-body">
+              <input
+                className="ft-asset-search"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder={`Search ${type === 'banner' ? 'banners' : 'wallpapers'}…`}
+                aria-label={`Search ${type === 'banner' ? 'banners' : 'wallpapers'}`}
+              />
+
+              <div className="ft-asset-categories" aria-label={`${type} categories`}>
+                <button
+                  type="button"
+                  className={`ft-asset-category-btn${activeCategory === 'All' ? ' active' : ''}`}
+                  onClick={() => setActiveCategory('All')}
+                >
+                  All
+                </button>
+                {categories.map(category => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={`ft-asset-category-btn${activeCategory === category ? ' active' : ''}`}
+                    onClick={() => setActiveCategory(category)}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+
+              <div className="ft-asset-grid">
+                <button
+                  type="button"
+                  className={`ft-asset-card${!pendingSrc ? ' selected' : ''}`}
+                  onClick={() => setPendingSrc('')}
+                >
+                  <div className="ft-asset-card-img" style={{ display:'grid', placeItems:'center', color:'rgba(255,255,255,0.48)', fontSize:12, fontWeight:900 }}>
+                    {noneLabel}
+                  </div>
+                  <div className="ft-asset-card-body">
+                    <div className="ft-asset-card-name">{noneLabel}</div>
+                    <div className="ft-asset-card-meta">System Default</div>
+                  </div>
+                </button>
+
+                {filteredItems.map(asset => (
+                  <button
+                    key={asset.key}
+                    type="button"
+                    className={`ft-asset-card${pendingSrc === asset.src ? ' selected' : ''}`}
+                    onClick={() => setPendingSrc(asset.src)}
+                    title={asset.desc || asset.name}
+                  >
+                    <img className="ft-asset-card-img" src={asset.src} alt={asset.name} loading="lazy" />
+                    <div className="ft-asset-card-body">
+                      <div className="ft-asset-card-name">{asset.name}</div>
+                      <div className="ft-asset-card-meta">{asset.category || 'Profile Asset'}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {filteredItems.length === 0 && (
+                <div className="ft-asset-empty">No {type === 'banner' ? 'banners' : 'wallpapers'} match that search.</div>
+              )}
+            </div>
+
+            <div className="ft-asset-popover-foot">
+              <div className="ft-asset-selected-label">
+                Selected: {pendingAsset?.name || noneLabel}
+              </div>
+              <button type="button" className="ft-asset-save-btn" onClick={handleSave}>
+                Save Selection
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
