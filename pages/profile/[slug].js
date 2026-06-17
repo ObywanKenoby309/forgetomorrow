@@ -823,7 +823,7 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-asset-more-btn { height:42px; padding:0 16px; border-radius:12px; border:1px solid rgba(255,112,67,0.36); background:rgba(255,112,67,0.14); color:${ORANGE}; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit; white-space:nowrap; }
           .ft-asset-more-btn:hover { background:rgba(255,112,67,0.22); }
           .ft-asset-popover-backdrop { position:fixed; inset:0; z-index:260; background:rgba(0,0,0,0.50); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
-          .ft-asset-popover { position:fixed; z-index:261; left:50%; top:50%; transform:translate(-50%,-50%); width:min(760px, calc(100vw - 28px)); max-height:min(78vh, 720px); display:flex; flex-direction:column; background:rgba(10,18,30,0.98); border:1px solid rgba(255,255,255,0.14); border-radius:18px; box-shadow:0 28px 80px rgba(0,0,0,0.62); overflow:hidden; }
+          .ft-asset-popover { position:fixed; z-index:261; left:50%; top:42%; transform:translate(-50%,-50%); width:min(760px, calc(100vw - 28px)); max-height:min(78vh, 720px); display:flex; flex-direction:column; background:rgba(10,18,30,0.98); border:1px solid rgba(255,255,255,0.14); border-radius:18px; box-shadow:0 28px 80px rgba(0,0,0,0.62); overflow:hidden; }
           .ft-asset-popover-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:16px 18px 12px; border-bottom:1px solid rgba(255,255,255,0.08); }
           .ft-asset-popover-title { font-size:14px; font-weight:900; color:var(--white); }
           .ft-asset-popover-sub { margin-top:3px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.42); }
@@ -833,7 +833,7 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-asset-search:focus { border-color:rgba(255,112,67,0.55); box-shadow:0 0 0 3px rgba(255,112,67,0.12); }
           .ft-asset-search::placeholder { color:rgba(255,255,255,0.28); }
           .ft-asset-categories { display:flex; gap:8px; flex-wrap:wrap; max-height:72px; overflow-y:auto; padding-right:3px; }
-          .ft-asset-category-btn { padding:5px 11px; border-radius:999px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.58); font-family:inherit; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s; }
+          .ft-asset-category-btn { padding:9px 11px; border-radius:999px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.58); font-family:inherit; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s; }
           .ft-asset-category-btn:hover { border-color:rgba(255,112,67,0.38); color:${ORANGE}; background:rgba(255,112,67,0.10); }
           .ft-asset-category-btn.active { border-color:rgba(255,112,67,0.55); color:${ORANGE}; background:rgba(255,112,67,0.16); }
           .ft-asset-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(136px, 1fr)); gap:10px; overflow-y:auto; min-height:0; max-height:42vh; padding-right:4px; scrollbar-width:thin; scrollbar-color:rgba(255,112,67,0.3) transparent; }
