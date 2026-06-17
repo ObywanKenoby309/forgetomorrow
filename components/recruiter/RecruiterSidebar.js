@@ -211,7 +211,8 @@ export default function RecruiterSidebar({
         alignSelf: 'start',
         maxHeight: 'calc(100vh - 48px)',
         overflowY: 'auto',
-        scrollbarWidth: 'thin',
+		scrollbarWidth: 'none',
+		msOverflowStyle: 'none',
 
         zIndex: 10,
 
