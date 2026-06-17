@@ -69,7 +69,7 @@ export const profileBanners = [
     desc: "Fire service dedication",
     category: "Public Service",
     tags: ["courage", "fire", "firefighter", "service", "resilience", "bravery"],
-    src: "/profile-banners/Courage.png",
+    src: "/profile-banners/Courage.jpg",
   },
   {
     key: "discovery",
@@ -77,7 +77,7 @@ export const profileBanners = [
     desc: "Life sciences discovery",
     category: "Science",
     tags: ["discovery", "science", "life sciences", "research", "innovation", "curiosity"],
-    src: "/profile-banners/Discovery.png",
+    src: "/profile-banners/Discovery.jpg",
   },
   {
     key: "guidance",
@@ -85,7 +85,7 @@ export const profileBanners = [
     desc: "Lighthouse guiding through uncertainty",
     category: "Guidance",
     tags: ["guidance", "lighthouse", "coaching", "mentor", "direction", "clarity"],
-    src: "/profile-banners/Guidance.png",
+    src: "/profile-banners/Guidance.jpg",
   },
   {
     key: "harmony",
@@ -93,7 +93,7 @@ export const profileBanners = [
     desc: "Music-inspired atmosphere",
     category: "Creative",
     tags: ["harmony", "music", "creative", "artist", "sound", "balance"],
-    src: "/profile-banners/Harmony.png",
+    src: "/profile-banners/Harmony.jpg",
   },
   {
     key: "inspiration",
@@ -101,7 +101,7 @@ export const profileBanners = [
     desc: "Points of light connecting",
     category: "Inspiration",
     tags: ["inspiration", "light", "ideas", "connection", "spark", "vision"],
-    src: "/profile-banners/Inspiration.png",
+    src: "/profile-banners/Inspiration.jpg",
   },
   {
     key: "protection",
@@ -109,7 +109,7 @@ export const profileBanners = [
     desc: "Law enforcement protection and service",
     category: "Public Service",
     tags: ["protection", "law enforcement", "security", "service", "public safety", "duty"],
-    src: "/profile-banners/Protection.png",
+    src: "/profile-banners/Protection.jpg",
   },
   {
     key: "rescue",
@@ -117,6 +117,6 @@ export const profileBanners = [
     desc: "Emergency response and rescue",
     category: "Public Service",
     tags: ["rescue", "emergency", "ems", "response", "service", "public safety"],
-    src: "/profile-banners/Rescue.png",
+    src: "/profile-banners/Rescue.jpg",
   },
 ];
