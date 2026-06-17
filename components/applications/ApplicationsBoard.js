@@ -23,6 +23,25 @@ import { snapCenterToCursor } from '@dnd-kit/modifiers';
 
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
+function LockIcon({ size = 12, color = 'currentColor' }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
 const STAGE_ABBR = {
   Pinned: 'PIN',
   Applied: 'APP',
@@ -119,24 +138,41 @@ function MiniSortableCard({ job, stage, accent, onView }) {
     >
       <div
         style={{
-          borderRadius: 8,
+          borderRadius: 10,
           overflow: 'hidden',
-          background: '#ffffff',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+          background: 'rgba(255,255,255,0.95)',
+          border: '1px solid rgba(255,255,255,0.7)',
+          boxShadow: locked
+            ? '0 2px 6px rgba(0,0,0,0.12)'
+            : `0 3px 10px ${accent}40, 0 1px 2px rgba(0,0,0,0.06)`,
           cursor: locked ? 'default' : 'pointer',
           opacity: locked ? 0.72 : 1,
           position: 'relative',
+          transition: 'box-shadow .15s ease, transform .15s ease',
         }}
       >
         {locked && (
           <span
             title="Managed by the recruiter — moves automatically with the job pipeline"
-            style={{ position: 'absolute', top: 2, right: 2, fontSize: 8, lineHeight: 1 }}
+            style={{
+              position: 'absolute',
+              top: 3,
+              right: 3,
+              width: 13,
+              height: 13,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.85)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#90A4AE',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+            }}
           >
-            🔒
+            <LockIcon size={7.5} />
           </span>
         )}
-        <div style={{ height: 3, background: accent }} />
+        <div style={{ height: 4, background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }} />
         <div style={{ minHeight: 35, display: 'flex', alignItems: 'center', padding: '4px 5px' }}>
           <span
             style={{
@@ -197,62 +233,98 @@ function MobileListView({ stagesData, onView }) {
                 padding: '8px 4px 6px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
+                gap: 7,
               }}
             >
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: c.solid, flexShrink: 0 }} />
-              {stage} <span style={{ opacity: 0.55, fontWeight: 700 }}>{items.length}</span>
-            </div>
-
-            {items.map((job) => (
-              <div
-                key={job.id}
-                onClick={() => onView && onView(job, stage)}
+              {stage}
+              <span
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 10,
-                  background: '#fff',
-                  border: '1px solid rgba(0,0,0,0.06)',
-                  borderRadius: 12,
-                  padding: '10px 12px',
-                  marginBottom: 6,
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+                  justifyContent: 'center',
+                  minWidth: 16,
+                  height: 16,
+                  borderRadius: 8,
+                  background: c.bg,
+                  fontSize: 9.5,
+                  fontWeight: 900,
+                  padding: '0 4px',
                 }}
               >
-                <div style={{ width: 4, alignSelf: 'stretch', borderRadius: 4, background: c.solid, flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
+                {items.length}
+              </span>
+            </div>
+
+            {items.map((job) => {
+              const locked = isApplicationLocked(job, stage);
+              return (
+                <div
+                  key={job.id}
+                  onClick={() => onView && onView(job, stage)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    background: 'rgba(255,255,255,0.92)',
+                    border: '1px solid rgba(255,255,255,0.6)',
+                    borderRadius: 14,
+                    padding: '10px 12px',
+                    marginBottom: 6,
+                    cursor: 'pointer',
+                    boxShadow: `0 3px 10px ${c.solid}1f, 0 1px 3px rgba(0,0,0,0.06)`,
+                    opacity: locked ? 0.82 : 1,
+                  }}
+                >
                   <div
                     style={{
-                      fontSize: 13.5,
-                      fontWeight: 700,
-                      color: '#112033',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      width: 4,
+                      alignSelf: 'stretch',
+                      borderRadius: 4,
+                      background: `linear-gradient(180deg, ${c.solid}, ${c.solid}cc)`,
+                      flexShrink: 0,
                     }}
-                  >
-                    {job.title}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 13.5,
+                        fontWeight: 700,
+                        color: '#112033',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {job.title}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11.5,
+                        color: '#607D8B',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {job.company}
+                      {job.location ? ` · ${job.location}` : ''}
+                    </div>
                   </div>
-                  <div
-                    style={{
-                      fontSize: 11.5,
-                      color: '#607D8B',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {job.company}
-                    {job.location ? ` · ${job.location}` : ''}
+                  {locked && (
+                    <span
+                      title="Managed by the recruiter"
+                      style={{ color: '#90A4AE', flexShrink: 0, display: 'flex' }}
+                    >
+                      <LockIcon size={12} />
+                    </span>
+                  )}
+                  <div style={{ fontSize: 10.5, color: '#90A4AE', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                    {job.dateAdded}
                   </div>
                 </div>
-                <div style={{ fontSize: 10.5, color: '#90A4AE', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                  {job.dateAdded}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         );
       })}
@@ -332,16 +404,29 @@ export default function ApplicationsBoard({
     })
   );
 
-  const wrapStyle = {
-    background: 'white',
-    border: '1px solid #eee',
-    borderRadius: 12,
-    padding: compact ? 10 : 8,
-    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-    width: '100%',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
-  };
+  const wrapStyle = isMobile
+    ? {
+        background: 'rgba(255,255,255,0.72)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255,255,255,0.4)',
+        borderRadius: 16,
+        padding: compact ? 10 : 8,
+        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+        width: '100%',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+      }
+    : {
+        background: 'white',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: compact ? 10 : 8,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        width: '100%',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+      };
 
   const columnStyle = {
     background: 'white',
@@ -493,10 +578,14 @@ export default function ApplicationsBoard({
             display: 'flex',
             gap: 6,
             marginBottom: compact ? 8 : 10,
-            background: 'rgba(0,0,0,0.045)',
-            borderRadius: 10,
-            padding: 3,
+            background: 'rgba(255,255,255,0.45)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,0.5)',
+            borderRadius: 12,
+            padding: 4,
             boxSizing: 'border-box',
+            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.04)',
           }}
         >
           {[
@@ -511,13 +600,15 @@ export default function ApplicationsBoard({
               style={{
                 flex: 1,
                 border: 'none',
-                borderRadius: 8,
+                borderRadius: 9,
                 padding: '8px 0',
                 fontWeight: 800,
                 fontSize: 12.5,
                 cursor: 'pointer',
                 background: mobileView === v.key ? '#FF7043' : 'transparent',
-                color: mobileView === v.key ? '#fff' : '#607D8B',
+                color: mobileView === v.key ? '#fff' : '#5F6B7A',
+                boxShadow: mobileView === v.key ? '0 4px 12px rgba(255,112,67,0.4)' : 'none',
+                transition: 'all .18s ease',
               }}
             >
               {v.label}
@@ -708,20 +799,40 @@ export default function ApplicationsBoard({
                   <div key={stage} style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                     <div
                       style={{
-                        textAlign: 'center',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 3,
                         fontSize: 9,
                         fontWeight: 800,
+                        letterSpacing: '0.02em',
                         color: c.text,
                         background: c.bg,
-                        border: `1px solid ${c.solid}`,
-                        borderRadius: 8,
-                        padding: '4px 2px',
-                        marginBottom: 5,
+                        border: `1px solid ${c.solid}33`,
+                        borderRadius: 10,
+                        padding: '5px 2px',
+                        marginBottom: 6,
                         boxSizing: 'border-box',
+                        boxShadow: `0 2px 6px ${c.solid}26`,
                       }}
                     >
-                      {STAGE_ABBR[stage] || stage.slice(0, 3).toUpperCase()}{' '}
-                      <span style={{ opacity: 0.65 }}>{items.length}</span>
+                      <span>{STAGE_ABBR[stage] || stage.slice(0, 3).toUpperCase()}</span>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: 14,
+                          height: 14,
+                          borderRadius: 7,
+                          background: 'rgba(255,255,255,0.65)',
+                          fontSize: 8.5,
+                          fontWeight: 900,
+                          padding: '0 3px',
+                        }}
+                      >
+                        {items.length}
+                      </span>
                     </div>
 
                     <DroppableColumn id={columnId}>
@@ -739,7 +850,22 @@ export default function ApplicationsBoard({
                             ))}
                           </SortableContext>
                         ) : (
-                          <div style={{ height: 36, border: '1.5px dashed rgba(0,0,0,0.14)', borderRadius: 8 }} />
+                          <div
+                            style={{
+                              height: 36,
+                              border: '1.5px dashed rgba(17,32,51,0.16)',
+                              borderRadius: 10,
+                              background: 'rgba(255,255,255,0.3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'rgba(17,32,51,0.22)',
+                              fontSize: 13,
+                              fontWeight: 700,
+                            }}
+                          >
+                            +
+                          </div>
                         )}
                       </div>
                     </DroppableColumn>
@@ -753,8 +879,21 @@ export default function ApplicationsBoard({
             {activeMeta.job ? (
               isMobile && mobileView === 'board' ? (
                 <div style={{ width: activeSize?.width || 64, pointerEvents: 'none' }}>
-                  <div style={{ borderRadius: 8, overflow: 'hidden', boxShadow: '0 14px 24px rgba(0,0,0,0.3)', background: '#fff' }}>
-                    <div style={{ height: 3, background: colorFor(stageKey(activeMeta.stage)).solid }} />
+                  <div
+                    style={{
+                      borderRadius: 10,
+                      overflow: 'hidden',
+                      boxShadow: '0 16px 28px rgba(0,0,0,0.32)',
+                      background: 'rgba(255,255,255,0.97)',
+                      border: '1px solid rgba(255,255,255,0.7)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: 4,
+                        background: `linear-gradient(135deg, ${colorFor(stageKey(activeMeta.stage)).solid}, ${colorFor(stageKey(activeMeta.stage)).solid}cc)`,
+                      }}
+                    />
                     <div style={{ fontSize: 9.5, fontWeight: 700, color: '#112033', padding: '5px 4px', lineHeight: 1.22 }}>
                       {activeMeta.job.title}
                     </div>
