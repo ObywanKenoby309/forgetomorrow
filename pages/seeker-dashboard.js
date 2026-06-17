@@ -13,6 +13,7 @@ import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOver
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
+import ActionCenterTab from '@/components/dashboard/ActionCenterTab';
 
 // ─── ISO week helpers ─────────────────────────────────────────────────────────
 const startOfISOWeek = (d) => {
@@ -187,49 +188,6 @@ function ActionTile({ title, emptyText, items, href, withChrome, style }) {
 }
 
 // ─── Mobile Action Tile ───────────────────────────────────────────────────────
-function MobileActionTile({ title, items, emptyText, href, icon }) {
-  const hasItems = items.length > 0;
-  return (
-    <Link href={href} style={{
-      display: 'flex', alignItems: 'center', gap: 12,
-      padding: '12px 14px', borderRadius: 12, textDecoration: 'none',
-      background: hasItems ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)',
-      border: hasItems ? '1px solid rgba(255,112,67,0.22)' : '1px solid rgba(0,0,0,0.06)',
-      boxShadow: hasItems ? '0 4px 12px rgba(0,0,0,0.08)' : 'none',
-      transition: 'all 150ms ease',
-    }}>
-      <div style={{
-        width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-        background: hasItems ? 'rgba(255,112,67,0.10)' : 'rgba(0,0,0,0.04)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
-      }}>
-        {icon}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: hasItems ? '#112033' : '#90A4AE' }}>{title}</div>
-        <div style={{ fontSize: 12, marginTop: 2, color: hasItems ? '#546E7A' : '#B0BEC5',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {hasItems ? (items[0].title || 'View item') : emptyText}
-        </div>
-      </div>
-      {hasItems ? (
-        <div style={{ minWidth: 28, height: 28, borderRadius: 999, flexShrink: 0,
-          background: '#FF7043', color: 'white', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: 13, fontWeight: 900,
-          boxShadow: '0 4px 10px rgba(255,112,67,0.40)' }}>
-          {items.length}
-        </div>
-      ) : (
-        <div style={{ width: 24, height: 24, borderRadius: 999, flexShrink: 0,
-          background: 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: 14, color: '#B0BEC5' }}>
-          ✓
-        </div>
-      )}
-    </Link>
-  );
-}
-
 // ─── Action Center ────────────────────────────────────────────────────────────
 function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) {
   const [items, setItems] = useState([]);
@@ -286,50 +244,7 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) 
     { key: 'shared',       title: 'Shared With Me',      emptyText: 'No shared documents.',    href: withChrome(`/action-center?scope=${scope}&tab=SHARED`),       icon: '📬', items: buckets.shared       },
   ];
 
-  const sortedTiles = [...tiles].sort((a, b) => (b.items.length > 0 ? 1 : 0) - (a.items.length > 0 ? 1 : 0));
-  const totalActions = tiles.reduce((sum, t) => sum + t.items.length, 0);
-
-  if (isMobile) {
-    if (initialLoading) {
-      return (
-        <div style={{ display: 'grid', gap: 8 }}>
-          {[1,2,3,4].map(i => (
-            <div key={i} style={{ height: 64, borderRadius: 12,
-              background: 'rgba(255,255,255,0.70)', border: '1px solid rgba(0,0,0,0.06)' }} />
-          ))}
-        </div>
-      );
-    }
-    return (
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#FF7043' }}>Action Center</div>
-            <div style={{ fontSize: 12, marginTop: 2,
-              fontWeight: totalActions > 0 ? 700 : 500,
-              color: totalActions > 0 ? '#FF7043' : '#90A4AE' }}>
-              {totalActions > 0
-                ? `${totalActions} item${totalActions !== 1 ? 's' : ''} need your attention`
-                : "You're all caught up"}
-            </div>
-          </div>
-          <Link href={withChrome(`/action-center?scope=${scope}`)} style={{
-            fontSize: 12, fontWeight: 700, color: '#FF7043', textDecoration: 'none',
-            padding: '6px 12px', borderRadius: 999,
-            border: '1px solid rgba(255,112,67,0.30)',
-            background: 'rgba(255,112,67,0.08)',
-          }}>
-            View all
-          </Link>
-        </div>
-        <div style={{ display: 'grid', gap: 8 }}>
-          {sortedTiles.map(t => <MobileActionTile key={t.key} {...t} />)}
-        </div>
-      </div>
-    );
-  }
-
-  // Desktop
+  // Desktop only — mobile uses the standalone ActionCenterTab edge drawer instead.
     return (
     <section className="rounded-xl p-5" style={glassStyle || {}}>
       <div className="flex items-center justify-between gap-3 mb-4">
@@ -483,11 +398,19 @@ export default function SeekerDashboard() {
               isMobile={true}
             />
 
-            {/* 2. Action Center */}
-            <section style={{ ...GLASS, padding: 16 }}>
-              <SeekerActionCenterSection scope={scope} withChrome={withChrome}
-                glassStyle={GLASS} isMobile={true} />
-            </section>
+            {/* 2. Action Center — edge tab + drawer (mobile only), no page footprint */}
+            <ActionCenterTab
+              scope={scope}
+              withChrome={withChrome}
+              pickBucket={pickSeekerBucket}
+              tileDefs={[
+                { key: 'messages',     bucket: 'messages',     title: 'New Messages',        emptyText: 'No unread items.',        href: withChrome(`/action-center?scope=${scope}&tab=SOCIAL`),       icon: '💬' },
+                { key: 'applications', bucket: 'applications', title: 'Application Updates', emptyText: 'No application updates.', href: withChrome(`/action-center?scope=${scope}&tab=APPLICATIONS`), icon: '📋' },
+                { key: 'calendar',     bucket: 'calendar',     title: 'Interview Invites',   emptyText: 'No calendar updates.',    href: withChrome(`/action-center?scope=${scope}&tab=CALENDAR`),     icon: '📅' },
+                { key: 'jobs',         bucket: 'jobs',         title: 'Job Matches',         emptyText: 'No new job updates.',     href: withChrome(`/action-center?scope=${scope}&tab=JOBS`),         icon: '🎯' },
+                { key: 'shared',       bucket: 'shared',       title: 'Shared With Me',      emptyText: 'No shared documents.',    href: withChrome(`/action-center?scope=${scope}&tab=SHARED`),       icon: '📬' },
+              ]}
+            />
 
             {/* 3. KPI strip — seekerColors, centered */}
             <section style={{ ...GLASS, padding: '12px 0 12px 12px', overflow: 'hidden' }}>
