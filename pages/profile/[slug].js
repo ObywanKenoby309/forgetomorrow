@@ -1115,6 +1115,12 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-signal-drawer-body { flex:1; overflow-y:auto; padding:0 16px 24px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
           .ft-signal-drawer-body::-webkit-scrollbar { display:none; }
 
+          @media (min-width:761px) {
+            .ft-signal-tab,
+            .ft-signal-drawer,
+            .ft-signal-drawer-backdrop { display:none !important; }
+          }
+
           @media (max-width:760px) {
             .ft-page { background-attachment:scroll; border-radius:16px; }
             .ft-page-overlay { padding:10px 0 18px; background:linear-gradient(180deg, rgba(10,9,8,0.24) 0%, rgba(10,9,8,0.14) 50%, rgba(10,9,8,0.24) 100%); }
@@ -1682,7 +1688,7 @@ flushPendingSaveRef.current = flushPendingSave;
         {/* shows whenever either is active. Persists across tab switches; docked */}
         {/* above the bottom edit toolbar. Reuses liveProfileData/handleApplyField */}
         {/* from the desktop right rail — no duplicated logic.                     */}
-        {isOwner && (editMode || mobileSheet) && (
+        {isOwner && mobileSheet && (
           <button
             type="button"
             className={`ft-signal-tab${showSignalDrawer ? ' open' : ''}`}
@@ -1694,11 +1700,11 @@ flushPendingSaveRef.current = flushPendingSave;
           </button>
         )}
 
-        {isOwner && (editMode || mobileSheet) && showSignalDrawer && (
+        {isOwner && mobileSheet && showSignalDrawer && (
           <div className="ft-signal-drawer-backdrop open" onClick={() => setShowSignalDrawer(false)} />
         )}
 
-        {isOwner && (editMode || mobileSheet) && signalDrawerMounted && (
+        {isOwner && mobileSheet && signalDrawerMounted && (
           <div className={`ft-signal-drawer${showSignalDrawer ? ' open' : ''}`}>
             <div className="ft-signal-drawer-handle-row">
               <span className="ft-signal-drawer-title">
