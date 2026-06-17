@@ -24,6 +24,7 @@ import { useRouter } from 'next/router';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingTitleCard from '@/components/coaching/CoachingTitleCard';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import ActionCenterTab from '@/components/dashboard/ActionCenterTab';
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 function localISODate(d = new Date()) {
@@ -437,6 +438,8 @@ export default function CoachingDashboardPage() {
     { label:'Avg Session Rating', value:avgScore === '—' ? '—' : `${avgScore}/5`, href:'/dashboard/coaching/feedback' },
   ];
 
+  const withCoachChrome = (path) => path.includes('?') ? `${path}&chrome=coach` : `${path}?chrome=coach`;
+
   const mobileTiles = [
     { key:'messages', title:'New Messages',     emptyText:'No unread coach inbox items.', href:'/action-center?scope=COACH&chrome=coach&tab=SOCIAL',   icon:'💬', items:actionBuckets.messages },
     { key:'requests', title:'Session Requests', emptyText:'No pending session requests.',  href:'/dashboard/coaching/client-hub-update?tab=requests',    icon:'📋', items:actionBuckets.requests },
@@ -536,33 +539,20 @@ export default function CoachingDashboardPage() {
             isMobile={true}
           />
 
-          <Section
-            title="Action Center"
-            helperText="Click a card to open"
-            isMobile={true}
-            action={
-              <Link href="/action-center?scope=COACH&chrome=coach" style={{
-                fontSize:12, fontWeight:700, color:'#FF7043', textDecoration:'none',
-                padding:'6px 12px', borderRadius:999, border:'1px solid rgba(255,112,67,0.30)',
-                background:'rgba(255,112,67,0.08)'
-              }}>
-                View all
-              </Link>
-            }
-            style={{ padding:16 }}
-          >
-            {actionLoading && !actionBootstrapped ? (
-              <div style={{ display:'grid', gap:8 }}>
-                {[1,2,3,4].map(i => (
-                  <div key={i} style={{ height:64, borderRadius:12, background:'rgba(255,255,255,0.70)', border:'1px solid rgba(0,0,0,0.06)' }} />
-                ))}
-              </div>
-            ) : (
-              <div style={{ display:'grid', gap:8 }}>
-                {sortedMobileTiles.map(t => <MobileActionTile key={t.key} {...t} />)}
-              </div>
-            )}
-          </Section>
+          <ActionCenterTab
+            scope="COACH"
+            withChrome={withCoachChrome}
+            pickBucket={pickActionBucket}
+            allHref="/action-center?scope=COACH&chrome=coach"
+            tileDefs={[
+              { key:'messages', bucket:'messages', title:'New Messages', emptyText:'No unread coach inbox items.', href:'/action-center?scope=COACH&chrome=coach&tab=SOCIAL', icon:'💬' },
+              { key:'requests', bucket:'requests', title:'Session Requests', emptyText:'No pending session requests.', href:'/dashboard/coaching/client-hub-update?tab=requests', icon:'📋' },
+              { key:'calendar', bucket:'calendar', title:'Session Updates', emptyText:'No calendar updates.', href:'/action-center?scope=COACH&chrome=coach&tab=CALENDAR', icon:'📅' },
+              { key:'feedback', bucket:'feedback', title:'New Feedback', emptyText:'No new feedback yet.', href:'/dashboard/coaching/feedback', icon:'⭐' },
+              { key:'clients', bucket:'clients', title:'Client Updates', emptyText:'No new client activity.', href:'/dashboard/coaching/clients', icon:'👤' },
+              { key:'shared', bucket:'shared', title:'Shared With Me', emptyText:'No shared documents.', href:'/action-center?scope=COACH&chrome=coach&tab=SHARED', icon:'📬' },
+            ]}
+          />
 
           <section style={{ ...GLASS, padding:'12px 0 12px 12px', overflow:'hidden' }}>
             <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', paddingRight:12, marginBottom:10 }}>

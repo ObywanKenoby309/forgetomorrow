@@ -27,6 +27,7 @@ import FeatureLock from "@/components/recruiter/FeatureLock";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import RecruiterTitleCard from "@/components/recruiter/RecruiterTitleCard";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
+import ActionCenterTab from "@/components/dashboard/ActionCenterTab";
 
 function safeText(v) {
   return typeof v === "string" ? v : v == null ? "" : String(v);
@@ -455,6 +456,7 @@ function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
 function DashboardBody() {
   const router = useRouter();
   const chromeQuery = normalizeRecruiterChrome(router?.query?.chrome) || "recruiter-smb";
+  const withRecruiterChrome = (path) => chromeQuery ? `${path}${path.includes("?") ? "&" : "?"}chrome=${chromeQuery}` : path;
   const { isEnterprise } = usePlan();
   const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -538,9 +540,18 @@ function DashboardBody() {
             subtitle="Your hiring pipeline at a glance. Act on what matters most today."
             isMobile
           />
-          <section style={{ ...GLASS, padding: 16 }}>
-            <RecruiterActionCenterSection chromeQuery={chromeQuery} isMobile />
-          </section>
+          <ActionCenterTab
+            scope="RECRUITER"
+            withChrome={withRecruiterChrome}
+            pickBucket={pickRecruiterBucket}
+            allHref={`/action-center?scope=RECRUITER&chrome=${chromeQuery}`}
+            tileDefs={[
+              { key: "unread_replies", bucket: "unread_replies", title: "Unread Replies", emptyText: "No unread candidate replies.", href: `/action-center?scope=RECRUITER&tab=UNREAD_REPLIES&chrome=${chromeQuery}`, icon: "💬" },
+              { key: "upcoming", bucket: "upcoming", title: "Upcoming Interviews", emptyText: "No upcoming interviews or conflicts.", href: `/action-center?scope=RECRUITER&tab=UPCOMING&chrome=${chromeQuery}`, icon: "📅" },
+              { key: "stalled", bucket: "stalled", title: "Stalled Candidates", emptyText: "No stalled candidates right now.", href: `/action-center?scope=RECRUITER&tab=STALLED&chrome=${chromeQuery}`, icon: "⚠️" },
+              { key: "awaiting_feedback", bucket: "awaiting_feedback", title: "Awaiting Feedback", emptyText: "No hiring manager feedback pending.", href: `/action-center?scope=RECRUITER&tab=AWAITING_FEEDBACK&chrome=${chromeQuery}`, icon: "🔄" },
+            ]}
+          />
           <section style={{ ...GLASS, padding: "12px 0 12px 12px", overflow: "hidden" }}>
             <div
               style={{
