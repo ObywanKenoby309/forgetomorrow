@@ -1,5 +1,5 @@
 // components/seeker/dashboard/RecommendedJobsPreview.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 function getAlignmentScore(job) {
@@ -24,10 +24,58 @@ function formatLocation(job) {
   return `${location} • ${worksite}`;
 }
 
+function useIsMobile(bp = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < bp);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [bp]);
+
+  return isMobile;
+}
+
+function JobCard({ job }) {
+  const alignmentScore = getAlignmentScore(job);
+  const alignmentLabel = getAlignmentLabel(alignmentScore);
+
+  return (
+    <Link
+      href={`/jobs?selectedJobId=${encodeURIComponent(job.id)}`}
+      className="recommendedJobCard"
+    >
+      <div className="recommendedJobMain">
+        <div className="recommendedJobText">
+          <h3>{job.title}</h3>
+          <p className="company">{job.company || 'Company not listed'}</p>
+        </div>
+
+        {typeof alignmentScore === 'number' && (
+          <div className="alignmentPill" aria-label={`Alignment ${alignmentScore}% ${alignmentLabel}`}>
+            <span className="alignmentScore">{alignmentScore}%</span>
+            {alignmentLabel && <span className="alignmentLabel">{alignmentLabel}</span>}
+          </div>
+        )}
+      </div>
+
+      <div className="recommendedJobMeta">{formatLocation(job)}</div>
+
+      {job.compensation && (
+        <div className="recommendedJobComp">{job.compensation}</div>
+      )}
+    </Link>
+  );
+}
+
 export default function RecommendedJobsPreview() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const touchStart = useRef(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     async function load() {
@@ -46,6 +94,36 @@ export default function RecommendedJobsPreview() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (activeIndex > Math.max(jobs.length - 1, 0)) {
+      setActiveIndex(0);
+    }
+  }, [activeIndex, jobs.length]);
+
+  const goPrevious = () => {
+    if (jobs.length <= 1) return;
+    setActiveIndex((idx) => (idx - 1 + jobs.length) % jobs.length);
+  };
+
+  const goNext = () => {
+    if (jobs.length <= 1) return;
+    setActiveIndex((idx) => (idx + 1) % jobs.length);
+  };
+
+  const handleTouchStart = (e) => {
+    touchStart.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStart.current === null || jobs.length <= 1) return;
+    const diff = touchStart.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) goNext();
+      else goPrevious();
+    }
+    touchStart.current = null;
+  };
+
   if (loading) {
     return (
       <div className="recommendedJobsShell">
@@ -59,41 +137,55 @@ export default function RecommendedJobsPreview() {
     return null;
   }
 
+  if (isMobile) {
+    const activeJob = jobs[activeIndex] || jobs[0];
+
+    return (
+      <div className="recommendedJobsShell">
+        <div
+          className="recommendedJobsSingle"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <JobCard job={activeJob} />
+        </div>
+
+        {jobs.length > 1 && (
+          <div className="recommendedJobsControls" aria-label="Recommended job carousel controls">
+            <button type="button" onClick={goPrevious} aria-label="Previous recommended job">
+              ‹
+            </button>
+
+            <div className="recommendedJobsDots" aria-label="Recommended job position">
+              {jobs.map((job, idx) => (
+                <button
+                  key={job.id || idx}
+                  type="button"
+                  aria-label={`Show recommended job ${idx + 1}`}
+                  aria-current={idx === activeIndex ? 'true' : 'false'}
+                  onClick={() => setActiveIndex(idx)}
+                  className={idx === activeIndex ? 'active' : ''}
+                />
+              ))}
+            </div>
+
+            <button type="button" onClick={goNext} aria-label="Next recommended job">
+              ›
+            </button>
+          </div>
+        )}
+
+        <style jsx>{styles}</style>
+      </div>
+    );
+  }
+
   return (
     <div className="recommendedJobsShell">
-      <div className="recommendedJobsScroller" aria-label="Recommended job matches">
-        {jobs.map((job) => {
-          const alignmentScore = getAlignmentScore(job);
-          const alignmentLabel = getAlignmentLabel(alignmentScore);
-
-          return (
-            <Link
-              key={job.id}
-              href={`/jobs?selectedJobId=${encodeURIComponent(job.id)}`}
-              className="recommendedJobCard"
-            >
-              <div className="recommendedJobMain">
-                <div className="recommendedJobText">
-                  <h3>{job.title}</h3>
-                  <p className="company">{job.company || 'Company not listed'}</p>
-                </div>
-
-                {typeof alignmentScore === 'number' && (
-                  <div className="alignmentPill" aria-label={`Alignment ${alignmentScore}% ${alignmentLabel}`}>
-                    <span className="alignmentScore">{alignmentScore}%</span>
-                    {alignmentLabel && <span className="alignmentLabel">{alignmentLabel}</span>}
-                  </div>
-                )}
-              </div>
-
-              <div className="recommendedJobMeta">{formatLocation(job)}</div>
-
-              {job.compensation && (
-                <div className="recommendedJobComp">{job.compensation}</div>
-              )}
-            </Link>
-          );
-        })}
+      <div className="recommendedJobsGrid" aria-label="Recommended job matches">
+        {jobs.map((job) => (
+          <JobCard key={job.id} job={job} />
+        ))}
       </div>
 
       <style jsx>{styles}</style>
@@ -104,28 +196,48 @@ export default function RecommendedJobsPreview() {
 const styles = `
   .recommendedJobsShell {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    box-sizing: border-box;
   }
 
   .recommendedJobsLoading {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     border: 1px solid rgba(255,112,67,0.14);
     background: rgba(255,255,255,0.72);
     border-radius: 14px;
-    padding: 18px;
+    padding: 16px;
     text-align: center;
     color: #607D8B;
     font-size: 13px;
     font-weight: 700;
   }
 
-  .recommendedJobsScroller {
+  .recommendedJobsGrid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .recommendedJobsSingle {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    box-sizing: border-box;
   }
 
   .recommendedJobCard {
     display: block;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
+    box-sizing: border-box;
     padding: 13px 14px;
     border-radius: 14px;
     border: 1px solid rgba(255,112,67,0.14);
@@ -148,6 +260,7 @@ const styles = `
     align-items: flex-start;
     justify-content: space-between;
     gap: 10px;
+    min-width: 0;
   }
 
   .recommendedJobText {
@@ -230,29 +343,61 @@ const styles = `
     line-height: 1.35;
   }
 
+  .recommendedJobsControls {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .recommendedJobsControls > button {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,112,67,0.24);
+    background: rgba(255,255,255,0.72);
+    color: #D9480F;
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(15,23,42,0.08);
+  }
+
+  .recommendedJobsDots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .recommendedJobsDots button {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    border: none;
+    padding: 0;
+    background: rgba(255,112,67,0.25);
+    cursor: pointer;
+    transition: width 160ms ease, background 160ms ease;
+  }
+
+  .recommendedJobsDots button.active {
+    width: 18px;
+    background: #FF7043;
+  }
+
   @media (max-width: 767px) {
     .recommendedJobsShell {
-      margin: 0 -4px;
-    }
-
-    .recommendedJobsScroller {
-      display: flex;
-      gap: 10px;
-      overflow-x: auto;
-      overscroll-behavior-x: contain;
-      scroll-snap-type: x mandatory;
-      padding: 2px 4px 8px;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-
-    .recommendedJobsScroller::-webkit-scrollbar {
-      display: none;
+      margin: 0;
+      overflow: hidden;
     }
 
     .recommendedJobCard {
-      flex: 0 0 88%;
-      scroll-snap-align: start;
       padding: 12px 13px;
       border-radius: 14px;
       background: rgba(255,255,255,0.78);
