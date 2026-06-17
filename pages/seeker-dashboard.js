@@ -618,13 +618,6 @@ export default function SeekerDashboard() {
               </div>
             </section>
 
-            {/* 8. Ad — lowest priority */}
-            <section style={{ ...GLASS, padding: 12 }}>
-              <div style={{ ...WHITE_CARD, padding: 16, minHeight: 100 }}>
-                <RightRailPlacementManager slot="right_rail_1" />
-              </div>
-            </section>
-
           </div>
         </SeekerLayout>
       </>
