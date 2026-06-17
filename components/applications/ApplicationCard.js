@@ -70,12 +70,13 @@ export default function ApplicationCard({
   dragListeners,
   dragAttributes,
 }) {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 1024 : false
+  );
   const [showMoveSelect, setShowMoveSelect] = useState(false);
 
   useEffect(() => {
-    const updateIsMobile = () => setIsMobile(window.innerWidth <= 768);
-    updateIsMobile();
+    const updateIsMobile = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener('resize', updateIsMobile);
     return () => window.removeEventListener('resize', updateIsMobile);
   }, []);

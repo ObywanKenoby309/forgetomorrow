@@ -20,139 +20,60 @@ const stageKey = (stage) =>
     'Closed Out': 'info',
   }[stage] || 'neutral');
 
-function StageStrip({ tracker }) {
-  const [isMobileTight, setIsMobileTight] = useState(false);
+function StageStrip({ tracker, wrapperStyle }) {
+  // ✅ Matches the platform-wide mobile breakpoint (SeekerLayout, etc).
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 1024 : false
+  );
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const mq = window.matchMedia('(max-width: 768px)');
-    const apply = () => setIsMobileTight(!!mq.matches);
-
-    apply();
-    if (mq.addEventListener) mq.addEventListener('change', apply);
-    else mq.addListener(apply);
-
-    return () => {
-      if (mq.removeEventListener) mq.removeEventListener('change', apply);
-      else mq.removeListener(apply);
-    };
+    const onResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  if (isMobileTight) {
-    return (
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '100%',
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          WebkitOverflowScrolling: 'touch',
-          boxSizing: 'border-box',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-        }}
-      >
-        <div
-          style={{
-            display: 'inline-grid',
-            gridAutoFlow: 'column',
-            gridAutoColumns: 'minmax(132px, 1fr)',
-            gap: 12,
-            minWidth: 'max-content',
-            paddingRight: 8,
-            boxSizing: 'border-box',
-          }}
-        >
-          {STAGES.map((stage) => {
-            const count = tracker?.[stage]?.length || 0;
-            const c = colorFor(stageKey(stage));
-            const mobileTitle =
-              stage === 'Pinned'
-                ? 'Pinned'
-                : stage === 'Applied'
-                ? 'Applied'
-                : stage === 'Interviewing'
-                ? 'Interviewi...'
-                : stage === 'Offers'
-                ? 'Offers'
-                : 'Closed Out';
-
-            return (
-              <div
-                key={stage}
-                style={{
-                  background: c.bg,
-                  color: c.text,
-                  border: `1px solid ${c.solid}`,
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  display: 'grid',
-                  gap: 4,
-                  textAlign: 'center',
-                  minWidth: 132,
-                  boxSizing: 'border-box',
-                  boxShadow: 'none',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    opacity: 0.92,
-                    lineHeight: 1.05,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'clip',
-                  }}
-                >
-                  {mobileTitle}
-                </div>
-                <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.05 }}>{count}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
+  // Mobile stage counts now live inside ApplicationsBoard itself
+  // (Board lane headers + Focus tabs), so this strip is desktop-only.
+  if (isMobile) return null;
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gap: 12,
-        gridTemplateColumns: 'repeat(5, minmax(0,1fr))',
-        width: '100%',
-        minWidth: 0,
-        boxSizing: 'border-box',
-      }}
-    >
-      {STAGES.map((stage) => {
-        const count = tracker?.[stage]?.length || 0;
-        const c = colorFor(stageKey(stage));
-        return (
-          <div
-            key={stage}
-            style={{
-              background: c.bg,
-              color: c.text,
-              border: `1px solid ${c.solid}`,
-              borderRadius: 10,
-              padding: '10px 12px',
-              display: 'grid',
-              gap: 4,
-              textAlign: 'center',
-              minWidth: 0,
-              boxSizing: 'border-box',
-            }}
-          >
-            <div style={{ fontSize: 12, opacity: 0.9, whiteSpace: 'nowrap' }}>{stage}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{count}</div>
-          </div>
-        );
-      })}
-    </div>
+    <section style={wrapperStyle}>
+      <div
+        style={{
+          display: 'grid',
+          gap: 12,
+          gridTemplateColumns: 'repeat(5, minmax(0,1fr))',
+          width: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box',
+        }}
+      >
+        {STAGES.map((stage) => {
+          const count = tracker?.[stage]?.length || 0;
+          const c = colorFor(stageKey(stage));
+          return (
+            <div
+              key={stage}
+              style={{
+                background: c.bg,
+                color: c.text,
+                border: `1px solid ${c.solid}`,
+                borderRadius: 10,
+                padding: '10px 12px',
+                display: 'grid',
+                gap: 4,
+                textAlign: 'center',
+                minWidth: 0,
+                boxSizing: 'border-box',
+              }}
+            >
+              <div style={{ fontSize: 12, opacity: 0.9, whiteSpace: 'nowrap' }}>{stage}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{count}</div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -596,9 +517,7 @@ const HeaderBox = (
       subtitle="Track your job search across stages, keep notes, and move roles forward."
     />
 
-    <section style={{ ...WHITE_CARD, padding: '28px 16px' }}>
-      <StageStrip tracker={tracker} />
-    </section>
+    <StageStrip tracker={tracker} wrapperStyle={{ ...WHITE_CARD, padding: '28px 16px' }} />
   </div>
 );
 
