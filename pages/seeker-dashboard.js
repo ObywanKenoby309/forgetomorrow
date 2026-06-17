@@ -546,34 +546,47 @@ export default function SeekerDashboard() {
             {/* 4. Connected jobs panel — Recommended + Pinned */}
             <ConnectedJobsPanel withChrome={withChrome} isMobile />
 
-            {/* 5. Profile Performance — health snapshot style */}
-            <section style={{ ...GLASS, padding: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center',
-                justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: '#112033' }}>Profile Health</span>
-                <Link href={withChrome('/seeker/profile')}
-                  style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
-                  Full analytics →
-                </Link>
-              </div>
-              <div style={{ ...WHITE_CARD, padding: 12 }}>
-                <ProfilePerformanceTeaser />
-              </div>
-            </section>
+{/* 5. Profile Performance — health snapshot style */}
+<section style={{ ...GLASS, padding: 16 }}>
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    }}
+  >
+    <span style={{ fontSize: 14, fontWeight: 800, color: '#112033' }}>
+      Profile Health
+    </span>
+    <Link
+      href={withChrome('/seeker/profile')}
+      style={{
+        fontSize: 11,
+        fontWeight: 700,
+        color: '#FF7043',
+        textDecoration: 'none',
+      }}
+    >
+      Full analytics →
+    </Link>
+  </div>
 
-            {/* 6. Activity — tracker at a glance */}
-            <section style={{ ...GLASS, padding: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Activity</span>
-                <Link href={withChrome('/seeker/applications')}
-                  style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
-                  History →
-                </Link>
-              </div>
-              <div style={{ ...WHITE_CARD, padding: 10 }}>
-                <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-              </div>
-            </section>
+  <ProfilePerformanceTeaser />
+</section>
+
+{/* 6. Activity — tracker at a glance */}
+<section style={{ ...GLASS, padding: 14 }}>
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+    <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Activity</span>
+    <Link href={withChrome('/seeker/applications')}
+      style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
+      History →
+    </Link>
+  </div>
+
+  <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
+</section>
 
           </div>
         </SeekerLayout>
