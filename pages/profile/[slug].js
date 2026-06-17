@@ -49,6 +49,25 @@ const SOCIAL_FIELDS = [
   { key: 'instagram', label: 'Instagram', placeholder: 'instagram.com/username', icon: '◉' },
 ];
 
+function getAssetCategoryList(items = []) {
+  return Array.from(new Set(items.map(item => item.category).filter(Boolean)));
+}
+
+function assetMatchesSearch(asset, query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (!q) return true;
+
+  const haystack = [
+    asset?.name,
+    asset?.desc,
+    asset?.category,
+    ...(Array.isArray(asset?.tags) ? asset.tags : []),
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  return haystack.includes(q);
+}
+
+
 // Maps each mobile edit sheet to the Profile Signal Engine signal(s) it affects,
 // so the mobile Signals drawer can show only what's relevant to the section
 // currently being edited (filterKeys matches PROFILE_SIGNALS[].key in
@@ -795,6 +814,25 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-asset-none { padding:5px 12px; border-radius:999px; flex-shrink:0; border:1px solid rgba(255,255,255,0.20); background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.70); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; transition:background 0.15s; }
           .ft-asset-none.selected { border-color:${ORANGE}; color:${ORANGE}; }
           .ft-asset-none:hover:not(.selected) { background:rgba(255,255,255,0.14); }
+          .ft-asset-picker { display:grid; gap:12px; margin-bottom:12px; }
+          .ft-asset-picker-top { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; }
+          .ft-asset-search { width:100%; min-width:0; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16); border-radius:10px; color:var(--white); font-family:inherit; font-size:13px; outline:none; padding:9px 12px; }
+          .ft-asset-search:focus { border-color:rgba(255,112,67,0.55); box-shadow:0 0 0 3px rgba(255,112,67,0.12); }
+          .ft-asset-search::placeholder { color:rgba(255,255,255,0.28); }
+          .ft-asset-count { font-size:11px; font-weight:700; color:rgba(255,255,255,0.42); white-space:nowrap; }
+          .ft-asset-categories { display:flex; gap:8px; flex-wrap:wrap; }
+          .ft-asset-category-btn { padding:5px 11px; border-radius:999px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.58); font-family:inherit; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s; }
+          .ft-asset-category-btn:hover { border-color:rgba(255,112,67,0.38); color:${ORANGE}; background:rgba(255,112,67,0.10); }
+          .ft-asset-category-btn.active { border-color:rgba(255,112,67,0.55); color:${ORANGE}; background:rgba(255,112,67,0.16); }
+          .ft-asset-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(132px, 1fr)); gap:10px; max-height:360px; overflow-y:auto; padding-right:4px; scrollbar-width:thin; scrollbar-color:rgba(255,112,67,0.3) transparent; }
+          .ft-asset-card { position:relative; overflow:hidden; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.05); cursor:pointer; padding:0; text-align:left; font-family:inherit; transition:border-color 0.15s, transform 0.15s, background 0.15s; }
+          .ft-asset-card:hover { transform:translateY(-1px); border-color:rgba(255,112,67,0.42); background:rgba(255,112,67,0.08); }
+          .ft-asset-card.selected { border-color:${ORANGE}; box-shadow:0 0 0 2px rgba(255,112,67,0.22); }
+          .ft-asset-card-img { width:100%; height:74px; object-fit:cover; display:block; background:rgba(255,255,255,0.06); }
+          .ft-asset-card-body { padding:8px 9px 9px; min-height:54px; }
+          .ft-asset-card-name { font-size:11px; font-weight:800; color:rgba(255,255,255,0.86); line-height:1.25; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+          .ft-asset-card-meta { font-size:9px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,112,67,0.72); margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+          .ft-asset-empty { font-size:12px; font-weight:600; color:rgba(255,255,255,0.42); padding:10px 2px; }
           .ft-slider-row { display:grid; gap:6px; margin-top:12px; }
           .ft-slider-label { font-size:11px; font-weight:600; color:rgba(255,255,255,0.60); }
           .ft-slider { width:100%; accent-color:${ORANGE}; }
@@ -1911,14 +1949,15 @@ flushPendingSaveRef.current = flushPendingSave;
                   </div>
 
                   <div className="ft-dark-section-label" style={{ marginBottom:10 }}>Banner</div>
-                  <div className="ft-asset-rail" style={{ marginBottom:12 }}>
-                    <button type="button" className={`ft-asset-none${!coverUrl ? ' selected' : ''}`} onClick={() => setCoverUrl('')}>None</button>
-                    {profileBanners.map(b => (
-                      <button key={b.key} type="button" className={`ft-asset-chip${coverUrl === b.src ? ' selected' : ''}`} onClick={() => setCoverUrl(b.src)}>
-                        <img src={b.src} alt={b.name} />
-                      </button>
-                    ))}
-                  </div>
+                  <AssetPicker
+                    type="banner"
+                    items={profileBanners}
+                    selectedSrc={coverUrl}
+                    onSelect={setCoverUrl}
+                    noneLabel="None"
+                    noneSelected={!coverUrl}
+                    onNone={() => setCoverUrl('')}
+                  />
                   {coverUrl && (
                     <div style={{ display:'grid', gap:10, marginBottom:22 }}>
                       <div style={{ display:'flex', gap:8, alignItems:'center' }}>
@@ -1936,14 +1975,15 @@ flushPendingSaveRef.current = flushPendingSave;
                   )}
 
                   <div className="ft-dark-section-label" style={{ marginBottom:10 }}>Background</div>
-                  <div className="ft-asset-rail">
-                    <button type="button" className={`ft-asset-none${!wallpaperUrl ? ' selected' : ''}`} onClick={() => setWallpaperUrl('')}>Default</button>
-                    {profileWallpapers.map(w => (
-                      <button key={w.key} type="button" className={`ft-asset-chip${wallpaperUrl === w.src ? ' selected' : ''}`} onClick={() => setWallpaperUrl(w.src)}>
-                        <img src={w.src} alt={w.name} />
-                      </button>
-                    ))}
-                  </div>
+                  <AssetPicker
+                    type="wallpaper"
+                    items={profileWallpapers}
+                    selectedSrc={wallpaperUrl}
+                    onSelect={setWallpaperUrl}
+                    noneLabel="Default"
+                    noneSelected={!wallpaperUrl}
+                    onNone={() => setWallpaperUrl('')}
+                  />
                 </div>
                 <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={async () => { await flushPendingSaveRef.current(true); setMobileSheet(null); }}>Done</button></div></>
               )}
@@ -2105,6 +2145,91 @@ flushPendingSaveRef.current = flushPendingSave;
   );
 }
 
+
+function AssetPicker({ type, items = [], selectedSrc, onSelect, noneLabel, noneSelected, onNone }) {
+  const [query, setQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All');
+
+  const categories = useMemo(() => getAssetCategoryList(items), [items]);
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const categoryMatches = activeCategory === 'All' || item.category === activeCategory;
+      return categoryMatches && assetMatchesSearch(item, query);
+    });
+  }, [items, activeCategory, query]);
+
+  return (
+    <div className="ft-asset-picker">
+      <div className="ft-asset-picker-top">
+        <input
+          className="ft-asset-search"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder={`Search ${type === 'banner' ? 'banners' : 'wallpapers'}…`}
+          aria-label={`Search ${type === 'banner' ? 'banners' : 'wallpapers'}`}
+        />
+        <span className="ft-asset-count">{filteredItems.length} shown</span>
+      </div>
+
+      <div className="ft-asset-categories" aria-label={`${type} categories`}>
+        <button
+          type="button"
+          className={`ft-asset-category-btn${activeCategory === 'All' ? ' active' : ''}`}
+          onClick={() => setActiveCategory('All')}
+        >
+          All
+        </button>
+        {categories.map(category => (
+          <button
+            key={category}
+            type="button"
+            className={`ft-asset-category-btn${activeCategory === category ? ' active' : ''}`}
+            onClick={() => setActiveCategory(category)}
+          >
+            {category}
+          </button>
+        ))}
+      </div>
+
+      <div className="ft-asset-grid">
+        <button
+          type="button"
+          className={`ft-asset-card${noneSelected ? ' selected' : ''}`}
+          onClick={onNone}
+        >
+          <div className="ft-asset-card-img" style={{ display:'grid', placeItems:'center', background:'rgba(255,255,255,0.06)', color:'rgba(255,255,255,0.46)', fontSize:12, fontWeight:800 }}>
+            {noneLabel}
+          </div>
+          <div className="ft-asset-card-body">
+            <div className="ft-asset-card-name">{noneLabel}</div>
+            <div className="ft-asset-card-meta">System Default</div>
+          </div>
+        </button>
+
+        {filteredItems.map(asset => (
+          <button
+            key={asset.key}
+            type="button"
+            className={`ft-asset-card${selectedSrc === asset.src ? ' selected' : ''}`}
+            onClick={() => onSelect(asset.src)}
+            title={asset.desc || asset.name}
+          >
+            <img className="ft-asset-card-img" src={asset.src} alt={asset.name} loading="lazy" />
+            <div className="ft-asset-card-body">
+              <div className="ft-asset-card-name">{asset.name}</div>
+              <div className="ft-asset-card-meta">{asset.category || 'Profile Asset'}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {filteredItems.length === 0 && (
+        <div className="ft-asset-empty">No {type === 'banner' ? 'banners' : 'wallpapers'} match that search.</div>
+      )}
+    </div>
+  );
+}
+
 function SkillsViewCard({ skills }) {
   return (
     <div className="ft-card">
@@ -2258,14 +2383,15 @@ function BannerSection({ editMode, bannerImage, bannerPos, resolvedBannerHeight,
       {editMode && showPanel && (
         <div className="ft-banner-panel">
           <div className="ft-panel-label">Portfolio banner</div>
-          <div className="ft-asset-rail" style={{ marginBottom:12 }}>
-            <button type="button" className={`ft-asset-none${!coverUrl ? ' selected' : ''}`} onClick={() => setCoverUrl('')}>None</button>
-            {profileBanners.map(b => (
-              <button key={b.key} type="button" className={`ft-asset-chip${coverUrl === b.src ? ' selected' : ''}`} onClick={() => setCoverUrl(b.src)}>
-                <img src={b.src} alt={b.name} />
-              </button>
-            ))}
-          </div>
+          <AssetPicker
+            type="banner"
+            items={profileBanners}
+            selectedSrc={coverUrl}
+            onSelect={setCoverUrl}
+            noneLabel="None"
+            noneSelected={!coverUrl}
+            onNone={() => setCoverUrl('')}
+          />
           {coverUrl && (
             <div style={{ display:'grid', gap:10, marginBottom:16 }}>
               <div style={{ display:'flex', gap:8, alignItems:'center' }}>
@@ -2282,14 +2408,15 @@ function BannerSection({ editMode, bannerImage, bannerPos, resolvedBannerHeight,
             </div>
           )}
           <div className="ft-panel-label">Page wallpaper</div>
-          <div className="ft-asset-rail">
-            <button type="button" className={`ft-asset-none${!wallpaperUrl ? ' selected' : ''}`} onClick={() => setWallpaperUrl('')}>Default</button>
-            {profileWallpapers.map(w => (
-              <button key={w.key} type="button" className={`ft-asset-chip${wallpaperUrl === w.src ? ' selected' : ''}`} onClick={() => setWallpaperUrl(w.src)}>
-                <img src={w.src} alt={w.name} />
-              </button>
-            ))}
-          </div>
+          <AssetPicker
+            type="wallpaper"
+            items={profileWallpapers}
+            selectedSrc={wallpaperUrl}
+            onSelect={setWallpaperUrl}
+            noneLabel="Default"
+            noneSelected={!wallpaperUrl}
+            onNone={() => setWallpaperUrl('')}
+          />
         </div>
       )}
     </div>
