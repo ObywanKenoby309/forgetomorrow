@@ -100,7 +100,7 @@ export default function ActionCenterTab({ scope, withChrome, tileDefs, pickBucke
         aria-label="Toggle Action Center"
         style={{
           position: 'fixed',
-          right: open ? 'min(85vw, 360px)' : 0,
+          right: open ? 'min(85vw, 380px)' : 0,
           top: '50%',
           transform: 'translateY(-50%)',
           zIndex: 220,
@@ -176,11 +176,11 @@ export default function ActionCenterTab({ scope, withChrome, tileDefs, pickBucke
           right: 0,
           bottom: 0,
           zIndex: 219,
-          width: 'min(85vw, 360px)',
+          width: 'min(85vw, 380px)',
           maxWidth: '100vw',
-          background: 'rgba(252,252,253,0.98)',
-          borderLeft: '1px solid rgba(255,112,67,0.15)',
-          boxShadow: '-12px 0 40px rgba(0,0,0,0.30)',
+          background: 'rgba(10,18,30,0.98)',
+          borderLeft: '1px solid rgba(255,255,255,0.10)',
+          boxShadow: '-12px 0 40px rgba(0,0,0,0.50)',
           display: 'flex',
           flexDirection: 'column',
           paddingTop: 'env(safe-area-inset-top, 14px)',
@@ -190,39 +190,39 @@ export default function ActionCenterTab({ scope, withChrome, tileDefs, pickBucke
           overflowY: 'auto',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 18px 12px', borderBottom: '1px solid rgba(0,0,0,0.08)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
           <div>
             <div style={{ fontWeight: 900, fontSize: 16, color: ORANGE }}>Action Center</div>
-            <div style={{ fontSize: 12, marginTop: 2, fontWeight: hasActions ? 700 : 500, color: hasActions ? ORANGE : '#90A4AE' }}>
+            <div style={{ fontSize: 11, marginTop: 2, color: hasActions ? ORANGE : 'rgba(255,255,255,0.50)' }}>
               {hasActions ? `${totalActions} item${totalActions !== 1 ? 's' : ''} need your attention` : "You're all caught up"}
             </div>
           </div>
           <button
             onClick={() => setOpen(false)}
-            style={{ background: 'rgba(0,0,0,0.06)', border: 'none', width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', fontSize: 16, fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.60)', width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', fontSize: 16, fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
           >×</button>
         </div>
 
-        <div style={{ padding: '14px 16px', display: 'grid', gap: 8 }}>
+        <div style={{ padding: '12px 14px', display: 'grid', gap: 6 }}>
           {loading ? (
             [1, 2, 3, 4].map((i) => (
-              <div key={i} style={{ height: 64, borderRadius: 12, background: 'rgba(0,0,0,0.04)' }} />
+              <div key={i} style={{ height: 56, borderRadius: 10, background: 'rgba(255,255,255,0.04)' }} />
             ))
           ) : (
             sortedTiles.map((t) => <DrawerActionTile key={t.key} {...t} onNavigate={() => setOpen(false)} />)
           )}
         </div>
 
-        <div style={{ padding: '4px 16px 16px' }}>
+        <div style={{ padding: '4px 14px 14px' }}>
           <Link
             href={resolvedAllHref}
             onClick={() => setOpen(false)}
             style={{
               display: 'block', textAlign: 'center', textDecoration: 'none',
               fontSize: 13, fontWeight: 800, color: ORANGE,
-              padding: '10px 14px', borderRadius: 999,
-              border: `1px solid rgba(255,112,67,0.30)`,
-              background: 'rgba(255,112,67,0.08)',
+              padding: '9px 14px', borderRadius: 999,
+              border: `1px solid rgba(255,112,67,0.35)`,
+              background: 'rgba(255,112,67,0.10)',
             }}
           >
             View all
@@ -240,40 +240,38 @@ function DrawerActionTile({ title, items, emptyText, href, icon, onNavigate }) {
       href={href}
       onClick={onNavigate}
       style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '12px 14px', borderRadius: 12, textDecoration: 'none',
-        background: hasItems ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)',
-        border: hasItems ? '1px solid rgba(255,112,67,0.22)' : '1px solid rgba(0,0,0,0.06)',
-        boxShadow: hasItems ? '0 4px 12px rgba(0,0,0,0.08)' : 'none',
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '10px 12px', borderRadius: 10, textDecoration: 'none',
+        background: hasItems ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.04)',
+        border: hasItems ? '1px solid rgba(255,112,67,0.25)' : '1px solid rgba(255,255,255,0.06)',
       }}
     >
       <div style={{
-        width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-        background: hasItems ? 'rgba(255,112,67,0.10)' : 'rgba(0,0,0,0.04)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+        width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+        background: hasItems ? 'rgba(255,112,67,0.16)' : 'rgba(255,255,255,0.05)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
       }}>
         {icon}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: hasItems ? '#112033' : '#90A4AE' }}>{title}</div>
-        <div style={{ fontSize: 12, marginTop: 2, color: hasItems ? '#546E7A' : '#B0BEC5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: 12.5, fontWeight: 800, color: hasItems ? '#fff' : 'rgba(255,255,255,0.45)' }}>{title}</div>
+        <div style={{ fontSize: 11, marginTop: 1, color: hasItems ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {hasItems ? (items[0].title || 'View item') : emptyText}
         </div>
       </div>
       {hasItems ? (
         <div style={{
-          minWidth: 28, height: 28, borderRadius: 999, flexShrink: 0,
+          minWidth: 22, height: 22, borderRadius: 999, flexShrink: 0,
           background: ORANGE, color: 'white', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: 13, fontWeight: 900,
-          boxShadow: '0 4px 10px rgba(255,112,67,0.40)',
+          justifyContent: 'center', fontSize: 11, fontWeight: 900,
         }}>
           {items.length}
         </div>
       ) : (
         <div style={{
-          width: 24, height: 24, borderRadius: 999, flexShrink: 0,
-          background: 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: 14, color: '#B0BEC5',
+          width: 20, height: 20, borderRadius: 999, flexShrink: 0,
+          background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', fontSize: 12, color: 'rgba(255,255,255,0.35)',
         }}>
           ✓
         </div>
