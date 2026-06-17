@@ -476,67 +476,7 @@ export default function SeekerDashboard() {
               ]}
             />
 
-            {/* 3. KPI strip — seekerColors, centered */}
-            <section style={{ ...GLASS, padding: '12px 0 12px 12px', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                paddingRight: 12, marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Your Progress</span>
-                <Link href={withChrome('/seeker/applications')}
-                  style={{ fontSize: 12, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
-                  Full history →
-                </Link>
-              </div>
-              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingRight: 12,
-                paddingBottom: 4, scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {kpi && [
-                  { label: 'Pinned',       value: kpi.pinned,       href: withChrome('/seeker/pinned-jobs'),    colorKey: 'neutral'      },
-                  { label: 'Applied',      value: kpi.applied,      href: withChrome('/seeker/applications'),   colorKey: 'applied'      },
-                  { label: 'Interviewing', value: kpi.interviewing, href: withChrome('/seeker/applications'),   colorKey: 'interviewing' },
-                  { label: 'Offers',       value: kpi.offers,       href: withChrome('/seeker/applications'),   colorKey: 'offers'       },
-                  { label: 'Closed Out',   value: kpi.closedOut,    href: withChrome('/seeker/applications'),   colorKey: 'info'         },
-                ].map(stat => {
-                  const c = colorFor(stat.colorKey);
-                  return (
-                    <Link key={stat.label} href={stat.href} style={{
-                      flexShrink: 0, width: 100,
-                      background: c.bg, border: `1px solid ${c.solid}`,
-                      borderRadius: 10, padding: '10px 12px',
-                      textDecoration: 'none', display: 'block', textAlign: 'center',
-                    }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: c.text,
-                        textTransform: 'uppercase', letterSpacing: '0.04em',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        textAlign: 'center' }}>
-                        {stat.label}
-                      </div>
-                      <div style={{ fontSize: 24, fontWeight: 900, color: c.text,
-                        lineHeight: 1.1, marginTop: 4, textAlign: 'center', width: '100%' }}>
-                        {stat.value}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-
-            {/* 4. Activity — right after KPIs, motivational */}
-            <section style={{ ...GLASS, padding: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Activity</span>
-                <Link href={withChrome('/seeker/applications')}
-                  style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
-                  History →
-                </Link>
-              </div>
-              <div style={{ ...WHITE_CARD, padding: 10 }}>
-                <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-              </div>
-            </section>
-
-            {/* 5. Connected jobs panel — Recommended + Pinned */}
-            <ConnectedJobsPanel withChrome={withChrome} isMobile />
-
-            {/* 6. Pipeline + Next Steps — recruiter-style small side-by-side cards */}
+            {/* 3. Pipeline + Next Steps — primary mobile actions */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: GAP }}>
 
               {/* Pipeline snapshot */}
@@ -603,7 +543,10 @@ export default function SeekerDashboard() {
               </section>
             </div>
 
-            {/* 7. Profile Performance — health snapshot style */}
+            {/* 4. Connected jobs panel — Recommended + Pinned */}
+            <ConnectedJobsPanel withChrome={withChrome} isMobile />
+
+            {/* 5. Profile Performance — health snapshot style */}
             <section style={{ ...GLASS, padding: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center',
                 justifyContent: 'space-between', marginBottom: 10 }}>
@@ -615,6 +558,20 @@ export default function SeekerDashboard() {
               </div>
               <div style={{ ...WHITE_CARD, padding: 12 }}>
                 <ProfilePerformanceTeaser />
+              </div>
+            </section>
+
+            {/* 6. Activity — tracker at a glance */}
+            <section style={{ ...GLASS, padding: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Activity</span>
+                <Link href={withChrome('/seeker/applications')}
+                  style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
+                  History →
+                </Link>
+              </div>
+              <div style={{ ...WHITE_CARD, padding: 10 }}>
+                <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
               </div>
             </section>
 
