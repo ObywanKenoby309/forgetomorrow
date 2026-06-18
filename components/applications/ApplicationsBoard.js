@@ -345,11 +345,9 @@ export default function ApplicationsBoard({
   onDelete,
   onView,
   onOpenPrep,
+  onAdd,
   compact = false,
   columns = 5,
-  title = 'Job Application Tracker',
-  actions = null,
-  leftActions = null,
 }) {
   const [activeId, setActiveId] = useState(null);
   const [activeSize, setActiveSize] = useState(null);
@@ -405,18 +403,24 @@ export default function ApplicationsBoard({
   );
 
   const wrapStyle = {
-    background: 'transparent',
-    border: 'none',
-    borderRadius: 0,
-    padding: 0,
-    boxShadow: 'none',
+    border: isMobile ? '1px solid rgba(255,255,255,0.4)' : 'none',
+    borderRadius: isMobile ? 16 : 0,
+    padding: isMobile ? 12 : '0 18px 0 0',
+    boxShadow: isMobile ? '0 10px 24px rgba(0,0,0,0.12)' : 'none',
+    background: isMobile ? 'rgba(255,255,255,0.72)' : 'transparent',
+    backdropFilter: isMobile ? 'blur(10px)' : 'none',
+    WebkitBackdropFilter: isMobile ? 'blur(10px)' : 'none',
     width: '100%',
     boxSizing: 'border-box',
     overflow: 'visible',
   };
 
+  // Desktop columns get glass backing; the white ApplicationCards sit on top of it.
   const columnStyle = {
-    background: 'white',
+    background: isMobile ? 'white' : 'rgba(255,255,255,0.45)',
+    backdropFilter: isMobile ? 'none' : 'blur(8px)',
+    WebkitBackdropFilter: isMobile ? 'none' : 'blur(8px)',
+    border: isMobile ? 'none' : '1px solid rgba(255,255,255,0.5)',
     borderRadius: 12,
     padding: compact ? 6 : 8,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
@@ -502,56 +506,6 @@ export default function ApplicationsBoard({
 
   return (
     <section style={wrapStyle}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: isMobile ? 'stretch' : 'center',
-          justifyContent: 'space-between',
-          gap: isMobile ? 10 : 12,
-          marginBottom: compact ? 8 : 12,
-          flexWrap: 'wrap',
-          flexDirection: isMobile ? 'column' : 'row',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: isMobile ? 'stretch' : 'center',
-            gap: isMobile ? 10 : 12,
-            flex: '1 1 auto',
-            minWidth: isMobile ? 0 : 240,
-            flexDirection: isMobile ? 'column' : 'row',
-          }}
-        >
-          {/* Title intentionally omitted — the page's SeekerTitleCard
-              already renders "Applications" above this on every device. */}
-
-          <div
-            style={{
-              display: 'flex',
-              width: isMobile ? '100%' : 'auto',
-              maxWidth: '100%',
-              minWidth: 0,
-            }}
-          >
-            {leftActions}
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            width: isMobile ? '100%' : 'auto',
-            maxWidth: '100%',
-            minWidth: 0,
-          }}
-        >
-          {actions}
-        </div>
-      </div>
-
       {isMobile && (
         <div
           style={{
@@ -579,21 +533,42 @@ export default function ApplicationsBoard({
               onClick={() => setMobileView(v.key)}
               style={{
                 flex: 1,
-                border: 'none',
+                border: mobileView === v.key ? '1.5px solid #FF7043' : '1.5px solid transparent',
                 borderRadius: 9,
                 padding: '8px 0',
                 fontWeight: 800,
                 fontSize: 12.5,
                 cursor: 'pointer',
-                background: mobileView === v.key ? '#FF7043' : 'transparent',
-                color: mobileView === v.key ? '#fff' : '#5F6B7A',
-                boxShadow: mobileView === v.key ? '0 4px 12px rgba(255,112,67,0.4)' : 'none',
+                background: mobileView === v.key ? '#1B2430' : 'transparent',
+                color: mobileView === v.key ? '#FF8A5C' : '#5F6B7A',
+                boxShadow: mobileView === v.key ? '0 0 0 3px rgba(255,112,67,0.18)' : 'none',
                 transition: 'all .18s ease',
               }}
             >
               {v.label}
             </button>
           ))}
+
+          {onAdd && (
+            <button
+              type="button"
+              onClick={() => onAdd()}
+              style={{
+                flex: 1,
+                border: 'none',
+                borderRadius: 9,
+                padding: '8px 0',
+                fontWeight: 800,
+                fontSize: 12.5,
+                cursor: 'pointer',
+                background: '#FF7043',
+                color: '#fff',
+                boxShadow: '0 4px 12px rgba(255,112,67,0.4)',
+              }}
+            >
+              + Add
+            </button>
+          )}
         </div>
       )}
 
@@ -728,6 +703,32 @@ export default function ApplicationsBoard({
                     >
                       <span style={{ whiteSpace: 'nowrap' }}>{stage}</span>
                       <span style={{ fontWeight: 900, whiteSpace: 'nowrap' }}>{items.length}</span>
+                      {!isMobile && onAdd && (
+                        <button
+                          type="button"
+                          onClick={() => onAdd(stage)}
+                          title={`Add to ${stage}`}
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: '50%',
+                            border: 'none',
+                            background: '#FF7043',
+                            color: '#fff',
+                            fontSize: 13,
+                            fontWeight: 800,
+                            lineHeight: 1,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            boxShadow: '0 2px 6px rgba(255,112,67,0.4)',
+                          }}
+                        >
+                          +
+                        </button>
+                      )}
                     </div>
 
                     <DroppableColumn id={columnId}>

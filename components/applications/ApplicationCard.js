@@ -112,6 +112,34 @@ export default function ApplicationCard({
       boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
     }}>
 
+      {/* Locked badge — top-right corner, doesn't compete with the action row */}
+      {locked && (
+        <span
+          title="Managed by the recruiter — moves automatically with the job pipeline"
+          style={{
+            position: 'absolute',
+            top: 6,
+            right: 6,
+            width: 20,
+            height: 20,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.9)',
+            border: '1px solid rgba(0,0,0,0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#90A4AE',
+            zIndex: 2,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
+          }}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="5" y="11" width="14" height="9" rx="2" />
+            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+          </svg>
+        </span>
+      )}
+
       {/* Stage accent strip */}
       <div style={{ height: 3, background: accent, flexShrink: 0 }} />
 
@@ -168,27 +196,7 @@ export default function ApplicationCard({
 
           {/* Left: move + view + edit + delete */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            {locked ? (
-              <div
-                title="Managed by the recruiter — moves automatically with the job pipeline"
-                style={{
-                  width: 30,
-                  height: 30,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#90A4AE',
-                  background: 'rgba(0,0,0,0.03)',
-                  borderRadius: 8,
-                  flexShrink: 0,
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <rect x="5" y="11" width="14" height="9" rx="2" />
-                  <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-                </svg>
-              </div>
-            ) : isMobile ? (
+            {locked ? null : isMobile ? (
               <>
                 <IconBtn
                   onClick={() => setShowMoveSelect(prev => !prev)}

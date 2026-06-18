@@ -59,16 +59,16 @@ function StageStrip({ tracker, wrapperStyle }) {
                 color: c.text,
                 border: `1px solid ${c.solid}`,
                 borderRadius: 10,
-                padding: '10px 12px',
+                padding: '7px 12px',
                 display: 'grid',
-                gap: 4,
+                gap: 2,
                 textAlign: 'center',
                 minWidth: 0,
                 boxSizing: 'border-box',
               }}
             >
-              <div style={{ fontSize: 12, opacity: 0.9, whiteSpace: 'nowrap' }}>{stage}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{count}</div>
+              <div style={{ fontSize: 11, opacity: 0.9, whiteSpace: 'nowrap' }}>{stage}</div>
+              <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1 }}>{count}</div>
             </div>
           );
         })}
@@ -94,15 +94,7 @@ export default function SeekerApplicationsPage() {
   const [details, setDetails] = useState({ job: null, stage: null });
   const [prepOpen, setPrepOpen] = useState(false);
   const [prepApplication, setPrepApplication] = useState(null);
-
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth < 1024 : false
-  );
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 1024);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  const [addStage, setAddStage] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -487,11 +479,13 @@ export default function SeekerApplicationsPage() {
     minWidth: 0,
   };
 
-  const WHITE_CARD = {
-    background: 'rgba(255,255,255,0.92)',
-    border: '1px solid rgba(0,0,0,0.08)',
+  const GLASS_CARD = {
+    background: 'rgba(255,255,255,0.72)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.4)',
     borderRadius: 12,
-    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
     boxSizing: 'border-box',
     width: '100%',
     minWidth: 0,
@@ -501,8 +495,8 @@ const ApplicationsRightRail = (
   <div
     style={{
       width: '100%',
-      maxWidth: 248,
-      margin: '0 auto -72px',
+      maxWidth: 195,
+      margin: '0 auto -110px',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'flex-start',
@@ -510,7 +504,7 @@ const ApplicationsRightRail = (
   >
     <div
       style={{
-        transform: 'scale(0.82)',
+        transform: 'scale(0.66)',
         transformOrigin: 'top center',
       }}
     >
@@ -526,7 +520,7 @@ const HeaderBox = (
       subtitle="Track your job search across stages, keep notes, and move roles forward."
     />
 
-    <StageStrip tracker={tracker} wrapperStyle={{ ...WHITE_CARD, padding: '28px 16px' }} />
+    <StageStrip tracker={tracker} wrapperStyle={{ ...GLASS_CARD, padding: '14px 16px' }} />
   </div>
 );
 
@@ -555,9 +549,9 @@ const HeaderBox = (
       url: '',
       notes: '',
       dateAdded: new Date().toISOString().split('T')[0],
-      status: 'Applied',
+      status: addStage || 'Applied',
     };
-  }, [formMode, jobToEdit]);
+  }, [formMode, jobToEdit, addStage]);
 
   if (loading) {
     return (
@@ -588,31 +582,11 @@ const HeaderBox = (
             stagesData={tracker}
             compact={false}
             columns={5}
-            title="Applications"
-            leftActions={
-              <button
-                onClick={() => {
-                  setFormMode('add');
-                  setShowForm(true);
-                }}
-                style={{
-                  backgroundColor: '#FF7043',
-                  color: 'white',
-                  border: 'none',
-                  padding: isMobile ? '7px 12px' : '10px 14px',
-                  borderRadius: 8,
-                  fontWeight: 700,
-                  fontSize: isMobile ? 12.5 : 14,
-                  cursor: 'pointer',
-                  width: 'auto',
-                  maxWidth: '100%',
-                  alignSelf: 'flex-start',
-                  boxShadow: isMobile ? '0 4px 10px rgba(255,112,67,0.3)' : 'none',
-                }}
-              >
-                + Add Application
-              </button>
-            }
+            onAdd={(stage) => {
+              setAddStage(stage || null);
+              setFormMode('add');
+              setShowForm(true);
+            }}
             onMove={(id, fromStage, toStage, pinnedId) =>
               moveApplication(id, fromStage, toStage, pinnedId)
             }
@@ -631,6 +605,7 @@ const HeaderBox = (
           onClose={() => {
             setShowForm(false);
             setJobToEdit(null);
+            setAddStage(null);
           }}
           onSave={formMode === 'add' ? addApplication : saveEdits}
           onDelete={
