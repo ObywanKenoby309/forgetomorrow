@@ -229,75 +229,9 @@ export default function ClientProfileUpdatePage() {
 
   const strategyHasResults = Boolean(form.strategyBrief);
 
-  const certificationsList = isFTUser
-    ? (() => {
-        const raw = source.certifications || source.certificationsJson;
-        if (!raw) return [];
-        try {
-          const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          if (!Array.isArray(arr)) return [];
-          return arr.map((c, i) => {
-            if (typeof c === 'string') return { id: `cert-${i}`, name: c, issuer: '', notes: '', year: '' };
-            return {
-              id: c.id || `cert-${i}`,
-              name: String(c.name || '').trim(),
-              issuer: String(c.issuer || '').trim(),
-              notes: String(c.notes || '').trim(),
-              year: String(c.year || '').trim(),
-            };
-          }).filter((c) => c.name || c.issuer || c.notes || c.year);
-        } catch { return []; }
-      })()
-    : [];
-
-  const projectsList = isFTUser
-    ? (() => {
-        const raw = source.projects || source.projectsJson;
-        if (!raw) return [];
-        try {
-          const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          if (!Array.isArray(arr)) return [];
-          return arr.map((p, i) => {
-            if (typeof p === 'string') return { id: `project-${i}`, name: p, organization: '', notes: '', startYear: '', endYear: '', url: '' };
-            return {
-              id: p.id || `project-${i}`,
-              name: String(p.name || p.title || '').trim(),
-              organization: String(p.organization || p.company || '').trim(),
-              notes: String(p.notes || p.description || p.summary || '').trim(),
-              startYear: String(p.startYear || '').trim(),
-              endYear: String(p.endYear || '').trim(),
-              url: String(p.url || p.link || '').trim(),
-            };
-          }).filter((p) => p.name || p.organization || p.notes || p.startYear || p.endYear || p.url);
-        } catch { return []; }
-      })()
-    : [];
-
-  const customSections = isFTUser
-    ? (() => {
-        const raw = source.customSectionJson || source.customSection;
-        if (!raw) return [];
-        try {
-          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          const arr = Array.isArray(parsed)
-            ? parsed
-            : (parsed && typeof parsed === 'object' && (parsed.name || parsed.organization || parsed.notes || parsed.startYear || parsed.endYear))
-              ? [parsed]
-              : [];
-          return arr.map((e, i) => {
-            if (typeof e === 'string') return { id: `custom-${i}`, name: e, organization: '', notes: '', startYear: '', endYear: '' };
-            return {
-              id: e.id || `custom-${i}`,
-              name: String(e.name || e.title || '').trim(),
-              organization: String(e.organization || e.company || '').trim(),
-              notes: String(e.notes || e.description || e.summary || '').trim(),
-              startYear: String(e.startYear || '').trim(),
-              endYear: String(e.endYear || '').trim(),
-            };
-          }).filter((e) => e.name || e.organization || e.notes || e.startYear || e.endYear);
-        } catch { return []; }
-      })()
-    : [];
+  const certificationsList = isFTUser && Array.isArray(source.certifications) ? source.certifications : [];
+  const projectsList = isFTUser && Array.isArray(source.projects) ? source.projects : [];
+  const customSections = isFTUser && Array.isArray(source.customSection) ? source.customSection : [];
 
   const profileSubTabs = [
     { id: 'overview',         label: 'Overview' },

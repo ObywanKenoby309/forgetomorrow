@@ -69,6 +69,87 @@ function toEducationObjects(value) {
   return [];
 }
 
+function toCertificationObjects(value) {
+  const arr = Array.isArray(value)
+    ? value
+    : (typeof value === 'string' && Array.isArray(safeJsonParse(value)))
+      ? safeJsonParse(value)
+      : [];
+
+  return arr
+    .map((item, index) => {
+      if (typeof item === 'string') {
+        const name = item.trim();
+        return name ? { id: `cert-${index}`, name, issuer: '', notes: '', year: '' } : null;
+      }
+      if (!item || typeof item !== 'object') return null;
+      return {
+        id: item.id || `cert-${index}`,
+        name: String(item.name || '').trim(),
+        issuer: String(item.issuer || '').trim(),
+        notes: String(item.notes || '').trim(),
+        year: String(item.year || '').trim(),
+      };
+    })
+    .filter((c) => c && (c.name || c.issuer || c.notes || c.year));
+}
+
+function toProjectObjects(value) {
+  const arr = Array.isArray(value)
+    ? value
+    : (typeof value === 'string' && Array.isArray(safeJsonParse(value)))
+      ? safeJsonParse(value)
+      : [];
+
+  return arr
+    .map((item, index) => {
+      if (typeof item === 'string') {
+        const name = item.trim();
+        return name ? { id: `project-${index}`, name, organization: '', notes: '', startYear: '', endYear: '', url: '' } : null;
+      }
+      if (!item || typeof item !== 'object') return null;
+      return {
+        id: item.id || `project-${index}`,
+        name: String(item.name || item.title || '').trim(),
+        organization: String(item.organization || item.company || '').trim(),
+        notes: String(item.notes || item.description || item.summary || '').trim(),
+        startYear: String(item.startYear || '').trim(),
+        endYear: String(item.endYear || '').trim(),
+        url: String(item.url || item.link || '').trim(),
+      };
+    })
+    .filter((p) => p && (p.name || p.organization || p.notes || p.startYear || p.endYear || p.url));
+}
+
+function toCustomSectionObjects(value) {
+  let raw = value;
+  if (typeof raw === 'string') raw = safeJsonParse(raw);
+
+  const arr = Array.isArray(raw)
+    ? raw
+    : (raw && typeof raw === 'object' && (raw.name || raw.organization || raw.notes || raw.startYear || raw.endYear))
+      ? [raw]
+      : [];
+
+  return arr
+    .map((item, index) => {
+      if (typeof item === 'string') {
+        const name = item.trim();
+        return name ? { id: `custom-${index}`, name, organization: '', notes: '', startYear: '', endYear: '' } : null;
+      }
+      if (!item || typeof item !== 'object') return null;
+      return {
+        id: item.id || `custom-${index}`,
+        name: String(item.name || item.title || '').trim(),
+        organization: String(item.organization || item.company || '').trim(),
+        notes: String(item.notes || item.description || item.summary || '').trim(),
+        startYear: String(item.startYear || '').trim(),
+        endYear: String(item.endYear || '').trim(),
+      };
+    })
+    .filter((e) => e && (e.name || e.organization || e.notes || e.startYear || e.endYear));
+}
+
 function getWorkPreferencesObject(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value;
 
@@ -235,6 +316,9 @@ export default async function handler(req, res) {
         skillsJson: true,
         languagesJson: true,
         educationJson: true,
+        certificationsJson: true,
+        projectsJson: true,
+        customSectionJson: true,
         slug: true,
       },
     });
@@ -270,6 +354,9 @@ export default async function handler(req, res) {
 
     const education = toEducationObjects(user.educationJson);
     const languages = toArrayJson(user.languagesJson);
+    const certifications = toCertificationObjects(user.certificationsJson);
+    const projects = toProjectObjects(user.projectsJson);
+    const customSection = toCustomSectionObjects(user.customSectionJson);
 
     const profile = {
       id: user.id,
@@ -296,6 +383,9 @@ export default async function handler(req, res) {
       languages,
       education,
       experience,
+      certifications,
+      projects,
+      customSection,
       resumeId: bestResume?.id || null,
     };
 
