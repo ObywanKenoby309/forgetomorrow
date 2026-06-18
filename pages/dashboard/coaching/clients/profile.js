@@ -229,12 +229,39 @@ export default function ClientProfileUpdatePage() {
 
   const strategyHasResults = Boolean(form.strategyBrief);
 
+  const certificationsList = isFTUser
+    ? toStringArray(source.certifications || source.certificationsJson || source.profileCertifications)
+    : [];
+
+  const projectsList = isFTUser
+    ? (() => {
+        const raw = source.projects || source.projectsJson || source.profileProjects;
+        if (!raw) return [];
+        try {
+          const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          return Array.isArray(arr) ? arr : [];
+        } catch { return []; }
+      })()
+    : [];
+
+  const customSections = isFTUser
+    ? (() => {
+        const raw = source.customSectionJson || source.customSections || source.customSectionsJson;
+        if (!raw) return [];
+        try {
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          return Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
+        } catch { return []; }
+      })()
+    : [];
+
   const profileSubTabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'experience', label: 'Experience' },
-    { id: 'education', label: 'Education' },
-    { id: 'skills', label: 'Skills' },
-    { id: 'preferences', label: 'Preferences' },
+    { id: 'overview',         label: 'Overview' },
+    { id: 'experience',       label: 'Experience' },
+    { id: 'education',        label: 'Education' },
+    { id: 'skills',           label: 'Skills' },
+    ...(customSections.length > 0 ? [{ id: 'custom', label: 'Custom' }] : []),
+    { id: 'preferences',      label: 'Preferences' },
   ];
 
   const coachToolsContent = (
@@ -654,7 +681,7 @@ export default function ClientProfileUpdatePage() {
                         <SectionCard title="Summary">
                           {isFTUser ? (
                             summaryText ? (
-                              <div className="text-[13px] leading-6 text-slate-700 whitespace-pre-line">{summaryText}</div>
+                              <div className="text-[13px] leading-6 text-slate-700 whitespace-pre-line max-h-[260px] overflow-y-auto pr-1">{summaryText}</div>
                             ) : (
                               <div className="text-sm text-slate-500">No profile summary available yet.</div>
                             )
@@ -693,6 +720,26 @@ export default function ClientProfileUpdatePage() {
                       ) : (
                         <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[220px] text-sm bg-white/88" placeholder="Enter experience manually..." value={form.manualExperience || ''} onChange={onChange('manualExperience')} />
                       )}
+
+                      {isFTUser && projectsList.length > 0 ? (
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                          <div className="text-xs font-black uppercase tracking-[0.10em] text-slate-500 mb-2">Projects</div>
+                          <div className="space-y-3">
+                            {projectsList.map((proj, idx) => {
+                              const title = typeof proj === 'string' ? proj : (proj.title || proj.name || proj.projectName || 'Project');
+                              const desc  = typeof proj === 'object' ? (proj.description || proj.desc || proj.summary || '') : '';
+                              const url   = typeof proj === 'object' ? (proj.url || proj.link || proj.projectUrl || '') : '';
+                              return (
+                                <div key={`${title}-${idx}`} className="border-b border-slate-100 last:border-0 pb-2">
+                                  <div className="font-semibold text-slate-900 break-words text-sm">{title}</div>
+                                  {desc ? <div className="text-sm text-slate-600 mt-0.5 break-words">{desc}</div> : null}
+                                  {url ? <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#FF7043] font-semibold mt-1 inline-block">View project →</a> : null}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
                     </SectionCard>
                   ) : null}
 
@@ -719,6 +766,20 @@ export default function ClientProfileUpdatePage() {
                       ) : (
                         <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[220px] text-sm bg-white/88" placeholder="Enter education manually..." value={form.manualEducation || ''} onChange={onChange('manualEducation')} />
                       )}
+
+                      {isFTUser && certificationsList.length > 0 ? (
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                          <div className="text-xs font-black uppercase tracking-[0.10em] text-slate-500 mb-2">Certifications</div>
+                          <div className="space-y-2">
+                            {certificationsList.map((cert, idx) => (
+                              <div key={`${cert}-${idx}`} className="flex items-start gap-3">
+                                <span className="mt-0.5 text-[#FF7043] text-sm shrink-0">✓</span>
+                                <span className="text-sm text-slate-700 break-words">{cert}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                     </SectionCard>
                   ) : null}
 
@@ -736,6 +797,39 @@ export default function ClientProfileUpdatePage() {
                         )
                       ) : (
                         <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Enter skills (comma separated)" value={form.manualSkills || ''} onChange={onChange('manualSkills')} />
+                      )}
+                    </SectionCard>
+                  ) : null}
+
+                  {profileSubTab === 'custom' ? (
+                    <SectionCard title="Custom Sections">
+                      {isFTUser ? (
+                        customSections.length > 0 ? (
+                          <div className="space-y-4 max-h-[520px] overflow-y-auto pr-1">
+                            {customSections.map((section, idx) => {
+                              const heading = typeof section === 'string' ? section : (section.title || section.heading || section.name || `Section ${idx + 1}`);
+                              const items   = typeof section === 'object' ? (section.items || section.entries || section.content || []) : [];
+                              const body    = typeof section === 'object' ? (section.body || section.text || section.description || '') : '';
+                              return (
+                                <div key={`${heading}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
+                                  <div className="font-semibold text-slate-900 mb-1 break-words">{heading}</div>
+                                  {body ? <div className="text-sm text-slate-600 break-words">{body}</div> : null}
+                                  {Array.isArray(items) && items.length > 0 ? (
+                                    <ul className="mt-1 space-y-1">
+                                      {items.map((item, iIdx) => (
+                                        <li key={iIdx} className="text-sm text-slate-700">• {typeof item === 'string' ? item : JSON.stringify(item)}</li>
+                                      ))}
+                                    </ul>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-500">No custom sections available for this client yet.</div>
+                        )
+                      ) : (
+                        <div className="text-sm text-slate-500">Custom sections are pulled automatically for ForgeTomorrow members.</div>
                       )}
                     </SectionCard>
                   ) : null}
