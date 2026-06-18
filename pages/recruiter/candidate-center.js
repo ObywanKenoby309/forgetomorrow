@@ -437,8 +437,6 @@ function MobileCandidateCenter({ tiles, activeModule, setActiveModule }) {
 
   const active = tiles[activeIndex];
 
-  if (activeModule) return null;
-
   return (
     <div style={{ position: "relative", width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden", boxSizing: "border-box" }}>
       <div style={{ padding: "0 16px 14px", position: "relative", zIndex: 20, boxSizing: "border-box" }}>
@@ -715,63 +713,95 @@ export default function CandidateCenter() {
       showToggle={Boolean(activeModule)}
     >
       <section style={{ ...WORKSPACE_STAGE, padding: 0, gap: 12 }}>
-        {!activeModule ? (
-          <>
-            {!isMobile ? (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 4,
-                  gap: 12,
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 900,
-                    color: ORANGE,
-                    lineHeight: 1.25,
-                    letterSpacing: "-0.01em",
-                    margin: 0,
-                    ...ORANGE_HEADING_LIFT,
-                  }}
-                >
-                  Candidate Tools
-                </h2>
+        {isMobile ? (
+          <div
+            style={{
+              ...WORKSPACE_STAGE,
+              paddingTop: 0,
+              paddingBottom: 0,
+              paddingLeft: 0,
+              paddingRight: 0,
+              overflow: "hidden",
+            }}
+          >
+            <MobileCandidateCenter
+              tiles={tiles}
+              activeModule={activeModule}
+              setActiveModule={setActiveModule}
+            />
+
+            {activeModule ? (
+              <div style={{ ...WORKSPACE_STAGE, margin: "16px 0 0", padding: "0 16px" }}>
+                {(() => {
+                  switch (activeModule) {
+                    case "search":
+                      return <InternalSearchModule />;
+
+                    case "compare":
+                      return <ExternalCompareModule />;
+
+                    case "pools":
+                      return <TalentPoolsModule expanded={siderailsCollapsed} />;
+
+                    default:
+                      return (
+                        <ToolFrame
+                          src={activeTile?.src || "/recruiter/candidate-center"}
+                          height="calc(100vh - 320px)"
+                        />
+                      );
+                  }
+                })()}
               </div>
             ) : null}
+          </div>
+        ) : !activeModule ? (
+          <>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 4,
+                gap: 12,
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: 18,
+                  fontWeight: 900,
+                  color: ORANGE,
+                  lineHeight: 1.25,
+                  letterSpacing: "-0.01em",
+                  margin: 0,
+                  ...ORANGE_HEADING_LIFT,
+                }}
+              >
+                Candidate Tools
+              </h2>
+            </div>
 
             <div
               style={{
                 ...WORKSPACE_STAGE,
-                paddingTop: isMobile ? 0 : 4,
-                paddingBottom: isMobile ? 0 : 4,
+                paddingTop: 4,
+                paddingBottom: 4,
                 paddingLeft: 0,
                 paddingRight: 0,
-                overflow: isMobile ? "hidden" : "visible",
+                overflow: "visible",
               }}
             >
-              {isMobile ? (
-                <MobileCandidateCenter
-                  tiles={tiles}
-                  activeModule={activeModule}
-                  setActiveModule={setActiveModule}
-                />
-              ) : (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                    gap: GAP,
-                  }}
-                >
-                  {tiles.map((tile) => (
-                    <DesktopCard key={tile.id} tile={tile} onOpen={setActiveModule} />
-                  ))}
-                </div>
-              )}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: GAP,
+                }}
+              >
+                {tiles.map((tile) => (
+                  <DesktopCard key={tile.id} tile={tile} onOpen={setActiveModule} />
+                ))}
+              </div>
             </div>
           </>
         ) : (
@@ -796,7 +826,7 @@ export default function CandidateCenter() {
                   return (
                     <ToolFrame
                       src={activeTile?.src || "/recruiter/candidate-center"}
-                      height={isMobile ? "calc(100vh - 320px)" : "calc(100vh - 280px)"}
+                      height="calc(100vh - 280px)"
                     />
                   );
               }
