@@ -152,8 +152,8 @@ export default function ClientProfileUpdatePage() {
   }
 
   // ── Derived render values ──────────────────────────────────────────────────
-  const source    = profileData || client;
-  const isFTUser  = Boolean(profileData);
+  const source = { ...(client || {}), ...(profileData || {}) };
+  const isFTUser = Boolean(profileData);
   const profileWallpaperSrc = isFTUser ? resolveProfileWallpaperSrc(source) : '';
   const [avatarBg, avatarDark] = avatarColor(client.name);
   const cfg = STATUS[form.status] || defaultStatus;
@@ -358,21 +358,33 @@ export default function ClientProfileUpdatePage() {
           <section className="rounded-[22px] border border-white/24 bg-[rgba(248,250,252,0.80)] shadow-[0_20px_50px_rgba(2,6,23,0.16)] backdrop-blur-xl overflow-hidden xl:col-[1/2] relative">
 
             {/* ── Page header ── */}
-            <div className="px-3 py-3 sm:px-4 sm:py-4 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(248,250,252,0.78))]">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+            <div className="px-4 py-4 sm:px-5 border-b border-white/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(30,41,59,0.92))] text-white">
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 relative">
                 <div className="min-w-0">
-                  <div className="text-[16px] font-black tracking-tight text-slate-900 truncate">
+                  <div className="mt-1 text-[20px] sm:text-[24px] font-black tracking-tight leading-tight truncate">
                     {client.name || 'Client'}
                   </div>
-                  <div className="mt-1 text-[13px] text-slate-600 truncate">
-                    Coaching Client • {client.email || 'No email on file'}
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-orange-300/40 bg-orange-500/15 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-orange-100">
+                      {isFTUser ? 'Forge Portfolio' : 'External Client'}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-slate-200 leading-snug break-words">
+                    {client.email || 'No email on file'}
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {/* Coaching Client — centered at top on desktop, inline on mobile */}
+                <div className="lg:absolute lg:inset-x-0 lg:top-0 lg:flex lg:justify-center lg:pointer-events-none order-first lg:order-none mb-1 lg:mb-0">
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#FF7043]">
+                    Coaching Client
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-stretch gap-2 w-full lg:w-auto lg:justify-end shrink-0">
                   <Link
                     href="/dashboard/coaching/clients"
-                    className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition"
+                    className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-white/15 transition"
                   >
                     Back
                   </Link>
@@ -381,20 +393,20 @@ export default function ClientProfileUpdatePage() {
                     type="button"
                     onClick={handleSave}
                     disabled={saving}
-                    className="rounded-xl border border-[#FF7043] bg-[#FF7043] px-2.5 py-1.5 text-[13px] font-medium text-white shadow-sm hover:bg-[#F4511E] transition disabled:opacity-70"
+                    className="rounded-xl border border-orange-300/35 bg-orange-500/85 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-[#F4511E] transition disabled:opacity-70"
                   >
                     {saving ? 'Saving…' : 'Save Changes'}
                   </button>
 
                   {saved ? (
-                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">
+                    <span className="inline-flex items-center rounded-xl border border-emerald-300/35 bg-emerald-500/15 px-3 py-2 text-xs font-black text-emerald-100">
                       Saved
                     </span>
                   ) : null}
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-1.5 mt-3">
+              <div className="flex flex-wrap gap-1.5 mt-4">
                 <TabButton id="profile"   label="Profile"   activeTab={activeTab} setActiveTab={setActiveTab} badge={tabBadges.profile} />
                 <TabButton id="coaching"  label="Coaching"  activeTab={activeTab} setActiveTab={setActiveTab} badge={tabBadges.coaching} />
                 <TabButton id="documents" label="Documents" activeTab={activeTab} setActiveTab={setActiveTab} badge={tabBadges.documents} />
@@ -497,26 +509,28 @@ export default function ClientProfileUpdatePage() {
                       <div className="space-y-3">
                         <SectionCard title="Client Snapshot">
                           <div
-                            className="relative overflow-hidden rounded-[20px] border border-white/40 shadow-[0_16px_34px_rgba(15,23,42,0.18)]"
+                            className="relative overflow-hidden rounded-[20px] border border-white/45 shadow-[0_16px_34px_rgba(15,23,42,0.22)]"
                             style={{
-                              minHeight: 330,
+                              minHeight: 326,
                               backgroundImage: profileWallpaperSrc
-                                ? `linear-gradient(180deg, rgba(2,6,23,0.32), rgba(2,6,23,0.68)), url("${profileWallpaperSrc}")`
-                                : 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92))',
+                                ? `linear-gradient(180deg, rgba(2,6,23,0.18), rgba(2,6,23,0.48)), url("${profileWallpaperSrc}")`
+                                : 'linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.94))',
                               backgroundSize: 'cover',
                               backgroundPosition: 'center',
                             }}
                           >
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,112,67,0.20),transparent_42%)]" />
-                            <div className="relative z-[1] flex min-h-[330px] flex-col items-center justify-center gap-3 px-3 py-5 text-center">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,112,67,0.18),transparent_42%)]" />
+                            <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-slate-950/70 via-slate-950/24 to-transparent" />
+
+                            <div className="relative z-[1] flex min-h-[326px] flex-col items-center justify-end gap-2 px-3 pb-3 pt-7 text-center">
                               <div
                                 style={{
-                                  width: 72, height: 72, borderRadius: '999px',
+                                  width: 74, height: 74, borderRadius: '999px',
                                   background: avatarUrl ? 'rgba(15,23,42,0.45)' : `linear-gradient(135deg, ${avatarBg}, ${avatarDark})`,
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                                   color: 'white', fontWeight: 900, fontSize: 25,
-                                  boxShadow: '0 14px 34px rgba(2,6,23,0.38)',
-                                  outline: '3px solid rgba(255,255,255,0.58)', outlineOffset: 3, overflow: 'hidden',
+                                  boxShadow: '0 14px 34px rgba(2,6,23,0.42)',
+                                  outline: '3px solid rgba(255,255,255,0.70)', outlineOffset: 3, overflow: 'hidden',
                                 }}
                               >
                                 {avatarUrl ? (
@@ -526,38 +540,38 @@ export default function ClientProfileUpdatePage() {
                                 )}
                               </div>
 
-                              <div className="w-full rounded-2xl border border-white/24 bg-slate-950/45 px-3 py-3 text-white shadow-[0_10px_28px_rgba(2,6,23,0.28)] backdrop-blur-md">
-                                <div className="text-[17px] font-black tracking-tight">{client.name}</div>
-                                <div className="mt-1 text-[12px] font-semibold text-white/80 break-words">{client.email || 'No email on file'}</div>
+                              <div className="w-full px-2 text-white [text-shadow:_0_2px_8px_rgba(2,6,23,0.90)]">
+                                <div className="text-[17px] font-black tracking-tight leading-tight">{client.name}</div>
+                                <div className="mt-1 text-[12px] font-bold text-white/90 break-words">{client.email || 'No email on file'}</div>
+                              </div>
 
-                                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                                  <span
-                                    className="rounded-full border border-white/20 bg-white/88 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide"
-                                    style={{ color: cfg.color }}
-                                  >
-                                    {form.status}
-                                  </span>
-                                  <span
-                                    className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
-                                      isFTUser
-                                        ? 'border-orange-300/45 bg-orange-500/22 text-orange-100'
-                                        : 'border-white/20 bg-white/14 text-white/88'
-                                    }`}
-                                  >
-                                    {isFTUser ? 'ForgeTomorrow User' : 'External Client'}
-                                  </span>
-                                </div>
+                              <div className="flex flex-wrap items-center justify-center gap-2">
+                                <span
+                                  className="rounded-full border border-white/35 bg-white/92 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide shadow-sm"
+                                  style={{ color: cfg.color }}
+                                >
+                                  {form.status}
+                                </span>
+                                <span
+                                  className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide shadow-sm ${
+                                    isFTUser
+                                      ? 'border-orange-200/60 bg-orange-500/82 text-white'
+                                      : 'border-white/30 bg-slate-950/42 text-white/92 backdrop-blur-sm'
+                                  }`}
+                                >
+                                  {isFTUser ? 'ForgeTomorrow User' : 'External Client'}
+                                </span>
                               </div>
 
                               <div className="grid w-full grid-cols-1 gap-2 pt-1">
-                                <button type="button" onClick={() => router.push('/dashboard/coaching/sessions')} className="rounded-xl border border-white/70 bg-white/95 px-2.5 py-1.5 text-[13px] font-black text-slate-950 shadow-[0_10px_24px_rgba(2,6,23,0.28)] backdrop-blur-md hover:bg-white transition">
+                                <button type="button" onClick={() => router.push('/dashboard/coaching/sessions')} className="rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] hover:bg-white transition">
                                   View Sessions
                                 </button>
-                                <button type="button" onClick={() => router.push('/coaching/messaging')} className="rounded-xl border border-white/70 bg-white/95 px-2.5 py-1.5 text-[13px] font-black text-slate-950 shadow-[0_10px_24px_rgba(2,6,23,0.28)] backdrop-blur-md hover:bg-white transition">
+                                <button type="button" onClick={() => router.push('/coaching/messaging')} className="rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] hover:bg-white transition">
                                   Message
                                 </button>
                                 {profileHref ? (
-                                  <button type="button" onClick={openProfile} className="rounded-xl border border-white/70 bg-white/95 px-2.5 py-1.5 text-[13px] font-black text-slate-950 shadow-[0_10px_24px_rgba(2,6,23,0.28)] backdrop-blur-md hover:bg-white transition">
+                                  <button type="button" onClick={openProfile} className="rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] hover:bg-white transition">
                                     View Profile
                                   </button>
                                 ) : null}
