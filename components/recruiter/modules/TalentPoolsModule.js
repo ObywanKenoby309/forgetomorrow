@@ -41,11 +41,12 @@ export default function TalentPoolsModule({ expanded = false }) {
 
   const panelStyle = useMemo(
     () => ({
-      background: "white",
-      border: "1px solid #eee",
+      background: "rgba(255,255,255,0.92)",
+      border: "1px solid rgba(15,23,42,0.08)",
       borderRadius: 14,
-      padding: 16,
-      boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+      padding: isMobile ? 12 : 16,
+      boxShadow: "0 4px 12px rgba(15,23,42,0.08)",
+      boxSizing: "border-box",
     }),
     []
   );
@@ -517,7 +518,7 @@ export default function TalentPoolsModule({ expanded = false }) {
   const canOpenSelected = Boolean(String(selectedEntry?.candidateUserId || "").trim());
 
   return (
-    <section style={{ ...panelStyle, overflow: 'hidden', width: '100%', boxSizing: 'border-box' }} aria-label="Talent Pools working surface">
+    <section style={{ ...panelStyle, overflow: 'hidden', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }} aria-label="Talent Pools working surface">
 
       {/* ── Header — stacks on mobile, side-by-side on desktop ── */}
       {isMobile ? (

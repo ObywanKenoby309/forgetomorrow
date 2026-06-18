@@ -4,21 +4,34 @@ import { useState, useEffect } from "react";
 const ORANGE = "#FF7043";
 const DARK = "#0D1B2A";
 
-const GLASS = {
-  border: "1px solid rgba(255,255,255,0.22)",
-  background: "rgba(255,255,255,0.72)",
-  backdropFilter: "blur(12px)",
-  WebkitBackdropFilter: "blur(12px)",
+const MODULE_SURFACE = {
+  border: "1px solid rgba(255,255,255,0.30)",
+  background: "rgba(255,255,255,0.86)",
   borderRadius: 18,
-  boxShadow: "0 14px 44px rgba(0,0,0,0.22)",
+  boxShadow: "0 8px 22px rgba(15,23,42,0.10)",
+  boxSizing: "border-box",
 };
 
 const CARD = {
   border: "1px solid rgba(15,23,42,0.10)",
-  background: "rgba(255,255,255,0.88)",
+  background: "rgba(255,255,255,0.92)",
   borderRadius: 14,
-  boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
+  boxShadow: "0 4px 12px rgba(15,23,42,0.08)",
+  boxSizing: "border-box",
 };
+
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+
+  return isMobile;
+}
 
 function ScoreRing({ score, size = 72 }) {
   const color =
@@ -399,6 +412,7 @@ async function handleSaveToVault() {
 }
 
 export default function ExternalCompareModule() {
+  const isMobile = useIsMobile(768);
   const [resumeText, setResumeText] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -508,7 +522,7 @@ export default function ExternalCompareModule() {
 
   if (result) {
     return (
-      <div style={{ ...GLASS, padding: 16, overflowY: "auto", maxHeight: "calc(100vh - 280px)" }}>
+      <div style={{ ...MODULE_SURFACE, padding: isMobile ? 12 : 16, overflowY: "auto", maxHeight: isMobile ? "none" : "calc(100vh - 280px)", width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden" }}>
         <ResultPanel
           data={result}
           resumeText={resumeText}
@@ -520,7 +534,7 @@ export default function ExternalCompareModule() {
   }
 
   return (
-    <div style={{ ...GLASS, padding: 16 }}>
+    <div style={{ ...MODULE_SURFACE, padding: isMobile ? 12 : 16, width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden" }}>
       {/* Header */}
       <div style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: DARK, marginBottom: 4 }}>
@@ -533,7 +547,7 @@ export default function ExternalCompareModule() {
       </div>
 
       {/* Input grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 14 }}>
         {/* JD */}
         <div style={{ ...CARD, padding: 14 }}>
           <div style={{

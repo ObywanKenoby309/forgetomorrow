@@ -11,11 +11,11 @@ import TalentPoolsModule from "@/components/recruiter/modules/TalentPoolsModule"
 
 const GLASS = {
   borderRadius: 18,
-  border: "1px solid rgba(255,255,255,0.22)",
-  background: "rgba(255,255,255,0.68)",
-  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
-  backdropFilter: "blur(12px)",
-  WebkitBackdropFilter: "blur(12px)",
+  border: "1px solid rgba(255,255,255,0.28)",
+  background: "rgba(255,255,255,0.74)",
+  boxShadow: "0 8px 22px rgba(15,23,42,0.10)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
 };
 
 const WHITE_CARD = {
@@ -26,6 +26,16 @@ const WHITE_CARD = {
   boxSizing: "border-box",
   position: "relative",
   overflow: "hidden",
+};
+
+const WORKSPACE_STAGE = {
+  width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
+  display: "grid",
+  gap: 12,
+  boxSizing: "border-box",
+  overflowX: "hidden",
 };
 
 const ORANGE = "#FF7043";
@@ -145,14 +155,9 @@ function WorkspaceModuleShell({ title, subtitle, onBack, children, isMobile = fa
   return (
     <section
       style={{
-        ...GLASS,
-        padding: isMobile ? 14 : 24,
-        display: "grid",
-        gap: 16,
-        width: "100%",
-        maxWidth: "100%",
-        boxSizing: "border-box",
-        overflowX: "hidden",
+        ...WORKSPACE_STAGE,
+        gap: 14,
+        padding: 0,
       }}
     >
       <button
@@ -221,11 +226,9 @@ function MatchScoreMiniGuide() {
         width: "min(100%, 330px)",
         flexShrink: 0,
         borderRadius: 16,
-        border: "1px solid rgba(255,255,255,0.38)",
-        background: "rgba(255,255,255,0.54)",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-        boxShadow: "0 10px 24px rgba(15,23,42,0.08)",
+        border: "1px solid rgba(0,0,0,0.08)",
+        background: "rgba(255,255,255,0.90)",
+        boxShadow: "0 6px 16px rgba(15,23,42,0.08)",
         padding: "14px 16px",
         display: "grid",
         gap: 14,
@@ -437,8 +440,8 @@ function MobileCandidateCenter({ tiles, activeModule, setActiveModule }) {
   if (activeModule) return null;
 
   return (
-    <div style={{ position: "relative" }}>
-      <div style={{ padding: "0 16px 14px", position: "relative", zIndex: 20 }}>
+    <div style={{ position: "relative", width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden", boxSizing: "border-box" }}>
+      <div style={{ padding: "0 16px 14px", position: "relative", zIndex: 20, boxSizing: "border-box" }}>
         <button
           onClick={() => setDropdownOpen((o) => !o)}
           style={{
@@ -711,7 +714,7 @@ export default function CandidateCenter() {
       onToggleSiderails={() => setSiderailsCollapsed(s => !s)}
       showToggle={Boolean(activeModule)}
     >
-      <section style={{ padding: 0, display: "grid", gap: 12 }}>
+      <section style={{ ...WORKSPACE_STAGE, padding: 0, gap: 12 }}>
         {!activeModule ? (
           <>
             {!isMobile ? (
@@ -742,12 +745,11 @@ export default function CandidateCenter() {
 
             <div
               style={{
-                ...GLASS,
-                paddingTop: 24,
-                paddingBottom: 24,
-                paddingLeft: isMobile ? 0 : 16,
-                paddingRight: isMobile ? 0 : 16,
-                width: "100%",
+                ...WORKSPACE_STAGE,
+                paddingTop: isMobile ? 0 : 4,
+                paddingBottom: isMobile ? 0 : 4,
+                paddingLeft: 0,
+                paddingRight: 0,
                 overflow: isMobile ? "hidden" : "visible",
               }}
             >
