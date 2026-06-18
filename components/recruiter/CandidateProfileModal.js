@@ -955,7 +955,7 @@ export default function CandidateProfileModal({
         <div className="px-5 py-4 sm:px-6 border-b border-white/35 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(30,41,59,0.92))] text-white flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 flex-shrink-0">
           <div className="min-w-0 w-full">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-[24px] font-black tracking-tight truncate">
+              <h2 className="text-[20px] sm:text-[24px] font-black tracking-tight leading-tight">
                 {candidate.name || "Candidate"}
               </h2>
               {isForgeCandidate ? (
@@ -968,10 +968,14 @@ export default function CandidateProfileModal({
                 </span>
               )}
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300">
-              <span>{candidate.role || candidate.headline || "Candidate"}</span>
-              <span>•</span>
-              <span>{displayLocation}</span>
+            {candidate.role || candidate.headline ? (
+  <div className="mt-1 text-sm font-medium text-slate-200 leading-snug">
+    {candidate.role || candidate.headline}
+  </div>
+) : null}
+
+<div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-300">
+  <span>{displayLocation}</span>
               {workStatusFmt ? (
                 <>
                   <span>•</span>
@@ -987,14 +991,14 @@ export default function CandidateProfileModal({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto xl:justify-end">
+          <div className="flex flex-wrap items-stretch gap-2 w-full xl:w-auto xl:justify-end">
             {candidate?.id && (
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setSaveMenuOpen((v) => !v)}
                   disabled={savingPacket}
-                  className="rounded-xl border border-orange-300/35 bg-orange-500/15 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-orange-500/20 transition disabled:opacity-60"
+                  className="w-full sm:w-auto rounded-xl border border-orange-300/35 bg-orange-500/15 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-orange-500/20 transition disabled:opacity-60"
                   title={savePacketMessage || "Save candidate review packet"}
                 >
                   {savingPacket ? "Saving…" : "Save ▾"}
@@ -1031,7 +1035,7 @@ export default function CandidateProfileModal({
                 href={resumeDownloadHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-white/15 transition"
+                className="w-full sm:w-auto rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-white/15 transition"
               >
                 Download resume
               </a>
@@ -1041,7 +1045,7 @@ export default function CandidateProfileModal({
                 type="button"
                 onClick={() => onViewResume(candidate)}
                 disabled={!hasResume}
-                className={`rounded-xl border px-3 py-2 text-sm font-bold shadow-sm transition ${
+                className={`w-full sm:w-auto rounded-xl border px-3 py-2 text-sm font-bold shadow-sm transition ${
                   hasResume
                     ? "border-white/20 bg-white/10 text-white hover:bg-white/15"
                     : "border-white/10 bg-white/5 text-slate-400 cursor-not-allowed opacity-70"
@@ -1054,7 +1058,7 @@ export default function CandidateProfileModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-white/15 transition"
+              className="w-full sm:w-auto rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-white/15 transition"
             >
               Close
             </button>
