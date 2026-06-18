@@ -2013,10 +2013,12 @@ export default function InternalSearchModule() {
 		<GlassPanel className="px-5 py-10 sm:px-6">
           {!hasActiveSearch ? (
             <>
-              <div className="text-sm font-semibold text-slate-900">
-                Build a targeted candidate search
-              </div>
-              <div className="mt-1 text-xs text-slate-600 max-w-2xl">
+              {!isMobile && (
+                <div className="text-sm font-semibold text-slate-900">
+                  Build a targeted candidate search
+                </div>
+              )}
+              <div className={`${isMobile ? "" : "mt-1"} text-xs text-slate-600 max-w-2xl`}>
                 Recruiters should only see candidates after a search, targeting rule, or automation has been configured.
               </div>
               <div className="mt-4 flex flex-wrap gap-2">

@@ -535,16 +535,18 @@ export default function ExternalCompareModule() {
 
   return (
     <div style={{ ...MODULE_SURFACE, padding: isMobile ? 12 : 16, width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden" }}>
-      {/* Header */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: DARK, marginBottom: 4 }}>
-          External Candidate Compare
+      {/* Header — desktop only. Mobile already has the selected tool card above this module. */}
+      {!isMobile && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: DARK, marginBottom: 4 }}>
+            External Candidate Compare
+          </div>
+          <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.5 }}>
+            Paste a resume and job description. ForgeTomorrow will score alignment,
+            identify strengths and gaps, and generate recruiter-grade explainability.
+          </div>
         </div>
-        <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.5 }}>
-          Paste a resume and job description. ForgeTomorrow will score alignment,
-          identify strengths and gaps, and generate recruiter-grade explainability.
-        </div>
-      </div>
+      )}
 
       {/* Input grid */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 14 }}>

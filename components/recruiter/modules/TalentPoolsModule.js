@@ -523,17 +523,7 @@ export default function TalentPoolsModule({ expanded = false }) {
       {/* ── Header — stacks on mobile, side-by-side on desktop ── */}
       {isMobile ? (
         <div style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
-          {/* Title + subtitle full width */}
-          <div>
-            <div style={{ fontWeight: 900, color: '#37474F', fontSize: 15, lineHeight: 1.2 }}>
-              Pools workspace
-            </div>
-            <div style={{ color: '#607D8B', fontSize: 12, marginTop: 4, lineHeight: 1.4 }}>
-              Pick a pool, scan candidates, and take action.
-            </div>
-          </div>
-
-          {/* Action buttons below title */}
+          {/* Action buttons — mobile tool identity already appears in the selector card above. */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <SecondaryButton onClick={() => setShowCreate(true)} disabled={saving}>
               + New pool
