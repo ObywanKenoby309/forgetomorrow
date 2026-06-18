@@ -2,7 +2,7 @@
 // v4 — Stepped journey form + compact intelligence output
 // Back/forward navigation, persistent state, generate as final action
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
@@ -321,7 +321,37 @@ function EvidenceSection({ label, items, tone, defaultOpen=false }) {
 
 
 // ── Welcome screen ────────────────────────────────────────────────────────────
+const WELCOME_PANELS = [
+  { id: 'description', label: 'Description' },
+  { id: 'whatYouGet',   label: "What you'll get" },
+  { id: 'howBuilt',     label: 'How the profile is built' },
+  { id: 'groundRules',  label: 'Ground Rules' },
+];
+
+const PANEL_COUNT     = WELCOME_PANELS.length;
+const AUTOPLAY_MS     = 4000;
+const PANEL_HEIGHT    = 320;
+
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(true);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 function WelcomeScreen({ onStart, profileSlug = '' }) {
+  const isMobile = useIsMobile(640);
+  return isMobile
+    ? <MobileWelcomeScreen onStart={onStart} profileSlug={profileSlug} />
+    : <DesktopWelcomeScreen onStart={onStart} profileSlug={profileSlug} />;
+}
+
+// ── Desktop — original static stacked layout, no carousel, no autoplay ───────
+function DesktopWelcomeScreen({ onStart, profileSlug = '' }) {
   const WHAT_IT_DOES = [
     { icon: '◉', label: 'Operating style',      desc: 'How you work, learn, and respond under pressure.' },
     { icon: '⬡', label: 'Strength signal map',  desc: 'What you do best — backed by evidence, not assumptions.' },
@@ -346,7 +376,11 @@ function WelcomeScreen({ onStart, profileSlug = '' }) {
         borderBottom: '1px solid rgba(255,112,67,0.12)',
         background: 'rgba(255,255,255,0.75)',
       }}>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div style={{
+          display: 'flex', gap: 6, flexWrap: 'nowrap', marginBottom: 12,
+          overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+          msOverflowStyle: 'none', scrollbarWidth: 'none',
+        }}>
           {['Voluntary', 'Evidence-backed', 'User-controlled'].map(l => (
             <Tag key={l} tone="slate">{l}</Tag>
           ))}
@@ -493,6 +527,285 @@ function WelcomeScreen({ onStart, profileSlug = '' }) {
         </div>
 
       </div>
+    </div>
+  );
+}
+
+// ── Mobile — auto-advancing carousel, swipeable, hold to pause ───────────────
+function MobileWelcomeScreen({ onStart, profileSlug = '' }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [paused, setPaused]           = useState(false);
+  const trackRef       = useRef(null);
+  const programmatic    = useRef(false);
+
+  const WHAT_IT_DOES = [
+    { icon: '◉', label: 'Operating style',      desc: 'How you work, learn, and respond under pressure.' },
+    { icon: '⬡', label: 'Strength signal map',  desc: 'What you do best — backed by evidence, not assumptions.' },
+    { icon: '◈', label: 'Business integration', desc: 'How to place, utilize, and support you effectively.' },
+    { icon: '◎', label: 'Evidence trail',        desc: 'Every conclusion is explainable and traceable to a source.' },
+  ];
+
+  const EVIDENCE_SOURCES = [
+    { tone: 'orange', label: 'Your reflection',  desc: '10 guided questions + optional free-text answers.' },
+    { tone: 'blue',   label: 'Your resume',       desc: 'Upload your primary resume for richer signal.' },
+    { tone: 'slate',  label: 'Your portfolio',    desc: 'Complete your profile and about section for stronger results.' },
+    { tone: 'green',  label: 'Platform intelligence', desc: 'ForgeTomorrow operational signals from your activity.' },
+  ];
+
+  const GROUND_RULES = [
+    'Patterns, not labels.',
+    'Evidence, not assumptions.',
+    'Guidance, not diagnosis.',
+    'You decide what gets shared.',
+  ];
+
+  // Programmatic move — used by autoplay + dot taps. Manual swipe bypasses this
+  // entirely (the browser handles the scroll natively) and is picked up by handleScroll.
+  const goTo = useCallback((index) => {
+    const track = trackRef.current;
+    setActiveIndex(index);
+    if (!track) return;
+    programmatic.current = true;
+    track.scrollTo({ left: index * track.offsetWidth, behavior: 'smooth' });
+    setTimeout(() => { programmatic.current = false; }, 500);
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    if (programmatic.current) return;
+    const track = trackRef.current;
+    if (!track) return;
+    const idx = Math.round(track.scrollLeft / track.offsetWidth);
+    setActiveIndex(Math.max(0, Math.min(idx, PANEL_COUNT - 1)));
+  }, []);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.addEventListener('scroll', handleScroll, { passive: true });
+    return () => track.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  // Autoplay — advances every 4s, gives a fresh 4s window after every move
+  // (auto or manual), and stops entirely while paused (press-and-hold).
+  useEffect(() => {
+    if (paused) return;
+    const id = setTimeout(() => {
+      goTo((activeIndex + 1) % PANEL_COUNT);
+    }, AUTOPLAY_MS);
+    return () => clearTimeout(id);
+  }, [activeIndex, paused, goTo]);
+
+  const pause  = () => setPaused(true);
+  const resume = () => setPaused(false);
+
+  return (
+    <div style={{ display: 'grid', gap: 0 }}>
+
+      {/* PERSISTENT — Hero / title */}
+      <div style={{
+        ...surface, padding: '20px 24px 16px',
+        borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
+        borderBottom: '1px solid rgba(255,112,67,0.12)',
+        background: 'rgba(255,255,255,0.75)',
+      }}>
+        <div style={{
+          display: 'flex', gap: 6, flexWrap: 'nowrap', marginBottom: 12,
+          overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+          msOverflowStyle: 'none', scrollbarWidth: 'none',
+        }}>
+          {['Voluntary', 'Evidence-backed', 'User-controlled'].map(l => (
+            <Tag key={l} tone="slate">{l}</Tag>
+          ))}
+        </div>
+
+        <h2 style={{
+          margin: 0, fontSize: 22, fontWeight: 900,
+          color: T.orange, letterSpacing: '-0.025em', lineHeight: 1.2,
+        }}>
+          Professional Operating Profile
+        </h2>
+      </div>
+
+      {/* MIDDLE — auto-advancing carousel, swipeable, hold to pause */}
+      <div
+        style={{ position: 'relative', borderBottom: `1px solid ${T.border}` }}
+        onMouseDown={pause} onMouseUp={resume} onMouseLeave={resume}
+        onTouchStart={pause} onTouchEnd={resume}
+      >
+        <div
+          ref={trackRef}
+          style={{
+            display: 'flex', height: PANEL_HEIGHT,
+            overflowX: 'auto', overflowY: 'hidden',
+            scrollSnapType: 'x mandatory',
+            msOverflowStyle: 'none', scrollbarWidth: 'none',
+            WebkitOverflowScrolling: 'touch',
+            background: T.white,
+            borderLeft: '1px solid rgba(255,255,255,0.42)',
+            borderRight: '1px solid rgba(255,255,255,0.42)',
+          }}
+        >
+          {WELCOME_PANELS.map(panel => (
+            <div
+              key={panel.id}
+              style={{
+                flexShrink: 0, width: '100%', height: '100%',
+                scrollSnapAlign: 'start', boxSizing: 'border-box',
+                overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+                padding: '18px 24px',
+              }}
+            >
+              <div style={{
+                fontSize: 10, fontWeight: 900, letterSpacing: '0.10em',
+                textTransform: 'uppercase', color: T.orange, marginBottom: 12,
+              }}>
+                {panel.label}
+              </div>
+
+              {panel.id === 'description' && (
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <p style={{ margin: 0, fontSize: 13, color: T.slate, lineHeight: 1.65 }}>
+                    A voluntary, evidence-backed reflection that helps you understand how you operate
+                    professionally — and helps the people you work with understand how to work with you.
+                    Not a personality test. Not a score. A structured professional intelligence profile
+                    you own and control.
+                  </p>
+                  <p style={{ margin: 0, fontSize: 12, color: T.mid, lineHeight: 1.6 }}>
+                    The profile draws from your answers, your resume, your portfolio, and ForgeTomorrow's
+                    intelligence signals. The more complete your profile and resume are before you begin,
+                    the richer and more specific your output will be.
+                  </p>
+                </div>
+              )}
+
+              {panel.id === 'whatYouGet' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
+                  {WHAT_IT_DOES.map(item => (
+                    <div key={item.label} style={{
+                      ...card, padding: '12px 14px',
+                      display: 'flex', alignItems: 'flex-start', gap: 12,
+                    }}>
+                      <span style={{ fontSize: 16, lineHeight: 1, color: T.orange, flexShrink: 0, marginTop: 2 }}>
+                        {item.icon}
+                      </span>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: T.dark, marginBottom: 3 }}>
+                          {item.label}
+                        </div>
+                        <div style={{ fontSize: 11, color: T.mid, lineHeight: 1.5 }}>
+                          {item.desc}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {panel.id === 'howBuilt' && (
+                <div style={{ display: 'grid', gap: 7 }}>
+                  {EVIDENCE_SOURCES.map(src => {
+                    const c = TONE[src.tone] || TONE.slate;
+                    const isResume    = src.tone === 'blue';
+                    const isPortfolio = src.tone === 'slate';
+                    return (
+                      <div key={src.label} style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '10px 14px', borderRadius: 9,
+                        background: c.bg, border: `1px solid ${c.border}`,
+                      }}>
+                        <div style={{ width: 3, alignSelf: 'stretch', borderRadius: 2,
+                          background: c.bar, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: T.dark, marginBottom: 2 }}>
+                            {src.label}
+                          </div>
+                          <div style={{ fontSize: 11, color: T.mid, lineHeight: 1.45 }}>
+                            {src.desc}
+                          </div>
+                        </div>
+                        {(isResume || isPortfolio) && (
+                          <a
+                            href={isResume ? '/resume/create' : profileSlug ? `/profile/${profileSlug}?edit=1` : '/profile'}
+                            style={{
+                              flexShrink: 0, fontSize: 11, fontWeight: 700,
+                              color: c.fg, textDecoration: 'none',
+                              padding: '5px 10px', borderRadius: 6,
+                              border: `1px solid ${c.border}`, background: 'white',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {isResume ? 'Add resume →' : 'Complete profile →'}
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {panel.id === 'groundRules' && (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {GROUND_RULES.map(r => (
+                    <div key={r} style={{
+                      display: 'flex', alignItems: 'center', gap: 9,
+                      padding: '10px 14px', borderRadius: 9,
+                      background: 'rgba(15,23,42,0.03)', border: `1px solid ${T.border}`,
+                    }}>
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: T.light, flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, color: T.slate, fontWeight: 600 }}>{r}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Dot indicators — tap to jump, also reflect autoplay position */}
+        <div style={{
+          display: 'flex', justifyContent: 'center', gap: 8,
+          padding: '10px 0', background: T.white,
+        }}>
+          {WELCOME_PANELS.map((panel, i) => (
+            <button
+              key={panel.id}
+              type="button"
+              onClick={() => goTo(i)}
+              aria-label={`Go to ${panel.label}`}
+              style={{
+                width: i === activeIndex ? 24 : 8, height: 8, borderRadius: 999,
+                background: i === activeIndex ? T.orange : 'rgba(255,112,67,0.25)',
+                border: 'none', padding: 0, cursor: 'pointer',
+                transition: 'width 220ms ease, background 220ms ease',
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* PERSISTENT — CTA footer */}
+      <div style={{
+        ...surface, padding: '16px 24px',
+        borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: 'none',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 16, flexWrap: 'wrap',
+      }}>
+        <div style={{ fontSize: 12, color: T.mid, lineHeight: 1.55, maxWidth: 480 }}>
+          The reflection takes about <strong style={{ color: T.slate }}>5 minutes</strong> to complete.
+          You can return and edit your answers at any time.
+        </div>
+        <button type="button" onClick={onStart} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          padding: '13px 28px', borderRadius: 10, border: 'none',
+          background: T.orange, color: 'white',
+          fontSize: 14, fontWeight: 900, cursor: 'pointer',
+          boxShadow: '0 4px 16px rgba(255,112,67,0.30)',
+          letterSpacing: '-0.01em', whiteSpace: 'nowrap',
+        }}>
+          Begin reflection →
+        </button>
+      </div>
+
     </div>
   );
 }
