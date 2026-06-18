@@ -1181,7 +1181,7 @@ export default function ProfessionalOperatingProfileEngine({ profileSlug = '' })
 
   // ── Welcome screen ───────────────────────────────────────────────────────
   if (!snapshot && !started) return (
-    <WelcomeScreen onStart={() => { setStarted(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} profileSlug={profileSlug} />
+    <WelcomeScreen onStart={() => { setStarted(true); }} profileSlug={profileSlug} />
   );
 
   // ── Journey form ─────────────────────────────────────────────────────────
