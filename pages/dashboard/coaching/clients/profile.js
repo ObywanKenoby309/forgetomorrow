@@ -152,8 +152,8 @@ export default function ClientProfileUpdatePage() {
   }
 
   // ── Derived render values ──────────────────────────────────────────────────
-  const source    = profileData || client;
-  const isFTUser  = Boolean(profileData);
+  const source = { ...(client || {}), ...(profileData || {}) };
+  const isFTUser = Boolean(profileData);
   const profileWallpaperSrc = isFTUser ? resolveProfileWallpaperSrc(source) : '';
   const [avatarBg, avatarDark] = avatarColor(client.name);
   const cfg = STATUS[form.status] || defaultStatus;
@@ -361,16 +361,19 @@ export default function ClientProfileUpdatePage() {
             <div className="px-4 py-4 sm:px-5 border-b border-white/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(30,41,59,0.92))] text-white">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-[20px] sm:text-[24px] font-black tracking-tight leading-tight truncate">
-                      {client.name || 'Client'}
-                    </div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#FF7043]">
+                    Coaching Client
+                  </div>
+                  <div className="mt-1 text-[20px] sm:text-[24px] font-black tracking-tight leading-tight truncate">
+                    {client.name || 'Client'}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-orange-300/40 bg-orange-500/15 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-orange-100">
                       {isFTUser ? 'Forge Portfolio' : 'External Client'}
                     </span>
                   </div>
-                  <div className="mt-1 text-sm font-medium text-slate-200 leading-snug break-words">
-                    Coaching Client • {client.email || 'No email on file'}
+                  <div className="mt-2 text-sm font-medium text-slate-200 leading-snug break-words">
+                    {client.email || 'No email on file'}
                   </div>
                 </div>
 
