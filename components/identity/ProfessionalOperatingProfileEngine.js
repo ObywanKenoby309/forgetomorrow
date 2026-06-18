@@ -599,7 +599,7 @@ function MobileWelcomeScreen({ onStart, profileSlug = '' }) {
   const resume = () => setPaused(false);
 
   return (
-    <div style={{ display: 'grid', gap: 0 }}>
+    <div style={{ display: 'grid', gap: 0, width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
 
       {/* PERSISTENT — Hero / title */}
       <div style={{
@@ -628,7 +628,11 @@ function MobileWelcomeScreen({ onStart, profileSlug = '' }) {
 
       {/* MIDDLE — auto-advancing carousel, swipeable, hold to pause */}
       <div
-        style={{ position: 'relative', borderBottom: `1px solid ${T.border}` }}
+        style={{
+          position: 'relative', borderBottom: `1px solid ${T.border}`,
+          width: '100%', maxWidth: '100%', minWidth: 0,
+          overflowX: 'hidden', boxSizing: 'border-box',
+        }}
         onMouseDown={pause} onMouseUp={resume} onMouseLeave={resume}
         onTouchStart={pause} onTouchEnd={resume}
       >
@@ -636,11 +640,13 @@ function MobileWelcomeScreen({ onStart, profileSlug = '' }) {
           ref={trackRef}
           style={{
             display: 'flex', height: PANEL_HEIGHT,
+            width: '100%', maxWidth: '100%', minWidth: 0,
             overflowX: 'auto', overflowY: 'hidden',
             scrollSnapType: 'x mandatory',
             msOverflowStyle: 'none', scrollbarWidth: 'none',
             WebkitOverflowScrolling: 'touch',
             background: T.white,
+            boxSizing: 'border-box',
             borderLeft: '1px solid rgba(255,255,255,0.42)',
             borderRight: '1px solid rgba(255,255,255,0.42)',
           }}
@@ -649,7 +655,7 @@ function MobileWelcomeScreen({ onStart, profileSlug = '' }) {
             <div
               key={panel.id}
               style={{
-                flexShrink: 0, width: '100%', height: '100%',
+                flexShrink: 0, width: '100%', minWidth: 0, height: '100%',
                 scrollSnapAlign: 'start', boxSizing: 'border-box',
                 overflowY: 'auto', WebkitOverflowScrolling: 'touch',
                 padding: '18px 24px',
