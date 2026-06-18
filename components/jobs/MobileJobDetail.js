@@ -437,40 +437,33 @@ export default function MobileJobDetail({
           aria-label="Toggle Alignment Analysis"
           style={{
             position: 'fixed',
-            right: 0,
+            right: alignOpen ? DRAWER_WIDTH : 0,
             top: '50%',
             transform: 'translateY(-50%)',
             zIndex: 65,
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            gap: 4,
-            padding: '12px 6px',
-            borderRadius: '12px 0 0 12px',
+            justifyContent: 'center',
+            width: 28,
+            height: 88,
+            padding: 0,
             border: 'none',
-            background: alignOpen
-              ? 'rgba(13,27,42,0.94)'
-              : `linear-gradient(135deg, ${ORANGE}, #FF5722)`,
-            color: alignOpen ? ORANGE : '#fff',
-            fontFamily: 'inherit',
-            fontSize: 10,
-            fontWeight: 800,
-            letterSpacing: '0.04em',
+            background: 'transparent',
             cursor: 'pointer',
-            writingMode: 'vertical-rl',
-            textOrientation: 'mixed',
-            boxShadow: alignOpen
-              ? '-6px 0 20px rgba(0,0,0,0.35)'
-              : '-6px 0 20px rgba(255,112,67,0.45)',
-            transition: 'right 0.3s cubic-bezier(0.32,0.72,0,1), background 0.15s',
-            right: alignOpen ? DRAWER_WIDTH : 0,
+            transition: 'right 0.3s cubic-bezier(0.32,0.72,0,1)',
             WebkitTapHighlightColor: 'transparent',
           }}
         >
-          <span style={{ writingMode: 'horizontal-tb', fontSize: 13 }}>
-            {alignOpen ? '›' : '‹'}
-          </span>
-          <span>⚡ Align</span>
+          <img
+            src="/icons/align.png"
+            alt="Align"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              display: 'block',
+            }}
+          />
         </button>
       )}
 

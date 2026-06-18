@@ -1759,8 +1759,8 @@ flushPendingSaveRef.current = flushPendingSave;
       src="/icons/signals.png"
       alt="Signals"
       style={{
-        width: '52px',
-        height: '170px',
+        width: '28px',
+        height: '88px',
         objectFit: 'contain',
         display: 'block',
       }}

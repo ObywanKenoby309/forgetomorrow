@@ -1076,8 +1076,8 @@ export default function CandidateProfileModal({
       src="/icons/tools-b.png"
       alt="Recruiter Tools"
       style={{
-        width: "52px",
-        height: "170px",
+        width: "28px",
+        height: "88px",
         objectFit: "contain",
       }}
     />
