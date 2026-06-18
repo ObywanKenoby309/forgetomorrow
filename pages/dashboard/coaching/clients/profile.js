@@ -1,5 +1,3 @@
-Dont touch this....
-
 // pages/dashboard/coaching/clients/profile.js
 import React from 'react';
 import Link from 'next/link';
