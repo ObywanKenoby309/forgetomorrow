@@ -27,59 +27,102 @@ export default function ApplicationsOverTime({ weeks = [], withChrome = (p) => p
   }
 
   return (
-    <div style={{ display: 'grid', gap: 8 }}>
-      {weeks.map((w) => (
+  <div
+    style={{
+      display: 'grid',
+      gap: 0,
+    }}
+  >
+    {/* Header */}
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '60px 1fr 1fr',
+        alignItems: 'center',
+        padding: '0 8px 8px 8px',
+        borderBottom: '1px solid rgba(15,23,42,0.08)',
+        marginBottom: 2,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          color: '#64748B',
+          textTransform: 'uppercase',
+        }}
+      >
+        Week
+      </div>
+
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          color: cApplied.text,
+          textAlign: 'center',
+          textTransform: 'uppercase',
+        }}
+      >
+        Applied
+      </div>
+
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          color: cInterv.text,
+          textAlign: 'center',
+          textTransform: 'uppercase',
+        }}
+      >
+        Interviews
+      </div>
+    </div>
+
+    {weeks.map((w) => (
+      <a
+        key={w.label}
+        href={withChrome('/seeker/applications')}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '60px 1fr 1fr',
+          alignItems: 'center',
+          padding: '10px 8px',
+          textDecoration: 'none',
+          borderBottom: '1px solid rgba(15,23,42,0.06)',
+          transition: 'background 150ms ease',
+        }}
+      >
         <div
-          key={w.label}
           style={{
-            border: '1px solid #e6e9ef',
-            borderRadius: 10,
-            padding: '10px 12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'white',
+            fontWeight: 800,
+            color: '#334155',
           }}
         >
-          <strong style={{ color: '#263238' }}>{w.label}</strong>
-
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <a
-              href={withChrome('/seeker/applications')}
-              style={{
-                textDecoration: 'none',
-                background: cApplied.bg,
-                color: cApplied.text,
-                border: `1px solid ${cApplied.solid}`,
-                padding: '4px 10px',
-                borderRadius: 999,
-                fontWeight: 700,
-                fontSize: 12,
-              }}
-              title="View applied roles"
-            >
-              Applied: {w.applied}
-            </a>
-
-            <a
-              href={withChrome('/seeker/applications')}
-              style={{
-                textDecoration: 'none',
-                background: cInterv.bg,
-                color: cInterv.text,
-                border: `1px solid ${cInterv.solid}`,
-                padding: '4px 10px',
-                borderRadius: 999,
-                fontWeight: 700,
-                fontSize: 12,
-              }}
-              title="View interviews"
-            >
-              Interviews: {w.interviews}
-            </a>
-          </div>
+          {w.label}
         </div>
-      ))}
-    </div>
-  );
-}
+
+        <div
+          style={{
+            textAlign: 'center',
+            fontWeight: 800,
+            color: cApplied.text,
+          }}
+        >
+          {w.applied}
+        </div>
+
+        <div
+          style={{
+            textAlign: 'center',
+            fontWeight: 800,
+            color: cInterv.text,
+          }}
+        >
+          {w.interviews}
+        </div>
+      </a>
+    ))}
+  </div>
+);
