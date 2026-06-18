@@ -1,3 +1,5 @@
+Dont touch this....
+
 // pages/dashboard/coaching/clients/profile.js
 import React from 'react';
 import Link from 'next/link';
@@ -93,6 +95,14 @@ export default function ClientProfileUpdatePage() {
 
   const [mobileCoachToolsOpen, setMobileCoachToolsOpen] = React.useState(false);
   const [profileSubTab, setProfileSubTab] = React.useState('overview');
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   React.useEffect(() => {
     setMobileCoachToolsOpen(false);
@@ -507,6 +517,55 @@ export default function ClientProfileUpdatePage() {
                   {profileSubTab === 'overview' ? (
                     <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-3">
                       <div className="space-y-3">
+                        {isMobile ? (
+                          <div
+                            className="relative overflow-hidden rounded-[20px] border border-white/45 shadow-[0_16px_34px_rgba(15,23,42,0.22)]"
+                            style={{
+                              minHeight: 380,
+                              backgroundImage: profileWallpaperSrc
+                                ? `linear-gradient(180deg, rgba(2,6,23,0.18), rgba(2,6,23,0.48)), url("${profileWallpaperSrc}")`
+                                : 'linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.94))',
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,112,67,0.18),transparent_42%)]" />
+                            <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-slate-950/70 via-slate-950/24 to-transparent" />
+                            <div className="relative z-[1] flex min-h-[380px] flex-col items-center justify-end gap-2 px-3 pb-3 pt-7 text-center">
+                              <div
+                                style={{
+                                  width: 74, height: 74, borderRadius: '999px',
+                                  background: avatarUrl ? 'rgba(15,23,42,0.45)' : `linear-gradient(135deg, ${avatarBg}, ${avatarDark})`,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  color: 'white', fontWeight: 900, fontSize: 25,
+                                  boxShadow: '0 14px 34px rgba(2,6,23,0.42)',
+                                  outline: '3px solid rgba(255,255,255,0.70)', outlineOffset: 3, overflow: 'hidden',
+                                }}
+                              >
+                                {avatarUrl ? (
+                                  <img src={avatarUrl} alt={client.name || 'Client avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                ) : (
+                                  initials(client.name)
+                                )}
+                              </div>
+                              <div className="w-full px-2 text-white [text-shadow:_0_2px_8px_rgba(2,6,23,0.90)]">
+                                <div className="text-[17px] font-black tracking-tight leading-tight">{client.name}</div>
+                                <div className="mt-1 text-[12px] font-bold text-white/90 break-words">{client.email || 'No email on file'}</div>
+                              </div>
+                              <div className="flex flex-wrap items-center justify-center gap-2">
+                                <span className="rounded-full border border-white/35 bg-white/92 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide shadow-sm" style={{ color: cfg.color }}>{form.status}</span>
+                                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide shadow-sm ${isFTUser ? 'border-orange-200/60 bg-orange-500/82 text-white' : 'border-white/30 bg-slate-950/42 text-white/92 backdrop-blur-sm'}`}>{isFTUser ? 'ForgeTomorrow User' : 'External Client'}</span>
+                              </div>
+                              <div className="grid w-full grid-cols-1 gap-2 pt-1">
+                                <button type="button" onClick={() => router.push('/dashboard/coaching/sessions')} className="rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] hover:bg-white transition">View Sessions</button>
+                                <button type="button" onClick={() => router.push('/coaching/messaging')} className="rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] hover:bg-white transition">Message</button>
+                                {profileHref ? (
+                                  <button type="button" onClick={openProfile} className="rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] hover:bg-white transition">View Profile</button>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
                         <SectionCard title="Client Snapshot">
                           <div
                             className="relative overflow-hidden rounded-[20px] border border-white/45 shadow-[0_16px_34px_rgba(15,23,42,0.22)]"
@@ -579,6 +638,7 @@ export default function ClientProfileUpdatePage() {
                             </div>
                           </div>
                         </SectionCard>
+                        )}
 
                         <SectionCard title="Command Snapshot">
                           <div className="divide-y divide-slate-100">
