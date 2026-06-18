@@ -412,7 +412,7 @@ export default function ApplicationsBoard({
     WebkitBackdropFilter: isMobile ? 'blur(10px)' : 'none',
     width: '100%',
     boxSizing: 'border-box',
-    overflow: 'visible',
+    overflow: isMobile ? 'hidden' : 'visible',
   };
 
   // Desktop columns get glass backing; the white ApplicationCards sit on top of it.
@@ -534,16 +534,20 @@ export default function ApplicationsBoard({
               onClick={() => setMobileView(v.key)}
               style={{
                 flex: 1,
+                minWidth: 0,
                 border: mobileView === v.key ? '1.5px solid #FF7043' : '1.5px solid transparent',
                 borderRadius: 9,
                 padding: '8px 0',
                 fontWeight: 800,
-                fontSize: 12.5,
+                fontSize: 12,
                 cursor: 'pointer',
                 background: mobileView === v.key ? '#1B2430' : 'transparent',
                 color: mobileView === v.key ? '#FF8A5C' : '#5F6B7A',
                 boxShadow: mobileView === v.key ? '0 0 0 3px rgba(255,112,67,0.18)' : 'none',
                 transition: 'all .18s ease',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
               {v.label}
@@ -556,15 +560,19 @@ export default function ApplicationsBoard({
               onClick={() => onAdd()}
               style={{
                 flex: 1,
+                minWidth: 0,
                 border: 'none',
                 borderRadius: 9,
                 padding: '8px 0',
                 fontWeight: 800,
-                fontSize: 12.5,
+                fontSize: 12,
                 cursor: 'pointer',
                 background: '#FF7043',
                 color: '#fff',
                 boxShadow: '0 4px 12px rgba(255,112,67,0.4)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
               + Add
