@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import { profileWallpapers } from '@/lib/profileWallpapers';
 import { MetaRow, SectionCard, TabButton } from '@/components/coaching/clients/ClientProfilePrimitives';
 import CommandBrief from '@/components/coaching/clients/CommandBrief';
 import { useClientProfile } from '@/hooks/useClientProfile';
@@ -20,6 +21,51 @@ import {
   defaultStatus,
   shimmerCSS,
 } from '@/lib/coaching/clientProfileHelpers';
+
+
+function resolveProfileWallpaperSrc(source = {}) {
+  const directCandidates = [
+    source.wallpaperUrl,
+    source.profileWallpaperUrl,
+    source.profileWallpaperSrc,
+    source.wallpaperSrc,
+    source.wallpaperImage,
+    source.backgroundUrl,
+    source.backgroundImage,
+    source.coverWallpaperUrl,
+    source.portfolioWallpaperUrl,
+    source.selectedWallpaperUrl,
+    source.wallpaper?.src,
+    source.wallpaper?.url,
+    source.profileWallpaper?.src,
+    source.profileWallpaper?.url,
+    source.background?.src,
+    source.background?.url,
+  ];
+
+  for (const value of directCandidates) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+
+  const wallpaperKeyCandidates = [
+    source.wallpaperKey,
+    source.profileWallpaperKey,
+    source.selectedWallpaperKey,
+    source.backgroundKey,
+    source.wallpaper,
+    source.profileWallpaper,
+  ];
+
+  for (const value of wallpaperKeyCandidates) {
+    if (typeof value !== 'string' || !value.trim()) continue;
+    const trimmed = value.trim();
+    if (trimmed.startsWith('/') || trimmed.startsWith('http')) return trimmed;
+    const found = profileWallpapers.find((item) => item.key === trimmed);
+    if (found?.src) return found.src;
+  }
+
+  return '';
+}
 
 export default function ClientProfileUpdatePage() {
   const router = useRouter();
@@ -108,6 +154,7 @@ export default function ClientProfileUpdatePage() {
   // ── Derived render values ──────────────────────────────────────────────────
   const source    = profileData || client;
   const isFTUser  = Boolean(profileData);
+  const profileWallpaperSrc = isFTUser ? resolveProfileWallpaperSrc(source) : '';
   const [avatarBg, avatarDark] = avatarColor(client.name);
   const cfg = STATUS[form.status] || defaultStatus;
 
@@ -429,54 +476,92 @@ export default function ClientProfileUpdatePage() {
                     ))}
                   </div>
 
+                  <div className="flex justify-center gap-1.5 -mt-1 pb-1" aria-label="Profile section position">
+                    {profileSubTabs.map((tab) => (
+                      <button
+                        key={`dot-${tab.id}`}
+                        type="button"
+                        onClick={() => setProfileSubTab(tab.id)}
+                        className={`h-1.5 rounded-full border-0 p-0 transition-all ${
+                          profileSubTab === tab.id
+                            ? 'w-5 bg-[#FF7043]'
+                            : 'w-1.5 bg-slate-300/75'
+                        }`}
+                        aria-label={`Go to ${tab.label}`}
+                      />
+                    ))}
+                  </div>
+
                   {profileSubTab === 'overview' ? (
                     <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-3">
                       <div className="space-y-3">
                         <SectionCard title="Client Snapshot">
-                          <div className="flex flex-col items-center text-center gap-3">
-                            <div
-                              style={{
-                                width: 64, height: 64, borderRadius: '999px',
-                                background: avatarUrl ? 'transparent' : `linear-gradient(135deg, ${avatarBg}, ${avatarDark})`,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                color: 'white', fontWeight: 800, fontSize: 24,
-                                boxShadow: `0 8px 24px ${avatarBg}55`,
-                                outline: `3px solid ${cfg.ring}45`, outlineOffset: 3, overflow: 'hidden',
-                              }}
-                            >
-                              {avatarUrl ? (
-                                <img src={avatarUrl} alt={client.name || 'Client avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                              ) : (
-                                initials(client.name)
-                              )}
-                            </div>
+                          <div
+                            className="relative overflow-hidden rounded-[20px] border border-white/40 shadow-[0_16px_34px_rgba(15,23,42,0.18)]"
+                            style={{
+                              minHeight: 330,
+                              backgroundImage: profileWallpaperSrc
+                                ? `linear-gradient(180deg, rgba(2,6,23,0.32), rgba(2,6,23,0.68)), url("${profileWallpaperSrc}")`
+                                : 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92))',
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,112,67,0.20),transparent_42%)]" />
+                            <div className="relative z-[1] flex min-h-[330px] flex-col items-center justify-center gap-3 px-3 py-5 text-center">
+                              <div
+                                style={{
+                                  width: 72, height: 72, borderRadius: '999px',
+                                  background: avatarUrl ? 'rgba(15,23,42,0.45)' : `linear-gradient(135deg, ${avatarBg}, ${avatarDark})`,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  color: 'white', fontWeight: 900, fontSize: 25,
+                                  boxShadow: '0 14px 34px rgba(2,6,23,0.38)',
+                                  outline: '3px solid rgba(255,255,255,0.58)', outlineOffset: 3, overflow: 'hidden',
+                                }}
+                              >
+                                {avatarUrl ? (
+                                  <img src={avatarUrl} alt={client.name || 'Client avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                ) : (
+                                  initials(client.name)
+                                )}
+                              </div>
 
-                            <div>
-                              <div className="text-[16px] font-black tracking-tight text-slate-900">{client.name}</div>
-                              <div className="mt-1 text-sm text-slate-500">{client.email || 'No email on file'}</div>
-                            </div>
+                              <div className="w-full rounded-2xl border border-white/24 bg-slate-950/45 px-3 py-3 text-white shadow-[0_10px_28px_rgba(2,6,23,0.28)] backdrop-blur-md">
+                                <div className="text-[17px] font-black tracking-tight">{client.name}</div>
+                                <div className="mt-1 text-[12px] font-semibold text-white/80 break-words">{client.email || 'No email on file'}</div>
 
-                            <div className="flex flex-wrap items-center justify-center gap-2">
-                              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: 999, background: cfg.bg, color: cfg.color }}>
-                                {form.status}
-                              </span>
-                              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
-                                {isFTUser ? 'ForgeTomorrow User' : 'External Client'}
-                              </span>
-                            </div>
+                                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                                  <span
+                                    className="rounded-full border border-white/20 bg-white/88 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide"
+                                    style={{ color: cfg.color }}
+                                  >
+                                    {form.status}
+                                  </span>
+                                  <span
+                                    className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                                      isFTUser
+                                        ? 'border-orange-300/45 bg-orange-500/22 text-orange-100'
+                                        : 'border-white/20 bg-white/14 text-white/88'
+                                    }`}
+                                  >
+                                    {isFTUser ? 'ForgeTomorrow User' : 'External Client'}
+                                  </span>
+                                </div>
+                              </div>
 
-                            <div className="grid grid-cols-1 gap-2 w-full pt-1">
-                              <button type="button" onClick={() => router.push('/dashboard/coaching/sessions')} className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition">
-                                View Sessions
-                              </button>
-                              <button type="button" onClick={() => router.push('/coaching/messaging')} className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition">
-                                Message
-                              </button>
-                              {profileHref ? (
-                                <button type="button" onClick={openProfile} className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition">
-                                  View Profile
+                              <div className="grid w-full grid-cols-1 gap-2 pt-1">
+                                <button type="button" onClick={() => router.push('/dashboard/coaching/sessions')} className="rounded-xl border border-white/25 bg-white/90 px-2.5 py-1.5 text-[13px] font-black text-slate-800 shadow-sm hover:bg-white transition">
+                                  View Sessions
                                 </button>
-                              ) : null}
+                                <button type="button" onClick={() => router.push('/coaching/messaging')} className="rounded-xl border border-white/25 bg-white/90 px-2.5 py-1.5 text-[13px] font-black text-slate-800 shadow-sm hover:bg-white transition">
+                                  Message
+                                </button>
+                                {profileHref ? (
+                                  <button type="button" onClick={openProfile} className="rounded-xl border border-white/25 bg-white/90 px-2.5 py-1.5 text-[13px] font-black text-slate-800 shadow-sm hover:bg-white transition">
+                                    View Profile
+                                  </button>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
                         </SectionCard>
