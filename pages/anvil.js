@@ -273,7 +273,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome, profile
   useEffect(() => () => clearTimeout(hintTimer.current), []);
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden", boxSizing: "border-box" }}>
 
       {/* ── Dropdown ── */}
       <div style={{ padding: "0 16px 14px", position: "relative", zIndex: 20 }}>
@@ -401,7 +401,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome, profile
 
       {/* ── Inline module content ── */}
       {activeModule && activeModule !== "resume" && (
-        <div style={{ ...MODULE_STAGE, margin: "16px 16px 0" }}>
+        <div style={{ ...MODULE_STAGE, margin: "16px 0 0", padding: "0 16px" }}>
           {activeModule === "profile" && (
             <ProfileDevelopment onNext={() => setActiveModule("offer")} setActiveModule={setActiveModule} />
           )}
