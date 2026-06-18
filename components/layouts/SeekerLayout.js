@@ -437,7 +437,7 @@ export default function SeekerLayout({
             overflowX: 'hidden',
             boxSizing: 'border-box',
             width: '100%',
-            maxWidth: '100vw',
+            maxWidth: '100%',
             minWidth: 0,
           }}
         >
