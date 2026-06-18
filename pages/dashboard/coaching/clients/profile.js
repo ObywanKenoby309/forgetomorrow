@@ -45,6 +45,12 @@ export default function ClientProfileUpdatePage() {
     onChange,
   } = useClientProfile();
 
+  const [mobileCoachToolsOpen, setMobileCoachToolsOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    setMobileCoachToolsOpen(false);
+  }, [activeTab, strategyView]);
+
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -163,6 +169,120 @@ export default function ClientProfileUpdatePage() {
 
   const strategyHasResults = Boolean(form.strategyBrief);
 
+  const coachToolsContent = (
+    <div className="space-y-3">
+      <SectionCard title="Coach Controls" className="min-h-[420px] flex-1" bodyClassName="h-full flex flex-col">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-slate-500 mb-1.5">Name</label>
+            <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" value={form.name} onChange={onChange('name')} />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1.5">Email</label>
+            <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" value={form.email} onChange={onChange('email')} />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1.5">Status</label>
+            <select className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" value={form.status} onChange={onChange('status')}>
+              <option value="Active">Active</option>
+              <option value="At Risk">At Risk</option>
+              <option value="New Intake">New Intake</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1.5">Next Session</label>
+            <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" type="datetime-local" value={toDateInputValue(form.nextSession)} onChange={onChange('nextSession')} />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1.5">Last Contact</label>
+            <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" type="datetime-local" value={toDateInputValue(form.lastContact)} onChange={onChange('lastContact')} />
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Focus Areas / Plan" helperText="Private to the coach." className="min-h-[160px]" bodyClassName="h-full flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex flex-wrap gap-2 mb-3">
+            {planItems.length > 0 ? (
+              planItems.map((item, i) => (
+                <span key={`${item}-${i}`} className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1 break-words">
+                  {item}
+                  <button type="button" onClick={() => removePlanItem(i)} className="ml-1 text-slate-500 hover:text-slate-700">×</button>
+                </span>
+              ))
+            ) : (
+              <div className="text-sm text-slate-500">No plan items added yet.</div>
+            )}
+          </div>
+          <div className="mt-auto flex items-center gap-2">
+            <input
+              className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88"
+              placeholder="Add a plan item…"
+              value={planInput}
+              onChange={(e) => setPlanInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPlanItem(); } }}
+            />
+            <button type="button" onClick={addPlanItem} className="px-2.5 py-1.5 rounded-xl text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition">Add</button>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Coach Notes" helperText="Pinned context plus timestamped note log" className="min-h-[420px] flex-1" bodyClassName="h-full flex flex-col">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-slate-500 mb-1.5">Pinned Context</label>
+            <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[120px] text-sm bg-white/88" placeholder="Pinned client context visible to you…" value={form.notes} onChange={onChange('notes')} />
+            <div className="mt-1 text-[11px] text-slate-400">This stays private to the coach workspace.</div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-4">
+            <div className="text-sm font-semibold text-slate-900 mb-2">Add Note</div>
+            <div className="flex flex-col gap-2 mb-3">
+              <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[84px] text-sm bg-white/88" placeholder="Add a timestamped coaching note…" value={newNote} onChange={(e) => setNewNote(e.target.value)} />
+              <div className="flex justify-end">
+                <button type="button" onClick={handleAddNote} disabled={savingNote || !newNote.trim()} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition disabled:opacity-50">
+                  {savingNote ? 'Adding…' : 'Add Note'}
+                </button>
+              </div>
+            </div>
+
+            {notes.length > 0 ? (
+              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                {notes.map((note) => (
+                  <div key={note.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 flex gap-3">
+                    <div className="flex-1">
+                      <div className="text-sm text-slate-700 whitespace-pre-wrap">{note.body}</div>
+                      <div className="text-[11px] text-slate-400 mt-2">{fmtDateTime(note.createdAt)}</div>
+                    </div>
+                    <button type="button" onClick={() => handleDeleteNote(note.id)} className="text-slate-400 hover:text-slate-700 text-sm">✕</button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-slate-500">No note history yet.</div>
+            )}
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Recent Coaching Activity" className="min-h-[160px]" bodyClassName="h-full flex flex-col">
+        {recentActivity.length === 0 ? (
+          <div className="text-sm text-slate-500">No recent coaching activity yet.</div>
+        ) : (
+          <div className="space-y-3 max-h-[180px] overflow-y-auto pr-1">
+            {recentActivity.map((item, idx) => (
+              <div key={`${item.label}-${idx}`} className="text-sm">
+                <div className="font-semibold text-slate-900 break-words">{item.label}</div>
+                <div className="text-slate-500 break-words">{fmtDateTime(item.ts)}</div>
+                {item.detail ? <div className="text-slate-600 mt-1 break-words">{item.detail}</div> : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </SectionCard>
+    </div>
+  );
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <CoachingLayout
@@ -175,7 +295,7 @@ export default function ClientProfileUpdatePage() {
 
       <div className="w-full pr-3 box-border">
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-3 w-full min-w-0">
-          <section className="rounded-[22px] border border-white/24 bg-[rgba(248,250,252,0.80)] shadow-[0_20px_50px_rgba(2,6,23,0.16)] backdrop-blur-xl overflow-hidden xl:col-[1/2]">
+          <section className="rounded-[22px] border border-white/24 bg-[rgba(248,250,252,0.80)] shadow-[0_20px_50px_rgba(2,6,23,0.16)] backdrop-blur-xl overflow-hidden xl:col-[1/2] relative">
 
             {/* ── Page header ── */}
             <div className="px-3 py-3 sm:px-4 sm:py-4 border-b border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(248,250,252,0.78))]">
@@ -220,6 +340,58 @@ export default function ClientProfileUpdatePage() {
                 <TabButton id="documents" label="Documents" activeTab={activeTab} setActiveTab={setActiveTab} badge={tabBadges.documents} />
               </div>
             </div>
+
+            {activeTab === 'coaching' && strategyView !== 'results' && !mobileCoachToolsOpen ? (
+              <button
+                type="button"
+                onClick={() => setMobileCoachToolsOpen(true)}
+                className="xl:hidden absolute right-0 top-1/2 z-[10030] -translate-y-1/2 bg-transparent border-0 p-0 shadow-none"
+                aria-label="Open coach tools"
+              >
+                <img
+                  src="/icons/tools-b.png"
+                  alt="Coach Tools"
+                  style={{
+                    width: '52px',
+                    height: '170px',
+                    objectFit: 'contain',
+                  }}
+                />
+              </button>
+            ) : null}
+
+            {mobileCoachToolsOpen ? (
+              <div className="xl:hidden absolute inset-0 z-[10035] overflow-hidden">
+                <button
+                  type="button"
+                  aria-label="Close coach tools overlay"
+                  onClick={() => setMobileCoachToolsOpen(false)}
+                  className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
+                />
+
+                <aside className="absolute bottom-0 right-0 top-0 flex w-[min(88vw,390px)] max-w-full flex-col border-l border-white/35 bg-[rgba(248,250,252,0.96)] shadow-[-24px_0_70px_rgba(2,6,23,0.38)] backdrop-blur-xl">
+                  <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-slate-950 px-4 py-4 text-white">
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#FF7043]">
+                        Client Review
+                      </div>
+                      <div className="text-base font-black tracking-tight">Coach Tools</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMobileCoachToolsOpen(false)}
+                      className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-black text-white"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-4">
+                    {coachToolsContent}
+                  </div>
+                </aside>
+              </div>
+            ) : null}
 
             {/* ── Tab content ── */}
             <div className="p-3 sm:p-3.5 bg-[linear-gradient(180deg,rgba(248,250,252,0.24),rgba(241,245,249,0.38))]">
@@ -423,7 +595,7 @@ export default function ClientProfileUpdatePage() {
                 ) : (
                   // ── Input mode — three-column layout ──
                   <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-3 items-stretch">
-                    <div className="flex flex-col gap-3 h-full">
+                    <div className="hidden xl:flex xl:flex-col gap-3 h-full">
                       <SectionCard title="Coach Controls" className="min-h-[420px] flex-1" bodyClassName="h-full flex flex-col">
                         <div className="space-y-3">
                           <div>
@@ -576,7 +748,7 @@ export default function ClientProfileUpdatePage() {
                       </SectionCard>
                     </div>
 
-                    <div className="flex flex-col gap-3 h-full">
+                    <div className="hidden xl:flex xl:flex-col gap-3 h-full">
                       <SectionCard title="Coach Notes" helperText="Pinned context plus timestamped note log" className="min-h-[420px] flex-1" bodyClassName="h-full flex flex-col">
                         <div className="space-y-3">
                           <div>
