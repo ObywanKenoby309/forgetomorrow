@@ -798,7 +798,7 @@ flushPendingSaveRef.current = flushPendingSave;
           /* ─── Banner ─── */
           .ft-banner-wrap { position:relative; width:100%; overflow:hidden; border-radius:18px; border:1px solid rgba(255,255,255,0.18); box-shadow:0 18px 38px rgba(0,0,0,0.18); background:rgba(255,255,255,0.08); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
           .ft-banner-blur { position:absolute; inset:0; background-size:cover; background-position:${bannerPos}; background-repeat:no-repeat; filter:blur(18px); transform:scale(1.10); opacity:0.85; }
-          .ft-banner-fg   { position:absolute; inset:0; background-size:cover; background-position:${bannerPos}; background-repeat:no-repeat; }
+          .ft-banner-fg   { position:absolute; inset:0; background-size:${bannerMode === 'fit' ? 'contain' : 'cover'}; background-position:${bannerPos}; background-repeat:no-repeat; }
           .ft-banner-vignette { position:absolute; inset:0; background:linear-gradient(180deg, rgba(17,32,51,0.55), rgba(17,32,51,0.22)); }
           .ft-banner-edit-overlay { position:absolute; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s; background:rgba(13,27,42,0.45); cursor:pointer; }
           .ft-banner-wrap:hover .ft-banner-edit-overlay { opacity:1; }
