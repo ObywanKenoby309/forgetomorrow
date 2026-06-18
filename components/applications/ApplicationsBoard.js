@@ -372,22 +372,9 @@ export default function ApplicationsBoard({
   }, []);
 
   useEffect(() => {
-    if (!isMobile || mobileView !== 'focus') return;
-
-    const rail = chipRailRef.current;
-    const chip = chipRefs.current[mobileStage];
-    if (!rail || !chip) return;
-
-    const railRect = rail.getBoundingClientRect();
-    const chipRect = chip.getBoundingClientRect();
-
-    const chipCenter = chip.offsetLeft + chipRect.width / 2;
-    const targetScrollLeft = chipCenter - railRect.width / 2;
-
-    rail.scrollTo({
-      left: Math.max(0, targetScrollLeft),
-      behavior: 'smooth',
-    });
+    // Focus stage chips are intentionally kept inside the phone viewport
+    // (wrapped 2-column grid, not a horizontal scroller). Do not auto-scroll
+    // the rail; it can pull the mobile layout sideways.
   }, [mobileStage, isMobile, mobileView]);
 
   const sensors = useSensors(
@@ -589,28 +576,19 @@ export default function ApplicationsBoard({
           style={{
             width: '100%',
             maxWidth: '100%',
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            WebkitOverflowScrolling: 'touch',
+            boxSizing: 'border-box',
             paddingBottom: 6,
             marginBottom: compact ? 8 : 10,
-            boxSizing: 'border-box',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            scrollSnapType: 'x proximity',
-            touchAction: 'pan-x',
           }}
         >
           <div
             style={{
-              display: 'inline-grid',
-              gridAutoFlow: 'column',
-              gridAutoColumns: 'max-content',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
               gap: 8,
-              width: 'max-content',
-              minWidth: '100%',
+              width: '100%',
+              minWidth: 0,
               boxSizing: 'border-box',
-              paddingRight: 8,
             }}
           >
             {STAGES.map((stage) => {
@@ -631,13 +609,14 @@ export default function ApplicationsBoard({
                     border: `1px solid ${c.solid}`,
                     background: isActive ? c.bg : '#fff',
                     color: c.text,
-                    padding: '10px 16px',
+                    padding: '9px 8px',
                     fontWeight: 800,
-                    fontSize: 14,
+                    fontSize: 12,
                     whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
                     cursor: 'pointer',
                     boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
-                    scrollSnapAlign: 'start',
                   }}
                 >
                   {stage} {count}
