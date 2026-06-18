@@ -231,14 +231,12 @@ export default function ClientProfileUpdatePage() {
 
   const certificationsList = isFTUser && Array.isArray(source.certifications) ? source.certifications : [];
   const projectsList = isFTUser && Array.isArray(source.projects) ? source.projects : [];
-  const customSections = isFTUser && Array.isArray(source.customSection) ? source.customSection : [];
 
   const profileSubTabs = [
     { id: 'overview',         label: 'Overview' },
     { id: 'experience',       label: 'Experience' },
     { id: 'education',        label: 'Education' },
     { id: 'skills',           label: 'Skills' },
-    ...(customSections.length > 0 ? [{ id: 'custom', label: 'Custom' }] : []),
     { id: 'preferences',      label: 'Preferences' },
   ];
 
@@ -672,44 +670,45 @@ export default function ClientProfileUpdatePage() {
                   ) : null}
 
                   {profileSubTab === 'experience' ? (
-                    <SectionCard title="Experience">
-                      {isFTUser ? (
-                        experienceList.length > 0 ? (
-                          <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-                            {experienceList.map((exp, idx) => (
-                              <div key={`${exp.title}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
-                                <div className="font-semibold text-slate-900 break-words">
-                                  {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
+                    <div className="space-y-3">
+                      <SectionCard title="Experience">
+                        {isFTUser ? (
+                          experienceList.length > 0 ? (
+                            <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                              {experienceList.map((exp, idx) => (
+                                <div key={`${exp.title}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
+                                  <div className="font-semibold text-slate-900 break-words">
+                                    {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
+                                  </div>
+                                  {exp.range ? <div className="text-xs text-slate-500 mt-1">{exp.range}</div> : null}
+                                  {exp.highlights?.length ? (
+                                    <ul className="mt-2 space-y-1">
+                                      {exp.highlights.slice(0, 5).map((item, itemIdx) => (
+                                        <li key={`${item}-${itemIdx}`} className="text-sm text-slate-700 leading-6">• {item}</li>
+                                      ))}
+                                    </ul>
+                                  ) : null}
                                 </div>
-                                {exp.range ? <div className="text-xs text-slate-500 mt-1">{exp.range}</div> : null}
-                                {exp.highlights?.length ? (
-                                  <ul className="mt-2 space-y-1">
-                                    {exp.highlights.slice(0, 5).map((item, itemIdx) => (
-                                      <li key={`${item}-${itemIdx}`} className="text-sm text-slate-700 leading-6">• {item}</li>
-                                    ))}
-                                  </ul>
-                                ) : null}
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-slate-500">No experience is available on this client yet.</div>
+                          )
                         ) : (
-                          <div className="text-sm text-slate-500">No experience is available on this client yet.</div>
-                        )
-                      ) : (
-                        <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[220px] text-sm bg-white/88" placeholder="Enter experience manually..." value={form.manualExperience || ''} onChange={onChange('manualExperience')} />
-                      )}
+                          <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[220px] text-sm bg-white/88" placeholder="Enter experience manually..." value={form.manualExperience || ''} onChange={onChange('manualExperience')} />
+                        )}
+                      </SectionCard>
 
                       {isFTUser && projectsList.length > 0 ? (
-                        <div className="mt-4 pt-4 border-t border-slate-100">
-                          <div className="text-xs font-black uppercase tracking-[0.10em] text-slate-500 mb-2">Projects</div>
-                          <div className="space-y-3">
+                        <SectionCard title="Projects">
+                          <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
                             {projectsList.map((proj) => {
                               const years = [proj.startYear, proj.endYear].filter(Boolean).join(' – ');
                               return (
-                                <div key={proj.id} className="border-b border-slate-100 last:border-0 pb-2">
-                                  <div className="font-semibold text-slate-900 break-words text-sm">{proj.name}</div>
+                                <div key={proj.id} className="border-b border-slate-100 last:border-0 pb-3">
+                                  <div className="font-semibold text-slate-900 break-words">{proj.name}</div>
                                   {(proj.organization || years) ? (
-                                    <div className="text-xs text-slate-500 mt-0.5">{[proj.organization, years].filter(Boolean).join(' • ')}</div>
+                                    <div className="text-xs text-slate-500 mt-1">{[proj.organization, years].filter(Boolean).join(' • ')}</div>
                                   ) : null}
                                   {proj.notes ? <div className="text-sm text-slate-600 mt-1 break-words whitespace-pre-line">{proj.notes}</div> : null}
                                   {proj.url ? <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#FF7043] font-semibold mt-1 inline-block break-all">{proj.url}</a> : null}
@@ -717,52 +716,53 @@ export default function ClientProfileUpdatePage() {
                               );
                             })}
                           </div>
-                        </div>
+                        </SectionCard>
                       ) : null}
-                    </SectionCard>
+                    </div>
                   ) : null}
 
                   {profileSubTab === 'education' ? (
-                    <SectionCard title="Education">
-                      {isFTUser ? (
-                        educationList.length > 0 ? (
-                          <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-                            {educationList.map((edu, idx) => (
-                              <div key={`${edu.school}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
-                                <div className="font-semibold text-slate-900 break-words">
-                                  {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
+                    <div className="space-y-3">
+                      <SectionCard title="Education">
+                        {isFTUser ? (
+                          educationList.length > 0 ? (
+                            <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                              {educationList.map((edu, idx) => (
+                                <div key={`${edu.school}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
+                                  <div className="font-semibold text-slate-900 break-words">
+                                    {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
+                                  </div>
+                                  <div className="text-sm text-slate-600 mt-1 break-words">{edu.school || 'School not listed'}</div>
+                                  {(edu.startYear || edu.endYear) ? (
+                                    <div className="text-xs text-slate-500 mt-1">{[edu.startYear, edu.endYear].filter(Boolean).join(' - ')}</div>
+                                  ) : null}
                                 </div>
-                                <div className="text-sm text-slate-600 mt-1 break-words">{edu.school || 'School not listed'}</div>
-                                {(edu.startYear || edu.endYear) ? (
-                                  <div className="text-xs text-slate-500 mt-1">{[edu.startYear, edu.endYear].filter(Boolean).join(' - ')}</div>
-                                ) : null}
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-slate-500">No education details are available yet.</div>
+                          )
                         ) : (
-                          <div className="text-sm text-slate-500">No education details are available yet.</div>
-                        )
-                      ) : (
-                        <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[220px] text-sm bg-white/88" placeholder="Enter education manually..." value={form.manualEducation || ''} onChange={onChange('manualEducation')} />
-                      )}
+                          <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[220px] text-sm bg-white/88" placeholder="Enter education manually..." value={form.manualEducation || ''} onChange={onChange('manualEducation')} />
+                        )}
+                      </SectionCard>
 
                       {isFTUser && certificationsList.length > 0 ? (
-                        <div className="mt-4 pt-4 border-t border-slate-100">
-                          <div className="text-xs font-black uppercase tracking-[0.10em] text-slate-500 mb-2">Certifications</div>
-                          <div className="space-y-3">
+                        <SectionCard title="Certifications">
+                          <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
                             {certificationsList.map((cert) => (
-                              <div key={cert.id} className="border-b border-slate-100 last:border-0 pb-2">
-                                <div className="font-semibold text-slate-900 text-sm break-words">{cert.name}</div>
+                              <div key={cert.id} className="border-b border-slate-100 last:border-0 pb-3">
+                                <div className="font-semibold text-slate-900 break-words">{cert.name}</div>
                                 {(cert.issuer || cert.year) ? (
-                                  <div className="text-xs text-slate-500 mt-0.5">{[cert.issuer, cert.year].filter(Boolean).join(' • ')}</div>
+                                  <div className="text-xs text-slate-500 mt-1">{[cert.issuer, cert.year].filter(Boolean).join(' • ')}</div>
                                 ) : null}
                                 {cert.notes ? <div className="text-sm text-slate-600 mt-1 break-words whitespace-pre-line">{cert.notes}</div> : null}
                               </div>
                             ))}
                           </div>
-                        </div>
+                        </SectionCard>
                       ) : null}
-                    </SectionCard>
+                    </div>
                   ) : null}
 
                   {profileSubTab === 'skills' ? (
@@ -779,29 +779,6 @@ export default function ClientProfileUpdatePage() {
                         )
                       ) : (
                         <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Enter skills (comma separated)" value={form.manualSkills || ''} onChange={onChange('manualSkills')} />
-                      )}
-                    </SectionCard>
-                  ) : null}
-
-                  {profileSubTab === 'custom' ? (
-                    <SectionCard title="Custom Section">
-                      {customSections.length > 0 ? (
-                        <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-                          {customSections.map((entry) => {
-                            const years = [entry.startYear, entry.endYear].filter(Boolean).join(' – ');
-                            return (
-                              <div key={entry.id} className="border-b border-slate-100 last:border-0 pb-3">
-                                <div className="font-semibold text-slate-900 break-words">{entry.name}</div>
-                                {(entry.organization || years) ? (
-                                  <div className="text-xs text-slate-500 mt-0.5">{[entry.organization, years].filter(Boolean).join(' • ')}</div>
-                                ) : null}
-                                {entry.notes ? <div className="text-sm text-slate-600 mt-1 break-words whitespace-pre-line">{entry.notes}</div> : null}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="text-sm text-slate-500">No custom section data available.</div>
                       )}
                     </SectionCard>
                   ) : null}

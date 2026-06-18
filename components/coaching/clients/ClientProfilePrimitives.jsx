@@ -17,7 +17,7 @@ export function MetaRow({ label, value }) {
 export function SectionCard({ title, action, helperText, children, className = '', bodyClassName = '' }) {
   return (
     <section
-      className={`rounded-[18px] border border-white/26 bg-[rgba(255,255,255,0.70)] shadow-[0_10px_22px_rgba(15,23,42,0.11)] backdrop-blur-xl ${className}`}
+      className={`rounded-[18px] border border-white/22 bg-[rgba(255,255,255,0.68)] shadow-[0_10px_28px_rgba(15,23,42,0.12)] backdrop-blur-md ${className}`}
     >
       <div className={`p-2.5 sm:p-3 ${bodyClassName}`}>
         <div className="flex items-start justify-between gap-3 mb-3">
