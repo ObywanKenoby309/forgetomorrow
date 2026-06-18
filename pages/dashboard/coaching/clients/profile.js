@@ -46,10 +46,15 @@ export default function ClientProfileUpdatePage() {
   } = useClientProfile();
 
   const [mobileCoachToolsOpen, setMobileCoachToolsOpen] = React.useState(false);
+  const [profileSubTab, setProfileSubTab] = React.useState('overview');
 
   React.useEffect(() => {
     setMobileCoachToolsOpen(false);
   }, [activeTab, strategyView]);
+
+  React.useEffect(() => {
+    setProfileSubTab('overview');
+  }, [client?.id]);
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
@@ -168,6 +173,14 @@ export default function ClientProfileUpdatePage() {
   };
 
   const strategyHasResults = Boolean(form.strategyBrief);
+
+  const profileSubTabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'experience', label: 'Experience' },
+    { id: 'education', label: 'Education' },
+    { id: 'skills', label: 'Skills' },
+    { id: 'preferences', label: 'Preferences' },
+  ];
 
   const coachToolsContent = (
     <div className="space-y-3">
@@ -383,195 +396,216 @@ export default function ClientProfileUpdatePage() {
                       className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-black text-white"
                     >
                       Close
-                    </button>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto p-4">
-                    {coachToolsContent}
-                  </div>
-                </aside>
-              </div>
-            ) : null}
-
-            {/* ── Tab content ── */}
-            <div className="p-3 sm:p-3.5 bg-[linear-gradient(180deg,rgba(248,250,252,0.24),rgba(241,245,249,0.38))]">
-
-              {/* ── Profile tab ── */}
+               {/* ── Profile tab ── */}
               {activeTab === 'profile' ? (
-                <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-3">
-                  <div className="space-y-3">
-                    <SectionCard title="Client Snapshot">
-                      <div className="flex flex-col items-center text-center gap-3">
-                        <div
-                          style={{
-                            width: 64, height: 64, borderRadius: '999px',
-                            background: avatarUrl ? 'transparent' : `linear-gradient(135deg, ${avatarBg}, ${avatarDark})`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: 'white', fontWeight: 800, fontSize: 24,
-                            boxShadow: `0 8px 24px ${avatarBg}55`,
-                            outline: `3px solid ${cfg.ring}45`, outlineOffset: 3, overflow: 'hidden',
-                          }}
-                        >
-                          {avatarUrl ? (
-                            <img src={avatarUrl} alt={client.name || 'Client avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                          ) : (
-                            initials(client.name)
-                          )}
-                        </div>
-
-                        <div>
-                          <div className="text-[16px] font-black tracking-tight text-slate-900">{client.name}</div>
-                          <div className="mt-1 text-sm text-slate-500">{client.email || 'No email on file'}</div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center justify-center gap-2">
-                          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: 999, background: cfg.bg, color: cfg.color }}>
-                            {form.status}
-                          </span>
-                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
-                            {isFTUser ? 'ForgeTomorrow User' : 'External Client'}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-2 w-full pt-1">
-                          <button type="button" onClick={() => router.push('/dashboard/coaching/sessions')} className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition">
-                            View Sessions
-                          </button>
-                          <button type="button" onClick={() => router.push('/coaching/messaging')} className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition">
-                            Message
-                          </button>
-                          {profileHref ? (
-                            <button type="button" onClick={openProfile} className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition">
-                              View Profile
-                            </button>
-                          ) : null}
-                        </div>
-                      </div>
-                    </SectionCard>
-
-                    <SectionCard title="Command Snapshot">
-                      <div className="divide-y divide-slate-100">
-                        <MetaRow label="Status"       value={form.status} />
-                        <MetaRow label="Next session" value={form.nextSession ? fmtDateTime(form.nextSession) : ''} />
-                        <MetaRow label="Last contact" value={form.lastContact ? fmtDateTime(form.lastContact) : ''} />
-                        <MetaRow label="Sessions"     value={sessions.length} />
-                        <MetaRow label="Notes"        value={notes.length} />
-                        <MetaRow label="Documents"    value={docs.length} />
-                      </div>
-                    </SectionCard>
+                <div className="space-y-3">
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
+                    {profileSubTabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setProfileSubTab(tab.id)}
+                        className={`shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-black transition ${
+                          profileSubTab === tab.id
+                            ? 'border-[#FF7043] bg-[#FF7043] text-white shadow-sm'
+                            : 'border-slate-200 bg-white/85 text-slate-700 hover:bg-white'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
                   </div>
 
-                  <div className="space-y-3">
-                    <SectionCard title="Summary">
-                      {isFTUser ? (
-                        summaryText ? (
-                          <div className="text-[13px] leading-6 text-slate-700 whitespace-pre-line">{summaryText}</div>
-                        ) : (
-                          <div className="text-sm text-slate-500">No profile summary available yet.</div>
-                        )
-                      ) : (
-                        <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[150px] text-sm bg-white/88" placeholder="Enter client summary..." value={form.manualSummary || ''} onChange={onChange('manualSummary')} />
-                      )}
-                    </SectionCard>
-
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                      <SectionCard title="Experience">
-                        {isFTUser ? (
-                          experienceList.length > 0 ? (
-                            <div className="space-y-3 max-h-[240px] overflow-y-auto pr-1">
-                              {experienceList.map((exp, idx) => (
-                                <div key={`${exp.title}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
-                                  <div className="font-semibold text-slate-900 break-words">
-                                    {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
-                                  </div>
-                                  {exp.range ? <div className="text-xs text-slate-500 mt-1">{exp.range}</div> : null}
-                                  {exp.highlights?.length ? (
-                                    <ul className="mt-2 space-y-1">
-                                      {exp.highlights.slice(0, 3).map((item, itemIdx) => (
-                                        <li key={`${item}-${itemIdx}`} className="text-sm text-slate-700 leading-6">• {item}</li>
-                                      ))}
-                                    </ul>
-                                  ) : null}
-                                </div>
-                              ))}
+                  {profileSubTab === 'overview' ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-3">
+                      <div className="space-y-3">
+                        <SectionCard title="Client Snapshot">
+                          <div className="flex flex-col items-center text-center gap-3">
+                            <div
+                              style={{
+                                width: 64, height: 64, borderRadius: '999px',
+                                background: avatarUrl ? 'transparent' : `linear-gradient(135deg, ${avatarBg}, ${avatarDark})`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: 'white', fontWeight: 800, fontSize: 24,
+                                boxShadow: `0 8px 24px ${avatarBg}55`,
+                                outline: `3px solid ${cfg.ring}45`, outlineOffset: 3, overflow: 'hidden',
+                              }}
+                            >
+                              {avatarUrl ? (
+                                <img src={avatarUrl} alt={client.name || 'Client avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                              ) : (
+                                initials(client.name)
+                              )}
                             </div>
-                          ) : (
-                            <div className="text-sm text-slate-500">No experience is available on this client yet.</div>
-                          )
-                        ) : (
-                          <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[180px] text-sm bg-white/88" placeholder="Enter experience manually..." value={form.manualExperience || ''} onChange={onChange('manualExperience')} />
-                        )}
-                      </SectionCard>
 
-                      <SectionCard title="Education">
-                        {isFTUser ? (
-                          educationList.length > 0 ? (
-                            <div className="space-y-3 max-h-[240px] overflow-y-auto pr-1">
-                              {educationList.map((edu, idx) => (
-                                <div key={`${edu.school}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
-                                  <div className="font-semibold text-slate-900 break-words">
-                                    {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
-                                  </div>
-                                  <div className="text-sm text-slate-600 mt-1 break-words">{edu.school || 'School not listed'}</div>
-                                  {(edu.startYear || edu.endYear) ? (
-                                    <div className="text-xs text-slate-500 mt-1">{[edu.startYear, edu.endYear].filter(Boolean).join(' - ')}</div>
-                                  ) : null}
-                                </div>
-                              ))}
+                            <div>
+                              <div className="text-[16px] font-black tracking-tight text-slate-900">{client.name}</div>
+                              <div className="mt-1 text-sm text-slate-500">{client.email || 'No email on file'}</div>
                             </div>
-                          ) : (
-                            <div className="text-sm text-slate-500">No education details are available yet.</div>
-                          )
-                        ) : (
-                          <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[180px] text-sm bg-white/88" placeholder="Enter education manually..." value={form.manualEducation || ''} onChange={onChange('manualEducation')} />
-                        )}
-                      </SectionCard>
-                    </div>
 
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                      <SectionCard title="Skills" helperText={isFTUser ? 'Read-only profile context for coaching.' : 'Coach-managed profile context for non-FT clients.'}>
-                        {isFTUser ? (
-                          skillsList.length > 0 ? (
-                            <div className="flex flex-wrap gap-2">
-                              {skillsList.map((skill, idx) => (
-                                <span key={`${skill}-${idx}`} className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300">{skill}</span>
-                              ))}
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: 999, background: cfg.bg, color: cfg.color }}>
+                                {form.status}
+                              </span>
+                              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                                {isFTUser ? 'ForgeTomorrow User' : 'External Client'}
+                              </span>
                             </div>
-                          ) : (
-                            <div className="text-sm text-slate-500">No skills are available on this client yet.</div>
-                          )
-                        ) : (
-                          <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Enter skills (comma separated)" value={form.manualSkills || ''} onChange={onChange('manualSkills')} />
-                        )}
-                      </SectionCard>
 
-                      <SectionCard title="Work Preferences">
-                        {isFTUser ? (
-                          hasWorkPrefs ? (
-                            <div className="divide-y divide-slate-100">
-                              <MetaRow label="Status" value={workStatus} />
-                              <MetaRow label="Work type" value={preferredWorkType} />
-                              <MetaRow label="Willing to relocate" value={typeof willingToRelocate === 'boolean' ? (willingToRelocate ? 'Yes' : 'No') : String(willingToRelocate || '').trim()} />
-                              {preferredLocations.length > 0 ? (
-                                <div className="py-2">
-                                  <div className="text-xs text-slate-500 mb-2">Preferred locations</div>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {preferredLocations.map((loc, idx) => (
-                                      <span key={`${loc}-${idx}`} className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700">{loc}</span>
-                                    ))}
-                                  </div>
-                                </div>
+                            <div className="grid grid-cols-1 gap-2 w-full pt-1">
+                              <button type="button" onClick={() => router.push('/dashboard/coaching/sessions')} className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition">
+                                View Sessions
+                              </button>
+                              <button type="button" onClick={() => router.push('/coaching/messaging')} className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition">
+                                Message
+                              </button>
+                              {profileHref ? (
+                                <button type="button" onClick={openProfile} className="rounded-xl border border-slate-200 bg-white/85 px-2.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-white transition">
+                                  View Profile
+                                </button>
                               ) : null}
                             </div>
+                          </div>
+                        </SectionCard>
+
+                        <SectionCard title="Command Snapshot">
+                          <div className="divide-y divide-slate-100">
+                            <MetaRow label="Status"       value={form.status} />
+                            <MetaRow label="Next session" value={form.nextSession ? fmtDateTime(form.nextSession) : ''} />
+                            <MetaRow label="Last contact" value={form.lastContact ? fmtDateTime(form.lastContact) : ''} />
+                            <MetaRow label="Sessions"     value={sessions.length} />
+                            <MetaRow label="Notes"        value={notes.length} />
+                            <MetaRow label="Documents"    value={docs.length} />
+                          </div>
+                        </SectionCard>
+                      </div>
+
+                      <div className="space-y-3">
+                        <SectionCard title="Summary">
+                          {isFTUser ? (
+                            summaryText ? (
+                              <div className="text-[13px] leading-6 text-slate-700 whitespace-pre-line">{summaryText}</div>
+                            ) : (
+                              <div className="text-sm text-slate-500">No profile summary available yet.</div>
+                            )
                           ) : (
-                            <div className="text-sm text-slate-500">No work preferences are available for this client yet.</div>
-                          )
+                            <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[150px] text-sm bg-white/88" placeholder="Enter client summary..." value={form.manualSummary || ''} onChange={onChange('manualSummary')} />
+                          )}
+                        </SectionCard>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {profileSubTab === 'experience' ? (
+                    <SectionCard title="Experience">
+                      {isFTUser ? (
+                        experienceList.length > 0 ? (
+                          <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                            {experienceList.map((exp, idx) => (
+                              <div key={`${exp.title}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
+                                <div className="font-semibold text-slate-900 break-words">
+                                  {[exp.title, exp.company].filter(Boolean).join(' — ') || 'Experience'}
+                                </div>
+                                {exp.range ? <div className="text-xs text-slate-500 mt-1">{exp.range}</div> : null}
+                                {exp.highlights?.length ? (
+                                  <ul className="mt-2 space-y-1">
+                                    {exp.highlights.slice(0, 5).map((item, itemIdx) => (
+                                      <li key={`${item}-${itemIdx}`} className="text-sm text-slate-700 leading-6">• {item}</li>
+                                    ))}
+                                  </ul>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
                         ) : (
-                          <div className="space-y-3">
-                            <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Work status" value={form.manualWorkStatus || ''} onChange={onChange('manualWorkStatus')} />
-                            <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Preferred work type" value={form.manualPreferredWorkType || ''} onChange={onChange('manualPreferredWorkType')} />
-                            <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Preferred locations (comma separated)" value={form.manualPreferredLocations || ''} onChange={onChange('manualPreferredLocations')} />
-                            <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Willing to relocate" value={form.manualWillingToRelocate || ''} onChange={onChange('manualWillingToRelocate')} />
+                          <div className="text-sm text-slate-500">No experience is available on this client yet.</div>
+                        )
+                      ) : (
+                        <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[220px] text-sm bg-white/88" placeholder="Enter experience manually..." value={form.manualExperience || ''} onChange={onChange('manualExperience')} />
+                      )}
+                    </SectionCard>
+                  ) : null}
+
+                  {profileSubTab === 'education' ? (
+                    <SectionCard title="Education">
+                      {isFTUser ? (
+                        educationList.length > 0 ? (
+                          <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                            {educationList.map((edu, idx) => (
+                              <div key={`${edu.school}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
+                                <div className="font-semibold text-slate-900 break-words">
+                                  {[edu.degree, edu.field].filter(Boolean).join(' in ') || 'Education'}
+                                </div>
+                                <div className="text-sm text-slate-600 mt-1 break-words">{edu.school || 'School not listed'}</div>
+                                {(edu.startYear || edu.endYear) ? (
+                                  <div className="text-xs text-slate-500 mt-1">{[edu.startYear, edu.endYear].filter(Boolean).join(' - ')}</div>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-500">No education details are available yet.</div>
+                        )
+                      ) : (
+                        <textarea className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[220px] text-sm bg-white/88" placeholder="Enter education manually..." value={form.manualEducation || ''} onChange={onChange('manualEducation')} />
+                      )}
+                    </SectionCard>
+                  ) : null}
+
+                  {profileSubTab === 'skills' ? (
+                    <SectionCard title="Skills" helperText={isFTUser ? 'Read-only profile context for coaching.' : 'Coach-managed profile context for non-FT clients.'}>
+                      {isFTUser ? (
+                        skillsList.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {skillsList.map((skill, idx) => (
+                              <span key={`${skill}-${idx}`} className="text-xs px-2 py-[6px] rounded-xl border bg-slate-100 text-slate-700 border-slate-300">{skill}</span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-500">No skills are available on this client yet.</div>
+                        )
+                      ) : (
+                        <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Enter skills (comma separated)" value={form.manualSkills || ''} onChange={onChange('manualSkills')} />
+                      )}
+                    </SectionCard>
+                  ) : null}
+
+                  {profileSubTab === 'preferences' ? (
+                    <SectionCard title="Work Preferences">
+                      {isFTUser ? (
+                        hasWorkPrefs ? (
+                          <div className="divide-y divide-slate-100">
+                            <MetaRow label="Status" value={workStatus} />
+                            <MetaRow label="Work type" value={preferredWorkType} />
+                            <MetaRow label="Willing to relocate" value={typeof willingToRelocate === 'boolean' ? (willingToRelocate ? 'Yes' : 'No') : String(willingToRelocate || '').trim()} />
+                            {preferredLocations.length > 0 ? (
+                              <div className="py-2">
+                                <div className="text-xs text-slate-500 mb-2">Preferred locations</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {preferredLocations.map((loc, idx) => (
+                                    <span key={`${loc}-${idx}`} className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700">{loc}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-500">No work preferences are available for this client yet.</div>
+                        )
+                      ) : (
+                        <div className="space-y-3">
+                          <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Work status" value={form.manualWorkStatus || ''} onChange={onChange('manualWorkStatus')} />
+                          <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Preferred work type" value={form.manualPreferredWorkType || ''} onChange={onChange('manualPreferredWorkType')} />
+                          <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Preferred locations (comma separated)" value={form.manualPreferredLocations || ''} onChange={onChange('manualPreferredLocations')} />
+                          <input className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Willing to relocate" value={form.manualWillingToRelocate || ''} onChange={onChange('manualWillingToRelocate')} />
+                        </div>
+                      )}
+                    </SectionCard>
+                  ) : null}
+                </div>
+              ) : null}
+
+ className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/88" placeholder="Willing to relocate" value={form.manualWillingToRelocate || ''} onChange={onChange('manualWillingToRelocate')} />
                           </div>
                         )}
                       </SectionCard>
