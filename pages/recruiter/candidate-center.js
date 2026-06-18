@@ -160,27 +160,6 @@ function WorkspaceModuleShell({ title, subtitle, onBack, children, isMobile = fa
         padding: 0,
       }}
     >
-      <button
-        type="button"
-        onClick={onBack}
-        style={{
-          marginBottom: 4,
-          fontSize: "0.875rem",
-          color: ORANGE,
-          textDecoration: "underline",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          textAlign: "left",
-          width: "fit-content",
-          fontWeight: 800,
-          padding: 0,
-          fontFamily: "inherit",
-        }}
-      >
-        ← Return to Main
-      </button>
-
       <div
         style={{
           display: "flex",
@@ -211,6 +190,27 @@ function WorkspaceModuleShell({ title, subtitle, onBack, children, isMobile = fa
 
         {!isMobile && title === "Internal Candidate Search" && <MatchScoreMiniGuide />}
       </div>
+
+      <button
+        type="button"
+        onClick={onBack}
+        style={{
+          justifySelf: "start",
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "7px 16px",
+          borderRadius: 999,
+          border: "1px solid rgba(255,112,67,0.30)",
+          background: "rgba(255,112,67,0.08)",
+          color: ORANGE,
+          fontWeight: 800,
+          fontSize: 12,
+          cursor: "pointer",
+          fontFamily: "inherit",
+        }}
+      >
+        Candidate Center Main
+      </button>
 
       {children}
     </section>

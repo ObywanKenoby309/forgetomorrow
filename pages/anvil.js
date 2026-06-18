@@ -628,7 +628,7 @@ export default function AnvilPage({ profileSlug = "" }) {
                     padding: "7px 16px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
                     background: "rgba(255,112,67,0.08)", color: "#FF7043",
                     fontWeight: 800, fontSize: 12, cursor: "pointer", textDecoration: "none" }}>
-                  ← Back to The Anvil
+                  Anvil Main
                 </button>
                 <ProfileDevelopment onNext={() => setActiveModule("offer")} setActiveModule={setActiveModule} />
               </div>
@@ -642,7 +642,7 @@ export default function AnvilPage({ profileSlug = "" }) {
                       padding: "6px 14px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
                       background: "rgba(255,112,67,0.08)", color: "#FF7043",
                       fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
-                    ← The Anvil
+                    Anvil Main
                   </button>
                 </div>
                 <OfferEngine />
@@ -657,7 +657,7 @@ export default function AnvilPage({ profileSlug = "" }) {
                       padding: "6px 14px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
                       background: "rgba(255,112,67,0.08)", color: "#FF7043",
                       fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
-                    ← The Anvil
+                    Anvil Main
                   </button>
                 </div>
                 <ProfessionalOperatingProfileEngine profileSlug={profileSlug} />
@@ -672,7 +672,7 @@ export default function AnvilPage({ profileSlug = "" }) {
           padding: "6px 14px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
           background: "rgba(255,112,67,0.08)", color: "#FF7043",
           fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
-        ← The Anvil
+        Anvil Main
       </button>
     </div>
     <ProjectPromotionEngine />
@@ -687,7 +687,7 @@ export default function AnvilPage({ profileSlug = "" }) {
                       padding: "6px 14px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
                       background: "rgba(255,112,67,0.08)", color: "#FF7043",
                       fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
-                    ← The Anvil
+                    Anvil Main
                   </button>
                 </div>
                 <GrowthEngine />

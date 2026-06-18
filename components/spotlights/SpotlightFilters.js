@@ -4,12 +4,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const glassBase = {
-  background: 'rgba(255,255,255,0.78)',
-  border: '1px solid rgba(255,255,255,0.55)',
+  background: 'rgba(255,255,255,0.92)',
+  border: '1px solid rgba(0,0,0,0.08)',
   borderRadius: 14,
-  boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
-  backdropFilter: 'blur(14px)',
-  WebkitBackdropFilter: 'blur(14px)',
+  boxShadow: '0 6px 18px rgba(15,23,42,0.10)',
+  boxSizing: 'border-box',
 };
 
 const DEFAULT_FILTERS = {

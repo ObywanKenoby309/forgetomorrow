@@ -1,4 +1,4 @@
-// pages/dashboard/coaching/client-hub-update.js
+// pages/dashboard/coaching/client-hub.js
 //
 // Rebuilt Client Hub — mirrors candidate-center-update.js exactly.
 // Same UX pattern, different tools. No iframes. No nested pages.
@@ -113,18 +113,6 @@ const TILES = [
 function WorkspaceModuleShell({ title, subtitle, onBack, children }) {
   return (
     <section style={{ ...GLASS, padding: 24, display: "grid", gap: 16, width: "100%" }}>
-      <button
-        type="button"
-        onClick={onBack}
-        style={{
-          marginBottom: 4, fontSize: "0.875rem", color: ORANGE,
-          textDecoration: "underline", background: "none", border: "none",
-          cursor: "pointer", textAlign: "left", width: "fit-content",
-          fontWeight: 800, padding: 0,
-        }}
-      >
-        ← Return to Main
-      </button>
       <div style={{ display: "grid", gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 22, color: ORANGE, lineHeight: 1.2, letterSpacing: "-0.01em", ...ORANGE_HEADING_LIFT }}>
           {title}
@@ -133,6 +121,20 @@ function WorkspaceModuleShell({ title, subtitle, onBack, children }) {
           {subtitle}
         </p>
       </div>
+      <button
+        type="button"
+        onClick={onBack}
+        style={{
+          justifySelf: "start", display: "inline-flex", alignItems: "center",
+          padding: "7px 16px", borderRadius: 999,
+          border: "1px solid rgba(255,112,67,0.30)",
+          background: "rgba(255,112,67,0.08)",
+          color: ORANGE, fontWeight: 800, fontSize: 12,
+          cursor: "pointer", fontFamily: "inherit",
+        }}
+      >
+        Client Hub Main
+      </button>
       {children}
     </section>
   );

@@ -273,7 +273,7 @@ function MobileLayoutInner({ tiles, activeModule, setActiveModule }) {
   useEffect(() => () => clearTimeout(hintTimer.current), []);
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'hidden', boxSizing: 'border-box' }}>
       <div style={{ padding: '0 16px 14px', position: 'relative', zIndex: 20 }}>
         <button
           onClick={() => setDropdownOpen((o) => !o)}
@@ -366,7 +366,7 @@ function MobileLayoutInner({ tiles, activeModule, setActiveModule }) {
                     {tile.title}
                   </div>
                   <div style={{ fontSize: 12, color: '#78909C', marginTop: 2 }}>
-                    {activeModule === tile.id ? 'Loaded below' : 'Load below'}
+                    {activeModule === tile.id ? 'Selected' : 'Open'}
                   </div>
                 </div>
                 {i === activeIndex && (

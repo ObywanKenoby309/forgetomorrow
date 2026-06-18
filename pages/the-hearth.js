@@ -123,19 +123,6 @@ function HearthModuleShell({ title, subtitle, children, onBack, coachAction = nu
   const isMobile = useIsMobile();
   return (
     <section style={{ ...GLASS, padding: 24, display: 'grid', gap: 16 }}>
-      <button
-        type="button"
-        onClick={onBack}
-        style={{
-          marginBottom: 4, fontSize: '0.875rem', color: '#FF7043',
-          textDecoration: 'underline', background: 'none', border: 'none',
-          cursor: 'pointer', textAlign: 'left', width: 'fit-content',
-          fontWeight: 800, padding: 0,
-        }}
-      >
-        ← Return to Main
-      </button>
-
       <div
         style={{
           display: 'grid',
@@ -162,6 +149,21 @@ function HearthModuleShell({ title, subtitle, children, onBack, coachAction = nu
           </div>
         ) : null}
       </div>
+
+      <button
+        type="button"
+        onClick={onBack}
+        style={{
+          justifySelf: 'start', display: 'inline-flex', alignItems: 'center',
+          padding: '7px 16px', borderRadius: 999,
+          border: '1px solid rgba(255,112,67,0.30)',
+          background: 'rgba(255,112,67,0.08)',
+          color: '#FF7043', fontWeight: 800, fontSize: 12,
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}
+      >
+        Hearth Main
+      </button>
 
       {children}
     </section>
