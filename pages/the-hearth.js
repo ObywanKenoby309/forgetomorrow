@@ -49,8 +49,255 @@ const ORANGE_HEADING_LIFT = {
   fontWeight: 900,
 };
 
-function HearthModuleShell({ title, subtitle, children, onBack, coachAction = null }) {
+
+const HEARTH_MODULES = [
+  { id: 'mentorship', label: 'Spotlights' },
+  { id: 'forums', label: 'Forums' },
+  { id: 'events', label: 'Events' },
+  { id: 'resources', label: 'Resources' },
+];
+
+const MOBILE_PANEL = {
+  ...WHITE_CARD,
+  borderRadius: 16,
+  boxShadow: '0 8px 20px rgba(15,23,42,0.10)',
+  boxSizing: 'border-box',
+};
+
+function HearthHeroCard({ greeting }) {
+  return (
+    <div
+      style={{
+        ...GLASS,
+        padding: 18,
+        display: 'grid',
+        gap: 10,
+        boxSizing: 'border-box',
+      }}
+    >
+      <div style={{ fontSize: 12, fontWeight: 800, color: '#607D8B' }}>{greeting}</div>
+      <div style={{ display: 'grid', gap: 6 }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 28,
+            color: '#FF7043',
+            lineHeight: 1.08,
+            letterSpacing: '-0.03em',
+            ...ORANGE_HEADING_LIFT,
+          }}
+        >
+          The Hearth
+        </h1>
+        <p style={{ margin: 0, color: '#546E7A', fontSize: 14, lineHeight: 1.55 }}>
+          Your central place to build connections, find mentors, and grow your professional network with purpose and authenticity.
+        </p>
+      </div>
+      <Link
+        href="/community-guidelines"
+        style={{
+          justifySelf: 'start',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '7px 12px',
+          borderRadius: 999,
+          border: '1px solid rgba(255,112,67,0.26)',
+          background: 'rgba(255,255,255,0.82)',
+          color: '#FF7043',
+          fontSize: 12,
+          fontWeight: 900,
+          textDecoration: 'none',
+          boxShadow: '0 3px 10px rgba(15,23,42,0.08)',
+        }}
+      >
+        Community Guidelines →
+      </Link>
+    </div>
+  );
+}
+
+function HearthMobileModuleNav({ activeModule, setActiveModule }) {
   const isMobile = useIsMobile();
+  if (!isMobile) return null;
+
+  return (
+    <div
+      style={{
+        ...MOBILE_PANEL,
+        padding: 8,
+        display: 'flex',
+        gap: 6,
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+      }}
+    >
+      {HEARTH_MODULES.map((item) => {
+        const active = activeModule === item.id;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setActiveModule(item.id)}
+            style={{
+              flexShrink: 0,
+              padding: '8px 12px',
+              borderRadius: 999,
+              border: active ? '1px solid rgba(255,112,67,0.34)' : '1px solid rgba(15,23,42,0.08)',
+              background: active ? 'linear-gradient(135deg, #FF7043, #FF8A65)' : 'rgba(255,255,255,0.78)',
+              color: active ? 'white' : '#37474F',
+              fontSize: 12,
+              fontWeight: 900,
+              cursor: 'pointer',
+              boxShadow: active ? '0 5px 14px rgba(255,112,67,0.22)' : 'none',
+            }}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MobileSpotlightSearchSheet({ open, onClose, value, onChange }) {
+  const inputRef = React.useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 80);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 80,
+          background: 'rgba(10,12,18,0.50)',
+          backdropFilter: 'blur(4px)',
+        }}
+      />
+      <div
+        style={{
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 90,
+          borderTopLeftRadius: 22,
+          borderTopRightRadius: 22,
+          background: 'rgba(255,255,255,0.98)',
+          boxShadow: '0 -24px 70px rgba(15,23,42,0.28)',
+          border: '1px solid rgba(255,255,255,0.54)',
+          padding: '14px 16px calc(18px + env(safe-area-inset-bottom))',
+          display: 'grid',
+          gap: 12,
+        }}
+      >
+        <div style={{ justifySelf: 'center', width: 42, height: 4, borderRadius: 999, background: 'rgba(15,23,42,0.16)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#263238' }}>Search Spotlights</div>
+            <div style={{ fontSize: 12, color: '#607D8B', marginTop: 2 }}>Search mentors, specialties, industries, or keywords.</div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              border: '1px solid rgba(15,23,42,0.10)',
+              background: 'white',
+              color: '#607D8B',
+              fontWeight: 900,
+              cursor: 'pointer',
+            }}
+            aria-label="Close search"
+          >
+            ✕
+          </button>
+        </div>
+        <input
+          ref={inputRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Search by name, skill, focus, or topic..."
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            borderRadius: 14,
+            border: '1px solid rgba(15,23,42,0.12)',
+            background: 'rgba(248,250,252,0.96)',
+            padding: '13px 14px',
+            fontSize: 16,
+            color: '#263238',
+            outline: 'none',
+          }}
+        />
+        {value ? (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            style={{
+              justifySelf: 'start',
+              border: 'none',
+              background: 'transparent',
+              color: '#FF7043',
+              fontSize: 12,
+              fontWeight: 900,
+              cursor: 'pointer',
+              padding: 0,
+            }}
+          >
+            Clear search
+          </button>
+        ) : null}
+      </div>
+    </>
+  );
+}
+
+function HearthModuleShell({ title, subtitle, children, onBack, coachAction = null, activeModule, setActiveModule }) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <section style={{ display: 'grid', gap: 12 }}>
+        <HearthMobileModuleNav activeModule={activeModule} setActiveModule={setActiveModule} />
+        {coachAction ? (
+          <div
+            style={{
+              ...MOBILE_PANEL,
+              padding: 12,
+              display: 'grid',
+              gap: 8,
+            }}
+          >
+            {coachAction}
+          </div>
+        ) : null}
+        {children}
+      </section>
+    );
+  }
+
   return (
     <section style={{ ...GLASS, padding: 24, display: 'grid', gap: 16 }}>
       <button
@@ -69,7 +316,7 @@ function HearthModuleShell({ title, subtitle, children, onBack, coachAction = nu
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: coachAction && !isMobile ? 'minmax(0,1fr) 280px' : '1fr',
+          gridTemplateColumns: coachAction ? 'minmax(0,1fr) 280px' : '1fr',
           gap: 16,
           alignItems: 'start',
         }}
@@ -104,6 +351,8 @@ function MentorshipModule() {
   const [spotlights, setSpotlights] = useState([]);
   const [selected, setSelected]     = useState(null);
   const [filters, setFilters]       = useState(null);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileSearch, setMobileSearch] = useState('');
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
 
@@ -154,7 +403,7 @@ function MentorshipModule() {
   const filtered = useMemo(() => {
     let arr = [...spotlights];
     if (!filters) return arr;
-    const term = (filters.q || '').trim().toLowerCase();
+    const term = ((isMobile ? mobileSearch : filters?.q) || '').trim().toLowerCase();
     if (term) {
       arr = arr.filter(a =>
         [a.name, a.headline, a.hook || '', a.summary, (a.specialties || []).join(' ')]
@@ -188,7 +437,7 @@ function MentorshipModule() {
       });
     }
     return arr;
-  }, [spotlights, filters]);
+  }, [spotlights, filters, isMobile, mobileSearch]);
 
   // Keep selected in sync after filter changes
   useEffect(() => {
@@ -212,8 +461,63 @@ function MentorshipModule() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
-      <SpotlightFilters onChange={setFilters} />
+    <div style={{ display: 'grid', gap: isMobile ? 10 : 14 }}>
+      {isMobile ? (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen(true)}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                textAlign: 'left',
+                padding: '11px 13px',
+                borderRadius: 14,
+                border: '1px solid rgba(15,23,42,0.10)',
+                background: 'rgba(255,255,255,0.92)',
+                color: mobileSearch ? '#263238' : '#90A4AE',
+                fontSize: 13,
+                fontWeight: 800,
+                boxShadow: '0 4px 12px rgba(15,23,42,0.08)',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {mobileSearch ? `Search: ${mobileSearch}` : '🔍 Search Spotlights'}
+            </button>
+            {mobileSearch ? (
+              <button
+                type="button"
+                onClick={() => setMobileSearch('')}
+                style={{
+                  flexShrink: 0,
+                  border: '1px solid rgba(255,112,67,0.22)',
+                  background: 'rgba(255,255,255,0.88)',
+                  color: '#FF7043',
+                  borderRadius: 999,
+                  padding: '9px 11px',
+                  fontSize: 12,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                }}
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+          <MobileSpotlightSearchSheet
+            open={mobileSearchOpen}
+            onClose={() => setMobileSearchOpen(false)}
+            value={mobileSearch}
+            onChange={setMobileSearch}
+          />
+        </>
+      ) : (
+        <SpotlightFilters onChange={setFilters} />
+      )}
 
       {filtered.length === 0 ? (
         <div style={{ ...WHITE_CARD, padding: 14, color: '#90A4AE', fontSize: 13 }}>
@@ -227,11 +531,11 @@ function MentorshipModule() {
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr' : 'minmax(0,1.8fr) minmax(0,1.5fr)',
-            gap: 14, alignItems: 'flex-start',
+            gap: isMobile ? 10 : 14, alignItems: 'flex-start',
           }}>
             <div style={{
-              maxHeight: '60vh', overflowY: 'auto',
-              display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4,
+              maxHeight: isMobile ? 'none' : '60vh', overflowY: isMobile ? 'visible' : 'auto',
+              display: 'flex', flexDirection: 'column', gap: 10, paddingRight: isMobile ? 0 : 4,
             }}>
               {filtered.map(s => (
                 <SpotlightCard
@@ -242,7 +546,7 @@ function MentorshipModule() {
                 />
               ))}
             </div>
-            <div style={{ position: 'sticky', top: 0 }}>
+            <div style={{ position: isMobile ? 'static' : 'sticky', top: 0 }}>
               {selected
                 ? <SpotlightDetail spotlight={selected} />
                 : <div style={{ ...WHITE_CARD, padding: 16, color: '#90A4AE', fontSize: 13 }}>Select a mentor to view details.</div>
@@ -274,20 +578,82 @@ function EventsModule() {
 }
 
 function ForumsModule() {
+  const threads = [
+    {
+      id: 1,
+      title: 'How do I explain a career pivot without sounding scattered?',
+      author: 'Forge Member',
+      channel: 'Career Pivots',
+      replies: 18,
+      views: 126,
+      age: '2h',
+    },
+    {
+      id: 2,
+      title: 'What makes a recruiter actually respond to a message?',
+      author: 'Community Question',
+      channel: 'Networking',
+      replies: 9,
+      views: 84,
+      age: '5h',
+    },
+    {
+      id: 3,
+      title: 'Resume feedback: operations leader moving toward customer success',
+      author: 'Peer Review',
+      channel: 'Resume Help',
+      replies: 23,
+      views: 210,
+      age: '1d',
+    },
+  ];
+
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <section style={{ ...WHITE_CARD, padding: 18 }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: '#37474F', marginBottom: 6 }}>
-          Forums not enabled yet
+    <div style={{ display: 'grid', gap: 10 }}>
+      <section style={{ ...MOBILE_PANEL, padding: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 900, color: '#FF7043', marginBottom: 5 }}>
+          Discussion Forums Preview
         </div>
-        <p style={{ color: '#607D8B', marginTop: 4, lineHeight: 1.6 }}>
-          We're finishing moderation tools, spam protection, and reporting workflows so that conversations
-          here stay healthy and constructive.
+        <p style={{ color: '#607D8B', margin: 0, lineHeight: 1.55, fontSize: 13 }}>
+          A Forge-style discussion space is coming soon: topic-based threads, healthy moderation, and useful peer support without noise.
         </p>
-        <p style={{ color: '#607D8B', marginTop: 8, lineHeight: 1.6 }}>
-          Once everything is ready, this space will open for topic-based threads, replies, and community
-          reputation.
-        </p>
+      </section>
+
+      <section style={{ ...MOBILE_PANEL, padding: 0, overflow: 'hidden' }}>
+        {threads.map((thread, index) => (
+          <button
+            key={thread.id}
+            type="button"
+            onClick={() => alert('Forums are coming soon.')}
+            style={{
+              width: '100%',
+              border: 'none',
+              borderBottom: index < threads.length - 1 ? '1px solid rgba(15,23,42,0.08)' : 'none',
+              background: 'rgba(255,255,255,0.78)',
+              padding: '13px 14px',
+              textAlign: 'left',
+              display: 'grid',
+              gap: 7,
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, fontWeight: 900, color: '#FF7043' }}>{thread.channel}</span>
+              <span style={{ color: '#B0BEC5', fontSize: 11 }}>•</span>
+              <span style={{ fontSize: 11, color: '#78909C', fontWeight: 800 }}>{thread.age}</span>
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: '#263238', lineHeight: 1.32 }}>
+              {thread.title}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12, color: '#607D8B', fontWeight: 700 }}>
+              <span>{thread.author}</span>
+              <span>•</span>
+              <span>{thread.replies} replies</span>
+              <span>•</span>
+              <span>{thread.views} views</span>
+            </div>
+          </button>
+        ))}
       </section>
     </div>
   );
@@ -366,6 +732,8 @@ export default function TheHearth() {
           subtitle="Discover mentors by specialty, experience, and availability."
           onBack={() => setActiveModule(null)}
           coachAction={chromeRaw === 'coach' ? <SpotlightResourceCard /> : null}
+          activeModule={activeModule}
+          setActiveModule={setActiveModule}
         >
           <MentorshipModule />
         </HearthModuleShell>
@@ -378,6 +746,8 @@ export default function TheHearth() {
           title="Community Events"
           subtitle="Workshops, webinars, and networking for professional growth."
           onBack={() => setActiveModule(null)}
+          activeModule={activeModule}
+          setActiveModule={setActiveModule}
         >
           <EventsModule />
         </HearthModuleShell>
@@ -390,6 +760,8 @@ export default function TheHearth() {
           title="Discussion Forums"
           subtitle="Topic-based community conversation, moderation, and reputation."
           onBack={() => setActiveModule(null)}
+          activeModule={activeModule}
+          setActiveModule={setActiveModule}
         >
           <ForumsModule />
         </HearthModuleShell>
@@ -402,6 +774,8 @@ export default function TheHearth() {
           title="Resource Library"
           subtitle="Articles, guides, and learning paths to support career growth."
           onBack={() => setActiveModule(null)}
+          activeModule={activeModule}
+          setActiveModule={setActiveModule}
         >
           <ResourcesModule />
         </HearthModuleShell>
@@ -414,13 +788,7 @@ export default function TheHearth() {
   return (
     <Layout
       title="ForgeTomorrow — The Hearth"
-      header={
-        <SeekerTitleCard
-          greeting={greeting}
-          title="The Hearth"
-          subtitle="Your central place to build connections, find mentors, and grow your professional network with purpose and authenticity."
-        />
-      }
+      header={<HearthHeroCard greeting={greeting} />}
       headerCard={false}
       activeNav={activeNav}
       rightVariant="light"

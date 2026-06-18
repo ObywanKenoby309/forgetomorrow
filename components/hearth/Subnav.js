@@ -4,10 +4,11 @@ import { useRouter } from 'next/router';
 const GLASS = {
   borderRadius: 14,
   border: '1px solid rgba(255,255,255,0.22)',
-  background: 'rgba(255,255,255,0.58)',
-  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  background: 'rgba(255,255,255,0.72)',
+  boxShadow: '0 8px 20px rgba(15,23,42,0.10)',
   backdropFilter: 'blur(10px)',
   WebkitBackdropFilter: 'blur(10px)',
+  boxSizing: 'border-box',
 };
 
 export default function Subnav() {
@@ -28,7 +29,10 @@ export default function Subnav() {
         padding: 8,
         display: 'flex',
         gap: 8,
-        flexWrap: 'wrap',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        maxWidth: '100%',
       }}
     >
       {tabs.map((t) => (
@@ -36,18 +40,20 @@ export default function Subnav() {
           key={t.href}
           href={t.href}
           style={{
+            flexShrink: 0,
             padding: '8px 12px',
             borderRadius: 999,
-            fontWeight: 700,
+            fontWeight: 800,
+            fontSize: 13,
             textDecoration: 'none',
             border: '1px solid rgba(0,0,0,0.08)',
             color: isActive(t.href) ? 'white' : '#37474F',
             background: isActive(t.href)
               ? 'linear-gradient(135deg, #FF6F43, #FF8E53)'
-              : 'white',
+              : 'rgba(255,255,255,0.86)',
             boxShadow: isActive(t.href)
-              ? 'inset 0 0 0 2px rgba(255,255,255,0.6)'
-              : '0 2px 4px rgba(0,0,0,0.05)',
+              ? '0 5px 14px rgba(255,112,67,0.22)'
+              : 'none',
           }}
         >
           {t.label}
