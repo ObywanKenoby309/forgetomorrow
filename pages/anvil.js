@@ -409,30 +409,12 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome, profile
             <OfferEngine />
           )}
           {activeModule === "identity" && (
-            <div style={MODULE_STAGE}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <button onClick={() => setActiveModule(null)}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6,
-                    padding: "6px 14px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
-                    background: "rgba(255,112,67,0.08)", color: "#FF7043",
-                    fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
-                  ← The Anvil
-                </button>
-              </div>
-              <ProfessionalOperatingProfileEngine profileSlug={profileSlug} />
-            </div>
-          )}
+			<div style={MODULE_STAGE}>
+			  <ProfessionalOperatingProfileEngine profileSlug={profileSlug} />
+			</div>
+		  )}
 		  {activeModule === "project-promotion" && (
 			<div style={MODULE_STAGE}>
-			  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-				<button onClick={() => setActiveModule(null)}
-				  style={{ display: "inline-flex", alignItems: "center", gap: 6,
-					padding: "6px 14px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
-					background: "rgba(255,112,67,0.08)", color: "#FF7043",
-					fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
-				  ← The Anvil
-				</button>
-			  </div>
 			  <ProjectPromotionEngine />
 			</div>
 		  )}
