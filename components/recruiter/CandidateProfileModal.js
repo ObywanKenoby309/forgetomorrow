@@ -481,6 +481,7 @@ export default function CandidateProfileModal({
   const [saveMenuOpen, setSaveMenuOpen] = useState(false);
   const [savingPacket, setSavingPacket] = useState(false);
   const [savePacketMessage, setSavePacketMessage] = useState("");
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -512,6 +513,7 @@ export default function CandidateProfileModal({
     setTagsLocal(toSafeArray(incomingTags));
     setSaveMenuOpen(false);
     setSavePacketMessage("");
+    setMobileToolsOpen(false);
   }, [open, candidate]);
 
   // ── Striker context injection ────────────────────────────────────────────────
@@ -787,6 +789,160 @@ export default function CandidateProfileModal({
     </button>
   );
 
+  const recruiterToolsContent = (
+    <>
+                <GlassCard>
+                  <SectionTitle eyebrow="Recruiter Intelligence" title="Portfolio Review" />
+                  <RecruiterPortfolioReview profileData={signalProfileData} />
+
+                  {!isForgeCandidate && (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                      Portfolio unavailable. Signal is limited to resume and recruiter-entered data.
+                    </div>
+                  )}
+                </GlassCard>
+
+                <GlassCard>
+                  <SectionTitle eyebrow="Readiness" title="Work Preferences" />
+                  {hasWorkPrefs ? (
+                    <div className="divide-y divide-slate-100">
+                      <PrefRow label="Status" value={workStatusFmt} />
+                      <PrefRow label="Work type" value={workTypeFmt} />
+                      <PrefRow label="Willing to relocate" value={relocateFmt} />
+                      {preferredLocationList.length > 0 && (
+                        <div className="py-2 border-b border-slate-100 last:border-0">
+                          <div className="text-xs text-slate-500 mb-1">Preferred locations</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {preferredLocationList.map((loc, i) => (
+                              <Pill key={i}>{loc}</Pill>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {earliestStart ? <PrefRow label="Earliest start" value={formatDate(earliestStart)} /> : null}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-slate-500">No work preferences set.</div>
+                  )}
+                </GlassCard>
+
+                <GlassCard>
+                  <SectionTitle eyebrow="Recruiter Read" title="Interpretation & Interview Focus" />
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                      Primary Recruiter Interpretation
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-slate-700">
+                      {candidateProfileInference.overallConclusion}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-white/80 p-3">
+                    <div className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                      Suggested Interview Focus
+                    </div>
+                    <ul className="mt-2 grid gap-1.5 text-xs leading-5 text-slate-700">
+                      {buildInterviewFocus({ roleSignalList, hasProjects, hasResume, candidateProfileInference }).map((item, idx) => (
+                        <li key={`focus-${idx}`}>• {item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </GlassCard>
+
+                <GlassCard>
+                  <SectionTitle eyebrow="Recruiter Utilities" title="Team Notes & Controls" />
+                  <div className="text-[11px] text-slate-400 mb-3">
+                    Visible to your team only. Does not modify the candidate&apos;s portfolio.
+                  </div>
+
+                  <div className="mb-4">
+                    <div className="text-xs font-black uppercase tracking-wide text-slate-500 mb-2">Recruiter Skills</div>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {hasSkills ? (
+                        toSafeArray(skillsLocal).map((s, i) => (
+                          <Pill
+                            key={`${s}-${i}`}
+                            onRemove={async () => {
+                              const next = toSafeArray(skillsLocal).filter((x) => x !== s);
+                              setSkillsLocal(next);
+                              await saveRecruiterSkills(next);
+                            }}
+                            disabled={savingSkills}
+                          >
+                            {s}
+                          </Pill>
+                        ))
+                      ) : (
+                        <div className="text-sm text-slate-500">No skills listed yet.</div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
+                        placeholder="Add a skill…"
+                        value={skillInput}
+                        onChange={(e) => setSkillInput(e.target.value)}
+                        onKeyDown={async (e) => {
+                          if (e.key === "Enter") await addSkill();
+                        }}
+                      />
+                      <button
+                        type="button"
+                        disabled={savingSkills}
+                        onClick={addSkill}
+                        className="px-3 py-2 rounded-xl text-sm font-bold text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm disabled:opacity-50 transition"
+                      >
+                        {savingSkills ? "Saving…" : "Add"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {hasLanguages ? (
+                    <div className="mb-4">
+                      <div className="text-xs font-black uppercase tracking-wide text-slate-500 mb-2">Languages</div>
+                      <div className="flex flex-wrap gap-2">
+                        {languageList.map((lang, i) => (
+                          <Pill key={i}>{lang}</Pill>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="mb-4">
+                    <div className="text-xs font-black uppercase tracking-wide text-slate-500 mb-2">Tags</div>
+                    <div className="flex flex-wrap gap-2">
+                      {["Top Prospect", "Phone Screen", "Keep Warm", "Do Not Contact"].map((t) => (
+                        <Tag key={t} t={t} />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs font-black uppercase tracking-wide text-slate-500 mb-2">Notes</div>
+                    <textarea
+                      className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[110px] text-sm bg-white/85"
+                      placeholder="Add private notes visible to your team…"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
+                    <div className="mt-1 text-[11px] text-slate-400">
+                      Notes are private to your organization and are not shared with candidates.
+                    </div>
+                    <div className="mt-3 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={saveNotes}
+                        className="px-4 py-2 rounded-xl text-sm font-bold text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
+                      >
+                        Save Notes
+                      </button>
+                    </div>
+                  </div>
+                </GlassCard>
+    </>
+  );
+
   return createPortal(
     <div className="fixed inset-0 z-[10020] flex items-start justify-center px-4 pt-8 pb-6 sm:px-6 sm:pt-10">
       <div
@@ -904,6 +1060,52 @@ export default function CandidateProfileModal({
             </button>
           </div>
         </div>
+
+        {!mobileToolsOpen && (
+          <button
+            type="button"
+            onClick={() => setMobileToolsOpen(true)}
+            className="xl:hidden absolute right-0 top-1/2 z-[10030] -translate-y-1/2 rounded-l-2xl border border-r-0 border-orange-200/70 bg-slate-950/95 px-3 py-4 text-xs font-black uppercase tracking-wide text-white shadow-2xl"
+            aria-label="Open recruiter tools"
+          >
+            Tools
+          </button>
+        )}
+
+        {mobileToolsOpen && (
+          <div className="xl:hidden absolute inset-0 z-[10035] overflow-hidden">
+            <button
+              type="button"
+              aria-label="Close recruiter tools overlay"
+              onClick={() => setMobileToolsOpen(false)}
+              className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
+            />
+
+            <aside className="absolute bottom-0 right-0 top-0 flex w-[min(88vw,390px)] max-w-full flex-col border-l border-white/35 bg-[rgba(248,250,252,0.96)] shadow-[-24px_0_70px_rgba(2,6,23,0.38)] backdrop-blur-xl">
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-slate-950 px-4 py-4 text-white">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#FF7043]">
+                    Candidate Review
+                  </div>
+                  <div className="text-base font-black tracking-tight">Recruiter Tools</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileToolsOpen(false)}
+                  className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-black text-white"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-4">
+                  {recruiterToolsContent}
+                </div>
+              </div>
+            </aside>
+          </div>
+        )}
 
         <div className="overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(255,112,67,0.13),transparent_34%),linear-gradient(180deg,rgba(248,250,252,0.45),rgba(226,232,240,0.58))]">
           <div className="p-5 sm:p-6 space-y-5">
@@ -1149,157 +1351,9 @@ export default function CandidateProfileModal({
                 </div>
               </div>
 
-              {/* Recruiter command rail */}
-              <div className="space-y-5">
-                <GlassCard>
-                  <SectionTitle eyebrow="Recruiter Intelligence" title="Portfolio Review" />
-                  <RecruiterPortfolioReview profileData={signalProfileData} />
-
-                  {!isForgeCandidate && (
-                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-                      Portfolio unavailable. Signal is limited to resume and recruiter-entered data.
-                    </div>
-                  )}
-                </GlassCard>
-
-                <GlassCard>
-                  <SectionTitle eyebrow="Readiness" title="Work Preferences" />
-                  {hasWorkPrefs ? (
-                    <div className="divide-y divide-slate-100">
-                      <PrefRow label="Status" value={workStatusFmt} />
-                      <PrefRow label="Work type" value={workTypeFmt} />
-                      <PrefRow label="Willing to relocate" value={relocateFmt} />
-                      {preferredLocationList.length > 0 && (
-                        <div className="py-2 border-b border-slate-100 last:border-0">
-                          <div className="text-xs text-slate-500 mb-1">Preferred locations</div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {preferredLocationList.map((loc, i) => (
-                              <Pill key={i}>{loc}</Pill>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {earliestStart ? <PrefRow label="Earliest start" value={formatDate(earliestStart)} /> : null}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-slate-500">No work preferences set.</div>
-                  )}
-                </GlassCard>
-
-                <GlassCard>
-                  <SectionTitle eyebrow="Recruiter Read" title="Interpretation & Interview Focus" />
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <div className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-                      Primary Recruiter Interpretation
-                    </div>
-                    <p className="mt-1 text-xs leading-5 text-slate-700">
-                      {candidateProfileInference.overallConclusion}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 rounded-xl border border-slate-200 bg-white/80 p-3">
-                    <div className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-                      Suggested Interview Focus
-                    </div>
-                    <ul className="mt-2 grid gap-1.5 text-xs leading-5 text-slate-700">
-                      {buildInterviewFocus({ roleSignalList, hasProjects, hasResume, candidateProfileInference }).map((item, idx) => (
-                        <li key={`focus-${idx}`}>• {item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </GlassCard>
-
-                <GlassCard>
-                  <SectionTitle eyebrow="Recruiter Utilities" title="Team Notes & Controls" />
-                  <div className="text-[11px] text-slate-400 mb-3">
-                    Visible to your team only. Does not modify the candidate&apos;s portfolio.
-                  </div>
-
-                  <div className="mb-4">
-                    <div className="text-xs font-black uppercase tracking-wide text-slate-500 mb-2">Recruiter Skills</div>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {hasSkills ? (
-                        toSafeArray(skillsLocal).map((s, i) => (
-                          <Pill
-                            key={`${s}-${i}`}
-                            onRemove={async () => {
-                              const next = toSafeArray(skillsLocal).filter((x) => x !== s);
-                              setSkillsLocal(next);
-                              await saveRecruiterSkills(next);
-                            }}
-                            disabled={savingSkills}
-                          >
-                            {s}
-                          </Pill>
-                        ))
-                      ) : (
-                        <div className="text-sm text-slate-500">No skills listed yet.</div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <input
-                        className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-full bg-white/85"
-                        placeholder="Add a skill…"
-                        value={skillInput}
-                        onChange={(e) => setSkillInput(e.target.value)}
-                        onKeyDown={async (e) => {
-                          if (e.key === "Enter") await addSkill();
-                        }}
-                      />
-                      <button
-                        type="button"
-                        disabled={savingSkills}
-                        onClick={addSkill}
-                        className="px-3 py-2 rounded-xl text-sm font-bold text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm disabled:opacity-50 transition"
-                      >
-                        {savingSkills ? "Saving…" : "Add"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {hasLanguages ? (
-                    <div className="mb-4">
-                      <div className="text-xs font-black uppercase tracking-wide text-slate-500 mb-2">Languages</div>
-                      <div className="flex flex-wrap gap-2">
-                        {languageList.map((lang, i) => (
-                          <Pill key={i}>{lang}</Pill>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="mb-4">
-                    <div className="text-xs font-black uppercase tracking-wide text-slate-500 mb-2">Tags</div>
-                    <div className="flex flex-wrap gap-2">
-                      {["Top Prospect", "Phone Screen", "Keep Warm", "Do Not Contact"].map((t) => (
-                        <Tag key={t} t={t} />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-xs font-black uppercase tracking-wide text-slate-500 mb-2">Notes</div>
-                    <textarea
-                      className="border border-slate-200 rounded-2xl px-3 py-2 w-full min-h-[110px] text-sm bg-white/85"
-                      placeholder="Add private notes visible to your team…"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                    />
-                    <div className="mt-1 text-[11px] text-slate-400">
-                      Notes are private to your organization and are not shared with candidates.
-                    </div>
-                    <div className="mt-3 flex items-center justify-end">
-                      <button
-                        type="button"
-                        onClick={saveNotes}
-                        className="px-4 py-2 rounded-xl text-sm font-bold text-white bg-[#FF7043] hover:bg-[#F4511E] shadow-sm transition"
-                      >
-                        Save Notes
-                      </button>
-                    </div>
-                  </div>
-                </GlassCard>
+              {/* Recruiter command rail — desktop only. Mobile opens from the right-side tools drawer. */}
+              <div className="hidden xl:block space-y-5">
+                {recruiterToolsContent}
               </div>
             </div>
           </div>
