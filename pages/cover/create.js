@@ -740,19 +740,29 @@ export default function CoverLetterPage() {
           display: none;
         }
         @media (max-width: 1100px) {
-          .ft-hammer-tab {
-            display: flex;
-            position: fixed; right: 0; top: 50%; transform: translateY(-50%);
-            z-index: 220;
-            flex-direction: column; align-items: center; justify-content: center;
-            width: 42px; height: 140px; padding: 0;
-            border-radius: 10px 0 0 10px; border: none;
-            background: linear-gradient(135deg, ${ORANGE}, #FF8A65);
-            color: #fff; font-family: inherit; font-size: 18px;
-            cursor: pointer;
-            box-shadow: -4px 0 16px rgba(255,112,67,0.45);
-            transition: right 0.3s cubic-bezier(0.32,0.72,0,1), background 0.15s;
-          }
+        .ft-hammer-tab {
+		  display: flex;
+		  position: fixed;
+		  right: 0;
+		  top: 50%;
+		  transform: translateY(-50%);
+		  z-index: 220;
+		  flex-direction: column;
+		  align-items: center;
+		  justify-content: center;
+		  width: 28px;
+		  height: 88px;
+		  padding: 0;
+		  border-radius: 10px 0 0 10px;
+		  border: none;
+		  background: linear-gradient(135deg, ${ORANGE}, #FF8A65);
+		  color: #fff;
+		  font-family: inherit;
+		  font-size: 18px;
+		  cursor: pointer;
+		  box-shadow: -4px 0 16px rgba(255,112,67,0.45);
+		  transition: right 0.3s cubic-bezier(0.32,0.72,0,1), background 0.15s;
+		}
           .ft-hammer-tab.open {
             right: min(85vw, 380px);
             background: rgba(13,27,42,0.94);
