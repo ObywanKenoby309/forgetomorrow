@@ -952,8 +952,8 @@ export default function CandidateProfileModal({
 
       <div className="relative w-full max-w-7xl rounded-[28px] border border-white/25 bg-[rgba(248,250,252,0.86)] shadow-[0_30px_90px_rgba(2,6,23,0.42)] backdrop-blur-xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 sm:px-6 border-b border-white/35 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(30,41,59,0.92))] text-white flex items-center justify-between gap-4 flex-shrink-0">
-          <div className="min-w-0">
+        <div className="px-5 py-4 sm:px-6 border-b border-white/35 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(30,41,59,0.92))] text-white flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 flex-shrink-0">
+          <div className="min-w-0 w-full">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-[24px] font-black tracking-tight truncate">
                 {candidate.name || "Candidate"}
@@ -987,7 +987,7 @@ export default function CandidateProfileModal({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto xl:justify-end">
             {candidate?.id && (
               <div className="relative">
                 <button
@@ -1062,15 +1062,23 @@ export default function CandidateProfileModal({
         </div>
 
         {!mobileToolsOpen && (
-          <button
-            type="button"
-            onClick={() => setMobileToolsOpen(true)}
-            className="xl:hidden absolute right-0 top-1/2 z-[10030] -translate-y-1/2 rounded-l-2xl border border-r-0 border-orange-200/70 bg-slate-950/95 px-3 py-4 text-xs font-black uppercase tracking-wide text-white shadow-2xl"
-            aria-label="Open recruiter tools"
-          >
-            Tools
-          </button>
-        )}
+  <button
+    type="button"
+    onClick={() => setMobileToolsOpen(true)}
+    className="xl:hidden absolute right-0 top-1/2 z-[10030] -translate-y-1/2 bg-transparent border-0 p-0 shadow-none"
+    aria-label="Open recruiter tools"
+  >
+    <img
+      src="/icons/tools-b.png"
+      alt="Recruiter Tools"
+      style={{
+        width: "52px",
+        height: "170px",
+        objectFit: "contain",
+      }}
+    />
+  </button>
+)}
 
         {mobileToolsOpen && (
           <div className="xl:hidden absolute inset-0 z-[10035] overflow-hidden">
