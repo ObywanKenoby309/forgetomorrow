@@ -230,27 +230,71 @@ export default function ClientProfileUpdatePage() {
   const strategyHasResults = Boolean(form.strategyBrief);
 
   const certificationsList = isFTUser
-    ? toStringArray(source.certifications || source.certificationsJson || source.profileCertifications)
+    ? (() => {
+        const raw = source.certifications || source.certificationsJson;
+        if (!raw) return [];
+        try {
+          const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (!Array.isArray(arr)) return [];
+          return arr.map((c, i) => {
+            if (typeof c === 'string') return { id: `cert-${i}`, name: c, issuer: '', notes: '', year: '' };
+            return {
+              id: c.id || `cert-${i}`,
+              name: String(c.name || '').trim(),
+              issuer: String(c.issuer || '').trim(),
+              notes: String(c.notes || '').trim(),
+              year: String(c.year || '').trim(),
+            };
+          }).filter((c) => c.name || c.issuer || c.notes || c.year);
+        } catch { return []; }
+      })()
     : [];
 
   const projectsList = isFTUser
     ? (() => {
-        const raw = source.projects || source.projectsJson || source.profileProjects;
+        const raw = source.projects || source.projectsJson;
         if (!raw) return [];
         try {
           const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          return Array.isArray(arr) ? arr : [];
+          if (!Array.isArray(arr)) return [];
+          return arr.map((p, i) => {
+            if (typeof p === 'string') return { id: `project-${i}`, name: p, organization: '', notes: '', startYear: '', endYear: '', url: '' };
+            return {
+              id: p.id || `project-${i}`,
+              name: String(p.name || p.title || '').trim(),
+              organization: String(p.organization || p.company || '').trim(),
+              notes: String(p.notes || p.description || p.summary || '').trim(),
+              startYear: String(p.startYear || '').trim(),
+              endYear: String(p.endYear || '').trim(),
+              url: String(p.url || p.link || '').trim(),
+            };
+          }).filter((p) => p.name || p.organization || p.notes || p.startYear || p.endYear || p.url);
         } catch { return []; }
       })()
     : [];
 
   const customSections = isFTUser
     ? (() => {
-        const raw = source.customSectionJson || source.customSections || source.customSectionsJson;
+        const raw = source.customSectionJson || source.customSection;
         if (!raw) return [];
         try {
           const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          return Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
+          const arr = Array.isArray(parsed)
+            ? parsed
+            : (parsed && typeof parsed === 'object' && (parsed.name || parsed.organization || parsed.notes || parsed.startYear || parsed.endYear))
+              ? [parsed]
+              : [];
+          return arr.map((e, i) => {
+            if (typeof e === 'string') return { id: `custom-${i}`, name: e, organization: '', notes: '', startYear: '', endYear: '' };
+            return {
+              id: e.id || `custom-${i}`,
+              name: String(e.name || e.title || '').trim(),
+              organization: String(e.organization || e.company || '').trim(),
+              notes: String(e.notes || e.description || e.summary || '').trim(),
+              startYear: String(e.startYear || '').trim(),
+              endYear: String(e.endYear || '').trim(),
+            };
+          }).filter((e) => e.name || e.organization || e.notes || e.startYear || e.endYear);
         } catch { return []; }
       })()
     : [];
@@ -725,15 +769,16 @@ export default function ClientProfileUpdatePage() {
                         <div className="mt-4 pt-4 border-t border-slate-100">
                           <div className="text-xs font-black uppercase tracking-[0.10em] text-slate-500 mb-2">Projects</div>
                           <div className="space-y-3">
-                            {projectsList.map((proj, idx) => {
-                              const title = typeof proj === 'string' ? proj : (proj.title || proj.name || proj.projectName || 'Project');
-                              const desc  = typeof proj === 'object' ? (proj.description || proj.desc || proj.summary || '') : '';
-                              const url   = typeof proj === 'object' ? (proj.url || proj.link || proj.projectUrl || '') : '';
+                            {projectsList.map((proj) => {
+                              const years = [proj.startYear, proj.endYear].filter(Boolean).join(' – ');
                               return (
-                                <div key={`${title}-${idx}`} className="border-b border-slate-100 last:border-0 pb-2">
-                                  <div className="font-semibold text-slate-900 break-words text-sm">{title}</div>
-                                  {desc ? <div className="text-sm text-slate-600 mt-0.5 break-words">{desc}</div> : null}
-                                  {url ? <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#FF7043] font-semibold mt-1 inline-block">View project →</a> : null}
+                                <div key={proj.id} className="border-b border-slate-100 last:border-0 pb-2">
+                                  <div className="font-semibold text-slate-900 break-words text-sm">{proj.name}</div>
+                                  {(proj.organization || years) ? (
+                                    <div className="text-xs text-slate-500 mt-0.5">{[proj.organization, years].filter(Boolean).join(' • ')}</div>
+                                  ) : null}
+                                  {proj.notes ? <div className="text-sm text-slate-600 mt-1 break-words whitespace-pre-line">{proj.notes}</div> : null}
+                                  {proj.url ? <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#FF7043] font-semibold mt-1 inline-block break-all">{proj.url}</a> : null}
                                 </div>
                               );
                             })}
@@ -770,11 +815,14 @@ export default function ClientProfileUpdatePage() {
                       {isFTUser && certificationsList.length > 0 ? (
                         <div className="mt-4 pt-4 border-t border-slate-100">
                           <div className="text-xs font-black uppercase tracking-[0.10em] text-slate-500 mb-2">Certifications</div>
-                          <div className="space-y-2">
-                            {certificationsList.map((cert, idx) => (
-                              <div key={`${cert}-${idx}`} className="flex items-start gap-3">
-                                <span className="mt-0.5 text-[#FF7043] text-sm shrink-0">✓</span>
-                                <span className="text-sm text-slate-700 break-words">{cert}</span>
+                          <div className="space-y-3">
+                            {certificationsList.map((cert) => (
+                              <div key={cert.id} className="border-b border-slate-100 last:border-0 pb-2">
+                                <div className="font-semibold text-slate-900 text-sm break-words">{cert.name}</div>
+                                {(cert.issuer || cert.year) ? (
+                                  <div className="text-xs text-slate-500 mt-0.5">{[cert.issuer, cert.year].filter(Boolean).join(' • ')}</div>
+                                ) : null}
+                                {cert.notes ? <div className="text-sm text-slate-600 mt-1 break-words whitespace-pre-line">{cert.notes}</div> : null}
                               </div>
                             ))}
                           </div>
@@ -802,34 +850,24 @@ export default function ClientProfileUpdatePage() {
                   ) : null}
 
                   {profileSubTab === 'custom' ? (
-                    <SectionCard title="Custom Sections">
-                      {isFTUser ? (
-                        customSections.length > 0 ? (
-                          <div className="space-y-4 max-h-[520px] overflow-y-auto pr-1">
-                            {customSections.map((section, idx) => {
-                              const heading = typeof section === 'string' ? section : (section.title || section.heading || section.name || `Section ${idx + 1}`);
-                              const items   = typeof section === 'object' ? (section.items || section.entries || section.content || []) : [];
-                              const body    = typeof section === 'object' ? (section.body || section.text || section.description || '') : '';
-                              return (
-                                <div key={`${heading}-${idx}`} className="border-b border-slate-100 last:border-0 pb-3">
-                                  <div className="font-semibold text-slate-900 mb-1 break-words">{heading}</div>
-                                  {body ? <div className="text-sm text-slate-600 break-words">{body}</div> : null}
-                                  {Array.isArray(items) && items.length > 0 ? (
-                                    <ul className="mt-1 space-y-1">
-                                      {items.map((item, iIdx) => (
-                                        <li key={iIdx} className="text-sm text-slate-700">• {typeof item === 'string' ? item : JSON.stringify(item)}</li>
-                                      ))}
-                                    </ul>
-                                  ) : null}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-slate-500">No custom sections available for this client yet.</div>
-                        )
+                    <SectionCard title="Custom Section">
+                      {customSections.length > 0 ? (
+                        <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                          {customSections.map((entry) => {
+                            const years = [entry.startYear, entry.endYear].filter(Boolean).join(' – ');
+                            return (
+                              <div key={entry.id} className="border-b border-slate-100 last:border-0 pb-3">
+                                <div className="font-semibold text-slate-900 break-words">{entry.name}</div>
+                                {(entry.organization || years) ? (
+                                  <div className="text-xs text-slate-500 mt-0.5">{[entry.organization, years].filter(Boolean).join(' • ')}</div>
+                                ) : null}
+                                {entry.notes ? <div className="text-sm text-slate-600 mt-1 break-words whitespace-pre-line">{entry.notes}</div> : null}
+                              </div>
+                            );
+                          })}
+                        </div>
                       ) : (
-                        <div className="text-sm text-slate-500">Custom sections are pulled automatically for ForgeTomorrow members.</div>
+                        <div className="text-sm text-slate-500">No custom section data available.</div>
                       )}
                     </SectionCard>
                   ) : null}
