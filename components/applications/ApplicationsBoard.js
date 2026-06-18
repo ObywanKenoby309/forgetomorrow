@@ -427,12 +427,13 @@ export default function ApplicationsBoard({
     minHeight: isMobile ? '220px' : '300px',
     position: 'relative',
     height: '100%',
+    width: '100%',
     minWidth: 0,
     boxSizing: 'border-box',
   };
 
   const gridTemplateColumns = isMobile
-    ? '1fr'
+    ? 'minmax(0, 1fr)'
     : columns === 'auto'
       ? 'repeat(auto-fit, minmax(220px, 1fr))'
       : `repeat(${columns}, minmax(0, 1fr))`;
