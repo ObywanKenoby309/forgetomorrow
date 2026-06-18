@@ -126,3 +126,4 @@ export default function ApplicationsOverTime({ weeks = [], withChrome = (p) => p
     ))}
   </div>
 );
+}
