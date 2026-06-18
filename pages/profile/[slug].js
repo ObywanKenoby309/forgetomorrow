@@ -1126,17 +1126,21 @@ flushPendingSaveRef.current = flushPendingSave;
           /* Docked to the right edge, vertically centered, sitting above the   */
           /* bottom edit toolbar/save bar so both remain usable at once.        */
           .ft-signal-tab {
-            position: fixed; right: 0; top: 50%; transform: translateY(-50%);
-            z-index: 220;
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-            padding: 12px 6px; border-radius: 12px 0 0 12px; border: none;
-            background: linear-gradient(135deg, ${ORANGE}, #FF8A65);
-            color: #fff; font-family: inherit; font-size: 10px; font-weight: 800;
-            letter-spacing: 0.04em; cursor: pointer; writing-mode: vertical-rl;
-            text-orientation: mixed;
-            box-shadow: -6px 0 20px rgba(255,112,67,0.40);
-            transition: right 0.3s cubic-bezier(0.32,0.72,0,1), background 0.15s, color 0.15s, border-color 0.15s;
-          }
+			position: fixed;
+			right: 0;
+			top: 50%;
+			transform: translateY(-50%);
+			z-index: 220;
+			padding: 0;
+			border: none;
+			background: transparent;
+			cursor: pointer;
+			box-shadow: none;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: right 0.3s cubic-bezier(0.32,0.72,0,1);
+		  }
           .ft-signal-tab.open {
             right: min(85vw, 360px);
             background: rgba(13,27,42,0.94); color: ${ORANGE};
@@ -1742,16 +1746,27 @@ flushPendingSaveRef.current = flushPendingSave;
         {/* above the bottom edit toolbar. Reuses liveProfileData/handleApplyField */}
         {/* from the desktop right rail — no duplicated logic.                     */}
         {isOwner && mobileSheet && (
-          <button
-            type="button"
-            className={`ft-signal-tab${showSignalDrawer ? ' open' : ''}`}
-            onClick={() => { setSignalDrawerMounted(true); setShowSignalDrawer(v => !v); }}
-            aria-label="Toggle Profile Signals panel"
-          >
-            <span className="ft-signal-tab-arrow">{showSignalDrawer ? '›' : '‹'}</span>
-            <span>✨ Signals</span>
-          </button>
-        )}
+  <button
+    type="button"
+    className={`ft-signal-tab${showSignalDrawer ? ' open' : ''}`}
+    onClick={() => {
+      setSignalDrawerMounted(true);
+      setShowSignalDrawer(v => !v);
+    }}
+    aria-label="Toggle Profile Signals panel"
+  >
+    <img
+      src="/icons/signals.png"
+      alt="Signals"
+      style={{
+        width: '52px',
+        height: '170px',
+        objectFit: 'contain',
+        display: 'block',
+      }}
+    />
+  </button>
+)}
 
         {isOwner && mobileSheet && showSignalDrawer && (
           <div className="ft-signal-drawer-backdrop open" onClick={() => setShowSignalDrawer(false)} />
