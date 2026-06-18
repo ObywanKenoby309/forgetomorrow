@@ -385,20 +385,12 @@ function ResourcesModule() {
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <section style={{ ...WHITE_CARD, padding: 18 }}>
-        <p style={{ color: '#607D8B', margin: 0, lineHeight: 1.6 }}>
-          Browse core learning sections now. Articles and guides today; paid certs and courses later,
-          once we finish moderation and curation workflows.
-        </p>
-      </section>
-      <div style={{ display: 'grid', gap: 12 }}>
-        {sectionCards.map((card) => (
-          <section key={card.title} style={{ ...WHITE_CARD, padding: 16 }}>
-            <div style={{ fontWeight: 800, color: '#263238', marginBottom: 6 }}>{card.title}</div>
-            <p style={{ color: '#455A64', margin: 0, lineHeight: 1.55 }}>{card.blurb}</p>
-          </section>
-        ))}
-      </div>
+      {sectionCards.map((card) => (
+        <section key={card.title} style={{ ...WHITE_CARD, padding: 16 }}>
+          <div style={{ fontWeight: 800, color: '#263238', marginBottom: 6 }}>{card.title}</div>
+          <p style={{ color: '#455A64', margin: 0, lineHeight: 1.55 }}>{card.blurb}</p>
+        </section>
+      ))}
     </div>
   );
 }
