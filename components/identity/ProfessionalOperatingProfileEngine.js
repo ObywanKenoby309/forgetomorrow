@@ -679,7 +679,7 @@ function MobileWelcomeScreen({ onStart, profileSlug = '' }) {
               )}
 
               {panel.id === 'whatYouGet' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
                   {WHAT_IT_DOES.map(item => (
                     <div key={item.label} style={{
                       ...card, padding: '12px 14px',
