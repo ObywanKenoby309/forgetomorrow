@@ -42,6 +42,16 @@ const WHITE_CARD = {
   overflow: "hidden",
 };
 
+const WORKSPACE_STAGE = {
+  width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
+  display: "grid",
+  gap: 12,
+  boxSizing: "border-box",
+  overflowX: "hidden",
+};
+
 const ORANGE = "#FF7043";
 const GAP = 16;
 
@@ -222,7 +232,7 @@ function MobileClientHub({ tiles, activeModule, setActiveModule }) {
   }, [handleScroll]);
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div style={{ position: "relative", width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden", boxSizing: "border-box", display: "grid", gap: 12 }}>
       {/* Dropdown nav */}
       <div style={{ position: "relative", padding: "0 16px" }}>
         <button
@@ -317,27 +327,47 @@ export default function ClientHubUpdate() {
       rightVariant="light"
       activeNav="client-hub"
     >
-      <section style={{ padding: 0, display: "grid", gap: 12 }}>
-        {!activeModule ? (
-          <>
-            {!isMobile && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4, gap: 12 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 900, color: ORANGE, lineHeight: 1.25, letterSpacing: "-0.01em", margin: 0, ...ORANGE_HEADING_LIFT }}>
-                  Coaching Tools
-                </h2>
-              </div>
-            )}
+      <section style={{ ...WORKSPACE_STAGE, padding: 0, gap: 12 }}>
+        {isMobile ? (
+          <div
+            style={{
+              ...WORKSPACE_STAGE,
+              paddingTop: 0,
+              paddingBottom: 0,
+              paddingLeft: 0,
+              paddingRight: 0,
+              overflow: "hidden",
+            }}
+          >
+            <MobileClientHub tiles={tiles} activeModule={activeModule} setActiveModule={setActiveModule} />
 
-            <div style={{ ...GLASS, paddingTop: 24, paddingBottom: 24, paddingLeft: isMobile ? 0 : 16, paddingRight: isMobile ? 0 : 16, width: "100%", overflow: isMobile ? "hidden" : "visible" }}>
-              {isMobile ? (
-                <MobileClientHub tiles={tiles} activeModule={activeModule} setActiveModule={setActiveModule} />
-              ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: GAP }}>
-                  {tiles.map((tile) => (
-                    <DesktopCard key={tile.id} tile={tile} onOpen={setActiveModule} />
-                  ))}
-                </div>
-              )}
+            {activeModule ? (
+              <div style={{ ...WORKSPACE_STAGE, margin: "16px 0 0", padding: "0 16px" }}>
+                {(() => {
+                  switch (activeModule) {
+                    case "clients":  return <ClientsModule embeddedMobile />;
+                    case "sessions": return <SessionsModule embeddedMobile />;
+                    case "feedback": return <FeedbackModule embeddedMobile />;
+                    default:         return null;
+                  }
+                })()}
+              </div>
+            ) : null}
+          </div>
+        ) : !activeModule ? (
+          <>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4, gap: 12 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 900, color: ORANGE, lineHeight: 1.25, letterSpacing: "-0.01em", margin: 0, ...ORANGE_HEADING_LIFT }}>
+                Coaching Tools
+              </h2>
+            </div>
+
+            <div style={{ ...WORKSPACE_STAGE, paddingTop: 4, paddingBottom: 4, paddingLeft: 0, paddingRight: 0, overflow: "visible" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: GAP }}>
+                {tiles.map((tile) => (
+                  <DesktopCard key={tile.id} tile={tile} onOpen={setActiveModule} />
+                ))}
+              </div>
             </div>
           </>
         ) : (

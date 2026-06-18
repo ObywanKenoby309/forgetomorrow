@@ -348,7 +348,7 @@ function ResponseCard({ r }) {
   );
 }
 
-export default function FeedbackModule() {
+export default function FeedbackModule({ embeddedMobile = false } = {}) {
   const [responses, setResponses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -421,14 +421,14 @@ export default function FeedbackModule() {
   }, [responses]);
 
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
+    <div style={{ display: 'grid', gap: embeddedMobile ? 10 : 14, width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'hidden', boxSizing: 'border-box' }}>
       {kpis && (
-        <div style={{ ...GLASS, padding: '16px 18px' }}>
+        <div style={{ ...GLASS, padding: embeddedMobile ? '14px 12px' : '16px 18px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'hidden' }}>
           <div
             style={{
-              fontSize: 18,
+              fontSize: embeddedMobile ? 15 : 18,
               color: '#FF7043',
-              marginBottom: 14,
+              marginBottom: embeddedMobile ? 10 : 14,
               textAlign: 'center',
               ...ORANGE_HEADING_LIFT,
             }}
@@ -439,7 +439,7 @@ export default function FeedbackModule() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 180px))',
+              gridTemplateColumns: embeddedMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(auto-fit, minmax(150px, 180px))',
               justifyContent: 'center',
               gap: 10,
               maxWidth: 860,
@@ -489,7 +489,7 @@ export default function FeedbackModule() {
         </div>
       )}
 
-      <div style={{ ...GLASS, padding: '18px 20px', minHeight: 280 }}>
+      <div style={{ ...GLASS, padding: embeddedMobile ? '14px 12px' : '18px 20px', minHeight: 280, width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'hidden' }}>
         <div
           style={{
             display: 'flex',
@@ -559,7 +559,7 @@ export default function FeedbackModule() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+              gridTemplateColumns: embeddedMobile ? '1fr' : 'repeat(auto-fit, minmax(360px, 1fr))',
               gap: 12,
               alignItems: 'start',
             }}

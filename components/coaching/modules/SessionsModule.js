@@ -99,7 +99,7 @@ function TypePill({ text }) {
 }
 
 // ─── Module ───────────────────────────────────────────────────────────────────
-export default function SessionsModule({ initialTab = 'agenda' }) {
+export default function SessionsModule({ initialTab = 'agenda', embeddedMobile = false } = {}) {
   const [activeTab, setActiveTab]     = useState(initialTab);
   const [typeFilter, setTypeFilter]   = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -219,10 +219,10 @@ export default function SessionsModule({ initialTab = 'agenda' }) {
 
   return (
     <>
-      <div style={{ display: 'grid', gap: 14 }}>
+      <div style={{ display: 'grid', gap: embeddedMobile ? 10 : 14, width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'hidden', boxSizing: 'border-box' }}>
 
         {/* Tab bar */}
-        <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid rgba(0,0,0,0.08)', paddingBottom: 0 }}>
+        <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid rgba(0,0,0,0.08)', paddingBottom: 0, overflowX: 'auto', maxWidth: '100%' }}>
           {[
             { id: 'agenda',   label: 'Agenda' },
             { id: 'requests', label: 'Appointment Requests' },
@@ -251,8 +251,8 @@ export default function SessionsModule({ initialTab = 'agenda' }) {
         {activeTab === 'agenda' && <>
 
         {/* Filters + actions */}
-        <div style={{ ...GLASS, padding: '14px 16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) auto auto', gap: 12, alignItems: 'center' }}>
+        <div style={{ ...GLASS, padding: embeddedMobile ? '12px' : '14px 16px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: embeddedMobile ? '1fr' : 'minmax(0,1fr) minmax(0,1fr) auto auto', gap: embeddedMobile ? 8 : 12, alignItems: 'center' }}>
             <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={selectStyle}>
               <option value="All">All Types</option>
               <option value="Strategy">Strategy</option>
@@ -282,14 +282,14 @@ export default function SessionsModule({ initialTab = 'agenda' }) {
         </div>
 
         {/* Agenda */}
-        <div style={{ ...GLASS, padding: '18px 20px' }}>
+        <div style={{ ...GLASS, padding: embeddedMobile ? '14px 12px' : '18px 20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontSize: 18, color: '#FF7043', ...ORANGE_HEADING_LIFT }}>Agenda</div>
             <div style={{ fontSize: 12, color: '#90A4AE' }}>{filtered.length} {filtered.length === 1 ? 'session' : 'sessions'}</div>
           </div>
 
           {/* Header row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 110px 110px 100px', gap: 10, padding: '8px 12px', background: 'linear-gradient(135deg,rgba(17,32,51,0.96),rgba(15,23,42,0.96))', color: '#E5E7EB', fontSize: 11, borderRadius: 10, marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div style={{ display: embeddedMobile ? 'none' : 'grid', gridTemplateColumns: '90px 1fr 110px 110px 100px', gap: 10, padding: '8px 12px', background: 'linear-gradient(135deg,rgba(17,32,51,0.96),rgba(15,23,42,0.96))', color: '#E5E7EB', fontSize: 11, borderRadius: 10, marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             <span>Time</span><span>Client</span><span>Topic</span><span>Status</span><span style={{ textAlign: 'right' }}>Actions</span>
           </div>
 
@@ -300,12 +300,12 @@ export default function SessionsModule({ initialTab = 'agenda' }) {
               <div style={{ fontWeight: 700, marginBottom: 6, color: '#112033', fontSize: 13 }}>{friendlyLabel(d)}</div>
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }}>
                 {groups[d].map((s) => (
-                  <li key={s.id} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 110px 110px 100px', alignItems: 'center', gap: 10, borderRadius: 10, padding: '9px 12px', background: 'linear-gradient(135deg,#F9FAFB,#EFF6FF)', border: '1px solid rgba(209,213,219,0.9)' }}>
+                  <li key={s.id} style={{ display: 'grid', gridTemplateColumns: embeddedMobile ? '1fr' : '90px 1fr 110px 110px 100px', alignItems: embeddedMobile ? 'start' : 'center', gap: embeddedMobile ? 8 : 10, borderRadius: 10, padding: embeddedMobile ? '12px' : '9px 12px', background: 'linear-gradient(135deg,#F9FAFB,#EFF6FF)', border: '1px solid rgba(209,213,219,0.9)' }}>
                     <strong style={{ fontSize: 13, color: '#112033' }}>{s.time}</strong>
-                    <span style={{ color: '#374151', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.client}</span>
+                    <span style={{ color: '#374151', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: embeddedMobile ? 'normal' : 'nowrap', fontWeight: embeddedMobile ? 800 : 400 }}>{s.client}</span>
                     <span><TypePill text={s.type} /></span>
                     <span><StatusBadge text={s.status} /></span>
-                    <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: 5, justifyContent: embeddedMobile ? 'flex-start' : 'flex-end', flexWrap: 'wrap' }}>
                       <button type="button" onClick={() => openEdit(s.id)} style={{ background: 'rgba(255,112,67,0.06)', color: '#D84315', border: '1px solid rgba(255,112,67,0.5)', borderRadius: 999, padding: '4px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>Edit</button>
                       <button type="button" onClick={() => deleteSession(s.id)} style={{ background: '#FFFFFF', color: '#B91C1C', border: '1px solid rgba(248,113,113,0.9)', borderRadius: 999, padding: '4px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>Delete</button>
                     </div>

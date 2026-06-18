@@ -265,7 +265,7 @@ function ActionsDropdown({ client, onDelete, onMessage, onSendCsat }) {
   );
 }
 
-export default function ClientsModule() {
+export default function ClientsModule({ embeddedMobile = false } = {}) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All');
   const [clients, setClients] = useState([]);
@@ -584,8 +584,8 @@ export default function ClientsModule() {
         }
       `}</style>
 
-      <div style={{ display: 'grid', gap: 14, minWidth: 0 }}>
-        <div style={{ ...GLASS, padding: '14px 16px' }}>
+      <div style={{ display: 'grid', gap: embeddedMobile ? 10 : 14, width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'hidden', boxSizing: 'border-box' }}>
+        <div style={{ ...GLASS, padding: embeddedMobile ? '12px' : '14px 16px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'hidden' }}>
           <div className="cm-filter-grid">
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email…" style={inputStyle} />
             <select value={status} onChange={(e) => setStatus(e.target.value)} style={inputStyle}>
@@ -600,9 +600,9 @@ export default function ClientsModule() {
           </div>
         </div>
 
-        <div style={{ ...GLASS, padding: '18px 20px', overflow: 'visible', backdropFilter: 'none', WebkitBackdropFilter: 'none', background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(255,255,255,0.55)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={{ fontSize: 18, color: '#FF7043', ...ORANGE_HEADING_LIFT }}>Clients</div>
+        <div style={{ ...GLASS, padding: embeddedMobile ? '14px 12px' : '18px 20px', overflow: 'visible', backdropFilter: 'none', WebkitBackdropFilter: 'none', background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(255,255,255,0.55)', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: embeddedMobile ? 'flex-end' : 'space-between', marginBottom: embeddedMobile ? 10 : 14 }}>
+            {!embeddedMobile && <div style={{ fontSize: 18, color: '#FF7043', ...ORANGE_HEADING_LIFT }}>Clients</div>}
             <div style={{ fontSize: 12, color: '#90A4AE' }}>{filtered.length} {filtered.length === 1 ? 'client' : 'clients'}</div>
           </div>
 
