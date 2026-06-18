@@ -37,6 +37,28 @@ const GLASS = {
   WebkitBackdropFilter: "blur(10px)",
 };
 
+const ANVIL_STAGE = {
+  width: "100%",
+  display: "grid",
+  gap: 12,
+  boxSizing: "border-box",
+};
+
+const TILE_SURFACE = {
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,0.42)",
+  background: "rgba(255,255,255,0.90)",
+  boxShadow: "0 8px 20px rgba(15,23,42,0.10)",
+  boxSizing: "border-box",
+};
+
+const MODULE_STAGE = {
+  width: "100%",
+  display: "grid",
+  gap: 12,
+  boxSizing: "border-box",
+};
+
 const ORANGE_HEADING_LIFT = {
   textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
   fontWeight: 900,
@@ -379,7 +401,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome, profile
 
       {/* ── Inline module content ── */}
       {activeModule && activeModule !== "resume" && (
-        <div style={{ ...GLASS, margin: "16px 16px 0", padding: 24, display: "grid", gap: 16 }}>
+        <div style={{ ...MODULE_STAGE, margin: "16px 16px 0" }}>
           {activeModule === "profile" && (
             <ProfileDevelopment onNext={() => setActiveModule("offer")} setActiveModule={setActiveModule} />
           )}
@@ -387,7 +409,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome, profile
             <OfferEngine />
           )}
           {activeModule === "identity" && (
-            <div style={{ ...GLASS, padding: 20, width: "100%", display: "grid", gap: 12 }}>
+            <div style={MODULE_STAGE}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <button onClick={() => setActiveModule(null)}
                   style={{ display: "inline-flex", alignItems: "center", gap: 6,
@@ -401,7 +423,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome, profile
             </div>
           )}
 		  {activeModule === "project-promotion" && (
-			<div style={{ ...GLASS, padding: 20, width: "100%", display: "grid", gap: 12 }}>
+			<div style={MODULE_STAGE}>
 			  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
 				<button onClick={() => setActiveModule(null)}
 				  style={{ display: "inline-flex", alignItems: "center", gap: 6,
@@ -429,7 +451,7 @@ function DesktopTile({ tile, onOpen, withChrome, profileSlug }) {
     const isLink = tile.id === "resume" || tile.id === "profile";
 
   const tileStyle = {
-    ...GLASS,
+    ...TILE_SURFACE,
     padding: 16,
     display: "grid",
     gap: 8,
@@ -459,7 +481,7 @@ function DesktopTile({ tile, onOpen, withChrome, profileSlug }) {
     e.currentTarget.style.transform = "translateY(-2px)";
   };
   const handleMouseLeave = (e) => {
-    e.currentTarget.style.boxShadow = GLASS.boxShadow;
+    e.currentTarget.style.boxShadow = TILE_SURFACE.boxShadow;
     e.currentTarget.style.transform = "none";
   };
 
@@ -583,12 +605,9 @@ export default function AnvilPage({ profileSlug = "" }) {
       />
 
       <div style={{
-        ...GLASS,
-        paddingTop: 24,
-        paddingBottom: 24,
-        paddingLeft: isMobile ? 0 : 16,
-        paddingRight: isMobile ? 0 : 16,
-        width: "100%",
+        ...ANVIL_STAGE,
+        paddingTop: isMobile ? 0 : 4,
+        paddingBottom: isMobile ? 0 : 4,
         overflow: isMobile ? "hidden" : "visible",
       }}>
 
@@ -621,7 +640,7 @@ export default function AnvilPage({ profileSlug = "" }) {
             )}
 
             {activeModule === "profile" && (
-              <div style={{ ...GLASS, padding: 24, width: "100%", display: "grid", gap: 16 }}>
+              <div style={{ ...MODULE_STAGE, gap: 16 }}>
                 <button onClick={() => setActiveModule(null)}
                   style={{ marginBottom: 12, display: "inline-flex", alignItems: "center", gap: 6,
                     padding: "7px 16px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
@@ -634,7 +653,7 @@ export default function AnvilPage({ profileSlug = "" }) {
             )}
 
             {activeModule === "offer" && (
-              <div style={{ ...GLASS, padding: 20, width: "100%", display: "grid", gap: 12 }}>
+              <div style={MODULE_STAGE}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <button onClick={() => setActiveModule(null)}
                     style={{ display: "inline-flex", alignItems: "center", gap: 6,
@@ -649,7 +668,7 @@ export default function AnvilPage({ profileSlug = "" }) {
             )}
 
             {activeModule === "identity" && (
-              <div style={{ ...GLASS, padding: 20, width: "100%", display: "grid", gap: 12 }}>
+              <div style={MODULE_STAGE}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <button onClick={() => setActiveModule(null)}
                     style={{ display: "inline-flex", alignItems: "center", gap: 6,
@@ -664,7 +683,7 @@ export default function AnvilPage({ profileSlug = "" }) {
             )}
 
 {activeModule === "project-promotion" && (
-  <div style={{ ...GLASS, padding: 20, width: "100%", display: "grid", gap: 12 }}>
+  <div style={MODULE_STAGE}>
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <button onClick={() => setActiveModule(null)}
         style={{ display: "inline-flex", alignItems: "center", gap: 6,
@@ -679,7 +698,7 @@ export default function AnvilPage({ profileSlug = "" }) {
 )}
 
             {activeModule === "onboarding" && (
-              <div style={{ ...GLASS, padding: 20, width: "100%", display: "grid", gap: 12 }}>
+              <div style={MODULE_STAGE}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <button onClick={() => setActiveModule(null)}
                     style={{ display: "inline-flex", alignItems: "center", gap: 6,
