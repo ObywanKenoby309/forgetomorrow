@@ -699,35 +699,6 @@ function ReportScheduleEditor({
   );
 }
 
-function LocalSponsorRail() {
-  return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#94A3B8", marginBottom: 8 }}>
-          Sponsored
-        </div>
-        <div
-          style={{
-            borderRadius: 12,
-            border: "1px dashed rgba(100,116,139,0.24)",
-            background: "rgba(255,255,255,0.60)",
-            minHeight: 180,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-            textAlign: "center",
-            color: "#94A3B8",
-            fontSize: 13,
-            fontWeight: 700,
-          }}
-        >
-          Reserved ad / sponsor panel
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function SnapshotDeliveryInlay({ isMobile = false }) {
   const [activeTab, setActiveTab] = useState("all");
@@ -875,55 +846,45 @@ export default function SnapshotDeliveryInlay({ isMobile = false }) {
 
   return (
     <>
-      <div style={{ display: "grid", gap: 14, paddingTop: 0 }}>
-        <div
-          style={
-            isMobile
-              ? { display: "grid", gap: 14 }
-              : { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 300px", gap: 14, alignItems: "start" }
-          }
-        >
-          <div style={{ display: "grid", gap: 14 }}>
-            <section style={{ ...GLASS, borderRadius: 18, padding: 16, textAlign: "center" }}>
-              <div style={{ fontSize: 24, fontWeight: 900, color: ORANGE }}>Snapshot Delivery Center</div>
-              <div style={{ fontSize: 14, color: MUTED, marginTop: 6, maxWidth: 560, margin: "8px auto 0" }}>
-                Each report has its own schedule. Set different recipients, timing, and cadence per report type — your settings never affect anyone else's.
-              </div>
-            </section>
+      <div style={{ display: "grid", gap: 14, paddingTop: 0, width: "100%", minWidth: 0 }}>
+        <div style={{ display: "grid", gap: 14, width: "100%", minWidth: 0 }}>
+          <section style={{ ...GLASS, borderRadius: 18, padding: 16, textAlign: "center" }}>
+            <div style={{ fontSize: 24, fontWeight: 900, color: ORANGE }}>Snapshot Delivery Center</div>
+            <div style={{ fontSize: 14, color: MUTED, marginTop: 6, maxWidth: 560, margin: "8px auto 0" }}>
+              Each report has its own schedule. Set different recipients, timing, and cadence per report type — your settings never affect anyone else's.
+            </div>
+          </section>
 
-            <div style={{ ...GLASS, borderRadius: 18, padding: "12px 16px" }}>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                <PillButton active={activeTab === "all"} onClick={() => setActiveTab("all")}>All Reports</PillButton>
-                {REPORTS.map((report) => {
-                  const s = schedules[report.key];
-                  const isActive = s?.recipients && s.recipients.trim().length > 0;
-                  return (
-                    <div key={report.key} style={{ position: "relative" }}>
-                      <PillButton active={activeTab === report.key} onClick={() => setActiveTab(report.key)}>
-                        {report.label}
-                      </PillButton>
-                      {isActive && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: -2,
-                            right: -2,
-                            width: 8,
-                            height: 8,
-                            borderRadius: "50%",
-                            background: ORANGE,
-                            border: "2px solid white",
-                          }}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+          <div style={{ ...GLASS, borderRadius: 18, padding: "12px 16px" }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+              <PillButton active={activeTab === "all"} onClick={() => setActiveTab("all")}>All Reports</PillButton>
+              {REPORTS.map((report) => {
+                const s = schedules[report.key];
+                const isActive = s?.recipients && s.recipients.trim().length > 0;
+                return (
+                  <div key={report.key} style={{ position: "relative" }}>
+                    <PillButton active={activeTab === report.key} onClick={() => setActiveTab(report.key)}>
+                      {report.label}
+                    </PillButton>
+                    {isActive && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: -2,
+                          right: -2,
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: ORANGE,
+                          border: "2px solid white",
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
-
-          {!isMobile && <LocalSponsorRail />}
         </div>
 
         {activeTab === "all" ? (
@@ -977,8 +938,6 @@ export default function SnapshotDeliveryInlay({ isMobile = false }) {
             )}
           </section>
         ) : null}
-
-        {isMobile && <LocalSponsorRail />}
       </div>
     </>
   );
