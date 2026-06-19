@@ -96,6 +96,57 @@ function InsightTile({ label, title, body, tone = "live" }) {
   );
 }
 
+
+function RotatingCard({ title, slides = [], intervalMs = 5200 }) {
+  const validSlides = Array.isArray(slides) ? slides.filter(Boolean) : [];
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (validSlides.length <= 1) return undefined;
+    const timer = window.setInterval(() => {
+      setActiveIndex((idx) => (idx + 1) % validSlides.length);
+    }, intervalMs);
+    return () => window.clearInterval(timer);
+  }, [validSlides.length, intervalMs]);
+
+  useEffect(() => {
+    if (activeIndex >= validSlides.length) setActiveIndex(0);
+  }, [activeIndex, validSlides.length]);
+
+  return (
+    <SectionCard title={title}>
+      <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ minHeight: 210, display: "grid" }}>
+          {validSlides[activeIndex] || null}
+        </div>
+
+        {validSlides.length > 1 ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+            {validSlides.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                aria-label={`Show slide ${idx + 1}`}
+                onClick={() => setActiveIndex(idx)}
+                style={{
+                  width: idx === activeIndex ? 18 : 7,
+                  height: 7,
+                  borderRadius: 999,
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  background: idx === activeIndex ? ORANGE : "rgba(100,116,139,0.32)",
+                  transition: "all 160ms ease",
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </SectionCard>
+  );
+}
+
 function MiniMetric({ label, value, hint }) {
   return (
     <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
@@ -122,58 +173,6 @@ function ActionTile({ title, body, buttonLabel, onClick }) {
       <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>{body}</div>
       <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginTop: 10 }}>{buttonLabel}</div>
     </button>
-  );
-}
-
-function RotatingCarouselCard({ title, slides = [], intervalMs = 5200 }) {
-  const safeSlides = Array.isArray(slides) ? slides.filter(Boolean) : [];
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    if (safeSlides.length <= 1) return undefined;
-    const timer = setInterval(() => {
-      setIndex((current) => (current + 1) % safeSlides.length);
-    }, intervalMs);
-    return () => clearInterval(timer);
-  }, [safeSlides.length, intervalMs]);
-
-  useEffect(() => {
-    if (index >= safeSlides.length) setIndex(0);
-  }, [index, safeSlides.length]);
-
-  const activeSlide = safeSlides[index] || safeSlides[0] || null;
-
-  return (
-    <SectionCard title={title}>
-      <div style={{ display: "grid", gap: 10 }}>
-        <div style={{ minHeight: 178 }}>
-          {activeSlide}
-        </div>
-
-        {safeSlides.length > 1 ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            {safeSlides.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                aria-label={`Show ${title} slide ${i + 1}`}
-                onClick={() => setIndex(i)}
-                style={{
-                  width: i === index ? 18 : 7,
-                  height: 7,
-                  borderRadius: 999,
-                  border: "none",
-                  background: i === index ? ORANGE : "rgba(100,116,139,0.28)",
-                  cursor: "pointer",
-                  padding: 0,
-                  transition: "all 180ms ease",
-                }}
-              />
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </SectionCard>
   );
 }
 
@@ -306,13 +305,32 @@ export default function ProfileAnalyticsPage() {
 
   // ── Section cards ────────────────────────────────────────────────────────
   const visibilityCard = (
-    <SectionCard title="Visibility Intelligence">
-      <div style={{ display: "grid", gap: GAP }}>
-        <InsightTile label={vis.level} tone={vis.tone} title={`${analytics.profileCompletionPct}% profile completion`} body={vis.body} />
-        <InsightTile label="Seen" tone="live" title={`${analytics.totalViews.toLocaleString()} profile interactions`} body="Your current visibility footprint across profile and engagement activity." />
-        <InsightTile label="Network" tone="building" title={`${analytics.connectionsGained7d.toLocaleString()} new connections in 7 days`} body="Connection growth shows whether visibility is turning into real professional momentum." />
-      </div>
-    </SectionCard>
+    <RotatingCard
+      title="Visibility Intelligence"
+      slides={[
+        <InsightTile
+          key="completion"
+          label={vis.level}
+          tone={vis.tone}
+          title={`${analytics.profileCompletionPct}% profile completion`}
+          body={vis.body}
+        />,
+        <InsightTile
+          key="interactions"
+          label="Seen"
+          tone="live"
+          title={`${analytics.totalViews.toLocaleString()} profile interactions`}
+          body="Your current visibility footprint across profile and engagement activity."
+        />,
+        <InsightTile
+          key="connections"
+          label="Network"
+          tone="building"
+          title={`${analytics.connectionsGained7d.toLocaleString()} new connections in 7 days`}
+          body="Connection growth shows whether visibility is turning into real professional momentum."
+        />,
+      ]}
+    />
   );
 
   const actionsCard = (
@@ -336,7 +354,14 @@ export default function ProfileAnalyticsPage() {
   const reachCard = (
     <SectionCard title="Reach Trend">
       {Array.isArray(analytics.viewsLast7Days) && Array.isArray(analytics.searchAppearancesLast7Days) ? (
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", alignItems: "stretch", gap: GAP }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+            alignItems: "stretch",
+            gap: GAP,
+          }}
+        >
           <div style={{ minWidth: 0, minHeight: 300, display: "grid" }}>
             <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
           </div>
@@ -606,29 +631,29 @@ export default function ProfileAnalyticsPage() {
   );
 
   const activityIntelligenceCard = (
-    <RotatingCarouselCard
+    <RotatingCard
       title="Activity Intelligence"
       slides={[
         <InsightTile
-          key="community"
+          key="activity-community"
           label="Community"
           tone="building"
           title={`${totalContent.toLocaleString()} content signals`}
           body="Posts and comments help turn your profile from a static page into an active professional signal."
         />,
         <InsightTile
-          key="network"
+          key="activity-network"
           label="Network"
           tone="live"
           title={`${analytics.connectionsGained7d.toLocaleString()} new connections in 7 days`}
           body="Connection movement shows whether activity is translating into real professional reach."
         />,
         <InsightTile
-          key="signal"
-          label="Signal"
-          tone={totalContent > 0 ? "strong" : "building"}
-          title={totalContent > 0 ? "Your activity is creating a footprint" : "Start with one useful contribution"}
-          body={totalContent > 0 ? "Keep connecting posts, comments, and Hearth replies to the career direction you want people to notice." : "A post, comment, or Hearth reply gives your profile a current professional signal beyond static resume data."}
+          key="activity-next"
+          label="Next move"
+          tone="strong"
+          title="Turn activity into useful visibility"
+          body="Use one helpful post, one thoughtful comment, and one Hearth reply to keep your professional signal active without adding noise."
         />,
       ]}
     />
@@ -662,8 +687,8 @@ export default function ProfileAnalyticsPage() {
   );
 
   const activitySupportCard = (
-    <RotatingCarouselCard
-      title="Top Content"
+    <RotatingCard
+      title="Content Spotlight"
       slides={[
         analytics.highestViewedPost ? (
           <div key="top-post" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
@@ -686,7 +711,7 @@ export default function ProfileAnalyticsPage() {
           <InsightTile key="top-comment-empty" label="Community" tone="live" title="Helpful comments become visibility signals" body="As comment-level tracking grows, this area will show which community contributions helped people notice you." />
         ),
         <div key="content-playbook" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Content Playbook</div>
+          <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Content playbook</div>
           <div style={{ display: "grid", gap: 8 }}>
             {["Share a quick career win or lesson learned.", "Answer one Hearth discussion with useful detail.", "Comment where you can add practical experience."].map((item) => (
               <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
@@ -701,13 +726,14 @@ export default function ProfileAnalyticsPage() {
   );
 
   // ── KPI strip ────────────────────────────────────────────────────────────
-  const activityKpiStrip = (
+  const kpiStrip = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-      <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(4, minmax(120px,1fr))", gap: GAP }}>
-        <KPI label="Posts" value={kv(analytics.postsCount)} />
-        <KPI label="Comments" value={kv(analytics.commentsCount)} />
-        <KPI label="Content Signals" value={kv(totalContent)} />
-        <KPI label="Connections (7d)" value={`+${kv(analytics.connectionsGained7d)}`} />
+      <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(5, minmax(120px,1fr))", gap: GAP }}>
+        <KPI label="Profile Interactions" value={kv(analytics.totalViews)} />
+        <KPI label="Posts"                value={kv(analytics.postsCount)} />
+        <KPI label="Comments"             value={kv(analytics.commentsCount)} />
+        <KPI label="Connections (7d)"     value={kv(analytics.connectionsGained7d)} />
+        <KPI label="Profile Completion"   value={`${analytics.profileCompletionPct}%`} />
       </section>
     </div>
   );
@@ -724,14 +750,13 @@ export default function ProfileAnalyticsPage() {
     </div>
   );
 
-  const kpiStrip = (
+  const activityKpiStrip = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-      <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(5, minmax(120px,1fr))", gap: GAP }}>
-        <KPI label="Profile Interactions" value={kv(analytics.totalViews)} />
-        <KPI label="Posts"                value={kv(analytics.postsCount)} />
-        <KPI label="Comments"             value={kv(analytics.commentsCount)} />
-        <KPI label="Connections (7d)"     value={kv(analytics.connectionsGained7d)} />
-        <KPI label="Profile Completion"   value={`${analytics.profileCompletionPct}%`} />
+      <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(4, minmax(120px,1fr))", gap: GAP }}>
+        <KPI label="Posts"            value={kv(analytics.postsCount)} />
+        <KPI label="Comments"         value={kv(analytics.commentsCount)} />
+        <KPI label="Content Signals"  value={kv(totalContent)} />
+        <KPI label="Connections (7d)" value={kv(analytics.connectionsGained7d)} />
       </section>
     </div>
   );
@@ -800,14 +825,14 @@ export default function ProfileAnalyticsPage() {
 
     if (activeTab === "visibility") {
       return (
-        <div style={{ display: "grid", gap: GAP }}>
+        <>
           {visibilityKpiStrip}
           {bleedCommandRow(
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{visibilityCard}</section>,
             <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-end" }}>{reachCard}</section>,
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{recentViewersCompactCard}</section>
           )}
-        </div>
+        </>
       );
     }
 
@@ -821,14 +846,14 @@ export default function ProfileAnalyticsPage() {
 
     if (activeTab === "activity") {
       return (
-        <div style={{ display: "grid", gap: GAP }}>
+        <>
           {activityKpiStrip}
           {bleedCommandRow(
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activityIntelligenceCard}</section>,
             connectionGrowthHeroCard,
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activitySupportCard}</section>
           )}
-        </div>
+        </>
       );
     }
 
