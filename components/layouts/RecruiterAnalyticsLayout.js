@@ -258,10 +258,20 @@ export default function RecruiterAnalyticsLayout({
   const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
 
   function handleNavigate(pathname, extraQuery = {}) {
+    const rawPath = String(pathname || "/recruiter/analytics");
+    const nextTab = rawPath.includes("presentation")
+      ? "presentation"
+      : rawPath.includes("snapshot")
+        ? "snapshots"
+        : rawPath.includes("reports")
+          ? "reports"
+          : "command";
+
     router.push(
       {
-        pathname,
+        pathname: "/recruiter/analytics",
         query: {
+          tab: nextTab,
           ...(filters?.range ? { range: filters.range } : {}),
           ...(filters?.jobId ? { jobId: filters.jobId } : {}),
           ...(filters?.recruiterId ? { recruiterId: filters.recruiterId } : {}),
@@ -272,7 +282,7 @@ export default function RecruiterAnalyticsLayout({
         },
       },
       undefined,
-      { shallow: false }
+      { shallow: true, scroll: false }
     );
   }
 
@@ -283,7 +293,9 @@ export default function RecruiterAnalyticsLayout({
       ? "Command Center"
       : activeTab === "reports"
         ? "Report Details"
-        : "Presentation Visuals";
+        : activeTab === "presentation"
+          ? "Presentation Visuals"
+          : "Snapshot Delivery";
 
   return (
     <>

@@ -1,0 +1,1006 @@
+// pages/recruiter/analytics/reports.js
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import ApplicationFunnel from "@/components/analytics/charts/ApplicationFunnel";
+import SourceBreakdown from "@/components/analytics/charts/SourceBreakdown";
+
+import { useAnalytics } from "@/hooks/useAnalyticsData";
+
+// ─── Design system tokens ─────────────────────────────────────────────────────
+// Radii: 22px page-level | 18px section cards | 12px chips/mini
+const GLASS = {
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(255,255,255,0.68)",
+  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+};
+
+const REPORT_OPTIONS = [
+  { key: "funnel", label: "Funnel" },
+  { key: "sources", label: "Sources" },
+  { key: "recruiters", label: "Recruiters" },
+  { key: "timeToFill", label: "Time-to-Fill" },
+  { key: "qualityOfHire", label: "Quality of Hire" },
+  { key: "talentIntel", label: "Talent Intel" },
+];
+
+function getReportFromQuery(query) {
+  const raw = typeof query.report === "string" ? query.report : "funnel";
+  const valid = REPORT_OPTIONS.some((option) => option.key === raw);
+  return valid ? raw : "funnel";
+}
+
+function NarrativeCard({ eyebrow, title, body, accent = "#FF7043" }) {
+  return (
+    <div
+      style={{
+        borderRadius: 18,
+        borderLeft: `4px solid ${accent}`,
+        background: "rgba(255,255,255,0.76)",
+        borderTop: "1px solid rgba(255,255,255,0.36)",
+        borderRight: "1px solid rgba(255,255,255,0.36)",
+        borderBottom: "1px solid rgba(255,255,255,0.36)",
+        boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: accent,
+          marginBottom: 6,
+        }}
+      >
+        {eyebrow}
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginBottom: 6 }}>
+        {title}
+      </div>
+      <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.7 }}>{body}</div>
+    </div>
+  );
+}
+
+function MethodCard({ eyebrow, title, body }) {
+  return (
+    <div
+      style={{
+        borderRadius: 18,
+        background: "rgba(255,255,255,0.48)",
+        border: "1px solid rgba(255,255,255,0.18)",
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          color: "#FF7043",
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+        }}
+      >
+        {eyebrow}
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 900, color: "#334155", marginTop: 8 }}>
+        {title}
+      </div>
+      <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6, marginTop: 6 }}>
+        {body}
+      </div>
+    </div>
+  );
+}
+
+function ReportSelector({ activeReport, onChange }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>
+      {REPORT_OPTIONS.map((option) => {
+        const isActive = activeReport === option.key;
+        return (
+          <button
+            key={option.key}
+            type="button"
+            onClick={() => onChange(option.key)}
+            style={{
+              border: "1px solid rgba(255,255,255,0.28)",
+              background: isActive ? "rgba(255,112,67,0.16)" : "rgba(255,255,255,0.62)",
+              color: isActive ? "#FF7043" : "#334155",
+              borderRadius: 999,
+              padding: "9px 14px",
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              boxShadow: isActive ? "0 4px 10px rgba(255,112,67,0.14)" : "none",
+            }}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ReportShell({ title, subtitle, visual, insights }) {
+  return (
+    <section style={{ ...GLASS, borderRadius: 18, padding: 18 }}>
+      <div style={{ fontSize: 22, fontWeight: 900, color: "#334155" }}>{title}</div>
+      <div style={{ fontSize: 14, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>
+        {subtitle}
+      </div>
+
+      <div
+        className="grid grid-cols-1 xl:grid-cols-2 gap-4"
+        style={{ marginTop: 16, alignItems: "start" }}
+      >
+        <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>{visual}</div>
+        <div style={{ display: "grid", gap: 12, alignContent: "start" }}>{insights}</div>
+      </div>
+    </section>
+  );
+}
+
+function BuildingVisual({ title, body }) {
+  return (
+    <div
+      style={{
+        minHeight: 320,
+        borderRadius: 18,
+        background: "rgba(255,255,255,0.58)",
+        border: "1px solid rgba(255,255,255,0.24)",
+        padding: 18,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+      }}
+    >
+      <div>
+        <div style={{ fontSize: 22, fontWeight: 900, color: "#334155" }}>{title}</div>
+        <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.7, marginTop: 10 }}>
+          {body}
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 20,
+          borderRadius: 12,
+          padding: 14,
+          background: "rgba(255,255,255,0.72)",
+          border: "1px solid rgba(255,255,255,0.32)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#94A3B8",
+            marginBottom: 6,
+          }}
+        >
+          Status
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 900, color: "#16A34A" }}>Live</div>
+        <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6, marginTop: 6 }}>
+          {body}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ReportsInlay({ filters, onFilterChange, isMobile }) {
+  const router = useRouter();
+  const [activeReport, setActiveReport] = useState(getReportFromQuery(router.query));
+  const { data, error } = useAnalytics(filters);
+  const [leaderboardData, setLeaderboardData] = useState(null);
+  const [timeToFillData, setTimeToFillData] = useState(null);
+  const [qohData, setQohData] = useState(null);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    setActiveReport(getReportFromQuery(router.query));
+  }, [router.isReady, router.query?.report]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadLeaderboard = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set("range", filters.range);
+        params.set("jobId", filters.jobId);
+        params.set("recruiterId", filters.recruiterId);
+        params.set("companyId", filters.companyId);
+
+        if (filters.range === "custom") {
+          if (filters.from) params.set("from", filters.from);
+          if (filters.to) params.set("to", filters.to);
+        }
+
+        const res = await fetch(`/api/analytics/recruiter/leaderboard?${params.toString()}`);
+        const json = await res.json();
+
+        if (active) {
+          setLeaderboardData(json);
+        }
+      } catch {
+        if (active) {
+          setLeaderboardData({ recruiters: [] });
+        }
+      }
+    };
+
+    loadLeaderboard();
+
+    return () => {
+      active = false;
+    };
+  }, [filters]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadTimeToFill = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set("range", filters.range);
+        params.set("jobId", filters.jobId);
+        params.set("recruiterId", filters.recruiterId);
+        params.set("companyId", filters.companyId);
+
+        if (filters.range === "custom") {
+          if (filters.from) params.set("from", filters.from);
+          if (filters.to) params.set("to", filters.to);
+        }
+
+        const res = await fetch(`/api/analytics/recruiter/time-to-fill?${params.toString()}`);
+        const json = await res.json();
+
+        if (active) {
+          setTimeToFillData(json);
+        }
+      } catch {
+        if (active) {
+          setTimeToFillData({
+            summary: {
+              avgTimeToFillDays: 0,
+              medianTimeToFillDays: 0,
+              fastestFillDays: 0,
+              slowestFillDays: 0,
+              filledJobs: 0,
+            },
+            jobs: [],
+          });
+        }
+      }
+    };
+
+    loadTimeToFill();
+
+    return () => {
+      active = false;
+    };
+  }, [filters]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadQoH = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set("range", filters.range);
+        params.set("jobId", filters.jobId);
+        params.set("recruiterId", filters.recruiterId);
+        params.set("companyId", filters.companyId);
+
+        if (filters.range === "custom") {
+          if (filters.from) params.set("from", filters.from);
+          if (filters.to) params.set("to", filters.to);
+        }
+
+        const res = await fetch(`/api/analytics/recruiter/qoh?${params.toString()}`);
+        const json = await res.json();
+
+        if (active) {
+          setQohData(json);
+        }
+      } catch {
+        if (active) {
+          setQohData({
+            minimumRequired: 5,
+            recordsCount: 0,
+            composite: 0,
+            band: "Insufficient Data",
+            components: {
+              retention90d: 0,
+              managerRating: 0,
+              rampDays: 0,
+              benchmarkDays: 0,
+            },
+            byRecruiter: [],
+          });
+        }
+      }
+    };
+
+    loadQoH();
+
+    return () => {
+      active = false;
+    };
+  }, [filters]);
+
+  const onReportChange = (reportKey) => {
+    setActiveReport(reportKey);
+
+    router.replace(
+      {
+        pathname: router.pathname,
+        query: {
+          ...router.query,
+          tab: "reports",
+          report: reportKey,
+          range: filters.range,
+          jobId: filters.jobId,
+          recruiterId: filters.recruiterId,
+          companyId: filters.companyId,
+          ...(filters.from ? { from: filters.from } : {}),
+          ...(filters.to ? { to: filters.to } : {}),
+        },
+      },
+      undefined,
+      { shallow: true, scroll: false }
+    );
+  };
+
+  const totalApplies = data?.kpis?.totalApplies ?? 0;
+  const totalInterviews = data?.kpis?.totalInterviews ?? 0;
+  const totalHires = data?.kpis?.totalHires ?? 0;
+  const interviewRate = totalApplies ? ((totalInterviews / totalApplies) * 100).toFixed(1) : "0.0";
+  const hireRate = totalApplies ? ((totalHires / totalApplies) * 100).toFixed(1) : "0.0";
+  const avgTimeToFill = data?.kpis?.avgTimeToFillDays ?? 0;
+
+  const renderActiveReport = () => {
+    if (activeReport === "funnel") {
+      return (
+        <ReportShell
+          title="Funnel narrative"
+          subtitle={`This period your funnel processed ${totalApplies} applications and converted ${totalInterviews} into interviews and ${totalHires} into hires. Interview rate is currently ${interviewRate}% and apply-to-hire is ${hireRate}%.`}
+          visual={<ApplicationFunnel data={data?.funnel || []} />}
+          insights={
+            <>
+              <NarrativeCard
+                eyebrow="Key finding"
+                title="Funnel drop-off should be diagnosed stage by stage"
+                body="A healthy top-of-funnel does not guarantee strong hiring efficiency. This report should help the team see where candidates are slowing, disappearing, or being filtered out too aggressively."
+              />
+              <NarrativeCard
+                eyebrow="Recommendation"
+                title="Use this report to separate process drag from market difficulty"
+                body="If conversion weakness is concentrated at one stage, the team should inspect screening criteria, interview coordination, response timing, and role-specific qualification patterns before changing the broader recruiting strategy."
+                accent="#0F766E"
+              />
+            </>
+          }
+        />
+      );
+    }
+
+    if (activeReport === "sources") {
+      return (
+        <ReportShell
+          title="Source narrative"
+          subtitle="Source reporting should not stop at volume. Recruiters need to understand which channels produce interviews, hires, and stronger downstream outcomes."
+          visual={<SourceBreakdown data={data?.sources || []} />}
+          insights={
+            <>
+              <NarrativeCard
+                eyebrow="Source quality"
+                title="High-volume sources are not always high-value sources"
+                body="This report should be used to compare source volume with downstream quality so the team can invest in channels that produce meaningful pipeline movement rather than surface-level traffic."
+                accent="#7C3AED"
+              />
+              <NarrativeCard
+                eyebrow="Meeting note"
+                title="Use this page to explain both performance and investment decisions"
+                body="The purpose of this report is not just to show what happened, but to support decisions about sourcing mix, recruiter effort, and where future recruiting energy should go."
+                accent="#D97706"
+              />
+            </>
+          }
+        />
+      );
+    }
+
+    if (activeReport === "recruiters") {
+      return (
+        <ReportShell
+          title="Recruiter activity narrative"
+          subtitle="Recruiter performance below is ranked from live recruiter-owned jobs and their downstream pipeline outcomes for the selected filter window."
+          visual={
+            <div style={{ display: "grid", gap: 10 }}>
+              {(leaderboardData?.recruiters || []).length === 0 ? (
+                <BuildingVisual
+                  title="Recruiter activity report"
+                  body="No recruiter-attributed activity found for the selected period. Data will appear as recruiters generate pipeline."
+                />
+              ) : (
+                leaderboardData.recruiters.map((recruiter, index) => (
+                  <div
+                    key={recruiter.recruiterId}
+                    style={{
+                      borderRadius: 12,
+                      background: "rgba(255,255,255,0.72)",
+                      border: "1px solid rgba(255,255,255,0.30)",
+                      padding: 14,
+                      display: "grid",
+                      gap: 8,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div style={{ fontSize: 16, fontWeight: 900, color: "#334155" }}>
+                        #{index + 1} {recruiter.recruiterName}
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#FF7043" }}>
+                        {recruiter.totalHires} hires
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                        gap: 10,
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 10, color: "#94A3B8" }}>Applications</div>
+                        <div
+                          style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                        >
+                          {recruiter.totalApplications}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#94A3B8" }}>Interviews</div>
+                        <div
+                          style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                        >
+                          {recruiter.totalInterviews}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#94A3B8" }}>Offers</div>
+                        <div
+                          style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                        >
+                          {recruiter.totalOffers}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#94A3B8" }}>Apply-to-hire</div>
+                        <div
+                          style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                        >
+                          {recruiter.conversionRatePct}%
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#94A3B8" }}>Avg. time-to-fill</div>
+                        <div
+                          style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                        >
+                          {recruiter.avgTimeToFillDays} days
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#94A3B8" }}>Pipeline velocity</div>
+                        <div
+                          style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                        >
+                          {recruiter.pipelineVelocity}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          }
+          insights={
+            <>
+              <NarrativeCard
+                eyebrow="Key finding"
+                title="Recruiter comparison should be grounded in owned-job outcomes"
+                body="This report ranks recruiter performance using recruiter-owned jobs and their downstream application, interview, offer, and hire results for the selected period."
+              />
+              <NarrativeCard
+                eyebrow="Recommendation"
+                title="Use recruiter comparisons to separate process issues from ownership patterns"
+                body="When recruiter outcomes diverge under similar req mix, this view helps leadership identify whether the issue is execution, req complexity, or process drag."
+                accent="#0F766E"
+              />
+            </>
+          }
+        />
+      );
+    }
+
+    if (activeReport === "timeToFill") {
+      return (
+        <ReportShell
+          title="Time-to-Fill narrative"
+          subtitle={`Current average time-to-fill is ${timeToFillData?.summary?.avgTimeToFillDays ?? avgTimeToFill} days. This report highlights filled roles in the selected period and shows where close speed is strongest or slowest.`}
+          visual={
+            <div style={{ display: "grid", gap: 10 }}>
+              {(timeToFillData?.jobs || []).length === 0 ? (
+                <BuildingVisual
+                  title="Time-to-Fill report"
+                  body="No filled jobs found in the selected period. Time-to-fill metrics will populate once roles are closed."
+                />
+              ) : (
+                <>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                      gap: 10,
+                    }}
+                  >
+                    <div
+                      style={{
+                        borderRadius: 12,
+                        background: "rgba(255,255,255,0.72)",
+                        border: "1px solid rgba(255,255,255,0.30)",
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 10, color: "#94A3B8" }}>Average</div>
+                      <div
+                        style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                      >
+                        {timeToFillData?.summary?.avgTimeToFillDays ?? 0}d
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        borderRadius: 12,
+                        background: "rgba(255,255,255,0.72)",
+                        border: "1px solid rgba(255,255,255,0.30)",
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 10, color: "#94A3B8" }}>Median</div>
+                      <div
+                        style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                      >
+                        {timeToFillData?.summary?.medianTimeToFillDays ?? 0}d
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        borderRadius: 12,
+                        background: "rgba(255,255,255,0.72)",
+                        border: "1px solid rgba(255,255,255,0.30)",
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 10, color: "#94A3B8" }}>Fastest</div>
+                      <div
+                        style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                      >
+                        {timeToFillData?.summary?.fastestFillDays ?? 0}d
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        borderRadius: 12,
+                        background: "rgba(255,255,255,0.72)",
+                        border: "1px solid rgba(255,255,255,0.30)",
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 10, color: "#94A3B8" }}>Slowest</div>
+                      <div
+                        style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                      >
+                        {timeToFillData?.summary?.slowestFillDays ?? 0}d
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {timeToFillData.jobs.map((job) => (
+                      <div
+                        key={job.jobId}
+                        style={{
+                          borderRadius: 12,
+                          background: "rgba(255,255,255,0.72)",
+                          border: "1px solid rgba(255,255,255,0.30)",
+                          padding: 14,
+                          display: "grid",
+                          gap: 8,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 12,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <div style={{ fontSize: 16, fontWeight: 900, color: "#334155" }}>
+                            {job.jobTitle}
+                          </div>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: "#FF7043" }}>
+                            {job.daysToFill} days
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                            gap: 10,
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: 10, color: "#94A3B8" }}>Recruiter</div>
+                            <div
+                              style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}
+                            >
+                              {job.recruiterName}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: "#94A3B8" }}>Created</div>
+                            <div
+                              style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}
+                            >
+                              {new Date(job.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: "#94A3B8" }}>Filled</div>
+                            <div
+                              style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}
+                            >
+                              {new Date(job.filledAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          }
+          insights={
+            <>
+              <NarrativeCard
+                eyebrow="Key finding"
+                title="Averages are useful, but spread matters just as much"
+                body="This report now shows average, median, fastest, and slowest close times so leaders can see whether speed is consistent or distorted by only a few reqs."
+              />
+              <NarrativeCard
+                eyebrow="Recommendation"
+                title="Use this view to identify which roles are dragging cycle time"
+                body="The strongest use of time-to-fill reporting is not just measuring duration, but identifying which job families and ownership patterns repeatedly slow hiring down."
+                accent="#0F766E"
+              />
+            </>
+          }
+        />
+      );
+    }
+
+    if (activeReport === "qualityOfHire") {
+      return (
+        <>
+          <div style={{ ...GLASS, borderRadius: 18, padding: 18, marginBottom: 16 }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: "#334155" }}>
+              Quality of Hire methodology
+            </div>
+            <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>
+              Quality of Hire belongs here first, not on the recruiter dashboard. It activates once
+              sufficient post-hire performance data exists for reliable scoring.
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <MethodCard
+                eyebrow="Component 1 · 40%"
+                title="90-Day Retention"
+                body="Measures whether the hire stayed through the 90-day mark."
+              />
+              <MethodCard
+                eyebrow="Component 2 · 35%"
+                title="Manager Rating"
+                body="Uses hiring manager scoring across early performance windows."
+              />
+              <MethodCard
+                eyebrow="Component 3 · 25%"
+                title="Ramp Time"
+                body="Compares time-to-productivity against role-specific benchmarks."
+              />
+            </div>
+          </div>
+          <ReportShell
+          title="Quality of Hire narrative"
+          subtitle={
+            (qohData?.recordsCount ?? 0) < (qohData?.minimumRequired ?? 5)
+              ? `Quality of Hire is live, but there is not enough post-hire data yet. Current records: ${qohData?.recordsCount ?? 0} of ${qohData?.minimumRequired ?? 5} required.`
+              : `Current composite Quality of Hire score is ${qohData?.composite ?? 0}, rated ${qohData?.band || "Insufficient Data"} for the selected period.`
+          }
+          visual={
+            (qohData?.recordsCount ?? 0) < (qohData?.minimumRequired ?? 5) ? (
+              <BuildingVisual
+                title="Quality of Hire report"
+                body={`There are ${qohData?.recordsCount ?? 0} qualified post-hire records available. This score will activate once at least ${qohData?.minimumRequired ?? 5} records exist.`}
+              />
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                    gap: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      borderRadius: 12,
+                      background: "rgba(255,255,255,0.72)",
+                      border: "1px solid rgba(255,255,255,0.30)",
+                      padding: 14,
+                    }}
+                  >
+                    <div style={{ fontSize: 10, color: "#94A3B8" }}>Composite</div>
+                    <div
+                      style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                    >
+                      {qohData?.composite ?? 0}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      borderRadius: 12,
+                      background: "rgba(255,255,255,0.72)",
+                      border: "1px solid rgba(255,255,255,0.30)",
+                      padding: 14,
+                    }}
+                  >
+                    <div style={{ fontSize: 10, color: "#94A3B8" }}>Retention 90d</div>
+                    <div
+                      style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                    >
+                      {qohData?.components?.retention90d ?? 0}%
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      borderRadius: 12,
+                      background: "rgba(255,255,255,0.72)",
+                      border: "1px solid rgba(255,255,255,0.30)",
+                      padding: 14,
+                    }}
+                  >
+                    <div style={{ fontSize: 10, color: "#94A3B8" }}>Manager Rating</div>
+                    <div
+                      style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                    >
+                      {qohData?.components?.managerRating ?? 0}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      borderRadius: 12,
+                      background: "rgba(255,255,255,0.72)",
+                      border: "1px solid rgba(255,255,255,0.30)",
+                      padding: 14,
+                    }}
+                  >
+                    <div style={{ fontSize: 10, color: "#94A3B8" }}>Avg Ramp Days</div>
+                    <div
+                      style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}
+                    >
+                      {qohData?.components?.rampDays ?? 0}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gap: 10 }}>
+                  {(qohData?.byRecruiter || []).map((recruiter, index) => (
+                    <div
+                      key={recruiter.recruiterId}
+                      style={{
+                        borderRadius: 12,
+                        background: "rgba(255,255,255,0.72)",
+                        border: "1px solid rgba(255,255,255,0.30)",
+                        padding: 14,
+                        display: "grid",
+                        gap: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div style={{ fontSize: 16, fontWeight: 900, color: "#334155" }}>
+                          #{index + 1} {recruiter.recruiterName}
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: "#FF7043" }}>
+                          {recruiter.score} • {recruiter.band}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                          gap: 10,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 10, color: "#94A3B8" }}>Records</div>
+                          <div
+                            style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}
+                          >
+                            {recruiter.recordsCount}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#94A3B8" }}>Band</div>
+                          <div
+                            style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginTop: 4 }}
+                          >
+                            {recruiter.band}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          }
+          insights={
+            <>
+              <NarrativeCard
+                eyebrow="Method note"
+                title="Quality of Hire should be grounded in transparent components"
+                body="Retention, manager scoring, and time-to-productivity all contribute to the final score so the metric remains explainable, defensible, and useful in enterprise discussion."
+              />
+              <NarrativeCard
+                eyebrow="Recommendation"
+                title="Use QoH as an outcome metric, not just a recruiting vanity score"
+                body="The value of Quality of Hire comes from connecting recruiting performance with post-hire success signals over time."
+                accent="#0F766E"
+              />
+            </>
+          }
+        />
+        </>
+      );
+    }
+
+    return (
+      <ReportShell
+        title="Talent Intelligence narrative"
+        subtitle={`This period Talent Intelligence is summarizing pipeline efficiency using live report metrics. Current apply-to-interview rate is ${interviewRate}% and apply-to-hire rate is ${hireRate}%.`}
+        visual={
+          <div style={{ display: "grid", gap: 10 }}>
+            <div
+              style={{
+                borderRadius: 12,
+                background: "rgba(255,255,255,0.72)",
+                border: "1px solid rgba(255,255,255,0.30)",
+                padding: 14,
+              }}
+            >
+              <div style={{ fontSize: 10, color: "#94A3B8" }}>Apply → Interview</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                {interviewRate}%
+              </div>
+            </div>
+
+            <div
+              style={{
+                borderRadius: 12,
+                background: "rgba(255,255,255,0.72)",
+                border: "1px solid rgba(255,255,255,0.30)",
+                padding: 14,
+              }}
+            >
+              <div style={{ fontSize: 10, color: "#94A3B8" }}>Apply → Hire</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                {hireRate}%
+              </div>
+            </div>
+
+            <div
+              style={{
+                borderRadius: 12,
+                background: "rgba(255,255,255,0.72)",
+                border: "1px solid rgba(255,255,255,0.30)",
+                padding: 14,
+              }}
+            >
+              <div style={{ fontSize: 10, color: "#94A3B8" }}>Avg Time-to-Fill</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#334155", marginTop: 4 }}>
+                {avgTimeToFill} days
+              </div>
+            </div>
+          </div>
+        }
+        insights={
+          <>
+            <NarrativeCard
+              eyebrow="Key finding"
+              title="The strongest recruiting intelligence connects source, fit, and conversion quality"
+              body="Recruiters need to understand not just where candidates came from, but why certain channels, profiles, and role patterns convert more efficiently than others."
+            />
+            <NarrativeCard
+              eyebrow="Recommendation"
+              title="Use this report to connect pattern recognition with action"
+              body="This first-pass view should be used to compare live efficiency signals across the current recruiting window before deeper source attribution and candidate pattern analysis are added."
+              accent="#0F766E"
+            />
+          </>
+        }
+      />
+    );
+  };
+
+  return (
+    <>
+      {error ? (
+        <div
+          style={{
+            borderRadius: 18,
+            border: "1px solid rgba(239,68,68,0.20)",
+            background: "rgba(254,242,242,0.86)",
+            color: "#B91C1C",
+            padding: 16,
+          }}
+        >
+          {String(error)}
+        </div>
+      ) : null}
+
+      <section style={{ ...GLASS, borderRadius: 18, padding: 18 }}>
+        <div style={{ fontSize: 22, fontWeight: 900, color: "#334155" }}>Report explorer</div>
+        <div style={{ fontSize: 14, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>
+          Choose one report at a time to review the visual, the key finding, and the recruiter-facing
+          explanation.
+        </div>
+
+        <ReportSelector activeReport={activeReport} onChange={onReportChange} />
+
+        <div style={{ marginTop: 18 }}>{renderActiveReport()}</div>
+      </section>
+    </>
+  );
+}
