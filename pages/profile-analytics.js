@@ -14,7 +14,6 @@ import SeekerAnalyticsLayout, { SeekerAnalyticsNavBar } from "@/components/layou
 import KPI from "@/components/analytics/KPI";
 import ViewsChart from "@/components/analytics/ViewsChart";
 import SearchAppearancesChart from "@/components/analytics/SearchAppearancesChart";
-import ProfileCompletionCard from "@/components/analytics/ProfileCompletionCard";
 import ConnectionsMiniChart from "@/components/analytics/ConnectionsMiniChart";
 import RecentViewers from "@/components/analytics/RecentViewers";
 
@@ -176,11 +175,56 @@ function ActionTile({ title, body, buttonLabel, onClick }) {
   );
 }
 
+
+function SignalChip({ label, value, tone = "neutral" }) {
+  const cfg = {
+    good: { border: "rgba(22,163,74,0.24)", bg: "rgba(22,163,74,0.10)", color: "#166534" },
+    warn: { border: "rgba(217,119,6,0.24)", bg: "rgba(217,119,6,0.10)", color: "#92400E" },
+    risk: { border: "rgba(220,38,38,0.22)", bg: "rgba(220,38,38,0.10)", color: "#991B1B" },
+    neutral: { border: "rgba(100,116,139,0.18)", bg: "rgba(248,250,252,0.82)", color: SLATE },
+  }[tone] || { border: "rgba(100,116,139,0.18)", bg: "rgba(248,250,252,0.82)", color: SLATE };
+
+  return (
+    <div style={{ border: `1px solid ${cfg.border}`, background: cfg.bg, color: cfg.color, borderRadius: 12, padding: "10px 11px" }}>
+      <div style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: "0.07em", textTransform: "uppercase", opacity: 0.78 }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 950, lineHeight: 1.15, marginTop: 4 }}>{value || "—"}</div>
+    </div>
+  );
+}
+
+function BulletList({ items = [] }) {
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      {(items || []).filter(Boolean).map((item, idx) => (
+        <div key={`${item}-${idx}`} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <span style={{ color: ORANGE, fontWeight: 950, lineHeight: 1.35, flexShrink: 0 }}>•</span>
+          <span style={{ fontSize: 12, color: MUTED, lineHeight: 1.55 }}>{item}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SmallPill({ children, tone = "neutral" }) {
+  const cfg = {
+    good: { border: "rgba(22,163,74,0.22)", bg: "rgba(22,163,74,0.09)", color: "#166534" },
+    warn: { border: "rgba(217,119,6,0.24)", bg: "rgba(217,119,6,0.10)", color: "#92400E" },
+    dark: { border: "rgba(15,23,42,0.88)", bg: "rgba(15,23,42,0.92)", color: "#FFFFFF" },
+    neutral: { border: "rgba(100,116,139,0.20)", bg: "rgba(248,250,252,0.88)", color: MUTED },
+  }[tone] || { border: "rgba(100,116,139,0.20)", bg: "rgba(248,250,252,0.88)", color: MUTED };
+
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", border: `1px solid ${cfg.border}`, background: cfg.bg, color: cfg.color, borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 850, lineHeight: 1.1 }}>
+      {children}
+    </span>
+  );
+}
+
 // ─── Tab copy ─────────────────────────────────────────────────────────────────
 const TAB_COPY = {
   overview:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "Understand how your profile performs, who's viewing it, and what actions will accelerate your visibility." },
   visibility: { title: "Profile Analytics — ForgeTomorrow", subtitle: "See how your profile is being discovered and who's been looking at your work." },
-  strength:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "Measure your profile's completeness and professional momentum score." },
+  strength:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "See how recruiters are likely to interpret your profile, evidence, and positioning." },
   activity:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "Track your content performance and community presence on ForgeTomorrow." },
 };
 
@@ -303,6 +347,144 @@ export default function ProfileAnalyticsPage() {
     return           { level: "Needs attention",  tone: "attention", body: "Important recruiter and community signals are missing. Strengthening your profile should be the next move." };
   }, [analytics.profileCompletionPct]);
 
+
+  const strengthProfile = useMemo(() => {
+    const headline = String(
+      profileDetails?.headline ||
+      profileDetails?.title ||
+      profileDetails?.currentTitle ||
+      ""
+    ).trim();
+
+    const summary = String(
+      profileDetails?.aboutMe ||
+      profileDetails?.summary ||
+      profileDetails?.bio ||
+      profileDetails?.profileSummary ||
+      ""
+    ).trim();
+
+    const skills = Array.from(new Set([
+      ...skillNamesFromAny(profileDetails?.skillsJson),
+      ...skillNamesFromAny(profileDetails?.skills),
+      ...skillNamesFromAny(profileDetails?.skillsProfile),
+    ])).filter(Boolean).slice(0, 24);
+
+    const languages = safeArray(profileDetails?.languagesJson || profileDetails?.languages).map((x) =>
+      typeof x === "string" ? x : x?.name || x?.label || ""
+    ).filter(Boolean);
+
+    const projects = safeArray(
+      profileDetails?.projectsJson ||
+      profileDetails?.projects ||
+      profileDetails?.portfolioProjects ||
+      profileDetails?.projectHighlights
+    );
+
+    const certifications = safeArray(
+      profileDetails?.certificationsJson ||
+      profileDetails?.certifications ||
+      profileDetails?.training
+    );
+
+    const education = safeArray(
+      profileDetails?.educationJson ||
+      profileDetails?.education ||
+      profileDetails?.educationList
+    );
+
+    const hasResume = Boolean(primaryResume?.id);
+    const hasStrongIdentity = headline.length >= 8 && summary.length >= 120;
+    const hasProjectProof = projects.length > 0;
+    const hasCapabilityProof = skills.length >= 8 || certifications.length > 0;
+
+    const professionalSignal = hasResume && hasStrongIdentity && hasCapabilityProof ? "Strong" : hasStrongIdentity || hasResume ? "Building" : "Review";
+    const executionVisibility = hasProjectProof ? "Strong" : totalContent > 0 || analytics.profileCompletionPct >= 80 ? "Building" : "Limited";
+    const validationRisk = hasResume && hasCapabilityProof && analytics.profileCompletionPct >= 80 ? "Low" : hasResume || hasStrongIdentity ? "Moderate" : "Review";
+    const portfolioDepth = hasProjectProof ? "Strong" : analytics.profileCompletionPct >= 80 ? "Strong" : analytics.profileCompletionPct >= 50 ? "Building" : "Emerging";
+    const resumeAccess = hasResume ? "Available" : "Missing";
+
+    const confidence = Math.max(
+      35,
+      Math.min(
+        96,
+        Math.round(
+          (analytics.profileCompletionPct || 0) * 0.72 +
+          (hasResume ? 9 : 0) +
+          (hasProjectProof ? 8 : 0) +
+          (skills.length >= 8 ? 5 : 0) +
+          (totalContent > 0 ? 2 : 0)
+        )
+      )
+    );
+
+    const summaryPreview = summary
+      ? (summary.length > 360 ? `${summary.slice(0, 357).trim()}...` : summary)
+      : "Your profile has enough structure to start building a recruiter-facing readout, but the summary area needs clearer positioning before this signal feels complete.";
+
+    const currentDirection = headline || "Career direction not clearly stated yet";
+    const primaryEvidence = hasResume && hasProjectProof ? "Portfolio + Resume + Projects" : hasResume ? "Portfolio + Resume" : "Profile signals only";
+    const recruiterAction = validationRisk === "Low" ? "Validate fit" : "Strengthen evidence";
+
+    const evidenceLibrary = [
+      headline ? `Headline present: ${headline}` : "Headline needs a clearer professional direction.",
+      summary ? "Professional summary is present." : "Professional summary is missing or too light.",
+      skills.length ? `${skills.length} skill signals detected.` : "Skill signals need to be added.",
+      hasResume ? "Primary resume is available." : "Primary resume is not attached yet.",
+      projects.length ? `${projects.length} structured project signal${projects.length === 1 ? "" : "s"} detected.` : "Structured project proof is not visible yet.",
+      totalContent > 0 ? `${totalContent} content signal${totalContent === 1 ? "" : "s"} from posts/comments.` : "Content signals are not active yet.",
+    ];
+
+    const validationAreas = [];
+    if (!projects.length) validationAreas.push("Add one concrete project, work sample, implementation example, or measurable outcome.");
+    if (!hasResume) validationAreas.push("Attach a primary resume so recruiters can validate your experience quickly.");
+    if (summary.length < 120) validationAreas.push("Strengthen your summary so your professional direction is clear in the first read.");
+    if (skills.length < 8) validationAreas.push("Add at least eight strong skill signals tied to your target roles.");
+    if (!certifications.length) validationAreas.push("Add certifications, training, or credentials if they support your direction.");
+    if (!validationAreas.length) validationAreas.push("Keep evidence fresh by adding new projects, outcomes, and role-specific proof as your work evolves.");
+
+    const clusterDefs = [
+      { label: "Support Operations", match: /support|service|ticket|incident|help desk|troubleshoot|customer/i },
+      { label: "Customer Operations", match: /client|customer|success|account|stakeholder|relationship|escalation/i },
+      { label: "Service Delivery", match: /delivery|sla|process|workflow|service now|servicenow|itil|operations/i },
+      { label: "Leadership", match: /lead|manager|supervisor|coach|mentor|team|training/i },
+      { label: "Systems & Tools", match: /salesforce|azure|intune|jamf|remedy|bmc|crm|analytics|reporting/i },
+    ];
+
+    const capabilityClusters = clusterDefs.map((cluster) => ({
+      label: cluster.label,
+      items: skills.filter((skill) => cluster.match.test(skill)).slice(0, 5),
+    })).filter((cluster) => cluster.items.length);
+
+    const used = new Set(capabilityClusters.flatMap((cluster) => cluster.items.map((item) => item.toLowerCase())));
+    const remaining = skills.filter((skill) => !used.has(skill.toLowerCase())).slice(0, 8);
+    if (remaining.length) capabilityClusters.push({ label: "Additional Signals", items: remaining });
+
+    return {
+      headline,
+      summary,
+      summaryPreview,
+      skills,
+      languages,
+      projects,
+      certifications,
+      education,
+      hasResume,
+      professionalSignal,
+      executionVisibility,
+      validationRisk,
+      portfolioDepth,
+      resumeAccess,
+      confidence,
+      currentDirection,
+      primaryEvidence,
+      recruiterAction,
+      evidenceLibrary,
+      validationAreas: validationAreas.slice(0, 5),
+      capabilityClusters: capabilityClusters.slice(0, 5),
+    };
+  }, [profileDetails, primaryResume, analytics.profileCompletionPct, totalContent]);
+
   // ── Section cards ────────────────────────────────────────────────────────
   const visibilityCard = (
     <RotatingCard
@@ -420,26 +602,151 @@ export default function ProfileAnalyticsPage() {
     </SectionCard>
   );
 
-  const strengthCard = (
-    <SectionCard title="Profile Strength">
-      <div style={{ display: "grid", gap: GAP }}>
-        <ProfileCompletionCard completionPct={analytics.profileCompletionPct} checklist={analytics.profileChecklist} />
-        <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Momentum score</div>
-          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 32, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{momentumScore}</div>
-              <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginTop: 4 }}>{momentumLabel}</div>
-            </div>
-            <div style={{ flex: 1, minWidth: 90 }}>
-              <ProgressBar value={momentumScore} />
-              <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.45, marginTop: 7 }}>Based on completion, profile interactions, content activity, and connection growth.</div>
-            </div>
+  const strengthSignalCard = (
+    <RotatingCard
+      title="Professional Signal"
+      minHeight={145}
+      slides={[
+        <div key="signal-core" style={{ display: "grid", gap: 10 }}>
+          <SignalChip label="Professional Signal" value={strengthProfile.professionalSignal} tone={strengthProfile.professionalSignal === "Strong" ? "good" : strengthProfile.professionalSignal === "Building" ? "warn" : "risk"} />
+          <SignalChip label="Execution Visibility" value={strengthProfile.executionVisibility} tone={strengthProfile.executionVisibility === "Strong" ? "good" : strengthProfile.executionVisibility === "Building" ? "warn" : "risk"} />
+          <SignalChip label="Validation Risk" value={strengthProfile.validationRisk} tone={strengthProfile.validationRisk === "Low" ? "good" : "warn"} />
+        </div>,
+        <div key="signal-depth" style={{ display: "grid", gap: 10 }}>
+          <SignalChip label="Portfolio Depth" value={strengthProfile.portfolioDepth} tone={strengthProfile.portfolioDepth === "Strong" ? "good" : strengthProfile.portfolioDepth === "Building" ? "warn" : "risk"} />
+          <SignalChip label="Resume Access" value={strengthProfile.resumeAccess} tone={strengthProfile.resumeAccess === "Available" ? "good" : "risk"} />
+          <SignalChip label="Signal Confidence" value={`${strengthProfile.confidence}%`} tone={strengthProfile.confidence >= 75 ? "good" : strengthProfile.confidence >= 55 ? "warn" : "risk"} />
+        </div>,
+        <div key="signal-readiness" style={{ display: "grid", gap: 10 }}>
+          <SignalChip label="Current Direction" value={strengthProfile.headline ? "Defined" : "Needs clarity"} tone={strengthProfile.headline ? "good" : "warn"} />
+          <SignalChip label="Capability Signals" value={strengthProfile.skills.length ? `${strengthProfile.skills.length} detected` : "Needs skills"} tone={strengthProfile.skills.length >= 8 ? "good" : "warn"} />
+          <SignalChip label="Project Proof" value={strengthProfile.projects.length ? "Visible" : "Missing"} tone={strengthProfile.projects.length ? "good" : "risk"} />
+        </div>,
+      ]}
+    />
+  );
+
+  const strengthRecruiterLensHeroCard = (
+    <section
+      style={{
+        ...GLASS,
+        borderRadius: 18,
+        padding: 18,
+        flex: "1 1 auto",
+        minWidth: 0,
+        alignSelf: "flex-end",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>
+            Recruiter Lens
+          </div>
+          <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", ...ORANGE_HEADING_LIFT }}>
+            How Recruiters Read Your Profile
           </div>
         </div>
-        <InsightTile label="Signal" tone={analytics.profileCompletionPct >= 80 ? "strong" : "building"} title="Complete profiles are easier to trust" body="Recruiters and contacts need quick proof of direction, capability, and credibility." />
+        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: "10px 12px", textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontSize: 30, fontWeight: 950, color: ORANGE, lineHeight: 1 }}>{strengthProfile.confidence}%</div>
+          <div style={{ fontSize: 10, fontWeight: 900, color: MUTED, letterSpacing: "0.07em", textTransform: "uppercase" }}>Signal Confidence</div>
+        </div>
       </div>
-    </SectionCard>
+
+      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.76)", borderRadius: 16, padding: 16, minHeight: 238 }}>
+        <div style={{ fontSize: 10, fontWeight: 900, color: MUTED, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 7 }}>
+          Positioning & Recruiter Summary
+        </div>
+        <div style={{ fontSize: 13, color: SLATE, lineHeight: 1.75 }}>
+          {strengthProfile.summaryPreview}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginTop: 14 }}>
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
+            <div style={{ fontSize: 9.5, fontWeight: 900, color: MUTED, letterSpacing: "0.07em", textTransform: "uppercase" }}>Current Direction</div>
+            <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35, marginTop: 5 }}>{strengthProfile.currentDirection}</div>
+          </div>
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
+            <div style={{ fontSize: 9.5, fontWeight: 900, color: MUTED, letterSpacing: "0.07em", textTransform: "uppercase" }}>Primary Evidence</div>
+            <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35, marginTop: 5 }}>{strengthProfile.primaryEvidence}</div>
+          </div>
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
+            <div style={{ fontSize: 9.5, fontWeight: 900, color: MUTED, letterSpacing: "0.07em", textTransform: "uppercase" }}>Recruiter Action</div>
+            <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35, marginTop: 5 }}>{strengthProfile.recruiterAction}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
+  const strengthActionsCard = (
+    <RotatingCard
+      title="Strengthen Position"
+      minHeight={145}
+      slides={[
+        <div key="validation" style={{ display: "grid", gap: 10 }}>
+          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase" }}>Validation Areas</div>
+          <BulletList items={strengthProfile.validationAreas.slice(0, 3)} />
+        </div>,
+        <div key="next-actions" style={{ display: "grid", gap: 10 }}>
+          <ActionTile title="Update your Anvil profile" body="Tighten the signals recruiters use to understand your professional direction." buttonLabel="Open The Anvil →" onClick={() => router.push("/anvil?module=profile")} />
+          <ActionTile title="Add execution proof" body="Projects, work samples, outcomes, and implementation examples improve recruiter confidence." buttonLabel="Open profile →" onClick={() => router.push("/profile")} />
+        </div>,
+        <div key="readout" style={{ display: "grid", gap: 10 }}>
+          <InsightTile label="Mirror" tone="live" title="This is your recruiter-facing read" body="The goal is not another score. The goal is to show what your profile currently proves, what it implies, and what still needs validation." />
+        </div>,
+      ]}
+    />
+  );
+
+  const strengthDetailGrid = (
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: GAP, marginTop: GAP }}>
+      <SectionCard title="Capability Clusters">
+        {strengthProfile.capabilityClusters.length ? (
+          <div style={{ display: "grid", gap: 10 }}>
+            {strengthProfile.capabilityClusters.map((cluster) => (
+              <div key={cluster.label} style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13 }}>
+                <div style={{ fontSize: 10, fontWeight: 950, color: MUTED, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>{cluster.label}</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                  {cluster.items.map((item) => <SmallPill key={`${cluster.label}-${item}`} tone="neutral">{item}</SmallPill>)}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <InsightTile label="Building" tone="building" title="No capability clusters available yet" body="Add skills, certifications, projects, or resume evidence to create clearer professional clusters." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Evidence Library">
+        <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 14 }}>
+            <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Detected Evidence</div>
+            <BulletList items={strengthProfile.evidenceLibrary.slice(0, 6)} />
+          </div>
+          <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 14 }}>
+            <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Execution Proof</div>
+            {strengthProfile.projects.length ? (
+              <div style={{ display: "grid", gap: 8 }}>
+                {strengthProfile.projects.slice(0, 3).map((project, idx) => {
+                  const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || `Project ${idx + 1}`;
+                  const desc = typeof project === "string" ? "" : project?.description || project?.summary || project?.details || "";
+                  return (
+                    <div key={`${title}-${idx}`} style={{ borderRadius: 12, border: "1px solid rgba(100,116,139,0.14)", background: "rgba(255,255,255,0.76)", padding: 11 }}>
+                      <div style={{ fontSize: 13, fontWeight: 950, color: SLATE }}>{title}</div>
+                      {desc ? <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, marginTop: 5 }}>{desc.length > 150 ? `${desc.slice(0, 147).trim()}...` : desc}</div> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: "#92400E", lineHeight: 1.6, border: "1px solid rgba(217,119,6,0.22)", background: "rgba(217,119,6,0.10)", borderRadius: 12, padding: 12 }}>
+                No structured project entries are visible yet. Resume history and profile activity can carry some proof, but project ownership and measurable outcomes will make this readout stronger.
+              </div>
+            )}
+          </div>
+        </div>
+      </SectionCard>
+    </div>
   );
 
   const topContentCard = (
@@ -778,6 +1085,18 @@ export default function ProfileAnalyticsPage() {
     </div>
   );
 
+  const strengthKpiStrip = (
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+      <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(5, minmax(120px,1fr))", gap: GAP }}>
+        <KPI label="Professional Signal" value={strengthProfile.professionalSignal} />
+        <KPI label="Execution Visibility" value={strengthProfile.executionVisibility} />
+        <KPI label="Validation Risk" value={strengthProfile.validationRisk} />
+        <KPI label="Portfolio Depth" value={strengthProfile.portfolioDepth} />
+        <KPI label="Resume Access" value={strengthProfile.resumeAccess} />
+      </section>
+    </div>
+  );
+
   const activityKpiStrip = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(4, minmax(120px,1fr))", gap: GAP }}>
@@ -817,7 +1136,7 @@ export default function ProfileAnalyticsPage() {
       // Mobile: each tab owns its own focused group.
       if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
       if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{visibilityKpiStrip}{reachCard}{visibilityCard}{recentViewersCompactCard}</div>;
-      if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthCard}{actionsCard}</div>;
+      if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthKpiStrip}{strengthRecruiterLensHeroCard}{strengthSignalCard}{strengthActionsCard}{strengthDetailGrid}</div>;
       if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{activityKpiStrip}{activityIntelligenceCard}{connectionGrowthHeroCard}{activitySupportCard}</div>;
       return null;
     }
@@ -866,10 +1185,17 @@ export default function ProfileAnalyticsPage() {
     }
 
     if (activeTab === "strength") {
-      return bleedCommandRow(
-        profileCommandCard,
-        <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-end" }}>{strengthCard}</section>,
-        nextActionsRailCard
+      return (
+        <>
+          {strengthKpiStrip}
+          {bleedCommandRow(
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{strengthSignalCard}</section>,
+            strengthRecruiterLensHeroCard,
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{strengthActionsCard}</section>,
+            8
+          )}
+          {strengthDetailGrid}
+        </>
       );
     }
 
