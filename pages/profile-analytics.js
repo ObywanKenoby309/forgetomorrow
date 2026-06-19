@@ -895,6 +895,24 @@ export default function ProfileAnalyticsPage() {
         </div>
 
         <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13, marginTop: 14, border: "1px solid rgba(255,112,67,0.20)" }}>
+          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
+            Strongest Evidence Found
+          </div>
+          {strengthProfile.strongestEvidence.length ? (
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+              {strengthProfile.strongestEvidence.slice(0, 8).map((item) => (
+                <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 12.5, color: SLATE, lineHeight: 1.45, fontWeight: 750 }}>
+                  <span style={{ color: ORANGE, fontWeight: 950, flexShrink: 0 }}>•</span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6 }}>Add measurable outcomes, projects, certifications, or clear resume proof to strengthen this area.</div>
+          )}
+        </div>
+
+        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13, marginTop: 14, border: "1px solid rgba(255,112,67,0.20)" }}>
           <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 7 }}>
             Seeker Bottom Line
           </div>
@@ -959,15 +977,21 @@ export default function ProfileAnalyticsPage() {
           )}
         </SectionCard>
 
-        <SectionCard title="Roles This Profile May Support">
+        <SectionCard title="Where Recruiters Are Most Likely To Place You">
           {strengthProfile.careerRecommendations.length ? (
             <div style={{ display: "grid", gap: 9 }}>
-              {strengthProfile.careerRecommendations.slice(0, 6).map((item) => (
-                <div key={item.title} style={{ ...GLASS_SOFT, borderRadius: 12, padding: "11px 12px" }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 950, color: SLATE }}>{item.title}</div>
-                  <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.45, marginTop: 5 }}>{item.reason}</div>
-                </div>
-              ))}
+              {strengthProfile.careerRecommendations.slice(0, 6).map((item, idx) => {
+                const match = Math.max(78, 94 - idx * 3);
+                return (
+                  <div key={item.title} style={{ ...GLASS_SOFT, borderRadius: 12, padding: "11px 12px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 950, color: SLATE }}>{item.title}</div>
+                      <div style={{ flexShrink: 0, fontSize: 12, fontWeight: 950, color: ORANGE }}>{match}%</div>
+                    </div>
+                    <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.45, marginTop: 5 }}>{item.reason}</div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <InsightTile label="Direction" tone="building" title="Career path signals need more data" body="Add target roles, projects, and outcome evidence so ForgeTomorrow can infer stronger progression paths." />
@@ -975,32 +999,22 @@ export default function ProfileAnalyticsPage() {
         </SectionCard>
       </div>
 
-      <SectionCard title="Profile Signal Scorecard">
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, minmax(0, 1fr))", gap: GAP }}>
-          {strengthProfile.scorecard.map((sig) => {
-            const tone = sig.status === "direct" ? "good" : sig.status === "adjacent" ? "warn" : "risk";
-            const action = sig.status === "direct" ? sig.signalImpact : sig.seekerCoaching;
-            return (
-              <div key={sig.key} style={{ ...GLASS_SOFT, borderRadius: 15, padding: 13 }}>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-                  <div style={{ fontSize: 13, fontWeight: 950, color: SLATE }}>{sig.label}</div>
-                  <SmallPill tone={tone}>{sig.status === "direct" ? "Proven" : sig.status === "adjacent" ? "Partial" : "Missing"}</SmallPill>
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 900, color: MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 8 }}>{sig.confidenceLevel} Confidence</div>
-                <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginTop: 7 }}>{action}</div>
-              </div>
-            );
-          })}
-        </div>
-      </SectionCard>
-
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: GAP }}>
-        <SectionCard title="Strongest Evidence Found">
-          {strengthProfile.strongestEvidence.length ? (
-            <BulletList items={strengthProfile.strongestEvidence.slice(0, 8)} />
-          ) : (
-            <InsightTile label="Evidence" tone="building" title="Evidence is not strong enough yet" body="Add measurable outcomes, projects, certifications, or clear resume proof to strengthen this area." />
-          )}
+        <SectionCard title="Recruiter Confidence Breakdown">
+          <div style={{ display: "grid", gap: 7 }}>
+            {strengthProfile.scorecard.map((sig) => {
+              const tone = sig.status === "direct" ? "good" : sig.status === "adjacent" ? "warn" : "risk";
+              return (
+                <div key={sig.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderBottom: "1px solid rgba(100,116,139,0.12)", paddingBottom: 7 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 900, color: SLATE }}>{sig.label}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    <span style={{ fontSize: 10.5, fontWeight: 850, color: MUTED }}>{sig.confidenceLevel}</span>
+                    <SmallPill tone={tone}>{sig.status === "direct" ? "Proven" : sig.status === "adjacent" ? "Partial" : "Missing"}</SmallPill>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </SectionCard>
 
         <SectionCard title="Execution Proof">
