@@ -379,15 +379,28 @@ export default function ProfileAnalyticsPage() {
     </SectionCard>
   );
 
+
   const profileCommandCard = (
-    <SectionCard title="Profile Command">
-      <div style={{ display: "grid", gridTemplateColumns: "0.9fr 1.1fr", gap: GAP, alignItems: "center" }}>
+    <section
+      style={{
+        ...GLASS,
+        borderRadius: 18,
+        padding: 14,
+        width: 238,
+        flex: "0 0 238px",
+        alignSelf: "flex-start",
+      }}
+    >
+      <div style={{ fontSize: 18, color: ORANGE, lineHeight: 1.25, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
+        Profile Command
+      </div>
+
+      <div style={{ display: "grid", gap: 10 }}>
         <div
           style={{
             ...GLASS_SOFT,
-            borderRadius: 18,
-            padding: 18,
-            minHeight: 190,
+            borderRadius: 14,
+            padding: 12,
             display: "grid",
             placeItems: "center",
             textAlign: "center",
@@ -395,85 +408,99 @@ export default function ProfileAnalyticsPage() {
         >
           <div
             style={{
-              width: 132,
-              height: 132,
+              width: 92,
+              height: 92,
               borderRadius: "50%",
-              border: "10px solid rgba(255,112,67,0.92)",
+              border: "7px solid rgba(255,112,67,0.92)",
               display: "grid",
               placeItems: "center",
-              background: "rgba(255,255,255,0.72)",
-              boxShadow: "0 10px 24px rgba(15,23,42,0.10)",
+              background: "rgba(255,255,255,0.78)",
+              boxShadow: "0 8px 18px rgba(15,23,42,0.10)",
             }}
           >
             <div>
-              <div style={{ fontSize: 34, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{analytics.profileCompletionPct}%</div>
-              <div style={{ fontSize: 11, fontWeight: 900, color: MUTED, marginTop: 3 }}>Complete</div>
+              <div style={{ fontSize: 22, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{analytics.profileCompletionPct}%</div>
+              <div style={{ fontSize: 9.5, fontWeight: 900, color: MUTED, marginTop: 2 }}>Complete</div>
             </div>
           </div>
         </div>
 
-        <div style={{ display: "grid", gap: 10 }}>
-          <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 14 }}>
-            <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
-              Momentum
-            </div>
-            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 32, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{momentumScore}</div>
-                <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginTop: 4 }}>{momentumLabel}</div>
-              </div>
-              <div style={{ flex: 1, minWidth: 100 }}>
-                <ProgressBar value={momentumScore} />
-                <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.45, marginTop: 7 }}>
-                  Completion, interactions, content, and connection growth.
-                </div>
-              </div>
-            </div>
+        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
+            Views
           </div>
+          <div style={{ fontSize: 28, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{analytics.totalViews.toLocaleString()}</div>
+          <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.4, marginTop: 4 }}>Profile interactions</div>
+        </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <MiniMetric label="Views" value={analytics.totalViews.toLocaleString()} hint="Profile interactions" />
-            <MiniMetric label="Viewers" value={analytics.recentViewers.length} hint="Recent list" />
+        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
+            Momentum
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{momentumScore}</div>
+              <div style={{ fontSize: 11, fontWeight: 900, color: ORANGE, marginTop: 3 }}>{momentumLabel}</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 70 }}>
+              <ProgressBar value={momentumScore} />
+            </div>
           </div>
         </div>
       </div>
-    </SectionCard>
+    </section>
   );
 
-  const visibilityTrendCard = (
-    <SectionCard title="Visibility Trend">
-      <div style={{ display: "grid", gap: GAP }}>
-        <div
-          style={{
-            ...GLASS_SOFT,
-            borderRadius: 14,
-            padding: 14,
-            minHeight: 260,
-            maxHeight: 310,
-            overflow: "hidden",
-          }}
-        >
-          <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 6 }}>Profile Views</div>
+  const visibilityHeroCard = (
+    <section
+      style={{
+        ...GLASS,
+        borderRadius: 18,
+        padding: 18,
+        flex: "1 1 auto",
+        minWidth: 0,
+        alignSelf: "flex-start",
+      }}
+    >
+      <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
+        Visibility Trend
+      </div>
+
+      <div style={{ ...GLASS_SOFT, borderRadius: 16, padding: 16, overflow: "hidden" }}>
+        <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 8 }}>Profile Views</div>
+        <div style={{ minHeight: 250, maxHeight: 320, overflow: "hidden" }}>
           <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
         </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 10 }}>
-          <MiniMetric label="7d views" value={weeklyViews} hint="Profile reach" />
-          <MiniMetric label="Search hits" value={weeklySearch} hint="Discovery" />
-          <MiniMetric label="Connections" value={analytics.connectionsGained7d} hint="7 day growth" />
-        </div>
       </div>
-    </SectionCard>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 14 }}>
+        <MiniMetric label="7d views" value={weeklyViews} hint="Profile reach" />
+        <MiniMetric label="Search hits" value={weeklySearch} hint="Discovery" />
+        <MiniMetric label="Connections" value={analytics.connectionsGained7d} hint="7 day growth" />
+      </div>
+    </section>
   );
 
-  const actionCommandCard = (
-    <SectionCard title="Next Best Actions">
+  const nextActionsRailCard = (
+    <section
+      style={{
+        ...GLASS,
+        borderRadius: 18,
+        padding: 14,
+        width: 302,
+        flex: "0 0 302px",
+        alignSelf: "flex-start",
+      }}
+    >
+      <div style={{ fontSize: 18, color: ORANGE, lineHeight: 1.25, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
+        Next Best Actions
+      </div>
       <div style={{ display: "grid", gap: 10 }}>
         {profileLoading ? (
           <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, color: MUTED }}>Loading profile actions…</div>
         ) : nextActions.length ? (
           nextActions.slice(0, 3).map((item) => (
-            <ActionTile key={item.label} title={item.label} body="Strengthen this profile signal in The Anvil to improve your visibility." buttonLabel="Open in The Anvil →" onClick={() => router.push("/anvil?module=profile")} />
+            <ActionTile key={item.label} title={item.label} body="Strengthen this profile signal in The Anvil to improve visibility." buttonLabel="Open in The Anvil →" onClick={() => router.push("/anvil?module=profile")} />
           ))
         ) : (
           <InsightTile label="Complete" tone="strong" title="Your profile checklist is complete" body="Keep your profile fresh as your goals, projects, and experience evolve." />
@@ -481,18 +508,16 @@ export default function ProfileAnalyticsPage() {
         <ActionTile title="Review your public profile" body="See what recruiters, coaches, and contacts see when they land on your profile." buttonLabel="Open profile →" onClick={() => router.push("/profile")} />
         <ActionTile title="Build visibility through the Hearth" body="Turn helpful community activity into professional visibility." buttonLabel="Open The Hearth →" onClick={() => router.push("/hearth/spotlights")} />
       </div>
-    </SectionCard>
+    </section>
   );
 
-  const recentViewersCommandCard = (
+  const recentViewersCompactCard = (
     <SectionCard title="Recent Viewers">
-      <div style={{ display: "grid", gap: 10 }}>
-        <RecentViewers viewers={analytics.recentViewers} allViewsHref={allViewsHref} />
-      </div>
+      <RecentViewers viewers={analytics.recentViewers} allViewsHref={allViewsHref} />
     </SectionCard>
   );
 
-  const topContentCommandCard = (
+  const topContentCompactCard = (
     <SectionCard title="Top Content">
       <div style={{ display: "grid", gap: 10 }}>
         {analytics.highestViewedPost ? (
@@ -506,23 +531,20 @@ export default function ProfileAnalyticsPage() {
         ) : (
           <InsightTile label="Building" tone="building" title="Top post performance will appear here" body="Once feed interaction tracking is expanded, your strongest post will surface here." />
         )}
-
         {analytics.highestViewedComment ? (
           <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
             <div style={{ fontSize: 10, color: MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em" }}>Highest Liked Comment</div>
             <div style={{ color: SLATE, fontSize: 13, lineHeight: 1.55, marginTop: 6 }}>"{analytics.highestViewedComment.snippet}"</div>
             <a href={analytics.highestViewedComment.url} style={{ display: "inline-block", color: ORANGE, fontWeight: 900, marginTop: 8, textDecoration: "none" }}>View comment →</a>
           </div>
-        ) : (
-          <InsightTile label="Community" tone="live" title="Helpful comments become visibility signals" body="Comment-level tracking will show which community contributions helped people notice you." />
-        )}
+        ) : null}
       </div>
     </SectionCard>
   );
 
-  const connectionGrowthCommandCard = (
+  const connectionGrowthCompactCard = (
     <SectionCard title="Connection Growth">
-      <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 14, minHeight: 220, overflow: "hidden" }}>
+      <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 14, minHeight: 210, overflow: "hidden" }}>
         <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
       </div>
     </SectionCard>
@@ -553,8 +575,9 @@ export default function ProfileAnalyticsPage() {
     }
 
     // Desktop — Overview:
-    // Row 1 respects the left sidebar and right rail.
-    // Lower rows are allowed to bleed left/right only after they sit under the sidebar height.
+    // Top KPI remains in the normal content lane.
+    // The command/hero/actions composition starts lower, under the left sidebar height,
+    // then bleeds left and right without forcing a single equal-height grid row.
     if (activeTab === "overview") {
       return (
         <>
@@ -562,31 +585,38 @@ export default function ProfileAnalyticsPage() {
 
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(0,1.08fr) minmax(0,1.55fr) minmax(0,1fr)",
+              marginLeft: LEFT_BLEED,
+              marginRight: RIGHT_BLEED,
+              marginTop: 96,
+              display: "flex",
+              alignItems: "flex-start",
               gap: GAP,
-              alignItems: "stretch",
+              width: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
+              maxWidth: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
+              minWidth: 0,
+              position: "relative",
+              zIndex: 2,
             }}
           >
             {profileCommandCard}
-            {visibilityTrendCard}
-            {actionCommandCard}
+            {visibilityHeroCard}
+            {nextActionsRailCard}
           </div>
 
           <div
             style={{
               marginLeft: LEFT_BLEED,
               marginRight: RIGHT_BLEED,
-              marginTop: 34,
+              marginTop: GAP,
               display: "grid",
               gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)",
               gap: GAP,
-              alignItems: "stretch",
+              alignItems: "start",
             }}
           >
-            {recentViewersCommandCard}
-            {topContentCommandCard}
-            {connectionGrowthCommandCard}
+            {recentViewersCompactCard}
+            {topContentCompactCard}
+            {connectionGrowthCompactCard}
           </div>
 
           <div
@@ -597,7 +627,7 @@ export default function ProfileAnalyticsPage() {
               display: "grid",
               gridTemplateColumns: "minmax(0,1fr) minmax(0,2fr)",
               gap: GAP,
-              alignItems: "stretch",
+              alignItems: "start",
             }}
           >
             {strengthCard}
