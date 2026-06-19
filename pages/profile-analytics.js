@@ -856,7 +856,29 @@ export default function ProfileAnalyticsPage() {
         <SignalChip label="Recruiter takeaway" value={strengthProfile.professionalSignal === "Strong" ? "Advance-worthy" : strengthProfile.professionalSignal} tone={strengthProfile.professionalSignal === "Strong" ? "good" : "warn"} />
         <SignalChip label="Proof level" value={strengthProfile.portfolioDepth} tone={strengthProfile.portfolioDepth === "Strong" ? "good" : strengthProfile.portfolioDepth === "Partial" ? "warn" : "risk"} />
         <SignalChip label="Top validation" value={strengthProfile.validationCards?.[0]?.title || "Fit and role scope"} tone={strengthProfile.validationRisk === "Low" ? "good" : "warn"} />
-      </div>
+			  <div style={{ display: "grid", gap: 6, marginTop: 4 }}>
+          {strengthProfile.scorecard.map((sig) => {
+            const tone = sig.status === "direct" ? "good" : sig.status === "adjacent" ? "warn" : "risk";
+            return (
+              <div
+                key={sig.key}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  fontSize: 11,
+                }}
+              >
+                <span style={{ color: SLATE, fontWeight: 850 }}>{sig.label}</span>
+                <SmallPill tone={tone}>
+                  {sig.status === "direct" ? "Proven" : sig.status === "adjacent" ? "Partial" : "Missing"}
+                </SmallPill>
+              </div>
+            );
+          })}
+        </div>
+	  </div>
     </SectionCard>
   );
 
@@ -877,7 +899,7 @@ export default function ProfileAnalyticsPage() {
             Recruiter Lens
           </div>
           <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", ...ORANGE_HEADING_LIFT }}>
-            If I Were Recruiting You
+            If We Were Recruiting You
           </div>
         </div>
         <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: "10px 12px", textAlign: "right", flexShrink: 0 }}>
@@ -910,30 +932,6 @@ export default function ProfileAnalyticsPage() {
           ) : (
             <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6 }}>Add measurable outcomes, projects, certifications, or clear resume proof to strengthen this area.</div>
           )}
-        </div>
-
-        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13, marginTop: 14, border: "1px solid rgba(255,112,67,0.20)" }}>
-          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 7 }}>
-            Seeker Bottom Line
-          </div>
-          <div style={{ fontSize: 13, color: SLATE, lineHeight: 1.7, fontWeight: 750 }}>
-            {strengthProfile.seekerBottomLine}
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 10, marginTop: 14 }}>
-          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
-            <div style={{ fontSize: 9.5, fontWeight: 900, color: MUTED, letterSpacing: "0.07em", textTransform: "uppercase" }}>Current Direction</div>
-            <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35, marginTop: 5 }}>{strengthProfile.currentDirection}</div>
-          </div>
-          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
-            <div style={{ fontSize: 9.5, fontWeight: 900, color: MUTED, letterSpacing: "0.07em", textTransform: "uppercase" }}>Recruiters See</div>
-            <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35, marginTop: 5 }}>{strengthProfile.strengthNarratives?.[0]?.label || strengthProfile.primaryEvidence}</div>
-          </div>
-          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
-            <div style={{ fontSize: 9.5, fontWeight: 900, color: MUTED, letterSpacing: "0.07em", textTransform: "uppercase" }}>Recruiter Action</div>
-            <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35, marginTop: 5 }}>{strengthProfile.recruiterAction}</div>
-          </div>
         </div>
       </div>
     </section>
@@ -999,24 +997,7 @@ export default function ProfileAnalyticsPage() {
         </SectionCard>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: GAP }}>
-        <SectionCard title="Recruiter Confidence Breakdown">
-          <div style={{ display: "grid", gap: 7 }}>
-            {strengthProfile.scorecard.map((sig) => {
-              const tone = sig.status === "direct" ? "good" : sig.status === "adjacent" ? "warn" : "risk";
-              return (
-                <div key={sig.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderBottom: "1px solid rgba(100,116,139,0.12)", paddingBottom: 7 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 900, color: SLATE }}>{sig.label}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    <span style={{ fontSize: 10.5, fontWeight: 850, color: MUTED }}>{sig.confidenceLevel}</span>
-                    <SmallPill tone={tone}>{sig.status === "direct" ? "Proven" : sig.status === "adjacent" ? "Partial" : "Missing"}</SmallPill>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </SectionCard>
-
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: GAP }}>
         <SectionCard title="Execution Proof">
           {strengthProfile.projects.length ? (
             <div style={{ display: "grid", gap: 8 }}>
