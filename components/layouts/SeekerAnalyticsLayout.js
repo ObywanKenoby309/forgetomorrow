@@ -29,6 +29,10 @@ import useSidebarCounts from "@/components/hooks/useSidebarCounts";
 
 import SeekerHeader from "@/components/seeker/SeekerHeader";
 import SeekerSidebar from "@/components/SeekerSidebar";
+import CoachingHeader from "@/components/coaching/CoachingHeader";
+import CoachingSidebar from "@/components/coaching/CoachingSidebar";
+import RecruiterHeader from "@/components/recruiter/RecruiterHeader";
+import RecruiterSidebar from "@/components/recruiter/RecruiterSidebar";
 import MobileBottomBar from "@/components/mobile/MobileBottomBar";
 import SupportFloatingButton from "@/components/SupportFloatingButton";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
@@ -206,8 +210,22 @@ export default function SeekerAnalyticsLayout({
     return () => { alive = false; };
   }, []);
 
-  // Always seeker chrome on this layout
-  const chromeMode = "seeker";
+  // Respect ?chrome= param so coach/recruiter chrome is preserved when they view this page
+  const rawChrome = String(router.query?.chrome || "").toLowerCase().trim();
+  const chromeMode = rawChrome === "coach"
+    ? "coach"
+    : rawChrome === "recruiter-ent" || rawChrome === "enterprise"
+      ? "recruiter-ent"
+      : rawChrome === "recruiter-smb" || rawChrome === "recruiter" || rawChrome === "smb"
+        ? "recruiter-smb"
+        : "seeker";
+
+  const isRecruiter     = chromeMode === "recruiter-smb" || chromeMode === "recruiter-ent";
+  const isCoach         = chromeMode === "coach";
+  const resolvedVariant = chromeMode === "recruiter-ent" ? "enterprise" : "smb";
+
+  const HeaderComp  = isRecruiter ? RecruiterHeader  : isCoach ? CoachingHeader  : SeekerHeader;
+  const SidebarComp = isRecruiter ? RecruiterSidebar : isCoach ? CoachingSidebar : SeekerSidebar;
 
   const [isMobileInternal, setIsMobileInternal] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -293,7 +311,7 @@ export default function SeekerAnalyticsLayout({
       </Head>
 
       <div style={backgroundStyle}>
-        <SeekerHeader />
+        <HeaderComp />
 
         <div
           style={{
@@ -322,10 +340,12 @@ export default function SeekerAnalyticsLayout({
               display: isMobile ? "none" : "block",
             }}
           >
-            <SeekerSidebar
+            <SidebarComp
               active="analytics"
-              counts={seekerCounts}
+              counts={!isRecruiter && !isCoach ? seekerCounts : undefined}
               profileSlug={profileSlug}
+              role={isRecruiter ? (planRole || "recruiter") : undefined}
+              variant={isRecruiter ? resolvedVariant : undefined}
             />
           </aside>
 
@@ -455,10 +475,12 @@ export default function SeekerAnalyticsLayout({
               boxShadow: "14px -14px 38px rgba(0,0,0,0.38)",
             }}
           >
-            <SeekerSidebar
+            <SidebarComp
               active="analytics"
-              counts={seekerCounts}
+              counts={!isRecruiter && !isCoach ? seekerCounts : undefined}
               profileSlug={profileSlug}
+              role={isRecruiter ? (planRole || "recruiter") : undefined}
+              variant={isRecruiter ? resolvedVariant : undefined}
             />
           </div>
         </div>
