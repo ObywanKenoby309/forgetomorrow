@@ -125,6 +125,58 @@ function ActionTile({ title, body, buttonLabel, onClick }) {
   );
 }
 
+function RotatingCarouselCard({ title, slides = [], intervalMs = 5200 }) {
+  const safeSlides = Array.isArray(slides) ? slides.filter(Boolean) : [];
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (safeSlides.length <= 1) return undefined;
+    const timer = setInterval(() => {
+      setIndex((current) => (current + 1) % safeSlides.length);
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [safeSlides.length, intervalMs]);
+
+  useEffect(() => {
+    if (index >= safeSlides.length) setIndex(0);
+  }, [index, safeSlides.length]);
+
+  const activeSlide = safeSlides[index] || safeSlides[0] || null;
+
+  return (
+    <SectionCard title={title}>
+      <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ minHeight: 178 }}>
+          {activeSlide}
+        </div>
+
+        {safeSlides.length > 1 ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            {safeSlides.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={`Show ${title} slide ${i + 1}`}
+                onClick={() => setIndex(i)}
+                style={{
+                  width: i === index ? 18 : 7,
+                  height: 7,
+                  borderRadius: 999,
+                  border: "none",
+                  background: i === index ? ORANGE : "rgba(100,116,139,0.28)",
+                  cursor: "pointer",
+                  padding: 0,
+                  transition: "all 180ms ease",
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </SectionCard>
+  );
+}
+
 // ─── Tab copy ─────────────────────────────────────────────────────────────────
 const TAB_COPY = {
   overview:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "Understand how your profile performs, who's viewing it, and what actions will accelerate your visibility." },
@@ -560,28 +612,32 @@ export default function ProfileAnalyticsPage() {
   );
 
   const activityIntelligenceCard = (
-    <SectionCard title="Activity Intelligence">
-      <div style={{ display: "grid", gap: GAP }}>
+    <RotatingCarouselCard
+      title="Activity Intelligence"
+      slides={[
         <InsightTile
+          key="community"
           label="Community"
           tone="building"
           title={`${totalContent.toLocaleString()} content signals`}
           body="Posts and comments help turn your profile from a static page into an active professional signal."
-        />
+        />,
         <InsightTile
+          key="network"
           label="Network"
           tone="live"
           title={`${analytics.connectionsGained7d.toLocaleString()} new connections in 7 days`}
           body="Connection movement shows whether activity is translating into real professional reach."
-        />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <MiniMetric label="Posts" value={analytics.postsCount} hint="Shared updates" />
-          <MiniMetric label="Comments" value={analytics.commentsCount} hint="Community replies" />
-          <MiniMetric label="Content" value={totalContent} hint="Total signals" />
-          <MiniMetric label="Growth" value={`+${analytics.connectionsGained7d}`} hint="7 days" />
-        </div>
-      </div>
-    </SectionCard>
+        />,
+        <InsightTile
+          key="signal"
+          label="Signal"
+          tone={totalContent > 0 ? "strong" : "building"}
+          title={totalContent > 0 ? "Your activity is creating a footprint" : "Start with one useful contribution"}
+          body={totalContent > 0 ? "Keep connecting posts, comments, and Hearth replies to the career direction you want people to notice." : "A post, comment, or Hearth reply gives your profile a current professional signal beyond static resume data."}
+        />,
+      ]}
+    />
   );
 
   const connectionGrowthHeroCard = (
@@ -612,10 +668,11 @@ export default function ProfileAnalyticsPage() {
   );
 
   const activitySupportCard = (
-    <SectionCard title="Activity Support">
-      <div style={{ display: "grid", gap: GAP }}>
-        {analytics.highestViewedPost ? (
-          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+    <RotatingCarouselCard
+      title="Top Content"
+      slides={[
+        analytics.highestViewedPost ? (
+          <div key="top-post" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
             <div style={{ fontSize: 10, color: MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em" }}>Top Post</div>
             <a href={analytics.highestViewedPost.url} style={{ display: "block", color: ORANGE, fontWeight: 900, marginTop: 6, textDecoration: "none", lineHeight: 1.35 }}>
               {analytics.highestViewedPost.title}
@@ -623,26 +680,44 @@ export default function ProfileAnalyticsPage() {
             <div style={{ fontSize: 12, color: MUTED, marginTop: 5 }}>{analytics.highestViewedPost.views.toLocaleString()} interactions</div>
           </div>
         ) : (
-          <InsightTile label="Building" tone="building" title="Top post performance will appear here" body="Once feed interaction tracking is expanded, your strongest post will surface here." />
-        )}
-        {analytics.highestViewedComment ? (
-          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-            <div style={{ fontSize: 10, color: MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em" }}>Highest Liked Comment</div>
+          <InsightTile key="top-post-empty" label="Building" tone="building" title="Top post performance will appear here" body="Once feed interaction tracking is expanded, your strongest post will surface here." />
+        ),
+        analytics.highestViewedComment ? (
+          <div key="top-comment" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 10, color: MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em" }}>Top Comment</div>
             <div style={{ color: SLATE, fontSize: 13, lineHeight: 1.55, marginTop: 6 }}>"{analytics.highestViewedComment.snippet}"</div>
             <a href={analytics.highestViewedComment.url} style={{ display: "inline-block", color: ORANGE, fontWeight: 900, marginTop: 8, textDecoration: "none" }}>View comment →</a>
           </div>
-        ) : null}
-        <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Content playbook</div>
-          <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
-            Use posts, comments, and Hearth replies to create professional signal without turning the page into a noisy social feed.
+        ) : (
+          <InsightTile key="top-comment-empty" label="Community" tone="live" title="Helpful comments become visibility signals" body="As comment-level tracking grows, this area will show which community contributions helped people notice you." />
+        ),
+        <div key="content-playbook" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Content Playbook</div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {["Share a quick career win or lesson learned.", "Answer one Hearth discussion with useful detail.", "Comment where you can add practical experience."].map((item) => (
+              <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span style={{ color: ORANGE, fontWeight: 900, lineHeight: 1.35, flexShrink: 0 }}>•</span>
+                <span style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{item}</span>
+              </div>
+            ))}
           </div>
-        </div>
-      </div>
-    </SectionCard>
+        </div>,
+      ]}
+    />
   );
 
   // ── KPI strip ────────────────────────────────────────────────────────────
+  const activityKpiStrip = (
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+      <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(4, minmax(120px,1fr))", gap: GAP }}>
+        <KPI label="Posts" value={kv(analytics.postsCount)} />
+        <KPI label="Comments" value={kv(analytics.commentsCount)} />
+        <KPI label="Content Signals" value={kv(totalContent)} />
+        <KPI label="Connections (7d)" value={`+${kv(analytics.connectionsGained7d)}`} />
+      </section>
+    </div>
+  );
+
   const kpiStrip = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(5, minmax(120px,1fr))", gap: GAP }}>
@@ -684,7 +759,7 @@ export default function ProfileAnalyticsPage() {
       if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
       if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{reachCard}{recentViewersCompactCard}</div>;
       if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthCard}{actionsCard}</div>;
-      if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{activityIntelligenceCard}{connectionGrowthHeroCard}{activitySupportCard}</div>;
+      if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{activityKpiStrip}{activityIntelligenceCard}{connectionGrowthHeroCard}{activitySupportCard}</div>;
       return null;
     }
 
@@ -734,10 +809,15 @@ export default function ProfileAnalyticsPage() {
     }
 
     if (activeTab === "activity") {
-      return bleedCommandRow(
-        <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activityIntelligenceCard}</section>,
-        connectionGrowthHeroCard,
-        <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activitySupportCard}</section>
+      return (
+        <div style={{ display: "grid", gap: GAP }}>
+          {activityKpiStrip}
+          {bleedCommandRow(
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activityIntelligenceCard}</section>,
+            connectionGrowthHeroCard,
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activitySupportCard}</section>
+          )}
+        </div>
       );
     }
 
