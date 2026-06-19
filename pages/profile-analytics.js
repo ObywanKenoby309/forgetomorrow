@@ -385,67 +385,75 @@ export default function ProfileAnalyticsPage() {
       style={{
         ...GLASS,
         borderRadius: 18,
-        padding: 10,
-        width: 224,
-        flex: "0 0 238px",
+        padding: 12,
+        width: 240,
+        flex: "0 0 240px",
         alignSelf: "flex-end",
       }}
     >
-      <div style={{ fontSize: 17, color: ORANGE, lineHeight: 1.2, letterSpacing: "-0.01em", marginBottom: 8, ...ORANGE_HEADING_LIFT }}>
+      <div style={{ fontSize: 17, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 8, ...ORANGE_HEADING_LIFT }}>
         Profile Command
       </div>
 
-      <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "grid", gap: 7 }}>
         <div
           style={{
             ...GLASS_SOFT,
-            background: "rgba(255,255,255,0.72)",
             borderRadius: 14,
             padding: 8,
             display: "grid",
-            placeItems: "center",
-            textAlign: "center",
+            gridTemplateColumns: "64px minmax(0,1fr)",
+            alignItems: "center",
+            gap: 10,
           }}
         >
           <div
             style={{
-              width: 76,
-              height: 76,
+              width: 58,
+              height: 58,
               borderRadius: "50%",
-              border: "6px solid rgba(255,112,67,0.92)",
+              border: "5px solid rgba(255,112,67,0.92)",
               display: "grid",
               placeItems: "center",
-              background: "rgba(255,255,255,0.78)",
+              background: "rgba(255,255,255,0.62)",
               boxShadow: "0 8px 18px rgba(15,23,42,0.10)",
             }}
           >
             <div>
-              <div style={{ fontSize: 22, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{analytics.profileCompletionPct}%</div>
-              <div style={{ fontSize: 9, fontWeight: 900, color: MUTED, marginTop: 2 }}>Complete</div>
+              <div style={{ fontSize: 17, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{analytics.profileCompletionPct}%</div>
+              <div style={{ fontSize: 8, fontWeight: 900, color: MUTED, marginTop: 1 }}>Complete</div>
+            </div>
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>
+              Completion
+            </div>
+            <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.35 }}>
+              Profile is ready to be seen.
             </div>
           </div>
         </div>
 
-        <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.72)", borderRadius: 14, padding: 10 }}>
-          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
+        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: "8px 10px" }}>
+          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>
             Views
           </div>
-          <div style={{ fontSize: 24, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{analytics.totalViews.toLocaleString()}</div>
-          <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.35, marginTop: 3 }}>Profile interactions</div>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8 }}>
+            <div style={{ fontSize: 20, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{analytics.totalViews.toLocaleString()}</div>
+            <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.25, textAlign: "right" }}>Profile interactions</div>
+          </div>
         </div>
 
-        <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.72)", borderRadius: 14, padding: 10 }}>
-          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
+        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: "8px 10px" }}>
+          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>
             Momentum
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "auto minmax(64px,1fr)", alignItems: "center", gap: 9 }}>
             <div>
-              <div style={{ fontSize: 24, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{momentumScore}</div>
+              <div style={{ fontSize: 20, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{momentumScore}</div>
               <div style={{ fontSize: 10.5, fontWeight: 900, color: ORANGE, marginTop: 2 }}>{momentumLabel}</div>
             </div>
-            <div style={{ flex: 1, minWidth: 70 }}>
-              <ProgressBar value={momentumScore} />
-            </div>
+            <ProgressBar value={momentumScore} />
           </div>
         </div>
       </div>
@@ -488,8 +496,8 @@ export default function ProfileAnalyticsPage() {
         ...GLASS,
         borderRadius: 18,
         padding: 12,
-        width: 292,
-        flex: "0 0 302px",
+        width: 240,
+        flex: "0 0 240px",
         alignSelf: "flex-end",
       }}
     >
@@ -588,7 +596,7 @@ export default function ProfileAnalyticsPage() {
             style={{
               marginLeft: LEFT_BLEED,
               marginRight: RIGHT_BLEED,
-              marginTop: 42,
+              marginTop: 8,
               display: "flex",
               alignItems: "flex-end",
               gap: GAP,
