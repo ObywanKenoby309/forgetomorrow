@@ -148,6 +148,81 @@ function RotatingCard({ title, slides = [], intervalMs = 5200, minHeight = 210 }
   );
 }
 
+function InlineSignalCarousel({ groups = [], intervalMs = 5200 }) {
+  const validGroups = Array.isArray(groups) ? groups.filter((group) => Array.isArray(group?.items) && group.items.length) : [];
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (validGroups.length <= 1) return undefined;
+    const timer = window.setInterval(() => {
+      setActiveIndex((idx) => (idx + 1) % validGroups.length);
+    }, intervalMs);
+    return () => window.clearInterval(timer);
+  }, [validGroups.length, intervalMs]);
+
+  useEffect(() => {
+    if (activeIndex >= validGroups.length) setActiveIndex(0);
+  }, [activeIndex, validGroups.length]);
+
+  const activeGroup = validGroups[activeIndex];
+
+  if (!activeGroup) return null;
+
+  return (
+    <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 11, display: "grid", gap: 8 }}>
+      <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+        {activeGroup.title}
+      </div>
+
+      <div style={{ display: "grid", gap: 7 }}>
+        {activeGroup.items.map((sig) => {
+          const tone = sig.status === "direct" ? "good" : sig.status === "adjacent" ? "warn" : "risk";
+          return (
+            <div
+              key={sig.key}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+                fontSize: 11,
+              }}
+            >
+              <span style={{ color: SLATE, fontWeight: 850 }}>{sig.label}</span>
+              <SmallPill tone={tone}>
+                {sig.status === "direct" ? "Proven" : sig.status === "adjacent" ? "Partial" : "Missing"}
+              </SmallPill>
+            </div>
+          );
+        })}
+      </div>
+
+      {validGroups.length > 1 ? (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 2 }}>
+          {validGroups.map((_, idx) => (
+            <button
+              key={idx}
+              type="button"
+              aria-label={`Show signal group ${idx + 1}`}
+              onClick={() => setActiveIndex(idx)}
+              style={{
+                width: idx === activeIndex ? 18 : 7,
+                height: 7,
+                borderRadius: 999,
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                background: idx === activeIndex ? ORANGE : "rgba(100,116,139,0.32)",
+                transition: "all 160ms ease",
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function MiniMetric({ label, value, hint }) {
   return (
     <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
@@ -853,31 +928,23 @@ export default function ProfileAnalyticsPage() {
           <div style={{ fontSize: 30, fontWeight: 950, lineHeight: 1 }}>{strengthProfile.confidence}%</div>
           <div style={{ fontSize: 13, fontWeight: 900, color: "rgba(255,255,255,0.88)", marginTop: 3 }}>{strengthProfile.professionalSignal}</div>
         </div>
+
         <SignalChip label="Recruiter takeaway" value={strengthProfile.professionalSignal === "Strong" ? "Advance-worthy" : strengthProfile.professionalSignal} tone={strengthProfile.professionalSignal === "Strong" ? "good" : "warn"} />
         <SignalChip label="Top validation" value={strengthProfile.validationCards?.[0]?.title || "Fit and role scope"} tone={strengthProfile.validationRisk === "Low" ? "good" : "warn"} />
-			  <div style={{ display: "grid", gap: 6, marginTop: 4 }}>
-          {strengthProfile.scorecard.map((sig) => {
-            const tone = sig.status === "direct" ? "good" : sig.status === "adjacent" ? "warn" : "risk";
-            return (
-              <div
-                key={sig.key}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 8,
-                  fontSize: 11,
-                }}
-              >
-                <span style={{ color: SLATE, fontWeight: 850 }}>{sig.label}</span>
-                <SmallPill tone={tone}>
-                  {sig.status === "direct" ? "Proven" : sig.status === "adjacent" ? "Partial" : "Missing"}
-                </SmallPill>
-              </div>
-            );
-          })}
-        </div>
-	  </div>
+
+        <InlineSignalCarousel
+          groups={[
+            {
+              title: "Core Signals",
+              items: strengthProfile.scorecard.filter((sig) => ["identity", "narrative", "proof", "portfolio"].includes(sig.key)),
+            },
+            {
+              title: "Trust + Access",
+              items: strengthProfile.scorecard.filter((sig) => ["credentials", "availability", "language", "visibility"].includes(sig.key)),
+            },
+          ]}
+        />
+      </div>
     </SectionCard>
   );
 
@@ -937,22 +1004,45 @@ export default function ProfileAnalyticsPage() {
   );
 
   const strengthActionsCard = (
-    <SectionCard title="Recruiters Will Want Proof Of">
-      <div style={{ display: "grid", gap: 10 }}>
-        {(strengthProfile.validationCards || []).slice(0, 3).map((item) => (
-          <div key={item.title} style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13 }}>
+    <RotatingCard
+      title="Recruiters Will Want Proof Of"
+      minHeight={250}
+      slides={[
+        ...(strengthProfile.validationCards || []).slice(0, 4).map((item) => (
+          <div key={item.title} style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13, minHeight: 220, display: "grid", alignContent: "start" }}>
             <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35 }}>{item.title}</div>
             <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>{item.body}</div>
             <div style={{ fontSize: 11.5, color: ORANGE, fontWeight: 900, lineHeight: 1.45, marginTop: 8 }}>{item.fix}</div>
           </div>
-        ))}
-        <ActionTile title="Strengthen the evidence" body={strengthProfile.validationCards?.[0]?.fix || "Add clearer proof, outcomes, and profile evidence tied to your target roles."} buttonLabel="Open The Anvil →" onClick={() => router.push("/anvil?module=profile")} />
-      </div>
-    </SectionCard>
+        )),
+        <ActionTile
+          key="strengthen-evidence"
+          title="Strengthen the evidence"
+          body={strengthProfile.validationCards?.[0]?.fix || "Add clearer proof, outcomes, and profile evidence tied to your target roles."}
+          buttonLabel="Open The Anvil →"
+          onClick={() => router.push("/anvil?module=profile")}
+        />,
+      ]}
+    />
   );
 
   const strengthDetailGrid = (
-    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", alignItems: "stretch", gap: GAP, marginTop: GAP }}>
+    <div
+      style={{
+        marginLeft: isMobile ? 0 : LEFT_BLEED,
+        marginRight: isMobile ? 0 : RIGHT_BLEED,
+        marginTop: GAP,
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+        alignItems: "stretch",
+        gap: GAP,
+        width: isMobile ? "100%" : `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
+        maxWidth: isMobile ? "100%" : `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
+        minWidth: 0,
+        position: "relative",
+        zIndex: 2,
+      }}
+    >
       <SectionCard title="Your Strongest Recruiting Signals">
         <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid" }}>
           {strengthProfile.strengthNarratives.length ? (
@@ -1005,10 +1095,23 @@ export default function ProfileAnalyticsPage() {
               {strengthProfile.projects.slice(0, 4).map((project, idx) => {
                 const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || `Project ${idx + 1}`;
                 const desc = typeof project === "string" ? "" : project?.description || project?.summary || project?.details || "";
+                const tools = typeof project === "string" ? "" : safeArray(project?.tools || project?.technologies || project?.skills).join(", ");
+                const outcome = typeof project === "string" ? "" : project?.outcome || project?.impact || project?.result || "";
+                const detail = desc || outcome || tools || "Project evidence is visible. Add scope, tools, stakeholders, and measurable outcomes to make this proof stronger.";
                 return (
-                  <div key={`${title}-${idx}`} style={{ borderRadius: 12, border: "1px solid rgba(100,116,139,0.14)", background: "rgba(255,255,255,0.76)", padding: 11 }}>
-                    <div style={{ fontSize: 13, fontWeight: 950, color: SLATE }}>{title}</div>
-                    {desc ? <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, marginTop: 5 }}>{desc.length > 170 ? `${desc.slice(0, 167).trim()}...` : desc}</div> : null}
+                  <div key={`${title}-${idx}`} style={{ borderRadius: 12, border: "1px solid rgba(100,116,139,0.14)", background: "rgba(255,255,255,0.76)", padding: 12 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                      <div style={{ fontSize: 13, fontWeight: 950, color: SLATE, lineHeight: 1.3 }}>{title}</div>
+                      <SmallPill tone="neutral">Project</SmallPill>
+                    </div>
+                    <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, marginTop: 7 }}>
+                      {detail.length > 190 ? `${detail.slice(0, 187).trim()}...` : detail}
+                    </div>
+                    {tools ? (
+                      <div style={{ fontSize: 11, color: ORANGE, fontWeight: 850, lineHeight: 1.4, marginTop: 7 }}>
+                        Tools: {tools.length > 90 ? `${tools.slice(0, 87).trim()}...` : tools}
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
