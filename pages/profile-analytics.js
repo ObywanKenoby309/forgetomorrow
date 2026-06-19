@@ -848,13 +848,12 @@ export default function ProfileAnalyticsPage() {
   const strengthSignalCard = (
     <SectionCard title="Recruiter Readiness">
       <div style={{ display: "grid", gap: 10 }}>
-        <div style={{ ...GLASS_SOFT, borderRadius: 16, padding: 14, background: "rgba(15,23,42,0.94)", color: "white" }}>
+        <div style={{ ...GLASS_SOFT, borderRadius: 16, padding: 14, background: "rgba(15,23,42,0.94)", color: "white", textAlign: "center" }}>
           <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Profile Read</div>
           <div style={{ fontSize: 30, fontWeight: 950, lineHeight: 1 }}>{strengthProfile.confidence}%</div>
           <div style={{ fontSize: 13, fontWeight: 900, color: "rgba(255,255,255,0.88)", marginTop: 3 }}>{strengthProfile.professionalSignal}</div>
         </div>
         <SignalChip label="Recruiter takeaway" value={strengthProfile.professionalSignal === "Strong" ? "Advance-worthy" : strengthProfile.professionalSignal} tone={strengthProfile.professionalSignal === "Strong" ? "good" : "warn"} />
-        <SignalChip label="Proof level" value={strengthProfile.portfolioDepth} tone={strengthProfile.portfolioDepth === "Strong" ? "good" : strengthProfile.portfolioDepth === "Partial" ? "warn" : "risk"} />
         <SignalChip label="Top validation" value={strengthProfile.validationCards?.[0]?.title || "Fit and role scope"} tone={strengthProfile.validationRisk === "Low" ? "good" : "warn"} />
 			  <div style={{ display: "grid", gap: 6, marginTop: 4 }}>
           {strengthProfile.scorecard.map((sig) => {
@@ -953,9 +952,9 @@ export default function ProfileAnalyticsPage() {
   );
 
   const strengthDetailGrid = (
-    <div style={{ display: "grid", gap: GAP, marginTop: GAP }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: GAP }}>
-        <SectionCard title="Your Strongest Recruiting Signals">
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", alignItems: "stretch", gap: GAP, marginTop: GAP }}>
+      <SectionCard title="Your Strongest Recruiting Signals">
+        <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid" }}>
           {strengthProfile.strengthNarratives.length ? (
             <div style={{ display: "grid", gap: 10 }}>
               {strengthProfile.strengthNarratives.slice(0, 5).map((item) => (
@@ -973,9 +972,11 @@ export default function ProfileAnalyticsPage() {
           ) : (
             <InsightTile label="Building" tone="building" title="More evidence needed" body="Add resume evidence, skills, experience, and project outcomes to generate stronger recruiter-facing strengths." />
           )}
-        </SectionCard>
+        </div>
+      </SectionCard>
 
-        <SectionCard title="Where Recruiters Are Most Likely To Place You">
+      <SectionCard title="Where Recruiters Are Most Likely To Place You">
+        <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid" }}>
           {strengthProfile.careerRecommendations.length ? (
             <div style={{ display: "grid", gap: 9 }}>
               {strengthProfile.careerRecommendations.slice(0, 6).map((item, idx) => {
@@ -994,11 +995,11 @@ export default function ProfileAnalyticsPage() {
           ) : (
             <InsightTile label="Direction" tone="building" title="Career path signals need more data" body="Add target roles, projects, and outcome evidence so ForgeTomorrow can infer stronger progression paths." />
           )}
-        </SectionCard>
-      </div>
+        </div>
+      </SectionCard>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: GAP }}>
-        <SectionCard title="Execution Proof">
+      <SectionCard title="Execution Proof">
+        <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid" }}>
           {strengthProfile.projects.length ? (
             <div style={{ display: "grid", gap: 8 }}>
               {strengthProfile.projects.slice(0, 4).map((project, idx) => {
@@ -1017,8 +1018,8 @@ export default function ProfileAnalyticsPage() {
               No structured project entries are visible yet. This is the biggest gap between profile strength and recruiter confidence. Add one project with scope, ownership, tools, and measurable outcome.
             </div>
           )}
-        </SectionCard>
-      </div>
+        </div>
+      </SectionCard>
     </div>
   );
 
@@ -1409,7 +1410,7 @@ export default function ProfileAnalyticsPage() {
       // Mobile: each tab owns its own focused group.
       if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
       if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{visibilityKpiStrip}{reachCard}{visibilityCard}{recentViewersCompactCard}</div>;
-      if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthKpiStrip}{strengthRecruiterLensHeroCard}{strengthSignalCard}{strengthActionsCard}{strengthDetailGrid}</div>;
+      if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthKpiStrip}{strengthRecruiterLensHeroCard}{strengthActionsCard}{strengthSignalCard}{strengthDetailGrid}</div>;
       if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{activityKpiStrip}{activityIntelligenceCard}{connectionGrowthHeroCard}{activitySupportCard}</div>;
       return null;
     }
@@ -1462,9 +1463,9 @@ export default function ProfileAnalyticsPage() {
         <>
           {strengthKpiStrip}
           {bleedCommandRow(
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{strengthSignalCard}</section>,
-            strengthRecruiterLensHeroCard,
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{strengthActionsCard}</section>,
+            strengthRecruiterLensHeroCard,
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{strengthSignalCard}</section>,
             8
           )}
           {strengthDetailGrid}
