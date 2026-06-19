@@ -569,30 +569,24 @@ export default function SeekerDashboard() {
 
               <section style={{ ...GLASS, padding: 12, minWidth: 0 }}>
                 <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: 10,
-                    gap: 6,
-                  }}
-                >
-                  <span style={{ fontSize: 12, fontWeight: 900, color: '#112033', lineHeight: 1.15 }}>
-                    Profile Health
-                  </span>
-                  <Link
-                    href={withChrome('/seeker/profile')}
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 800,
-                      color: '#FF7043',
-                      textDecoration: 'none',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    →
-                  </Link>
-                </div>
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 6,
+  }}
+>
+  <span
+    style={{
+      fontSize: 12,
+      fontWeight: 900,
+      color: '#112033',
+      lineHeight: 1.15,
+    }}
+  >
+    Profile Health
+  </span>
+</div>
 
                 <ProfilePerformanceTeaser layout="vertical" compact />
               </section>
