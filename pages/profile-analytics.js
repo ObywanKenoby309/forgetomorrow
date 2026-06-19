@@ -1,26 +1,43 @@
 // pages/profile-analytics.js
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import Head from 'next/head';
-import { useRouter } from 'next/router';
-import SeekerLayout from '@/components/layouts/SeekerLayout';
-import CoachingLayout from '@/components/layouts/CoachingLayout';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import Head from "next/head";
+import { useRouter } from "next/router";
+import SeekerLayout from "@/components/layouts/SeekerLayout";
+import CoachingLayout from "@/components/layouts/CoachingLayout";
+import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 
-import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import KPI from "@/components/analytics/KPI";
+import ViewsChart from "@/components/analytics/ViewsChart";
+import SearchAppearancesChart from "@/components/analytics/SearchAppearancesChart";
+import ProfileCompletionCard from "@/components/analytics/ProfileCompletionCard";
+import ConnectionsMiniChart from "@/components/analytics/ConnectionsMiniChart";
+import RecentViewers from "@/components/analytics/RecentViewers";
 
-// Componentized pieces
-import KPI from '@/components/analytics/KPI';
-import ViewsChart from '@/components/analytics/ViewsChart';
-import SearchAppearancesChart from '@/components/analytics/SearchAppearancesChart';
-import ProfileCompletionCard from '@/components/analytics/ProfileCompletionCard';
-import ConnectionsMiniChart from '@/components/analytics/ConnectionsMiniChart';
-import RecentViewers from '@/components/analytics/RecentViewers';
+const GLASS = {
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(255,255,255,0.68)",
+  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+};
 
-// ---- Shared logic (copied verbatim from Anvil ProfileDevelopment rules) ----
+const GLASS_SOFT = {
+  border: "1px solid rgba(255,255,255,0.18)",
+  background: "rgba(255,255,255,0.58)",
+  boxShadow: "0 8px 22px rgba(15,23,42,0.10)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+};
+
+const ORANGE = "#FF7043";
+const SLATE = "#334155";
+const MUTED = "#64748B";
+
 function safeArray(v) {
   if (!v) return [];
   if (Array.isArray(v)) return v.filter(Boolean);
-  if (typeof v === 'object' && Array.isArray(v.items)) return v.items.filter(Boolean);
-  if (typeof v === 'string') {
+  if (typeof v === "object" && Array.isArray(v.items)) return v.items.filter(Boolean);
+  if (typeof v === "string") {
     try {
       const parsed = JSON.parse(v);
       return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
@@ -34,28 +51,224 @@ function safeArray(v) {
 function skillNamesFromAny(skillsJson) {
   const arr = safeArray(skillsJson);
   return arr
-    .map((x) => (typeof x === 'string' ? x : x?.name || x?.label || ''))
-    .map((s) => String(s || '').trim())
+    .map((x) => (typeof x === "string" ? x : x?.name || x?.label || ""))
+    .map((s) => String(s || "").trim())
     .filter(Boolean);
+}
+
+function MobileCarousel({ cards }) {
+  const trackRef = useRef(null);
+  const programmatic = useRef(false);
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  const goTo = (index) => {
+    setActiveIdx(index);
+    const track = trackRef.current;
+    if (!track) return;
+    programmatic.current = true;
+    track.scrollTo({ left: index * track.offsetWidth, behavior: "smooth" });
+    setTimeout(() => {
+      programmatic.current = false;
+    }, 600);
+  };
+
+  const handleScroll = () => {
+    if (programmatic.current) return;
+    const track = trackRef.current;
+    if (!track) return;
+    const index = Math.round(track.scrollLeft / track.offsetWidth);
+    if (index >= 0 && index < cards.length) setActiveIdx(index);
+  };
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.addEventListener("scroll", handleScroll, { passive: true });
+    return () => track.removeEventListener("scroll", handleScroll);
+  }, [cards.length]);
+
+  return (
+    <div style={{ width: "100%", maxWidth: "100%", overflowX: "hidden" }}>
+      <div style={{ borderRadius: 18, overflow: "hidden", width: "100%" }}>
+        <div
+          ref={trackRef}
+          style={{
+            display: "flex",
+            gap: 12,
+            paddingLeft: 2,
+            paddingRight: 2,
+            width: "100%",
+            overflowX: "auto",
+            scrollSnapType: "x mandatory",
+            msOverflowStyle: "none",
+            scrollbarWidth: "none",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {cards.map((card, i) => (
+            <div
+              key={i}
+              style={{
+                flex: "0 0 calc(100% - 6px)",
+                width: "calc(100% - 6px)",
+                minWidth: "calc(100% - 6px)",
+                scrollSnapAlign: "start",
+                boxSizing: "border-box",
+              }}
+            >
+              {card}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 10 }}>
+        {cards.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => goTo(i)}
+            aria-label={`Go to card ${i + 1}`}
+            style={{
+              width: i === activeIdx ? 24 : 8,
+              height: 8,
+              borderRadius: 999,
+              background: i === activeIdx ? ORANGE : "rgba(255,112,67,0.25)",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              transition: "width 220ms ease, background 220ms ease",
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SectionCard({ title, action, children, minHeight }) {
+  return (
+    <section
+      style={{
+        ...GLASS,
+        borderRadius: 18,
+        padding: 16,
+        width: "100%",
+        minWidth: 0,
+        minHeight: minHeight || "auto",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 18,
+            color: ORANGE,
+            lineHeight: 1.25,
+            letterSpacing: "-0.01em",
+            fontWeight: 900,
+          }}
+        >
+          {title}
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function InsightTile({ label, title, body, tone = "live" }) {
+  const config = {
+    live: { bg: "rgba(255,112,67,0.12)", color: ORANGE, dot: ORANGE },
+    strong: { bg: "rgba(22,163,74,0.10)", color: "#16A34A", dot: "#16A34A" },
+    attention: { bg: "rgba(220,38,38,0.10)", color: "#DC2626", dot: "#DC2626" },
+    building: { bg: "rgba(15,118,110,0.10)", color: "#0F766E", dot: "#0F766E" },
+  }[tone];
+
+  return (
+    <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <span
+          style={{
+            display: "inline-block",
+            width: 7,
+            height: 7,
+            borderRadius: "50%",
+            background: config.dot,
+            flexShrink: 0,
+          }}
+        />
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.07em",
+            textTransform: "uppercase",
+            background: config.bg,
+            color: config.color,
+            borderRadius: 6,
+            padding: "2px 7px",
+          }}
+        >
+          {label}
+        </span>
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 900, color: SLATE, lineHeight: 1.35 }}>
+        {title}
+      </div>
+      <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65, marginTop: 6 }}>
+        {body}
+      </div>
+    </div>
+  );
+}
+
+function ActionTile({ title, body, buttonLabel, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        ...GLASS_SOFT,
+        borderRadius: 12,
+        padding: 14,
+        border: "1px solid rgba(255,255,255,0.22)",
+        textAlign: "left",
+        cursor: "pointer",
+        fontFamily: "inherit",
+        width: "100%",
+      }}
+    >
+      <div style={{ fontSize: 14, fontWeight: 900, color: SLATE }}>{title}</div>
+      <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>{body}</div>
+      <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginTop: 10 }}>
+        {buttonLabel}
+      </div>
+    </button>
+  );
 }
 
 export default function ProfileAnalyticsPage() {
   const router = useRouter();
-  const isCoachChrome = (router.query.chrome || '').toString() === 'coach';
+  const isCoachChrome = (router.query.chrome || "").toString() === "coach";
   const Layout = isCoachChrome ? CoachingLayout : SeekerLayout;
 
   const withChrome = useCallback(
     (href) => {
-      const s = String(href || '');
+      const s = String(href || "");
       if (!isCoachChrome) return s;
-      return s.includes('?') ? `${s}&chrome=coach` : `${s}?chrome=coach`;
+      return s.includes("?") ? `${s}&chrome=coach` : `${s}?chrome=coach`;
     },
     [isCoachChrome]
   );
 
-  // ---------------------------
-  // LIVE: fetch profile fields used by Anvil completion checker
-  // ---------------------------
   const [profileDetails, setProfileDetails] = useState(null);
   const [primaryResume, setPrimaryResume] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -67,8 +280,8 @@ export default function ProfileAnalyticsPage() {
       setProfileLoading(true);
       try {
         const [dRes, pRes] = await Promise.all([
-          fetch('/api/profile/details'),
-          fetch('/api/profile/primaries'),
+          fetch("/api/profile/details"),
+          fetch("/api/profile/primaries"),
         ]);
 
         const dJson = await dRes.json().catch(() => ({}));
@@ -80,7 +293,7 @@ export default function ProfileAnalyticsPage() {
         setProfileDetails(merged || null);
         setPrimaryResume(pJson?.primaryResume || null);
       } catch (e) {
-        console.error('[ProfileAnalytics] completion fetch error', e);
+        console.error("[ProfileAnalytics] completion fetch error", e);
         if (!alive) return;
         setProfileDetails(null);
         setPrimaryResume(null);
@@ -96,12 +309,9 @@ export default function ProfileAnalyticsPage() {
     };
   }, []);
 
-  // ---------------------------
-  // Completion computation (same thresholds as Anvil)
-  // ---------------------------
   const completion = useMemo(() => {
-    const headline = String(profileDetails?.headline || '').trim();
-    const aboutMe = String(profileDetails?.aboutMe || '').trim();
+    const headline = String(profileDetails?.headline || "").trim();
+    const aboutMe = String(profileDetails?.aboutMe || "").trim();
     const skills = skillNamesFromAny(profileDetails?.skillsJson);
     const languages = safeArray(profileDetails?.languagesJson);
 
@@ -122,11 +332,11 @@ export default function ProfileAnalyticsPage() {
     const progress = Math.round((completed / total) * 100);
 
     const checklist = [
-      { label: 'Headline', done: hasHeadline },
-      { label: 'Summary', done: hasSummary },
-      { label: 'Skills (8+)', done: hasSkills },
-      { label: 'Languages (1+)', done: hasLanguages },
-      { label: 'Primary Resume', done: hasPrimaryResume },
+      { label: "Headline", done: hasHeadline },
+      { label: "Summary", done: hasSummary },
+      { label: "Skills (8+)", done: hasSkills },
+      { label: "Languages (1+)", done: hasLanguages },
+      { label: "Primary Resume", done: hasPrimaryResume },
     ];
 
     return {
@@ -137,9 +347,6 @@ export default function ProfileAnalyticsPage() {
     };
   }, [profileDetails, primaryResume]);
 
-  // ---------------------------
-  // LIVE: fetch analytics (ProfileView / Contact / FeedPost)
-  // ---------------------------
   const [analyticsState, setAnalyticsState] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
@@ -149,20 +356,20 @@ export default function ProfileAnalyticsPage() {
     async function fetchAnalytics() {
       setAnalyticsLoading(true);
       try {
-        const res = await fetch('/api/profile/analytics');
+        const res = await fetch("/api/profile/analytics");
         const json = await res.json().catch(() => ({}));
 
         if (!alive) return;
 
         if (!res.ok) {
-          console.error('[ProfileAnalytics] analytics fetch failed', json);
+          console.error("[ProfileAnalytics] analytics fetch failed", json);
           setAnalyticsState(null);
           return;
         }
 
         setAnalyticsState(json || null);
       } catch (e) {
-        console.error('[ProfileAnalytics] analytics fetch error', e);
+        console.error("[ProfileAnalytics] analytics fetch error", e);
         if (!alive) return;
         setAnalyticsState(null);
       } finally {
@@ -177,43 +384,39 @@ export default function ProfileAnalyticsPage() {
     };
   }, []);
 
-  // ---------------------------
-  // Analytics object for UI (no placeholders, no "wired" language)
-  // ---------------------------
   const analytics = useMemo(() => {
     const a = analyticsState || {};
 
-    // prefer live completion from your computed logic (matches Anvil UI)
     const profileCompletionPct =
       Number(completion.progress) ||
-      (typeof a.profileCompletionPct === 'number' ? a.profileCompletionPct : 0);
+      (typeof a.profileCompletionPct === "number" ? a.profileCompletionPct : 0);
 
-    const daysLabels = Array.isArray(a.daysLabels) && a.daysLabels.length === 7
-      ? a.daysLabels
-      : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-    const viewsLast7Days = Array.isArray(a.viewsLast7Days) ? a.viewsLast7Days : null;
-    const searchAppearancesLast7Days = Array.isArray(a.searchAppearancesLast7Days)
-      ? a.searchAppearancesLast7Days
-      : null;
-    const connectionsLast7Days = Array.isArray(a.connectionsLast7Days) ? a.connectionsLast7Days : null;
+    const daysLabels =
+      Array.isArray(a.daysLabels) && a.daysLabels.length === 7
+        ? a.daysLabels
+        : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
     return {
-      totalViews: typeof a.totalViews === 'number' ? a.totalViews : 0,
-      postsCount: typeof a.postsCount === 'number' ? a.postsCount : 0,
-      commentsCount: typeof a.commentsCount === 'number' ? a.commentsCount : 0,
-      connectionsGained7d: typeof a.connectionsGained7d === 'number' ? a.connectionsGained7d : 0,
+      totalViews: typeof a.totalViews === "number" ? a.totalViews : 0,
+      postsCount: typeof a.postsCount === "number" ? a.postsCount : 0,
+      commentsCount: typeof a.commentsCount === "number" ? a.commentsCount : 0,
+      connectionsGained7d:
+        typeof a.connectionsGained7d === "number" ? a.connectionsGained7d : 0,
 
       profileCompletionPct,
 
       daysLabels,
-      viewsLast7Days,
-      searchAppearancesLast7Days,
-      connectionsLast7Days,
+      viewsLast7Days: Array.isArray(a.viewsLast7Days) ? a.viewsLast7Days : null,
+      searchAppearancesLast7Days: Array.isArray(a.searchAppearancesLast7Days)
+        ? a.searchAppearancesLast7Days
+        : null,
+      connectionsLast7Days: Array.isArray(a.connectionsLast7Days)
+        ? a.connectionsLast7Days
+        : null,
 
       lastProfileViewer: a.lastProfileViewer || {
         name: null,
-        profileUrl: '/profile?tab=views',
+        profileUrl: "/profile?tab=views",
       },
 
       recentViewers: Array.isArray(a.recentViewers) ? a.recentViewers : [],
@@ -224,21 +427,14 @@ export default function ProfileAnalyticsPage() {
     };
   }, [analyticsState, completion.progress, completion.checklist]);
 
-  const allViewsHref =
-    (analytics.lastProfileViewer?.profileUrl || '/profile?tab=views') +
-    (isCoachChrome ? '&chrome=coach' : '');
+  const allViewsHref = withChrome(analytics.lastProfileViewer?.profileUrl || "/profile?tab=views");
 
-  const hasTopPost = !!analytics.highestViewedPost;
-  const hasTopComment = !!analytics.highestViewedComment;
+  const kpiValue = (v) => (v === null || typeof v === "undefined" ? "—" : String(v));
 
-  // ---------------------------
-  // Mobile: swipe-dot panels + details modal
-  // ---------------------------
-  const [mobilePanelIndex, setMobilePanelIndex] = useState(0);
-  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
-  const touchStartX = useRef(null);
-
-  const panelTitles = ['Actions', 'Reach', 'Activity'];
+  const detailedAnalyticsAvailable =
+    Array.isArray(analytics.viewsLast7Days) &&
+    Array.isArray(analytics.searchAppearancesLast7Days) &&
+    Array.isArray(analytics.connectionsLast7Days);
 
   const nextActions = useMemo(() => {
     const list = Array.isArray(analytics.profileChecklist) ? analytics.profileChecklist : [];
@@ -250,94 +446,215 @@ export default function ProfileAnalyticsPage() {
 
     if (c >= 80) {
       return {
-        level: 'STRONG',
-        tone: 'text-emerald-700',
-        blurb: 'Strong foundation. Keep it fresh and recruiter-relevant.',
+        level: "Strong",
+        tone: "strong",
+        body: "Your profile has a strong foundation. Keep it current and connected to the roles you want.",
       };
     }
+
     if (c >= 40) {
       return {
-        level: 'BUILDING',
-        tone: 'text-amber-700',
-        blurb: 'You are close. A few upgrades will increase visibility fast.',
+        level: "Building",
+        tone: "building",
+        body: "Your profile is moving in the right direction. A few key updates can improve visibility quickly.",
       };
     }
+
     return {
-      level: 'LOW',
-      tone: 'text-red-700',
-      blurb: 'Key recruiter signals are missing. Let’s strengthen this now.',
+      level: "Needs attention",
+      tone: "attention",
+      body: "Important recruiter and community signals are missing. Strengthening your profile should be the next move.",
     };
   }, [analytics.profileCompletionPct]);
 
-  function onTouchStart(e) {
-    try {
-      touchStartX.current = e.touches?.[0]?.clientX ?? null;
-    } catch {
-      touchStartX.current = null;
-    }
-  }
+  const topContentCard = (
+    <SectionCard title="Top Content" minHeight={260}>
+      <div style={{ display: "grid", gap: 12 }}>
+        {analytics.highestViewedPost ? (
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 11, color: MUTED, fontWeight: 800, textTransform: "uppercase" }}>
+              Top Post
+            </div>
+            <a
+              href={withChrome(analytics.highestViewedPost.url)}
+              style={{
+                display: "block",
+                color: ORANGE,
+                fontWeight: 900,
+                marginTop: 6,
+                textDecoration: "none",
+              }}
+            >
+              {analytics.highestViewedPost.title}
+            </a>
+            <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>
+              {analytics.highestViewedPost.views.toLocaleString()} interactions
+            </div>
+          </div>
+        ) : (
+          <InsightTile
+            label="Building"
+            tone="building"
+            title="Post performance will appear here"
+            body="Once feed interaction tracking is expanded, your strongest post will surface here with meaningful engagement context."
+          />
+        )}
 
-  function onTouchEnd(e) {
-    try {
-      const startX = touchStartX.current;
-      const endX = e.changedTouches?.[0]?.clientX ?? null;
-      touchStartX.current = null;
+        {analytics.highestViewedComment ? (
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 11, color: MUTED, fontWeight: 800, textTransform: "uppercase" }}>
+              Highest Liked Comment
+            </div>
+            <div style={{ color: SLATE, fontSize: 13, lineHeight: 1.55, marginTop: 6 }}>
+              “{analytics.highestViewedComment.snippet}”
+            </div>
+            <a
+              href={withChrome(analytics.highestViewedComment.url)}
+              style={{
+                display: "inline-block",
+                color: ORANGE,
+                fontWeight: 900,
+                marginTop: 8,
+                textDecoration: "none",
+              }}
+            >
+              View comment →
+            </a>
+          </div>
+        ) : (
+          <InsightTile
+            label="Community"
+            tone="live"
+            title="Helpful comments become visibility signals"
+            body="As comment-level tracking grows, this area can show which community contributions helped people notice you."
+          />
+        )}
+      </div>
+    </SectionCard>
+  );
 
-      if (startX == null || endX == null) return;
+  const actionsCard = (
+    <SectionCard title="Next Best Actions" minHeight={260}>
+      <div style={{ display: "grid", gap: 10 }}>
+        {profileLoading ? (
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, color: MUTED }}>
+            Loading profile actions…
+          </div>
+        ) : nextActions.length ? (
+          nextActions.map((item) => (
+            <ActionTile
+              key={item.label}
+              title={item.label}
+              body="Strengthen this profile signal in The Anvil to improve your visibility."
+              buttonLabel="Open in The Anvil →"
+              onClick={() => router.push(withChrome("/anvil?module=profile"))}
+            />
+          ))
+        ) : (
+          <InsightTile
+            label="Complete"
+            tone="strong"
+            title="Your profile checklist is complete"
+            body="Keep your profile fresh as your goals, projects, and experience evolve."
+          />
+        )}
+      </div>
+    </SectionCard>
+  );
 
-      const dx = endX - startX;
-      const threshold = 45;
+  const visibilityCard = (
+    <SectionCard title="Visibility Intelligence" minHeight={260}>
+      <div style={{ display: "grid", gap: 10 }}>
+        <InsightTile
+          label={visibility.level}
+          tone={visibility.tone}
+          title={`${analytics.profileCompletionPct}% profile completion`}
+          body={visibility.body}
+        />
+        <InsightTile
+          label="Seen"
+          tone="live"
+          title={`${analytics.totalViews.toLocaleString()} profile interactions`}
+          body="This is your current visibility footprint across profile and engagement activity."
+        />
+        <InsightTile
+          label="Network"
+          tone="building"
+          title={`${analytics.connectionsGained7d.toLocaleString()} new connections in 7 days`}
+          body="Connection growth helps show whether visibility is turning into real professional momentum."
+        />
+      </div>
+    </SectionCard>
+  );
 
-      if (dx > threshold) {
-        setMobilePanelIndex((i) => Math.max(0, i - 1));
-      } else if (dx < -threshold) {
-        setMobilePanelIndex((i) => Math.min(panelTitles.length - 1, i + 1));
-      }
-    } catch {
-      touchStartX.current = null;
-    }
-  }
+  const reachCard = (
+    <SectionCard title="Reach Trend" minHeight={260}>
+      {Array.isArray(analytics.viewsLast7Days) && Array.isArray(analytics.searchAppearancesLast7Days) ? (
+        <div style={{ display: "grid", gap: 12 }}>
+          <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
+          <SearchAppearancesChart
+            labels={analytics.daysLabels}
+            data={analytics.searchAppearancesLast7Days}
+          />
+        </div>
+      ) : (
+        <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, color: MUTED, fontSize: 13 }}>
+          {analyticsLoading ? "Loading charts…" : "No 7-day view/search chart data available yet."}
+        </div>
+      )}
+    </SectionCard>
+  );
+
+  const recentActivityCard = (
+    <SectionCard title="Recent Activity" minHeight={260}>
+      <div style={{ display: "grid", gap: 12 }}>
+        {Array.isArray(analytics.connectionsLast7Days) ? (
+          <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days} />
+        ) : (
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, color: MUTED, fontSize: 13 }}>
+            {analyticsLoading ? "Loading connection trend…" : "No connection trend data available yet."}
+          </div>
+        )}
+
+        <RecentViewers viewers={analytics.recentViewers} allViewsHref={allViewsHref} />
+      </div>
+    </SectionCard>
+  );
+
+  const completionCard = (
+    <SectionCard title="Profile Strength" minHeight={260}>
+      <ProfileCompletionCard
+        completionPct={analytics.profileCompletionPct}
+        checklist={analytics.profileChecklist}
+      />
+    </SectionCard>
+  );
 
   const HeaderBox = (
-  <section
-    style={{
-      borderRadius: 18,
-      border: '1px solid rgba(255,255,255,0.22)',
-      background: 'rgba(255,255,255,0.58)',
-      boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      padding: 16,
-      textAlign: 'center',
-    }}
-    aria-label="Profile analytics overview"
-  >
-    <div style={{ fontSize: 24, fontWeight: 900, color: '#FF7043' }}>
-      Profile Analytics
-    </div>
-
-    <div
+    <section
       style={{
-        marginTop: 6,
-        fontSize: 14,
-        color: '#64748B',
-        maxWidth: 720,
-        marginInline: 'auto',
-        lineHeight: 1.5,
+        ...GLASS,
+        borderRadius: 18,
+        padding: 16,
+        textAlign: "center",
       }}
+      aria-label="Profile analytics overview"
     >
-      Track engagement on your profile and content.
-    </div>
-  </section>
-);
-
-  const kpiValue = (v) => (v === null || typeof v === 'undefined' ? '—' : String(v));
-
-  // show charts when arrays exist (even if all zeros)
-  const detailedAnalyticsAvailable =
-    Array.isArray(analytics.viewsLast7Days) &&
-    Array.isArray(analytics.searchAppearancesLast7Days) &&
-    Array.isArray(analytics.connectionsLast7Days);
+      <div style={{ fontSize: 24, fontWeight: 900, color: ORANGE }}>Profile Analytics</div>
+      <div
+        style={{
+          marginTop: 6,
+          fontSize: 14,
+          color: MUTED,
+          maxWidth: 720,
+          marginInline: "auto",
+          lineHeight: 1.5,
+        }}
+      >
+        See how your profile, content, and community activity are helping you get noticed.
+      </div>
+    </section>
+  );
 
   return (
     <>
@@ -348,387 +665,112 @@ export default function ProfileAnalyticsPage() {
       <Layout
         title="Profile Analytics | ForgeTomorrow"
         header={HeaderBox}
-		headerCard={false}
+        headerCard={false}
         right={<RightRailPlacementManager surfaceId="profile" />}
         activeNav="profile"
         sidebarInitialOpen={{ coaching: false, seeker: false }}
       >
-        <div className="max-w-6xl mx-auto px-4 py-6 md:py-8">
-          {/* ---------------------------
-              MOBILE: viewport-locked experience (md:hidden)
-             --------------------------- */}
-          <div className="md:hidden">
-            <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-xs uppercase tracking-wide text-[#607D8B]">
-                    Profile Visibility
-                  </div>
-
-                  <div className={`mt-1 text-lg font-extrabold ${visibility.tone}`}>
-                    {profileLoading ? 'Checking…' : visibility.level}
-                  </div>
-
-                  <p className="mt-1 mb-0 text-sm text-[#455A64]">
-                    {profileLoading ? 'Loading your live completion status.' : visibility.blurb}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => router.push(withChrome('/anvil?module=profile'))}
-                  className="shrink-0 rounded-xl px-4 py-2 font-bold text-sm bg-[#FF7043] text-white shadow-sm"
-                >
-                  Strengthen
-                </button>
-              </div>
-
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <div className="text-xs text-[#607D8B]">
-                  Completion:{' '}
-                  <span className="font-bold text-[#263238]">
-                    {profileLoading ? '—' : `${Number(analytics.profileCompletionPct) || 0}%`}
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setMobileDetailsOpen(true)}
-                  className="text-sm font-bold text-[#FF7043]"
-                >
-                  View detailed analytics →
-                </button>
-              </div>
-            </section>
-
-            <section className="mt-4 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-4 pt-4 pb-2">
-                <div className="flex items-center justify-between">
-                  <h2 className="m-0 text-[#263238] font-extrabold text-base">
-                    {panelTitles[mobilePanelIndex]}
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    {panelTitles.map((t, idx) => {
-                      const active = idx === mobilePanelIndex;
-                      return (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => setMobilePanelIndex(idx)}
-                          aria-label={`Show ${t}`}
-                          className="flex items-center gap-1"
-                        >
-                          <span
-                            className={`inline-block rounded-full transition-all ${
-                              active ? 'w-3 h-3' : 'w-2 h-2'
-                            }`}
-                            style={{
-                              background: active ? '#FF7043' : 'rgba(96,125,139,0.35)',
-                            }}
-                          />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="mt-2 flex items-center gap-3 text-xs text-[#607D8B]">
-                  {panelTitles.map((t, idx) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setMobilePanelIndex(idx)}
-                      className={`font-bold ${
-                        idx === mobilePanelIndex ? 'text-[#FF7043]' : 'text-[#607D8B]'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="px-4 pb-4" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-                {/* Actions */}
-                {mobilePanelIndex === 0 ? (
-                  <div>
-                    <p className="m-0 text-sm text-[#455A64]">
-                      Next best actions (live from your profile).
-                    </p>
-
-                    <div className="mt-3 space-y-2">
-                      {profileLoading ? (
-                        <div className="bg-[#FAFAFA] border border-gray-200 rounded-xl p-4 text-sm text-[#455A64]">
-                          Loading…
-                        </div>
-                      ) : nextActions.length ? (
-                        nextActions.map((item) => (
-                          <button
-                            key={item.label}
-                            type="button"
-                            onClick={() => router.push(withChrome('/anvil?module=profile'))}
-                            className="w-full text-left bg-[#FAFAFA] border border-gray-200 rounded-xl px-3 py-3"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <div className="font-extrabold text-[#263238]">{item.label}</div>
-                                <div className="text-xs text-[#607D8B] mt-0.5">
-                                  Tap to strengthen in The Anvil
-                                </div>
-                              </div>
-                              <span className="shrink-0 text-sm font-bold text-[#FF7043]">
-                                Open →
-                              </span>
-                            </div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="bg-[#FAFAFA] border border-gray-200 rounded-xl p-4 text-sm text-[#455A64]">
-                          Your checklist is complete.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-
-                {/* Reach */}
-                {mobilePanelIndex === 1 ? (
-                  <div>
-                    <p className="m-0 text-sm text-[#455A64]">
-                      Reach across the last 7 days.
-                    </p>
-                    <div className="mt-3 bg-[#FAFAFA] border border-gray-200 rounded-xl p-3 text-sm text-[#455A64]">
-                      {analyticsLoading ? 'Loading…' : `Profile interactions: ${analytics.totalViews.toLocaleString()}`}
-                    </div>
-
-                    {detailedAnalyticsAvailable ? (
-                      <div className="mt-3 space-y-3">
-                        <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
-                        <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
-                      </div>
-                    ) : (
-                      <section className="mt-3 bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-sm text-[#455A64]">
-                        {analyticsLoading ? 'Loading charts…' : 'No 7-day chart data available yet.'}
-                      </section>
-                    )}
-                  </div>
-                ) : null}
-
-                {/* Activity */}
-                {mobilePanelIndex === 2 ? (
-                  <div>
-                    <p className="m-0 text-sm text-[#455A64]">
-                      Recent viewers and activity.
-                    </p>
-                    <div className="mt-3 bg-[#FAFAFA] border border-gray-200 rounded-xl p-3 text-sm text-[#455A64]">
-                      {analyticsLoading ? 'Loading…' : `Recent viewers: ${analytics.recentViewers.length}`}
-                    </div>
-
-                    <div className="mt-3 space-y-3">
-                      {Array.isArray(analytics.connectionsLast7Days) ? (
-                        <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days} />
-                      ) : (
-                        <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-sm text-[#455A64]">
-                          {analyticsLoading ? 'Loading…' : 'No connection trend data available yet.'}
-                        </section>
-                      )}
-
-                      <RecentViewers viewers={analytics.recentViewers} allViewsHref={allViewsHref} />
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </section>
-
-            {/* Mobile Details Modal */}
-            {mobileDetailsOpen ? (
-              <div className="fixed inset-0 z-[60] flex items-end justify-center" role="dialog" aria-modal="true">
-                <button
-                  type="button"
-                  className="absolute inset-0 bg-black/40"
-                  onClick={() => setMobileDetailsOpen(false)}
-                  aria-label="Close details"
-                />
-                <div className="relative w-full max-w-xl bg-white rounded-t-2xl shadow-2xl border border-gray-200">
-                  <div className="px-4 py-3 flex items-center justify-between border-b border-gray-200">
-                    <div className="font-extrabold text-[#263238]">Detailed Analytics</div>
-                    <button
-                      type="button"
-                      onClick={() => setMobileDetailsOpen(false)}
-                      className="text-sm font-bold text-[#FF7043]"
-                    >
-                      Close
-                    </button>
-                  </div>
-
-                  <div className="p-4 space-y-4 max-h-[78vh] overflow-auto">
-                    <div className="grid grid-cols-2 gap-3">
-                      <KPI label="Profile Interactions" value={kpiValue(analytics.totalViews)} />
-                      <KPI label="Profile Completion" value={`${analytics.profileCompletionPct}%`} />
-                      <KPI label="Posts" value={kpiValue(analytics.postsCount)} />
-                      <KPI label="Comments" value={kpiValue(analytics.commentsCount)} />
-                      <KPI label="Connections (7d)" value={kpiValue(analytics.connectionsGained7d)} />
-                    </div>
-
-                    {/* Charts */}
-                    {detailedAnalyticsAvailable ? (
-                      <>
-                        <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
-                        <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
-                        <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days} />
-                      </>
-                    ) : (
-                      <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-sm text-[#455A64]">
-                        {analyticsLoading ? 'Loading…' : 'No 7-day chart data available yet.'}
-                      </section>
-                    )}
-
-                    <ProfileCompletionCard completionPct={analytics.profileCompletionPct} checklist={analytics.profileChecklist} />
-
-                    <RecentViewers viewers={analytics.recentViewers} allViewsHref={allViewsHref} />
-
-                    <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
-                      <h2 className="text-[#FF7043] font-semibold mb-3">Top Content</h2>
-                      {hasTopPost ? (
-                        <div className="mb-5">
-                          <strong className="text-[#263238]">Top Post (Interactions)</strong>
-                          <a href={withChrome(analytics.highestViewedPost.url)} className="block text-[#FF7043] font-bold mt-1">
-                            {analytics.highestViewedPost.title}
-                          </a>
-                          <small className="text-[#607D8B]">{analytics.highestViewedPost.views.toLocaleString()} interactions</small>
-                        </div>
-                      ) : (
-                        <div className="mb-5">
-                          <strong className="text-[#263238]">Top Post (Interactions)</strong>
-                          <p className="text-[#607D8B] text-sm mt-1 mb-0">
-                            Your top-performing post will appear here once interaction tracking is added for feed content.
-                          </p>
-                        </div>
-                      )}
-
-                      {hasTopComment ? (
-                        <div>
-                          <strong className="text-[#263238]">Highest Liked Comment</strong>
-                          <p className="text-[#455A64] italic mt-1">“{analytics.highestViewedComment.snippet}”</p>
-                          <a href={withChrome(analytics.highestViewedComment.url)} className="text-[#FF7043] font-bold">
-                            View comment
-                          </a>
-                          <small className="text-[#607D8B] block">{analytics.highestViewedComment.likes.toLocaleString()} likes</small>
-                        </div>
-                      ) : (
-                        <div>
-                          <strong className="text-[#263238]">Highest Liked Comment</strong>
-                          <p className="text-[#607D8B] text-sm mt-1 mb-0">
-                            Your most engaging comment will appear here once comment-level engagement tracking is added.
-                          </p>
-                        </div>
-                      )}
-                    </section>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-
-          {/* ---------------------------
-              DESKTOP/TABLET
-             --------------------------- */}
-          <div className="hidden md:block">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+        <div style={{ width: "100%", maxWidth: "100%", minWidth: 0 }}>
+          <div
+            style={{
+              ...GLASS,
+              borderRadius: 18,
+              padding: 16,
+              marginBottom: 12,
+            }}
+          >
+            <section
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(5, minmax(120px, 1fr))",
+                gap: 12,
+              }}
+              className="profileAnalyticsKpiGrid"
+            >
               <KPI label="Profile Interactions" value={kpiValue(analytics.totalViews)} />
               <KPI label="Posts" value={kpiValue(analytics.postsCount)} />
               <KPI label="Comments" value={kpiValue(analytics.commentsCount)} />
               <KPI label="Connections (7d)" value={kpiValue(analytics.connectionsGained7d)} />
               <KPI label="Profile Completion" value={`${analytics.profileCompletionPct}%`} />
-            </div>
+            </section>
+          </div>
 
-            <div className="grid lg:grid-cols-3 gap-6 mb-6">
-              <div className="lg:col-span-2">
-                {Array.isArray(analytics.viewsLast7Days) && Array.isArray(analytics.searchAppearancesLast7Days) ? (
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
-                    <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
-                  </div>
-                ) : (
-                  <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 text-sm text-[#455A64]">
-                    {analyticsLoading ? 'Loading charts…' : 'No view/search chart data available yet.'}
-                  </section>
-                )}
-              </div>
-
-              <ProfileCompletionCard completionPct={analytics.profileCompletionPct} checklist={analytics.profileChecklist} />
-            </div>
-
-            <div className="grid lg:grid-cols-3 gap-6">
-              {Array.isArray(analytics.connectionsLast7Days) ? (
-                <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days} />
-              ) : (
-                <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 text-sm text-[#455A64]">
-                  {analyticsLoading ? 'Loading…' : 'No connection trend data available yet.'}
-                </section>
-              )}
-
-              <RecentViewers viewers={analytics.recentViewers} allViewsHref={allViewsHref} />
-
-              <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-                <h2 className="text-[#FF7043] font-semibold mb-4">Top Content</h2>
-
-                {hasTopPost ? (
-                  <div className="mb-6">
-                    <strong className="text-[#263238]">Top Post (Interactions)</strong>
-                    <a
-                      href={
-                        analytics.highestViewedPost.url +
-                        (isCoachChrome ? '?chrome=coach' : '')
-                      }
-                      className="block text-[#FF7043] font-bold mt-1"
-                    >
-                      {analytics.highestViewedPost.title}
-                    </a>
-                    <small className="text-[#607D8B]">
-                      {analytics.highestViewedPost.views.toLocaleString()} interactions
-                    </small>
-                  </div>
-                ) : (
-                  <div className="mb-6">
-                    <strong className="text-[#263238]">Top Post (Interactions)</strong>
-                    <p className="text-[#607D8B] text-sm mt-1">
-                      Your top-performing post will appear here once interaction tracking is added for feed content.
-                    </p>
-                  </div>
-                )}
-
-                {hasTopComment ? (
-                  <div>
-                    <strong className="text-[#263238]">Highest Liked Comment</strong>
-                    <p className="text-[#455A64] italic mt-1">
-                      “{analytics.highestViewedComment.snippet}”
-                    </p>
-                    <a
-                      href={
-                        analytics.highestViewedComment.url +
-                        (isCoachChrome ? '?chrome=coach' : '')
-                      }
-                      className="text-[#FF7043] font-bold"
-                    >
-                      View comment
-                    </a>
-                    <small className="text-[#607D8B] block">
-                      {analytics.highestViewedComment.likes.toLocaleString()} likes
-                    </small>
-                  </div>
-                ) : (
-                  <div>
-                    <strong className="text-[#263238]">Highest Liked Comment</strong>
-                    <p className="text-[#607D8B] text-sm mt-1">
-                      Your most engaging comment will appear here once comment-level engagement tracking is added.
-                    </p>
-                  </div>
-                )}
-              </section>
+          <div className="profileAnalyticsMobile">
+            <MobileCarousel cards={[visibilityCard, completionCard, actionsCard]} />
+            <div style={{ marginTop: 12 }}>
+              <MobileCarousel cards={[reachCard, recentActivityCard, topContentCard]} />
             </div>
           </div>
+
+          <div className="profileAnalyticsDesktop">
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
+                gap: 12,
+                marginTop: 12,
+              }}
+            >
+              {visibilityCard}
+              {reachCard}
+              {completionCard}
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
+                gap: 12,
+                marginTop: 12,
+              }}
+            >
+              {actionsCard}
+              {recentActivityCard}
+              {topContentCard}
+            </div>
+          </div>
+
+          {!detailedAnalyticsAvailable && !analyticsLoading ? (
+            <div
+              style={{
+                fontSize: 12,
+                color: MUTED,
+                textAlign: "right",
+                fontWeight: 600,
+                lineHeight: 1.4,
+                marginTop: 10,
+              }}
+            >
+              Some charts will populate as profile and visibility events build.
+            </div>
+          ) : null}
         </div>
+
+        <style jsx>{`
+          .profileAnalyticsMobile {
+            display: none;
+          }
+
+          @media (max-width: 1023px) {
+            .profileAnalyticsKpiGrid {
+              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+
+            .profileAnalyticsDesktop {
+              display: none;
+            }
+
+            .profileAnalyticsMobile {
+              display: block;
+            }
+          }
+
+          @media (max-width: 520px) {
+            .profileAnalyticsKpiGrid {
+              grid-template-columns: 1fr !important;
+            }
+          }
+        `}</style>
       </Layout>
     </>
   );
