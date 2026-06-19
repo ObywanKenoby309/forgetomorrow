@@ -14,7 +14,6 @@
 // Mobile grid:  single column, right rail not rendered
 
 import React, {
-  useCallback,
   useEffect,
   useIsomorphicLayoutEffect,
   useLayoutEffect,
@@ -114,61 +113,65 @@ function AnalyticsTitleCard({ title, subtitle, description }) {
   );
 }
 
-// ─── Seeker analytics nav / filter bar ───────────────────────────────────────
-function SeekerAnalyticsNavBar({ activeTab, onTabChange }) {
-  const [isMobileBar, setIsMobileBar] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobileBar(window.innerWidth < 640);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+// ─── Seeker analytics nav tabs (rendered in PAGE as a normal card, not in layout)
+// Exported so profile-analytics.js can import and use it directly.
+export function SeekerAnalyticsNavBar({ activeTab, onTabChange, isMobile }) {
+  const SEEKER_TABS = [
+    { id: "overview",   label: "Overview",         hint: "KPIs + visibility + actions" },
+    { id: "visibility", label: "Visibility",        hint: "Reach trend + viewers" },
+    { id: "strength",   label: "Profile Strength",  hint: "Completion + momentum" },
+    { id: "activity",   label: "Activity",          hint: "Content + connections" },
+  ];
 
   return (
-    <div
+    <section
       style={{
-        ...GLASS,
-        borderRadius: 14,
-        padding: isMobileBar ? "8px 10px" : "10px 16px",
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        overflowX: "auto",
-        msOverflowStyle: "none",
-        scrollbarWidth: "none",
-        WebkitOverflowScrolling: "touch",
+        borderRadius: 18,
+        border: "1px solid rgba(255,255,255,0.22)",
+        background: "rgba(255,255,255,0.68)",
+        boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        padding: isMobile ? 10 : 12,
       }}
     >
-      {SEEKER_TABS.map((tab) => {
-        const active = activeTab === tab.id;
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onTabChange(tab.id)}
-            style={{
-              flexShrink: 0,
-              padding: isMobileBar ? "7px 14px" : "8px 18px",
-              borderRadius: 999,
-              border: active ? `1.5px solid ${ORANGE}` : "1.5px solid rgba(255,255,255,0.30)",
-              background: active ? ORANGE : "rgba(255,255,255,0.55)",
-              color: active ? "#fff" : SLATE,
-              fontSize: isMobileBar ? 12 : 13,
-              fontWeight: 800,
-              cursor: "pointer",
-              fontFamily: "inherit",
-              letterSpacing: active ? "-0.01em" : "0",
-              boxShadow: active ? "0 4px 12px rgba(255,112,67,0.30)" : "none",
-              transition: "all 0.15s ease",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {tab.label}
-          </button>
-        );
-      })}
-    </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(4, minmax(0,1fr))",
+          gap: 8,
+        }}
+      >
+        {SEEKER_TABS.map((tab) => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onTabChange(tab.id)}
+              style={{
+                border: active ? "1px solid rgba(255,112,67,0.36)" : "1px solid rgba(51,65,85,0.10)",
+                background: active ? "rgba(255,112,67,0.14)" : "rgba(255,255,255,0.62)",
+                color: active ? ORANGE : SLATE,
+                borderRadius: 14,
+                padding: isMobile ? "10px 10px" : "12px 14px",
+                cursor: "pointer",
+                textAlign: "left",
+                boxShadow: active ? "0 6px 16px rgba(255,112,67,0.14)" : "none",
+                fontFamily: "inherit",
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.2 }}>{tab.label}</div>
+              {!isMobile && (
+                <div style={{ fontSize: 11, color: active ? ORANGE : MUTED, marginTop: 3, fontWeight: 700 }}>
+                  {tab.hint}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -279,28 +282,8 @@ export default function SeekerAnalyticsLayout({
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
 
-  const handleTabChange = useCallback(
-    (tabId) => {
-      if (onTabChange) {
-        onTabChange(tabId);
-      } else {
-        // Default: push tab as query param so it survives refresh
-        router.push(
-          { pathname: router.pathname, query: { ...router.query, tab: tabId } },
-          undefined,
-          { shallow: true, scroll: false }
-        );
-      }
-    },
-    [onTabChange, router]
-  );
-
-  const resolvedActiveTab =
-    activeTab ||
-    (typeof router.query?.tab === "string" ? router.query.tab : "overview");
-
-  const activeLabel =
-    SEEKER_TABS.find((t) => t.id === resolvedActiveTab)?.label || "Overview";
+  const SEEKER_TAB_LABELS = { overview: "Overview", visibility: "Visibility", strength: "Profile Strength", activity: "Activity" };
+  const activeLabel = SEEKER_TAB_LABELS[activeTab] || "Overview";
 
   const rightRail = right || <RightRailPlacementManager slot="right_rail_1" />;
 
@@ -379,13 +362,7 @@ export default function SeekerAnalyticsLayout({
                 />
               </section>
 
-              {/* Nav tabs */}
-              <SeekerAnalyticsNavBar
-                activeTab={resolvedActiveTab}
-                onTabChange={handleTabChange}
-              />
-
-              {/* Page content */}
+              {/* Page content — tab nav + inlay rendered by page, matching Sora's pattern */}
               {children}
             </div>
           </main>
