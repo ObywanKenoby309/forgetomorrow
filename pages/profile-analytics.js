@@ -190,7 +190,7 @@ function InsightTile({ label, title, body, tone = "live" }) {
     strong: { bg: "rgba(22,163,74,0.10)", color: "#16A34A", dot: "#16A34A" },
     attention: { bg: "rgba(220,38,38,0.10)", color: "#DC2626", dot: "#DC2626" },
     building: { bg: "rgba(15,118,110,0.10)", color: "#0F766E", dot: "#0F766E" },
-  }[tone];
+  }[tone] || { bg: "rgba(255,112,67,0.12)", color: ORANGE, dot: ORANGE };
 
   return (
     <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
@@ -226,6 +226,56 @@ function InsightTile({ label, title, body, tone = "live" }) {
       <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65, marginTop: 6 }}>
         {body}
       </div>
+    </div>
+  );
+}
+
+function MiniMetric({ label, value, hint }) {
+  return (
+    <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: "0.07em",
+          textTransform: "uppercase",
+          color: MUTED,
+          marginBottom: 5,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: 22, fontWeight: 950, color: SLATE, lineHeight: 1 }}>
+        {value}
+      </div>
+      {hint ? (
+        <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.45, marginTop: 7 }}>
+          {hint}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ProgressBar({ value }) {
+  const pct = Math.max(0, Math.min(100, Number(value) || 0));
+  return (
+    <div
+      style={{
+        height: 10,
+        borderRadius: 999,
+        background: "rgba(100,116,139,0.16)",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          width: `${pct}%`,
+          height: "100%",
+          borderRadius: 999,
+          background: "linear-gradient(90deg,#FF7043,#FFB74D)",
+        }}
+      />
     </div>
   );
 }
@@ -441,6 +491,38 @@ export default function ProfileAnalyticsPage() {
     return list.filter((x) => !x?.done).slice(0, 4);
   }, [analytics.profileChecklist]);
 
+  const totalContentActivity = Number(analytics.postsCount || 0) + Number(analytics.commentsCount || 0);
+
+  const weeklyViewsTotal = useMemo(() => {
+    if (!Array.isArray(analytics.viewsLast7Days)) return 0;
+    return analytics.viewsLast7Days.reduce((sum, n) => sum + Number(n || 0), 0);
+  }, [analytics.viewsLast7Days]);
+
+  const weeklySearchTotal = useMemo(() => {
+    if (!Array.isArray(analytics.searchAppearancesLast7Days)) return 0;
+    return analytics.searchAppearancesLast7Days.reduce((sum, n) => sum + Number(n || 0), 0);
+  }, [analytics.searchAppearancesLast7Days]);
+
+  const momentumScore = useMemo(() => {
+    const completionPoints = Math.min(45, Math.round((analytics.profileCompletionPct || 0) * 0.45));
+    const viewPoints = Math.min(20, analytics.totalViews * 2);
+    const contentPoints = Math.min(20, totalContentActivity * 2);
+    const connectionPoints = Math.min(15, analytics.connectionsGained7d * 5);
+    return Math.max(0, Math.min(100, completionPoints + viewPoints + contentPoints + connectionPoints));
+  }, [
+    analytics.profileCompletionPct,
+    analytics.totalViews,
+    totalContentActivity,
+    analytics.connectionsGained7d,
+  ]);
+
+  const momentumLabel = useMemo(() => {
+    if (momentumScore >= 80) return "Strong momentum";
+    if (momentumScore >= 50) return "Building momentum";
+    if (momentumScore >= 25) return "Early momentum";
+    return "Needs activity";
+  }, [momentumScore]);
+
   const visibility = useMemo(() => {
     const c = Number(analytics.profileCompletionPct) || 0;
 
@@ -468,7 +550,7 @@ export default function ProfileAnalyticsPage() {
   }, [analytics.profileCompletionPct]);
 
   const topContentCard = (
-    <SectionCard title="Top Content" minHeight={260}>
+    <SectionCard title="Top Content" minHeight={390}>
       <div style={{ display: "grid", gap: 12 }}>
         {analytics.highestViewedPost ? (
           <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
@@ -529,12 +611,39 @@ export default function ProfileAnalyticsPage() {
             body="As comment-level tracking grows, this area can show which community contributions helped people notice you."
           />
         )}
+
+        <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              color: ORANGE,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+            }}
+          >
+            Content playbook
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {[
+              "Share a quick career win or lesson learned.",
+              "Answer one Hearth discussion with useful detail.",
+              "Comment where you can add practical experience.",
+            ].map((item) => (
+              <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span style={{ color: ORANGE, fontWeight: 900, lineHeight: 1.35 }}>•</span>
+                <span style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </SectionCard>
   );
 
   const actionsCard = (
-    <SectionCard title="Next Best Actions" minHeight={260}>
+    <SectionCard title="Next Best Actions" minHeight={390}>
       <div style={{ display: "grid", gap: 10 }}>
         {profileLoading ? (
           <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, color: MUTED }}>
@@ -558,12 +667,26 @@ export default function ProfileAnalyticsPage() {
             body="Keep your profile fresh as your goals, projects, and experience evolve."
           />
         )}
+
+        <ActionTile
+          title="Review your public profile"
+          body="See what recruiters, coaches, and professional contacts see when they land on your profile."
+          buttonLabel="Open profile →"
+          onClick={() => router.push(withChrome("/profile"))}
+        />
+
+        <ActionTile
+          title="Build visibility through the Hearth"
+          body="Helpful community activity can become professional visibility without turning into noisy social posting."
+          buttonLabel="Open The Hearth →"
+          onClick={() => router.push(withChrome("/hearth/spotlights"))}
+        />
       </div>
     </SectionCard>
   );
 
   const visibilityCard = (
-    <SectionCard title="Visibility Intelligence" minHeight={260}>
+    <SectionCard title="Visibility Intelligence" minHeight={390}>
       <div style={{ display: "grid", gap: 10 }}>
         <InsightTile
           label={visibility.level}
@@ -583,12 +706,33 @@ export default function ProfileAnalyticsPage() {
           title={`${analytics.connectionsGained7d.toLocaleString()} new connections in 7 days`}
           body="Connection growth helps show whether visibility is turning into real professional momentum."
         />
+
+        <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: ORANGE,
+              marginBottom: 10,
+            }}
+          >
+            Visibility breakdown
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <MiniMetric label="7d views" value={weeklyViewsTotal} hint="Profile reach" />
+            <MiniMetric label="Search hits" value={weeklySearchTotal} hint="Discovery" />
+            <MiniMetric label="Content" value={totalContentActivity} hint="Posts + comments" />
+            <MiniMetric label="Viewers" value={analytics.recentViewers.length} hint="Recent list" />
+          </div>
+        </div>
       </div>
     </SectionCard>
   );
 
   const reachCard = (
-    <SectionCard title="Reach Trend" minHeight={260}>
+    <SectionCard title="Reach Trend" minHeight={390}>
       {Array.isArray(analytics.viewsLast7Days) && Array.isArray(analytics.searchAppearancesLast7Days) ? (
         <div style={{ display: "grid", gap: 12 }}>
           <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
@@ -602,11 +746,30 @@ export default function ProfileAnalyticsPage() {
           {analyticsLoading ? "Loading charts…" : "No 7-day view/search chart data available yet."}
         </div>
       )}
+
+      <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, marginTop: 12 }}>
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            color: ORANGE,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            marginBottom: 8,
+          }}
+        >
+          Reading the trend
+        </div>
+        <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
+          Spikes show moments when people noticed you. The next step is connecting those moments to
+          posts, comments, profile updates, applications, or recruiter searches.
+        </div>
+      </div>
     </SectionCard>
   );
 
   const recentActivityCard = (
-    <SectionCard title="Recent Activity" minHeight={260}>
+    <SectionCard title="Recent Activity" minHeight={390}>
       <div style={{ display: "grid", gap: 12 }}>
         {Array.isArray(analytics.connectionsLast7Days) ? (
           <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days} />
@@ -617,16 +780,75 @@ export default function ProfileAnalyticsPage() {
         )}
 
         <RecentViewers viewers={analytics.recentViewers} allViewsHref={allViewsHref} />
+
+        <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              color: ORANGE,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+            }}
+          >
+            Why this matters
+          </div>
+          <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
+            Views are not the finish line. The goal is to turn visibility into profile visits,
+            conversations, applications, referrals, and real opportunities.
+          </div>
+        </div>
       </div>
     </SectionCard>
   );
 
   const completionCard = (
-    <SectionCard title="Profile Strength" minHeight={260}>
-      <ProfileCompletionCard
-        completionPct={analytics.profileCompletionPct}
-        checklist={analytics.profileChecklist}
-      />
+    <SectionCard title="Profile Strength" minHeight={390}>
+      <div style={{ display: "grid", gap: 12 }}>
+        <ProfileCompletionCard
+          completionPct={analytics.profileCompletionPct}
+          checklist={analytics.profileChecklist}
+        />
+
+        <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              color: ORANGE,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+            }}
+          >
+            Momentum score
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 32, fontWeight: 950, color: SLATE, lineHeight: 1 }}>
+                {momentumScore}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginTop: 4 }}>
+                {momentumLabel}
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 90 }}>
+              <ProgressBar value={momentumScore} />
+              <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.45, marginTop: 7 }}>
+                Based on completion, profile interactions, content activity, and connection growth.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <InsightTile
+          label="Signal"
+          tone={analytics.profileCompletionPct >= 80 ? "strong" : "building"}
+          title="Complete profiles are easier to trust"
+          body="Recruiters and contacts need quick proof of direction, capability, and credibility. This card keeps those gaps visible."
+        />
+      </div>
     </SectionCard>
   );
 
@@ -709,6 +931,7 @@ export default function ProfileAnalyticsPage() {
                 gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
                 gap: 12,
                 marginTop: 12,
+                alignItems: "stretch",
               }}
             >
               {visibilityCard}
@@ -722,6 +945,7 @@ export default function ProfileAnalyticsPage() {
                 gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
                 gap: 12,
                 marginTop: 12,
+                alignItems: "stretch",
               }}
             >
               {actionsCard}
