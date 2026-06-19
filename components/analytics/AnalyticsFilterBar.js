@@ -1,16 +1,14 @@
 // components/analytics/AnalyticsFilterBar.js
 //
-// Self-contained filter bar for all recruiter analytics pages.
+// Self-contained filter bar for recruiter analytics workspace.
 // Owns its own isMobile detection and layout logic entirely in JavaScript.
 // No external CSS classes — no specificity battles.
 //
-// Desktop: View row | Report row | Period + selects on same line
-// Mobile:  View strip | Report strip | Period strip | Selects 50/50 | Export full-width
-//
-// Active tab always scrolled into view on mobile via ScrollStrip.
+// Desktop: Workspace tabs | Reports row only on Reports | Period + selects
+// Mobile:  Workspace grid | Reports strip only on Reports | Period strip | Selects 50/50 | Export full-width
 //
 // Props:
-//   activeTab      — "command" | "reports" | "presentation"
+//   activeTab      — "command" | "reports" | "presentation" | "snapshots"
 //   activeReport   — active report key e.g. "funnel"
 //   filters        — { range, jobId, recruiterId, companyId, from, to }
 //   onFilterChange — (patch) => void
@@ -41,9 +39,30 @@ const SOFT_GLASS = {
 
 // ─── Navigation config ────────────────────────────────────────────────────────
 const MODE_TABS = [
-  { key: "command", label: "Command Center", href: "/recruiter/analytics" },
-  { key: "reports", label: "Report Details", href: "/recruiter/analytics/reports" },
-  { key: "presentation", label: "Presentation Visuals", href: "/recruiter/analytics/presentation" },
+  {
+    key: "command",
+    label: "Command Center",
+    hint: "Executive overview",
+    tab: "command",
+  },
+  {
+    key: "reports",
+    label: "Report Details",
+    hint: "Detailed narratives",
+    tab: "reports",
+  },
+  {
+    key: "presentation",
+    label: "Presentation Visuals",
+    hint: "Export visuals",
+    tab: "presentation",
+  },
+  {
+    key: "snapshots",
+    label: "Snapshot Delivery",
+    hint: "Delivery schedules",
+    tab: "snapshots",
+  },
 ];
 
 const REPORT_LINKS = [
@@ -63,7 +82,8 @@ function ScrollStrip({ children, activeIndex, isMobile }) {
 
   useEffect(() => {
     if (!isMobile || !ref.current) return;
-    const active = ref.current.children[activeIndex];
+    const safeIndex = activeIndex >= 0 ? activeIndex : 0;
+    const active = ref.current.children[safeIndex];
     if (active) {
       active.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
     }
@@ -92,6 +112,36 @@ function ScrollStrip({ children, activeIndex, isMobile }) {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+function WorkspaceTabButton({ active, onClick, label, hint, isMobile }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        border: active ? "1px solid rgba(255,112,67,0.36)" : "1px solid rgba(51,65,85,0.10)",
+        background: active ? "rgba(255,112,67,0.14)" : "rgba(255,255,255,0.62)",
+        color: active ? ORANGE : SLATE,
+        borderRadius: 14,
+        padding: isMobile ? "10px 10px" : "12px 14px",
+        cursor: "pointer",
+        textAlign: "left",
+        boxShadow: active ? "0 6px 16px rgba(255,112,67,0.14)" : "none",
+        fontFamily: "inherit",
+        minWidth: 0,
+        width: "100%",
+        transition: "background 140ms ease, border 140ms ease, box-shadow 140ms ease",
+      }}
+    >
+      <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.2 }}>{label}</div>
+      {!isMobile && (
+        <div style={{ fontSize: 11, color: active ? ORANGE : MUTED, marginTop: 3, fontWeight: 700 }}>
+          {hint}
+        </div>
+      )}
+    </button>
+  );
+}
+
 function TabButton({ active, onClick, children, small }) {
   return (
     <button
@@ -254,9 +304,16 @@ export default function AnalyticsFilterBar({
 
   const period = filters?.range || "30d";
 
-  const activeModeIdx = MODE_TABS.findIndex((t) => t.key === activeTab);
   const activeReportIdx = REPORT_LINKS.findIndex((t) => t.key === activeReport);
   const activePeriodIdx = PERIOD_OPTIONS.indexOf(period);
+
+  function handleWorkspaceNavigate(tab) {
+    onNavigate?.("/recruiter/analytics", { tab });
+  }
+
+  function handleReportNavigate(report) {
+    onNavigate?.("/recruiter/analytics", { tab: "reports", report });
+  }
 
   function handleExport() {
     const params = new URLSearchParams({
@@ -275,37 +332,44 @@ export default function AnalyticsFilterBar({
     return (
       <section style={{ ...GLASS, borderRadius: 18, padding: 12, width: "100%", minWidth: 0, maxWidth: "100%" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, width: "100%" }}>
-            <Label small>View</Label>
-            <ScrollStrip activeIndex={activeModeIdx} isMobile>
-              {MODE_TABS.map((tab) => (
-                <TabButton
-                  key={tab.key}
-                  active={activeTab === tab.key}
-                  onClick={() => onNavigate?.(tab.href)}
-                  small
-                >
-                  {tab.label}
-                </TabButton>
-              ))}
-            </ScrollStrip>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 8,
+              width: "100%",
+              minWidth: 0,
+            }}
+          >
+            {MODE_TABS.map((tab) => (
+              <WorkspaceTabButton
+                key={tab.key}
+                active={activeTab === tab.key}
+                onClick={() => handleWorkspaceNavigate(tab.tab)}
+                label={tab.label}
+                hint={tab.hint}
+                isMobile
+              />
+            ))}
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, width: "100%" }}>
-            <Label small>Report</Label>
-            <ScrollStrip activeIndex={activeReportIdx} isMobile>
-              {REPORT_LINKS.map((tab) => (
-                <TabButton
-                  key={tab.key}
-                  active={activeTab === "reports" && activeReport === tab.key}
-                  onClick={() => onNavigate?.("/recruiter/analytics/reports", { report: tab.key })}
-                  small
-                >
-                  {tab.label}
-                </TabButton>
-              ))}
-            </ScrollStrip>
-          </div>
+          {activeTab === "reports" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, width: "100%" }}>
+              <Label small>Report</Label>
+              <ScrollStrip activeIndex={activeReportIdx} isMobile>
+                {REPORT_LINKS.map((tab) => (
+                  <TabButton
+                    key={tab.key}
+                    active={activeReport === tab.key}
+                    onClick={() => handleReportNavigate(tab.key)}
+                    small
+                  >
+                    {tab.label}
+                  </TabButton>
+                ))}
+              </ScrollStrip>
+            </div>
+          )}
 
           <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, width: "100%" }}>
             <Label small>Period</Label>
@@ -375,40 +439,41 @@ export default function AnalyticsFilterBar({
   return (
     <section style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <Label>View:</Label>
-          <ScrollStrip activeIndex={activeModeIdx} isMobile={false}>
-            {MODE_TABS.map((tab) => (
-              <TabButton
-                key={tab.key}
-                active={activeTab === tab.key}
-                onClick={() => onNavigate?.(tab.href)}
-              >
-                {tab.label}
-              </TabButton>
-            ))}
-          </ScrollStrip>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: 8,
+          }}
+        >
+          {MODE_TABS.map((tab) => (
+            <WorkspaceTabButton
+              key={tab.key}
+              active={activeTab === tab.key}
+              onClick={() => handleWorkspaceNavigate(tab.tab)}
+              label={tab.label}
+              hint={tab.hint}
+              isMobile={false}
+            />
+          ))}
+        </div>
 
-          <div style={{ flexShrink: 0, marginLeft: 6, textAlign: "left" }}>
-            <div style={{ fontSize: 11, color: "#94A3B8" }}>Refresh</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>30s live</div>
+        {activeTab === "reports" && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <Label>Report:</Label>
+            <ScrollStrip activeIndex={activeReportIdx} isMobile={false}>
+              {REPORT_LINKS.map((tab) => (
+                <TabButton
+                  key={tab.key}
+                  active={activeReport === tab.key}
+                  onClick={() => handleReportNavigate(tab.key)}
+                >
+                  {tab.label}
+                </TabButton>
+              ))}
+            </ScrollStrip>
           </div>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <Label>Report:</Label>
-          <ScrollStrip activeIndex={activeReportIdx} isMobile={false}>
-            {REPORT_LINKS.map((tab) => (
-              <TabButton
-                key={tab.key}
-                active={activeTab === "reports" && activeReport === tab.key}
-                onClick={() => onNavigate?.("/recruiter/analytics/reports", { report: tab.key })}
-              >
-                {tab.label}
-              </TabButton>
-            ))}
-          </ScrollStrip>
-        </div>
+        )}
 
         <div style={{ ...SOFT_GLASS, borderRadius: 12, padding: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
