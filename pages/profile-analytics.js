@@ -97,7 +97,7 @@ function InsightTile({ label, title, body, tone = "live" }) {
 }
 
 
-function RotatingCard({ title, slides = [], intervalMs = 5200 }) {
+function RotatingCard({ title, slides = [], intervalMs = 5200, minHeight = 210 }) {
   const validSlides = Array.isArray(slides) ? slides.filter(Boolean) : [];
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -116,7 +116,7 @@ function RotatingCard({ title, slides = [], intervalMs = 5200 }) {
   return (
     <SectionCard title={title}>
       <div style={{ display: "grid", gap: 10 }}>
-        <div style={{ minHeight: 210, display: "grid" }}>
+        <div style={{ minHeight, display: "grid" }}>
           {validSlides[activeIndex] || null}
         </div>
 
@@ -307,23 +307,24 @@ export default function ProfileAnalyticsPage() {
   const visibilityCard = (
     <RotatingCard
       title="Visibility Intelligence"
+      minHeight={132}
       slides={[
         <InsightTile
-          key="completion"
+          key="visibility-completion"
           label={vis.level}
           tone={vis.tone}
           title={`${analytics.profileCompletionPct}% profile completion`}
           body={vis.body}
         />,
         <InsightTile
-          key="interactions"
+          key="visibility-interactions"
           label="Seen"
           tone="live"
           title={`${analytics.totalViews.toLocaleString()} profile interactions`}
           body="Your current visibility footprint across profile and engagement activity."
         />,
         <InsightTile
-          key="connections"
+          key="visibility-connections"
           label="Network"
           tone="building"
           title={`${analytics.connectionsGained7d.toLocaleString()} new connections in 7 days`}
@@ -362,11 +363,38 @@ export default function ProfileAnalyticsPage() {
             gap: GAP,
           }}
         >
-          <div style={{ minWidth: 0, minHeight: 300, display: "grid" }}>
-            <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
+          <div
+            style={{
+              ...GLASS_SOFT,
+              borderRadius: 16,
+              padding: 14,
+              minHeight: isMobile ? 300 : 430,
+              overflow: "hidden",
+              display: "grid",
+              gridTemplateRows: "auto minmax(0, 1fr)",
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 8 }}>Views (Last 7 Days)</div>
+            <div style={{ minHeight: isMobile ? 240 : 360, overflow: "hidden" }}>
+              <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
+            </div>
           </div>
-          <div style={{ minWidth: 0, minHeight: 300, display: "grid" }}>
-            <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
+
+          <div
+            style={{
+              ...GLASS_SOFT,
+              borderRadius: 16,
+              padding: 14,
+              minHeight: isMobile ? 300 : 430,
+              overflow: "hidden",
+              display: "grid",
+              gridTemplateRows: "auto minmax(0, 1fr)",
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 8 }}>Search Appearances (Last 7 Days)</div>
+            <div style={{ minHeight: isMobile ? 240 : 360, overflow: "hidden" }}>
+              <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
+            </div>
           </div>
         </div>
       ) : (
@@ -830,7 +858,8 @@ export default function ProfileAnalyticsPage() {
           {bleedCommandRow(
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{visibilityCard}</section>,
             <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-end" }}>{reachCard}</section>,
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{recentViewersCompactCard}</section>
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{recentViewersCompactCard}</section>,
+            DESKTOP_BLEED_DROP
           )}
         </>
       );
