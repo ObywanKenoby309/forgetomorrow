@@ -226,24 +226,24 @@ function ConnectedJobsPanel({ withChrome, isMobile = false, style = {} }) {
 function ActionTile({ title, emptyText, items, href, withChrome, style }) {
   const list = Array.isArray(items) ? items : [];
   return (
-    <div className="rounded-lg p-4 flex flex-col min-h-[170px]" style={style || {}}>
+    <div className="rounded-lg p-3 flex flex-col min-h-[112px]" style={style || {}}>
       <div className="flex items-start justify-between gap-3">
         <div className="font-semibold text-slate-900 text-sm leading-5 whitespace-normal break-words">{title}</div>
         <div className="shrink-0" />
       </div>
-      <div className="mt-3 flex-1">
+      <div className="mt-2 flex-1">
         {list.length === 0 ? (
-          <div className="text-sm text-slate-500">{emptyText}</div>
+          <div className="text-xs text-slate-500 leading-5">{emptyText}</div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {list.slice(0, 1).map((n) => (
-              <div key={n.id} className="text-sm text-slate-700">{n.title || 'Update'}</div>
+              <div key={n.id} className="text-xs text-slate-700 leading-5">{n.title || 'Update'}</div>
             ))}
           </div>
         )}
       </div>
-      <div className="mt-4 flex justify-end">
-        <Link href={withChrome(href)} className="rounded-md border px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+      <div className="mt-2 flex justify-end">
+        <Link href={withChrome(href)} className="rounded-md border px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
           View More
         </Link>
       </div>
@@ -342,19 +342,19 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) 
         </div>
       </div>
       {initialLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <div key={idx} className="rounded-lg p-4 min-h-[170px] animate-pulse"
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+          {Array.from({ length: 5 }).map((_, idx) => (
+            <div key={idx} className="rounded-lg p-3 min-h-[112px] animate-pulse"
               style={{ ...glassStyle, borderRadius: 14 }}>
               <div className="h-4 w-40 bg-slate-200 rounded" />
-              <div className="h-3 w-56 bg-slate-200 rounded mt-4" />
-              <div className="h-3 w-44 bg-slate-200 rounded mt-2" />
-              <div className="h-10 w-28 bg-slate-200 rounded mt-6 ml-auto" />
+              <div className="h-3 w-32 bg-slate-200 rounded mt-3" />
+              <div className="h-3 w-24 bg-slate-200 rounded mt-2" />
+              <div className="h-8 w-24 bg-slate-200 rounded mt-4 ml-auto" />
             </div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           <ActionTile title="New Messages"        emptyText="No unread items."        items={buckets.messages}     href={`/action-center?scope=${scope}&tab=SOCIAL`}       withChrome={withChrome} style={glassStyle} />
           <ActionTile title="Job Updates"         emptyText="No new job updates."     items={buckets.jobs}         href={`/action-center?scope=${scope}&tab=JOBS`}         withChrome={withChrome} style={glassStyle} />
           <ActionTile title="Application Updates" emptyText="No application updates." items={buckets.applications} href={`/action-center?scope=${scope}&tab=APPLICATIONS`}  withChrome={withChrome} style={glassStyle} />
