@@ -3,11 +3,19 @@ import { prisma } from "@/lib/prisma";
 
 export default async function handler(req, res) {
   try {
-    const count = await prisma.visibilityEvent.count();
+    const event = await prisma.visibilityEvent.create({
+      data: {
+        targetUserId: "test-user",
+        eventType: "TEST_EVENT",
+        metadata: {
+          source: "api-test",
+        },
+      },
+    });
 
     return res.status(200).json({
       ok: true,
-      count,
+      event,
     });
   } catch (error) {
     console.error(error);
