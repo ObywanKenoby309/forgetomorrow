@@ -611,37 +611,6 @@ export default function ProfileAnalyticsPage() {
             {visibilityHeroCard}
             {nextActionsRailCard}
           </div>
-
-          <div
-            style={{
-              marginLeft: LEFT_BLEED,
-              marginRight: RIGHT_BLEED,
-              marginTop: GAP,
-              display: "grid",
-              gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)",
-              gap: GAP,
-              alignItems: "start",
-            }}
-          >
-            {recentViewersCompactCard}
-            {topContentCompactCard}
-            {connectionGrowthCompactCard}
-          </div>
-
-          <div
-            style={{
-              marginLeft: LEFT_BLEED,
-              marginRight: RIGHT_BLEED,
-              marginTop: GAP,
-              display: "grid",
-              gridTemplateColumns: "minmax(0,1fr) minmax(0,2fr)",
-              gap: GAP,
-              alignItems: "start",
-            }}
-          >
-            {strengthCard}
-            {recentActivityCard}
-          </div>
         </>
       );
     }
