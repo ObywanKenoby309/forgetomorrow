@@ -971,6 +971,8 @@ model User {
   recruiterReviewPacketsCreated  RecruiterCandidateReviewPacket[] @relation("RecruiterReviewPacketsCreated")
   resumes                        Resume[]
   savedPosts                     SavedPost[]
+  visibilityEventsReceived       VisibilityEvent[] 				  @relation("VisibilityTarget")
+  visibilityEventsCreated  		 VisibilityEvent[] 				  @relation("VisibilityActor")
   feedHearthRecommendations      FeedHearthRecommendation[]
   hearthForumThreads             HearthForumThread[]              @relation("HearthThreadAuthor")
   hearthForumReplies             HearthForumReply[]               @relation("HearthReplyAuthor")
@@ -1894,6 +1896,24 @@ model ProfileView {
   @@index([targetId])
   @@index([viewerId])
   @@map("profile_views")
+}
+
+model VisibilityEvent {
+  id           String   @id @default(cuid())
+
+  actorId      String?
+  actor        User?    @relation("VisibilityActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  targetUserId String
+  targetUser   User     @relation("VisibilityTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  eventType    String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([targetUserId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([eventType, createdAt])
 }
 
 model Queue {
