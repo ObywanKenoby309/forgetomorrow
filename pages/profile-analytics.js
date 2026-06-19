@@ -222,6 +222,154 @@ function SmallPill({ children, tone = "neutral" }) {
   );
 }
 
+
+function cleanRecruiterLanguage(text = "") {
+  return String(text || "")
+    .replace(/Recruiter should read this as/gi, "This profile reads as")
+    .replace(/Recruiter should/gi, "Recruiters will likely")
+    .replace(/recruiter should/gi, "recruiters will likely")
+    .replace(/Validate /g, "Validate ")
+    .trim();
+}
+
+function sentenceCase(text = "") {
+  const s = String(text || "").trim();
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function simpleCapabilityLabel(label = "") {
+  return String(label || "")
+    .replace(/\s*\/\s*/g, " / ")
+    .replace(/It/g, "IT")
+    .trim();
+}
+
+function capabilityExplanation(label = "") {
+  const l = String(label || "").toLowerCase();
+  if (/service delivery|customer operations|customer success|account/.test(l)) return "Recruiters see customer-facing operations, delivery ownership, escalation handling, and business relationship signals.";
+  if (/process|operations|improvement|workflow/.test(l)) return "Recruiters see evidence of improving systems, workflows, standards, and operational execution.";
+  if (/leadership|people|executive|founder|strategy/.test(l)) return "Recruiters see leadership scope, ownership, decision-making, and accountability indicators.";
+  if (/it service|incident|technical support|desktop|endpoint|identity|access|systems|cloud/.test(l)) return "Recruiters see technical operations, support delivery, troubleshooting, systems, and structured service-process evidence.";
+  if (/training|enablement|documentation|knowledge/.test(l)) return "Recruiters see knowledge transfer, documentation ownership, training, and repeatable-process discipline.";
+  if (/sales|business development|revenue/.test(l)) return "Recruiters see commercial exposure, customer communication, conversion, and business-growth context.";
+  if (/project|program|portfolio|product/.test(l)) return "Recruiters see delivery, stakeholder coordination, scope management, and implementation ownership signals.";
+  if (/safety|security|public|military|government/.test(l)) return "Recruiters see discipline, judgment, risk awareness, protocol, and high-responsibility environment experience.";
+  return "Recruiters see this as a visible capability signal, but they may still validate scope, ownership, and outcomes.";
+}
+
+function roleRecommendationsFromSignals(signals = [], headline = "") {
+  const text = `${safeArray(signals).join(" ")} ${headline}`.toLowerCase();
+  const roles = [];
+  const add = (title, reason) => {
+    if (!roles.some((r) => r.title === title)) roles.push({ title, reason });
+  };
+
+  if (/customer success|service delivery|customer operations|account/.test(text)) {
+    add("Director of Customer Success Operations", "Strong customer operations, service delivery, escalation, and support-leadership alignment.");
+    add("Service Delivery Director", "Visible delivery ownership, SLA/process discipline, and client-facing operations signals.");
+    add("Customer Success Leader", "Customer relationship, adoption, retention, and operational support signals are present.");
+  }
+  if (/operations|process|workflow|kpi|improvement/.test(text)) {
+    add("Operations Director", "Operational execution, process improvement, and cross-functional delivery signals are visible.");
+    add("Business Operations Lead", "Process, reporting, workflow, and execution evidence supports business-operations review.");
+  }
+  if (/project|program|portfolio|product|roadmap/.test(text)) {
+    add("Program / Portfolio Manager", "Project delivery, requirements translation, stakeholder coordination, and roadmap signals are present.");
+    add("Product Operations Lead", "Product ownership, execution, user insight, and operating-model signals are visible.");
+  }
+  if (/technical support|it service|incident|endpoint|systems|cloud|identity/.test(text)) {
+    add("Technical Support Operations Manager", "Technical support, service process, escalation, and systems-adjacent signals are visible.");
+    add("IT Service Delivery Manager", "ITSM, incident/process ownership, support delivery, and service execution signals are present.");
+  }
+  if (/leadership|people|executive|founder|strategy/.test(text)) {
+    add("Founder / Operator", "Ownership, strategy, execution, and cross-functional leadership signals are visible.");
+    add("Operations Executive", "Leadership, systems thinking, execution, and business-building signals support executive review.");
+  }
+
+  if (!roles.length) {
+    add("Operations / Delivery Role", "The current profile shows early operational signals, but more target-role evidence would sharpen fit.");
+    add("Customer-Facing Operations Role", "Visible profile evidence suggests service, communication, or support-adjacent capability.");
+  }
+
+  return roles.slice(0, 6);
+}
+
+function cleanValidationArea(text = "") {
+  const s = String(text || "").trim();
+  if (!s) return null;
+  if (/project|work example|scope|stakeholder|timeline|outcome/i.test(s)) {
+    return {
+      title: "Project ownership and outcomes",
+      body: "Recruiters will want one or two concrete examples showing scope, your ownership, stakeholders, risk, and measurable results.",
+      fix: "Add project entries with problem, action, tools, stakeholders, and outcome.",
+    };
+  }
+  if (/resume|source evidence/i.test(s)) {
+    return {
+      title: "Resume-backed proof",
+      body: "Recruiters will want the profile narrative backed by a current primary resume and visible evidence.",
+      fix: "Attach or refresh the primary resume and make sure it supports the same story as the profile.",
+    };
+  }
+  if (/budget|forecast|financial/i.test(s)) {
+    return {
+      title: "Budget or planning ownership",
+      body: "Recruiters may look for clearer evidence of budget, forecasting, staffing, or resource-planning responsibility.",
+      fix: "Add budget, staffing, cost, or planning details where accurate.",
+    };
+  }
+  if (/team|leadership|performance|authority/i.test(s)) {
+    return {
+      title: "Leadership scope",
+      body: "Recruiters will likely confirm team size, authority level, performance ownership, and leadership outcomes.",
+      fix: "Add team size, reporting structure, coaching responsibilities, and measurable team outcomes.",
+    };
+  }
+  if (/process|repeatable|execution|workflow|quality/i.test(s)) {
+    return {
+      title: "Repeatable execution proof",
+      body: "Recruiters will likely validate whether the profile shows one-time activity or repeatable operating discipline.",
+      fix: "Add SOPs, playbooks, KPIs, before/after metrics, or workflow examples.",
+    };
+  }
+  return {
+    title: sentenceCase(s.replace(/^Ask for\s+/i, "").replace(/^Validate\s+/i, "")),
+    body: cleanRecruiterLanguage(s),
+    fix: "Add clearer proof, context, and measurable outcomes tied to the roles you want.",
+  };
+}
+
+function extractHighValueEvidence({ headline = "", summary = "", experience = [], projects = [], certifications = [], education = [], skills = [], profileSignals = [], hasResume = false } = {}) {
+  const rawText = [headline, summary, JSON.stringify(experience || []), JSON.stringify(projects || []), JSON.stringify(certifications || []), JSON.stringify(education || [])].join(" ");
+  const evidence = [];
+  const add = (item) => {
+    const clean = String(item || "").trim();
+    if (!clean) return;
+    if (/headline present|location present|listed skill|summary contains|summary includes|summary communicates|language:/i.test(clean)) return;
+    if (!evidence.some((x) => x.toLowerCase() === clean.toLowerCase())) evidence.push(clean);
+  };
+
+  const quantified = rawText.match(/(?:\$?\d[\d,.]*\+?\s*(?:years|yrs|people|users|clients|accounts|teams|projects|tickets|cases|direct reports|interactions|pages|%|percent|million|billion|k|m)|\$\d[\d,.]*\+?)/gi) || [];
+  quantified.slice(0, 6).forEach((item) => add(item));
+
+  safeArray(projects).slice(0, 4).forEach((project, idx) => {
+    const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || `Project ${idx + 1}`;
+    if (title) add(`Project evidence: ${title}`);
+  });
+
+  safeArray(certifications).slice(0, 4).forEach((cert) => {
+    const label = typeof cert === "string" ? cert : cert?.name || cert?.title || cert?.label || cert?.certification;
+    if (label) add(`Credential/training: ${label}`);
+  });
+
+  (profileSignals || []).flatMap((sig) => sig.evidenceDetected || []).forEach(add);
+  if (hasResume) add("Primary resume evidence is available");
+  if (skills.length) add(`${skills.length} role-relevant skills listed`);
+
+  return evidence.slice(0, 8);
+}
+
 // ─── Tab copy ─────────────────────────────────────────────────────────────────
 const TAB_COPY = {
   overview:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "Understand how your profile performs, who's viewing it, and what actions will accelerate your visibility." },
@@ -456,26 +604,70 @@ export default function ProfileAnalyticsPage() {
     const conclusion = operationalInference.overallConclusion || "Recruiter interpretation is limited until more experience, skills, projects, or resume evidence is available.";
     const recruiterMeaning = operationalInference.recruiterMeaning || "Recruiters will use the visible profile evidence as a starting point and validate scope, ownership, and outcomes.";
 
-    const validationFocus = Array.from(new Set([
+    const rawValidationFocus = Array.from(new Set([
       ...(operationalInference.validationFocus || []),
       ...needsWork.flatMap((sig) => sig.missingValidation || []).slice(0, 6),
     ].filter(Boolean))).slice(0, 6);
+
+    const validationCards = rawValidationFocus.map(cleanValidationArea).filter(Boolean).slice(0, 4);
+    const validationFocus = validationCards.length
+      ? validationCards.map((item) => item.body)
+      : ["Recruiters will mostly validate fit, scope, and role alignment because the core profile signals are already strong."];
 
     const topStrengths = Array.from(new Set([
       ...(operationalInference.signals || []),
       ...proven.map((sig) => sig.label.replace(" Signal", "")),
     ].filter(Boolean))).slice(0, 8);
 
+    const strengthNarratives = topStrengths.slice(0, 5).map((label) => ({
+      label: simpleCapabilityLabel(label),
+      body: capabilityExplanation(label),
+    }));
+
     const careerSignals = Array.from(new Set([
       ...(operationalInference.progressionCapabilities || []),
       ...(operationalInference.relatedCapabilities || []),
     ].filter(Boolean))).slice(0, 8);
 
-    const strongestEvidence = Array.from(new Set([
-      ...profileSignals.flatMap((sig) => sig.evidenceDetected || []),
-      ...(hasResume ? ["Primary resume evidence is available"] : []),
-      ...(projects.length ? [`${projects.length} project${projects.length === 1 ? "" : "s"} visible`] : []),
-    ].filter(Boolean))).slice(0, 8);
+    const careerRecommendations = roleRecommendationsFromSignals([
+      ...topStrengths,
+      ...careerSignals,
+      ...(operationalInference.signals || []),
+    ], headline);
+
+    const strongestEvidence = extractHighValueEvidence({
+      headline,
+      summary,
+      experience,
+      projects,
+      certifications,
+      education,
+      skills,
+      profileSignals,
+      hasResume,
+    });
+
+    const recruiterJudgment = (() => {
+      const strengthLine = strengthNarratives.length
+        ? `The strongest visible story is ${strengthNarratives.slice(0, 3).map((item) => item.label).join(", ")}.`
+        : "The strongest story is still forming because the profile needs more visible evidence.";
+      const validationLine = validationCards.length
+        ? `The main things I would still validate are ${validationCards.slice(0, 3).map((item) => item.title.toLowerCase()).join(", ")}.`
+        : "I would mostly validate fit, role scope, and current goals rather than basic credibility.";
+      const fitLine = score >= 75
+        ? "I would be comfortable moving this profile into a serious fit conversation if the role matches the direction shown here."
+        : score >= 50
+        ? "I would keep this profile in consideration, but I would want sharper proof before treating it as a strong match."
+        : "I would need more evidence before confidently advancing this profile.";
+
+      return `${cleanRecruiterLanguage(conclusion)} ${strengthLine} ${fitLine} ${validationLine}`;
+    })();
+
+    const seekerBottomLine = score >= 75
+      ? "You are not just completing a profile — you are presenting a credible professional case. The next move is sharpening proof, not adding more noise."
+      : score >= 50
+      ? "You have enough signal to be evaluated, but the profile needs stronger proof before recruiters can confidently place you."
+      : "The profile needs clearer evidence before recruiters can quickly understand and trust the professional story.";
 
     const scorecard = profileSignals.map((sig) => ({
       key: sig.key,
@@ -516,10 +708,15 @@ export default function ProfileAnalyticsPage() {
       primaryEvidence,
       recruiterAction,
       conclusion,
-      recruiterMeaning,
+      recruiterMeaning: cleanRecruiterLanguage(recruiterMeaning),
+      recruiterJudgment,
+      seekerBottomLine,
       validationFocus,
+      validationCards,
       topStrengths,
+      strengthNarratives,
       careerSignals,
+      careerRecommendations,
       strongestEvidence,
       scorecard,
       prioritySignal: verdict?.priority || needsWork[0] || null,
@@ -656,9 +853,9 @@ export default function ProfileAnalyticsPage() {
           <div style={{ fontSize: 30, fontWeight: 950, lineHeight: 1 }}>{strengthProfile.confidence}%</div>
           <div style={{ fontSize: 13, fontWeight: 900, color: "rgba(255,255,255,0.88)", marginTop: 3 }}>{strengthProfile.professionalSignal}</div>
         </div>
-        <SignalChip label="Execution Visibility" value={strengthProfile.executionVisibility} tone={strengthProfile.executionVisibility === "Strong" ? "good" : strengthProfile.executionVisibility === "Building" ? "warn" : "risk"} />
-        <SignalChip label="Validation Risk" value={strengthProfile.validationRisk} tone={strengthProfile.validationRisk === "Low" ? "good" : strengthProfile.validationRisk === "Moderate" ? "warn" : "risk"} />
-        <SignalChip label="Top Concern" value={strengthProfile.prioritySignal?.label ? String(strengthProfile.prioritySignal.label).replace(" Signal", "") : "Keep evidence fresh"} tone={strengthProfile.prioritySignal ? "warn" : "good"} />
+        <SignalChip label="Recruiter takeaway" value={strengthProfile.professionalSignal === "Strong" ? "Advance-worthy" : strengthProfile.professionalSignal} tone={strengthProfile.professionalSignal === "Strong" ? "good" : "warn"} />
+        <SignalChip label="Proof level" value={strengthProfile.portfolioDepth} tone={strengthProfile.portfolioDepth === "Strong" ? "good" : strengthProfile.portfolioDepth === "Partial" ? "warn" : "risk"} />
+        <SignalChip label="Top validation" value={strengthProfile.validationCards?.[0]?.title || "Fit and role scope"} tone={strengthProfile.validationRisk === "Low" ? "good" : "warn"} />
       </div>
     </SectionCard>
   );
@@ -680,7 +877,7 @@ export default function ProfileAnalyticsPage() {
             Recruiter Lens
           </div>
           <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", ...ORANGE_HEADING_LIFT }}>
-            How Recruiters Read Your Profile
+            If I Were Recruiting You
           </div>
         </div>
         <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: "10px 12px", textAlign: "right", flexShrink: 0 }}>
@@ -689,20 +886,20 @@ export default function ProfileAnalyticsPage() {
         </div>
       </div>
 
-      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.76)", borderRadius: 16, padding: 16, minHeight: 318 }}>
+      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.76)", borderRadius: 16, padding: 16, minHeight: 360 }}>
         <div style={{ fontSize: 10, fontWeight: 900, color: MUTED, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 7 }}>
-          Overall Recruiter Conclusion
+          Recruiter Assessment
         </div>
-        <div style={{ fontSize: 15, fontWeight: 850, color: SLATE, lineHeight: 1.7 }}>
-          {strengthProfile.conclusion}
+        <div style={{ fontSize: 16, fontWeight: 850, color: SLATE, lineHeight: 1.75 }}>
+          {strengthProfile.recruiterJudgment}
         </div>
 
-        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13, marginTop: 14 }}>
+        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13, marginTop: 14, border: "1px solid rgba(255,112,67,0.20)" }}>
           <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 7 }}>
-            What Recruiters Are Likely Thinking
+            Seeker Bottom Line
           </div>
-          <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.7 }}>
-            {strengthProfile.recruiterMeaning}
+          <div style={{ fontSize: 13, color: SLATE, lineHeight: 1.7, fontWeight: 750 }}>
+            {strengthProfile.seekerBottomLine}
           </div>
         </div>
 
@@ -712,8 +909,8 @@ export default function ProfileAnalyticsPage() {
             <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35, marginTop: 5 }}>{strengthProfile.currentDirection}</div>
           </div>
           <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
-            <div style={{ fontSize: 9.5, fontWeight: 900, color: MUTED, letterSpacing: "0.07em", textTransform: "uppercase" }}>Primary Evidence</div>
-            <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35, marginTop: 5 }}>{strengthProfile.primaryEvidence}</div>
+            <div style={{ fontSize: 9.5, fontWeight: 900, color: MUTED, letterSpacing: "0.07em", textTransform: "uppercase" }}>Recruiters See</div>
+            <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35, marginTop: 5 }}>{strengthProfile.strengthNarratives?.[0]?.label || strengthProfile.primaryEvidence}</div>
           </div>
           <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
             <div style={{ fontSize: 9.5, fontWeight: 900, color: MUTED, letterSpacing: "0.07em", textTransform: "uppercase" }}>Recruiter Action</div>
@@ -725,13 +922,16 @@ export default function ProfileAnalyticsPage() {
   );
 
   const strengthActionsCard = (
-    <SectionCard title="Recruiter Concerns">
+    <SectionCard title="Recruiters Will Want Proof Of">
       <div style={{ display: "grid", gap: 10 }}>
-        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13 }}>
-          <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Likely Validation Areas</div>
-          <BulletList items={strengthProfile.validationFocus.slice(0, 4)} />
-        </div>
-        <ActionTile title="Fix the top concern" body={strengthProfile.prioritySignal?.seekerCoaching || "Add clearer proof, outcomes, and profile evidence tied to your target roles."} buttonLabel="Open The Anvil →" onClick={() => router.push("/anvil?module=profile")} />
+        {(strengthProfile.validationCards || []).slice(0, 3).map((item) => (
+          <div key={item.title} style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35 }}>{item.title}</div>
+            <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>{item.body}</div>
+            <div style={{ fontSize: 11.5, color: ORANGE, fontWeight: 900, lineHeight: 1.45, marginTop: 8 }}>{item.fix}</div>
+          </div>
+        ))}
+        <ActionTile title="Strengthen the evidence" body={strengthProfile.validationCards?.[0]?.fix || "Add clearer proof, outcomes, and profile evidence tied to your target roles."} buttonLabel="Open The Anvil →" onClick={() => router.push("/anvil?module=profile")} />
       </div>
     </SectionCard>
   );
@@ -739,13 +939,18 @@ export default function ProfileAnalyticsPage() {
   const strengthDetailGrid = (
     <div style={{ display: "grid", gap: GAP, marginTop: GAP }}>
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: GAP }}>
-        <SectionCard title="Recruiter Strengths">
-          {strengthProfile.topStrengths.length ? (
-            <div style={{ display: "grid", gap: 9 }}>
-              {strengthProfile.topStrengths.slice(0, 8).map((item) => (
-                <div key={item} style={{ display: "flex", alignItems: "center", gap: 9, ...GLASS_SOFT, borderRadius: 12, padding: "10px 12px" }}>
-                  <span style={{ color: "#16A34A", fontWeight: 950 }}>✓</span>
-                  <span style={{ fontSize: 13, fontWeight: 850, color: SLATE }}>{item}</span>
+        <SectionCard title="Your Strongest Recruiting Signals">
+          {strengthProfile.strengthNarratives.length ? (
+            <div style={{ display: "grid", gap: 10 }}>
+              {strengthProfile.strengthNarratives.slice(0, 5).map((item) => (
+                <div key={item.label} style={{ ...GLASS_SOFT, borderRadius: 13, padding: 13 }}>
+                  <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
+                    <span style={{ color: "#16A34A", fontWeight: 950, lineHeight: 1.35 }}>✓</span>
+                    <div>
+                      <div style={{ fontSize: 13.5, fontWeight: 950, color: SLATE }}>{item.label}</div>
+                      <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 5 }}>{item.body}</div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -754,13 +959,13 @@ export default function ProfileAnalyticsPage() {
           )}
         </SectionCard>
 
-        <SectionCard title="Career Trajectory">
-          {strengthProfile.careerSignals.length ? (
+        <SectionCard title="Roles This Profile May Support">
+          {strengthProfile.careerRecommendations.length ? (
             <div style={{ display: "grid", gap: 9 }}>
-              {strengthProfile.careerSignals.slice(0, 8).map((item) => (
-                <div key={item} style={{ ...GLASS_SOFT, borderRadius: 12, padding: "10px 12px" }}>
-                  <div style={{ fontSize: 13, fontWeight: 900, color: SLATE }}>{item}</div>
-                  <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.45, marginTop: 4 }}>Related or progression signal detected by the operational inference engine.</div>
+              {strengthProfile.careerRecommendations.slice(0, 6).map((item) => (
+                <div key={item.title} style={{ ...GLASS_SOFT, borderRadius: 12, padding: "11px 12px" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 950, color: SLATE }}>{item.title}</div>
+                  <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.45, marginTop: 5 }}>{item.reason}</div>
                 </div>
               ))}
             </div>
@@ -771,25 +976,18 @@ export default function ProfileAnalyticsPage() {
       </div>
 
       <SectionCard title="Profile Signal Scorecard">
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: GAP }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, minmax(0, 1fr))", gap: GAP }}>
           {strengthProfile.scorecard.map((sig) => {
             const tone = sig.status === "direct" ? "good" : sig.status === "adjacent" ? "warn" : "risk";
+            const action = sig.status === "direct" ? sig.signalImpact : sig.seekerCoaching;
             return (
-              <div key={sig.key} style={{ ...GLASS_SOFT, borderRadius: 15, padding: 14 }}>
+              <div key={sig.key} style={{ ...GLASS_SOFT, borderRadius: 15, padding: 13 }}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 950, color: SLATE }}>{sig.label}</div>
-                    <div style={{ fontSize: 10, fontWeight: 900, color: MUTED, letterSpacing: "0.07em", textTransform: "uppercase", marginTop: 3 }}>{sig.confidenceLevel} Confidence</div>
-                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 950, color: SLATE }}>{sig.label}</div>
                   <SmallPill tone={tone}>{sig.status === "direct" ? "Proven" : sig.status === "adjacent" ? "Partial" : "Missing"}</SmallPill>
                 </div>
-                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, marginTop: 10 }}>
-                  {sig.recruiterInterpretation}
-                </div>
-                <div style={{ borderTop: "1px solid rgba(100,116,139,0.16)", marginTop: 10, paddingTop: 10 }}>
-                  <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>How to strengthen it</div>
-                  <div style={{ fontSize: 12, color: SLATE, lineHeight: 1.55 }}>{sig.seekerCoaching}</div>
-                </div>
+                <div style={{ fontSize: 11, fontWeight: 900, color: MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 8 }}>{sig.confidenceLevel} Confidence</div>
+                <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.5, marginTop: 7 }}>{action}</div>
               </div>
             );
           })}
