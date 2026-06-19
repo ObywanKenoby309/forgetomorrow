@@ -1,5 +1,7 @@
 // components/seeker/dashboard/ProfilePerformanceTeaser.js
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 const STATS = [
   {
@@ -70,12 +72,22 @@ function StatCard({ icon, label, sub, value, color, bg, border, suffix = '', com
 }
 
 export default function ProfilePerformanceTeaser({ layout = 'row', compact = false }) {
+  const router = useRouter();
+
   const [data, setData] = useState({
     viewsLast7: 0,
     searchAppearancesLast7: 0,
     completionPercent: 0,
   });
   const [loading, setLoading] = useState(true);
+
+  const chrome = Array.isArray(router.query.chrome)
+    ? router.query.chrome[0]
+    : router.query.chrome;
+
+  const analyticsHref = chrome
+    ? `/profile-analytics?chrome=${encodeURIComponent(chrome)}`
+    : '/profile-analytics';
 
   useEffect(() => {
     async function load() {
@@ -116,21 +128,44 @@ export default function ProfilePerformanceTeaser({ layout = 'row', compact = fal
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: compact ? 6 : 8 }}>
-      {STATS.map((s) => (
-        <StatCard
-          key={s.key}
-          icon={s.icon}
-          label={s.label}
-          sub={s.sub}
-          value={data[s.key] ?? 0}
-          color={s.color}
-          bg={s.bg}
-          border={s.border}
-          suffix={s.suffix}
-          compact={compact}
-        />
-      ))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? 8 : 10 }}>
+      <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: compact ? 6 : 8 }}>
+        {STATS.map((s) => (
+          <StatCard
+            key={s.key}
+            icon={s.icon}
+            label={s.label}
+            sub={s.sub}
+            value={data[s.key] ?? 0}
+            color={s.color}
+            bg={s.bg}
+            border={s.border}
+            suffix={s.suffix}
+            compact={compact}
+          />
+        ))}
+      </div>
+
+      <Link
+        href={analyticsHref}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+          borderRadius: compact ? 9 : 10,
+          border: '1px solid rgba(255,112,67,0.28)',
+          background: 'rgba(255,112,67,0.10)',
+          color: '#E85D2F',
+          fontSize: compact ? 10 : 12,
+          fontWeight: 900,
+          lineHeight: 1.2,
+          padding: compact ? '7px 8px' : '9px 10px',
+          textDecoration: 'none',
+        }}
+      >
+        View analytics →
+      </Link>
     </div>
   );
 }
