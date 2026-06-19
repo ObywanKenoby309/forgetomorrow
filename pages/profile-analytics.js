@@ -575,11 +575,11 @@ export default function ProfileAnalyticsPage() {
   // ── Inlay content per tab ────────────────────────────────────────────────
   const inlay = (() => {
     if (isMobile) {
-      // Mobile: single-column stacked per tab
-      if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}{actionsCard}{strengthCard}{recentActivityCard}</div>;
-      if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{reachCard}{recentActivityCard}</div>;
+      // Mobile: each tab owns its own focused group.
+      if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
+      if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{reachCard}{recentViewersCompactCard}</div>;
       if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthCard}{actionsCard}</div>;
-      if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{topContentCard}{recentActivityCard}</div>;
+      if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{topContentCompactCard}{connectionGrowthCompactCard}</div>;
       return null;
     }
 
@@ -650,7 +650,7 @@ export default function ProfileAnalyticsPage() {
       return (
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)", gap: GAP }}>
           {reachCard}
-          {recentActivityCard}
+          {recentViewersCompactCard}
         </div>
       );
     }
@@ -666,9 +666,9 @@ export default function ProfileAnalyticsPage() {
 
     if (activeTab === "activity") {
       return (
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,2fr)", gap: GAP }}>
-          {topContentCard}
-          {recentActivityCard}
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: GAP }}>
+          {topContentCompactCard}
+          {connectionGrowthCompactCard}
         </div>
       );
     }
