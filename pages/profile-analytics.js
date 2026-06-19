@@ -4,8 +4,8 @@
 //   - Layout owns: title card
 //   - Page owns: tab nav card + inlay content
 //   - isMobile === null gate prevents flash
-//   - Bleed (edge-to-edge) on desktop command rows
-//   - Overview command row pattern is LAW — do not change it
+//   - Bleed (edge-to-edge) only on Overview tab, matching recruiter Command Center
+//   - Other tabs: full-width normal content
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
@@ -45,10 +45,10 @@ const ORANGE_HEADING_LIFT = {
   fontWeight: 900,
 };
 
-// ─── Bleed constants — match command center pattern exactly ───────────────────
-const LEFT_BLEED         = -(240 + 12);
-const RIGHT_BLEED        = -(240 + 12);
-const DESKTOP_BLEED_DROP = 32;
+// ─── Bleed constants — match Sora's recruiter CommandInlay exactly ────────────
+const LEFT_BLEED         = -(240 + 12);   // sidebar 240 + gap 12
+const RIGHT_BLEED        = -(240 + 12);   // right rail 240 + gap 12
+const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recruiter
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function safeArray(v) {
@@ -60,12 +60,8 @@ function safeArray(v) {
   }
   return [];
 }
-
 function skillNamesFromAny(s) {
-  return safeArray(s)
-    .map((x) => (typeof x === "string" ? x : x?.name || x?.label || ""))
-    .map((v) => String(v || "").trim())
-    .filter(Boolean);
+  return safeArray(s).map((x) => (typeof x === "string" ? x : x?.name || x?.label || "")).map((v) => String(v || "").trim()).filter(Boolean);
 }
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
@@ -88,7 +84,6 @@ function InsightTile({ label, title, body, tone = "live" }) {
     attention: { bg: "rgba(220,38,38,0.10)",   color: "#DC2626", dot: "#DC2626" },
     building:  { bg: "rgba(15,118,110,0.10)",  color: "#0F766E", dot: "#0F766E" },
   }[tone] || { bg: "rgba(255,112,67,0.12)", color: ORANGE, dot: ORANGE };
-
   return (
     <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
@@ -142,7 +137,7 @@ const TAB_COPY = {
 export default function ProfileAnalyticsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
-  const [isMobile, setIsMobile]   = useState(null);
+  const [isMobile, setIsMobile]   = useState(null); // null = measuring, true/false = known
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -151,6 +146,7 @@ export default function ProfileAnalyticsPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  // ── Profile completion ───────────────────────────────────────────────────
   const [profileDetails, setProfileDetails] = useState(null);
   const [primaryResume, setPrimaryResume]   = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -166,12 +162,8 @@ export default function ProfileAnalyticsPage() {
         if (!alive) return;
         setProfileDetails(dJson?.details || dJson || null);
         setPrimaryResume(pJson?.primaryResume || null);
-      } catch {
-        if (!alive) return;
-      } finally {
-        if (!alive) return;
-        setProfileLoading(false);
-      }
+      } catch { if (!alive) return; }
+      finally { if (!alive) return; setProfileLoading(false); }
     })();
     return () => { alive = false; };
   }, []);
@@ -183,9 +175,8 @@ export default function ProfileAnalyticsPage() {
     const languages = safeArray(profileDetails?.languagesJson);
     const checks = [headline.length >= 8, aboutMe.length >= 120, skills.length >= 8, safeArray(languages).length >= 1, Boolean(primaryResume?.id)];
     const completed = checks.filter(Boolean).length;
-
     return {
-      progress: Math.round((completed / 5) * 100),
+      progress:  Math.round((completed / 5) * 100),
       checklist: [
         { label: "Headline",        done: checks[0] },
         { label: "Summary",         done: checks[1] },
@@ -196,6 +187,7 @@ export default function ProfileAnalyticsPage() {
     };
   }, [profileDetails, primaryResume]);
 
+  // ── Analytics data ───────────────────────────────────────────────────────
   const [analyticsState, setAnalyticsState]     = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
@@ -208,12 +200,8 @@ export default function ProfileAnalyticsPage() {
         const json = await res.json().catch(() => ({}));
         if (!alive) return;
         setAnalyticsState(res.ok ? (json || null) : null);
-      } catch {
-        if (!alive) return;
-      } finally {
-        if (!alive) return;
-        setAnalyticsLoading(false);
-      }
+      } catch { if (!alive) return; }
+      finally { if (!alive) return; setAnalyticsLoading(false); }
     })();
     return () => { alive = false; };
   }, []);
@@ -222,7 +210,6 @@ export default function ProfileAnalyticsPage() {
     const a   = analyticsState || {};
     const pct = Number(completion.progress) || (typeof a.profileCompletionPct === "number" ? a.profileCompletionPct : 0);
     const days = Array.isArray(a.daysLabels) && a.daysLabels.length === 7 ? a.daysLabels : ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-
     return {
       totalViews:                 typeof a.totalViews === "number" ? a.totalViews : 0,
       postsCount:                 typeof a.postsCount === "number" ? a.postsCount : 0,
@@ -265,6 +252,7 @@ export default function ProfileAnalyticsPage() {
     return           { level: "Needs attention",  tone: "attention", body: "Important recruiter and community signals are missing. Strengthening your profile should be the next move." };
   }, [analytics.profileCompletionPct]);
 
+  // ── Section cards ────────────────────────────────────────────────────────
   const visibilityCard = (
     <SectionCard title="Visibility Intelligence">
       <div style={{ display: "grid", gap: GAP }}>
@@ -272,10 +260,10 @@ export default function ProfileAnalyticsPage() {
         <InsightTile label="Seen" tone="live" title={`${analytics.totalViews.toLocaleString()} profile interactions`} body="Your current visibility footprint across profile and engagement activity." />
         <InsightTile label="Network" tone="building" title={`${analytics.connectionsGained7d.toLocaleString()} new connections in 7 days`} body="Connection growth shows whether visibility is turning into real professional momentum." />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <MiniMetric label="7d views"    value={weeklyViews}                    hint="Profile reach" />
-          <MiniMetric label="Search hits" value={weeklySearch}                   hint="Discovery" />
-          <MiniMetric label="Content"     value={totalContent}                   hint="Posts + comments" />
-          <MiniMetric label="Viewers"     value={analytics.recentViewers.length} hint="Recent list" />
+          <MiniMetric label="7d views"    value={weeklyViews}                     hint="Profile reach" />
+          <MiniMetric label="Search hits" value={weeklySearch}                    hint="Discovery" />
+          <MiniMetric label="Content"     value={totalContent}                    hint="Posts + comments" />
+          <MiniMetric label="Viewers"     value={analytics.recentViewers.length}  hint="Recent list" />
         </div>
       </div>
     </SectionCard>
@@ -390,6 +378,7 @@ export default function ProfileAnalyticsPage() {
       </div>
     </SectionCard>
   );
+
 
   const profileCommandCard = (
     <section
@@ -570,6 +559,90 @@ export default function ProfileAnalyticsPage() {
     </SectionCard>
   );
 
+  const activityIntelligenceCard = (
+    <SectionCard title="Activity Intelligence">
+      <div style={{ display: "grid", gap: GAP }}>
+        <InsightTile
+          label="Community"
+          tone="building"
+          title={`${totalContent.toLocaleString()} content signals`}
+          body="Posts and comments help turn your profile from a static page into an active professional signal."
+        />
+        <InsightTile
+          label="Network"
+          tone="live"
+          title={`${analytics.connectionsGained7d.toLocaleString()} new connections in 7 days`}
+          body="Connection movement shows whether activity is translating into real professional reach."
+        />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <MiniMetric label="Posts" value={analytics.postsCount} hint="Shared updates" />
+          <MiniMetric label="Comments" value={analytics.commentsCount} hint="Community replies" />
+          <MiniMetric label="Content" value={totalContent} hint="Total signals" />
+          <MiniMetric label="Growth" value={`+${analytics.connectionsGained7d}`} hint="7 days" />
+        </div>
+      </div>
+    </SectionCard>
+  );
+
+  const connectionGrowthHeroCard = (
+    <section
+      style={{
+        ...GLASS,
+        borderRadius: 18,
+        padding: 18,
+        flex: "1 1 auto",
+        minWidth: 0,
+        alignSelf: "flex-end",
+      }}
+    >
+      <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
+        Connection Growth
+      </div>
+
+      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.74)", borderRadius: 16, padding: 14, overflow: "hidden" }}>
+        <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 14 }}>
+        <MiniMetric label="New connections" value={analytics.connectionsGained7d} hint="7 day growth" />
+        <MiniMetric label="Posts" value={analytics.postsCount} hint="Shared content" />
+        <MiniMetric label="Comments" value={analytics.commentsCount} hint="Community activity" />
+      </div>
+    </section>
+  );
+
+  const activitySupportCard = (
+    <SectionCard title="Activity Support">
+      <div style={{ display: "grid", gap: GAP }}>
+        {analytics.highestViewedPost ? (
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 10, color: MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em" }}>Top Post</div>
+            <a href={analytics.highestViewedPost.url} style={{ display: "block", color: ORANGE, fontWeight: 900, marginTop: 6, textDecoration: "none", lineHeight: 1.35 }}>
+              {analytics.highestViewedPost.title}
+            </a>
+            <div style={{ fontSize: 12, color: MUTED, marginTop: 5 }}>{analytics.highestViewedPost.views.toLocaleString()} interactions</div>
+          </div>
+        ) : (
+          <InsightTile label="Building" tone="building" title="Top post performance will appear here" body="Once feed interaction tracking is expanded, your strongest post will surface here." />
+        )}
+        {analytics.highestViewedComment ? (
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 10, color: MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em" }}>Highest Liked Comment</div>
+            <div style={{ color: SLATE, fontSize: 13, lineHeight: 1.55, marginTop: 6 }}>"{analytics.highestViewedComment.snippet}"</div>
+            <a href={analytics.highestViewedComment.url} style={{ display: "inline-block", color: ORANGE, fontWeight: 900, marginTop: 8, textDecoration: "none" }}>View comment →</a>
+          </div>
+        ) : null}
+        <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Content playbook</div>
+          <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
+            Use posts, comments, and Hearth replies to create professional signal without turning the page into a noisy social feed.
+          </div>
+        </div>
+      </div>
+    </SectionCard>
+  );
+
+  // ── KPI strip ────────────────────────────────────────────────────────────
   const kpiStrip = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(5, minmax(120px,1fr))", gap: GAP }}>
@@ -598,27 +671,24 @@ export default function ProfileAnalyticsPage() {
         zIndex: 2,
       }}
     >
-      <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>
-        {left}
-      </section>
-      <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-end" }}>
-        {center}
-      </section>
-      <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>
-        {right}
-      </section>
+      {left}
+      {center}
+      {right}
     </div>
   );
 
+  // ── Inlay content per tab ────────────────────────────────────────────────
   const inlay = (() => {
     if (isMobile) {
-      if (activeTab === "overview")   return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
-      if (activeTab === "visibility") return <div style={{ display: "grid", gap: GAP }}>{reachCard}{recentViewersCompactCard}</div>;
-      if (activeTab === "strength")   return <div style={{ display: "grid", gap: GAP }}>{strengthCard}{actionsCard}</div>;
-      if (activeTab === "activity")   return <div style={{ display: "grid", gap: GAP }}>{topContentCompactCard}{connectionGrowthCompactCard}</div>;
+      // Mobile: each tab owns its own focused group.
+      if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
+      if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{reachCard}{recentViewersCompactCard}</div>;
+      if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthCard}{actionsCard}</div>;
+      if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{activityIntelligenceCard}{connectionGrowthHeroCard}{activitySupportCard}</div>;
       return null;
     }
 
+    // Desktop — Overview is LAW. Do not change this row.
     if (activeTab === "overview") {
       return (
         <>
@@ -649,25 +719,25 @@ export default function ProfileAnalyticsPage() {
 
     if (activeTab === "visibility") {
       return bleedCommandRow(
-        visibilityCard,
-        reachCard,
-        recentViewersCompactCard
+        <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{visibilityCard}</section>,
+        <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-end" }}>{reachCard}</section>,
+        <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{recentViewersCompactCard}</section>
       );
     }
 
     if (activeTab === "strength") {
       return bleedCommandRow(
         profileCommandCard,
-        strengthCard,
-        actionsCard
+        <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-end" }}>{strengthCard}</section>,
+        nextActionsRailCard
       );
     }
 
     if (activeTab === "activity") {
       return bleedCommandRow(
-        connectionGrowthCompactCard,
-        topContentCard,
-        recentActivityCard
+        <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activityIntelligenceCard}</section>,
+        connectionGrowthHeroCard,
+        <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activitySupportCard}</section>
       );
     }
 
@@ -682,6 +752,7 @@ export default function ProfileAnalyticsPage() {
       pageSubtitle={activeCopy.subtitle}
       activeTab={activeTab}
     >
+      {/* isMobile === null = still measuring — render nothing to prevent flash */}
       {isMobile === null ? null : (
         <div style={{ display: "grid", gap: GAP }}>
           <SeekerAnalyticsNavBar
