@@ -311,12 +311,6 @@ export default function ProfileAnalyticsPage() {
         <InsightTile label={vis.level} tone={vis.tone} title={`${analytics.profileCompletionPct}% profile completion`} body={vis.body} />
         <InsightTile label="Seen" tone="live" title={`${analytics.totalViews.toLocaleString()} profile interactions`} body="Your current visibility footprint across profile and engagement activity." />
         <InsightTile label="Network" tone="building" title={`${analytics.connectionsGained7d.toLocaleString()} new connections in 7 days`} body="Connection growth shows whether visibility is turning into real professional momentum." />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <MiniMetric label="7d views"    value={weeklyViews}                     hint="Profile reach" />
-          <MiniMetric label="Search hits" value={weeklySearch}                    hint="Discovery" />
-          <MiniMetric label="Content"     value={totalContent}                    hint="Posts + comments" />
-          <MiniMetric label="Viewers"     value={analytics.recentViewers.length}  hint="Recent list" />
-        </div>
       </div>
     </SectionCard>
   );
@@ -342,17 +336,17 @@ export default function ProfileAnalyticsPage() {
   const reachCard = (
     <SectionCard title="Reach Trend">
       {Array.isArray(analytics.viewsLast7Days) && Array.isArray(analytics.searchAppearancesLast7Days) ? (
-        <div style={{ display: "grid", gap: GAP }}>
-          <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
-          <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", alignItems: "stretch", gap: GAP }}>
+          <div style={{ minWidth: 0, minHeight: 300, display: "grid" }}>
+            <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
+          </div>
+          <div style={{ minWidth: 0, minHeight: 300, display: "grid" }}>
+            <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
+          </div>
         </div>
       ) : (
         <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, color: MUTED, fontSize: 13 }}>{analyticsLoading ? "Loading charts…" : "No chart data available yet."}</div>
       )}
-      <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, marginTop: GAP }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Reading the trend</div>
-        <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65 }}>Spikes show moments when people noticed you. Connect those moments to posts, comments, profile updates, applications, or recruiter searches.</div>
-      </div>
     </SectionCard>
   );
 
@@ -718,6 +712,18 @@ export default function ProfileAnalyticsPage() {
     </div>
   );
 
+  const visibilityKpiStrip = (
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+      <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(5, minmax(120px,1fr))", gap: GAP }}>
+        <KPI label="7D Views" value={kv(weeklyViews)} />
+        <KPI label="Search Hits" value={kv(weeklySearch)} />
+        <KPI label="Connections" value={kv(analytics.connectionsGained7d)} />
+        <KPI label="Content" value={kv(totalContent)} />
+        <KPI label="Viewers" value={kv(analytics.recentViewers.length)} />
+      </section>
+    </div>
+  );
+
   const kpiStrip = (
     <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
       <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(5, minmax(120px,1fr))", gap: GAP }}>
@@ -757,7 +763,7 @@ export default function ProfileAnalyticsPage() {
     if (isMobile) {
       // Mobile: each tab owns its own focused group.
       if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
-      if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{reachCard}{recentViewersCompactCard}</div>;
+      if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{visibilityKpiStrip}{reachCard}{visibilityCard}{recentViewersCompactCard}</div>;
       if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthCard}{actionsCard}</div>;
       if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{activityKpiStrip}{activityIntelligenceCard}{connectionGrowthHeroCard}{activitySupportCard}</div>;
       return null;
@@ -793,10 +799,15 @@ export default function ProfileAnalyticsPage() {
     }
 
     if (activeTab === "visibility") {
-      return bleedCommandRow(
-        <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{visibilityCard}</section>,
-        <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-end" }}>{reachCard}</section>,
-        <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{recentViewersCompactCard}</section>
+      return (
+        <div style={{ display: "grid", gap: GAP }}>
+          {visibilityKpiStrip}
+          {bleedCommandRow(
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{visibilityCard}</section>,
+            <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-end" }}>{reachCard}</section>,
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{recentViewersCompactCard}</section>
+          )}
+        </div>
       );
     }
 
