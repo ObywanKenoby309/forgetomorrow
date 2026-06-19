@@ -327,7 +327,7 @@ export default function ProfileAnalyticsPage() {
         <ProfileCompletionCard completionPct={analytics.profileCompletionPct} checklist={analytics.profileChecklist} />
         <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Momentum score</div>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
             <div>
               <div style={{ fontSize: 32, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{momentumScore}</div>
               <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginTop: 4 }}>{momentumLabel}</div>
@@ -385,10 +385,10 @@ export default function ProfileAnalyticsPage() {
       style={{
         ...GLASS,
         borderRadius: 18,
-        padding: 8,
-        width: 200,
-        flex: "0 0 200px",
-        alignSelf: "flex-start",
+        padding: 10,
+        width: 224,
+        flex: "0 0 238px",
+        alignSelf: "flex-end",
       }}
     >
       <div style={{ fontSize: 17, color: ORANGE, lineHeight: 1.2, letterSpacing: "-0.01em", marginBottom: 8, ...ORANGE_HEADING_LIFT }}>
@@ -399,6 +399,7 @@ export default function ProfileAnalyticsPage() {
         <div
           style={{
             ...GLASS_SOFT,
+            background: "rgba(255,255,255,0.72)",
             borderRadius: 14,
             padding: 8,
             display: "grid",
@@ -408,10 +409,10 @@ export default function ProfileAnalyticsPage() {
         >
           <div
             style={{
-              width: 60,
-              height: 60,
+              width: 76,
+              height: 76,
               borderRadius: "50%",
-              border: "5px solid rgba(255,112,67,0.92)",
+              border: "6px solid rgba(255,112,67,0.92)",
               display: "grid",
               placeItems: "center",
               background: "rgba(255,255,255,0.78)",
@@ -419,13 +420,13 @@ export default function ProfileAnalyticsPage() {
             }}
           >
             <div>
-              <div style={{ fontSize: 18, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{analytics.profileCompletionPct}%</div>
+              <div style={{ fontSize: 22, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{analytics.profileCompletionPct}%</div>
               <div style={{ fontSize: 9, fontWeight: 900, color: MUTED, marginTop: 2 }}>Complete</div>
             </div>
           </div>
         </div>
 
-        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 8 }}>
+        <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.72)", borderRadius: 14, padding: 10 }}>
           <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
             Views
           </div>
@@ -433,7 +434,7 @@ export default function ProfileAnalyticsPage() {
           <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.35, marginTop: 3 }}>Profile interactions</div>
         </div>
 
-        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 8 }}>
+        <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.72)", borderRadius: 14, padding: 10 }}>
           <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
             Momentum
           </div>
@@ -459,14 +460,14 @@ export default function ProfileAnalyticsPage() {
         padding: 18,
         flex: "1 1 auto",
         minWidth: 0,
-        alignSelf: "flex-start",
+        alignSelf: "flex-end",
       }}
     >
       <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
         Visibility Trend
       </div>
 
-      <div style={{ ...GLASS_SOFT, borderRadius: 16, padding: 14, overflow: "hidden" }}>
+      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.74)", borderRadius: 16, padding: 14, overflow: "hidden" }}>
         <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 8 }}>Profile Views</div>
         <div style={{ minHeight: 220, maxHeight: 285, overflow: "hidden" }}>
           <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
@@ -489,7 +490,7 @@ export default function ProfileAnalyticsPage() {
         padding: 12,
         width: 292,
         flex: "0 0 302px",
-        alignSelf: "flex-start",
+        alignSelf: "flex-end",
       }}
     >
       <div style={{ fontSize: 17, color: ORANGE, lineHeight: 1.2, letterSpacing: "-0.01em", marginBottom: 8, ...ORANGE_HEADING_LIFT }}>
@@ -587,7 +588,7 @@ export default function ProfileAnalyticsPage() {
             style={{
               marginLeft: LEFT_BLEED,
               marginRight: RIGHT_BLEED,
-              marginTop: 8,
+              marginTop: 42,
               display: "flex",
               alignItems: "flex-end",
               gap: GAP,
