@@ -388,7 +388,7 @@ export default function ProfileAnalyticsPage() {
         padding: 14,
         width: 238,
         flex: "0 0 238px",
-        alignSelf: "flex-start",
+        alignSelf: "flex-end",
       }}
     >
       <div style={{ fontSize: 18, color: ORANGE, lineHeight: 1.25, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
@@ -459,7 +459,7 @@ export default function ProfileAnalyticsPage() {
         padding: 18,
         flex: "1 1 auto",
         minWidth: 0,
-        alignSelf: "flex-start",
+        alignSelf: "flex-end",
       }}
     >
       <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
@@ -489,7 +489,7 @@ export default function ProfileAnalyticsPage() {
         padding: 14,
         width: 302,
         flex: "0 0 302px",
-        alignSelf: "flex-start",
+        alignSelf: "flex-end",
       }}
     >
       <div style={{ fontSize: 18, color: ORANGE, lineHeight: 1.25, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
@@ -589,7 +589,7 @@ export default function ProfileAnalyticsPage() {
               marginRight: RIGHT_BLEED,
               marginTop: 96,
               display: "flex",
-              alignItems: "flex-start",
+              alignItems: "flex-end",
               gap: GAP,
               width: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
               maxWidth: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
