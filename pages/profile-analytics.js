@@ -504,9 +504,9 @@ export default function ProfileAnalyticsPage() {
       <div style={{ fontSize: 17, color: ORANGE, lineHeight: 1.2, letterSpacing: "-0.01em", marginBottom: 8, ...ORANGE_HEADING_LIFT }}>
         Next Best Actions
       </div>
-      <div style={{ display: "grid", gap: 10 }}>
+      <div style={{ display: "grid", gap: 6 }}>
         {profileLoading ? (
-          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, color: MUTED }}>Loading profile actions…</div>
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 10, color: MUTED }}>Loading profile actions…</div>
         ) : nextActions.length ? (
           nextActions.slice(0, 3).map((item) => (
             <ActionTile key={item.label} title={item.label} body="Strengthen this profile signal in The Anvil to improve visibility." buttonLabel="Open in The Anvil →" onClick={() => router.push("/anvil?module=profile")} />
