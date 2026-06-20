@@ -1066,6 +1066,7 @@ export default function ProfileStrengthPage() {
   maxWidth: "calc(100% - 504px)",
   minWidth: 0,
   alignSelf: "flex-end",
+  pointerEvents: "auto",
 }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 12 }}>
@@ -1674,6 +1675,7 @@ export default function ProfileStrengthPage() {
         minWidth: 0,
         position: "relative",
         zIndex: 2,
+		pointerEvents: "none",
       }}
     >
       {left}
@@ -1741,26 +1743,28 @@ export default function ProfileStrengthPage() {
         <>
           {strengthCommandRow(
             <section
-              style={{
-                width: 240,
-                flex: "0 0 240px",
-                alignSelf: "flex-end",
-                minWidth: 0,
-              }}
-            >
+  style={{
+    width: 240,
+    flex: "0 0 240px",
+    alignSelf: "flex-end",
+    minWidth: 0,
+    pointerEvents: "auto",
+  }}
+>
               {executionProofCard}
             </section>,
             strengthRecruiterLensHeroCard,
             <section
-              style={{
-                width: 240,
-                flex: "0 0 240px",
-                alignSelf: "flex-end",
-                minWidth: 0,
-              }}
-            >
-              {strengthSignalCard}
-            </section>
+  style={{
+    width: 240,
+    flex: "0 0 240px",
+    alignSelf: "flex-end",
+    minWidth: 0,
+    pointerEvents: "auto",
+  }}
+>
+  {strengthSignalCard}
+</section>
           )}
           {strengthDetailGrid}
         </>
