@@ -51,6 +51,7 @@ const LEFT_BLEED         = -(240 + 12);   // sidebar 240 + gap 12
 const RIGHT_BLEED        = -(240 + 12);   // right rail 240 + gap 12
 const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recruiter
 const COMMAND_RAIL_HEIGHT = 390;
+const LEFT_COMMAND_CARD_HEIGHT = 285;
 const COMMAND_CENTER_CHART_HEIGHT = 360;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -909,8 +910,8 @@ export default function ProfileAnalyticsPage() {
   const visibilityCard = (
     <RotatingCard
       title="Visibility Intelligence"
-      minHeight={isMobile ? 132 : 284}
-      cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
+      minHeight={isMobile ? 132 : 179}
+      cardStyle={isMobile ? {} : { height: LEFT_COMMAND_CARD_HEIGHT, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
         <InsightTile
@@ -1286,6 +1287,8 @@ export default function ProfileAnalyticsPage() {
         width: 240,
         flex: "0 0 240px",
         alignSelf: "flex-end",
+        height: LEFT_COMMAND_CARD_HEIGHT,
+        overflow: "hidden",
       }}
     >
       <div style={{ fontSize: 17, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 8, ...ORANGE_HEADING_LIFT }}>
@@ -1465,8 +1468,8 @@ export default function ProfileAnalyticsPage() {
   const activityIntelligenceCard = (
     <RotatingCard
       title="Activity Intelligence"
-      minHeight={isMobile ? 154 : 284}
-      cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
+      minHeight={isMobile ? 154 : 179}
+      cardStyle={isMobile ? {} : { height: LEFT_COMMAND_CARD_HEIGHT, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
         <InsightTile
