@@ -50,9 +50,6 @@ const ORANGE_HEADING_LIFT = {
 const LEFT_BLEED         = -(240 + 12);   // sidebar 240 + gap 12
 const RIGHT_BLEED        = -(240 + 12);   // right rail 240 + gap 12
 const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recruiter
-const COMMAND_RAIL_HEIGHT = 390;
-const LEFT_COMMAND_CARD_HEIGHT = 230;
-const COMMAND_CENTER_CHART_HEIGHT = 360;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function safeArray(v) {
@@ -69,9 +66,9 @@ function skillNamesFromAny(s) {
 }
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
-function SectionCard({ title, children, action, style = {} }) {
+function SectionCard({ title, children, action }) {
   return (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, ...style }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
         <div style={{ fontSize: 18, color: ORANGE, lineHeight: 1.25, letterSpacing: "-0.01em", margin: 0, ...ORANGE_HEADING_LIFT }}>{title}</div>
         {action}
@@ -101,7 +98,7 @@ function InsightTile({ label, title, body, tone = "live" }) {
 }
 
 
-function RotatingCard({ title, slides = [], intervalMs = 5200, minHeight = 210, cardStyle = {}, contentStyle = {} }) {
+function RotatingCard({ title, slides = [], intervalMs = 5200, minHeight = 210 }) {
   const validSlides = Array.isArray(slides) ? slides.filter(Boolean) : [];
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -118,9 +115,9 @@ function RotatingCard({ title, slides = [], intervalMs = 5200, minHeight = 210, 
   }, [activeIndex, validSlides.length]);
 
   return (
-    <SectionCard title={title} style={cardStyle}>
-      <div style={{ display: "grid", gap: 10, height: "100%", minHeight: 0 }}>
-        <div style={{ minHeight, display: "grid", ...contentStyle }}>
+    <SectionCard title={title}>
+      <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ minHeight, display: "grid" }}>
           {validSlides[activeIndex] || null}
         </div>
 
@@ -297,7 +294,7 @@ function BulletList({ items = [] }) {
   return (
     <div style={{ display: "grid", gap: 8 }}>
       {(items || []).filter(Boolean).map((item, idx) => (
-        <div key={`${item}-${idx}`} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+        <div key={`${item}-${idx}`} style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
           <span style={{ color: ORANGE, fontWeight: 950, lineHeight: 1.35, flexShrink: 0 }}>•</span>
           <span style={{ fontSize: 12, color: MUTED, lineHeight: 1.55 }}>{item}</span>
         </div>
@@ -553,6 +550,7 @@ function generateRecruiterQuestions(sp) {
 const TAB_COPY = {
   overview:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "Understand how your profile performs, who's viewing it, and what actions will accelerate your visibility." },
   visibility: { title: "Profile Analytics — ForgeTomorrow", subtitle: "See how your profile is being discovered and who's been looking at your work." },
+  strength:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "See how recruiters are likely to interpret your profile, evidence, and positioning." },
   activity:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "Track your content performance and community presence on ForgeTomorrow." },
 };
 
@@ -910,9 +908,7 @@ export default function ProfileAnalyticsPage() {
   const visibilityCard = (
     <RotatingCard
       title="Visibility Intelligence"
-      minHeight={isMobile ? 132 : 179}
-      cardStyle={isMobile ? {} : { height: LEFT_COMMAND_CARD_HEIGHT, overflow: "hidden" }}
-      contentStyle={isMobile ? {} : { alignContent: "stretch" }}
+      minHeight={132}
       slides={[
         <InsightTile
           key="visibility-completion"
@@ -973,13 +969,16 @@ export default function ProfileAnalyticsPage() {
               ...GLASS_SOFT,
               borderRadius: 16,
               padding: 14,
-              minHeight: isMobile ? 280 : COMMAND_CENTER_CHART_HEIGHT,
+              minHeight: isMobile ? 300 : 430,
               overflow: "hidden",
               display: "grid",
-              alignItems: "stretch",
+              gridTemplateRows: "auto minmax(0, 1fr)",
             }}
           >
-            <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
+            <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 8 }}>Views (Last 7 Days)</div>
+            <div style={{ minHeight: isMobile ? 240 : 360, overflow: "hidden" }}>
+              <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
+            </div>
           </div>
 
           <div
@@ -987,13 +986,16 @@ export default function ProfileAnalyticsPage() {
               ...GLASS_SOFT,
               borderRadius: 16,
               padding: 14,
-              minHeight: isMobile ? 280 : COMMAND_CENTER_CHART_HEIGHT,
+              minHeight: isMobile ? 300 : 430,
               overflow: "hidden",
               display: "grid",
-              alignItems: "stretch",
+              gridTemplateRows: "auto minmax(0, 1fr)",
             }}
           >
-            <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
+            <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 8 }}>Search Appearances (Last 7 Days)</div>
+            <div style={{ minHeight: isMobile ? 240 : 360, overflow: "hidden" }}>
+              <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
+            </div>
           </div>
         </div>
       ) : (
@@ -1072,10 +1074,9 @@ export default function ProfileAnalyticsPage() {
         flex: "1 1 auto",
         minWidth: 0,
         alignSelf: "flex-end",
-        minHeight: COMMAND_RAIL_HEIGHT,
       }}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 14, marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>
             Recruiter Lens
@@ -1105,7 +1106,7 @@ export default function ProfileAnalyticsPage() {
           {strengthProfile.strongestEvidence.length ? (
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 8 }}>
               {strengthProfile.strongestEvidence.slice(0, 8).map((item) => (
-                <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 12.5, color: SLATE, lineHeight: 1.45, fontWeight: 750 }}>
+                <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-end", fontSize: 12.5, color: SLATE, lineHeight: 1.45, fontWeight: 750 }}>
                   <span style={{ color: ORANGE, fontWeight: 950, flexShrink: 0 }}>•</span>
                   <span>{item}</span>
                 </div>
@@ -1171,7 +1172,7 @@ export default function ProfileAnalyticsPage() {
             <div style={{ display: "grid", gap: 10 }}>
               {strengthProfile.strengthNarratives.slice(0, 5).map((item) => (
                 <div key={item.label} style={{ ...GLASS_SOFT, borderRadius: 13, padding: 13 }}>
-                  <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", gap: 9, alignItems: "flex-end" }}>
                     <span style={{ color: "#16A34A", fontWeight: 950, lineHeight: 1.35 }}>✓</span>
                     <div>
                       <div style={{ fontSize: 13.5, fontWeight: 950, color: SLATE }}>{item.label}</div>
@@ -1266,7 +1267,7 @@ export default function ProfileAnalyticsPage() {
           <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Content playbook</div>
           <div style={{ display: "grid", gap: 8 }}>
             {["Share a quick career win or lesson learned.", "Answer one Hearth discussion with useful detail.", "Comment where you can add practical experience."].map((item) => (
-              <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                 <span style={{ color: ORANGE, fontWeight: 900, lineHeight: 1.35, flexShrink: 0 }}>•</span>
                 <span style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{item}</span>
               </div>
@@ -1287,8 +1288,6 @@ export default function ProfileAnalyticsPage() {
         width: 240,
         flex: "0 0 240px",
         alignSelf: "flex-end",
-        height: LEFT_COMMAND_CARD_HEIGHT,
-        overflow: "hidden",
       }}
     >
       <div style={{ fontSize: 17, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 8, ...ORANGE_HEADING_LIFT }}>
@@ -1343,6 +1342,19 @@ export default function ProfileAnalyticsPage() {
             <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.25, textAlign: "right" }}>Profile interactions</div>
           </div>
         </div>
+
+        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: "8px 10px" }}>
+          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>
+            Momentum
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "auto minmax(64px,1fr)", alignItems: "center", gap: 9 }}>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{momentumScore}</div>
+              <div style={{ fontSize: 10.5, fontWeight: 900, color: ORANGE, marginTop: 2 }}>{momentumLabel}</div>
+            </div>
+            <ProgressBar value={momentumScore} />
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -1359,13 +1371,20 @@ export default function ProfileAnalyticsPage() {
       }}
     >
       <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
-        Visibility Trend <span style={{ fontSize: 15, color: MUTED, textShadow: "none", fontWeight: 850 }}>(Last 7 Days)</span>
+        Visibility Trend
       </div>
 
       <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.74)", borderRadius: 16, padding: 14, overflow: "hidden" }}>
-        <div style={{ minHeight: 260, maxHeight: 325, overflow: "hidden" }}>
+        <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 8 }}>Profile Views</div>
+        <div style={{ minHeight: 220, maxHeight: 285, overflow: "hidden" }}>
           <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
         </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 14 }}>
+        <MiniMetric label="7d views" value={weeklyViews} hint="Profile reach" />
+        <MiniMetric label="Search hits" value={weeklySearch} hint="Discovery" />
+        <MiniMetric label="Connections" value={analytics.connectionsGained7d} hint="7 day growth" />
       </div>
     </section>
   );
@@ -1373,61 +1392,35 @@ export default function ProfileAnalyticsPage() {
   const nextActionsRailCard = (
     <section
       style={{
+        ...GLASS,
+        borderRadius: 18,
+        padding: 12,
         width: 240,
         flex: "0 0 240px",
         alignSelf: "flex-end",
-        minWidth: 0,
-        minHeight: COMMAND_RAIL_HEIGHT,
       }}
     >
-      <RotatingCard
-        title="Next Best Actions"
-        minHeight={284}
-        cardStyle={{ height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
-        contentStyle={{ alignContent: "stretch" }}
-        slides={[
-          ...(profileLoading
-            ? [<div key="loading-actions" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12, color: MUTED }}>Loading profile actions…</div>]
-            : nextActions.length
-              ? nextActions.slice(0, 3).map((item) => (
-                  <ActionTile
-                    key={item.label}
-                    title={item.label}
-                    body="Strengthen this profile signal in The Anvil to improve visibility."
-                    buttonLabel="Open in The Anvil →"
-                    onClick={() => router.push("/anvil?module=profile")}
-                  />
-                ))
-              : [
-                  <InsightTile
-                    key="complete-profile"
-                    label="Complete"
-                    tone="strong"
-                    title="Your profile checklist is complete"
-                    body="Keep your profile fresh as your goals, projects, and experience evolve."
-                  />,
-                ]),
-          <ActionTile
-            key="review-profile"
-            title="Review your public profile"
-            body="See what recruiters, coaches, and contacts see when they land on your profile."
-            buttonLabel="Open profile →"
-            onClick={() => router.push("/profile")}
-          />,
-          <ActionTile
-            key="hearth-visibility"
-            title="Build visibility through the Hearth"
-            body="Turn helpful community activity into professional visibility."
-            buttonLabel="Open The Hearth →"
-            onClick={() => router.push("/hearth/spotlights")}
-          />,
-        ]}
-      />
+      <div style={{ fontSize: 17, color: ORANGE, lineHeight: 1.2, letterSpacing: "-0.01em", marginBottom: 8, ...ORANGE_HEADING_LIFT }}>
+        Next Best Actions
+      </div>
+      <div style={{ display: "grid", gap: 4 }}>
+        {profileLoading ? (
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 8, color: MUTED }}>Loading profile actions…</div>
+        ) : nextActions.length ? (
+          nextActions.slice(0, 3).map((item) => (
+            <ActionTile key={item.label} title={item.label} body="Strengthen this profile signal in The Anvil to improve visibility." buttonLabel="Open in The Anvil →" onClick={() => router.push("/anvil?module=profile")} />
+          ))
+        ) : (
+          <InsightTile label="Complete" tone="strong" title="Your profile checklist is complete" body="Keep your profile fresh as your goals, projects, and experience evolve." />
+        )}
+        <ActionTile title="Review your public profile" body="See what recruiters, coaches, and contacts see when they land on your profile." buttonLabel="Open profile →" onClick={() => router.push("/profile")} />
+        <ActionTile title="Build visibility through the Hearth" body="Turn helpful community activity into professional visibility." buttonLabel="Open The Hearth →" onClick={() => router.push("/hearth/spotlights")} />
+      </div>
     </section>
   );
 
   const recentViewersCompactCard = (
-    <SectionCard title="Recent Viewers" style={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}>
+    <SectionCard title="Recent Viewers">
       <RecentViewers viewers={analytics.recentViewers} allViewsHref={allViewsHref} />
     </SectionCard>
   );
@@ -1468,30 +1461,27 @@ export default function ProfileAnalyticsPage() {
   const activityIntelligenceCard = (
     <RotatingCard
       title="Activity Intelligence"
-      minHeight={isMobile ? 154 : 179}
-      cardStyle={isMobile ? {} : { height: LEFT_COMMAND_CARD_HEIGHT, overflow: "hidden" }}
-      contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
         <InsightTile
           key="activity-community"
           label="Community"
           tone="building"
           title={`${totalContent.toLocaleString()} content signals`}
-          body="Posts and comments turn your profile into an active professional signal."
+          body="Posts and comments help turn your profile from a static page into an active professional signal."
         />,
         <InsightTile
           key="activity-network"
           label="Network"
           tone="live"
           title={`${analytics.connectionsGained7d.toLocaleString()} new connections in 7 days`}
-          body="Connection movement shows whether activity is creating real reach."
+          body="Connection movement shows whether activity is translating into real professional reach."
         />,
         <InsightTile
           key="activity-next"
           label="Next move"
           tone="strong"
-          title="Turn activity into visibility"
-          body="One post. One comment. One Hearth reply."
+          title="Turn activity into useful visibility"
+          body="Use one helpful post, one thoughtful comment, and one Hearth reply to keep your professional signal active without adding noise."
         />,
       ]}
     />
@@ -1512,19 +1502,14 @@ export default function ProfileAnalyticsPage() {
         Connection Growth
       </div>
 
-      <div
-        style={{
-          ...GLASS_SOFT,
-          background: "rgba(255,255,255,0.74)",
-          borderRadius: 16,
-          padding: 14,
-          minHeight: COMMAND_CENTER_CHART_HEIGHT,
-          overflow: "hidden",
-          display: "grid",
-          alignItems: "stretch",
-        }}
-      >
+      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.74)", borderRadius: 16, padding: 14, overflow: "hidden" }}>
         <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 14 }}>
+        <MiniMetric label="New connections" value={analytics.connectionsGained7d} hint="7 day growth" />
+        <MiniMetric label="Posts" value={analytics.postsCount} hint="Shared content" />
+        <MiniMetric label="Comments" value={analytics.commentsCount} hint="Community activity" />
       </div>
     </section>
   );
@@ -1532,78 +1517,34 @@ export default function ProfileAnalyticsPage() {
   const activitySupportCard = (
     <RotatingCard
       title="Content Spotlight"
-      minHeight={isMobile ? 390 : 284}
-      cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
-      contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
-        <div key="top-content" style={{ display: "grid", gap: 12 }}>
-          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-            <div style={{ fontSize: 10, color: ORANGE, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
-              Top Post
-            </div>
-            {analytics.highestViewedPost ? (
-              <>
-                <a href={analytics.highestViewedPost.url} style={{ display: "block", color: SLATE, fontWeight: 950, marginTop: 4, textDecoration: "none", lineHeight: 1.35 }}>
-                  {analytics.highestViewedPost.title}
-                </a>
-                <div style={{ fontSize: 12, color: ORANGE, fontWeight: 900, marginTop: 8 }}>
-                  {analytics.highestViewedPost.views.toLocaleString()} interactions
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ fontSize: 13, color: SLATE, fontWeight: 950, lineHeight: 1.35 }}>Top post performance will appear here</div>
-                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>Share useful content to build activity signals.</div>
-              </>
-            )}
+        analytics.highestViewedPost ? (
+          <div key="top-post" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 10, color: MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em" }}>Top Post</div>
+            <a href={analytics.highestViewedPost.url} style={{ display: "block", color: ORANGE, fontWeight: 900, marginTop: 6, textDecoration: "none", lineHeight: 1.35 }}>
+              {analytics.highestViewedPost.title}
+            </a>
+            <div style={{ fontSize: 12, color: MUTED, marginTop: 5 }}>{analytics.highestViewedPost.views.toLocaleString()} interactions</div>
           </div>
-
-          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-            <div style={{ fontSize: 10, color: ORANGE, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
-              Top Comment
-            </div>
-            {analytics.highestViewedComment ? (
-              <>
-                <div style={{ color: SLATE, fontSize: 13, fontWeight: 850, lineHeight: 1.5 }}>"{analytics.highestViewedComment.snippet}"</div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
-                  <span style={{ fontSize: 12, color: ORANGE, fontWeight: 900 }}>
-                    {(analytics.highestViewedComment.views || analytics.highestViewedComment.likes || 0).toLocaleString()} interactions
-                  </span>
-                  <a href={analytics.highestViewedComment.url} style={{ color: ORANGE, fontSize: 12, fontWeight: 900, textDecoration: "none" }}>View →</a>
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ fontSize: 13, color: SLATE, fontWeight: 950, lineHeight: 1.35 }}>Helpful comments become visibility signals</div>
-                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>Comment where you can add practical experience.</div>
-              </>
-            )}
+        ) : (
+          <InsightTile key="top-post-empty" label="Building" tone="building" title="Top post performance will appear here" body="Once feed interaction tracking is expanded, your strongest post will surface here." />
+        ),
+        analytics.highestViewedComment ? (
+          <div key="top-comment" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 10, color: MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em" }}>Top Comment</div>
+            <div style={{ color: SLATE, fontSize: 13, lineHeight: 1.55, marginTop: 6 }}>"{analytics.highestViewedComment.snippet}"</div>
+            <a href={analytics.highestViewedComment.url} style={{ display: "inline-block", color: ORANGE, fontWeight: 900, marginTop: 8, textDecoration: "none" }}>View comment →</a>
           </div>
-        </div>,
-
-        <div key="daily-playbook" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
-            Today's Playbook
-          </div>
-          <div style={{ display: "grid", gap: 10 }}>
-            {["Answer one Hearth discussion.", "Comment on one professional post.", "Share one useful career lesson."].map((item) => (
-              <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <span style={{ color: ORANGE, fontWeight: 950, lineHeight: 1.35, flexShrink: 0 }}>•</span>
-                <span style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.55 }}>{item}</span>
-              </div>
-            ))}
-          </div>
-        </div>,
-
-        <div key="weekly-playbook" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
-            This Week's Playbook
-          </div>
-          <div style={{ display: "grid", gap: 10 }}>
-            {["Publish one original post.", "Make three meaningful comments.", "Add one project or result to your profile.", "Connect with three professionals."].map((item) => (
-              <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <span style={{ color: ORANGE, fontWeight: 950, lineHeight: 1.35, flexShrink: 0 }}>•</span>
-                <span style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.55 }}>{item}</span>
+        ) : (
+          <InsightTile key="top-comment-empty" label="Community" tone="live" title="Helpful comments become visibility signals" body="As comment-level tracking grows, this area will show which community contributions helped people notice you." />
+        ),
+        <div key="content-playbook" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Content playbook</div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {["Share a quick career win or lesson learned.", "Answer one Hearth discussion with useful detail.", "Comment where you can add practical experience."].map((item) => (
+              <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                <span style={{ color: ORANGE, fontWeight: 900, lineHeight: 1.35, flexShrink: 0 }}>•</span>
+                <span style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{item}</span>
               </div>
             ))}
           </div>
@@ -1688,6 +1629,7 @@ export default function ProfileAnalyticsPage() {
       // Mobile: each tab owns its own focused group.
       if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
       if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{visibilityKpiStrip}{reachCard}{visibilityCard}{recentViewersCompactCard}</div>;
+      if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthKpiStrip}{strengthRecruiterLensHeroCard}{executionProofCard}{strengthSignalCard}{strengthDetailGrid}</div>;
       if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{activityKpiStrip}{activityIntelligenceCard}{connectionGrowthHeroCard}{activitySupportCard}</div>;
       return null;
     }
@@ -1735,6 +1677,20 @@ export default function ProfileAnalyticsPage() {
       );
     }
 
+    if (activeTab === "strength") {
+      return (
+        <>
+          {strengthKpiStrip}
+          {bleedCommandRow(
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{executionProofCard}</section>,
+            strengthRecruiterLensHeroCard,
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{strengthSignalCard}</section>,
+            8
+          )}
+          {strengthDetailGrid}
+        </>
+      );
+    }
 
     if (activeTab === "activity") {
       return (
@@ -1743,8 +1699,7 @@ export default function ProfileAnalyticsPage() {
           {bleedCommandRow(
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activityIntelligenceCard}</section>,
             connectionGrowthHeroCard,
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activitySupportCard}</section>,
-            8
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activitySupportCard}</section>
           )}
         </>
       );
