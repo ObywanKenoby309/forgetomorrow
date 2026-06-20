@@ -53,9 +53,9 @@ const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recr
 const LEFT_COMMAND_CARD_HEIGHT = 230;
 const COMMAND_RAIL_HEIGHT = 390;
 const STRENGTH_MAIN_MIN_HEIGHT = 520;
-const STRENGTH_SIDE_CARD_DROP = 48;
-const STRENGTH_SIDE_CARD_HEIGHT = 330;
-const STRENGTH_DETAIL_TOP_GAP = 72;
+const STRENGTH_SIDE_CARD_DROP = 100;
+const STRENGTH_SIDE_CARD_HEIGHT = 400;
+const STRENGTH_DETAIL_TOP_GAP = 132;
 const COMMAND_ROW_TOP_GAP = 8;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
