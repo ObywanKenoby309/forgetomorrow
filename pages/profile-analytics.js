@@ -968,15 +968,17 @@ export default function ProfileAnalyticsPage() {
               ...GLASS_SOFT,
               borderRadius: 16,
               padding: 14,
-              minHeight: isMobile ? 300 : 430,
+              minHeight: isMobile ? 280 : 335,
               overflow: "hidden",
               display: "grid",
               gridTemplateRows: "auto minmax(0, 1fr)",
             }}
           >
             <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 8 }}>Views (Last 7 Days)</div>
-            <div style={{ minHeight: isMobile ? 240 : 360, overflow: "hidden" }}>
-              <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
+            <div style={{ height: isMobile ? 220 : 260, overflow: "hidden" }}>
+              <div style={{ transform: "translateY(-38px)", height: isMobile ? 258 : 298 }}>
+                <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
+              </div>
             </div>
           </div>
 
@@ -985,15 +987,17 @@ export default function ProfileAnalyticsPage() {
               ...GLASS_SOFT,
               borderRadius: 16,
               padding: 14,
-              minHeight: isMobile ? 300 : 430,
+              minHeight: isMobile ? 280 : 335,
               overflow: "hidden",
               display: "grid",
               gridTemplateRows: "auto minmax(0, 1fr)",
             }}
           >
             <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 8 }}>Search Appearances (Last 7 Days)</div>
-            <div style={{ minHeight: isMobile ? 240 : 360, overflow: "hidden" }}>
-              <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
+            <div style={{ height: isMobile ? 220 : 260, overflow: "hidden" }}>
+              <div style={{ transform: "translateY(-38px)", height: isMobile ? 258 : 298 }}>
+                <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
+              </div>
             </div>
           </div>
         </div>
@@ -1341,19 +1345,6 @@ export default function ProfileAnalyticsPage() {
             <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.25, textAlign: "right" }}>Profile interactions</div>
           </div>
         </div>
-
-        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: "8px 10px" }}>
-          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>
-            Momentum
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "auto minmax(64px,1fr)", alignItems: "center", gap: 9 }}>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{momentumScore}</div>
-              <div style={{ fontSize: 10.5, fontWeight: 900, color: ORANGE, marginTop: 2 }}>{momentumLabel}</div>
-            </div>
-            <ProgressBar value={momentumScore} />
-          </div>
-        </div>
       </div>
     </section>
   );
@@ -1370,20 +1361,13 @@ export default function ProfileAnalyticsPage() {
       }}
     >
       <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
-        Visibility Trend
+        Visibility Trend <span style={{ fontSize: 15, color: MUTED, textShadow: "none", fontWeight: 850 }}>(Last 7 Days)</span>
       </div>
 
       <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.74)", borderRadius: 16, padding: 14, overflow: "hidden" }}>
-        <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 8 }}>Profile Views</div>
-        <div style={{ minHeight: 220, maxHeight: 285, overflow: "hidden" }}>
+        <div style={{ minHeight: 260, maxHeight: 325, overflow: "hidden" }}>
           <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
         </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 14 }}>
-        <MiniMetric label="7d views" value={weeklyViews} hint="Profile reach" />
-        <MiniMetric label="Search hits" value={weeklySearch} hint="Discovery" />
-        <MiniMetric label="Connections" value={analytics.connectionsGained7d} hint="7 day growth" />
       </div>
     </section>
   );
@@ -1391,30 +1375,53 @@ export default function ProfileAnalyticsPage() {
   const nextActionsRailCard = (
     <section
       style={{
-        ...GLASS,
-        borderRadius: 18,
-        padding: 12,
         width: 240,
         flex: "0 0 240px",
         alignSelf: "flex-end",
+        minWidth: 0,
       }}
     >
-      <div style={{ fontSize: 17, color: ORANGE, lineHeight: 1.2, letterSpacing: "-0.01em", marginBottom: 8, ...ORANGE_HEADING_LIFT }}>
-        Next Best Actions
-      </div>
-      <div style={{ display: "grid", gap: 4 }}>
-        {profileLoading ? (
-          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 8, color: MUTED }}>Loading profile actions…</div>
-        ) : nextActions.length ? (
-          nextActions.slice(0, 3).map((item) => (
-            <ActionTile key={item.label} title={item.label} body="Strengthen this profile signal in The Anvil to improve visibility." buttonLabel="Open in The Anvil →" onClick={() => router.push("/anvil?module=profile")} />
-          ))
-        ) : (
-          <InsightTile label="Complete" tone="strong" title="Your profile checklist is complete" body="Keep your profile fresh as your goals, projects, and experience evolve." />
-        )}
-        <ActionTile title="Review your public profile" body="See what recruiters, coaches, and contacts see when they land on your profile." buttonLabel="Open profile →" onClick={() => router.push("/profile")} />
-        <ActionTile title="Build visibility through the Hearth" body="Turn helpful community activity into professional visibility." buttonLabel="Open The Hearth →" onClick={() => router.push("/hearth/spotlights")} />
-      </div>
+      <RotatingCard
+        title="Next Best Actions"
+        minHeight={174}
+        slides={[
+          ...(profileLoading
+            ? [<div key="loading-actions" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12, color: MUTED }}>Loading profile actions…</div>]
+            : nextActions.length
+              ? nextActions.slice(0, 3).map((item) => (
+                  <ActionTile
+                    key={item.label}
+                    title={item.label}
+                    body="Strengthen this profile signal in The Anvil to improve visibility."
+                    buttonLabel="Open in The Anvil →"
+                    onClick={() => router.push("/anvil?module=profile")}
+                  />
+                ))
+              : [
+                  <InsightTile
+                    key="complete-profile"
+                    label="Complete"
+                    tone="strong"
+                    title="Your profile checklist is complete"
+                    body="Keep your profile fresh as your goals, projects, and experience evolve."
+                  />,
+                ]),
+          <ActionTile
+            key="review-profile"
+            title="Review your public profile"
+            body="See what recruiters, coaches, and contacts see when they land on your profile."
+            buttonLabel="Open profile →"
+            onClick={() => router.push("/profile")}
+          />,
+          <ActionTile
+            key="hearth-visibility"
+            title="Build visibility through the Hearth"
+            body="Turn helpful community activity into professional visibility."
+            buttonLabel="Open The Hearth →"
+            onClick={() => router.push("/hearth/spotlights")}
+          />,
+        ]}
+      />
     </section>
   );
 
@@ -1642,7 +1649,7 @@ export default function ProfileAnalyticsPage() {
             style={{
               marginLeft: LEFT_BLEED,
               marginRight: RIGHT_BLEED,
-              marginTop: 8,
+              marginTop: 12,
               display: "flex",
               alignItems: "flex-end",
               gap: GAP,
