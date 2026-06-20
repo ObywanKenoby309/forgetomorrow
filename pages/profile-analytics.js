@@ -223,6 +223,27 @@ function InlineSignalCarousel({ groups = [], intervalMs = 5200 }) {
   );
 }
 
+function SimpleAutoCarousel({ slides = [], intervalMs = 5200 }) {
+  const validSlides = Array.isArray(slides) ? slides.filter(Boolean) : [];
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (validSlides.length <= 1) return undefined;
+    const timer = window.setInterval(() => {
+      setActiveIndex((idx) => (idx + 1) % validSlides.length);
+    }, intervalMs);
+    return () => window.clearInterval(timer);
+  }, [validSlides.length, intervalMs]);
+
+  useEffect(() => {
+    if (activeIndex >= validSlides.length) setActiveIndex(0);
+  }, [activeIndex, validSlides.length]);
+
+  if (!validSlides.length) return null;
+
+  return validSlides[activeIndex];
+}
+
 function MiniMetric({ label, value, hint }) {
   return (
     <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12 }}>
@@ -929,8 +950,22 @@ export default function ProfileAnalyticsPage() {
           <div style={{ fontSize: 13, fontWeight: 900, color: "rgba(255,255,255,0.88)", marginTop: 3 }}>{strengthProfile.professionalSignal}</div>
         </div>
 
-        <SignalChip label="Recruiter takeaway" value={strengthProfile.professionalSignal === "Strong" ? "Advance-worthy" : strengthProfile.professionalSignal} tone={strengthProfile.professionalSignal === "Strong" ? "good" : "warn"} />
-        <SignalChip label="Top validation" value={strengthProfile.validationCards?.[0]?.title || "Fit and role scope"} tone={strengthProfile.validationRisk === "Low" ? "good" : "warn"} />
+        <SimpleAutoCarousel
+  slides={[
+    <SignalChip
+      key="recruiter-takeaway"
+      label="Recruiter takeaway"
+      value={strengthProfile.professionalSignal === "Strong" ? "Advance-worthy" : strengthProfile.professionalSignal}
+      tone={strengthProfile.professionalSignal === "Strong" ? "good" : "warn"}
+    />,
+    <SignalChip
+      key="top-validation"
+      label="Top validation"
+      value={strengthProfile.validationCards?.[0]?.title || "Fit and role scope"}
+      tone={strengthProfile.validationRisk === "Low" ? "good" : "warn"}
+    />,
+  ]}
+/>
 
         <InlineSignalCarousel
           groups={[
@@ -1006,10 +1041,10 @@ export default function ProfileAnalyticsPage() {
   const strengthActionsCard = (
     <RotatingCard
       title="Recruiters Will Want Proof Of"
-      minHeight={250}
+      minHeight={165}
       slides={[
         ...(strengthProfile.validationCards || []).slice(0, 4).map((item) => (
-          <div key={item.title} style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13, minHeight: 220, display: "grid", alignContent: "start" }}>
+          <div key={item.title} style={{ ...GLASS_SOFT, borderRadius: 14, padding: 10, minHeight: 130, display: "grid", alignContent: "start" }}>
             <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35 }}>{item.title}</div>
             <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>{item.body}</div>
             <div style={{ fontSize: 11.5, color: ORANGE, fontWeight: 900, lineHeight: 1.45, marginTop: 8 }}>{item.fix}</div>
