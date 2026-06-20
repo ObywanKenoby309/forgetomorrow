@@ -171,6 +171,7 @@ function AppShell({ Component, pageProps }) {
       '/profile/[slug]',
 	  '/profile/view/[slug]',
       '/profile-analytics',
+	  '/profile-strength',
       '/feed',
       '/post-view', // Post full view is INTERNAL (prevents public header/footer)
       '/member-profile',
