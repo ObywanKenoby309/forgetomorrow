@@ -399,13 +399,22 @@ export default function RightRailPlacementManager({
     // ForgeVault uses the same house-ad rail until a dedicated ad surface is added.
     // Keep this here so these routes can receive a right-rail house ad even if
     // surfaceMap has not been expanded yet.
-    if (String(path || '').startsWith('/search') || String(path || '').startsWith('/dashboard/forge-vault')) {
-      return {
-        surfaceId: 'platform_search',
-        segment: 'seeker',
-        carousel: true,
-      };
-    }
+    if (String(path || '').startsWith('/profile-strength')) {
+  return {
+    surfaceId: 'seeker_profile_strength',
+    segment: 'seeker',
+    carousel: false,
+  };
+}
+
+if (String(path || '').startsWith('/search') || 
+    String(path || '').startsWith('/dashboard/forge-vault')) {
+  return {
+    surfaceId: 'platform_search',
+    segment: 'seeker',
+    carousel: true,
+  };
+}
 
     if (surfaceIdProp) {
       // caller provided surfaceId directly — still resolve segment/carousel from map

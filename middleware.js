@@ -24,66 +24,59 @@ const ratelimit =
     prefix: "middleware:rl:",
   });
 
-/* -----------------------------------------------
-   PUBLIC PAGES (FULL EXTERNAL SITE)
------------------------------------------------- */
 const PUBLIC_PATHS = new Set([
-  "/",                     // Home
-  "/about",                // About Us
-  "/pricing",              // Pricing / Signup
-  "/help",                 // Help Center (NOT Support Center)
-  "/contact",              // Contact
-  "/features",             // Features overview
-  "/careers",              // Careers
-  "/press",                // Press Kit
-  "/blog",                 // Blog landing
-  "/privacy",              // Privacy Policy
-  "/terms",                // Terms of Service
-  "/community-guidelines", // Community Guidelines
-  "/security",             // Security
-  "/accessibility",        // Accessibility
-  "/tracking-policy",      // Cookies / Tracking
-  "/company",              // ✅ NEW: Company Hub
-  "/product",              // ✅ NEW: Product Hub
-  "/legal",                // ✅ NEW: Legal Hub
-  "/login",                // Login page
-  "/auth/signin",          // NextAuth Signin
-  "/feedback",             // Feedback landing
-  "/subprocessors",        // Subprocessor list
+  "/",
+  "/about",
+  "/pricing",
+  "/help",
+  "/contact",
+  "/features",
+  "/careers",
+  "/press",
+  "/blog",
+  "/privacy",
+  "/terms",
+  "/community-guidelines",
+  "/security",
+  "/accessibility",
+  "/tracking-policy",
+  "/company",
+  "/product",
+  "/legal",
+  "/login",
+  "/auth/signin",
+  "/feedback",
+  "/subprocessors",
 ]);
 
-// ✅ Internal / Workspace routes (staff-only by login)
 const INTERNAL_PREFIXES = ["/internal", "/workspace"];
 
-// ✅ App routes that must require login (but are NOT staff-only)
-const AUTH_PREFIXES = ["/action-center", "/profile", "/search"];
+const AUTH_PREFIXES = [
+  "/action-center",
+  "/profile",
+  "/profile-strength",
+  "/search",
+];
 
-// ✅ Foundry routes must always require login, independent of SITE_LOCK
-// Guest join routes are intentionally public.
 const FOUNDRY_PREFIXES = ["/foundry", "/api/foundry"];
 
 function isPublicPath(pathname) {
-  // Direct matches
   if (PUBLIC_PATHS.has(pathname)) return true;
 
-  // Wildcard sections: allow all children
   if (pathname.startsWith("/blog/")) return true;
   if (pathname.startsWith("/help/")) return true;
   if (pathname.startsWith("/features/")) return true;
   if (pathname.startsWith("/feedback/")) return true;
 
-  // Public assets (Next, icons, images, corp banners, wallpapers)
   if (pathname.startsWith("/_next")) return true;
   if (pathname.startsWith("/static")) return true;
   if (pathname.startsWith("/favicon")) return true;
   if (pathname.startsWith("/images")) return true;
   if (pathname.startsWith("/icons")) return true;
 
-  // 🔥 Allow corporate banners and wallpaper assets publicly
   if (pathname.startsWith("/corporate-banners")) return true;
   if (pathname.startsWith("/profile-wallpapers")) return true;
 
-  // Signup / Register flow
   if (SIGNUPS_OPEN && pathname.startsWith("/signup")) return true;
 
   return false;
@@ -108,10 +101,8 @@ function isPublicFoundryGuestPath(pathname) {
     pathname === "/api/foundry/guest-token" ||
     pathname === "/api/foundry/resolve-code" ||
     pathname.startsWith("/api/foundry/room-status/") ||
-    // Share-file GET is public — guests need to see shared files without auth
     pathname.match(/^\/api\/foundry\/room\/[^\/]+\/share-file$/) !== null ||
-    // File download — access control handled inside the endpoint
-    pathname === "/api/files/download" 
+    pathname === "/api/files/download"
   );
 }
 
@@ -134,24 +125,20 @@ function redirectToSignin(req, pathname) {
 export async function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  // ✅ Full-rename redirect: /roadmap -> /anvil (preserve querystring)
   if (pathname === "/roadmap") {
     const url = req.nextUrl.clone();
     url.pathname = "/anvil";
     return NextResponse.redirect(url, 301);
   }
 
-  // 1. Always allow NextAuth API
   if (pathname.startsWith("/api/auth/")) {
     return NextResponse.next();
   }
 
-  // 1b. Always allow public resume PDF download
   if (pathname.startsWith("/api/resume/public-download")) {
     return NextResponse.next();
   }
 
-  // 1c. Always allow Stripe/Billing webhooks + checkout/success/cancel
   if (
     pathname.startsWith("/api/stripe") ||
     pathname.startsWith("/api/billing") ||
@@ -162,12 +149,10 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // ✅ 1d. Guest Foundry join routes are public
   if (isPublicFoundryGuestPath(pathname)) {
     return NextResponse.next();
   }
 
-  // ✅ 1e. All other Foundry routes are always protected, independent of SITE_LOCK
   if (isFoundryPath(pathname)) {
     const hasSession = await hasValidNextAuthSession(req);
 
@@ -178,17 +163,14 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // 2. Always allow public profile slugs (/u and /u/:slug)
   if (pathname === "/u" || pathname.startsWith("/u/")) {
     return NextResponse.next();
   }
 
-  // 3. Other public routes
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
-  // ✅ 3a. App routes that always require login (not staff-only)
   if (isAuthPath(pathname)) {
     const hasSession = await hasValidNextAuthSession(req);
 
@@ -199,7 +181,6 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // ✅ 3b. Internal/workspace routes are always protected (independent of SITE_LOCK)
   if (isInternalPath(pathname)) {
     const hasSession = await hasValidNextAuthSession(req);
 
@@ -207,12 +188,9 @@ export async function middleware(req) {
       return redirectToSignin(req, pathname);
     }
 
-    // Authenticated: allow for now.
-    // (We will tighten this to employee/department after Prisma + NextAuth session wiring.)
     return NextResponse.next();
   }
 
-  // 4. SITE_LOCK protected mode
   if (SITE_LOCK) {
     const hasSession = await hasValidNextAuthSession(req);
 
@@ -221,7 +199,6 @@ export async function middleware(req) {
     }
   }
 
-  // 5. Rate limiting
   if (ratelimit) {
     const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
     const { success } = await ratelimit.limit(ip);
