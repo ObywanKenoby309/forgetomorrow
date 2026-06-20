@@ -51,8 +51,9 @@ const LEFT_BLEED         = -(240 + 12);   // sidebar 240 + gap 12
 const RIGHT_BLEED        = -(240 + 12);   // right rail 240 + gap 12
 const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recruiter
 const COMMAND_RAIL_HEIGHT = 390;
-const LEFT_COMMAND_CARD_HEIGHT = 230;
-const COMMAND_CENTER_CHART_HEIGHT = 360;
+const LEFT_COMMAND_CARD_OFFSET = 70;
+const LEFT_COMMAND_CARD_HEIGHT = COMMAND_RAIL_HEIGHT - LEFT_COMMAND_CARD_OFFSET;
+const COMMAND_CENTER_CHART_HEIGHT = 305;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function safeArray(v) {
@@ -910,8 +911,8 @@ export default function ProfileAnalyticsPage() {
   const visibilityCard = (
     <RotatingCard
       title="Visibility Intelligence"
-      minHeight={isMobile ? 132 : 179}
-      cardStyle={isMobile ? {} : { height: LEFT_COMMAND_CARD_HEIGHT, overflow: "hidden" }}
+      minHeight={isMobile ? 132 : 269}
+      cardStyle={isMobile ? {} : { height: LEFT_COMMAND_CARD_HEIGHT, marginTop: LEFT_COMMAND_CARD_OFFSET, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
         <InsightTile
@@ -1071,7 +1072,7 @@ export default function ProfileAnalyticsPage() {
         padding: 18,
         flex: "1 1 auto",
         minWidth: 0,
-        alignSelf: "flex-end",
+        alignSelf: "flex-start",
         minHeight: COMMAND_RAIL_HEIGHT,
       }}
     >
@@ -1286,8 +1287,9 @@ export default function ProfileAnalyticsPage() {
         padding: 12,
         width: 240,
         flex: "0 0 240px",
-        alignSelf: "flex-end",
+        alignSelf: "flex-start",
         height: LEFT_COMMAND_CARD_HEIGHT,
+        marginTop: LEFT_COMMAND_CARD_OFFSET,
         overflow: "hidden",
       }}
     >
@@ -1338,7 +1340,7 @@ export default function ProfileAnalyticsPage() {
           <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>
             Views
           </div>
-          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
             <div style={{ fontSize: 20, fontWeight: 950, color: SLATE, lineHeight: 1 }}>{analytics.totalViews.toLocaleString()}</div>
             <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.25, textAlign: "right" }}>Profile interactions</div>
           </div>
@@ -1355,7 +1357,7 @@ export default function ProfileAnalyticsPage() {
         padding: 18,
         flex: "1 1 auto",
         minWidth: 0,
-        alignSelf: "flex-end",
+        alignSelf: "flex-start",
       }}
     >
       <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
@@ -1363,7 +1365,7 @@ export default function ProfileAnalyticsPage() {
       </div>
 
       <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.74)", borderRadius: 16, padding: 14, overflow: "hidden" }}>
-        <div style={{ minHeight: 260, maxHeight: 325, overflow: "hidden" }}>
+        <div style={{ minHeight: COMMAND_CENTER_CHART_HEIGHT, overflow: "hidden", display: "grid", alignItems: "stretch" }}>
           <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
         </div>
       </div>
@@ -1375,7 +1377,7 @@ export default function ProfileAnalyticsPage() {
       style={{
         width: 240,
         flex: "0 0 240px",
-        alignSelf: "flex-end",
+        alignSelf: "flex-start",
         minWidth: 0,
         minHeight: COMMAND_RAIL_HEIGHT,
       }}
@@ -1468,8 +1470,8 @@ export default function ProfileAnalyticsPage() {
   const activityIntelligenceCard = (
     <RotatingCard
       title="Activity Intelligence"
-      minHeight={isMobile ? 154 : 179}
-      cardStyle={isMobile ? {} : { height: LEFT_COMMAND_CARD_HEIGHT, overflow: "hidden" }}
+      minHeight={isMobile ? 154 : 269}
+      cardStyle={isMobile ? {} : { height: LEFT_COMMAND_CARD_HEIGHT, marginTop: LEFT_COMMAND_CARD_OFFSET, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
         <InsightTile
@@ -1505,7 +1507,7 @@ export default function ProfileAnalyticsPage() {
         padding: 18,
         flex: "1 1 auto",
         minWidth: 0,
-        alignSelf: "flex-end",
+        alignSelf: "flex-start",
       }}
     >
       <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
@@ -1667,7 +1669,7 @@ export default function ProfileAnalyticsPage() {
         marginRight: RIGHT_BLEED,
         marginTop,
         display: "flex",
-        alignItems: "flex-end",
+        alignItems: "flex-start",
         gap: GAP,
         width: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
         maxWidth: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
@@ -1704,7 +1706,7 @@ export default function ProfileAnalyticsPage() {
               marginRight: RIGHT_BLEED,
               marginTop: 8,
               display: "flex",
-              alignItems: "flex-end",
+              alignItems: "flex-start",
               gap: GAP,
               width: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
               maxWidth: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
@@ -1726,9 +1728,9 @@ export default function ProfileAnalyticsPage() {
         <>
           {visibilityKpiStrip}
           {bleedCommandRow(
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{visibilityCard}</section>,
-            <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-end" }}>{reachCard}</section>,
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{recentViewersCompactCard}</section>,
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-start", minWidth: 0 }}>{visibilityCard}</section>,
+            <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-start" }}>{reachCard}</section>,
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-start", minWidth: 0 }}>{recentViewersCompactCard}</section>,
             8
           )}
         </>
@@ -1741,9 +1743,9 @@ export default function ProfileAnalyticsPage() {
         <>
           {activityKpiStrip}
           {bleedCommandRow(
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activityIntelligenceCard}</section>,
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-start", minWidth: 0 }}>{activityIntelligenceCard}</section>,
             connectionGrowthHeroCard,
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activitySupportCard}</section>,
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-start", minWidth: 0 }}>{activitySupportCard}</section>,
             8
           )}
         </>
