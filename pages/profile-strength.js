@@ -1115,8 +1115,8 @@ export default function ProfileStrengthPage() {
   const executionProofCard = (
     <RotatingCard
       title="Execution Proof"
-      minHeight={isMobile ? 260 : 284}
-      cardStyle={isMobile ? {} : { height: 240 }}
+      minHeight={isMobile ? 260 : 160}
+      cardStyle={isMobile ? {} : { height: 240, overflow: "hidden" }}
       contentStyle={{ alignContent: "stretch" }}
       slides={[
         ...(strengthProfile.projects.length
