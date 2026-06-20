@@ -1626,7 +1626,7 @@ export default function ProfileAnalyticsPage() {
   const inlay = (() => {
     if (isMobile) {
       // Mobile: each tab owns its own focused group.
-      if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{visibilityCard}</div>;
+      if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
       if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{visibilityKpiStrip}{reachCard}{visibilityCard}{recentViewersCompactCard}</div>;
       if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{activityKpiStrip}{activityIntelligenceCard}{connectionGrowthHeroCard}{activitySupportCard}</div>;
       return null;
@@ -1636,6 +1636,8 @@ export default function ProfileAnalyticsPage() {
     if (activeTab === "overview") {
       return (
         <>
+          {kpiStrip}
+
           <div
             style={{
               marginLeft: LEFT_BLEED,
