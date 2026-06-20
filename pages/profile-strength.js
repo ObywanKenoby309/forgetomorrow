@@ -50,9 +50,12 @@ const ORANGE_HEADING_LIFT = {
 const LEFT_BLEED         = -(240 + 12);   // sidebar 240 + gap 12
 const RIGHT_BLEED        = -(240 + 12);   // right rail 240 + gap 12
 const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recruiter
-const COMMAND_RAIL_HEIGHT = LEFT_COMMAND_CARD_HEIGHT;
 const LEFT_COMMAND_CARD_HEIGHT = 230;
+const COMMAND_RAIL_HEIGHT = 390;
 const STRENGTH_MAIN_MIN_HEIGHT = 520;
+const STRENGTH_SIDE_CARD_DROP = 48;
+const STRENGTH_SIDE_CARD_HEIGHT = 330;
+const STRENGTH_DETAIL_TOP_GAP = 72;
 const COMMAND_ROW_TOP_GAP = 8;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1026,7 +1029,7 @@ export default function ProfileStrengthPage() {
   );
 
   const strengthSignalCard = (
-    <SectionCard title="Recruiter Readiness" style={isMobile ? {} : { height: 520, overflow: "hidden" }}>
+    <SectionCard title="Recruiter Readiness" style={isMobile ? {} : { height: STRENGTH_SIDE_CARD_HEIGHT, overflow: "hidden" }}>
       <div style={{ display: "grid", gap: 10, height: "100%", minHeight: 0 }}>
         <div style={{ ...GLASS_SOFT, borderRadius: 16, padding: 14, background: "rgba(15,23,42,0.94)", color: "white", textAlign: "center" }}>
           <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Profile Read</div>
@@ -1129,7 +1132,7 @@ export default function ProfileStrengthPage() {
     <RotatingCard
       title="Execution Proof"
       minHeight={isMobile ? 260 : 284}
-      cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
+      cardStyle={isMobile ? {} : { height: STRENGTH_SIDE_CARD_HEIGHT, overflow: "hidden" }}
       contentStyle={{ alignContent: "stretch" }}
       slides={[
         ...(strengthProfile.projects.length
@@ -1165,7 +1168,7 @@ export default function ProfileStrengthPage() {
       style={{
         marginLeft: isMobile ? 0 : LEFT_BLEED,
         marginRight: isMobile ? 0 : RIGHT_BLEED,
-        marginTop: GAP,
+        marginTop: isMobile ? GAP : STRENGTH_DETAIL_TOP_GAP,
         display: "grid",
         gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
         alignItems: "stretch",
@@ -1714,9 +1717,29 @@ export default function ProfileStrengthPage() {
       return (
         <>
           {strengthCommandRow(
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{executionProofCard}</section>,
+            <section
+              style={{
+                width: 240,
+                flex: "0 0 240px",
+                alignSelf: "flex-end",
+                minWidth: 0,
+                transform: `translateY(${STRENGTH_SIDE_CARD_DROP}px)`,
+              }}
+            >
+              {executionProofCard}
+            </section>,
             strengthRecruiterLensHeroCard,
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{strengthSignalCard}</section>
+            <section
+              style={{
+                width: 240,
+                flex: "0 0 240px",
+                alignSelf: "flex-end",
+                minWidth: 0,
+                transform: `translateY(${STRENGTH_SIDE_CARD_DROP}px)`,
+              }}
+            >
+              {strengthSignalCard}
+            </section>
           )}
           {strengthDetailGrid}
         </>
