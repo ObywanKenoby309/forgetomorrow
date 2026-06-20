@@ -53,9 +53,10 @@ const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recr
 const LEFT_COMMAND_CARD_HEIGHT = 230;
 const COMMAND_RAIL_HEIGHT = 390;
 const STRENGTH_MAIN_MIN_HEIGHT = 520;
-const STRENGTH_SIDE_CARD_DROP = 100;
+const STRENGTH_SIDE_CARD_DROP = 0;
 const STRENGTH_SIDE_CARD_HEIGHT = 400;
-const STRENGTH_DETAIL_TOP_GAP = 132;
+const STRENGTH_EXECUTION_PROOF_HEIGHT = 200;
+const STRENGTH_DETAIL_TOP_GAP = 24;
 const COMMAND_ROW_TOP_GAP = 8;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1132,7 +1133,7 @@ export default function ProfileStrengthPage() {
     <RotatingCard
       title="Execution Proof"
       minHeight={isMobile ? 260 : 284}
-      cardStyle={isMobile ? {} : { height: STRENGTH_SIDE_CARD_HEIGHT, overflow: "hidden" }}
+      cardStyle={isMobile ? {} : { height: STRENGTH_EXECUTION_PROOF_HEIGHT, overflow: "hidden" }}
       contentStyle={{ alignContent: "stretch" }}
       slides={[
         ...(strengthProfile.projects.length
@@ -1723,7 +1724,6 @@ export default function ProfileStrengthPage() {
                 flex: "0 0 240px",
                 alignSelf: "flex-end",
                 minWidth: 0,
-                transform: `translateY(${STRENGTH_SIDE_CARD_DROP}px)`,
               }}
             >
               {executionProofCard}
@@ -1735,7 +1735,6 @@ export default function ProfileStrengthPage() {
                 flex: "0 0 240px",
                 alignSelf: "flex-end",
                 minWidth: 0,
-                transform: `translateY(${STRENGTH_SIDE_CARD_DROP}px)`,
               }}
             >
               {strengthSignalCard}
