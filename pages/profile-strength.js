@@ -1113,13 +1113,17 @@ export default function ProfileStrengthPage() {
     </section>
   );
 
-  const executionProofCard = (
-    <RotatingCard
-      title="Execution Proof"
-      minHeight={isMobile ? 260 : 105}
-	  cardStyle={isMobile ? {} : { height: 185, overflow: "hidden" }}
-      contentStyle={{ alignContent: "stretch" }}
-      slides={[
+const executionProofCard = (
+  <RotatingCard
+    title="Execution Proof"
+    minHeight={isMobile ? 260 : 115}
+    cardStyle={isMobile ? {} : { height: 205, overflow: "hidden" }}
+    contentStyle={{
+      alignContent: "center",
+      height: "100%",
+      overflow: "hidden",
+    }}
+    slides={[
         ...(strengthProfile.projects.length
           ? strengthProfile.projects.slice(0, 3).map((project, idx) => {
               const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || `Project ${idx + 1}`;
