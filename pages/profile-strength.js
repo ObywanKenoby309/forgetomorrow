@@ -1215,7 +1215,7 @@ export default function ProfileStrengthPage() {
         marginTop: isMobile ? GAP : STRENGTH_DETAIL_TOP_GAP,
         display: "grid",
         gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
-        alignItems: "stretch",
+        alignItems: "start",
         gap: GAP,
         width: isMobile ? "100%" : `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
         maxWidth: isMobile ? "100%" : `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
@@ -1227,7 +1227,13 @@ export default function ProfileStrengthPage() {
       {whyYouMatchCard}
 
       <SectionCard title="Where Recruiters Are Most Likely To Place You">
-        <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid" }}>
+        <div
+  style={{
+    height: isMobile ? "auto" : 520,
+    overflowY: isMobile ? "visible" : "auto",
+    display: "grid",
+  }}
+>
           {strengthProfile.careerRecommendations.length ? (
             <div style={{ display: "grid", gap: 9 }}>
               {strengthProfile.careerRecommendations.slice(0, 6).map((item, idx) => {
@@ -1250,7 +1256,14 @@ export default function ProfileStrengthPage() {
       </SectionCard>
 
       <SectionCard title="What Recruiters May Ask">
-        <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid", alignContent: "start" }}>
+        <div
+  style={{
+    height: isMobile ? "auto" : 520,
+    overflowY: isMobile ? "visible" : "auto",
+    display: "grid",
+    alignContent: "start",
+  }}
+>
           {(() => {
             const questions = generateRecruiterQuestions(strengthProfile);
             return questions.length ? (
