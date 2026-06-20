@@ -1059,14 +1059,14 @@ export default function ProfileStrengthPage() {
   const strengthRecruiterLensHeroCard = (
     <section
       style={{
-        ...GLASS,
-        borderRadius: 18,
-        padding: 18,
-        flex: "1 1 auto",
-        minWidth: 0,
-        alignSelf: "flex-end",
-        
-      }}
+  ...GLASS,
+  borderRadius: 18,
+  padding: 18,
+  flex: "0 1 auto",
+  maxWidth: "calc(100% - 504px)",
+  minWidth: 0,
+  alignSelf: "flex-end",
+}}
     >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 12 }}>
         <div>
@@ -1115,8 +1115,8 @@ export default function ProfileStrengthPage() {
   const executionProofCard = (
     <RotatingCard
       title="Execution Proof"
-      minHeight={isMobile ? 260 : 160}
-      cardStyle={isMobile ? {} : { height: 240, overflow: "hidden" }}
+      minHeight={isMobile ? 260 : 100}
+	  cardStyle={isMobile ? {} : { height: 180, overflow: "hidden" }}
       contentStyle={{ alignContent: "stretch" }}
       slides={[
         ...(strengthProfile.projects.length
