@@ -477,76 +477,73 @@ function extractHighValueEvidence({ headline = "", summary = "", experience = []
 function generateRecruiterQuestions(sp) {
   const questions = [];
   const seen = new Set();
+
   const add = (question, context, type = "general") => {
-    const key = question.toLowerCase().slice(0, 40);
+    const cleanQuestion = String(question || "").trim();
+    if (!cleanQuestion) return;
+    const key = cleanQuestion.toLowerCase().slice(0, 70);
     if (seen.has(key)) return;
     seen.add(key);
-    questions.push({ question, context, type });
+    questions.push({ question: cleanQuestion, context, type });
   };
 
-  // 1. Project-specific questions — strongest signal, highest priority
   safeArray(sp.projects).slice(0, 2).forEach((project) => {
-    const title = typeof project === "string" ? project : project?.title || project?.name || "this project";
+    const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || "this project";
     add(
-      `Walk me through ${title} — what was your direct ownership and what was the measurable outcome?`,
-      "Recruiters use project stories to separate participation from real ownership. Scope, decisions made, and outcomes are what they're listening for.",
+      `Walk me through ${title}. What did you personally own, what changed, and what result can you point to?`,
+      "Recruiters use project stories to separate participation from ownership. They are listening for scope, decisions, obstacles, and measurable outcome.",
       "project"
     );
   });
 
-  // 2. Validation-gap questions — from the WHY engine's existing analysis
-  if (sp.validationFocus?.length) {
-    const raw = sp.validationFocus[0];
-    const cleaned = String(raw || "").replace(/^Ask for\s+/i, "").replace(/^Validate\s+/i, "").trim();
-    if (cleaned) {
-      add(
-        `Can you give me a concrete example that demonstrates ${cleaned.charAt(0).toLowerCase() + cleaned.slice(1)}?`,
-        "This is the area the profile currently signals but hasn't fully proven. A specific story with ownership and outcome would close the gap.",
-        "validation"
-      );
-    }
+  const topValidation = sp.validationCards?.[0]?.title || "project ownership and outcomes";
+  if (/project ownership|outcome|scope|stakeholder/i.test(topValidation)) {
+    add(
+      "Tell me about a project or process improvement you personally owned from problem identification through implementation.",
+      "This closes the biggest validation gap: direct ownership, stakeholder impact, and measurable outcome.",
+      "validation"
+    );
+  } else if (/leadership/i.test(topValidation)) {
+    add(
+      "Tell me about a time you led a team through a difficult operational challenge. What was your authority, and what improved?",
+      "Recruiters will validate leadership scope, decision rights, team size, and outcome.",
+      "validation"
+    );
+  } else {
+    add(
+      `Give me a specific example that proves ${String(topValidation).toLowerCase()}. What was the situation, what did you own, and what changed?`,
+      "Recruiters are looking for evidence, not labels. A strong answer should include context, action, and result.",
+      "validation"
+    );
   }
 
-  // 3. Strength-specific questions — probe the strongest visible signals
   if (sp.strengthNarratives.length) {
     const top = sp.strengthNarratives[0];
     add(
-      `How have you applied ${top.label.toLowerCase()} in a high-stakes or complex situation — and what was the result?`,
-      top.body,
+      `How have you applied ${top.label.toLowerCase()} in a high-stakes or complex situation?`,
+      "A strong answer should connect the capability to real pressure, decisions made, and the business or team result.",
       "strength"
     );
   }
 
-  // 4. Scope question — universal but essential
   add(
-    "What's the largest scope you've directly owned — team size, budget, or system — not just been involved in?",
-    "Recruiters distinguish involvement from ownership. This surfaces the real level of accountability behind the profile signals.",
+    "What is the largest scope you have directly owned — team size, system, customer base, budget, or operational responsibility?",
+    "Recruiters distinguish exposure from accountability. This surfaces the real level of ownership behind the profile.",
     "scope"
   );
 
-  // 5. Proof-gap question if score is lower
-  if (sp.score < 75) {
-    add(
-      "What's the clearest, most concrete result you drove in the last two years that you can point to right now?",
-      "Recruiters use outcome stories to gauge whether profile signals represent real execution or just familiarity.",
-      "proof"
-    );
-  }
-
-  // 6. Direction question — always relevant
   add(
-    "Where do you want to be in the next role, and how does your recent experience point toward that direction?",
-    "Recruiters are evaluating trajectory and fit alignment, not just past performance. A clear answer accelerates the conversation.",
+    "Which role direction are you most intentionally targeting next, and what evidence in your background supports that move?",
+    "Recruiters are evaluating trajectory and fit alignment, not just past activity.",
     "direction"
   );
 
-  // 7. Credentials if any exist
   if (safeArray(sp.certifications).length) {
     const cert = safeArray(sp.certifications)[0];
-    const certName = typeof cert === "string" ? cert : cert?.name || cert?.label || "your certification";
+    const certName = typeof cert === "string" ? cert : cert?.name || cert?.label || cert?.certification || "your certification";
     add(
-      `How have you applied ${certName} in your actual day-to-day work?`,
-      "Recruiters want to know credentials are lived, not just listed. A brief real example ties the credential to execution.",
+      `How have you applied ${certName} in practical work, not just training?`,
+      "Recruiters want credentials connected to execution. A brief real example ties the credential to business value.",
       "credential"
     );
   }
@@ -1033,41 +1030,27 @@ export default function ProfileStrengthPage() {
     <SectionCard title="Recruiter Readiness" style={isMobile ? {} : {}}>
       <div style={{ display: "grid", gap: 10, height: "100%", minHeight: 0 }}>
         <div style={{ ...GLASS_SOFT, borderRadius: 16, padding: 14, background: "rgba(15,23,42,0.94)", color: "white", textAlign: "center" }}>
-          <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Profile Read</div>
+          <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Overall Score</div>
           <div style={{ fontSize: 30, fontWeight: 950, lineHeight: 1 }}>{strengthProfile.confidence}%</div>
           <div style={{ fontSize: 13, fontWeight: 900, color: "rgba(255,255,255,0.88)", marginTop: 3 }}>{strengthProfile.professionalSignal}</div>
         </div>
 
-        <div style={{ minHeight: 70 }}>
-        <SimpleAutoCarousel
-  slides={[
-    <SignalChip
-      key="recruiter-takeaway"
-      label="Recruiter takeaway"
-      value={strengthProfile.professionalSignal === "Strong" ? "Advance-worthy" : strengthProfile.professionalSignal}
-      tone={strengthProfile.professionalSignal === "Strong" ? "good" : "warn"}
-    />,
-    <SignalChip
-      key="top-validation"
-      label="Top validation"
-      value={strengthProfile.validationCards?.[0]?.title || "Fit and role scope"}
-      tone={strengthProfile.validationRisk === "Low" ? "good" : "warn"}
-    />,
-  ]}
-/>
-        </div>
+        <SignalChip
+          label="Strengths"
+          value={`${strengthProfile.provenCount} Proven Signals`}
+          tone={strengthProfile.provenCount >= 6 ? "good" : "warn"}
+        />
 
-        <InlineSignalCarousel
-          groups={[
-            {
-              title: "Core Signals",
-              items: strengthProfile.scorecard.filter((sig) => ["identity", "narrative", "proof", "portfolio"].includes(sig.key)),
-            },
-            {
-              title: "Trust + Access",
-              items: strengthProfile.scorecard.filter((sig) => ["credentials", "availability", "language", "visibility"].includes(sig.key)),
-            },
-          ]}
+        <SignalChip
+          label="Biggest Risk"
+          value={strengthProfile.validationCards?.[0]?.title || "Fit and role scope"}
+          tone={strengthProfile.validationRisk === "Low" ? "good" : "warn"}
+        />
+
+        <SignalChip
+          label="Recruiter Confidence"
+          value={strengthProfile.professionalSignal === "Strong" ? "High" : strengthProfile.professionalSignal}
+          tone={strengthProfile.professionalSignal === "Strong" ? "good" : "warn"}
         />
       </div>
     </SectionCard>
@@ -1106,24 +1089,6 @@ export default function ProfileStrengthPage() {
         </div>
         <div style={{ fontSize: 16, fontWeight: 850, color: SLATE, lineHeight: 1.75 }}>
           {strengthProfile.recruiterJudgment}
-        </div>
-
-        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13, marginTop: 14, border: "1px solid rgba(255,112,67,0.20)" }}>
-          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
-            Strongest Evidence Found
-          </div>
-          {strengthProfile.strongestEvidence.length ? (
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 8 }}>
-              {strengthProfile.strongestEvidence.slice(0, 8).map((item) => (
-                <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 12.5, color: SLATE, lineHeight: 1.45, fontWeight: 750 }}>
-                  <span style={{ color: ORANGE, fontWeight: 950, flexShrink: 0 }}>•</span>
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6 }}>Add measurable outcomes, projects, certifications, or clear resume proof to strengthen this area.</div>
-          )}
         </div>
       </div>
     </section>
@@ -1164,6 +1129,65 @@ export default function ProfileStrengthPage() {
     />
   );
 
+  const strongestEvidenceCard = (
+    <SectionCard title="Strongest Evidence Found">
+      <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid", alignContent: "start" }}>
+        {strengthProfile.strongestEvidence.length ? (
+          <div style={{ display: "grid", gap: 9 }}>
+            {strengthProfile.strongestEvidence.slice(0, 8).map((item) => (
+              <div key={item} style={{ ...GLASS_SOFT, borderRadius: 12, padding: "11px 12px", display: "flex", gap: 9, alignItems: "flex-start" }}>
+                <span style={{ color: ORANGE, fontWeight: 950, lineHeight: 1.35, flexShrink: 0 }}>•</span>
+                <span style={{ fontSize: 13, color: SLATE, lineHeight: 1.45, fontWeight: 850 }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <InsightTile label="Evidence" tone="building" title="More proof needed" body="Add measurable outcomes, projects, certifications, or clear resume proof to strengthen this area." />
+        )}
+      </div>
+    </SectionCard>
+  );
+
+  const whyYouMatchCard = (
+    <SectionCard title="Why You Match">
+      <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid", alignContent: "start", gap: 10 }}>
+        {strengthProfile.careerRecommendations?.[0] ? (
+          <>
+            <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 14, border: "1px solid rgba(255,112,67,0.20)" }}>
+              <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
+                Best-fit role signal
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 950, color: SLATE, lineHeight: 1.3 }}>
+                {strengthProfile.careerRecommendations[0].title}
+              </div>
+              <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>
+                {strengthProfile.careerRecommendations[0].reason}
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gap: 8 }}>
+              {[
+                `${strengthProfile.provenCount} proven profile signals`,
+                strengthProfile.hasResume ? "Primary resume evidence available" : "Resume evidence needs attention",
+                strengthProfile.projects.length ? `${strengthProfile.projects.length} portfolio project${strengthProfile.projects.length === 1 ? "" : "s"} listed` : "Portfolio projects need to be added",
+                strengthProfile.certifications.length ? `${strengthProfile.certifications.length} credential/training signal${strengthProfile.certifications.length === 1 ? "" : "s"}` : "Credentials can be strengthened",
+                strengthProfile.topStrengths?.[0] || strengthProfile.strengthNarratives?.[0]?.label || "",
+                strengthProfile.topStrengths?.[1] || strengthProfile.strengthNarratives?.[1]?.label || "",
+              ].filter(Boolean).slice(0, 6).map((item) => (
+                <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <span style={{ color: "#16A34A", fontWeight: 950, lineHeight: 1.35, flexShrink: 0 }}>✓</span>
+                  <span style={{ fontSize: 12.5, color: SLATE, lineHeight: 1.45, fontWeight: 800 }}>{item}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <InsightTile label="Match" tone="building" title="Role match needs more data" body="Add target roles, projects, skills, and outcome evidence so ForgeTomorrow can explain stronger role fit." />
+        )}
+      </div>
+    </SectionCard>
+  );
+
   const strengthDetailGrid = (
     <div
       style={{
@@ -1181,27 +1205,9 @@ export default function ProfileStrengthPage() {
         zIndex: 2,
       }}
     >
-      <SectionCard title="Your Strongest Recruiting Signals">
-        <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid" }}>
-          {strengthProfile.strengthNarratives.length ? (
-            <div style={{ display: "grid", gap: 10 }}>
-              {strengthProfile.strengthNarratives.slice(0, 5).map((item) => (
-                <div key={item.label} style={{ ...GLASS_SOFT, borderRadius: 13, padding: 13 }}>
-                  <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-                    <span style={{ color: "#16A34A", fontWeight: 950, lineHeight: 1.35 }}>✓</span>
-                    <div>
-                      <div style={{ fontSize: 13.5, fontWeight: 950, color: SLATE }}>{item.label}</div>
-                      <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 5 }}>{item.body}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <InsightTile label="Building" tone="building" title="More evidence needed" body="Add resume evidence, skills, experience, and project outcomes to generate stronger recruiter-facing strengths." />
-          )}
-        </div>
-      </SectionCard>
+      {strongestEvidenceCard}
+
+      {whyYouMatchCard}
 
       <SectionCard title="Where Recruiters Are Most Likely To Place You">
         <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid" }}>
@@ -1666,7 +1672,7 @@ export default function ProfileStrengthPage() {
       // Mobile: each tab owns its own focused group.
       if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
       if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{visibilityKpiStrip}{reachCard}{visibilityCard}{recentViewersCompactCard}</div>;
-      if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthRecruiterLensHeroCard}{executionProofCard}{strengthSignalCard}{strengthDetailGrid}</div>;
+      if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{executionProofCard}{strengthRecruiterLensHeroCard}{strengthSignalCard}{strengthDetailGrid}</div>;
       if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{activityKpiStrip}{activityIntelligenceCard}{connectionGrowthHeroCard}{activitySupportCard}</div>;
       return null;
     }
