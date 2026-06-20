@@ -50,6 +50,8 @@ const ORANGE_HEADING_LIFT = {
 const LEFT_BLEED         = -(240 + 12);   // sidebar 240 + gap 12
 const RIGHT_BLEED        = -(240 + 12);   // right rail 240 + gap 12
 const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recruiter
+const COMMAND_RAIL_HEIGHT = 330;
+const COMMAND_CENTER_CHART_HEIGHT = 360;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function safeArray(v) {
@@ -66,9 +68,9 @@ function skillNamesFromAny(s) {
 }
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
-function SectionCard({ title, children, action }) {
+function SectionCard({ title, children, action, style = {} }) {
   return (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, ...style }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
         <div style={{ fontSize: 18, color: ORANGE, lineHeight: 1.25, letterSpacing: "-0.01em", margin: 0, ...ORANGE_HEADING_LIFT }}>{title}</div>
         {action}
@@ -98,7 +100,7 @@ function InsightTile({ label, title, body, tone = "live" }) {
 }
 
 
-function RotatingCard({ title, slides = [], intervalMs = 5200, minHeight = 210 }) {
+function RotatingCard({ title, slides = [], intervalMs = 5200, minHeight = 210, cardStyle = {}, contentStyle = {} }) {
   const validSlides = Array.isArray(slides) ? slides.filter(Boolean) : [];
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -115,9 +117,9 @@ function RotatingCard({ title, slides = [], intervalMs = 5200, minHeight = 210 }
   }, [activeIndex, validSlides.length]);
 
   return (
-    <SectionCard title={title}>
-      <div style={{ display: "grid", gap: 10 }}>
-        <div style={{ minHeight, display: "grid" }}>
+    <SectionCard title={title} style={cardStyle}>
+      <div style={{ display: "grid", gap: 10, height: "100%", minHeight: 0 }}>
+        <div style={{ minHeight, display: "grid", ...contentStyle }}>
           {validSlides[activeIndex] || null}
         </div>
 
@@ -907,7 +909,9 @@ export default function ProfileAnalyticsPage() {
   const visibilityCard = (
     <RotatingCard
       title="Visibility Intelligence"
-      minHeight={132}
+      minHeight={isMobile ? 132 : 224}
+      cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
+      contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
         <InsightTile
           key="visibility-completion"
@@ -968,18 +972,13 @@ export default function ProfileAnalyticsPage() {
               ...GLASS_SOFT,
               borderRadius: 16,
               padding: 14,
-              minHeight: isMobile ? 280 : 335,
+              minHeight: isMobile ? 280 : COMMAND_CENTER_CHART_HEIGHT,
               overflow: "hidden",
               display: "grid",
-              gridTemplateRows: "auto minmax(0, 1fr)",
+              alignItems: "stretch",
             }}
           >
-            <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 8 }}>Views (Last 7 Days)</div>
-            <div style={{ height: isMobile ? 220 : 260, overflow: "hidden" }}>
-              <div style={{ transform: "translateY(-38px)", height: isMobile ? 258 : 298 }}>
-                <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
-              </div>
-            </div>
+            <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
           </div>
 
           <div
@@ -987,18 +986,13 @@ export default function ProfileAnalyticsPage() {
               ...GLASS_SOFT,
               borderRadius: 16,
               padding: 14,
-              minHeight: isMobile ? 280 : 335,
+              minHeight: isMobile ? 280 : COMMAND_CENTER_CHART_HEIGHT,
               overflow: "hidden",
               display: "grid",
-              gridTemplateRows: "auto minmax(0, 1fr)",
+              alignItems: "stretch",
             }}
           >
-            <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 8 }}>Search Appearances (Last 7 Days)</div>
-            <div style={{ height: isMobile ? 220 : 260, overflow: "hidden" }}>
-              <div style={{ transform: "translateY(-38px)", height: isMobile ? 258 : 298 }}>
-                <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
-              </div>
-            </div>
+            <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
           </div>
         </div>
       ) : (
@@ -1077,6 +1071,7 @@ export default function ProfileAnalyticsPage() {
         flex: "1 1 auto",
         minWidth: 0,
         alignSelf: "flex-end",
+        minHeight: COMMAND_RAIL_HEIGHT,
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 12 }}>
@@ -1379,11 +1374,14 @@ export default function ProfileAnalyticsPage() {
         flex: "0 0 240px",
         alignSelf: "flex-end",
         minWidth: 0,
+        minHeight: COMMAND_RAIL_HEIGHT,
       }}
     >
       <RotatingCard
         title="Next Best Actions"
-        minHeight={174}
+        minHeight={224}
+        cardStyle={{ height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
+        contentStyle={{ alignContent: "stretch" }}
         slides={[
           ...(profileLoading
             ? [<div key="loading-actions" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12, color: MUTED }}>Loading profile actions…</div>]
@@ -1426,7 +1424,7 @@ export default function ProfileAnalyticsPage() {
   );
 
   const recentViewersCompactCard = (
-    <SectionCard title="Recent Viewers">
+    <SectionCard title="Recent Viewers" style={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}>
       <RecentViewers viewers={analytics.recentViewers} allViewsHref={allViewsHref} />
     </SectionCard>
   );
@@ -1467,27 +1465,30 @@ export default function ProfileAnalyticsPage() {
   const activityIntelligenceCard = (
     <RotatingCard
       title="Activity Intelligence"
+      minHeight={isMobile ? 154 : 224}
+      cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
+      contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
         <InsightTile
           key="activity-community"
           label="Community"
           tone="building"
           title={`${totalContent.toLocaleString()} content signals`}
-          body="Posts and comments help turn your profile from a static page into an active professional signal."
+          body="Posts and comments turn your profile into an active professional signal."
         />,
         <InsightTile
           key="activity-network"
           label="Network"
           tone="live"
           title={`${analytics.connectionsGained7d.toLocaleString()} new connections in 7 days`}
-          body="Connection movement shows whether activity is translating into real professional reach."
+          body="Connection movement shows whether activity is creating real reach."
         />,
         <InsightTile
           key="activity-next"
           label="Next move"
           tone="strong"
-          title="Turn activity into useful visibility"
-          body="Use one helpful post, one thoughtful comment, and one Hearth reply to keep your professional signal active without adding noise."
+          title="Turn activity into visibility"
+          body="One post. One comment. One Hearth reply."
         />,
       ]}
     />
@@ -1508,14 +1509,19 @@ export default function ProfileAnalyticsPage() {
         Connection Growth
       </div>
 
-      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.74)", borderRadius: 16, padding: 14, overflow: "hidden" }}>
+      <div
+        style={{
+          ...GLASS_SOFT,
+          background: "rgba(255,255,255,0.74)",
+          borderRadius: 16,
+          padding: 14,
+          minHeight: COMMAND_CENTER_CHART_HEIGHT,
+          overflow: "hidden",
+          display: "grid",
+          alignItems: "stretch",
+        }}
+      >
         <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 14 }}>
-        <MiniMetric label="New connections" value={analytics.connectionsGained7d} hint="7 day growth" />
-        <MiniMetric label="Posts" value={analytics.postsCount} hint="Shared content" />
-        <MiniMetric label="Comments" value={analytics.commentsCount} hint="Community activity" />
       </div>
     </section>
   );
@@ -1523,34 +1529,78 @@ export default function ProfileAnalyticsPage() {
   const activitySupportCard = (
     <RotatingCard
       title="Content Spotlight"
+      minHeight={isMobile ? 390 : 224}
+      cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
+      contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
-        analytics.highestViewedPost ? (
-          <div key="top-post" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-            <div style={{ fontSize: 10, color: MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em" }}>Top Post</div>
-            <a href={analytics.highestViewedPost.url} style={{ display: "block", color: ORANGE, fontWeight: 900, marginTop: 6, textDecoration: "none", lineHeight: 1.35 }}>
-              {analytics.highestViewedPost.title}
-            </a>
-            <div style={{ fontSize: 12, color: MUTED, marginTop: 5 }}>{analytics.highestViewedPost.views.toLocaleString()} interactions</div>
+        <div key="top-content" style={{ display: "grid", gap: 12 }}>
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 10, color: ORANGE, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+              Top Post
+            </div>
+            {analytics.highestViewedPost ? (
+              <>
+                <a href={analytics.highestViewedPost.url} style={{ display: "block", color: SLATE, fontWeight: 950, marginTop: 4, textDecoration: "none", lineHeight: 1.35 }}>
+                  {analytics.highestViewedPost.title}
+                </a>
+                <div style={{ fontSize: 12, color: ORANGE, fontWeight: 900, marginTop: 8 }}>
+                  {analytics.highestViewedPost.views.toLocaleString()} interactions
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 13, color: SLATE, fontWeight: 950, lineHeight: 1.35 }}>Top post performance will appear here</div>
+                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>Share useful content to build activity signals.</div>
+              </>
+            )}
           </div>
-        ) : (
-          <InsightTile key="top-post-empty" label="Building" tone="building" title="Top post performance will appear here" body="Once feed interaction tracking is expanded, your strongest post will surface here." />
-        ),
-        analytics.highestViewedComment ? (
-          <div key="top-comment" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-            <div style={{ fontSize: 10, color: MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em" }}>Top Comment</div>
-            <div style={{ color: SLATE, fontSize: 13, lineHeight: 1.55, marginTop: 6 }}>"{analytics.highestViewedComment.snippet}"</div>
-            <a href={analytics.highestViewedComment.url} style={{ display: "inline-block", color: ORANGE, fontWeight: 900, marginTop: 8, textDecoration: "none" }}>View comment →</a>
+
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 10, color: ORANGE, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+              Top Comment
+            </div>
+            {analytics.highestViewedComment ? (
+              <>
+                <div style={{ color: SLATE, fontSize: 13, fontWeight: 850, lineHeight: 1.5 }}>"{analytics.highestViewedComment.snippet}"</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
+                  <span style={{ fontSize: 12, color: ORANGE, fontWeight: 900 }}>
+                    {(analytics.highestViewedComment.views || analytics.highestViewedComment.likes || 0).toLocaleString()} interactions
+                  </span>
+                  <a href={analytics.highestViewedComment.url} style={{ color: ORANGE, fontSize: 12, fontWeight: 900, textDecoration: "none" }}>View →</a>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 13, color: SLATE, fontWeight: 950, lineHeight: 1.35 }}>Helpful comments become visibility signals</div>
+                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>Comment where you can add practical experience.</div>
+              </>
+            )}
           </div>
-        ) : (
-          <InsightTile key="top-comment-empty" label="Community" tone="live" title="Helpful comments become visibility signals" body="As comment-level tracking grows, this area will show which community contributions helped people notice you." />
-        ),
-        <div key="content-playbook" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Content playbook</div>
-          <div style={{ display: "grid", gap: 8 }}>
-            {["Share a quick career win or lesson learned.", "Answer one Hearth discussion with useful detail.", "Comment where you can add practical experience."].map((item) => (
+        </div>,
+
+        <div key="daily-playbook" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+            Today's Playbook
+          </div>
+          <div style={{ display: "grid", gap: 10 }}>
+            {["Answer one Hearth discussion.", "Comment on one professional post.", "Share one useful career lesson."].map((item) => (
               <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <span style={{ color: ORANGE, fontWeight: 900, lineHeight: 1.35, flexShrink: 0 }}>•</span>
-                <span style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{item}</span>
+                <span style={{ color: ORANGE, fontWeight: 950, lineHeight: 1.35, flexShrink: 0 }}>•</span>
+                <span style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.55 }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>,
+
+        <div key="weekly-playbook" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+            This Week's Playbook
+          </div>
+          <div style={{ display: "grid", gap: 10 }}>
+            {["Publish one original post.", "Make three meaningful comments.", "Add one project or result to your profile.", "Connect with three professionals."].map((item) => (
+              <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span style={{ color: ORANGE, fontWeight: 950, lineHeight: 1.35, flexShrink: 0 }}>•</span>
+                <span style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.55 }}>{item}</span>
               </div>
             ))}
           </div>
@@ -1676,7 +1726,7 @@ export default function ProfileAnalyticsPage() {
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{visibilityCard}</section>,
             <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-end" }}>{reachCard}</section>,
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{recentViewersCompactCard}</section>,
-            8
+            12
           )}
         </>
       );
@@ -1690,7 +1740,8 @@ export default function ProfileAnalyticsPage() {
           {bleedCommandRow(
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activityIntelligenceCard}</section>,
             connectionGrowthHeroCard,
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activitySupportCard}</section>
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activitySupportCard}</section>,
+            12
           )}
         </>
       );
