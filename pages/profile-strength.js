@@ -1090,6 +1090,24 @@ export default function ProfileStrengthPage() {
         <div style={{ fontSize: 16, fontWeight: 850, color: SLATE, lineHeight: 1.75 }}>
           {strengthProfile.recruiterJudgment}
         </div>
+
+        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 13, marginTop: 14, border: "1px solid rgba(255,112,67,0.20)" }}>
+          <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
+            Strongest Evidence Found
+          </div>
+          {strengthProfile.strongestEvidence.length ? (
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+              {strengthProfile.strongestEvidence.slice(0, 8).map((item) => (
+                <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 12.5, color: SLATE, lineHeight: 1.45, fontWeight: 750 }}>
+                  <span style={{ color: ORANGE, fontWeight: 950, flexShrink: 0 }}>•</span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6 }}>Add measurable outcomes, projects, certifications, or clear resume proof to strengthen this area.</div>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -1205,8 +1223,6 @@ export default function ProfileStrengthPage() {
         zIndex: 2,
       }}
     >
-      {strongestEvidenceCard}
-
       {whyYouMatchCard}
 
       <SectionCard title="Where Recruiters Are Most Likely To Place You">
