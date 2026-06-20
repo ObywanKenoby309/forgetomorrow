@@ -647,7 +647,7 @@ export default function SeekerDashboard() {
             />
 
             {/* ROW 2, COL 1: KPI strip */}
-            <section style={{ ...GLASS, padding: '12px 16px 16px 16px', gridColumn: '1 / 2', gridRow: '2' }}>
+            <section style={{ ...GLASS, padding: '12px 16px 14px 16px', gridColumn: '1 / 2', gridRow: '2' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <h2
                   style={{
@@ -676,7 +676,7 @@ export default function SeekerDashboard() {
                 </Link>
               </div>
               {kpi && (
-                <div style={{ minHeight: 108 }}>
+                <div>
                   <KpiRow
                     pinned={kpi.pinned || 0}
                     applied={kpi.applied || 0}
@@ -687,7 +687,7 @@ export default function SeekerDashboard() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 8 }}>
                 <h2
                   style={{
                     fontSize: 16,
@@ -760,15 +760,18 @@ export default function SeekerDashboard() {
                 ...KPI_GLASS,
                 gridColumn: '2 / 3',
                 gridRow: '3',
-                padding: 16,
+                padding: 10,
                 boxSizing: 'border-box',
+                alignSelf: 'start',
+                maxHeight: 214,
+                overflow: 'hidden',
               }}
             >
               <div
                 style={{
                   fontSize: 15,
                   fontWeight: 900,
-                  marginBottom: 10,
+                  marginBottom: 8,
                   color: '#0F172A',
                   lineHeight: 1.25,
                   letterSpacing: '-0.01em',
@@ -776,7 +779,7 @@ export default function SeekerDashboard() {
               >
                 Profile Health
               </div>
-              <div style={{ ...WHITE_CARD, padding: 12 }}>
+              <div style={{ ...WHITE_CARD, padding: 8 }}>
                 <ProfilePerformanceTeaser />
               </div>
             </aside>
