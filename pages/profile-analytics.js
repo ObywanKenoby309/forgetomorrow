@@ -466,6 +466,86 @@ function extractHighValueEvidence({ headline = "", summary = "", experience = []
   return evidence.slice(0, 8);
 }
 
+function generateRecruiterQuestions(sp) {
+  const questions = [];
+  const seen = new Set();
+  const add = (question, context, type = "general") => {
+    const key = question.toLowerCase().slice(0, 40);
+    if (seen.has(key)) return;
+    seen.add(key);
+    questions.push({ question, context, type });
+  };
+
+  // 1. Project-specific questions — strongest signal, highest priority
+  safeArray(sp.projects).slice(0, 2).forEach((project) => {
+    const title = typeof project === "string" ? project : project?.title || project?.name || "this project";
+    add(
+      `Walk me through ${title} — what was your direct ownership and what was the measurable outcome?`,
+      "Recruiters use project stories to separate participation from real ownership. Scope, decisions made, and outcomes are what they're listening for.",
+      "project"
+    );
+  });
+
+  // 2. Validation-gap questions — from the WHY engine's existing analysis
+  if (sp.validationFocus?.length) {
+    const raw = sp.validationFocus[0];
+    const cleaned = String(raw || "").replace(/^Ask for\s+/i, "").replace(/^Validate\s+/i, "").trim();
+    if (cleaned) {
+      add(
+        `Can you give me a concrete example that demonstrates ${cleaned.charAt(0).toLowerCase() + cleaned.slice(1)}?`,
+        "This is the area the profile currently signals but hasn't fully proven. A specific story with ownership and outcome would close the gap.",
+        "validation"
+      );
+    }
+  }
+
+  // 3. Strength-specific questions — probe the strongest visible signals
+  if (sp.strengthNarratives.length) {
+    const top = sp.strengthNarratives[0];
+    add(
+      `How have you applied ${top.label.toLowerCase()} in a high-stakes or complex situation — and what was the result?`,
+      top.body,
+      "strength"
+    );
+  }
+
+  // 4. Scope question — universal but essential
+  add(
+    "What's the largest scope you've directly owned — team size, budget, or system — not just been involved in?",
+    "Recruiters distinguish involvement from ownership. This surfaces the real level of accountability behind the profile signals.",
+    "scope"
+  );
+
+  // 5. Proof-gap question if score is lower
+  if (sp.score < 75) {
+    add(
+      "What's the clearest, most concrete result you drove in the last two years that you can point to right now?",
+      "Recruiters use outcome stories to gauge whether profile signals represent real execution or just familiarity.",
+      "proof"
+    );
+  }
+
+  // 6. Direction question — always relevant
+  add(
+    "Where do you want to be in the next role, and how does your recent experience point toward that direction?",
+    "Recruiters are evaluating trajectory and fit alignment, not just past performance. A clear answer accelerates the conversation.",
+    "direction"
+  );
+
+  // 7. Credentials if any exist
+  if (safeArray(sp.certifications).length) {
+    const cert = safeArray(sp.certifications)[0];
+    const certName = typeof cert === "string" ? cert : cert?.name || cert?.label || "your certification";
+    add(
+      `How have you applied ${certName} in your actual day-to-day work?`,
+      "Recruiters want to know credentials are lived, not just listed. A brief real example ties the credential to execution.",
+      "credential"
+    );
+  }
+
+  return questions.slice(0, 6);
+}
+
 // ─── Tab copy ─────────────────────────────────────────────────────────────────
 const TAB_COPY = {
   overview:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "Understand how your profile performs, who's viewing it, and what actions will accelerate your visibility." },
@@ -950,6 +1030,7 @@ export default function ProfileAnalyticsPage() {
           <div style={{ fontSize: 13, fontWeight: 900, color: "rgba(255,255,255,0.88)", marginTop: 3 }}>{strengthProfile.professionalSignal}</div>
         </div>
 
+        <div style={{ minHeight: 70 }}>
         <SimpleAutoCarousel
   slides={[
     <SignalChip
@@ -966,6 +1047,7 @@ export default function ProfileAnalyticsPage() {
     />,
   ]}
 />
+        </div>
 
         <InlineSignalCarousel
           groups={[
@@ -1038,27 +1120,33 @@ export default function ProfileAnalyticsPage() {
     </section>
   );
 
-  const strengthActionsCard = (
-    <RotatingCard
-      title="Recruiters Will Want Proof Of"
-      minHeight={165}
-      slides={[
-        ...(strengthProfile.validationCards || []).slice(0, 4).map((item) => (
-          <div key={item.title} style={{ ...GLASS_SOFT, borderRadius: 14, padding: 10, minHeight: 130, display: "grid", alignContent: "start" }}>
-            <div style={{ fontSize: 12.5, fontWeight: 950, color: SLATE, lineHeight: 1.35 }}>{item.title}</div>
-            <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>{item.body}</div>
-            <div style={{ fontSize: 11.5, color: ORANGE, fontWeight: 900, lineHeight: 1.45, marginTop: 8 }}>{item.fix}</div>
+  const executionProofCard = (
+    <SectionCard title="Execution Proof">
+      <div style={{ display: "grid", gap: 8 }}>
+        {strengthProfile.projects.length ? (
+          <div style={{ maxHeight: 320, overflowY: "auto", display: "grid", gap: 7, paddingRight: 2 }}>
+            {strengthProfile.projects.map((project, idx) => {
+              const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || `Project ${idx + 1}`;
+              return (
+                <div key={`${title}-${idx}`} style={{ ...GLASS_SOFT, borderRadius: 12, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: SLATE, lineHeight: 1.3 }}>{title}</div>
+                </div>
+              );
+            })}
           </div>
-        )),
+        ) : (
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
+            No Projects Listed. Update your portfolio with any relevant projects.
+          </div>
+        )}
         <ActionTile
-          key="strengthen-evidence"
-          title="Strengthen the evidence"
-          body={strengthProfile.validationCards?.[0]?.fix || "Add clearer proof, outcomes, and profile evidence tied to your target roles."}
+          title="Add projects to The Anvil"
+          body="Project entries are the strongest recruiter proof signal. Add scope, tools, stakeholders, and measurable outcomes."
           buttonLabel="Open The Anvil →"
           onClick={() => router.push("/anvil?module=profile")}
-        />,
-      ]}
-    />
+        />
+      </div>
+    </SectionCard>
   );
 
   const strengthDetailGrid = (
@@ -1123,39 +1211,32 @@ export default function ProfileAnalyticsPage() {
         </div>
       </SectionCard>
 
-      <SectionCard title="Execution Proof">
-        <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid" }}>
-          {strengthProfile.projects.length ? (
-            <div style={{ display: "grid", gap: 8 }}>
-              {strengthProfile.projects.slice(0, 4).map((project, idx) => {
-                const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || `Project ${idx + 1}`;
-                const desc = typeof project === "string" ? "" : project?.description || project?.summary || project?.details || "";
-                const tools = typeof project === "string" ? "" : safeArray(project?.tools || project?.technologies || project?.skills).join(", ");
-                const outcome = typeof project === "string" ? "" : project?.outcome || project?.impact || project?.result || "";
-                const detail = desc || outcome || tools || "Project evidence is visible. Add scope, tools, stakeholders, and measurable outcomes to make this proof stronger.";
-                return (
-                  <div key={`${title}-${idx}`} style={{ borderRadius: 12, border: "1px solid rgba(100,116,139,0.14)", background: "rgba(255,255,255,0.76)", padding: 12 }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-                      <div style={{ fontSize: 13, fontWeight: 950, color: SLATE, lineHeight: 1.3 }}>{title}</div>
-                      <SmallPill tone="neutral">Project</SmallPill>
+      <SectionCard title="What Recruiters May Ask">
+        <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid", alignContent: "start" }}>
+          {(() => {
+            const questions = generateRecruiterQuestions(strengthProfile);
+            return questions.length ? (
+              <div style={{ display: "grid", gap: 9 }}>
+                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, marginBottom: 4 }}>
+                  Based on your portfolio, these are the questions a recruiter is most likely to ask. Use these to prepare before any conversation.
+                </div>
+                {questions.map((item, idx) => (
+                  <div key={`rq-${idx}`} style={{ borderRadius: 12, border: "1px solid rgba(100,116,139,0.14)", background: "rgba(255,255,255,0.76)", padding: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 950, color: SLATE, lineHeight: 1.35 }}>
+                      {item.question}
                     </div>
-                    <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, marginTop: 7 }}>
-                      {detail.length > 190 ? `${detail.slice(0, 187).trim()}...` : detail}
+                    <div style={{ fontSize: 11.5, color: MUTED, lineHeight: 1.55, marginTop: 7 }}>
+                      {item.context}
                     </div>
-                    {tools ? (
-                      <div style={{ fontSize: 11, color: ORANGE, fontWeight: 850, lineHeight: 1.4, marginTop: 7 }}>
-                        Tools: {tools.length > 90 ? `${tools.slice(0, 87).trim()}...` : tools}
-                      </div>
-                    ) : null}
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div style={{ fontSize: 12, color: "#92400E", lineHeight: 1.6, border: "1px solid rgba(217,119,6,0.22)", background: "rgba(217,119,6,0.10)", borderRadius: 12, padding: 12 }}>
-              No structured project entries are visible yet. This is the biggest gap between profile strength and recruiter confidence. Add one project with scope, ownership, tools, and measurable outcome.
-            </div>
-          )}
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: "#92400E", lineHeight: 1.6, border: "1px solid rgba(217,119,6,0.22)", background: "rgba(217,119,6,0.10)", borderRadius: 12, padding: 12 }}>
+                Add projects, experience, and skills to your profile so ForgeTomorrow can generate recruiter preparation questions specific to your background.
+              </div>
+            );
+          })()}
         </div>
       </SectionCard>
     </div>
@@ -1548,7 +1629,7 @@ export default function ProfileAnalyticsPage() {
       // Mobile: each tab owns its own focused group.
       if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
       if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{visibilityKpiStrip}{reachCard}{visibilityCard}{recentViewersCompactCard}</div>;
-      if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthKpiStrip}{strengthRecruiterLensHeroCard}{strengthActionsCard}{strengthSignalCard}{strengthDetailGrid}</div>;
+      if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthKpiStrip}{strengthRecruiterLensHeroCard}{executionProofCard}{strengthSignalCard}{strengthDetailGrid}</div>;
       if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{activityKpiStrip}{activityIntelligenceCard}{connectionGrowthHeroCard}{activitySupportCard}</div>;
       return null;
     }
@@ -1601,7 +1682,7 @@ export default function ProfileAnalyticsPage() {
         <>
           {strengthKpiStrip}
           {bleedCommandRow(
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{strengthActionsCard}</section>,
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{executionProofCard}</section>,
             strengthRecruiterLensHeroCard,
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{strengthSignalCard}</section>,
             8
