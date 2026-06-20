@@ -1116,75 +1116,106 @@ export default function ProfileStrengthPage() {
 const executionProofCard = (
   <RotatingCard
     title="Execution Proof"
-    minHeight={isMobile ? 260 : 115}
-    cardStyle={isMobile ? {} : { height: 215, overflow: "hidden" }}
+    minHeight={isMobile ? 260 : 104}
+    cardStyle={
+      isMobile
+        ? {}
+        : {
+            height: 205,
+            boxSizing: "border-box",
+            overflow: "hidden",
+          }
+    }
     contentStyle={{
-      alignContent: "center",
-      height: "100%",
+      alignContent: "stretch",
+      height: isMobile ? "auto" : 104,
       overflow: "hidden",
     }}
     slides={[
-        ...(strengthProfile.projects.length
-          ? strengthProfile.projects.slice(0, 3).map((project, idx) => {
-              const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || `Project ${idx + 1}`;
-              return (
-                <div key={`${title}-${idx}`} style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-                  <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
-                    Project Evidence
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 950, color: SLATE, lineHeight: 1.35 }}>{title}</div>
+      ...(strengthProfile.projects.length
+        ? strengthProfile.projects.slice(0, 3).map((project, idx) => {
+            const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || `Project ${idx + 1}`;
+            return (
+              <div
+                key={`${title}-${idx}`}
+                style={{
+                  ...GLASS_SOFT,
+                  borderRadius: 12,
+                  padding: 14,
+                  height: "100%",
+                  boxSizing: "border-box",
+                  overflow: "hidden",
+                }}
+              >
+                <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
+                  Project Evidence
                 </div>
-              );
-            })
-          : [
-              <div key="no-projects" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
-                No Projects Listed. Update your portfolio with any relevant projects.
-              </div>,
-            ]),
-        <button
-  key="add-projects"
-  type="button"
-  onClick={() => router.push("/resume/create?section=projects")}
-  style={{
-    ...GLASS_SOFT,
-    borderRadius: 12,
-    padding: 14,
-    border: "1px solid rgba(255,112,67,0.18)",
-    textAlign: "left",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    width: "100%",
-    height: "100%",
-    minHeight: 0,
-    overflow: "hidden",
-    display: "grid",
-    alignContent: "start",
-  }}
->
-  <div style={{ fontSize: 14, fontWeight: 900, color: SLATE }}>
-    Turn work into proof
-  </div>
-  <div
-    style={{
-      fontSize: 12,
-      color: MUTED,
-      lineHeight: 1.45,
-      marginTop: 6,
-      overflow: "hidden",
-      display: "-webkit-box",
-      WebkitLineClamp: 3,
-      WebkitBoxOrient: "vertical",
-    }}
-  >
-    Add a project with outcomes, tools, and impact recruiters can verify.
-  </div>
-  <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginTop: 8 }}>
-    Add a Project →
-  </div>
-</button>
-      ]}
-    />
-  );
+                <div style={{ fontSize: 14, fontWeight: 950, color: SLATE, lineHeight: 1.35 }}>{title}</div>
+              </div>
+            );
+          })
+        : [
+            <div
+              key="no-projects"
+              style={{
+                ...GLASS_SOFT,
+                borderRadius: 12,
+                padding: 14,
+                height: "100%",
+                boxSizing: "border-box",
+                overflow: "hidden",
+                fontSize: 12,
+                color: MUTED,
+                lineHeight: 1.65,
+              }}
+            >
+              No Projects Listed. Update your portfolio with any relevant projects.
+            </div>,
+          ])}
+      <button
+        key="add-projects"
+        type="button"
+        onClick={() => router.push("/resume/create?section=projects")}
+        style={{
+          ...GLASS_SOFT,
+          borderRadius: 12,
+          padding: 14,
+          border: "1px solid rgba(255,112,67,0.18)",
+          textAlign: "left",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          width: "100%",
+          height: "100%",
+          boxSizing: "border-box",
+          overflow: "hidden",
+          display: "grid",
+          alignContent: "start",
+        }}
+      >
+        <div style={{ fontSize: 14, fontWeight: 900, color: SLATE }}>
+          Turn work into proof
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: MUTED,
+            lineHeight: 1.45,
+            marginTop: 6,
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+          }}
+        >
+          Add a project with outcomes, tools, and impact recruiters can verify.
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginTop: 8 }}>
+          Add a Project →
+        </div>
+      </button>
+    ]}
+  />
+);
 
   const strongestEvidenceCard = (
     <SectionCard title="Strongest Evidence Found">
