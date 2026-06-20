@@ -50,6 +50,10 @@ const ORANGE_HEADING_LIFT = {
 const LEFT_BLEED         = -(240 + 12);   // sidebar 240 + gap 12
 const RIGHT_BLEED        = -(240 + 12);   // right rail 240 + gap 12
 const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recruiter
+const COMMAND_RAIL_HEIGHT = 390;
+const LEFT_COMMAND_CARD_HEIGHT = 230;
+const STRENGTH_MAIN_MIN_HEIGHT = 520;
+const COMMAND_ROW_TOP_GAP = 8;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function safeArray(v) {
@@ -66,9 +70,9 @@ function skillNamesFromAny(s) {
 }
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
-function SectionCard({ title, children, action }) {
+function SectionCard({ title, children, action, style = {} }) {
   return (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, ...style }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
         <div style={{ fontSize: 18, color: ORANGE, lineHeight: 1.25, letterSpacing: "-0.01em", margin: 0, ...ORANGE_HEADING_LIFT }}>{title}</div>
         {action}
@@ -98,7 +102,7 @@ function InsightTile({ label, title, body, tone = "live" }) {
 }
 
 
-function RotatingCard({ title, slides = [], intervalMs = 5200, minHeight = 210 }) {
+function RotatingCard({ title, slides = [], intervalMs = 5200, minHeight = 210, cardStyle = {}, contentStyle = {} }) {
   const validSlides = Array.isArray(slides) ? slides.filter(Boolean) : [];
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -115,9 +119,9 @@ function RotatingCard({ title, slides = [], intervalMs = 5200, minHeight = 210 }
   }, [activeIndex, validSlides.length]);
 
   return (
-    <SectionCard title={title}>
-      <div style={{ display: "grid", gap: 10 }}>
-        <div style={{ minHeight, display: "grid" }}>
+    <SectionCard title={title} style={cardStyle}>
+      <div style={{ display: "grid", gap: 10, height: "100%", minHeight: 0 }}>
+        <div style={{ minHeight, display: "grid", ...contentStyle }}>
           {validSlides[activeIndex] || null}
         </div>
 
@@ -1022,8 +1026,8 @@ export default function ProfileStrengthPage() {
   );
 
   const strengthSignalCard = (
-    <SectionCard title="Recruiter Readiness">
-      <div style={{ display: "grid", gap: 10 }}>
+    <SectionCard title="Recruiter Readiness" style={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}>
+      <div style={{ display: "grid", gap: 10, height: "100%", minHeight: 0 }}>
         <div style={{ ...GLASS_SOFT, borderRadius: 16, padding: 14, background: "rgba(15,23,42,0.94)", color: "white", textAlign: "center" }}>
           <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Profile Read</div>
           <div style={{ fontSize: 30, fontWeight: 950, lineHeight: 1 }}>{strengthProfile.confidence}%</div>
@@ -1074,6 +1078,7 @@ export default function ProfileStrengthPage() {
         flex: "1 1 auto",
         minWidth: 0,
         alignSelf: "flex-end",
+        minHeight: isMobile ? "auto" : STRENGTH_MAIN_MIN_HEIGHT,
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 12 }}>
@@ -1091,7 +1096,7 @@ export default function ProfileStrengthPage() {
         </div>
       </div>
 
-      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.76)", borderRadius: 16, padding: 16, minHeight: 360 }}>
+      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.76)", borderRadius: 16, padding: 16, minHeight: isMobile ? 360 : 410 }}>
         <div style={{ fontSize: 10, fontWeight: 900, color: MUTED, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 7 }}>
           Recruiter Assessment
         </div>
@@ -1121,32 +1126,38 @@ export default function ProfileStrengthPage() {
   );
 
   const executionProofCard = (
-    <SectionCard title="Execution Proof">
-      <div style={{ display: "grid", gap: 8 }}>
-        {strengthProfile.projects.length ? (
-          <div style={{ maxHeight: 320, overflowY: "auto", display: "grid", gap: 7, paddingRight: 2 }}>
-            {strengthProfile.projects.map((project, idx) => {
+    <RotatingCard
+      title="Execution Proof"
+      minHeight={isMobile ? 260 : 284}
+      cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
+      contentStyle={{ alignContent: "stretch" }}
+      slides={[
+        ...(strengthProfile.projects.length
+          ? strengthProfile.projects.slice(0, 3).map((project, idx) => {
               const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || `Project ${idx + 1}`;
               return (
-                <div key={`${title}-${idx}`} style={{ ...GLASS_SOFT, borderRadius: 12, padding: "10px 12px" }}>
-                  <div style={{ fontSize: 13, fontWeight: 900, color: SLATE, lineHeight: 1.3 }}>{title}</div>
+                <div key={`${title}-${idx}`} style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+                  <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
+                    Project Evidence
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 950, color: SLATE, lineHeight: 1.35 }}>{title}</div>
                 </div>
               );
-            })}
-          </div>
-        ) : (
-          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
-            No Projects Listed. Update your portfolio with any relevant projects.
-          </div>
-        )}
+            })
+          : [
+              <div key="no-projects" style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14, fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
+                No Projects Listed. Update your portfolio with any relevant projects.
+              </div>,
+            ]),
         <ActionTile
+          key="add-projects"
           title="Add projects to The Anvil"
           body="Project entries are the strongest recruiter proof signal. Add scope, tools, stakeholders, and measurable outcomes."
           buttonLabel="Open The Anvil →"
           onClick={() => router.push("/anvil?module=profile")}
-        />
-      </div>
-    </SectionCard>
+        />,
+      ]}
+    />
   );
 
   const strengthDetailGrid = (
@@ -1601,7 +1612,29 @@ export default function ProfileStrengthPage() {
     </div>
   );
 
-  const bleedCommandRow = (left, center, right, marginTop = DESKTOP_BLEED_DROP) => (
+  const bleedCommandRow = (left, center, right, marginTop = COMMAND_ROW_TOP_GAP) => (
+    <div
+      style={{
+        marginLeft: LEFT_BLEED,
+        marginRight: RIGHT_BLEED,
+        marginTop,
+        display: "flex",
+        alignItems: "flex-end",
+        gap: GAP,
+        width: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
+        maxWidth: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
+        minWidth: 0,
+        position: "relative",
+        zIndex: 2,
+      }}
+    >
+      {left}
+      {center}
+      {right}
+    </div>
+  );
+
+  const strengthCommandRow = (left, center, right, marginTop = COMMAND_ROW_TOP_GAP) => (
     <div
       style={{
         marginLeft: LEFT_BLEED,
@@ -1680,11 +1713,10 @@ export default function ProfileStrengthPage() {
     if (activeTab === "strength") {
       return (
         <>
-          {bleedCommandRow(
+          {strengthCommandRow(
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{executionProofCard}</section>,
             strengthRecruiterLensHeroCard,
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{strengthSignalCard}</section>,
-            8
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{strengthSignalCard}</section>
           )}
           {strengthDetailGrid}
         </>
