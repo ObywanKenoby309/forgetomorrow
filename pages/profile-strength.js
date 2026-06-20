@@ -1,4 +1,4 @@
-// pages/profile-analytics.js
+// pages/profile-strength.js
 // Seeker profile analytics command center.
 // Follows Sora's inlay pattern exactly:
 //   - Layout owns: title card
@@ -9,7 +9,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import SeekerAnalyticsLayout, { SeekerAnalyticsNavBar } from "@/components/layouts/SeekerAnalyticsLayout";
+import SeekerAnalyticsLayout from "@/components/layouts/SeekerAnalyticsLayout";
 
 import KPI from "@/components/analytics/KPI";
 import ViewsChart from "@/components/analytics/ViewsChart";
@@ -550,13 +550,14 @@ function generateRecruiterQuestions(sp) {
 const TAB_COPY = {
   overview:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "Understand how your profile performs, who's viewing it, and what actions will accelerate your visibility." },
   visibility: { title: "Profile Analytics — ForgeTomorrow", subtitle: "See how your profile is being discovered and who's been looking at your work." },
+  strength:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "See how recruiters are likely to interpret your profile, evidence, and positioning." },
   activity:   { title: "Profile Analytics — ForgeTomorrow", subtitle: "Track your content performance and community presence on ForgeTomorrow." },
 };
 
 // ─── Main page ────────────────────────────────────────────────────────────────
-export default function ProfileAnalyticsPage() {
+export default function ProfileStrengthPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("overview");
+  const activeTab = "strength";
   const [isMobile, setIsMobile]   = useState(null); // null = measuring, true/false = known
 
   useEffect(() => {
@@ -1626,8 +1627,9 @@ export default function ProfileAnalyticsPage() {
   const inlay = (() => {
     if (isMobile) {
       // Mobile: each tab owns its own focused group.
-      if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{visibilityCard}</div>;
+      if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
       if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{visibilityKpiStrip}{reachCard}{visibilityCard}{recentViewersCompactCard}</div>;
+      if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{strengthRecruiterLensHeroCard}{executionProofCard}{strengthSignalCard}{strengthDetailGrid}</div>;
       if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{activityKpiStrip}{activityIntelligenceCard}{connectionGrowthHeroCard}{activitySupportCard}</div>;
       return null;
     }
@@ -1636,6 +1638,8 @@ export default function ProfileAnalyticsPage() {
     if (activeTab === "overview") {
       return (
         <>
+          {kpiStrip}
+
           <div
             style={{
               marginLeft: LEFT_BLEED,
@@ -1673,6 +1677,19 @@ export default function ProfileAnalyticsPage() {
       );
     }
 
+    if (activeTab === "strength") {
+      return (
+        <>
+          {bleedCommandRow(
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{executionProofCard}</section>,
+            strengthRecruiterLensHeroCard,
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{strengthSignalCard}</section>,
+            8
+          )}
+          {strengthDetailGrid}
+        </>
+      );
+    }
 
     if (activeTab === "activity") {
       return (
@@ -1695,17 +1712,13 @@ export default function ProfileAnalyticsPage() {
   return (
     <SeekerAnalyticsLayout
       title={activeCopy.title}
+      suiteTitle="Profile Strength"
       pageSubtitle={activeCopy.subtitle}
       activeTab={activeTab}
     >
       {/* isMobile === null = still measuring — render nothing to prevent flash */}
       {isMobile === null ? null : (
         <div style={{ display: "grid", gap: GAP }}>
-          <SeekerAnalyticsNavBar
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            isMobile={isMobile === true}
-          />
           {inlay}
         </div>
       )}

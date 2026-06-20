@@ -9,6 +9,7 @@ import PinnedJobsPreview from '@/components/PinnedJobsPreview';
 import RecommendedJobsPreview from '@/components/seeker/dashboard/RecommendedJobsPreview';
 import ProfilePerformanceTeaser from '@/components/seeker/dashboard/ProfilePerformanceTeaser';
 import KpiRow from '@/components/seeker/dashboard/KpiRow';
+import ProfileStrengthKpiRow from '@/components/seeker/dashboard/ProfileStrengthKpiRow';
 import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOverTime';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
@@ -543,6 +544,28 @@ export default function SeekerDashboard() {
               </section>
             </div>
 
+            {/* 3b. Profile Strength — recruiter signal row */}
+            <section
+              onClick={() => router.push(withChrome('/profile-strength'))}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') router.push(withChrome('/profile-strength'));
+              }}
+              style={{ ...GLASS, padding: '10px 12px', cursor: 'pointer' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Profile Strength</span>
+                <Link
+                  href={withChrome('/profile-strength')}
+                  style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}
+                >
+                  Full read →
+                </Link>
+              </div>
+              <ProfileStrengthKpiRow isMobile={true} />
+            </section>
+
             {/* 4. Connected jobs panel — Recommended + Pinned */}
             <ConnectedJobsPanel withChrome={withChrome} isMobile />
 
@@ -663,6 +686,45 @@ export default function SeekerDashboard() {
                   />
                 </div>
               )}
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, marginBottom: 10 }}>
+                <h2
+                  style={{
+                    fontSize: 16,
+                    color: '#FF7043',
+                    lineHeight: 1.25,
+                    letterSpacing: '-0.01em',
+                    margin: 0,
+                    ...ORANGE_HEADING_LIFT,
+                  }}
+                >
+                  Profile Strength
+                </h2>
+                <Link
+                  href={withChrome('/profile-strength')}
+                  style={{
+                    color: '#FF7043',
+                    fontWeight: 800,
+                    fontSize: 13,
+                    lineHeight: 1.2,
+                    textDecoration: 'none',
+                    ...ORANGE_HEADING_LIFT,
+                  }}
+                >
+                  Full read →
+                </Link>
+              </div>
+              <div
+                onClick={() => router.push(withChrome('/profile-strength'))}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') router.push(withChrome('/profile-strength'));
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <ProfileStrengthKpiRow isMobile={false} />
+              </div>
             </section>
 
             {/* ROW 3, COL 1: Action Center */}

@@ -63,7 +63,6 @@ const RIGHT_W = 260;
 const SEEKER_TABS = [
   { id: "overview",    label: "Overview" },
   { id: "visibility",  label: "Visibility" },
-  { id: "strength",    label: "Profile Strength" },
   { id: "activity",    label: "Activity" },
 ];
 
@@ -120,7 +119,6 @@ export function SeekerAnalyticsNavBar({ activeTab, onTabChange, isMobile }) {
   const SEEKER_TABS = [
     { id: "overview",   label: "Overview",         hint: "KPIs + visibility + actions" },
     { id: "visibility", label: "Visibility",        hint: "Reach trend + viewers" },
-    { id: "strength",   label: "Profile Strength",  hint: "Completion + momentum" },
     { id: "activity",   label: "Activity",          hint: "Content + connections" },
   ];
 
@@ -283,7 +281,7 @@ export default function SeekerAnalyticsLayout({
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
 
-  const SEEKER_TAB_LABELS = { overview: "Overview", visibility: "Visibility", strength: "Profile Strength", activity: "Activity" };
+  const SEEKER_TAB_LABELS = { overview: "Overview", visibility: "Visibility", activity: "Activity" };
   const activeLabel = SEEKER_TAB_LABELS[activeTab] || "Overview";
 
   const rightRail = right || <RightRailPlacementManager slot="right_rail_1" />;
