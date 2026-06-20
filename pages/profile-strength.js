@@ -52,7 +52,7 @@ const RIGHT_BLEED        = -(240 + 12);   // right rail 240 + gap 12
 const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recruiter
 const LEFT_COMMAND_CARD_HEIGHT = 230;
 const COMMAND_RAIL_HEIGHT = 390;
-const STRENGTH_MAIN_MIN_HEIGHT = 520;
+const STRENGTH_MAIN_MIN_HEIGHT = 600;
 const STRENGTH_SIDE_CARD_DROP = 0;
 const STRENGTH_SIDE_CARD_HEIGHT = 400;
 const STRENGTH_EXECUTION_PROOF_HEIGHT = 200;
@@ -1100,7 +1100,7 @@ export default function ProfileStrengthPage() {
         </div>
       </div>
 
-      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.76)", borderRadius: 16, padding: 16, minHeight: isMobile ? 360 : 410 }}>
+      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.76)", borderRadius: 16, padding: 16, minHeight: isMobile ? 360 : STRENGTH_MAIN_MIN_HEIGHT }}>
         <div style={{ fontSize: 10, fontWeight: 900, color: MUTED, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 7 }}>
           Recruiter Assessment
         </div>
