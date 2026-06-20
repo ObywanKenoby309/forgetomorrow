@@ -1645,7 +1645,7 @@ export default function ProfileStrengthPage() {
         marginRight: RIGHT_BLEED,
         marginTop,
         display: "flex",
-        alignItems: "stretch",
+        alignItems: "flex-end",
         gap: GAP,
         width: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
         maxWidth: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
@@ -1722,11 +1722,8 @@ export default function ProfileStrengthPage() {
               style={{
                 width: 240,
                 flex: "0 0 240px",
+                alignSelf: "flex-end",
                 minWidth: 0,
-                alignSelf: "stretch",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-end",
               }}
             >
               {executionProofCard}
@@ -1736,11 +1733,8 @@ export default function ProfileStrengthPage() {
               style={{
                 width: 240,
                 flex: "0 0 240px",
+                alignSelf: "flex-end",
                 minWidth: 0,
-                alignSelf: "stretch",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-end",
               }}
             >
               {strengthSignalCard}
