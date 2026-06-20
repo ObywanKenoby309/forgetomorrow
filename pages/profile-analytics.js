@@ -51,7 +51,7 @@ const LEFT_BLEED         = -(240 + 12);   // sidebar 240 + gap 12
 const RIGHT_BLEED        = -(240 + 12);   // right rail 240 + gap 12
 const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recruiter
 const COMMAND_RAIL_HEIGHT = 390;
-const LEFT_COMMAND_CARD_HEIGHT = 285;
+const LEFT_COMMAND_CARD_HEIGHT = 260;
 const COMMAND_CENTER_CHART_HEIGHT = 360;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
