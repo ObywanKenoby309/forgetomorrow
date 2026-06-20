@@ -1140,7 +1140,7 @@ export default function ProfileStrengthPage() {
         <button
   key="add-projects"
   type="button"
-  onClick={() => router.push("/anvil?module=profile")}
+  onClick={() => router.push("/resume/create?section=projects")}
   style={{
     ...GLASS_SOFT,
     borderRadius: 12,
@@ -1158,7 +1158,7 @@ export default function ProfileStrengthPage() {
   }}
 >
   <div style={{ fontSize: 14, fontWeight: 900, color: SLATE }}>
-    Add projects to The Anvil
+    Turn work into proof
   </div>
   <div
     style={{
@@ -1172,10 +1172,10 @@ export default function ProfileStrengthPage() {
       WebkitBoxOrient: "vertical",
     }}
   >
-    Project entries are the strongest recruiter proof signal. Add scope, tools, stakeholders, and measurable outcomes.
+    Add a project with outcomes, tools, and impact recruiters can verify.
   </div>
   <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginTop: 8 }}>
-    Open The Anvil →
+    Add a Project →
   </div>
 </button>
       ]}
