@@ -780,7 +780,7 @@ export default function SeekerDashboard() {
                 Profile Health
               </div>
               <div style={{ ...WHITE_CARD, padding: 8 }}>
-                <ProfilePerformanceTeaser />
+                <ProfilePerformanceTeaser layout="vertical" compact />
               </div>
             </aside>
 

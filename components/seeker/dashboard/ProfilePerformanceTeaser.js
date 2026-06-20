@@ -40,21 +40,21 @@ function StatCard({ icon, label, sub, value, color, bg, border, suffix = '', com
       style={{
         background: bg,
         border: `1px solid ${border}`,
-        borderRadius: compact ? 10 : 12,
-        padding: compact ? '8px 6px' : '14px 10px 12px',
+        borderRadius: compact ? 9 : 12,
+        padding: compact ? '5px 5px' : '14px 10px 12px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: compact ? 2 : 4,
+        gap: compact ? 1 : 4,
         flex: 1,
         minWidth: 0,
-        boxShadow: '0 8px 18px rgba(15,23,42,0.08)',
+        boxShadow: compact ? '0 4px 10px rgba(15,23,42,0.06)' : '0 8px 18px rgba(15,23,42,0.08)',
       }}
     >
-      <div style={{ fontSize: compact ? 15 : 20, lineHeight: 1 }}>{icon}</div>
+      <div style={{ fontSize: compact ? 12 : 20, lineHeight: 1 }}>{icon}</div>
       <div
         style={{
-          fontSize: compact ? 20 : 26,
+          fontSize: compact ? 17 : 26,
           fontWeight: 950,
           color,
           lineHeight: 1.05,
@@ -63,10 +63,10 @@ function StatCard({ icon, label, sub, value, color, bg, border, suffix = '', com
       >
         {value}{suffix}
       </div>
-      <div style={{ fontSize: compact ? 8.5 : 11, fontWeight: 800, color, opacity: 0.92, textAlign: 'center', lineHeight: 1.12 }}>
+      <div style={{ fontSize: compact ? 7.5 : 11, fontWeight: 800, color, opacity: 0.92, textAlign: 'center', lineHeight: 1.05 }}>
         {label}
       </div>
-      <div style={{ fontSize: compact ? 8 : 10, color: '#607D8B', fontWeight: 700, lineHeight: 1.1 }}>{sub}</div>
+      <div style={{ fontSize: compact ? 7 : 10, color: '#607D8B', fontWeight: 700, lineHeight: 1.05 }}>{sub}</div>
     </div>
   );
 }
@@ -110,13 +110,13 @@ export default function ProfilePerformanceTeaser({ layout = 'row', compact = fal
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: compact ? 6 : 8 }}>
+      <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: compact ? 4 : 8 }}>
         {[1, 2, 3].map((i) => (
           <div
             key={i}
             style={{
               flex: 1,
-              height: compact ? 62 : 90,
+              height: compact ? 44 : 90,
               borderRadius: compact ? 10 : 12,
               background: 'rgba(255,255,255,0.28)',
               animation: 'pulse 1.5s ease-in-out infinite',
@@ -128,8 +128,8 @@ export default function ProfilePerformanceTeaser({ layout = 'row', compact = fal
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? 8 : 10 }}>
-      <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: compact ? 6 : 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? 6 : 10 }}>
+      <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: compact ? 4 : 8 }}>
         {STATS.map((s) => (
           <StatCard
             key={s.key}
@@ -153,14 +153,14 @@ export default function ProfilePerformanceTeaser({ layout = 'row', compact = fal
           alignItems: 'center',
           justifyContent: 'center',
           width: '100%',
-          borderRadius: compact ? 9 : 10,
+          borderRadius: compact ? 8 : 10,
           border: '1px solid rgba(255,112,67,0.28)',
           background: 'rgba(255,112,67,0.10)',
           color: '#E85D2F',
-          fontSize: compact ? 10 : 12,
+          fontSize: compact ? 9 : 12,
           fontWeight: 900,
           lineHeight: 1.2,
-          padding: compact ? '7px 8px' : '9px 10px',
+          padding: compact ? '5px 7px' : '9px 10px',
           textDecoration: 'none',
         }}
       >
