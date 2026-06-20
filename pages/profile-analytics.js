@@ -53,6 +53,7 @@ const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recr
 const COMMAND_RAIL_HEIGHT = 390;
 const LEFT_COMMAND_CARD_HEIGHT = 230;
 const COMMAND_CENTER_CHART_HEIGHT = 360;
+const COMMAND_ROW_TOP_GAP = 8;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function safeArray(v) {
@@ -1660,7 +1661,7 @@ export default function ProfileAnalyticsPage() {
     </div>
   );
 
-  const bleedCommandRow = (left, center, right, marginTop = DESKTOP_BLEED_DROP) => (
+  const bleedCommandRow = (left, center, right, marginTop = COMMAND_ROW_TOP_GAP) => (
     <div
       style={{
         marginLeft: LEFT_BLEED,
@@ -1698,25 +1699,11 @@ export default function ProfileAnalyticsPage() {
         <>
           {kpiStrip}
 
-          <div
-            style={{
-              marginLeft: LEFT_BLEED,
-              marginRight: RIGHT_BLEED,
-              marginTop: 8,
-              display: "flex",
-              alignItems: "flex-end",
-              gap: GAP,
-              width: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
-              maxWidth: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
-              minWidth: 0,
-              position: "relative",
-              zIndex: 2,
-            }}
-          >
-            {profileCommandCard}
-            {visibilityHeroCard}
-            {nextActionsRailCard}
-          </div>
+          {bleedCommandRow(
+            profileCommandCard,
+            visibilityHeroCard,
+            nextActionsRailCard
+          )}
         </>
       );
     }
@@ -1728,8 +1715,7 @@ export default function ProfileAnalyticsPage() {
           {bleedCommandRow(
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{visibilityCard}</section>,
             <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-end" }}>{reachCard}</section>,
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{recentViewersCompactCard}</section>,
-            8
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{recentViewersCompactCard}</section>
           )}
         </>
       );
@@ -1743,8 +1729,7 @@ export default function ProfileAnalyticsPage() {
           {bleedCommandRow(
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activityIntelligenceCard}</section>,
             connectionGrowthHeroCard,
-            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activitySupportCard}</section>,
-            8
+            <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activitySupportCard}</section>
           )}
         </>
       );
