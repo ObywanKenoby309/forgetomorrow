@@ -1169,7 +1169,15 @@ export default function ProfileStrengthPage() {
 
   const whyYouMatchCard = (
     <SectionCard title="Why You Match">
-      <div style={{ minHeight: isMobile ? "auto" : 420, display: "grid", alignContent: "start", gap: 10 }}>
+      <div
+  style={{
+    height: isMobile ? "auto" : 520,
+    overflowY: isMobile ? "visible" : "auto",
+    display: "grid",
+    alignContent: "start",
+    gap: 10,
+  }}
+>
         {strengthProfile.careerRecommendations?.[0] ? (
           <>
             <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 14, border: "1px solid rgba(255,112,67,0.20)" }}>
