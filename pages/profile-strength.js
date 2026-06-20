@@ -1170,13 +1170,16 @@ export default function ProfileStrengthPage() {
   const whyYouMatchCard = (
     <SectionCard title="Why You Match">
       <div
-  style={{
-    height: isMobile ? "auto" : 520,
-    overflowY: isMobile ? "visible" : "auto",
-    display: "grid",
-    alignContent: "start",
-    gap: 10,
-  }}
+style={{
+  height: isMobile ? "auto" : 420,
+  overflowY: isMobile ? "visible" : "auto",
+  display: "grid",
+  alignContent: "start",
+  gap: 10,
+  paddingRight: isMobile ? 0 : 6,
+  scrollbarWidth: "thin",
+  scrollbarColor: "rgba(255,112,67,0.55) rgba(255,255,255,0.18)",
+}}
 >
         {strengthProfile.careerRecommendations?.[0] ? (
           <>
@@ -1236,11 +1239,16 @@ export default function ProfileStrengthPage() {
 
       <SectionCard title="Where Recruiters Are Most Likely To Place You">
         <div
-  style={{
-    height: isMobile ? "auto" : 520,
-    overflowY: isMobile ? "visible" : "auto",
-    display: "grid",
-  }}
+style={{
+  height: isMobile ? "auto" : 420,
+  overflowY: isMobile ? "visible" : "auto",
+  display: "grid",
+  alignContent: "start",
+  gap: 10,
+  paddingRight: isMobile ? 0 : 6,
+  scrollbarWidth: "thin",
+  scrollbarColor: "rgba(255,112,67,0.55) rgba(255,255,255,0.18)",
+}}
 >
           {strengthProfile.careerRecommendations.length ? (
             <div style={{ display: "grid", gap: 9 }}>
@@ -1265,12 +1273,16 @@ export default function ProfileStrengthPage() {
 
       <SectionCard title="What Recruiters May Ask">
         <div
-  style={{
-    height: isMobile ? "auto" : 520,
-    overflowY: isMobile ? "visible" : "auto",
-    display: "grid",
-    alignContent: "start",
-  }}
+style={{
+  height: isMobile ? "auto" : 420,
+  overflowY: isMobile ? "visible" : "auto",
+  display: "grid",
+  alignContent: "start",
+  gap: 10,
+  paddingRight: isMobile ? 0 : 6,
+  scrollbarWidth: "thin",
+  scrollbarColor: "rgba(255,112,67,0.55) rgba(255,255,255,0.18)",
+}}
 >
           {(() => {
             const questions = generateRecruiterQuestions(strengthProfile);
