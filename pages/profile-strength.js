@@ -1221,7 +1221,7 @@ export default function ProfileStrengthPage() {
         maxWidth: isMobile ? "100%" : `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
         minWidth: 0,
         position: "relative",
-        zIndex: 2,
+        zIndex: 0,
       }}
     >
       {whyYouMatchCard}
@@ -1674,7 +1674,7 @@ export default function ProfileStrengthPage() {
         maxWidth: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
         minWidth: 0,
         position: "relative",
-        zIndex: 2,
+        zIndex: 0,
 		pointerEvents: "none",
       }}
     >
