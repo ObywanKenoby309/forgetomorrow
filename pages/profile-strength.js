@@ -1030,7 +1030,7 @@ export default function ProfileStrengthPage() {
   );
 
   const strengthSignalCard = (
-    <SectionCard title="Recruiter Readiness" style={isMobile ? {} : { minHeight: STRENGTH_SIDE_CARD_HEIGHT }}>
+    <SectionCard title="Recruiter Readiness" style={isMobile ? {} : {}}>
       <div style={{ display: "grid", gap: 10, height: "100%", minHeight: 0 }}>
         <div style={{ ...GLASS_SOFT, borderRadius: 16, padding: 14, background: "rgba(15,23,42,0.94)", color: "white", textAlign: "center" }}>
           <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Profile Read</div>
@@ -1133,7 +1133,7 @@ export default function ProfileStrengthPage() {
     <RotatingCard
       title="Execution Proof"
       minHeight={isMobile ? 260 : 284}
-      cardStyle={isMobile ? {} : { minHeight: STRENGTH_EXECUTION_PROOF_HEIGHT }}
+      cardStyle={isMobile ? {} : {}}
       contentStyle={{ alignContent: "stretch" }}
       slides={[
         ...(strengthProfile.projects.length
@@ -1645,7 +1645,7 @@ export default function ProfileStrengthPage() {
         marginRight: RIGHT_BLEED,
         marginTop,
         display: "flex",
-        alignItems: "flex-end",
+        alignItems: "stretch",
         gap: GAP,
         width: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
         maxWidth: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
@@ -1722,8 +1722,11 @@ export default function ProfileStrengthPage() {
               style={{
                 width: 240,
                 flex: "0 0 240px",
-                alignSelf: "flex-end",
                 minWidth: 0,
+                alignSelf: "stretch",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-end",
               }}
             >
               {executionProofCard}
@@ -1733,8 +1736,11 @@ export default function ProfileStrengthPage() {
               style={{
                 width: 240,
                 flex: "0 0 240px",
-                alignSelf: "flex-end",
                 minWidth: 0,
+                alignSelf: "stretch",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-end",
               }}
             >
               {strengthSignalCard}
