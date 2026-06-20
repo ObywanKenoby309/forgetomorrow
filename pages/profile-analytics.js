@@ -50,7 +50,7 @@ const ORANGE_HEADING_LIFT = {
 const LEFT_BLEED         = -(240 + 12);   // sidebar 240 + gap 12
 const RIGHT_BLEED        = -(240 + 12);   // right rail 240 + gap 12
 const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recruiter
-const COMMAND_RAIL_HEIGHT = 330;
+const COMMAND_RAIL_HEIGHT = 430;
 const COMMAND_CENTER_CHART_HEIGHT = 360;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -909,7 +909,7 @@ export default function ProfileAnalyticsPage() {
   const visibilityCard = (
     <RotatingCard
       title="Visibility Intelligence"
-      minHeight={isMobile ? 132 : 224}
+      minHeight={isMobile ? 132 : 324}
       cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
@@ -957,7 +957,7 @@ export default function ProfileAnalyticsPage() {
   );
 
   const reachCard = (
-    <SectionCard title="Reach Trend">
+    <SectionCard title="Reach Trend" style={isMobile ? {} : { minHeight: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}>
       {Array.isArray(analytics.viewsLast7Days) && Array.isArray(analytics.searchAppearancesLast7Days) ? (
         <div
           style={{
@@ -1286,6 +1286,8 @@ export default function ProfileAnalyticsPage() {
         width: 240,
         flex: "0 0 240px",
         alignSelf: "flex-end",
+        minHeight: COMMAND_RAIL_HEIGHT,
+        overflow: "hidden",
       }}
     >
       <div style={{ fontSize: 17, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 8, ...ORANGE_HEADING_LIFT }}>
@@ -1353,6 +1355,8 @@ export default function ProfileAnalyticsPage() {
         flex: "1 1 auto",
         minWidth: 0,
         alignSelf: "flex-end",
+        minHeight: COMMAND_RAIL_HEIGHT,
+        overflow: "hidden",
       }}
     >
       <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
@@ -1360,7 +1364,7 @@ export default function ProfileAnalyticsPage() {
       </div>
 
       <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.74)", borderRadius: 16, padding: 14, overflow: "hidden" }}>
-        <div style={{ minHeight: 260, maxHeight: 325, overflow: "hidden" }}>
+        <div style={{ minHeight: 320, maxHeight: 325, overflow: "hidden" }}>
           <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
         </div>
       </div>
@@ -1379,7 +1383,7 @@ export default function ProfileAnalyticsPage() {
     >
       <RotatingCard
         title="Next Best Actions"
-        minHeight={224}
+        minHeight={324}
         cardStyle={{ height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
         contentStyle={{ alignContent: "stretch" }}
         slides={[
@@ -1465,7 +1469,7 @@ export default function ProfileAnalyticsPage() {
   const activityIntelligenceCard = (
     <RotatingCard
       title="Activity Intelligence"
-      minHeight={isMobile ? 154 : 224}
+      minHeight={isMobile ? 154 : 324}
       cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
@@ -1503,6 +1507,8 @@ export default function ProfileAnalyticsPage() {
         flex: "1 1 auto",
         minWidth: 0,
         alignSelf: "flex-end",
+        minHeight: COMMAND_RAIL_HEIGHT,
+        overflow: "hidden",
       }}
     >
       <div style={{ fontSize: 22, color: ORANGE, lineHeight: 1.15, letterSpacing: "-0.01em", marginBottom: 12, ...ORANGE_HEADING_LIFT }}>
@@ -1529,7 +1535,7 @@ export default function ProfileAnalyticsPage() {
   const activitySupportCard = (
     <RotatingCard
       title="Content Spotlight"
-      minHeight={isMobile ? 390 : 224}
+      minHeight={isMobile ? 390 : 324}
       cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
