@@ -1026,7 +1026,7 @@ export default function ProfileStrengthPage() {
   );
 
   const strengthSignalCard = (
-    <SectionCard title="Recruiter Readiness" style={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}>
+    <SectionCard title="Recruiter Readiness" style={isMobile ? {} : { height: 520, overflow: "hidden" }}>
       <div style={{ display: "grid", gap: 10, height: "100%", minHeight: 0 }}>
         <div style={{ ...GLASS_SOFT, borderRadius: 16, padding: 14, background: "rgba(15,23,42,0.94)", color: "white", textAlign: "center" }}>
           <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Profile Read</div>
