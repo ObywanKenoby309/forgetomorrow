@@ -1057,18 +1057,18 @@ export default function ProfileStrengthPage() {
         </div>
 
         <div style={{ minHeight: 0, overflow: "hidden" }}>
-        <InlineSignalCarousel
-          groups={[
-            {
-              title: "Core Signals",
-              items: strengthProfile.scorecard.filter((sig) => ["identity", "narrative", "proof", "portfolio"].includes(sig.key)),
-            },
-            {
-              title: "Trust + Access",
-              items: strengthProfile.scorecard.filter((sig) => ["credentials", "availability", "language", "visibility"].includes(sig.key)),
-            },
-          ]}
-        />
+          <InlineSignalCarousel
+            groups={[
+              {
+                title: "Core Signals",
+                items: strengthProfile.scorecard.filter((sig) => ["identity", "narrative", "proof", "portfolio"].includes(sig.key)),
+              },
+              {
+                title: "Trust + Access",
+                items: strengthProfile.scorecard.filter((sig) => ["credentials", "availability", "language", "visibility"].includes(sig.key)),
+              },
+            ]}
+          />
         </div>
       </div>
     </SectionCard>
