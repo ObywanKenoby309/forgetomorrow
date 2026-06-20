@@ -763,8 +763,11 @@ export default function SeekerDashboard() {
                 padding: 10,
                 boxSizing: 'border-box',
                 alignSelf: 'start',
-                maxHeight: 214,
+                height: 208,
+                maxHeight: 208,
                 overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
               <div
@@ -775,12 +778,24 @@ export default function SeekerDashboard() {
                   color: '#0F172A',
                   lineHeight: 1.25,
                   letterSpacing: '-0.01em',
+                  flexShrink: 0,
                 }}
               >
                 Profile Health
               </div>
-              <div style={{ ...WHITE_CARD, padding: 8 }}>
-                <ProfilePerformanceTeaser layout="vertical" compact />
+              <div
+                style={{
+                  ...WHITE_CARD,
+                  padding: 8,
+                  flex: 1,
+                  minHeight: 0,
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                }}
+              >
+                <ProfilePerformanceTeaser compact />
               </div>
             </aside>
 
