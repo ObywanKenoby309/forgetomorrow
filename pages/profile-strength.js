@@ -1137,13 +1137,47 @@ export default function ProfileStrengthPage() {
                 No Projects Listed. Update your portfolio with any relevant projects.
               </div>,
             ]),
-        <ActionTile
-          key="add-projects"
-          title="Add projects to The Anvil"
-          body="Project entries are the strongest recruiter proof signal. Add scope, tools, stakeholders, and measurable outcomes."
-          buttonLabel="Open The Anvil →"
-          onClick={() => router.push("/anvil?module=profile")}
-        />,
+        <button
+  key="add-projects"
+  type="button"
+  onClick={() => router.push("/anvil?module=profile")}
+  style={{
+    ...GLASS_SOFT,
+    borderRadius: 12,
+    padding: 14,
+    border: "1px solid rgba(255,112,67,0.18)",
+    textAlign: "left",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    width: "100%",
+    height: "100%",
+    minHeight: 0,
+    overflow: "hidden",
+    display: "grid",
+    alignContent: "start",
+  }}
+>
+  <div style={{ fontSize: 14, fontWeight: 900, color: SLATE }}>
+    Add projects to The Anvil
+  </div>
+  <div
+    style={{
+      fontSize: 12,
+      color: MUTED,
+      lineHeight: 1.45,
+      marginTop: 6,
+      overflow: "hidden",
+      display: "-webkit-box",
+      WebkitLineClamp: 3,
+      WebkitBoxOrient: "vertical",
+    }}
+  >
+    Project entries are the strongest recruiter proof signal. Add scope, tools, stakeholders, and measurable outcomes.
+  </div>
+  <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginTop: 8 }}>
+    Open The Anvil →
+  </div>
+</button>
       ]}
     />
   );
