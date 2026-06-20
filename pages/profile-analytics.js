@@ -50,7 +50,7 @@ const ORANGE_HEADING_LIFT = {
 const LEFT_BLEED         = -(240 + 12);   // sidebar 240 + gap 12
 const RIGHT_BLEED        = -(240 + 12);   // right rail 240 + gap 12
 const DESKTOP_BLEED_DROP = 32;            // same as DESKTOP_REPORT_DROP in recruiter
-const COMMAND_RAIL_HEIGHT = 330;
+const COMMAND_RAIL_HEIGHT = 390;
 const COMMAND_CENTER_CHART_HEIGHT = 360;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -909,7 +909,7 @@ export default function ProfileAnalyticsPage() {
   const visibilityCard = (
     <RotatingCard
       title="Visibility Intelligence"
-      minHeight={isMobile ? 132 : 224}
+      minHeight={isMobile ? 132 : 284}
       cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
@@ -1379,7 +1379,7 @@ export default function ProfileAnalyticsPage() {
     >
       <RotatingCard
         title="Next Best Actions"
-        minHeight={224}
+        minHeight={284}
         cardStyle={{ height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
         contentStyle={{ alignContent: "stretch" }}
         slides={[
@@ -1465,7 +1465,7 @@ export default function ProfileAnalyticsPage() {
   const activityIntelligenceCard = (
     <RotatingCard
       title="Activity Intelligence"
-      minHeight={isMobile ? 154 : 224}
+      minHeight={isMobile ? 154 : 284}
       cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
@@ -1529,7 +1529,7 @@ export default function ProfileAnalyticsPage() {
   const activitySupportCard = (
     <RotatingCard
       title="Content Spotlight"
-      minHeight={isMobile ? 390 : 224}
+      minHeight={isMobile ? 390 : 284}
       cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
@@ -1699,7 +1699,7 @@ export default function ProfileAnalyticsPage() {
             style={{
               marginLeft: LEFT_BLEED,
               marginRight: RIGHT_BLEED,
-              marginTop: 12,
+              marginTop: 8,
               display: "flex",
               alignItems: "flex-end",
               gap: GAP,
@@ -1726,7 +1726,7 @@ export default function ProfileAnalyticsPage() {
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{visibilityCard}</section>,
             <section style={{ flex: "1 1 auto", minWidth: 0, alignSelf: "flex-end" }}>{reachCard}</section>,
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{recentViewersCompactCard}</section>,
-            12
+            8
           )}
         </>
       );
@@ -1741,7 +1741,7 @@ export default function ProfileAnalyticsPage() {
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activityIntelligenceCard}</section>,
             connectionGrowthHeroCard,
             <section style={{ width: 240, flex: "0 0 240px", alignSelf: "flex-end", minWidth: 0 }}>{activitySupportCard}</section>,
-            12
+            8
           )}
         </>
       );
