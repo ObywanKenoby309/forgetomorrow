@@ -1171,7 +1171,7 @@ const executionProofCard = (
             >
               No Projects Listed. Update your portfolio with any relevant projects.
             </div>,
-          ])}
+          ])},
       <button
         key="add-projects"
         type="button"
