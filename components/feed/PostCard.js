@@ -402,12 +402,15 @@ export default function PostCard({
       }
     } catch {}
 
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+
     setReactionViewer({
       emoji,
       userIds,
       names: reactionUsers[emoji]?.names || [],
       top,
       left,
+      mobile: isMobile,
     });
 
     const names = await fetchUsersForEmoji(emoji);
@@ -993,68 +996,86 @@ export default function PostCard({
           onClick={() => setReactionViewer(null)}
         />
 
-        <div
-          className="fixed z-[100000] max-h-[55dvh] overflow-hidden rounded-[20px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_22px_70px_rgba(50,20,10,0.32)] backdrop-blur-[24px] sm:max-h-[70dvh] sm:rounded-[22px]"
-          style={{
-            top: reactionViewer.top ?? 96,
-            left: reactionViewer.left ?? 16,
-            width: 'min(300px, calc(100vw - 24px))',
-          }}
-          role="dialog"
-          aria-modal="false"
-          aria-label="Post reactions"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between border-b border-white/45 px-3.5 py-2.5 sm:px-4 sm:py-3">
-            <div>
+        {reactionViewer.mobile ? (
+          <div
+            className="fixed bottom-20 left-3 right-3 z-[100000] sm:hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="rounded-2xl border border-white/50 bg-[rgba(255,250,245,0.98)] p-4 shadow-[0_22px_70px_rgba(50,20,10,0.32)] backdrop-blur-[24px]">
               <div className="text-sm font-extrabold text-[#3a2418]">
-                {reactionViewer.emoji} Reactions
+                {(() => {
+                  const names = reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || [];
+                  const first = names[0] || 'Someone';
+                  const others = Math.max(0, (reactionViewer.userIds?.length || names.length) - 1);
+
+                  return others > 0
+                    ? `${reactionViewer.emoji} ${first} and ${others} other${others === 1 ? '' : 's'} reacted`
+                    : `${reactionViewer.emoji} ${first} reacted`;
+                })()}
               </div>
-              <div className="text-[11px] font-semibold text-[#a8775f]">
-                {reactionViewer.userIds?.length || 0}{' '}
-                {(reactionViewer.userIds?.length || 0) === 1 ? 'member' : 'members'}
+
+              <button
+                type="button"
+                className="mt-2 text-xs font-extrabold text-[#d6602f]"
+                onClick={() =>
+                  setReactionViewer((v) => ({ ...v, mobile: false }))
+                }
+              >
+                View all
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="fixed z-[100000] max-h-[70dvh] overflow-hidden rounded-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_22px_70px_rgba(50,20,10,0.32)] backdrop-blur-[24px]"
+            style={{
+              top: reactionViewer.top ?? 96,
+              left: reactionViewer.left ?? 16,
+              width: 'min(300px, calc(100vw - 24px))',
+            }}
+            role="dialog"
+            aria-modal="false"
+            aria-label="Post reactions"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/45 px-4 py-3">
+              <div>
+                <div className="text-sm font-extrabold text-[#3a2418]">
+                  {reactionViewer.emoji} Reactions
+                </div>
+                <div className="text-[11px] font-semibold text-[#a8775f]">
+                  {reactionViewer.userIds?.length || 0} members
+                </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setReactionViewer(null)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/50 bg-white/60"
+              >
+                ✕
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setReactionViewer(null)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/50 bg-white/60 text-[#6b4a3a] transition hover:bg-white/80 hover:text-[#3a2418]"
-              aria-label="Close reactions"
-            >
-              <svg className="w-[16px] h-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="max-h-[42dvh] overflow-y-auto px-3.5 py-2.5 sm:max-h-[260px] sm:px-4 sm:py-3">
-            {reactionUsers[reactionViewer.emoji]?.loading && !(reactionViewer.names || []).length ? (
-              <div className="rounded-2xl border border-white/50 bg-white/35 px-4 py-4 text-sm font-semibold text-[#8a5d44]">
-                Loading…
-              </div>
-            ) : (
+            <div className="max-h-[260px] overflow-y-auto px-4 py-3">
               <div className="space-y-2">
                 {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((name, index) => (
                   <div
                     key={`post-reaction-viewer-${reactionViewer.emoji}-${name}-${index}`}
-                    className="flex items-center gap-2.5 rounded-2xl border border-white/45 bg-white/40 px-3 py-2.5 sm:gap-3 sm:py-3"
+                    className="flex items-center gap-3 rounded-2xl border border-white/45 bg-white/40 px-3 py-3"
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
                       {String(name || 'Member').charAt(0).toUpperCase() || '?'}
                     </div>
                     <div className="min-w-0 flex-1 truncate text-sm font-extrabold text-[#3a2418]">
                       {name || 'Member'}
                     </div>
-                    <div className="text-sm" aria-hidden="true">
-                      {reactionViewer.emoji}
-                    </div>
                   </div>
                 ))}
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </>,
       document.body
     )}
