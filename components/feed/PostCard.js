@@ -297,7 +297,7 @@ export default function PostCard({
 
   const fetchUsersForEmoji = async (emoji) => {
     const cached = reactionUsers[emoji];
-    if (cached?.loaded && Array.isArray(cached.names)) return cached.names;
+    if (cached?.loaded && Array.isArray(cached.users)) return cached.users;
 
     const reaction = postReactions.find((r) => r.emoji === emoji);
     const userIds = Array.isArray(reaction?.userIds) ? reaction.userIds.map(String).filter(Boolean) : [];
@@ -320,38 +320,54 @@ export default function PostCard({
       if (!res.ok) throw new Error('Could not load reaction users');
 
       const data = await res.json().catch(() => ({}));
-      const users = Array.isArray(data.users) ? data.users : [];
+      const users = Array.isArray(data.users)
+        ? data.users.map((user) => ({
+            id: String(user?.id || ''),
+            name: String(user?.name || 'Member'),
+            headline: String(user?.headline || ''),
+            slug: String(user?.slug || ''),
+            avatarUrl: String(user?.avatarUrl || ''),
+          })).filter((user) => user.id)
+        : [];
 
-setReactionUsers((prev) => ({
-  ...prev,
-  [emoji]: {
-    users,
-    loading: false,
-    loaded: true,
-  },
-}));
-
-return users;
-    } catch (err) {
-      console.error('reaction hover error:', err);
-      const names = userIds.map((id) => (String(id) === String(currentUserId) ? 'You' : 'Member'));
       setReactionUsers((prev) => ({
         ...prev,
         [emoji]: {
-          names,
+          users,
           loading: false,
           loaded: true,
         },
       }));
-      return names;
+
+      return users;
+    } catch (err) {
+      console.error('reaction hover error:', err);
+      const users = userIds.map((id) => ({
+        id: String(id),
+        name: String(id) === String(currentUserId) ? 'You' : 'Member',
+        headline: '',
+        slug: '',
+        avatarUrl: '',
+      }));
+
+      setReactionUsers((prev) => ({
+        ...prev,
+        [emoji]: {
+          users,
+          loading: false,
+          loaded: true,
+        },
+      }));
+
+      return users;
     }
   };
 
   const getTooltipText = (emoji) => {
-    const names = reactionUsers[emoji]?.names || [];
-    if (!names.length) return 'Loading…';
-    const preview = names.slice(0, 3).join(', ');
-    const extra = names.length > 3 ? ` +${names.length - 3}` : '';
+    const users = reactionUsers[emoji]?.users || [];
+    if (!users.length) return 'Loading…';
+    const preview = users.slice(0, 3).map((user) => user.name || 'Member').join(', ');
+    const extra = users.length > 3 ? ` +${users.length - 3}` : '';
     return `${preview}${extra} reacted with ${emoji}`;
   };
 
@@ -405,17 +421,12 @@ return users;
     setReactionViewer({
       emoji,
       userIds,
-      names: reactionUsers[emoji]?.names || [],
       top,
       left,
       mobile: isMobile,
     });
 
-    const names = await fetchUsersForEmoji(emoji);
-    setReactionViewer((current) => {
-      if (!current || current.emoji !== emoji) return current;
-      return { ...current, names };
-    });
+    await fetchUsersForEmoji(emoji);
   };
 
   // ── Derived display values ────────────────────────────────
@@ -1002,12 +1013,13 @@ return users;
             <div className="rounded-2xl border border-white/50 bg-[rgba(255,250,245,0.98)] p-4 shadow-[0_22px_70px_rgba(50,20,10,0.32)] backdrop-blur-[24px]">
               <div className="text-sm font-extrabold text-[#3a2418]">
                 {(() => {
-                  const names = reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || [];
-                  const first = names[0] || 'Someone';
-                  const others = Math.max(0, (reactionViewer.userIds?.length || names.length) - 1);
+                  const users = reactionUsers[reactionViewer.emoji]?.users || [];
+                  const total = reactionViewer.userIds?.length || users.length || 0;
+                  const first = users[0]?.name || (reactionUsers[reactionViewer.emoji]?.loading ? 'Loading members…' : 'Someone');
+                  const others = Math.max(0, total - 1);
 
                   return others > 0
-                    ? `${reactionViewer.emoji} ${first} and ${others} other${others === 1 ? '' : 's'} reacted`
+                    ? `${reactionViewer.emoji} ${first} and ${others.toLocaleString()} other${others === 1 ? '' : 's'} reacted`
                     : `${reactionViewer.emoji} ${first} reacted`;
                 })()}
               </div>
@@ -1025,11 +1037,11 @@ return users;
           </div>
         ) : (
           <div
-            className="fixed z-[100000] max-h-[70dvh] overflow-hidden rounded-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_22px_70px_rgba(50,20,10,0.32)] backdrop-blur-[24px]"
+            className="fixed z-[100000] max-h-[72dvh] overflow-visible rounded-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_22px_70px_rgba(50,20,10,0.32)] backdrop-blur-[24px]"
             style={{
               top: reactionViewer.top ?? 96,
               left: reactionViewer.left ?? 16,
-              width: 'min(300px, calc(100vw - 24px))',
+              width: 'min(440px, calc(100vw - 24px))',
             }}
             role="dialog"
             aria-modal="false"
@@ -1055,42 +1067,51 @@ return users;
               </button>
             </div>
 
-            <div className="max-h-[260px] overflow-y-auto px-4 py-3">
+
+            <div className="max-h-[320px] overflow-y-auto overflow-x-hidden px-4 py-3">
               <div className="space-y-2">
-			  {(reactionUsers[reactionViewer.emoji]?.users || []).map((user) => (
-  <MemberAvatarActions
-    key={user.id}
-    targetUserId={user.id}
-    targetUserSlug={user.slug}
-    targetName={user.name}
-  >
-    <div className="flex items-center gap-3 rounded-2xl border border-white/45 bg-white/40 px-3 py-3 hover:bg-white/60 cursor-pointer">
-      {user.avatarUrl ? (
-        <img
-          src={user.avatarUrl}
-          alt={user.name}
-          className="h-10 w-10 rounded-full object-cover"
-        />
-      ) : (
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-white font-bold">
-          {String(user.name || '?').charAt(0).toUpperCase()}
-        </div>
-      )}
 
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-extrabold text-[#3a2418]">
-          {user.name}
-        </div>
+  {reactionUsers[reactionViewer.emoji]?.loading && (
+    <div className="py-4 text-center text-sm text-[#8a5d44]">
+      Loading members...
+    </div>
+  )}
 
-        {user.headline && (
-          <div className="truncate text-xs text-[#8a5d44]">
-            {user.headline}
+{(reactionUsers[reactionViewer.emoji]?.users || []).map((user) => (
+  <div key={user.id} className="w-full" data-stop-card-click>
+    <MemberAvatarActions
+      targetUserId={user.id}
+      targetUserSlug={user.slug}
+      targetName={user.name}
+    >
+      <div className="flex w-full items-center gap-3 rounded-2xl border border-white/45 bg-white/40 px-3 py-3 hover:bg-white/60 cursor-pointer">
+        {user.avatarUrl ? (
+          <img
+            src={user.avatarUrl}
+            alt={user.name}
+            className="h-10 w-10 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-white font-bold">
+            {String(user.name || '?').charAt(0).toUpperCase()}
           </div>
         )}
+
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-extrabold text-[#3a2418]">
+            {user.name}
+          </div>
+
+          {user.headline && (
+            <div className="truncate text-xs text-[#8a5d44]">
+              {user.headline}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-</MemberAvatarActions>
-              ))}
+    </MemberAvatarActions>
+  </div>
+))}
               </div>
             </div>
           </div>

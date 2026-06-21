@@ -19,19 +19,34 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'userIds array required' });
   }
 
+  const safeUserIds = [...new Set(userIds.map((id) => String(id)).filter(Boolean))].slice(0, 500);
+
   try {
     const users = await prisma.user.findMany({
-  where: { id: { in: userIds } },
-  select: {
-    id: true,
-    name: true,
-    headline: true,
-    slug: true,
-    avatarUrl: true,
-  },
-});
+      where: { id: { in: safeUserIds } },
+      select: {
+        id: true,
+        name: true,
+        headline: true,
+        slug: true,
+        avatarUrl: true,
+      },
+    });
 
-return res.status(200).json({ users });
+    const byId = new Map(users.map((user) => [String(user.id), user]));
+
+    const orderedUsers = safeUserIds
+      .map((id) => byId.get(String(id)))
+      .filter(Boolean)
+      .map((user) => ({
+        id: String(user.id),
+        name: user.name || 'Member',
+        headline: user.headline || '',
+        slug: user.slug || '',
+        avatarUrl: user.avatarUrl || '',
+      }));
+
+    return res.status(200).json({ users: orderedUsers });
   } catch (err) {
     console.error('[USERS NAMES ERROR]', err);
     return res.status(500).json({ error: 'Failed to fetch user names' });
