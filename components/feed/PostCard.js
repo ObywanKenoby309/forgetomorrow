@@ -1057,7 +1057,7 @@ return users;
 
             <div className="max-h-[260px] overflow-y-auto px-4 py-3">
               <div className="space-y-2">
-(reactionUsers[reactionViewer.emoji]?.users || []).map((user) => (
+			  {(reactionUsers[reactionViewer.emoji]?.users || []).map((user) => (
   <MemberAvatarActions
     key={user.id}
     targetUserId={user.id}
@@ -1090,7 +1090,7 @@ return users;
       </div>
     </div>
   </MemberAvatarActions>
-))
+			  ))}
 
     {lightboxIndex !== null && mediaAttachments[lightboxIndex] && (
       <div
