@@ -51,21 +51,19 @@ export default function SearchAppearancesChart({ labels = [], data = [] }) {
 
   return (
     <div className="ft-chart-wrap" style={{ width: "100%", height: isMobile ? 220 : "clamp(220px, 30vw, 320px)" }}>
-      <style>{`.ft-chart-wrap svg { background: transparent !important; }`}</style>
-      <ResponsiveContainer width="100%" height="100%" style={{ background: "transparent" }}>
-        <AreaChart data={rows} margin={isMobile ? { top: 8, right: 6, bottom: 8, left: -18 } : { top: 8, right: 12, bottom: 8, left: 0 }} style={{ background: "transparent" }}>
+      <style>{`.ft-chart-wrap svg rect:first-of-type { fill: transparent !important; }`}</style>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={rows} margin={isMobile ? { top: 8, right: 6, bottom: 8, left: -18 } : { top: 8, right: 12, bottom: 8, left: 0 }}>
           <defs>
             <linearGradient id="searchHitsTeal" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={TEAL} stopOpacity={0.26} />
               <stop offset="100%" stopColor={TEAL} stopOpacity={0} />
             </linearGradient>
           </defs>
-
           <CartesianGrid strokeDasharray="3 3" stroke="#ECEFF1" />
           <XAxis dataKey="day" tick={{ fill: "#607D8B", fontSize: isMobile ? 10 : 12 }} />
           <YAxis allowDecimals={false} width={isMobile ? 24 : 36} tick={{ fill: "#607D8B", fontSize: isMobile ? 10 : 12 }} />
           <Tooltip content={TooltipCard} />
-
           <Area type="monotone" dataKey="searchHits" stroke="none" fill="url(#searchHitsTeal)" isAnimationActive={false} />
           <Line type="monotone" dataKey="searchHits" stroke={TEAL} strokeWidth={2.5} dot={false} isAnimationActive={false} />
         </AreaChart>

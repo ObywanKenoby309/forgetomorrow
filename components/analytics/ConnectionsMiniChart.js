@@ -60,14 +60,13 @@ export default function ConnectionsMiniChart({ labels = [], data = [] }) {
 
   return (
     <div className="ft-chart-wrap" style={{ width: "100%", height: isMobile ? 220 : "clamp(220px, 30vw, 320px)" }}>
-      <style>{`.ft-chart-wrap svg { background: transparent !important; }`}</style>
-      <ResponsiveContainer width="100%" height="100%" style={{ background: "transparent" }}>
+      <style>{`.ft-chart-wrap svg rect:first-of-type { fill: transparent !important; }`}</style>
+      <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={rows}
           margin={isMobile ? { top: 8, right: 4, bottom: 20, left: -18 } : { top: 8, right: 12, bottom: 28, left: 0 }}
           barSize={isMobile ? 24 : 38}
           barCategoryGap={isMobile ? 12 : 22}
-          style={{ background: "transparent" }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#ECEFF1" />
           <XAxis
