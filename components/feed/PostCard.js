@@ -373,6 +373,7 @@ export default function PostCard({
         id: String(entry.id || ''),
         name: String(entry.name || 'Member'),
         headline: String(entry.headline || ''),
+        slug: String(entry.slug || ''),
         avatarUrl: String(entry.avatarUrl || ''),
       };
     }
@@ -381,6 +382,7 @@ export default function PostCard({
       id: '',
       name: String(entry || 'Member'),
       headline: '',
+      slug: '',
       avatarUrl: '',
     };
   };
@@ -1097,32 +1099,40 @@ export default function PostCard({
                         key={`post-reaction-viewer-mobile-${reactionViewer.emoji}-${user.id || index}`}
                         className="flex items-center gap-2.5 rounded-xl border border-white/45 bg-white/40 px-3 py-2"
                       >
-                        {user.avatarUrl ? (
-                          <img
-                            src={user.avatarUrl}
-                            alt={user.name}
-                            className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/50"
-                          />
-                        ) : (
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
-                            {String(user.name || 'Member').charAt(0).toUpperCase() || '?'}
-                          </div>
-                        )}
-
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-extrabold text-[#3a2418]">
-                            {user.name || 'Member'}
-                          </div>
-                          {user.headline ? (
-                            <div className="truncate text-[11px] font-semibold text-[#a8775f]">
-                              {user.headline}
+                        <MemberAvatarActions
+                          targetUserId={user.id && user.name !== 'You' ? user.id : null}
+                          targetUserSlug={user.slug || ''}
+                          targetName={user.name || 'Member'}
+                        >
+                          {user.avatarUrl ? (
+                            <img
+                              src={user.avatarUrl}
+                              alt={user.name}
+                              className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/50"
+                            />
+                          ) : (
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
+                              {String(user.name || 'Member').charAt(0).toUpperCase() || '?'}
                             </div>
-                          ) : null}
-                        </div>
+                          )}
+                        </MemberAvatarActions>
 
-                        <div className="shrink-0 text-sm" aria-hidden="true">
-                          {reactionViewer.emoji}
-                        </div>
+                        <MemberAvatarActions
+                          targetUserId={user.id && user.name !== 'You' ? user.id : null}
+                          targetUserSlug={user.slug || ''}
+                          targetName={user.name || 'Member'}
+                        >
+                          <div className="min-w-0 flex-1 cursor-pointer">
+                            <div className="truncate text-sm font-extrabold text-[#3a2418]">
+                              {user.name || 'Member'}
+                            </div>
+                            {user.headline ? (
+                              <div className="truncate text-[11px] font-semibold text-[#a8775f]">
+                                {user.headline}
+                              </div>
+                            ) : null}
+                          </div>
+                        </MemberAvatarActions>
                       </div>
                     );
                   })}
@@ -1172,32 +1182,40 @@ export default function PostCard({
                         key={`post-reaction-viewer-${reactionViewer.emoji}-${user.id || index}`}
                         className="flex items-center gap-2.5 rounded-xl border border-white/45 bg-white/40 px-3 py-2"
                       >
-                        {user.avatarUrl ? (
-                          <img
-                            src={user.avatarUrl}
-                            alt={user.name}
-                            className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/50"
-                          />
-                        ) : (
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
-                            {String(user.name || 'Member').charAt(0).toUpperCase() || '?'}
-                          </div>
-                        )}
-
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-extrabold text-[#3a2418]">
-                            {user.name || 'Member'}
-                          </div>
-                          {user.headline ? (
-                            <div className="truncate text-[11px] font-semibold text-[#a8775f]">
-                              {user.headline}
+                        <MemberAvatarActions
+                          targetUserId={user.id && user.name !== 'You' ? user.id : null}
+                          targetUserSlug={user.slug || ''}
+                          targetName={user.name || 'Member'}
+                        >
+                          {user.avatarUrl ? (
+                            <img
+                              src={user.avatarUrl}
+                              alt={user.name}
+                              className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/50"
+                            />
+                          ) : (
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
+                              {String(user.name || 'Member').charAt(0).toUpperCase() || '?'}
                             </div>
-                          ) : null}
-                        </div>
+                          )}
+                        </MemberAvatarActions>
 
-                        <div className="shrink-0 text-sm" aria-hidden="true">
-                          {reactionViewer.emoji}
-                        </div>
+                        <MemberAvatarActions
+                          targetUserId={user.id && user.name !== 'You' ? user.id : null}
+                          targetUserSlug={user.slug || ''}
+                          targetName={user.name || 'Member'}
+                        >
+                          <div className="min-w-0 flex-1 cursor-pointer">
+                            <div className="truncate text-sm font-extrabold text-[#3a2418]">
+                              {user.name || 'Member'}
+                            </div>
+                            {user.headline ? (
+                              <div className="truncate text-[11px] font-semibold text-[#a8775f]">
+                                {user.headline}
+                              </div>
+                            ) : null}
+                          </div>
+                        </MemberAvatarActions>
                       </div>
                     );
                   })}

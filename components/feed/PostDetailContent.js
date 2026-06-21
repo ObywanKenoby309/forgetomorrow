@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
 import { useConnect } from '@/components/actions/useConnect';
+import MemberAvatarActions from '@/components/member/MemberAvatarActions';
 
 // Renders a post's full body + attachments + comment thread + reply box.
 // Used by both PostCommentsModal (variant="modal", scrollable panes inside
@@ -184,6 +185,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
         id: String(entry.id || ''),
         name: String(entry.name || 'Member'),
         headline: String(entry.headline || ''),
+        slug: String(entry.slug || ''),
         avatarUrl: String(entry.avatarUrl || ''),
       };
     }
@@ -192,6 +194,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
       id: '',
       name: String(entry || 'Member'),
       headline: '',
+      slug: '',
       avatarUrl: '',
     };
   };
@@ -941,32 +944,40 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                         key={`${reactionViewer.commentKey}-${user.id || index}`}
                         className="flex items-center gap-3 rounded-xl border border-white/45 bg-white/40 px-3 py-2"
                       >
-                        {user.avatarUrl ? (
-                          <img
-                            src={user.avatarUrl}
-                            alt={user.name}
-                            className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-white/50"
-                          />
-                        ) : (
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
-                            {String(user.name || 'Member').charAt(0).toUpperCase() || '?'}
-                          </div>
-                        )}
-
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-extrabold text-[#3a2418]">
-                            {user.name || 'Member'}
-                          </div>
-                          {user.headline ? (
-                            <div className="truncate text-xs font-semibold text-[#a8775f]">
-                              {user.headline}
+                        <MemberAvatarActions
+                          targetUserId={user.id && user.name !== 'You' ? user.id : null}
+                          targetUserSlug={user.slug || ''}
+                          targetName={user.name || 'Member'}
+                        >
+                          {user.avatarUrl ? (
+                            <img
+                              src={user.avatarUrl}
+                              alt={user.name}
+                              className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-white/50"
+                            />
+                          ) : (
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
+                              {String(user.name || 'Member').charAt(0).toUpperCase() || '?'}
                             </div>
-                          ) : null}
-                        </div>
+                          )}
+                        </MemberAvatarActions>
 
-                        <div className="text-sm" aria-hidden="true">
-                          {reactionViewer.emoji}
-                        </div>
+                        <MemberAvatarActions
+                          targetUserId={user.id && user.name !== 'You' ? user.id : null}
+                          targetUserSlug={user.slug || ''}
+                          targetName={user.name || 'Member'}
+                        >
+                          <div className="min-w-0 flex-1 cursor-pointer">
+                            <div className="truncate text-sm font-extrabold text-[#3a2418]">
+                              {user.name || 'Member'}
+                            </div>
+                            {user.headline ? (
+                              <div className="truncate text-xs font-semibold text-[#a8775f]">
+                                {user.headline}
+                              </div>
+                            ) : null}
+                          </div>
+                        </MemberAvatarActions>
                       </div>
                     );
                   })}
