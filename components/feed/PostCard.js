@@ -1,5 +1,6 @@
 // components/feed/PostCard.js
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
 import MemberAvatarActions from '@/components/member/MemberAvatarActions';
@@ -356,51 +357,65 @@ export default function PostCard({
     return `${preview}${extra} reacted with ${emoji}`;
   };
 
-const openReactionViewer = async (emoji, event) => {
-  const reaction = postReactions.find((r) => r?.emoji === emoji);
-  const userIds = Array.isArray(reaction?.userIds)
-    ? reaction.userIds.map(String).filter(Boolean)
-    : [];
+  const openReactionViewer = async (emoji, event) => {
+    const reaction = postReactions.find((r) => r?.emoji === emoji);
+    const userIds = Array.isArray(reaction?.userIds) ? reaction.userIds.map(String).filter(Boolean) : [];
+    if (!userIds.length) return;
 
-  if (!userIds.length) return;
+    let top = 96;
+    let left = 16;
 
-  const rect = event.currentTarget.getBoundingClientRect();
+    try {
+      const viewportWidth = window.innerWidth || 360;
+      const viewportHeight = window.innerHeight || 700;
+      const panelWidth = 300;
+      const estimatedPanelHeight = 330;
+      const clickX = Number(event?.clientX);
+      const clickY = Number(event?.clientY);
 
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+      if (Number.isFinite(clickX) && Number.isFinite(clickY)) {
+        left = Math.min(
+          Math.max(12, clickX - 18),
+          Math.max(12, viewportWidth - panelWidth - 12)
+        );
 
-  const panelWidth = 300;
-  const panelHeight = 330;
+        top = clickY + 12;
 
-  let left = rect.left;
-  let top = rect.bottom + 8;
+        if (top + estimatedPanelHeight > viewportHeight) {
+          top = Math.max(12, clickY - estimatedPanelHeight - 12);
+        }
+      } else {
+        const rect = event?.currentTarget?.getBoundingClientRect?.();
 
-  if (left + panelWidth > viewportWidth - 12) {
-    left = viewportWidth - panelWidth - 12;
-  }
+        if (rect) {
+          left = Math.min(
+            Math.max(12, rect.left),
+            Math.max(12, viewportWidth - panelWidth - 12)
+          );
 
-  if (top + panelHeight > viewportHeight - 12) {
-    top = rect.top - panelHeight - 8;
-  }
+          top = rect.bottom + 8;
 
-  left = Math.max(12, left);
-  top = Math.max(12, top);
+          if (top + estimatedPanelHeight > viewportHeight) {
+            top = Math.max(12, rect.top - estimatedPanelHeight - 8);
+          }
+        }
+      }
+    } catch {}
 
-  setReactionViewer({
-    emoji,
-    userIds,
-    names: reactionUsers[emoji]?.names || [],
-    top,
-    left,
-  });
+    setReactionViewer({
+      emoji,
+      userIds,
+      names: reactionUsers[emoji]?.names || [],
+      top,
+      left,
+    });
 
-  const names = await fetchUsersForEmoji(emoji);
-
-  setReactionViewer((current) => {
-    if (!current || current.emoji !== emoji) return current;
-    return { ...current, names };
-  });
-};
+    const names = await fetchUsersForEmoji(emoji);
+    setReactionViewer((current) => {
+      if (!current || current.emoji !== emoji) return current;
+      return { ...current, names };
+    });
+  };
 
   // ── Derived display values ────────────────────────────────
 
@@ -522,7 +537,7 @@ const openReactionViewer = async (emoji, event) => {
 
     <div
       onClick={handleCardClick}
-      className={`relative overflow-visible rounded-[20px] border border-white/40 bg-[linear-gradient(160deg,rgba(255,255,255,0.22),rgba(255,180,130,0.18))] backdrop-blur-[26px] backdrop-saturate-[160%] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_20px_50px_-24px_rgba(50,20,10,0.3)] p-3.5 sm:p-5 space-y-3 sm:space-y-4 w-full cursor-pointer transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-white/60 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(50,20,10,0.35)] ${accentEdgeClass}`}
+      className={`relative overflow-hidden rounded-[20px] border border-white/40 bg-[linear-gradient(160deg,rgba(255,255,255,0.22),rgba(255,180,130,0.18))] backdrop-blur-[26px] backdrop-saturate-[160%] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_20px_50px_-24px_rgba(50,20,10,0.3)] p-3.5 sm:p-5 space-y-3 sm:space-y-4 w-full cursor-pointer transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-white/60 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(50,20,10,0.35)] ${accentEdgeClass}`}
     >
 
       {/* Header row */}
@@ -969,7 +984,7 @@ const openReactionViewer = async (emoji, event) => {
       )}
     </div>
 
-    {reactionViewer && (
+    {reactionViewer && typeof document !== 'undefined' && createPortal(
       <>
         <button
           type="button"
@@ -1040,7 +1055,8 @@ const openReactionViewer = async (emoji, event) => {
             )}
           </div>
         </div>
-      </>
+      </>,
+      document.body
     )}
 
     {lightboxIndex !== null && mediaAttachments[lightboxIndex] && (
