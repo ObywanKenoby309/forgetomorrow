@@ -321,14 +321,20 @@ export default function PostCard({
 
       const data = await res.json().catch(() => ({}));
       const names = Array.isArray(data.users)
-  ? data.users.map((u) => ({
-      id: u.id,
-      name: u.name || 'Member',
-      headline: u.headline || '',
-      slug: u.slug || '',
-      avatarUrl: u.avatarUrl || '',
-    }))
-  : [];
+        ? data.users.map((u) => ({
+            id: String(u?.id || ''),
+            name: String(u?.id || '') === String(currentUserId) ? 'You' : String(u?.name || 'Member'),
+            headline: String(u?.headline || ''),
+            slug: String(u?.slug || ''),
+            avatarUrl: String(u?.avatarUrl || ''),
+          }))
+        : userIds.map((id) => ({
+            id: String(id),
+            name: String(id) === String(currentUserId) ? 'You' : 'Member',
+            headline: '',
+            slug: '',
+            avatarUrl: '',
+          }));
 
       setReactionUsers((prev) => ({
         ...prev,
@@ -342,7 +348,13 @@ export default function PostCard({
       return names;
     } catch (err) {
       console.error('reaction hover error:', err);
-      const names = userIds.map((id) => (String(id) === String(currentUserId) ? 'You' : 'Member'));
+      const names = userIds.map((id) => ({
+        id: String(id),
+        name: String(id) === String(currentUserId) ? 'You' : 'Member',
+        headline: '',
+        slug: '',
+        avatarUrl: '',
+      }));
       setReactionUsers((prev) => ({
         ...prev,
         [emoji]: {
@@ -355,10 +367,28 @@ export default function PostCard({
     }
   };
 
+  const getReactionDisplayUser = (entry) => {
+    if (entry && typeof entry === 'object') {
+      return {
+        id: String(entry.id || ''),
+        name: String(entry.name || 'Member'),
+        headline: String(entry.headline || ''),
+        avatarUrl: String(entry.avatarUrl || ''),
+      };
+    }
+
+    return {
+      id: '',
+      name: String(entry || 'Member'),
+      headline: '',
+      avatarUrl: '',
+    };
+  };
+
   const getTooltipText = (emoji) => {
     const names = reactionUsers[emoji]?.names || [];
     if (!names.length) return 'Loading…';
-    const preview = names.slice(0, 3).join(', ');
+    const preview = names.slice(0, 3).map((entry) => getReactionDisplayUser(entry).name).join(', ');
     const extra = names.length > 3 ? ` +${names.length - 3}` : '';
     return `${preview}${extra} reacted with ${emoji}`;
   };
@@ -1033,7 +1063,8 @@ export default function PostCard({
                   <div className="truncate text-sm font-extrabold text-[#3a2418]">
                     {(() => {
                       const names = reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || [];
-                      const first = names[0] || 'Someone';
+                      const firstUser = getReactionDisplayUser(names[0] || 'Someone');
+                      const first = firstUser.name || 'Someone';
                       const others = Math.max(0, (reactionViewer.userIds?.length || names.length) - 1);
 
                       return others > 0
@@ -1058,24 +1089,43 @@ export default function PostCard({
 
               <div className="ft-reaction-scroll max-h-[42dvh] overflow-x-visible overflow-y-auto px-4 py-3">
                 <div className="space-y-2">
-                  {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((name, index) => (
-                    <div
-                      key={`post-reaction-viewer-mobile-${reactionViewer.emoji}-${name}-${index}`}
-                      className="flex items-center gap-2.5 rounded-2xl border border-white/45 bg-white/40 px-3 py-2.5"
-                    >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
-                        {String(name || 'Member').charAt(0).toUpperCase() || '?'}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-extrabold text-[#3a2418]">
-                          {name || 'Member'}
+                  {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((entry, index) => {
+                    const user = getReactionDisplayUser(entry);
+
+                    return (
+                      <div
+                        key={`post-reaction-viewer-mobile-${reactionViewer.emoji}-${user.id || index}`}
+                        className="flex items-center gap-2.5 rounded-xl border border-white/45 bg-white/40 px-3 py-2"
+                      >
+                        {user.avatarUrl ? (
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.name}
+                            className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/50"
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
+                            {String(user.name || 'Member').charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-extrabold text-[#3a2418]">
+                            {user.name || 'Member'}
+                          </div>
+                          {user.headline ? (
+                            <div className="truncate text-[11px] font-semibold text-[#a8775f]">
+                              {user.headline}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="shrink-0 text-sm" aria-hidden="true">
+                          {reactionViewer.emoji}
                         </div>
                       </div>
-                      <div className="shrink-0 text-sm" aria-hidden="true">
-                        {reactionViewer.emoji}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -1114,24 +1164,43 @@ export default function PostCard({
 
             <div className="ft-reaction-scroll max-h-[260px] overflow-x-visible overflow-y-auto px-4 py-3">
               <div className="space-y-2">
-                {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((name, index) => (
-                  <div
-                    key={`post-reaction-viewer-${reactionViewer.emoji}-${name}-${index}`}
-                    className="flex items-center gap-2.5 rounded-2xl border border-white/45 bg-white/40 px-3 py-2.5"
-                  >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
-                      {String(name || 'Member').charAt(0).toUpperCase() || '?'}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-extrabold text-[#3a2418]">
-                        {name || 'Member'}
+                {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((entry, index) => {
+                    const user = getReactionDisplayUser(entry);
+
+                    return (
+                      <div
+                        key={`post-reaction-viewer-${reactionViewer.emoji}-${user.id || index}`}
+                        className="flex items-center gap-2.5 rounded-xl border border-white/45 bg-white/40 px-3 py-2"
+                      >
+                        {user.avatarUrl ? (
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.name}
+                            className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/50"
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
+                            {String(user.name || 'Member').charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-extrabold text-[#3a2418]">
+                            {user.name || 'Member'}
+                          </div>
+                          {user.headline ? (
+                            <div className="truncate text-[11px] font-semibold text-[#a8775f]">
+                              {user.headline}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="shrink-0 text-sm" aria-hidden="true">
+                          {reactionViewer.emoji}
+                        </div>
                       </div>
-                    </div>
-                    <div className="shrink-0 text-sm" aria-hidden="true">
-                      {reactionViewer.emoji}
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })}
               </div>
             </div>
           </div>

@@ -146,41 +146,61 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
         body: JSON.stringify({ userIds: safeIds }),
       });
       if (!res.ok) throw new Error('names fetch failed');
-const data = await res.json().catch(() => ({}));
-
-const names = Array.isArray(data.users)
-  ? data.users.map((u) => ({
-      id: String(u.id || ''),
-      name:
-        String(u.id || '') === myId
-          ? 'You'
-          : String(u.name || 'Member'),
-      headline: String(u.headline || ''),
-      slug: String(u.slug || ''),
-      avatarUrl: String(u.avatarUrl || ''),
-    }))
-  : safeIds.map((id) => ({
-      id,
-      name: id === myId ? 'You' : 'Member',
-      headline: '',
-      slug: '',
-      avatarUrl: '',
-    }));
+      const data = await res.json().catch(() => ({}));
+      const names = Array.isArray(data.users)
+        ? data.users.map((u) => ({
+            id: String(u?.id || ''),
+            name: String(u?.id || '') === myId ? 'You' : String(u?.name || 'Member'),
+            headline: String(u?.headline || ''),
+            slug: String(u?.slug || ''),
+            avatarUrl: String(u?.avatarUrl || ''),
+          }))
+        : safeIds.map((id) => ({
+            id: String(id),
+            name: String(id) === myId ? 'You' : 'Member',
+            headline: '',
+            slug: '',
+            avatarUrl: '',
+          }));
 
       setReactionNames((prev) => ({ ...prev, [cacheKey]: { names, loading: false, loaded: true } }));
       return names;
     } catch {
-      const fallback = safeIds.map((id) => (id === myId ? 'You' : 'Member'));
+      const fallback = safeIds.map((id) => ({
+        id: String(id),
+        name: String(id) === myId ? 'You' : 'Member',
+        headline: '',
+        slug: '',
+        avatarUrl: '',
+      }));
       setReactionNames((prev) => ({ ...prev, [cacheKey]: { names: fallback, loading: false, loaded: true } }));
       return fallback;
     }
+  };
+
+  const getReactionDisplayUser = (entry) => {
+    if (entry && typeof entry === 'object') {
+      return {
+        id: String(entry.id || ''),
+        name: String(entry.name || 'Member'),
+        headline: String(entry.headline || ''),
+        avatarUrl: String(entry.avatarUrl || ''),
+      };
+    }
+
+    return {
+      id: '',
+      name: String(entry || 'Member'),
+      headline: '',
+      avatarUrl: '',
+    };
   };
 
   const getReactionTooltip = (commentKey, emoji) => {
     const cacheKey = `${commentKey}:${emoji}`;
     const names = reactionNames[cacheKey]?.names;
     if (!names?.length) return 'Loading…';
-    const preview = names.slice(0, 3).join(', ');
+    const preview = names.slice(0, 3).map((entry) => getReactionDisplayUser(entry).name).join(', ');
     const extra = names.length > 3 ? ` +${names.length - 3}` : '';
     return `${preview}${extra} reacted with ${emoji}`;
   };
@@ -474,6 +494,24 @@ const names = Array.isArray(data.users)
 
   return (
     <div className={isModal ? 'flex min-h-0 flex-1 flex-col' : 'flex flex-col'}>
+      <style jsx>{`
+        .ft-comment-reaction-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255,112,67,0.42) rgba(255,247,242,0.72);
+        }
+        .ft-comment-reaction-scroll::-webkit-scrollbar {
+          width: 8px;
+        }
+        .ft-comment-reaction-scroll::-webkit-scrollbar-track {
+          background: rgba(255,247,242,0.72);
+          border-radius: 999px;
+        }
+        .ft-comment-reaction-scroll::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, rgba(255,112,67,0.72), rgba(229,90,43,0.48));
+          border: 2px solid rgba(255,247,242,0.92);
+          border-radius: 999px;
+        }
+      `}</style>
       <section className="shrink-0 border-b border-white/40 bg-white/30 px-4 py-4 sm:px-7 sm:py-5">
         <header className="flex items-center gap-3 pr-14">
           {post.authorAvatar ? (
@@ -659,7 +697,7 @@ const names = Array.isArray(data.users)
 
                         {menuOpen && canTarget ? (
                           <div
-                            className="absolute left-0 z-[100001] mt-2 w-56 overflow-visible rounded-xl border border-white/50 bg-white/95 shadow-xl"
+                            className="absolute left-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-white/50 bg-white/95 shadow-xl"
                             role="menu"
                           >
                             <button
@@ -861,7 +899,7 @@ const names = Array.isArray(data.users)
           onClick={() => setReactionViewer(null)}
         >
           <div
-            className="max-h-[58dvh] w-[calc(100vw-20px)] overflow-visible rounded-t-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_28px_90px_rgba(50,20,10,0.35)] backdrop-blur-[24px] sm:max-h-[70dvh] sm:max-w-md sm:rounded-[26px]"
+            className="max-h-[58dvh] w-[calc(100vw-20px)] overflow-hidden rounded-t-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_28px_90px_rgba(50,20,10,0.35)] backdrop-blur-[24px] sm:max-h-[70dvh] sm:max-w-md sm:rounded-[26px]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-white/45 px-4 py-3 sm:px-5 sm:py-4">
@@ -887,7 +925,7 @@ const names = Array.isArray(data.users)
               </button>
             </div>
 
-            <div className="max-h-[44dvh] overflow-y-auto px-4 py-3 sm:max-h-[56dvh] sm:px-5 sm:py-4">
+            <div className="ft-comment-reaction-scroll max-h-[44dvh] overflow-y-auto px-4 py-3 sm:max-h-[56dvh] sm:px-5 sm:py-4">
               {reactionNames[`${reactionViewer.commentKey}:${reactionViewer.emoji}`]?.loading &&
                 !(reactionViewer.names?.length) ? (
                 <div className="rounded-2xl border border-white/50 bg-white/35 px-4 py-4 text-sm font-semibold text-[#8a5d44]">
@@ -895,40 +933,43 @@ const names = Array.isArray(data.users)
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {(reactionNames[`${reactionViewer.commentKey}:${reactionViewer.emoji}`]?.names || reactionViewer.names || []).map((user, index) => (
-                    <div
-  key={`${reactionViewer.commentKey}-${user?.id || index}`}
-  className="flex items-center gap-3 rounded-xl border border-white/45 bg-white/40 px-3 py-2"
->
-  {user?.avatarUrl ? (
-    <img
-      src={user.avatarUrl}
-      alt={user.name}
-      className="h-9 w-9 rounded-full object-cover ring-1 ring-white/50"
-    />
-  ) : (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
-      {String(user?.name || 'Member').charAt(0).toUpperCase()}
-    </div>
-  )}
+                  {(reactionNames[`${reactionViewer.commentKey}:${reactionViewer.emoji}`]?.names || reactionViewer.names || []).map((entry, index) => {
+                    const user = getReactionDisplayUser(entry);
 
-  <div className="min-w-0 flex-1">
-    <div className="truncate text-sm font-extrabold text-[#3a2418]">
-      {user?.name || 'Member'}
-    </div>
+                    return (
+                      <div
+                        key={`${reactionViewer.commentKey}-${user.id || index}`}
+                        className="flex items-center gap-3 rounded-xl border border-white/45 bg-white/40 px-3 py-2"
+                      >
+                        {user.avatarUrl ? (
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.name}
+                            className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-white/50"
+                          />
+                        ) : (
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
+                            {String(user.name || 'Member').charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )}
 
-    {user?.headline ? (
-      <div className="truncate text-xs text-[#a8775f]">
-        {user.headline}
-      </div>
-    ) : null}
-  </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-extrabold text-[#3a2418]">
+                            {user.name || 'Member'}
+                          </div>
+                          {user.headline ? (
+                            <div className="truncate text-xs font-semibold text-[#a8775f]">
+                              {user.headline}
+                            </div>
+                          ) : null}
+                        </div>
 
-  <div className="text-sm">
-    {reactionViewer.emoji}
-  </div>
-</div>
-                  ))}
+                        <div className="text-sm" aria-hidden="true">
+                          {reactionViewer.emoji}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
