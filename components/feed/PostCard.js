@@ -382,8 +382,8 @@ export default function PostCard({
         top = clickY + 12;
 
         if (top + estimatedPanelHeight > viewportHeight) {
-          top = Math.max(12, clickY - estimatedPanelHeight - 12);
-        }
+		  top = Math.max(12, viewportHeight - estimatedPanelHeight - 12);
+		}
       } else {
         const rect = event?.currentTarget?.getBoundingClientRect?.();
 
