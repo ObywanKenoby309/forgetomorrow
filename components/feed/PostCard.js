@@ -365,21 +365,38 @@ export default function PostCard({
     let left = 16;
 
     try {
-      const rect = event?.currentTarget?.getBoundingClientRect?.();
       const viewportWidth = window.innerWidth || 360;
       const viewportHeight = window.innerHeight || 700;
       const panelWidth = 300;
       const estimatedPanelHeight = 330;
+      const clickX = Number(event?.clientX);
+      const clickY = Number(event?.clientY);
 
-      if (rect) {
+      if (Number.isFinite(clickX) && Number.isFinite(clickY)) {
         left = Math.min(
-          Math.max(12, rect.left),
+          Math.max(12, clickX - 18),
           Math.max(12, viewportWidth - panelWidth - 12)
         );
 
-        top = rect.bottom + 8;
+        top = clickY + 12;
+
         if (top + estimatedPanelHeight > viewportHeight) {
-          top = Math.max(12, rect.top - estimatedPanelHeight - 8);
+          top = Math.max(12, clickY - estimatedPanelHeight - 12);
+        }
+      } else {
+        const rect = event?.currentTarget?.getBoundingClientRect?.();
+
+        if (rect) {
+          left = Math.min(
+            Math.max(12, rect.left),
+            Math.max(12, viewportWidth - panelWidth - 12)
+          );
+
+          top = rect.bottom + 8;
+
+          if (top + estimatedPanelHeight > viewportHeight) {
+            top = Math.max(12, rect.top - estimatedPanelHeight - 8);
+          }
         }
       }
     } catch {}
