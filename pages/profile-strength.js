@@ -1121,7 +1121,7 @@ const executionProofCard = (
       isMobile
         ? {}
         : {
-            height: 215,
+            height: 205,
             boxSizing: "border-box",
             overflow: "hidden",
           }
