@@ -563,7 +563,9 @@ const TAB_COPY = {
 export default function ProfileStrengthPage() {
   const router = useRouter();
   const activeTab = "strength";
-  const [isMobile, setIsMobile]   = useState(null); // null = measuring, true/false = known
+  const [isMobile, setIsMobile]     = useState(null); // null = measuring, true/false = known
+  const [mobileSection, setMobileSection] = useState("signals"); // signals | placement | questions | proof
+  const [readExpanded, setReadExpanded]   = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -1789,13 +1791,232 @@ style={{
     </div>
   );
 
-  // ── Inlay content per tab ────────────────────────────────────────────────
+  // ── Mobile strength inlay ─────────────────────────────────────────────────
+  const MOBILE_PANEL_H = 320;
+
+  const mobilePanelTabs = [
+    { id: "signals",   label: "Signals" },
+    { id: "placement", label: "Placement" },
+    { id: "questions", label: "Q&A Prep" },
+    { id: "proof",     label: "Proof" },
+  ];
+
+  // Proof carousel state — 2 projects per page
+  const proofProjects = strengthProfile.projects.length ? strengthProfile.projects : [];
+  const proofPages = [];
+  for (let pageIdx = 0; pageIdx < proofProjects.length; pageIdx += 2) proofPages.push(proofProjects.slice(pageIdx, pageIdx + 2));
+
+  const MobileProofCarousel = () => {
+    const [proofPage, setProofPage] = useState(0);
+    const currentPage = proofPages[proofPage] || [];
+    return (
+      <div style={{ display: "grid", gap: GAP }}>
+        {currentPage.map((project, idx) => {
+          const title = typeof project === "string" ? project : project?.title || project?.name || project?.projectName || `Project ${idx + 1}`;
+          return (
+            <div key={`${title}-${idx}`} style={{ ...GLASS_SOFT, borderRadius: 11, padding: "10px 12px" }}>
+              <div style={{ fontSize: 9, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>Project Evidence</div>
+              <div style={{ fontSize: 13, fontWeight: 900, color: SLATE, lineHeight: 1.3 }}>{title}</div>
+            </div>
+          );
+        })}
+        {proofPages.length > 1 && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            {proofPages.map((_, pidx) => (
+              <button key={pidx} type="button" onClick={() => setProofPage(pidx)} style={{ width: pidx === proofPage ? 18 : 7, height: 7, borderRadius: 999, border: "none", padding: 0, cursor: "pointer", background: pidx === proofPage ? ORANGE : "rgba(100,116,139,0.32)", transition: "all 160ms ease" }} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const mobileStrengthInlay = (
+    <div style={{ display: "grid", gap: GAP }}>
+      {/* KPI strip */}
+      {strengthKpiStrip}
+
+      {/* Recruiter Lens Hero — collapsible */}
+      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+          <div>
+            <div style={{ fontSize: 9, fontWeight: 950, color: ORANGE, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 3 }}>Recruiter Lens</div>
+            <div style={{ fontSize: 16, color: ORANGE, fontWeight: 900, lineHeight: 1.2, ...ORANGE_HEADING_LIFT }}>If We Were Recruiting You</div>
+          </div>
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: "8px 10px", textAlign: "center", flexShrink: 0 }}>
+            <div style={{ fontSize: 22, fontWeight: 950, color: ORANGE, lineHeight: 1 }}>{strengthProfile.provenCount}</div>
+            <div style={{ fontSize: 8, fontWeight: 900, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>Proven</div>
+          </div>
+        </div>
+        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 14, background: "rgba(255,255,255,0.76)" }}>
+          <div style={{ fontSize: 9, fontWeight: 900, color: MUTED, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>Recruiter Assessment</div>
+          <div style={{
+            fontSize: 13, fontWeight: 750, color: SLATE, lineHeight: 1.65,
+            display: readExpanded ? "block" : "-webkit-box",
+            WebkitLineClamp: readExpanded ? undefined : 3,
+            WebkitBoxOrient: "vertical",
+            overflow: readExpanded ? "visible" : "hidden",
+          }}>
+            {strengthProfile.recruiterJudgment}
+          </div>
+          <button type="button" onClick={() => setReadExpanded((prev) => !prev)} style={{ marginTop: 8, background: "none", border: "none", color: ORANGE, fontWeight: 900, fontSize: 12, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+            {readExpanded ? "Show less ↑" : "Read full assessment →"}
+          </button>
+          {readExpanded && strengthProfile.strongestEvidence.length > 0 && (
+            <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 12, marginTop: 10, border: "1px solid rgba(255,112,67,0.20)", background: "rgba(255,255,255,0.70)" }}>
+              <div style={{ fontSize: 9, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Strongest Evidence Found</div>
+              <div style={{ display: "grid", gap: 5 }}>
+                {strengthProfile.strongestEvidence.map((item) => (
+                  <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <span style={{ color: ORANGE, fontWeight: 950, flexShrink: 0 }}>•</span>
+                    <span style={{ fontSize: 11, color: SLATE, lineHeight: 1.45, fontWeight: 700 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recruiter Readiness */}
+      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
+        <div style={{ fontSize: 16, color: ORANGE, fontWeight: 900, marginBottom: 10, ...ORANGE_HEADING_LIFT }}>Recruiter Readiness</div>
+        <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 14, background: "rgba(15,23,42,0.94)", color: "white", textAlign: "center", marginBottom: 8 }}>
+          <div style={{ fontSize: 9, fontWeight: 950, color: ORANGE, letterSpacing: "0.10em", textTransform: "uppercase", marginBottom: 4 }}>Profile Read</div>
+          <div style={{ fontSize: 28, fontWeight: 950, lineHeight: 1 }}>{strengthProfile.confidence}%</div>
+          <div style={{ fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.80)", marginTop: 2 }}>{strengthProfile.professionalSignal}</div>
+        </div>
+        <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: "10px 12px", marginBottom: 8, border: "1px solid rgba(22,163,74,0.22)", background: "rgba(22,163,74,0.06)" }}>
+          <div style={{ fontSize: 9, fontWeight: 900, color: "#16A34A", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>Recruiter Takeaway</div>
+          <div style={{ fontSize: 14, fontWeight: 950, color: "#166534" }}>{strengthProfile.professionalSignal === "Strong" ? "Advance-worthy" : strengthProfile.professionalSignal}</div>
+        </div>
+        <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: "10px 12px" }}>
+          <div style={{ fontSize: 9, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>Core Signals</div>
+          {strengthProfile.scorecard.filter((sig) => ["identity", "narrative", "proof", "portfolio"].includes(sig.key)).map((sig, i, arr) => (
+            <div key={sig.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: i < arr.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none", fontSize: 12, color: SLATE, fontWeight: 600 }}>
+              <span>{sig.label.replace(" Signal", "")}</span>
+              <SmallPill tone={sig.status === "direct" ? "good" : sig.status === "adjacent" ? "warn" : "neutral"}>
+                {sig.status === "direct" ? "Proven" : sig.status === "adjacent" ? "Partial" : "Missing"}
+              </SmallPill>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Four-tab bottom section */}
+      <div style={{ ...GLASS, borderRadius: 18, padding: 14 }}>
+        {/* Tab row */}
+        <div style={{ display: "flex", gap: 5, marginBottom: 14 }}>
+          {mobilePanelTabs.map((tab) => (
+            <button key={tab.id} type="button" onClick={() => setMobileSection(tab.id)} style={{
+              flex: 1, padding: "8px 2px", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+              background: mobileSection === tab.id ? ORANGE : "rgba(255,255,255,0.6)",
+              color: mobileSection === tab.id ? "white" : SLATE,
+              fontSize: 10, fontWeight: 800,
+            }}>{tab.label}</button>
+          ))}
+        </div>
+
+        {/* SIGNALS — scrollable */}
+        {mobileSection === "signals" && (
+          <>
+            <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 10, ...ORANGE_HEADING_LIFT }}>Your Strongest Recruiting Signals</div>
+            <div style={{ height: MOBILE_PANEL_H, overflowY: "auto" }}>
+              {strengthProfile.strengthNarratives.length ? strengthProfile.strengthNarratives.map((item) => (
+                <div key={item.label} style={{ ...GLASS_SOFT, borderRadius: 11, padding: "10px 12px", marginBottom: 8 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 4 }}>
+                    <span style={{ color: "#16A34A", fontWeight: 950, flexShrink: 0 }}>✓</span>
+                    <div style={{ fontSize: 12, fontWeight: 900, color: SLATE }}>{item.label}</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, paddingLeft: 16 }}>{item.body}</div>
+                </div>
+              )) : (
+                <InsightTile label="Building" tone="building" title="More evidence needed" body="Add resume evidence, skills, experience, and project outcomes to generate stronger recruiter-facing strengths." />
+              )}
+            </div>
+          </>
+        )}
+
+        {/* PLACEMENT — scrollable */}
+        {mobileSection === "placement" && (
+          <>
+            <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 10, ...ORANGE_HEADING_LIFT }}>Where Recruiters Are Most Likely To Place You</div>
+            <div style={{ height: MOBILE_PANEL_H, overflowY: "auto" }}>
+              {strengthProfile.careerRecommendations.length ? strengthProfile.careerRecommendations.map((item, idx) => (
+                <div key={item.title} style={{ ...GLASS_SOFT, borderRadius: 11, padding: "10px 12px", marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                    <div style={{ fontSize: 12, fontWeight: 900, color: SLATE, lineHeight: 1.3 }}>{item.title}</div>
+                    <div style={{ fontSize: 13, fontWeight: 950, color: ORANGE, flexShrink: 0 }}>{Math.max(78, 94 - idx * 3)}%</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.45 }}>{item.reason}</div>
+                </div>
+              )) : (
+                <InsightTile label="Direction" tone="building" title="Career path signals need more data" body="Add target roles, projects, and outcome evidence so ForgeTomorrow can infer stronger progression paths." />
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Q&A PREP — scrollable */}
+        {mobileSection === "questions" && (
+          <>
+            <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 6, ...ORANGE_HEADING_LIFT }}>What Recruiters May Ask</div>
+            <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.55, marginBottom: 10 }}>Based on your portfolio, use these to prepare before any conversation.</div>
+            <div style={{ height: MOBILE_PANEL_H, overflowY: "auto" }}>
+              {generateRecruiterQuestions(strengthProfile).map((item, idx) => (
+                <div key={`rq-mobile-${idx}`} style={{ ...GLASS_SOFT, borderRadius: 11, padding: 12, marginBottom: 8, border: "1px solid rgba(100,116,139,0.14)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: SLATE, lineHeight: 1.35, marginBottom: 6 }}>{item.question}</div>
+                  <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>{item.context}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* PROOF — carousel + evidence fallback */}
+        {mobileSection === "proof" && (
+          <>
+            <div style={{ fontSize: 13, fontWeight: 900, color: ORANGE, marginBottom: 6, ...ORANGE_HEADING_LIFT }}>Execution Proof</div>
+            <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.55, marginBottom: 10 }}>The project evidence your recruiter read is based on.</div>
+            <div style={{ overflowY: "auto", maxHeight: MOBILE_PANEL_H + 120 }}>
+              {proofProjects.length > 0 ? <MobileProofCarousel /> : (
+                <div style={{ ...GLASS_SOFT, borderRadius: 11, padding: "10px 12px", marginBottom: 8, fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
+                  No Projects Listed. Update your portfolio with any relevant projects.
+                </div>
+              )}
+              {strengthProfile.strongestEvidence.length > 0 && (
+                <div style={{ ...GLASS_SOFT, borderRadius: 11, padding: "10px 12px", marginTop: 8, border: "1px solid rgba(255,112,67,0.10)" }}>
+                  <div style={{ fontSize: 9, fontWeight: 900, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Strongest Evidence Found</div>
+                  <div style={{ display: "grid", gap: 5 }}>
+                    {strengthProfile.strongestEvidence.map((item) => (
+                      <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                        <span style={{ color: ORANGE, fontWeight: 950, flexShrink: 0 }}>•</span>
+                        <span style={{ fontSize: 11, color: SLATE, lineHeight: 1.45, fontWeight: 700 }}>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <ActionTile
+                title="Add projects to The Anvil"
+                body="Project entries are the strongest recruiter proof signal. Add scope, tools, stakeholders, and measurable outcomes."
+                buttonLabel="Open The Anvil →"
+                onClick={() => router.push("/anvil?module=profile")}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  // ── Inlay content per tab ─────────────────────────────────────────────────
   const inlay = (() => {
     if (isMobile) {
       // Mobile: each tab owns its own focused group.
       if (activeTab === "overview")    return <div style={{ display: "grid", gap: GAP }}>{kpiStrip}{visibilityCard}</div>;
       if (activeTab === "visibility")  return <div style={{ display: "grid", gap: GAP }}>{visibilityKpiStrip}{reachCard}{visibilityCard}{recentViewersCompactCard}</div>;
-      if (activeTab === "strength")    return <div style={{ display: "grid", gap: GAP }}>{executionProofCard}{strengthRecruiterLensHeroCard}{strengthSignalCard}{strengthDetailGrid}</div>;
+      if (activeTab === "strength")    return mobileStrengthInlay;
       if (activeTab === "activity")    return <div style={{ display: "grid", gap: GAP }}>{activityKpiStrip}{activityIntelligenceCard}{connectionGrowthHeroCard}{activitySupportCard}</div>;
       return null;
     }
