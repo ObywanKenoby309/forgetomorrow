@@ -29,8 +29,8 @@ const GLASS = {
 };
 
 const GLASS_SOFT = {
-  border: "1px solid rgba(0,0,0,0.06)",
-  background: "rgba(255,255,255,0.88)",
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(255,255,255,0.58)",
   boxShadow: "0 8px 22px rgba(15,23,42,0.10)",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
@@ -972,8 +972,9 @@ export default function ProfileAnalyticsPage() {
           <div
             style={{
               ...GLASS_SOFT,
-              borderRadius: 16,
-              padding: 14,
+background: "rgba(255,255,255,0.42)",
+borderRadius: 16,
+padding: 14,
               minHeight: isMobile ? 280 : COMMAND_CENTER_CHART_HEIGHT,
               overflow: "hidden",
               display: "grid",
@@ -986,8 +987,9 @@ export default function ProfileAnalyticsPage() {
           <div
             style={{
               ...GLASS_SOFT,
-              borderRadius: 16,
-              padding: 14,
+background: "rgba(255,255,255,0.42)",
+borderRadius: 16,
+padding: 14,
               minHeight: isMobile ? 280 : COMMAND_CENTER_CHART_HEIGHT,
               overflow: "hidden",
               display: "grid",
@@ -1363,7 +1365,7 @@ export default function ProfileAnalyticsPage() {
         Visibility Trend <span style={{ fontSize: 15, color: MUTED, textShadow: "none", fontWeight: 850 }}>(Last 7 Days)</span>
       </div>
 
-      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.74)", borderRadius: 16, padding: 14, overflow: "hidden" }}>
+      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.42)", borderRadius: 16, padding: 14, overflow: "hidden" }}>
         <div style={{ minHeight: 260, maxHeight: 325, overflow: "hidden" }}>
           <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
         </div>
@@ -1460,7 +1462,14 @@ export default function ProfileAnalyticsPage() {
 
   const connectionGrowthCompactCard = (
     <SectionCard title="Connection Growth">
-      <div style={{ ...GLASS_SOFT, borderRadius: 14, padding: 14, minHeight: 210, overflow: "hidden" }}>
+      <div style={{
+  ...GLASS_SOFT,
+  background: "rgba(255,255,255,0.42)",
+  borderRadius: 14,
+  padding: 14,
+  minHeight: 210,
+  overflow: "hidden"
+}}>
         <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
       </div>
     </SectionCard>
@@ -1516,7 +1525,7 @@ export default function ProfileAnalyticsPage() {
       <div
         style={{
           ...GLASS_SOFT,
-          background: "rgba(255,255,255,0.74)",
+          background: "rgba(255,255,255,0.42)",
           borderRadius: 16,
           padding: 14,
           minHeight: COMMAND_CENTER_CHART_HEIGHT,
