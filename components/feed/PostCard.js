@@ -522,7 +522,7 @@ const openReactionViewer = async (emoji, event) => {
 
     <div
       onClick={handleCardClick}
-      className={`relative overflow-hidden rounded-[20px] border border-white/40 bg-[linear-gradient(160deg,rgba(255,255,255,0.22),rgba(255,180,130,0.18))] backdrop-blur-[26px] backdrop-saturate-[160%] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_20px_50px_-24px_rgba(50,20,10,0.3)] p-3.5 sm:p-5 space-y-3 sm:space-y-4 w-full cursor-pointer transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-white/60 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(50,20,10,0.35)] ${accentEdgeClass}`}
+      className={`relative overflow-visible rounded-[20px] border border-white/40 bg-[linear-gradient(160deg,rgba(255,255,255,0.22),rgba(255,180,130,0.18))] backdrop-blur-[26px] backdrop-saturate-[160%] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_20px_50px_-24px_rgba(50,20,10,0.3)] p-3.5 sm:p-5 space-y-3 sm:space-y-4 w-full cursor-pointer transition-all duration-300 ease-out hover:-translate-y-[3px] hover:border-white/60 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_28px_60px_-24px_rgba(255,140,90,0.3),0_28px_60px_-24px_rgba(50,20,10,0.35)] ${accentEdgeClass}`}
     >
 
       {/* Header row */}
