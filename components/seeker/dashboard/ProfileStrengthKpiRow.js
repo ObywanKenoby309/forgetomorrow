@@ -105,7 +105,7 @@ export default function ProfileStrengthKpiRow({ isMobile = false }) {
   const router = useRouter();
 
   const chrome = String(router.query?.chrome || '').toLowerCase();
-  const dest = `/profile-analytics?tab=strength${chrome ? `&chrome=${chrome}` : ''}`;
+  const dest = `/profile-strength${chrome ? `?chrome=${chrome}` : ''}`;
 
   const [profileDetails, setProfileDetails] = useState(null);
   const [primaryResume, setPrimaryResume] = useState(null);

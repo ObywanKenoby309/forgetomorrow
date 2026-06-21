@@ -569,7 +569,7 @@ export default function SeekerDashboard() {
             {/* 4. Connected jobs panel — Recommended + Pinned */}
             <ConnectedJobsPanel withChrome={withChrome} isMobile />
 
-            {/* 5. Activity + Profile Health — tracker with health snapshot */}
+            {/* 5. Activity + Engagement — tracker with health snapshot */}
             <div
               style={{
                 display: 'grid',
@@ -600,14 +600,15 @@ export default function SeekerDashboard() {
   }}
 >
   <span
-    style={{
-      fontSize: 12,
-      fontWeight: 900,
-      color: '#112033',
-      lineHeight: 1.15,
-    }}
-  >
-    Profile Health
+  style={{
+    fontSize: 12,
+    fontWeight: 900,
+    color: '#FF7043',
+    lineHeight: 1.15,
+    ...ORANGE_HEADING_LIFT,
+  }}
+>
+    Engagement
   </span>
 </div>
 
@@ -754,7 +755,7 @@ export default function SeekerDashboard() {
               </div>
             </aside>
 
-            {/* COL 2, ROW 3: Profile Health — beside Action Center only */}
+            {/* COL 2, ROW 3: Engagement — beside Action Center only */}
             <aside
               style={{
                 ...KPI_GLASS,
@@ -781,7 +782,7 @@ export default function SeekerDashboard() {
                   flexShrink: 0,
                 }}
               >
-                Profile Health
+                Engagement
               </div>
               <div
                 style={{
