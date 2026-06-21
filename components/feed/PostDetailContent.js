@@ -902,7 +902,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
           onClick={() => setReactionViewer(null)}
         >
           <div
-            className="max-h-[58dvh] w-[calc(100vw-20px)] overflow-hidden rounded-t-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_28px_90px_rgba(50,20,10,0.35)] backdrop-blur-[24px] sm:max-h-[70dvh] sm:max-w-md sm:rounded-[26px]"
+            className="max-h-[56dvh] w-[calc(100vw-20px)] overflow-hidden rounded-t-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_28px_90px_rgba(50,20,10,0.35)] backdrop-blur-[24px] sm:max-h-[420px] sm:max-w-[380px] sm:rounded-[24px]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-white/45 px-4 py-3 sm:px-5 sm:py-4">
@@ -940,15 +940,13 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                     const user = getReactionDisplayUser(entry);
 
                     return (
-                      <div
+                      <MemberAvatarActions
                         key={`${reactionViewer.commentKey}-${user.id || index}`}
-                        className="flex items-center gap-3 rounded-xl border border-white/45 bg-white/40 px-3 py-2"
+                        targetUserId={user.id && user.name !== 'You' ? user.id : null}
+                        targetUserSlug={user.slug || ''}
+                        targetName={user.name || 'Member'}
                       >
-                        <MemberAvatarActions
-                          targetUserId={user.id && user.name !== 'You' ? user.id : null}
-                          targetUserSlug={user.slug || ''}
-                          targetName={user.name || 'Member'}
-                        >
+                        <div className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-white/45 bg-white/40 px-3 py-2 transition hover:bg-white/55">
                           {user.avatarUrl ? (
                             <img
                               src={user.avatarUrl}
@@ -960,14 +958,8 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                               {String(user.name || 'Member').charAt(0).toUpperCase() || '?'}
                             </div>
                           )}
-                        </MemberAvatarActions>
 
-                        <MemberAvatarActions
-                          targetUserId={user.id && user.name !== 'You' ? user.id : null}
-                          targetUserSlug={user.slug || ''}
-                          targetName={user.name || 'Member'}
-                        >
-                          <div className="min-w-0 flex-1 cursor-pointer">
+                          <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-extrabold text-[#3a2418]">
                               {user.name || 'Member'}
                             </div>
@@ -977,8 +969,18 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                               </div>
                             ) : null}
                           </div>
-                        </MemberAvatarActions>
-                      </div>
+
+                          {user.id && user.name !== 'You' ? (
+                            <div className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/55 text-[#6b4a3a]">
+                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                                <circle cx="5" cy="12" r="1.5" />
+                                <circle cx="12" cy="12" r="1.5" />
+                                <circle cx="19" cy="12" r="1.5" />
+                              </svg>
+                            </div>
+                          ) : null}
+                        </div>
+                      </MemberAvatarActions>
                     );
                   })}
                 </div>

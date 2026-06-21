@@ -1089,21 +1089,19 @@ export default function PostCard({
                 </button>
               </div>
 
-              <div className="ft-reaction-scroll max-h-[42dvh] overflow-x-visible overflow-y-auto px-4 py-3">
+              <div className="ft-reaction-scroll max-h-[42dvh] overflow-x-hidden overflow-y-auto px-4 py-3">
                 <div className="space-y-2">
                   {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((entry, index) => {
                     const user = getReactionDisplayUser(entry);
 
                     return (
-                      <div
+                      <MemberAvatarActions
                         key={`post-reaction-viewer-mobile-${reactionViewer.emoji}-${user.id || index}`}
-                        className="flex items-center gap-2.5 rounded-xl border border-white/45 bg-white/40 px-3 py-2"
+                        targetUserId={user.id && user.name !== 'You' ? user.id : null}
+                        targetUserSlug={user.slug || ''}
+                        targetName={user.name || 'Member'}
                       >
-                        <MemberAvatarActions
-                          targetUserId={user.id && user.name !== 'You' ? user.id : null}
-                          targetUserSlug={user.slug || ''}
-                          targetName={user.name || 'Member'}
-                        >
+                        <div className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-white/45 bg-white/40 px-3 py-2 transition hover:bg-white/55">
                           {user.avatarUrl ? (
                             <img
                               src={user.avatarUrl}
@@ -1115,14 +1113,8 @@ export default function PostCard({
                               {String(user.name || 'Member').charAt(0).toUpperCase() || '?'}
                             </div>
                           )}
-                        </MemberAvatarActions>
 
-                        <MemberAvatarActions
-                          targetUserId={user.id && user.name !== 'You' ? user.id : null}
-                          targetUserSlug={user.slug || ''}
-                          targetName={user.name || 'Member'}
-                        >
-                          <div className="min-w-0 flex-1 cursor-pointer">
+                          <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-extrabold text-[#3a2418]">
                               {user.name || 'Member'}
                             </div>
@@ -1132,8 +1124,18 @@ export default function PostCard({
                               </div>
                             ) : null}
                           </div>
-                        </MemberAvatarActions>
-                      </div>
+
+                          {user.id && user.name !== 'You' ? (
+                            <div className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/55 text-[#6b4a3a]">
+                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                                <circle cx="5" cy="12" r="1.5" />
+                                <circle cx="12" cy="12" r="1.5" />
+                                <circle cx="19" cy="12" r="1.5" />
+                              </svg>
+                            </div>
+                          ) : null}
+                        </div>
+                      </MemberAvatarActions>
                     );
                   })}
                 </div>
@@ -1172,21 +1174,19 @@ export default function PostCard({
               </button>
             </div>
 
-            <div className="ft-reaction-scroll max-h-[260px] overflow-x-visible overflow-y-auto px-4 py-3">
+            <div className="ft-reaction-scroll max-h-[260px] overflow-x-hidden overflow-y-auto px-4 py-3">
               <div className="space-y-2">
                 {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((entry, index) => {
                     const user = getReactionDisplayUser(entry);
 
                     return (
-                      <div
+                      <MemberAvatarActions
                         key={`post-reaction-viewer-${reactionViewer.emoji}-${user.id || index}`}
-                        className="flex items-center gap-2.5 rounded-xl border border-white/45 bg-white/40 px-3 py-2"
+                        targetUserId={user.id && user.name !== 'You' ? user.id : null}
+                        targetUserSlug={user.slug || ''}
+                        targetName={user.name || 'Member'}
                       >
-                        <MemberAvatarActions
-                          targetUserId={user.id && user.name !== 'You' ? user.id : null}
-                          targetUserSlug={user.slug || ''}
-                          targetName={user.name || 'Member'}
-                        >
+                        <div className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-white/45 bg-white/40 px-3 py-2 transition hover:bg-white/55">
                           {user.avatarUrl ? (
                             <img
                               src={user.avatarUrl}
@@ -1198,14 +1198,8 @@ export default function PostCard({
                               {String(user.name || 'Member').charAt(0).toUpperCase() || '?'}
                             </div>
                           )}
-                        </MemberAvatarActions>
 
-                        <MemberAvatarActions
-                          targetUserId={user.id && user.name !== 'You' ? user.id : null}
-                          targetUserSlug={user.slug || ''}
-                          targetName={user.name || 'Member'}
-                        >
-                          <div className="min-w-0 flex-1 cursor-pointer">
+                          <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-extrabold text-[#3a2418]">
                               {user.name || 'Member'}
                             </div>
@@ -1215,8 +1209,18 @@ export default function PostCard({
                               </div>
                             ) : null}
                           </div>
-                        </MemberAvatarActions>
-                      </div>
+
+                          {user.id && user.name !== 'You' ? (
+                            <div className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/55 text-[#6b4a3a]">
+                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                                <circle cx="5" cy="12" r="1.5" />
+                                <circle cx="12" cy="12" r="1.5" />
+                                <circle cx="19" cy="12" r="1.5" />
+                              </svg>
+                            </div>
+                          ) : null}
+                        </div>
+                      </MemberAvatarActions>
                     );
                   })}
               </div>

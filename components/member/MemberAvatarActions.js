@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/router';
 import { useProfileViewLogger } from '../actions/useProfileViewLogger';
 
@@ -50,6 +51,7 @@ export default function MemberAvatarActions({
   const [status,    setStatus]    = useState('idle'); // idle | loading | none | outgoing | incoming | connected
   const [requestId, setRequestId] = useState(null);
   const [actioning, setActioning] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 220 });
 
   // ── Derive page rules from router ─────────────────────────────────────────
   const rules       = PAGE_RULES[router.pathname] || {};
@@ -82,10 +84,42 @@ export default function MemberAvatarActions({
     }
   }, [targetUserId, status]);
 
+  const positionMenu = () => {
+    try {
+      const rect = containerRef.current?.getBoundingClientRect?.();
+      if (!rect || typeof window === 'undefined') return;
+
+      const menuWidth = 220;
+      const margin = 10;
+      const viewportWidth = window.innerWidth || 360;
+      const viewportHeight = window.innerHeight || 700;
+
+      let left = rect.left;
+      let top = rect.bottom + 8;
+
+      if (left + menuWidth > viewportWidth - margin) {
+        left = viewportWidth - menuWidth - margin;
+      }
+
+      if (top + 210 > viewportHeight - margin) {
+        top = Math.max(margin, rect.top - 210 - 8);
+      }
+
+      setMenuPosition({
+        top: Math.max(margin, top),
+        left: Math.max(margin, left),
+        width: menuWidth,
+      });
+    } catch {}
+  };
+
   const toggle = (e) => {
     if (stopPropagation) { e?.preventDefault(); e?.stopPropagation(); }
     if (!targetUserId) return;
-    if (!open) fetchStatus(); // lazy load on first open
+    if (!open) {
+      positionMenu();
+      fetchStatus(); // lazy load on first open
+    }
     setOpen(v => !v);
   };
 
@@ -94,14 +128,26 @@ export default function MemberAvatarActions({
   // Close on outside click
   useEffect(() => {
     if (!open) return;
+
     const handler = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+      const target = e.target;
+      if (containerRef.current && containerRef.current.contains(target)) return;
+      if (target?.closest?.('[data-member-avatar-actions-menu="true"]')) return;
+      setOpen(false);
     };
+
+    const onResize = () => positionMenu();
+
     document.addEventListener('mousedown', handler);
     document.addEventListener('touchstart', handler);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', onResize, true);
+
     return () => {
       document.removeEventListener('mousedown', handler);
       document.removeEventListener('touchstart', handler);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', onResize, true);
     };
   }, [open]);
 
@@ -260,24 +306,42 @@ export default function MemberAvatarActions({
     <div ref={containerRef} style={{ position: 'relative', display: 'inline-block' }}>
       <div onClick={toggle} style={{ cursor: 'pointer' }}>{children}</div>
 
-      {open && (
-        <div style={{
-          position: 'absolute', zIndex: 200, top: 'calc(100% + 6px)', left: 0,
-          minWidth: 188, background: 'white', borderRadius: 10,
-          border: '1px solid #e5e7eb', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          overflow: 'hidden',
-        }}>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          data-member-avatar-actions-menu="true"
+          style={{
+            position: 'fixed',
+            zIndex: 100005,
+            top: menuPosition.top,
+            left: menuPosition.left,
+            width: menuPosition.width,
+            background: 'rgba(255,255,255,0.98)',
+            borderRadius: 14,
+            border: '1px solid rgba(229,231,235,0.95)',
+            boxShadow: '0 18px 50px rgba(15,23,42,0.22)',
+            overflow: 'hidden',
+            backdropFilter: 'blur(16px)',
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          role="menu"
+        >
           {/* Header */}
           <div style={{
-            padding: '10px 14px 8px', borderBottom: '1px solid #f3f4f6',
-            fontSize: 13, fontWeight: 700, color: '#111827',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            padding: '12px 14px 10px',
+            borderBottom: '1px solid #f3f4f6',
+            fontSize: 13,
+            fontWeight: 800,
+            color: '#111827',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
           }}>
             {targetName}
           </div>
 
           {/* Actions */}
-          <div style={{ padding: '4px 0' }}>
+          <div style={{ padding: '6px 0' }}>
             {!hideProfile && resolvedProfilePath && (
               <Btn onClick={viewProfile}>View portfolio</Btn>
             )}
@@ -307,7 +371,8 @@ export default function MemberAvatarActions({
               <Btn muted disabled>Connected</Btn>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
