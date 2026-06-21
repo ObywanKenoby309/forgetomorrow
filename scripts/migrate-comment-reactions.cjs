@@ -1,4 +1,4 @@
-// scripts/migrate-comment-reactions.js
+// scripts/migrate-comment-reactions.cjs
 // Run once: node scripts/migrate-comment-reactions.js
 // Converts old { likes, likedBy } comment shape to { reactions: [{ emoji, count, userIds }] }
 

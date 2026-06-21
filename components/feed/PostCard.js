@@ -817,7 +817,6 @@ export default function PostCard({
                   onMouseLeave={() => setHoveredEmoji(null)}
                   className="inline-flex items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 py-1.5 text-xs font-bold text-[#6b4a3a] transition hover:bg-white/55 hover:text-[#3a2418]"
                   aria-label={`See who reacted with ${emoji}`}
-                  title={`See who reacted with ${emoji}`}
                 >
                   <span>{emoji}</span>
                   <span>{count}</span>
