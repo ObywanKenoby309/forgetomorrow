@@ -1142,7 +1142,7 @@ const executionProofCard = (
                   ...GLASS_SOFT,
                   borderRadius: 12,
                   padding: 14,
-                  height: "100%",
+                  height: 145,
                   boxSizing: "border-box",
                   overflow: "hidden",
                 }}
@@ -1161,7 +1161,7 @@ const executionProofCard = (
                 ...GLASS_SOFT,
                 borderRadius: 12,
                 padding: 14,
-                height: "100%",
+                height: 145,
                 boxSizing: "border-box",
                 overflow: "hidden",
                 fontSize: 12,
