@@ -748,7 +748,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                               {reactionHoverKey?.commentKey === commentKey &&
                                 reactionHoverKey?.emoji &&
                                 (commentReactions.find((r) => r?.emoji === reactionHoverKey.emoji)?.count || 0) > 0 && (
-                                <div className="absolute bottom-full left-0 mb-2 z-20 whitespace-nowrap rounded-lg border border-white/40 bg-white/95 px-3 py-2 text-xs font-semibold text-[#3a2418] shadow-xl shadow-black/30">
+                                <div className="absolute bottom-full left-0 mb-2 z-20 hidden whitespace-nowrap rounded-lg border border-white/40 bg-white/95 px-3 py-2 text-xs font-semibold text-[#3a2418] shadow-xl shadow-black/30 sm:block">
                                   {getReactionTooltip(commentKey, reactionHoverKey.emoji)}
                                 </div>
                               )}
@@ -845,10 +845,10 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
           onClick={() => setReactionViewer(null)}
         >
           <div
-            className="max-h-[70dvh] w-full overflow-hidden rounded-t-[26px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_28px_90px_rgba(50,20,10,0.35)] backdrop-blur-[24px] sm:max-w-md sm:rounded-[26px]"
+            className="max-h-[58dvh] w-full overflow-hidden rounded-t-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_28px_90px_rgba(50,20,10,0.35)] backdrop-blur-[24px] sm:max-h-[70dvh] sm:max-w-md sm:rounded-[26px]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-white/45 px-5 py-4">
+            <div className="flex items-center justify-between border-b border-white/45 px-4 py-3 sm:px-5 sm:py-4">
               <div>
                 <div className="text-base font-extrabold text-[#3a2418]">
                   {reactionViewer.emoji} Reactions
@@ -862,7 +862,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
               <button
                 type="button"
                 onClick={() => setReactionViewer(null)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/60 text-[#6b4a3a] transition hover:bg-white/80 hover:text-[#3a2418]"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/50 bg-white/60 text-[#6b4a3a] transition hover:bg-white/80 hover:text-[#3a2418] sm:h-10 sm:w-10"
                 aria-label="Close reactions"
               >
                 <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -871,7 +871,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
               </button>
             </div>
 
-            <div className="max-h-[56dvh] overflow-y-auto px-5 py-4">
+            <div className="max-h-[44dvh] overflow-y-auto px-4 py-3 sm:max-h-[56dvh] sm:px-5 sm:py-4">
               {reactionNames[`${reactionViewer.commentKey}:${reactionViewer.emoji}`]?.loading &&
                 !(reactionViewer.names?.length) ? (
                 <div className="rounded-2xl border border-white/50 bg-white/35 px-4 py-4 text-sm font-semibold text-[#8a5d44]">
@@ -882,7 +882,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                   {(reactionNames[`${reactionViewer.commentKey}:${reactionViewer.emoji}`]?.names || reactionViewer.names || []).map((name, index) => (
                     <div
                       key={`${reactionViewer.commentKey}-${name}-${index}`}
-                      className="flex items-center gap-3 rounded-2xl border border-white/45 bg-white/40 px-3 py-3"
+                      className="flex items-center gap-2.5 rounded-2xl border border-white/45 bg-white/40 px-3 py-2.5 sm:gap-3 sm:py-3"
                     >
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
                         {String(name || 'Member').charAt(0).toUpperCase() || '?'}

@@ -868,7 +868,7 @@ export default function PostCard({
             })}
 
             {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
-              <div className="absolute bottom-full left-0 mb-2 z-20 whitespace-nowrap rounded-lg border border-white/40 bg-white/95 px-3 py-2 text-xs font-semibold text-[#3a2418] shadow-xl shadow-black/30">
+              <div className="absolute bottom-full left-0 mb-2 z-20 hidden whitespace-nowrap rounded-lg border border-white/40 bg-white/95 px-3 py-2 text-xs font-semibold text-[#3a2418] shadow-xl shadow-black/30 sm:block">
                 {getTooltipText(hoveredEmoji)}
               </div>
             )}
@@ -976,7 +976,7 @@ export default function PostCard({
             />
           </div>
           {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
-            <div className="absolute bottom-full left-0 mb-3 bg-white/95 border border-white/40 text-[#3a2418] text-sm rounded-lg p-3 shadow-2xl shadow-black/50 z-20 whitespace-nowrap">
+            <div className="absolute bottom-full left-0 mb-3 hidden bg-white/95 border border-white/40 text-[#3a2418] text-sm rounded-lg p-3 shadow-2xl shadow-black/50 z-20 whitespace-nowrap sm:block">
               {getTooltipText(hoveredEmoji)}
             </div>
           )}
@@ -994,7 +994,7 @@ export default function PostCard({
         />
 
         <div
-          className="fixed z-[100000] max-h-[70dvh] overflow-hidden rounded-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_22px_70px_rgba(50,20,10,0.32)] backdrop-blur-[24px]"
+          className="fixed z-[100000] max-h-[55dvh] overflow-hidden rounded-[20px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_22px_70px_rgba(50,20,10,0.32)] backdrop-blur-[24px] sm:max-h-[70dvh] sm:rounded-[22px]"
           style={{
             top: reactionViewer.top ?? 96,
             left: reactionViewer.left ?? 16,
@@ -1005,7 +1005,7 @@ export default function PostCard({
           aria-label="Post reactions"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between border-b border-white/45 px-4 py-3">
+          <div className="flex items-center justify-between border-b border-white/45 px-3.5 py-2.5 sm:px-4 sm:py-3">
             <div>
               <div className="text-sm font-extrabold text-[#3a2418]">
                 {reactionViewer.emoji} Reactions
@@ -1028,7 +1028,7 @@ export default function PostCard({
             </button>
           </div>
 
-          <div className="max-h-[260px] overflow-y-auto px-4 py-3">
+          <div className="max-h-[42dvh] overflow-y-auto px-3.5 py-2.5 sm:max-h-[260px] sm:px-4 sm:py-3">
             {reactionUsers[reactionViewer.emoji]?.loading && !(reactionViewer.names || []).length ? (
               <div className="rounded-2xl border border-white/50 bg-white/35 px-4 py-4 text-sm font-semibold text-[#8a5d44]">
                 Loading…
@@ -1038,7 +1038,7 @@ export default function PostCard({
                 {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((name, index) => (
                   <div
                     key={`post-reaction-viewer-${reactionViewer.emoji}-${name}-${index}`}
-                    className="flex items-center gap-3 rounded-2xl border border-white/45 bg-white/40 px-3 py-3"
+                    className="flex items-center gap-2.5 rounded-2xl border border-white/45 bg-white/40 px-3 py-2.5 sm:gap-3 sm:py-3"
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
                       {String(name || 'Member').charAt(0).toUpperCase() || '?'}
