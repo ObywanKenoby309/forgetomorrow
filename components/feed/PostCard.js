@@ -1127,16 +1127,6 @@ export default function PostCard({
                               </div>
                             ) : null}
                           </div>
-
-                          {user.id && user.name !== 'You' ? (
-                            <div className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/55 text-[#6b4a3a]">
-                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-                                <circle cx="5" cy="12" r="1.5" />
-                                <circle cx="12" cy="12" r="1.5" />
-                                <circle cx="19" cy="12" r="1.5" />
-                              </svg>
-                            </div>
-                          ) : null}
                         </div>
                       </MemberAvatarActions>
                     );
@@ -1215,16 +1205,6 @@ export default function PostCard({
                               </div>
                             ) : null}
                           </div>
-
-                          {user.id && user.name !== 'You' ? (
-                            <div className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/55 text-[#6b4a3a]">
-                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-                                <circle cx="5" cy="12" r="1.5" />
-                                <circle cx="12" cy="12" r="1.5" />
-                                <circle cx="19" cy="12" r="1.5" />
-                              </svg>
-                            </div>
-                          ) : null}
                         </div>
                       </MemberAvatarActions>
                     );
