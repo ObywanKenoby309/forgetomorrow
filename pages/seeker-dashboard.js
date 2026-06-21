@@ -772,18 +772,19 @@ export default function SeekerDashboard() {
               }}
             >
               <div
-                style={{
-                  fontSize: 15,
-                  fontWeight: 900,
-                  marginBottom: 8,
-                  color: '#0F172A',
-                  lineHeight: 1.25,
-                  letterSpacing: '-0.01em',
-                  flexShrink: 0,
-                }}
-              >
-                Engagement
-              </div>
+  style={{
+    fontSize: 15,
+    fontWeight: 900,
+    marginBottom: 8,
+    color: '#FF7043',
+    lineHeight: 1.25,
+    letterSpacing: '-0.01em',
+    flexShrink: 0,
+    ...ORANGE_HEADING_LIFT,
+  }}
+>
+  Engagement
+</div>
               <div
                 style={{
                   ...WHITE_CARD,
