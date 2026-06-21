@@ -1114,7 +1114,7 @@ export default function PostCard({
                             </div>
                           )}
 
-                          <div className="min-w-0 flex-1 pr-2">
+                          <div className="min-w-0 flex-1 pr-2 max-w-[230px]">
                             <div className="truncate text-sm font-extrabold text-[#3a2418]">
                               {user.name || 'Member'}
                             </div>
@@ -1202,7 +1202,7 @@ export default function PostCard({
                             </div>
                           )}
 
-                          <div className="min-w-0 flex-1 pr-2">
+                          <div className="min-w-0 flex-1 pr-2 max-w-[320px]">
                             <div className="truncate text-sm font-extrabold text-[#3a2418]">
                               {user.name || 'Member'}
                             </div>
