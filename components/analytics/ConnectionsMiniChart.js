@@ -66,6 +66,7 @@ export default function ConnectionsMiniChart({ labels = [], data = [] }) {
           margin={isMobile ? { top: 8, right: 4, bottom: 20, left: -18 } : { top: 8, right: 12, bottom: 28, left: 0 }}
           barSize={isMobile ? 24 : 38}
           barCategoryGap={isMobile ? 12 : 22}
+          style={{ background: "transparent" }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#ECEFF1" />
           <XAxis

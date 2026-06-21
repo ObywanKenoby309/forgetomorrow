@@ -29,8 +29,8 @@ const GLASS = {
 };
 
 const GLASS_SOFT = {
-  border: "1px solid rgba(255,255,255,0.22)",
-  background: "rgba(255,255,255,0.58)",
+  border: "1px solid rgba(255,255,255,0.28)",
+  background: "rgba(255,255,255,0.32)",
   boxShadow: "0 8px 22px rgba(15,23,42,0.10)",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
@@ -911,8 +911,8 @@ export default function ProfileAnalyticsPage() {
   const visibilityCard = (
     <RotatingCard
       title="Visibility Intelligence"
-      minHeight={isMobile ? 132 : 179}
-      cardStyle={isMobile ? {} : { height: LEFT_COMMAND_CARD_HEIGHT, overflow: "hidden" }}
+      minHeight={isMobile ? 160 : 179}
+      cardStyle={isMobile ? { overflow: "hidden" } : { height: LEFT_COMMAND_CARD_HEIGHT, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
         <InsightTile
@@ -1475,8 +1475,8 @@ export default function ProfileAnalyticsPage() {
   const activityIntelligenceCard = (
     <RotatingCard
       title="Activity Intelligence"
-      minHeight={isMobile ? 154 : 179}
-      cardStyle={isMobile ? {} : { height: LEFT_COMMAND_CARD_HEIGHT, overflow: "hidden" }}
+      minHeight={isMobile ? 180 : 179}
+      cardStyle={isMobile ? { overflow: "hidden" } : { height: LEFT_COMMAND_CARD_HEIGHT, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
         <InsightTile
@@ -1539,7 +1539,7 @@ export default function ProfileAnalyticsPage() {
     <RotatingCard
       title="Content Spotlight"
       minHeight={isMobile ? 390 : 284}
-      cardStyle={isMobile ? {} : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
+      cardStyle={isMobile ? { overflow: "hidden" } : { height: COMMAND_RAIL_HEIGHT, overflow: "hidden" }}
       contentStyle={isMobile ? {} : { alignContent: "stretch" }}
       slides={[
         <div key="top-content" style={{ display: "grid", gap: 12 }}>
