@@ -458,6 +458,28 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
 
   return (
     <div className={isModal ? 'flex min-h-0 flex-1 flex-col' : 'flex flex-col'}>
+      <style jsx>{`
+        .ft-reaction-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255,112,67,0.42) rgba(255,247,242,0.72);
+        }
+        .ft-reaction-scroll::-webkit-scrollbar {
+          width: 8px;
+        }
+        .ft-reaction-scroll::-webkit-scrollbar-track {
+          background: rgba(255,247,242,0.72);
+          border-radius: 999px;
+        }
+        .ft-reaction-scroll::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, rgba(255,112,67,0.72), rgba(229,90,43,0.48));
+          border: 2px solid rgba(255,247,242,0.92);
+          border-radius: 999px;
+        }
+        .ft-reaction-scroll::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, rgba(255,112,67,0.9), rgba(229,90,43,0.62));
+        }
+      `}</style>
+
       <section className="shrink-0 border-b border-white/40 bg-white/30 px-4 py-4 sm:px-7 sm:py-5">
         <header className="flex items-center gap-3 pr-14">
           {post.authorAvatar ? (
@@ -643,7 +665,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
 
                         {menuOpen && canTarget ? (
                           <div
-                            className="absolute left-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-white/50 bg-white/95 shadow-xl"
+                            className="absolute left-0 z-[100002] mt-2 w-44 overflow-hidden rounded-xl border border-white/50 bg-white/95 shadow-xl"
                             role="menu"
                           >
                             <button
@@ -764,7 +786,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                                   type="button"
                                   onClick={() => openReactionViewer(c, i, reaction.emoji)}
                                   className="inline-flex items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 py-1.5 text-xs font-bold text-[#6b4a3a] transition hover:bg-white/55"
-                                  aria-label={`See who reacted with ${reaction.emoji}`}
+                                  aria-label={`${reaction.count} ${reaction.count === 1 ? 'reaction' : 'reactions'} with ${reaction.emoji}`}
                                 >
                                   <span>{reaction.emoji}</span>
                                   <span>{reaction.count}</span>
@@ -845,7 +867,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
           onClick={() => setReactionViewer(null)}
         >
           <div
-            className="max-h-[58dvh] w-full overflow-hidden rounded-t-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_28px_90px_rgba(50,20,10,0.35)] backdrop-blur-[24px] sm:max-h-[70dvh] sm:max-w-md sm:rounded-[26px]"
+            className="max-h-[58dvh] w-[calc(100vw-20px)] overflow-visible rounded-t-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_28px_90px_rgba(50,20,10,0.35)] backdrop-blur-[24px] sm:max-h-[70dvh] sm:max-w-md sm:rounded-[26px]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-white/45 px-4 py-3 sm:px-5 sm:py-4">
@@ -871,7 +893,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
               </button>
             </div>
 
-            <div className="max-h-[44dvh] overflow-y-auto px-4 py-3 sm:max-h-[56dvh] sm:px-5 sm:py-4">
+            <div className="ft-reaction-scroll max-h-[44dvh] overflow-x-visible overflow-y-auto px-4 py-3 sm:max-h-[56dvh] sm:px-5 sm:py-4">
               {reactionNames[`${reactionViewer.commentKey}:${reactionViewer.emoji}`]?.loading &&
                 !(reactionViewer.names?.length) ? (
                 <div className="rounded-2xl border border-white/50 bg-white/35 px-4 py-4 text-sm font-semibold text-[#8a5d44]">
@@ -887,8 +909,8 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
                         {String(name || 'Member').charAt(0).toUpperCase() || '?'}
                       </div>
-                      <div className="min-w-0 flex-1 truncate text-sm font-extrabold text-[#3a2418]">
-                        {name || 'Member'}
+                      <div className="min-w-0 flex-1 text-sm font-extrabold text-[#3a2418]">
+                        <span className="block truncate">{name || 'Member'}</span>
                       </div>
                       <div className="text-sm" aria-hidden="true">
                         {reactionViewer.emoji}

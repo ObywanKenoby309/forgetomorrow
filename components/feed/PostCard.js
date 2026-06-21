@@ -297,7 +297,7 @@ export default function PostCard({
 
   const fetchUsersForEmoji = async (emoji) => {
     const cached = reactionUsers[emoji];
-    if (cached?.loaded && Array.isArray(cached.users)) return cached.users;
+    if (cached?.loaded && Array.isArray(cached.names)) return cached.names;
 
     const reaction = postReactions.find((r) => r.emoji === emoji);
     const userIds = Array.isArray(reaction?.userIds) ? reaction.userIds.map(String).filter(Boolean) : [];
@@ -320,54 +320,40 @@ export default function PostCard({
       if (!res.ok) throw new Error('Could not load reaction users');
 
       const data = await res.json().catch(() => ({}));
-      const users = Array.isArray(data.users)
-        ? data.users.map((user) => ({
-            id: String(user?.id || ''),
-            name: String(user?.name || 'Member'),
-            headline: String(user?.headline || ''),
-            slug: String(user?.slug || ''),
-            avatarUrl: String(user?.avatarUrl || ''),
-          })).filter((user) => user.id)
-        : [];
+      const names = Array.isArray(data.names)
+        ? data.names.map((n) => (n === currentUserName ? 'You' : String(n || 'Member')))
+        : userIds.map((id) => (String(id) === String(currentUserId) ? 'You' : 'Member'));
 
       setReactionUsers((prev) => ({
         ...prev,
         [emoji]: {
-          users,
+          names,
           loading: false,
           loaded: true,
         },
       }));
 
-      return users;
+      return names;
     } catch (err) {
       console.error('reaction hover error:', err);
-      const users = userIds.map((id) => ({
-        id: String(id),
-        name: String(id) === String(currentUserId) ? 'You' : 'Member',
-        headline: '',
-        slug: '',
-        avatarUrl: '',
-      }));
-
+      const names = userIds.map((id) => (String(id) === String(currentUserId) ? 'You' : 'Member'));
       setReactionUsers((prev) => ({
         ...prev,
         [emoji]: {
-          users,
+          names,
           loading: false,
           loaded: true,
         },
       }));
-
-      return users;
+      return names;
     }
   };
 
   const getTooltipText = (emoji) => {
-    const users = reactionUsers[emoji]?.users || [];
-    if (!users.length) return 'Loading…';
-    const preview = users.slice(0, 3).map((user) => user.name || 'Member').join(', ');
-    const extra = users.length > 3 ? ` +${users.length - 3}` : '';
+    const names = reactionUsers[emoji]?.names || [];
+    if (!names.length) return 'Loading…';
+    const preview = names.slice(0, 3).join(', ');
+    const extra = names.length > 3 ? ` +${names.length - 3}` : '';
     return `${preview}${extra} reacted with ${emoji}`;
   };
 
@@ -378,55 +364,61 @@ export default function PostCard({
 
     let top = 96;
     let left = 16;
+    let mobile = false;
 
     try {
       const viewportWidth = window.innerWidth || 360;
       const viewportHeight = window.innerHeight || 700;
-      const panelWidth = 300;
-      const estimatedPanelHeight = 330;
+      mobile = viewportWidth < 640;
+
+      const panelWidth = Math.min(mobile ? 320 : 340, viewportWidth - 28);
+      const estimatedPanelHeight = mobile ? 320 : 330;
       const clickX = Number(event?.clientX);
       const clickY = Number(event?.clientY);
 
       if (Number.isFinite(clickX) && Number.isFinite(clickY)) {
         left = Math.min(
-          Math.max(12, clickX - 18),
-          Math.max(12, viewportWidth - panelWidth - 12)
+          Math.max(14, clickX - 24),
+          Math.max(14, viewportWidth - panelWidth - 14)
         );
 
         top = clickY + 12;
 
-        if (top + estimatedPanelHeight > viewportHeight) {
-		  top = Math.max(12, viewportHeight - estimatedPanelHeight - 12);
-		}
+        if (top + estimatedPanelHeight > viewportHeight - 14) {
+          top = Math.max(14, viewportHeight - estimatedPanelHeight - 14);
+        }
       } else {
         const rect = event?.currentTarget?.getBoundingClientRect?.();
 
         if (rect) {
           left = Math.min(
-            Math.max(12, rect.left),
-            Math.max(12, viewportWidth - panelWidth - 12)
+            Math.max(14, rect.left),
+            Math.max(14, viewportWidth - panelWidth - 14)
           );
 
           top = rect.bottom + 8;
 
-          if (top + estimatedPanelHeight > viewportHeight) {
-            top = Math.max(12, rect.top - estimatedPanelHeight - 8);
+          if (top + estimatedPanelHeight > viewportHeight - 14) {
+            top = Math.max(14, viewportHeight - estimatedPanelHeight - 14);
           }
         }
       }
     } catch {}
 
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-
     setReactionViewer({
       emoji,
       userIds,
+      names: reactionUsers[emoji]?.names || [],
       top,
       left,
-      mobile: isMobile,
+      mobile,
     });
 
-    await fetchUsersForEmoji(emoji);
+    const names = await fetchUsersForEmoji(emoji);
+    setReactionViewer((current) => {
+      if (!current || current.emoji !== emoji) return current;
+      return { ...current, names };
+    });
   };
 
   // ── Derived display values ────────────────────────────────
@@ -545,6 +537,25 @@ export default function PostCard({
       .ft-pop { animation: ft-pop 0.42s cubic-bezier(.34,1.56,.64,1); }
       .ft-flicker { animation: ft-flicker 2.4s ease-in-out infinite; }
       .ft-slidedown { animation: ft-slidedown 0.28s ease; }
+      .ft-reaction-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,112,67,0.42) rgba(255,247,242,0.72);
+      }
+      .ft-reaction-scroll::-webkit-scrollbar {
+        width: 8px;
+      }
+      .ft-reaction-scroll::-webkit-scrollbar-track {
+        background: rgba(255,247,242,0.72);
+        border-radius: 999px;
+      }
+      .ft-reaction-scroll::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, rgba(255,112,67,0.72), rgba(229,90,43,0.48));
+        border: 2px solid rgba(255,247,242,0.92);
+        border-radius: 999px;
+      }
+      .ft-reaction-scroll::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, rgba(255,112,67,0.9), rgba(229,90,43,0.62));
+      }
     `}</style>
 
     <div
@@ -1007,41 +1018,69 @@ export default function PostCard({
 
         {reactionViewer.mobile ? (
           <div
-            className="fixed bottom-20 left-3 right-3 z-[100000] sm:hidden"
+            className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+14px)] left-3 right-3 z-[100000] sm:hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="rounded-2xl border border-white/50 bg-[rgba(255,250,245,0.98)] p-4 shadow-[0_22px_70px_rgba(50,20,10,0.32)] backdrop-blur-[24px]">
-              <div className="text-sm font-extrabold text-[#3a2418]">
-                {(() => {
-                  const users = reactionUsers[reactionViewer.emoji]?.users || [];
-                  const total = reactionViewer.userIds?.length || users.length || 0;
-                  const first = users[0]?.name || (reactionUsers[reactionViewer.emoji]?.loading ? 'Loading members…' : 'Someone');
-                  const others = Math.max(0, total - 1);
+            <div className="max-h-[58dvh] overflow-visible rounded-[22px] border border-white/50 bg-[rgba(255,250,245,0.98)] shadow-[0_22px_70px_rgba(50,20,10,0.32)] backdrop-blur-[24px]">
+              <div className="flex items-start justify-between gap-3 border-b border-white/45 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-extrabold text-[#3a2418]">
+                    {(() => {
+                      const names = reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || [];
+                      const first = names[0] || 'Someone';
+                      const others = Math.max(0, (reactionViewer.userIds?.length || names.length) - 1);
 
-                  return others > 0
-                    ? `${reactionViewer.emoji} ${first} and ${others.toLocaleString()} other${others === 1 ? '' : 's'} reacted`
-                    : `${reactionViewer.emoji} ${first} reacted`;
-                })()}
+                      return others > 0
+                        ? `${reactionViewer.emoji} ${first} and ${others} other${others === 1 ? '' : 's'} reacted`
+                        : `${reactionViewer.emoji} ${first} reacted`;
+                    })()}
+                  </div>
+                  <div className="mt-0.5 text-[11px] font-semibold text-[#a8775f]">
+                    {reactionViewer.userIds?.length || 0} members
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setReactionViewer(null)}
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/60 text-[#6b4a3a]"
+                  aria-label="Close reactions"
+                >
+                  ✕
+                </button>
               </div>
 
-              <button
-                type="button"
-                className="mt-2 text-xs font-extrabold text-[#d6602f]"
-                onClick={() =>
-                  setReactionViewer((v) => ({ ...v, mobile: false }))
-                }
-              >
-                View all
-              </button>
+              <div className="ft-reaction-scroll max-h-[42dvh] overflow-x-visible overflow-y-auto px-4 py-3">
+                <div className="space-y-2">
+                  {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((name, index) => (
+                    <div
+                      key={`post-reaction-viewer-mobile-${reactionViewer.emoji}-${name}-${index}`}
+                      className="flex items-center gap-2.5 rounded-2xl border border-white/45 bg-white/40 px-3 py-2.5"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
+                        {String(name || 'Member').charAt(0).toUpperCase() || '?'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-extrabold text-[#3a2418]">
+                          {name || 'Member'}
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-sm" aria-hidden="true">
+                        {reactionViewer.emoji}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         ) : (
           <div
-            className="fixed z-[100000] max-h-[72dvh] overflow-visible rounded-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_22px_70px_rgba(50,20,10,0.32)] backdrop-blur-[24px]"
+            className="fixed z-[100000] max-h-[70dvh] overflow-visible rounded-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_22px_70px_rgba(50,20,10,0.32)] backdrop-blur-[24px]"
             style={{
               top: reactionViewer.top ?? 96,
               left: reactionViewer.left ?? 16,
-              width: 'min(440px, calc(100vw - 24px))',
+              width: 'min(340px, calc(100vw - 28px))',
             }}
             role="dialog"
             aria-modal="false"
@@ -1067,51 +1106,26 @@ export default function PostCard({
               </button>
             </div>
 
-
-            <div className="max-h-[320px] overflow-y-auto overflow-x-hidden px-4 py-3">
+            <div className="ft-reaction-scroll max-h-[260px] overflow-x-visible overflow-y-auto px-4 py-3">
               <div className="space-y-2">
-
-  {reactionUsers[reactionViewer.emoji]?.loading && (
-    <div className="py-4 text-center text-sm text-[#8a5d44]">
-      Loading members...
-    </div>
-  )}
-
-{(reactionUsers[reactionViewer.emoji]?.users || []).map((user) => (
-  <div key={user.id} className="w-full" data-stop-card-click>
-    <MemberAvatarActions
-      targetUserId={user.id}
-      targetUserSlug={user.slug}
-      targetName={user.name}
-    >
-      <div className="flex w-full items-center gap-3 rounded-2xl border border-white/45 bg-white/40 px-3 py-3 hover:bg-white/60 cursor-pointer">
-        {user.avatarUrl ? (
-          <img
-            src={user.avatarUrl}
-            alt={user.name}
-            className="h-10 w-10 rounded-full object-cover"
-          />
-        ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-white font-bold">
-            {String(user.name || '?').charAt(0).toUpperCase()}
-          </div>
-        )}
-
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-extrabold text-[#3a2418]">
-            {user.name}
-          </div>
-
-          {user.headline && (
-            <div className="truncate text-xs text-[#8a5d44]">
-              {user.headline}
-            </div>
-          )}
-        </div>
-      </div>
-    </MemberAvatarActions>
-  </div>
-))}
+                {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((name, index) => (
+                  <div
+                    key={`post-reaction-viewer-${reactionViewer.emoji}-${name}-${index}`}
+                    className="flex items-center gap-2.5 rounded-2xl border border-white/45 bg-white/40 px-3 py-2.5"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
+                      {String(name || 'Member').charAt(0).toUpperCase() || '?'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-extrabold text-[#3a2418]">
+                        {name || 'Member'}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-sm" aria-hidden="true">
+                      {reactionViewer.emoji}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
