@@ -817,6 +817,7 @@ export default function PostCard({
                   onMouseLeave={() => setHoveredEmoji(null)}
                   className="inline-flex items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 py-1.5 text-xs font-bold text-[#6b4a3a] transition hover:bg-white/55 hover:text-[#3a2418]"
                   aria-label={`See who reacted with ${emoji}`}
+                  title={`See who reacted with ${emoji}`}
                 >
                   <span>{emoji}</span>
                   <span>{count}</span>
@@ -827,6 +828,63 @@ export default function PostCard({
             {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
               <div className="absolute bottom-full left-0 mb-2 z-20 whitespace-nowrap rounded-lg border border-white/40 bg-white/95 px-3 py-2 text-xs font-semibold text-[#3a2418] shadow-xl shadow-black/30">
                 {getTooltipText(hoveredEmoji)}
+              </div>
+            )}
+
+            {reactionViewer && (
+              <div
+                className="absolute left-0 top-full z-[100000] mt-2 w-[280px] overflow-hidden rounded-2xl border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_18px_50px_rgba(50,20,10,0.28)] backdrop-blur-[20px]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b border-white/45 px-4 py-3">
+                  <div>
+                    <div className="text-sm font-extrabold text-[#3a2418]">
+                      {reactionViewer.emoji} Reactions
+                    </div>
+                    <div className="text-[11px] font-semibold text-[#a8775f]">
+                      {reactionViewer.userIds?.length || 0}{' '}
+                      {(reactionViewer.userIds?.length || 0) === 1 ? 'member' : 'members'}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setReactionViewer(null)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/50 bg-white/60 text-[#6b4a3a] transition hover:bg-white/80 hover:text-[#3a2418]"
+                    aria-label="Close reactions"
+                  >
+                    <svg className="w-[16px] h-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 6 6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="max-h-[260px] overflow-y-auto px-4 py-3">
+                  {reactionUsers[reactionViewer.emoji]?.loading && !(reactionViewer.names || []).length ? (
+                    <div className="rounded-2xl border border-white/50 bg-white/35 px-4 py-4 text-sm font-semibold text-[#8a5d44]">
+                      Loading…
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((name, index) => (
+                        <div
+                          key={`post-reaction-viewer-${reactionViewer.emoji}-${name}-${index}`}
+                          className="flex items-center gap-3 rounded-2xl border border-white/45 bg-white/40 px-3 py-3"
+                        >
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
+                            {String(name || 'Member').charAt(0).toUpperCase() || '?'}
+                          </div>
+                          <div className="min-w-0 flex-1 truncate text-sm font-extrabold text-[#3a2418]">
+                            {name || 'Member'}
+                          </div>
+                          <div className="text-sm" aria-hidden="true">
+                            {reactionViewer.emoji}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -940,71 +998,6 @@ export default function PostCard({
         </div>
       )}
     </div>
-
-    {reactionViewer && (
-      <div
-        className="fixed inset-0 z-[100000] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Post reactions"
-        onClick={() => setReactionViewer(null)}
-      >
-        <div
-          className="max-h-[70dvh] w-full overflow-hidden rounded-t-[26px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_28px_90px_rgba(50,20,10,0.35)] backdrop-blur-[24px] sm:max-w-md sm:rounded-[26px]"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between border-b border-white/45 px-5 py-4">
-            <div>
-              <div className="text-base font-extrabold text-[#3a2418]">
-                {reactionViewer.emoji} Reactions
-              </div>
-              <div className="text-xs font-semibold text-[#a8775f]">
-                {reactionViewer.userIds?.length || 0}{' '}
-                {(reactionViewer.userIds?.length || 0) === 1 ? 'member' : 'members'}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setReactionViewer(null)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/60 text-[#6b4a3a] transition hover:bg-white/80 hover:text-[#3a2418]"
-              aria-label="Close reactions"
-            >
-              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="max-h-[56dvh] overflow-y-auto px-5 py-4">
-            {reactionUsers[reactionViewer.emoji]?.loading && !(reactionViewer.names || []).length ? (
-              <div className="rounded-2xl border border-white/50 bg-white/35 px-4 py-4 text-sm font-semibold text-[#8a5d44]">
-                Loading…
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((name, index) => (
-                  <div
-                    key={`post-reaction-viewer-${reactionViewer.emoji}-${name}-${index}`}
-                    className="flex items-center gap-3 rounded-2xl border border-white/45 bg-white/40 px-3 py-3"
-                  >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
-                      {String(name || 'Member').charAt(0).toUpperCase() || '?'}
-                    </div>
-                    <div className="min-w-0 flex-1 truncate text-sm font-extrabold text-[#3a2418]">
-                      {name || 'Member'}
-                    </div>
-                    <div className="text-sm" aria-hidden="true">
-                      {reactionViewer.emoji}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    )}
 
     {lightboxIndex !== null && mediaAttachments[lightboxIndex] && (
       <div
