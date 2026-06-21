@@ -16,6 +16,8 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
   const [commentMenuKey, setCommentMenuKey] = useState(null);
   const [connectingKey, setConnectingKey] = useState(null);
   const [localComments, setLocalComments] = useState([]);
+  const [commentLikeNames, setCommentLikeNames] = useState({});
+  const [likeViewer, setLikeViewer] = useState(null);
 
   const { data: session } = useSession();
   const router = useRouter();
@@ -85,6 +87,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
   const visibleComments = allComments.filter((c) => !(c && c.deleted === true));
 
   const myId = session?.user?.id ? String(session.user.id) : '';
+  const currentUserName = session?.user?.name || 'You';
 
   const getCommentAuthorId = (c) => {
     try {
@@ -97,6 +100,136 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
   const getCommentHeadline = (c) => {
     return c?.headline || c?.authorHeadline || null;
   };
+
+
+  const getCommentLikeIds = (c) => {
+    if (!Array.isArray(c?.likedBy)) return [];
+    return c.likedBy.map((id) => String(id || '').trim()).filter(Boolean);
+  };
+
+  const getCommentLikeKey = (comment, visibleIndex) => {
+    return `${post.id}:${comment?.id ?? visibleIndex}:comment-likes`;
+  };
+
+  const loadCommentLikeNames = async (ids, key) => {
+    const safeIds = Array.isArray(ids)
+      ? ids.map((id) => String(id || '').trim()).filter(Boolean)
+      : [];
+
+    if (!safeIds.length || !key) return [];
+
+    const cached = commentLikeNames[key];
+    if (cached?.loaded && Array.isArray(cached.names)) {
+      return cached.names;
+    }
+
+    setCommentLikeNames((prev) => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] || {}),
+        loading: true,
+      },
+    }));
+
+    try {
+      const res = await fetch('/api/users/names', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds: safeIds }),
+      });
+
+      if (!res.ok) throw new Error('Could not load comment likes');
+
+      const data = await res.json().catch(() => ({}));
+      const names = Array.isArray(data.names)
+        ? data.names.map((name) =>
+            name === currentUserName ? 'You' : String(name || 'Member')
+          )
+        : [];
+
+      setCommentLikeNames((prev) => ({
+        ...prev,
+        [key]: {
+          names,
+          loading: false,
+          loaded: true,
+        },
+      }));
+
+      return names;
+    } catch {
+      const fallbackNames = safeIds.map((id) =>
+        id === myId ? 'You' : 'Member'
+      );
+
+      setCommentLikeNames((prev) => ({
+        ...prev,
+        [key]: {
+          names: fallbackNames,
+          loading: false,
+          loaded: true,
+        },
+      }));
+
+      return fallbackNames;
+    }
+  };
+
+  const getCommentLikePreview = (comment, visibleIndex) => {
+    const ids = getCommentLikeIds(comment);
+    if (!ids.length) return '';
+
+    const key = getCommentLikeKey(comment, visibleIndex);
+    const names = commentLikeNames[key]?.names || [];
+
+    if (!names.length) {
+      return commentLikeNames[key]?.loading ? 'Liked by loading…' : 'Liked by members';
+    }
+
+    const firstNames = names.slice(0, 2).join(', ');
+    const remaining = Math.max(0, ids.length - 2);
+
+    return remaining > 0
+      ? `Liked by ${firstNames} +${remaining}`
+      : `Liked by ${firstNames}`;
+  };
+
+  const openCommentLikeViewer = async (comment, visibleIndex) => {
+    const ids = getCommentLikeIds(comment);
+    if (!ids.length) return;
+
+    const key = getCommentLikeKey(comment, visibleIndex);
+    const cachedNames = commentLikeNames[key]?.names || [];
+
+    setLikeViewer({
+      key,
+      ids,
+      names: cachedNames,
+    });
+
+    const names = await loadCommentLikeNames(ids, key);
+
+    setLikeViewer((current) => {
+      if (!current || current.key !== key) return current;
+      return {
+        ...current,
+        names,
+      };
+    });
+  };
+
+  useEffect(() => {
+    visibleComments.forEach((comment, index) => {
+      const ids = getCommentLikeIds(comment);
+      if (!ids.length) return;
+
+      const key = getCommentLikeKey(comment, index);
+      if (commentLikeNames[key]?.loaded || commentLikeNames[key]?.loading) return;
+
+      loadCommentLikeNames(ids, key);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localComments, post?.id]);
 
   const logProfileView = async (targetUserId, source) => {
     try {
@@ -172,7 +305,13 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
 
     try {
       const currentLikes = Number(comment?.likes) || 0;
-      const hasLiked = Boolean(comment?.hasLiked);
+      const likedBy = getCommentLikeIds(comment);
+      const hasLiked = Boolean(comment?.hasLiked) || likedBy.includes(myId);
+      const nextLikedBy = hasLiked
+        ? likedBy.filter((id) => id !== myId)
+        : myId
+          ? [...likedBy, myId]
+          : likedBy;
       const nextLikes = hasLiked
         ? Math.max(0, currentLikes - 1)
         : currentLikes + 1;
@@ -182,7 +321,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
           if (!c) return c;
 
           if (commentId && String(c.id || '') === String(commentId)) {
-            return { ...c, likes: nextLikes, hasLiked: !hasLiked };
+            return { ...c, likes: nextLikes, hasLiked: !hasLiked, likedBy: nextLikedBy };
           }
 
           if (!commentId) {
@@ -192,7 +331,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
               if (x && x.deleted === true) continue;
               seen += 1;
               if (seen === visibleIndex && idx === i) {
-                return { ...c, likes: nextLikes, hasLiked: !hasLiked };
+                return { ...c, likes: nextLikes, hasLiked: !hasLiked, likedBy: nextLikedBy };
               }
             }
           }
@@ -236,6 +375,11 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                   typeof updated.hasLiked === 'boolean'
                     ? updated.hasLiked
                     : Boolean(c?.hasLiked),
+                likedBy: Array.isArray(updated.likedBy)
+                  ? updated.likedBy
+                  : Array.isArray(c?.likedBy)
+                    ? c.likedBy
+                    : [],
                 id: updated.id ?? c.id,
               };
             }
@@ -404,7 +548,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
           </div>
         </header>
 
-        <div className={`mt-4 pr-1 text-[15px] leading-7 text-[#4a3024] ${isModal ? 'max-h-[22vh] overflow-y-auto sm:max-h-[26vh]' : ''}`}>
+        <div className={`mt-4 pr-1 text-[15px] leading-7 text-[#4a3024] ${isModal ? 'max-h-none overflow-visible sm:max-h-[26vh] sm:overflow-y-auto' : ''}`}>
           <div className="whitespace-pre-wrap">{post.body}</div>
 
           {safeAttachments.length > 0 && (
@@ -491,8 +635,10 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
             <div className="space-y-4">
               {visibleComments.map((c, i) => {
                 const likes = Number(c?.likes) || 0;
-                const hasLiked = Boolean(c?.hasLiked);
+                const likeIds = getCommentLikeIds(c);
+                const hasLiked = Boolean(c?.hasLiked) || likeIds.includes(myId);
                 const key = c?.id ?? i;
+                const likePreview = getCommentLikePreview(c, i);
 
                 const busyLike = likingKey === `${post.id}:${c?.id ?? i}`;
                 const busyDelete =
@@ -637,6 +783,19 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                             Like{likes > 0 ? ` · ${likes}` : ''}
                           </button>
 
+                          {likes > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => openCommentLikeViewer(c, i)}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-white/50 bg-white/30 px-3 py-1.5 text-xs font-bold text-[#8a5d44] transition hover:bg-white/55 hover:text-[#3a2418]"
+                              aria-label="See who liked this comment"
+                              title="See who liked this comment"
+                            >
+                              <span aria-hidden="true">👍</span>
+                              <span>{likePreview || `${likes} ${likes === 1 ? 'like' : 'likes'}`}</span>
+                            </button>
+                          )}
+
                           {canDelete && (
                             <button
                               type="button"
@@ -697,6 +856,72 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
           </div>
         </div>
       </section>
+
+      {likeViewer && (
+        <div
+          className="fixed inset-0 z-[100000] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Comment likes"
+          onClick={() => setLikeViewer(null)}
+        >
+          <div
+            className="max-h-[70dvh] w-full overflow-hidden rounded-t-[26px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_28px_90px_rgba(50,20,10,0.35)] backdrop-blur-[24px] sm:max-w-md sm:rounded-[26px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/45 px-5 py-4">
+              <div>
+                <div className="text-base font-extrabold text-[#3a2418]">
+                  Liked by
+                </div>
+                <div className="text-xs font-semibold text-[#a8775f]">
+                  {likeViewer.ids?.length || 0}{' '}
+                  {(likeViewer.ids?.length || 0) === 1 ? 'member' : 'members'}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setLikeViewer(null)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/60 text-[#6b4a3a] transition hover:bg-white/80 hover:text-[#3a2418]"
+                aria-label="Close comment likes"
+              >
+                <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="max-h-[56dvh] overflow-y-auto px-5 py-4">
+              {(commentLikeNames[likeViewer.key]?.loading &&
+                !(commentLikeNames[likeViewer.key]?.names || likeViewer.names || []).length) ? (
+                <div className="rounded-2xl border border-white/50 bg-white/35 px-4 py-4 text-sm font-semibold text-[#8a5d44]">
+                  Loading likes…
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {(commentLikeNames[likeViewer.key]?.names || likeViewer.names || []).map((name, index) => (
+                    <div
+                      key={`${likeViewer.key}-${name}-${index}`}
+                      className="flex items-center gap-3 rounded-2xl border border-white/45 bg-white/40 px-3 py-3"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
+                        {String(name || 'Member').charAt(0).toUpperCase() || '?'}
+                      </div>
+                      <div className="min-w-0 flex-1 truncate text-sm font-extrabold text-[#3a2418]">
+                        {name || 'Member'}
+                      </div>
+                      <div className="text-sm" aria-hidden="true">
+                        👍
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

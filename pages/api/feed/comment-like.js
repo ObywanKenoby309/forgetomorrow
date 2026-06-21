@@ -95,6 +95,7 @@ export default async function handler(req, res) {
         id: target.id ?? null,
         likes: nextLikes,
         hasLiked: !hasLiked,
+        likedBy: nextLikedBy,
       },
     });
   } catch (err) {
