@@ -902,7 +902,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
           onClick={() => setReactionViewer(null)}
         >
           <div
-            className="max-h-[56dvh] w-[calc(100vw-20px)] overflow-hidden rounded-t-[22px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_28px_90px_rgba(50,20,10,0.35)] backdrop-blur-[24px] sm:max-h-[420px] sm:max-w-[380px] sm:rounded-[24px]"
+            className="max-h-[54dvh] w-[calc(100vw-24px)] overflow-hidden rounded-t-[20px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_18px_48px_rgba(50,20,10,0.24)] backdrop-blur-[22px] sm:max-h-[360px] sm:max-w-[320px] sm:rounded-[20px]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-white/45 px-4 py-3 sm:px-5 sm:py-4">
@@ -946,7 +946,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                         targetUserSlug={user.slug || ''}
                         targetName={user.name || 'Member'}
                       >
-                        <div className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-white/45 bg-white/40 px-3 py-2 transition hover:bg-white/55">
+                        <div className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-white/45 bg-white/40 px-2.5 py-1.5 transition hover:bg-white/55">
                           {user.avatarUrl ? (
                             <img
                               src={user.avatarUrl}
@@ -964,11 +964,14 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                               {user.name || 'Member'}
                             </div>
                             {user.headline ? (
-                              <div className="truncate text-xs font-semibold text-[#a8775f]">
-                                {user.headline}
-                              </div>
-                            ) : null}
-                          </div>
+							  <div
+								className="truncate text-xs font-semibold text-[#a8775f]"
+								title={user.headline}
+							  >
+								{user.headline}
+							  </div>
+							) : null}
+						  </div>
 
                           {user.id && user.name !== 'You' ? (
                             <div className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/55 text-[#6b4a3a]">
