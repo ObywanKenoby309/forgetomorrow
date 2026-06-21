@@ -897,7 +897,6 @@ const names = Array.isArray(data.users)
                 <div className="space-y-2">
                   {(reactionNames[`${reactionViewer.commentKey}:${reactionViewer.emoji}`]?.names || reactionViewer.names || []).map((user, index) => (
                     <div
-<div
   key={`${reactionViewer.commentKey}-${user?.id || index}`}
   className="flex items-center gap-3 rounded-xl border border-white/45 bg-white/40 px-3 py-2"
 >
