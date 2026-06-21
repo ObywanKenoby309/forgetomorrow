@@ -1194,26 +1194,27 @@ const executionProofCard = (
           alignContent: "start",
         }}
       >
-        <div style={{ fontSize: 14, fontWeight: 900, color: SLATE }}>
-          Turn work into proof
-        </div>
-        <div
-          style={{
-            fontSize: 12,
-            color: MUTED,
-            lineHeight: 1.45,
-            marginTop: 6,
-            overflow: "hidden",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-          }}
-        >
-          Add a project with outcomes, tools, and impact recruiters can verify.
-        </div>
-        <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginTop: 8 }}>
-          Add a Project →
-        </div>
+<div style={{ fontSize: 14, fontWeight: 900, color: SLATE }}>
+  Turn work into proof
+</div>
+
+<div
+  style={{
+    fontSize: 12,
+    color: MUTED,
+    lineHeight: 1.45,
+    marginTop: 6,
+    overflow: "hidden",
+    display: "-webkit-box",
+    WebkitLineClamp: 3,
+    WebkitBoxOrient: "vertical",
+  }}
+>
+  <span style={{ color: ORANGE, fontWeight: 900 }}>
+    Add a Project
+  </span>{" "}
+  with outcomes, tools, and impact recruiters can verify.
+</div>
       </button>,
     ]}
   />
