@@ -1114,12 +1114,15 @@ export default function PostCard({
                             </div>
                           )}
 
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 flex-1 pr-2">
                             <div className="truncate text-sm font-extrabold text-[#3a2418]">
                               {user.name || 'Member'}
                             </div>
                             {user.headline ? (
-                              <div className="truncate text-[11px] font-semibold text-[#a8775f]">
+                              <div
+  className="block max-w-full truncate text-[11px] font-semibold text-[#a8775f]"
+  title={user.headline}
+>
                                 {user.headline}
                               </div>
                             ) : null}
@@ -1148,7 +1151,7 @@ export default function PostCard({
             style={{
               top: reactionViewer.top ?? 96,
               left: reactionViewer.left ?? 16,
-              width: 'min(340px, calc(100vw - 28px))',
+              width: 'min(440px, calc(100vw - 28px))',
             }}
             role="dialog"
             aria-modal="false"
@@ -1199,12 +1202,15 @@ export default function PostCard({
                             </div>
                           )}
 
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 flex-1 pr-2">
                             <div className="truncate text-sm font-extrabold text-[#3a2418]">
                               {user.name || 'Member'}
                             </div>
                             {user.headline ? (
-                              <div className="truncate text-[11px] font-semibold text-[#a8775f]">
+                              <div
+  className="block max-w-full truncate text-[11px] font-semibold text-[#a8775f]"
+  title={user.headline}
+>
                                 {user.headline}
                               </div>
                             ) : null}
