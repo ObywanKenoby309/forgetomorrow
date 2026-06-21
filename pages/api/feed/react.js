@@ -108,11 +108,16 @@ export default async function handler(req, res) {
 
     const existing = await prisma.feedPost.findUnique({
       where: { id: whereId },
-      select: { id: true, reactions: true },
+      select: { id: true, authorId: true, reactions: true },
     });
 
     if (!existing) {
       return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const authorId = existing.authorId ? String(existing.authorId) : '';
+    if (authorId && authorId === String(userId)) {
+      return res.status(403).json({ error: 'Cannot react to your own post' });
     }
 
     const currentReactions = normalizeReactions(existing.reactions);
@@ -125,7 +130,7 @@ export default async function handler(req, res) {
         data: {
           reactions: updatedReactions,
         },
-        select: { id: true, reactions: true },
+        select: { id: true, authorId: true, reactions: true },
       });
     } catch (err) {
       console.error('[FEED REACT UPDATE ERROR]', err);

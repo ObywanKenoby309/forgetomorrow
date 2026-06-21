@@ -59,6 +59,7 @@ export default function PostCard({
   const [copyConfirm,    setCopyConfirm]    = useState(false);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [reactionViewer, setReactionViewer] = useState(null);
   const touchStartXRef = useRef(null);
 
   const actionsMenuRef = useRef(null);
@@ -263,39 +264,115 @@ export default function PostCard({
 
   // ── Reactions ─────────────────────────────────────────────
 
-  const selectedEmojis = post.reactions
-    ?.filter((r) => r.users?.includes(currentUserId) || r.userIds?.includes(currentUserId))
-    ?.map((r) => r.emoji) || [];
+  const postReactions = Array.isArray(post.reactions) ? post.reactions : [];
 
-  const reactionCounts = post.reactions?.reduce((acc, r) => {
-    acc[r.emoji] = r.count || 0; return acc;
+  const selectedEmojis = postReactions
+    .filter((r) => {
+      const userIds = Array.isArray(r?.userIds) ? r.userIds.map(String) : [];
+      const users = Array.isArray(r?.users) ? r.users.map(String) : [];
+      const myId = currentUserId ? String(currentUserId) : '';
+      return Boolean(myId) && (userIds.includes(myId) || users.includes(myId));
+    })
+    .map((r) => r.emoji) || [];
+
+  const reactionCounts = postReactions.reduce((acc, r) => {
+    if (!r?.emoji) return acc;
+    acc[r.emoji] = Number(r.count) || (Array.isArray(r.userIds) ? r.userIds.length : 0);
+    return acc;
   }, {}) || {};
+
+  const visiblePostReactions = postReactions.filter((r) => {
+    const count = Number(r?.count) || (Array.isArray(r?.userIds) ? r.userIds.length : 0);
+    return r?.emoji && count > 0;
+  });
 
   const likeEmoji    = '👍';
   const likeCount    = reactionCounts[likeEmoji] || 0;
   const likeSelected = selectedEmojis.includes(likeEmoji);
-  const handleLike   = () => onReact?.(post.id, likeEmoji);
+  const handleLike   = () => {
+    if (isOwner) return;
+    onReact?.(post.id, likeEmoji);
+  };
 
   const fetchUsersForEmoji = async (emoji) => {
-    if (reactionUsers[emoji]) return;
-    const reaction = post.reactions?.find((r) => r.emoji === emoji);
-    if (!reaction || !reaction.userIds?.length) return;
+    const cached = reactionUsers[emoji];
+    if (cached?.loaded && Array.isArray(cached.names)) return cached.names;
+
+    const reaction = postReactions.find((r) => r.emoji === emoji);
+    const userIds = Array.isArray(reaction?.userIds) ? reaction.userIds.map(String).filter(Boolean) : [];
+    if (!userIds.length) return [];
+
+    setReactionUsers((prev) => ({
+      ...prev,
+      [emoji]: {
+        ...(prev[emoji] || {}),
+        loading: true,
+      },
+    }));
+
     try {
       const res = await fetch('/api/users/names', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userIds: reaction.userIds }),
+        body: JSON.stringify({ userIds }),
       });
-      if (res.ok) {
-        const data  = await res.json();
-        const names = (data.names || []).map((n) => (n === currentUserName ? 'You' : n)).join(', ');
-        setReactionUsers((prev) => ({ ...prev, [emoji]: names }));
-      }
-    } catch (err) { console.error('reaction hover error:', err); }
+      if (!res.ok) throw new Error('Could not load reaction users');
+
+      const data = await res.json().catch(() => ({}));
+      const names = Array.isArray(data.names)
+        ? data.names.map((n) => (n === currentUserName ? 'You' : String(n || 'Member')))
+        : userIds.map((id) => (String(id) === String(currentUserId) ? 'You' : 'Member'));
+
+      setReactionUsers((prev) => ({
+        ...prev,
+        [emoji]: {
+          names,
+          loading: false,
+          loaded: true,
+        },
+      }));
+
+      return names;
+    } catch (err) {
+      console.error('reaction hover error:', err);
+      const names = userIds.map((id) => (String(id) === String(currentUserId) ? 'You' : 'Member'));
+      setReactionUsers((prev) => ({
+        ...prev,
+        [emoji]: {
+          names,
+          loading: false,
+          loaded: true,
+        },
+      }));
+      return names;
+    }
   };
 
-  const getTooltipText = (emoji) =>
-    reactionUsers[emoji] ? `${reactionUsers[emoji]} reacted with ${emoji}` : 'Loading…';
+  const getTooltipText = (emoji) => {
+    const names = reactionUsers[emoji]?.names || [];
+    if (!names.length) return 'Loading…';
+    const preview = names.slice(0, 3).join(', ');
+    const extra = names.length > 3 ? ` +${names.length - 3}` : '';
+    return `${preview}${extra} reacted with ${emoji}`;
+  };
+
+  const openReactionViewer = async (emoji) => {
+    const reaction = postReactions.find((r) => r?.emoji === emoji);
+    const userIds = Array.isArray(reaction?.userIds) ? reaction.userIds.map(String).filter(Boolean) : [];
+    if (!userIds.length) return;
+
+    setReactionViewer({
+      emoji,
+      userIds,
+      names: reactionUsers[emoji]?.names || [],
+    });
+
+    const names = await fetchUsersForEmoji(emoji);
+    setReactionViewer((current) => {
+      if (!current || current.emoji !== emoji) return current;
+      return { ...current, names };
+    });
+  };
 
   // ── Derived display values ────────────────────────────────
 
@@ -627,21 +704,23 @@ export default function PostCard({
       <div className="pt-3 space-y-3">
         <div className={`h-px w-full ${accentDividerClass}`} />
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              onClick={handleLike}
-              className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full border text-xs sm:text-sm font-bold transition-all duration-150 ${
-                likeSelected
-                  ? 'text-[#b6481f] border-orange-400/50 bg-gradient-to-br from-orange-500/25 to-orange-500/10'
-                  : 'text-[#6b4a3a] border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 hover:text-[#3a2418] hover:-translate-y-0.5'
-              }`}
-            >
-              <svg className={`w-4 h-4 sm:w-[18px] sm:h-[18px] ${likeSelected ? 'ft-pop' : ''}`} viewBox="0 0 24 24" fill="currentColor">
-                <path d="M2 21h4V9H2v12zM22 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13.17 1 7.59 6.59C7.22 6.95 7 7.45 7 8v11c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
-              </svg>
-              <span>Like</span>
-              {likeCount > 0 && <span className="text-[10px] sm:text-xs text-[#a8775f]">{likeCount}</span>}
-            </button>
+            {!isOwner && (
+              <button
+                type="button"
+                onClick={handleLike}
+                className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full border text-xs sm:text-sm font-bold transition-all duration-150 ${
+                  likeSelected
+                    ? 'text-[#b6481f] border-orange-400/50 bg-gradient-to-br from-orange-500/25 to-orange-500/10'
+                    : 'text-[#6b4a3a] border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 hover:text-[#3a2418] hover:-translate-y-0.5'
+                }`}
+              >
+                <svg className={`w-4 h-4 sm:w-[18px] sm:h-[18px] ${likeSelected ? 'ft-pop' : ''}`} viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2 21h4V9H2v12zM22 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13.17 1 7.59 6.59C7.22 6.95 7 7.45 7 8v11c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
+                </svg>
+                <span>Like</span>
+                {likeCount > 0 && <span className="text-[10px] sm:text-xs text-[#a8775f]">{likeCount}</span>}
+              </button>
+            )}
 
             <button
               type="button"
@@ -683,17 +762,19 @@ export default function PostCard({
               )}
             </button>
 
-            <button
-              type="button"
-              onClick={() => setShowEmojiBar((v) => !v)}
-              className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 text-[#6b4a3a] hover:text-[#3a2418] transition-all duration-150"
-              aria-label="React"
-            >
-              <svg className="w-4 h-4 sm:w-[18px] sm:h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M9 9h.01M15 9h.01M8.5 14.5a4 4 0 0 0 7 0" />
-              </svg>
-            </button>
+            {!isOwner && (
+              <button
+                type="button"
+                onClick={() => setShowEmojiBar((v) => !v)}
+                className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60 text-[#6b4a3a] hover:text-[#3a2418] transition-all duration-150"
+                aria-label="React"
+              >
+                <svg className="w-4 h-4 sm:w-[18px] sm:h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M9 9h.01M15 9h.01M8.5 14.5a4 4 0 0 0 7 0" />
+                </svg>
+              </button>
+            )}
 
             <button
               type="button"
@@ -718,6 +799,39 @@ export default function PostCard({
               <span>{saved ? 'Saved' : 'Save'}</span>
             </button>
         </div>
+
+        {visiblePostReactions.length > 0 && (
+          <div className="relative flex flex-wrap items-center gap-1.5">
+            {visiblePostReactions.map((reaction) => {
+              const emoji = reaction.emoji;
+              const count = Number(reaction.count) || (Array.isArray(reaction.userIds) ? reaction.userIds.length : 0);
+              return (
+                <button
+                  key={`post-reaction-${emoji}`}
+                  type="button"
+                  onClick={() => openReactionViewer(emoji)}
+                  onMouseEnter={() => {
+                    setHoveredEmoji(emoji);
+                    fetchUsersForEmoji(emoji);
+                  }}
+                  onMouseLeave={() => setHoveredEmoji(null)}
+                  className="inline-flex items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 py-1.5 text-xs font-bold text-[#6b4a3a] transition hover:bg-white/55 hover:text-[#3a2418]"
+                  aria-label={`See who reacted with ${emoji}`}
+                  title={`See who reacted with ${emoji}`}
+                >
+                  <span>{emoji}</span>
+                  <span>{count}</span>
+                </button>
+              );
+            })}
+
+            {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
+              <div className="absolute bottom-full left-0 mb-2 z-20 whitespace-nowrap rounded-lg border border-white/40 bg-white/95 px-3 py-2 text-xs font-semibold text-[#3a2418] shadow-xl shadow-black/30">
+                {getTooltipText(hoveredEmoji)}
+              </div>
+            )}
+          </div>
+        )}
 
         {latestVisibleComment && (
           <button
@@ -807,12 +921,12 @@ export default function PostCard({
       </div>
 
       {/* Emoji bar */}
-      {showEmojiBar && (
+      {showEmojiBar && !isOwner && (
         <div className="relative">
           <div className="mt-2 ft-slidedown">
             <QuickEmojiBar
               emojis={['🔥', '🎉', '👏', '❤️']}
-              onPick={(emoji) => onReact?.(post.id, emoji)}
+              onPick={(emoji) => { if (!isOwner) onReact?.(post.id, emoji); }}
               selectedEmojis={selectedEmojis}
               reactionCounts={reactionCounts}
               onMouseEnter={(emoji) => { setHoveredEmoji(emoji); if (reactionCounts[emoji] > 0) fetchUsersForEmoji(emoji); }}
@@ -827,6 +941,71 @@ export default function PostCard({
         </div>
       )}
     </div>
+
+    {reactionViewer && (
+      <div
+        className="fixed inset-0 z-[100000] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Post reactions"
+        onClick={() => setReactionViewer(null)}
+      >
+        <div
+          className="max-h-[70dvh] w-full overflow-hidden rounded-t-[26px] border border-white/50 bg-[rgba(255,250,245,0.97)] shadow-[0_28px_90px_rgba(50,20,10,0.35)] backdrop-blur-[24px] sm:max-w-md sm:rounded-[26px]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between border-b border-white/45 px-5 py-4">
+            <div>
+              <div className="text-base font-extrabold text-[#3a2418]">
+                {reactionViewer.emoji} Reactions
+              </div>
+              <div className="text-xs font-semibold text-[#a8775f]">
+                {reactionViewer.userIds?.length || 0}{' '}
+                {(reactionViewer.userIds?.length || 0) === 1 ? 'member' : 'members'}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setReactionViewer(null)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/60 text-[#6b4a3a] transition hover:bg-white/80 hover:text-[#3a2418]"
+              aria-label="Close reactions"
+            >
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="max-h-[56dvh] overflow-y-auto px-5 py-4">
+            {reactionUsers[reactionViewer.emoji]?.loading && !(reactionViewer.names || []).length ? (
+              <div className="rounded-2xl border border-white/50 bg-white/35 px-4 py-4 text-sm font-semibold text-[#8a5d44]">
+                Loading…
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((name, index) => (
+                  <div
+                    key={`post-reaction-viewer-${reactionViewer.emoji}-${name}-${index}`}
+                    className="flex items-center gap-3 rounded-2xl border border-white/45 bg-white/40 px-3 py-3"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
+                      {String(name || 'Member').charAt(0).toUpperCase() || '?'}
+                    </div>
+                    <div className="min-w-0 flex-1 truncate text-sm font-extrabold text-[#3a2418]">
+                      {name || 'Member'}
+                    </div>
+                    <div className="text-sm" aria-hidden="true">
+                      {reactionViewer.emoji}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
 
     {lightboxIndex !== null && mediaAttachments[lightboxIndex] && (
       <div
