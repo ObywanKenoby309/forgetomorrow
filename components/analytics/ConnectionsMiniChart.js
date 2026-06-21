@@ -60,7 +60,7 @@ export default function ConnectionsMiniChart({ labels = [], data = [] }) {
 
   return (
     <div className="ft-chart-wrap" style={{ width: "100%", height: isMobile ? 220 : "clamp(220px, 30vw, 320px)" }}>
-      <style>{`.ft-chart-wrap svg rect:first-of-type { fill: transparent !important; }`}</style>
+      <style>{`.ft-chart-wrap > div > div > svg { background: transparent !important; }`}</style>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={rows}

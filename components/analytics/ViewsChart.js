@@ -51,7 +51,7 @@ export default function ViewsChart({ labels = [], data = [] }) {
 
   return (
     <div className="ft-chart-wrap" style={{ width: "100%", height: isMobile ? 220 : "clamp(220px, 30vw, 320px)" }}>
-      <style>{`.ft-chart-wrap svg rect:first-of-type { fill: transparent !important; }`}</style>
+      <style>{`.ft-chart-wrap > div > div > svg { background: transparent !important; }`}</style>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={rows} margin={isMobile ? { top: 8, right: 6, bottom: 8, left: -18 } : { top: 8, right: 12, bottom: 8, left: 0 }}>
           <defs>
