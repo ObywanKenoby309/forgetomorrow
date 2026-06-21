@@ -972,9 +972,8 @@ export default function ProfileAnalyticsPage() {
           <div
             style={{
               ...GLASS_SOFT,
-background: "rgba(255,255,255,0.42)",
-borderRadius: 16,
-padding: 14,
+              borderRadius: 16,
+              padding: 14,
               minHeight: isMobile ? 280 : COMMAND_CENTER_CHART_HEIGHT,
               overflow: "hidden",
               display: "grid",
@@ -987,9 +986,8 @@ padding: 14,
           <div
             style={{
               ...GLASS_SOFT,
-background: "rgba(255,255,255,0.42)",
-borderRadius: 16,
-padding: 14,
+              borderRadius: 16,
+              padding: 14,
               minHeight: isMobile ? 280 : COMMAND_CENTER_CHART_HEIGHT,
               overflow: "hidden",
               display: "grid",
@@ -1365,7 +1363,7 @@ padding: 14,
         Visibility Trend <span style={{ fontSize: 15, color: MUTED, textShadow: "none", fontWeight: 850 }}>(Last 7 Days)</span>
       </div>
 
-      <div style={{ ...GLASS_SOFT, background: "rgba(255,255,255,0.42)", borderRadius: 16, padding: 14, overflow: "hidden" }}>
+      <div style={{ ...GLASS_SOFT, borderRadius: 16, padding: 14, overflow: "hidden" }}>
         <div style={{ minHeight: 260, maxHeight: 325, overflow: "hidden" }}>
           <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
         </div>
@@ -1464,7 +1462,6 @@ padding: 14,
     <SectionCard title="Connection Growth">
       <div style={{
   ...GLASS_SOFT,
-  background: "rgba(255,255,255,0.42)",
   borderRadius: 14,
   padding: 14,
   minHeight: 210,
@@ -1525,7 +1522,6 @@ padding: 14,
       <div
         style={{
           ...GLASS_SOFT,
-          background: "rgba(255,255,255,0.42)",
           borderRadius: 16,
           padding: 14,
           minHeight: COMMAND_CENTER_CHART_HEIGHT,
@@ -1623,8 +1619,15 @@ padding: 14,
   );
 
   // ── KPI strip ────────────────────────────────────────────────────────────
+  const KPI_STRIP_STYLE = {
+    ...GLASS,
+    borderRadius: 18,
+    padding: 16,
+    border: "1px solid rgba(0,0,0,0.10)",
+  };
+
   const kpiStrip = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+    <div style={KPI_STRIP_STYLE}>
       <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(5, minmax(120px,1fr))", gap: GAP }}>
         <KPI label="Profile Interactions" value={kv(analytics.totalViews)} />
         <KPI label="Posts"                value={kv(analytics.postsCount)} />
@@ -1636,7 +1639,7 @@ padding: 14,
   );
 
   const visibilityKpiStrip = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+    <div style={KPI_STRIP_STYLE}>
       <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(5, minmax(120px,1fr))", gap: GAP }}>
         <KPI label="7D Views" value={kv(weeklyViews)} />
         <KPI label="Search Hits" value={kv(weeklySearch)} />
@@ -1648,7 +1651,7 @@ padding: 14,
   );
 
   const strengthKpiStrip = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+    <div style={KPI_STRIP_STYLE}>
       <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(5, minmax(120px,1fr))", gap: GAP }}>
         <KPI label="Professional Signal" value={strengthProfile.professionalSignal} />
         <KPI label="Execution Visibility" value={strengthProfile.executionVisibility} />
@@ -1660,7 +1663,7 @@ padding: 14,
   );
 
   const activityKpiStrip = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+    <div style={KPI_STRIP_STYLE}>
       <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0,1fr))" : "repeat(4, minmax(120px,1fr))", gap: GAP }}>
         <KPI label="Posts"            value={kv(analytics.postsCount)} />
         <KPI label="Comments"         value={kv(analytics.commentsCount)} />
