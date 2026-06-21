@@ -146,10 +146,26 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
         body: JSON.stringify({ userIds: safeIds }),
       });
       if (!res.ok) throw new Error('names fetch failed');
-      const data = await res.json().catch(() => ({}));
-      const names = Array.isArray(data.names)
-        ? data.names.map((n) => (n === currentUserName ? 'You' : String(n || 'Member')))
-        : safeIds.map((id) => (id === myId ? 'You' : 'Member'));
+const data = await res.json().catch(() => ({}));
+
+const names = Array.isArray(data.users)
+  ? data.users.map((u) => ({
+      id: String(u.id || ''),
+      name:
+        String(u.id || '') === myId
+          ? 'You'
+          : String(u.name || 'Member'),
+      headline: String(u.headline || ''),
+      slug: String(u.slug || ''),
+      avatarUrl: String(u.avatarUrl || ''),
+    }))
+  : safeIds.map((id) => ({
+      id,
+      name: id === myId ? 'You' : 'Member',
+      headline: '',
+      slug: '',
+      avatarUrl: '',
+    }));
 
       setReactionNames((prev) => ({ ...prev, [cacheKey]: { names, loading: false, loaded: true } }));
       return names;
@@ -458,28 +474,6 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
 
   return (
     <div className={isModal ? 'flex min-h-0 flex-1 flex-col' : 'flex flex-col'}>
-      <style jsx>{`
-        .ft-reaction-scroll {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(255,112,67,0.42) rgba(255,247,242,0.72);
-        }
-        .ft-reaction-scroll::-webkit-scrollbar {
-          width: 8px;
-        }
-        .ft-reaction-scroll::-webkit-scrollbar-track {
-          background: rgba(255,247,242,0.72);
-          border-radius: 999px;
-        }
-        .ft-reaction-scroll::-webkit-scrollbar-thumb {
-          background: linear-gradient(180deg, rgba(255,112,67,0.72), rgba(229,90,43,0.48));
-          border: 2px solid rgba(255,247,242,0.92);
-          border-radius: 999px;
-        }
-        .ft-reaction-scroll::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(180deg, rgba(255,112,67,0.9), rgba(229,90,43,0.62));
-        }
-      `}</style>
-
       <section className="shrink-0 border-b border-white/40 bg-white/30 px-4 py-4 sm:px-7 sm:py-5">
         <header className="flex items-center gap-3 pr-14">
           {post.authorAvatar ? (
@@ -665,7 +659,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
 
                         {menuOpen && canTarget ? (
                           <div
-                            className="absolute left-0 z-[100002] mt-2 w-44 overflow-hidden rounded-xl border border-white/50 bg-white/95 shadow-xl"
+                            className="absolute left-0 z-[100001] mt-2 w-56 overflow-visible rounded-xl border border-white/50 bg-white/95 shadow-xl"
                             role="menu"
                           >
                             <button
@@ -786,7 +780,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                                   type="button"
                                   onClick={() => openReactionViewer(c, i, reaction.emoji)}
                                   className="inline-flex items-center gap-1 rounded-full border border-white/50 bg-white/30 px-2.5 py-1.5 text-xs font-bold text-[#6b4a3a] transition hover:bg-white/55"
-                                  aria-label={`${reaction.count} ${reaction.count === 1 ? 'reaction' : 'reactions'} with ${reaction.emoji}`}
+                                  aria-label={`See who reacted with ${reaction.emoji}`}
                                 >
                                   <span>{reaction.emoji}</span>
                                   <span>{reaction.count}</span>
@@ -893,7 +887,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
               </button>
             </div>
 
-            <div className="ft-reaction-scroll max-h-[44dvh] overflow-x-visible overflow-y-auto px-4 py-3 sm:max-h-[56dvh] sm:px-5 sm:py-4">
+            <div className="max-h-[44dvh] overflow-y-auto px-4 py-3 sm:max-h-[56dvh] sm:px-5 sm:py-4">
               {reactionNames[`${reactionViewer.commentKey}:${reactionViewer.emoji}`]?.loading &&
                 !(reactionViewer.names?.length) ? (
                 <div className="rounded-2xl border border-white/50 bg-white/35 px-4 py-4 text-sm font-semibold text-[#8a5d44]">
@@ -901,21 +895,40 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {(reactionNames[`${reactionViewer.commentKey}:${reactionViewer.emoji}`]?.names || reactionViewer.names || []).map((name, index) => (
+                  {(reactionNames[`${reactionViewer.commentKey}:${reactionViewer.emoji}`]?.names || reactionViewer.names || []).map((user, index) => (
                     <div
-                      key={`${reactionViewer.commentKey}-${name}-${index}`}
-                      className="flex items-center gap-2.5 rounded-2xl border border-white/45 bg-white/40 px-3 py-2.5 sm:gap-3 sm:py-3"
-                    >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white ring-1 ring-white/50">
-                        {String(name || 'Member').charAt(0).toUpperCase() || '?'}
-                      </div>
-                      <div className="min-w-0 flex-1 text-sm font-extrabold text-[#3a2418]">
-                        <span className="block truncate">{name || 'Member'}</span>
-                      </div>
-                      <div className="text-sm" aria-hidden="true">
-                        {reactionViewer.emoji}
-                      </div>
-                    </div>
+<div
+  key={`${reactionViewer.commentKey}-${user?.id || index}`}
+  className="flex items-center gap-3 rounded-xl border border-white/45 bg-white/40 px-3 py-2"
+>
+  {user?.avatarUrl ? (
+    <img
+      src={user.avatarUrl}
+      alt={user.name}
+      className="h-9 w-9 rounded-full object-cover ring-1 ring-white/50"
+    />
+  ) : (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
+      {String(user?.name || 'Member').charAt(0).toUpperCase()}
+    </div>
+  )}
+
+  <div className="min-w-0 flex-1">
+    <div className="truncate text-sm font-extrabold text-[#3a2418]">
+      {user?.name || 'Member'}
+    </div>
+
+    {user?.headline ? (
+      <div className="truncate text-xs text-[#a8775f]">
+        {user.headline}
+      </div>
+    ) : null}
+  </div>
+
+  <div className="text-sm">
+    {reactionViewer.emoji}
+  </div>
+</div>
                   ))}
                 </div>
               )}

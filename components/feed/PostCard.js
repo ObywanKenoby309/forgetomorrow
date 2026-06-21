@@ -320,9 +320,15 @@ export default function PostCard({
       if (!res.ok) throw new Error('Could not load reaction users');
 
       const data = await res.json().catch(() => ({}));
-      const names = Array.isArray(data.names)
-        ? data.names.map((n) => (n === currentUserName ? 'You' : String(n || 'Member')))
-        : userIds.map((id) => (String(id) === String(currentUserId) ? 'You' : 'Member'));
+      const names = Array.isArray(data.users)
+  ? data.users.map((u) => ({
+      id: u.id,
+      name: u.name || 'Member',
+      headline: u.headline || '',
+      slug: u.slug || '',
+      avatarUrl: u.avatarUrl || '',
+    }))
+  : [];
 
       setReactionUsers((prev) => ({
         ...prev,
