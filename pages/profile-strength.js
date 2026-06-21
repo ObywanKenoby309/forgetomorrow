@@ -1116,19 +1116,19 @@ export default function ProfileStrengthPage() {
 const executionProofCard = (
   <RotatingCard
     title="Execution Proof"
-    minHeight={isMobile ? 260 : 104}
+    minHeight={isMobile ? 260 : 118}
     cardStyle={
       isMobile
         ? {}
         : {
-            height: 205,
+            height: 215,
             boxSizing: "border-box",
             overflow: "hidden",
           }
     }
     contentStyle={{
       alignContent: "stretch",
-      height: isMobile ? "auto" : 104,
+      height: isMobile ? "auto" : 118,
       overflow: "hidden",
     }}
     slides={[
@@ -1142,7 +1142,7 @@ const executionProofCard = (
                   ...GLASS_SOFT,
                   borderRadius: 12,
                   padding: 14,
-                  height: 145,
+                  height: "100%",
                   boxSizing: "border-box",
                   overflow: "hidden",
                 }}
@@ -1150,7 +1150,9 @@ const executionProofCard = (
                 <div style={{ fontSize: 10, fontWeight: 950, color: ORANGE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
                   Project Evidence
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 950, color: SLATE, lineHeight: 1.35 }}>{title}</div>
+                <div style={{ fontSize: 14, fontWeight: 950, color: SLATE, lineHeight: 1.35 }}>
+                  {title}
+                </div>
               </div>
             );
           })
@@ -1161,7 +1163,7 @@ const executionProofCard = (
                 ...GLASS_SOFT,
                 borderRadius: 12,
                 padding: 14,
-                height: 145,
+                height: "100%",
                 boxSizing: "border-box",
                 overflow: "hidden",
                 fontSize: 12,
@@ -1203,7 +1205,7 @@ const executionProofCard = (
             marginTop: 6,
             overflow: "hidden",
             display: "-webkit-box",
-            WebkitLineClamp: 3,
+            WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
           }}
         >
@@ -1212,7 +1214,7 @@ const executionProofCard = (
         <div style={{ fontSize: 12, fontWeight: 900, color: ORANGE, marginTop: 8 }}>
           Add a Project →
         </div>
-      </button>
+      </button>,
     ]}
   />
 );
