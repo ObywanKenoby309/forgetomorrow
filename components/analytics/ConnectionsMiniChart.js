@@ -59,8 +59,8 @@ export default function ConnectionsMiniChart({ labels = [], data = [] }) {
   }
 
   return (
-    <div style={{ width: "100%", height: isMobile ? 220 : "clamp(220px, 30vw, 320px)" }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div style={{ width: "100%", height: isMobile ? 220 : "clamp(220px, 30vw, 320px)", background: "transparent" }}><style>{`svg.recharts-surface > rect, .recharts-wrapper svg > rect { fill: transparent !important; }`}</style>
+      <ResponsiveContainer width="100%" height="100%" style={{ background: "transparent" }}>
         <BarChart
           data={rows}
           margin={isMobile ? { top: 8, right: 4, bottom: 20, left: -18 } : { top: 8, right: 12, bottom: 28, left: 0 }}

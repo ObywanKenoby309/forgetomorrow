@@ -50,8 +50,8 @@ export default function ViewsChart({ labels = [], data = [] }) {
   }, [labels, data]);
 
   return (
-    <div style={{ width: "100%", height: isMobile ? 220 : "clamp(220px, 30vw, 320px)" }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div style={{ width: "100%", height: isMobile ? 220 : "clamp(220px, 30vw, 320px)", background: "transparent" }}><style>{`svg.recharts-surface > rect, .recharts-wrapper svg > rect { fill: transparent !important; }`}</style>
+      <ResponsiveContainer width="100%" height="100%" style={{ background: "transparent" }}>
         <AreaChart data={rows} margin={isMobile ? { top: 8, right: 6, bottom: 8, left: -18 } : { top: 8, right: 12, bottom: 8, left: 0 }} style={{ background: "transparent" }}>
           <defs>
             <linearGradient id="profileViewsOrange" x1="0" y1="0" x2="0" y2="1">
