@@ -356,65 +356,51 @@ export default function PostCard({
     return `${preview}${extra} reacted with ${emoji}`;
   };
 
-  const openReactionViewer = async (emoji, event) => {
-    const reaction = postReactions.find((r) => r?.emoji === emoji);
-    const userIds = Array.isArray(reaction?.userIds) ? reaction.userIds.map(String).filter(Boolean) : [];
-    if (!userIds.length) return;
+const openReactionViewer = async (emoji, event) => {
+  const reaction = postReactions.find((r) => r?.emoji === emoji);
+  const userIds = Array.isArray(reaction?.userIds)
+    ? reaction.userIds.map(String).filter(Boolean)
+    : [];
 
-    let top = 96;
-    let left = 16;
+  if (!userIds.length) return;
 
-    try {
-      const viewportWidth = window.innerWidth || 360;
-      const viewportHeight = window.innerHeight || 700;
-      const panelWidth = 300;
-      const estimatedPanelHeight = 330;
-      const clickX = Number(event?.clientX);
-      const clickY = Number(event?.clientY);
+  const rect = event.currentTarget.getBoundingClientRect();
 
-      if (Number.isFinite(clickX) && Number.isFinite(clickY)) {
-        left = Math.min(
-          Math.max(12, clickX - 18),
-          Math.max(12, viewportWidth - panelWidth - 12)
-        );
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
 
-        top = clickY + 12;
+  const panelWidth = 300;
+  const panelHeight = 330;
 
-        if (top + estimatedPanelHeight > viewportHeight) {
-          top = Math.max(12, clickY - estimatedPanelHeight - 12);
-        }
-      } else {
-        const rect = event?.currentTarget?.getBoundingClientRect?.();
+  let left = rect.left;
+  let top = rect.bottom + 8;
 
-        if (rect) {
-          left = Math.min(
-            Math.max(12, rect.left),
-            Math.max(12, viewportWidth - panelWidth - 12)
-          );
+  if (left + panelWidth > viewportWidth - 12) {
+    left = viewportWidth - panelWidth - 12;
+  }
 
-          top = rect.bottom + 8;
+  if (top + panelHeight > viewportHeight - 12) {
+    top = rect.top - panelHeight - 8;
+  }
 
-          if (top + estimatedPanelHeight > viewportHeight) {
-            top = Math.max(12, rect.top - estimatedPanelHeight - 8);
-          }
-        }
-      }
-    } catch {}
+  left = Math.max(12, left);
+  top = Math.max(12, top);
 
-    setReactionViewer({
-      emoji,
-      userIds,
-      names: reactionUsers[emoji]?.names || [],
-      top,
-      left,
-    });
+  setReactionViewer({
+    emoji,
+    userIds,
+    names: reactionUsers[emoji]?.names || [],
+    top,
+    left,
+  });
 
-    const names = await fetchUsersForEmoji(emoji);
-    setReactionViewer((current) => {
-      if (!current || current.emoji !== emoji) return current;
-      return { ...current, names };
-    });
-  };
+  const names = await fetchUsersForEmoji(emoji);
+
+  setReactionViewer((current) => {
+    if (!current || current.emoji !== emoji) return current;
+    return { ...current, names };
+  });
+};
 
   // ── Derived display values ────────────────────────────────
 
