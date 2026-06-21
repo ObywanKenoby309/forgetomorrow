@@ -1089,8 +1089,15 @@ return users;
         )}
       </div>
     </div>
-  </MemberAvatarActions>
-			  ))}
+</MemberAvatarActions>
+              ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </>,
+      document.body
+    )}
 
     {lightboxIndex !== null && mediaAttachments[lightboxIndex] && (
       <div
