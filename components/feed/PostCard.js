@@ -320,20 +320,18 @@ export default function PostCard({
       if (!res.ok) throw new Error('Could not load reaction users');
 
       const data = await res.json().catch(() => ({}));
-      const names = Array.isArray(data.names)
-        ? data.names.map((n) => (n === currentUserName ? 'You' : String(n || 'Member')))
-        : userIds.map((id) => (String(id) === String(currentUserId) ? 'You' : 'Member'));
+      cconst users = Array.isArray(data.users) ? data.users : [];
 
-      setReactionUsers((prev) => ({
-        ...prev,
-        [emoji]: {
-          names,
-          loading: false,
-          loaded: true,
-        },
-      }));
+setReactionUsers((prev) => ({
+  ...prev,
+  [emoji]: {
+    users,
+    loading: false,
+    loaded: true,
+  },
+}));
 
-      return names;
+return users;
     } catch (err) {
       console.error('reaction hover error:', err);
       const names = userIds.map((id) => (String(id) === String(currentUserId) ? 'You' : 'Member'));
@@ -1059,26 +1057,40 @@ export default function PostCard({
 
             <div className="max-h-[260px] overflow-y-auto px-4 py-3">
               <div className="space-y-2">
-                {(reactionUsers[reactionViewer.emoji]?.names || reactionViewer.names || []).map((name, index) => (
-                  <div
-                    key={`post-reaction-viewer-${reactionViewer.emoji}-${name}-${index}`}
-                    className="flex items-center gap-3 rounded-2xl border border-white/45 bg-white/40 px-3 py-3"
-                  >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-xs font-extrabold text-white">
-                      {String(name || 'Member').charAt(0).toUpperCase() || '?'}
-                    </div>
-                    <div className="min-w-0 flex-1 truncate text-sm font-extrabold text-[#3a2418]">
-                      {name || 'Member'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+(reactionUsers[reactionViewer.emoji]?.users || []).map((user) => (
+  <MemberAvatarActions
+    key={user.id}
+    targetUserId={user.id}
+    targetUserSlug={user.slug}
+    targetName={user.name}
+  >
+    <div className="flex items-center gap-3 rounded-2xl border border-white/45 bg-white/40 px-3 py-3 hover:bg-white/60 cursor-pointer">
+      {user.avatarUrl ? (
+        <img
+          src={user.avatarUrl}
+          alt={user.name}
+          className="h-10 w-10 rounded-full object-cover"
+        />
+      ) : (
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-300 text-white font-bold">
+          {String(user.name || '?').charAt(0).toUpperCase()}
+        </div>
+      )}
+
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-extrabold text-[#3a2418]">
+          {user.name}
+        </div>
+
+        {user.headline && (
+          <div className="truncate text-xs text-[#8a5d44]">
+            {user.headline}
           </div>
         )}
-      </>,
-      document.body
-    )}
+      </div>
+    </div>
+  </MemberAvatarActions>
+))
 
     {lightboxIndex !== null && mediaAttachments[lightboxIndex] && (
       <div

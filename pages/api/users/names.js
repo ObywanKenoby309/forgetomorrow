@@ -21,12 +21,17 @@ export default async function handler(req, res) {
 
   try {
     const users = await prisma.user.findMany({
-      where: { id: { in: userIds } },
-      select: { id: true, name: true },
-    });
+  where: { id: { in: userIds } },
+  select: {
+    id: true,
+    name: true,
+    headline: true,
+    slug: true,
+    avatarUrl: true,
+  },
+});
 
-    const names = users.map(u => u.name || 'User');
-    return res.status(200).json({ names });
+return res.status(200).json({ users });
   } catch (err) {
     console.error('[USERS NAMES ERROR]', err);
     return res.status(500).json({ error: 'Failed to fetch user names' });
