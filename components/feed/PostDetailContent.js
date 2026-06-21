@@ -570,13 +570,13 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
           </div>
         </div>
 
-        <div className={`px-4 py-4 sm:px-7 sm:py-5 ${isModal ? 'min-h-0 flex-1 overflow-y-auto' : ''}`}>
+        <div className={`px-4 py-3 sm:px-7 sm:py-4 ${isModal ? 'min-h-0 flex-1 overflow-y-auto' : ''}`}>
           {visibleComments.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-white/50 bg-white/25 px-5 py-10 text-center text-sm text-[#8a5d44]">
               No comments yet. Be the first to add one.
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {visibleComments.map((c, i) => {
                 const commentReactions = getCommentReactions(c);
                 const userReactedEmoji = getUserReactedEmoji(c);
@@ -607,7 +607,7 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
                 return (
                   <article
                     key={key}
-                    className="group rounded-3xl border border-white/50 bg-white/50 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] transition hover:bg-white/65 hover:border-white/70 sm:p-5"
+                    className="group rounded-2xl border border-white/50 bg-white/50 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] transition hover:bg-white/65 hover:border-white/70 sm:p-4"
                   >
                     <div className="flex items-start gap-3 sm:gap-4">
                       <div className="relative shrink-0">
@@ -802,26 +802,28 @@ export default function PostDetailContent({ post, onReply, variant = 'modal' }) 
           )}
         </div>
 
-        <div className="shrink-0 border-t border-white/40 bg-white/35 px-4 py-3 shadow-[0_-12px_35px_rgba(50,20,10,0.06)] sm:px-7 sm:py-4">
-          <div className="rounded-3xl border border-white/50 bg-white/40 p-3 sm:p-4">
+        <div className="shrink-0 border-t border-white/40 bg-white/35 px-4 py-2 shadow-[0_-12px_35px_rgba(50,20,10,0.06)] sm:px-7 sm:py-3">
+          <div className="rounded-2xl border border-white/50 bg-white/40 p-2.5 sm:p-3">
             <div className="rounded-2xl border border-white/50 bg-white/45 overflow-hidden">
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                rows={3}
-                className="max-h-40 min-h-[96px] w-full resize-y border-0 p-4 bg-transparent text-[15px] leading-6 text-[#3a2418] placeholder:text-[#b48b78] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[rgba(255,112,67,0.4)]"
+                rows={2}
+                className="max-h-28 min-h-[58px] w-full resize-y border-0 p-3 bg-transparent text-[14px] leading-5 text-[#3a2418] placeholder:text-[#b48b78] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[rgba(255,112,67,0.4)]"
                 placeholder="Write your comment…"
               />
             </div>
 
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <QuickEmojiBar onPick={addEmoji} />
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="-mt-2">
+                <QuickEmojiBar onPick={addEmoji} />
+              </div>
 
               <div className="flex justify-end">
                 <button
                   onClick={send}
                   disabled={!text.trim()}
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-[#FF7043] to-[#E55A2B] px-5 py-2.5 text-sm font-extrabold text-white shadow-[0_10px_24px_-10px_rgba(255,112,67,0.55)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-10px_rgba(255,112,67,0.65)] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 disabled:hover:shadow-[0_10px_24px_-10px_rgba(255,112,67,0.55)]"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-[#FF7043] to-[#E55A2B] px-4 py-2 text-sm font-extrabold text-white shadow-[0_10px_24px_-10px_rgba(255,112,67,0.55)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-10px_rgba(255,112,67,0.65)] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 disabled:hover:shadow-[0_10px_24px_-10px_rgba(255,112,67,0.55)]"
                 >
                   Comment
                   <svg className="w-[16px] h-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
