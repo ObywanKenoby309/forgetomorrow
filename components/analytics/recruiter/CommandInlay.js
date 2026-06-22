@@ -50,7 +50,7 @@ const ORANGE_HEADING_LIFT = {
 // desktop bleed settings
 const LEFT_BLEED = -(240 + 12);
 const RIGHT_BLEED = -(240 + 12);
-const DESKTOP_REPORT_DROP = 8;
+const DESKTOP_REPORT_DROP = 4;
 
 // ─── Insight config ───────────────────────────────────────────────────────────
 const INSIGHT_CONFIG = {
