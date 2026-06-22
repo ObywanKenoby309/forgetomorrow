@@ -202,15 +202,16 @@ function ToggleRow({ checked, onChange, label, hint }) {
   return (
     <label
       style={{
-        ...GLASS_SOFT,
-        borderRadius: 12,
-        padding: 12,
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
-        gap: 12,
-        cursor: "pointer",
-      }}
+  ...GLASS_SOFT,
+  borderRadius: 14,
+  padding: "10px 12px",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  justifyContent: "space-between",
+  minHeight: 0,
+}}
     >
       <div>
         <div style={{ fontSize: 13, fontWeight: 800, color: SLATE }}>{label}</div>
@@ -426,7 +427,19 @@ function AllOverview({ schedules, onSelectReport }) {
                   </span>
                 )}
               </div>
-              <div style={{ fontSize: 12, color: MUTED }}>{report.description}</div>
+              <div
+  style={{
+    fontSize: 11,
+    color: MUTED,
+    lineHeight: 1.35,
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+  }}
+>
+  {report.description}
+</div>
               {hasSchedule && (
                 <div style={{ fontSize: 12, color: SLATE, marginTop: 6, fontWeight: 700 }}>
                   {s.cadence.charAt(0).toUpperCase() + s.cadence.slice(1)} · {s.timeOfDay} · {prettyTZ(s.timezone)} · {recipientCount} recipient{recipientCount !== 1 ? "s" : ""}
@@ -846,7 +859,7 @@ export default function SnapshotDeliveryInlay({ isMobile = false }) {
 
   return (
     <>
-      <div style={{ display: "grid", gap: 14, paddingTop: 0, width: "100%", minWidth: 0 }}>
+      <div style={{ display: "grid", gap: 14, paddingTop: isMobile ? 0 : 28, width: "100%", minWidth: 0 }}>
         <div style={{ display: "grid", gap: 14, width: "100%", minWidth: 0 }}>
           <section style={{ ...GLASS, borderRadius: 18, padding: 16, textAlign: "center" }}>
             <div style={{ fontSize: 24, fontWeight: 900, color: ORANGE }}>Snapshot Delivery Center</div>
