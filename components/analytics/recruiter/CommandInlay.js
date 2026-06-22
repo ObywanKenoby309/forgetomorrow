@@ -48,7 +48,7 @@ const ORANGE_HEADING_LIFT = {
 };
 
 // desktop bleed settings
-const LEFT_BLEED = -(0);
+const LEFT_BLEED = -(240 + 12);
 const RIGHT_BLEED = -(240 + 12);
 const DESKTOP_REPORT_DROP = -8;
 
@@ -396,7 +396,6 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           justifyContent: "space-between",
           gap: 12,
           marginBottom: 12,
-          flexShrink: 0,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
