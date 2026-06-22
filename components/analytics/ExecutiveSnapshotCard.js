@@ -158,8 +158,6 @@ export default function ExecutiveSnapshotCard({
           />
           </div>
         </div>
-        </div>
-      </div>
     </div>
   );
 }
