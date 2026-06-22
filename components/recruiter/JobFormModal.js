@@ -401,10 +401,6 @@ export default function JobFormModal({
 
   if (!open) return null;
 
-  const aiBadge = isEnterprise
-    ? { label: "AI Optimizer Active", hint: "Rewrite + ATS guidance for faster, cleaner postings." }
-    : { label: "AI Add-on Locked", hint: "Upgrade to unlock JD optimization + ATS guidance." };
-
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[clamp(40px,10vh,100px)] pb-6">
       {/* Backdrop */}
@@ -429,27 +425,6 @@ export default function JobFormModal({
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-semibold text-slate-900">{titleLabel}</h2>
 
-              {/* AI badge (brand-forward, less transparent) */}
-              <span
-                className={`text-[11px] px-2 py-1 rounded-full font-medium border ${
-                  isEnterprise
-                    ? "text-white"
-                    : "text-white bg-slate-500 border-slate-500"
-                }`}
-                style={
-                  isEnterprise
-                    ? {
-                        background: `linear-gradient(90deg, ${ORANGE} 0%, ${ORANGE_DARK} 100%)`,
-                        borderColor: ORANGE_DARK,
-                      }
-                    : undefined
-                }
-                title={aiBadge.hint}
-              >
-                {aiBadge.label}
-              </span>
-
-              {/* subtle “you’re in control” helper */}
               {!isView && (
                 <span className="text-xs text-slate-600">
                   Build fast. Save as a template. Add screening questions only when you need them.
@@ -483,7 +458,26 @@ export default function JobFormModal({
                   Save as Template
                 </button>
 
-                {/* Additional Questions toggle (beside save) */}
+                {!isView && (
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!valid}
+                    className={`px-3 py-1.5 rounded-lg text-white active:scale-[0.99] ${
+                      valid ? "" : "bg-slate-400 cursor-not-allowed"
+                    }`}
+                    style={
+                      valid
+                        ? { background: `linear-gradient(90deg, ${ORANGE} 0%, ${ORANGE_DARK} 100%)` }
+                        : undefined
+                    }
+                    title={valid ? "Save this job posting." : "Fill required fields to save this job."}
+                  >
+                    Save Job
+                  </button>
+                )}
+
+                {/* Additional Questions toggle */}
                 <button
                   type="button"
                   onClick={toggleAdditionalQuestions}
@@ -976,45 +970,6 @@ export default function JobFormModal({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-5 border-t border-black/5 flex items-center justify-between gap-3 sticky bottom-[64px] md:bottom-0 bg-white/70 backdrop-blur-xl">
-          <div className="text-xs text-slate-600 text-center md:text-left w-full md:w-auto">
-            {isView
-              ? "Viewing job details."
-              : valid
-              ? "Ready to save. Your posting is complete."
-              : "Fields marked * are required."}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white hover:bg-slate-50 active:scale-[0.99]"
-            >
-              Close
-            </button>
-
-            {!isView && (
-              <button
-                onClick={handleSave}
-                disabled={!valid}
-                className={`px-4 py-2 rounded-xl text-sm text-white active:scale-[0.99] ${
-                  valid ? "" : "bg-slate-400 cursor-not-allowed"
-                }`}
-                style={
-                  valid
-                    ? { background: `linear-gradient(90deg, ${ORANGE} 0%, ${ORANGE_DARK} 100%)` }
-                    : undefined
-                }
-              >
-                Save Job
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Spacer so the very bottom content is not trapped behind the raised sticky footer on mobile */}
-        <div className="h-[64px] md:h-0" />
       </div>
     </div>
   );
