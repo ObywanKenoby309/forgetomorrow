@@ -22,15 +22,15 @@ import { classifySignals, overallVerdict, signalScoreToPercent } from "@/lib/int
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const GLASS = {
   border: "1px solid rgba(255,255,255,0.22)",
-  background: "rgba(255,255,255,0.68)",
+  background: "rgba(255,255,255,0.28)",
   boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
   backdropFilter: "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
 };
 
 const GLASS_SOFT = {
-  border: "1px solid rgba(255,255,255,0.28)",
-  background: "rgba(255,255,255,0.32)",
+  border: "1px solid rgba(255,255,255,0.18)",
+  background: "rgba(255,255,255,0.18)",
   boxShadow: "0 8px 22px rgba(15,23,42,0.10)",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
