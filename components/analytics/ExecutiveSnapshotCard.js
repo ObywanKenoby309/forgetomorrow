@@ -99,7 +99,6 @@ export default function ExecutiveSnapshotCard({
         maxWidth: "100%",
         minWidth: 0,
         boxSizing: "border-box",
-        alignSelf: "start",
       }}
     >
       <div style={{ display: "grid", gap: 10 }}>
