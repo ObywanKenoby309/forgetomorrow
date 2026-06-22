@@ -334,16 +334,14 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
   const compactStatColumns = isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))";
 
   const execSnapshotCard = (
-    <div style={{ height: 460, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-      <ExecutiveSnapshotCard
-        loading={loading}
-        topSource={topSource}
-        offerAcceptanceRate={offerAcceptanceRate}
-        totalHires={totalHires}
-        totalApplies={totalApplies}
-        compactStatColumns={compactStatColumns}
-      />
-    </div>
+    <ExecutiveSnapshotCard
+      loading={loading}
+      topSource={topSource}
+      offerAcceptanceRate={offerAcceptanceRate}
+      totalHires={totalHires}
+      totalApplies={totalApplies}
+      compactStatColumns={compactStatColumns}
+    />
   );
 
   const recruiterActivityCard = (
@@ -653,7 +651,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           marginTop: DESKTOP_REPORT_DROP,
           display: "grid",
           gridTemplateColumns: "240px minmax(0, 2fr) 240px",
-          alignItems: "start",
+          alignItems: "end",
           gap: 12,
         }}
       >
