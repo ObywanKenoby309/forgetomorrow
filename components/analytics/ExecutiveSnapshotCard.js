@@ -96,19 +96,13 @@ export default function ExecutiveSnapshotCard({
         borderRadius: 18,
         padding: 12,
         width: "100%",
+        maxWidth: "100%",
         minWidth: 0,
-        pointerEvents: "auto",
+        boxSizing: "border-box",
+        alignSelf: "start",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 10,
-          marginBottom: 10,
-        }}
-      >
+      <div style={{ display: "grid", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 16, fontWeight: 900, color: SLATE, letterSpacing: "-0.2px", lineHeight: 1.15 }}>
             Executive Snapshot
@@ -119,33 +113,16 @@ export default function ExecutiveSnapshotCard({
               color: MUTED,
               marginTop: 3,
               lineHeight: 1.35,
-              display: "-webkit-box",
-              WebkitLineClamp: 1,
-              WebkitBoxOrient: "vertical",
+              whiteSpace: "nowrap",
               overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
             Source quality, interview flow, and close efficiency.
           </div>
         </div>
 
-        {!isMobile && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 0 }}>
-            <ActionLink href="/recruiter/analytics/reports?report=funnel" orange>
-              Report details
-            </ActionLink>
-            <ActionLink href="/recruiter/analytics/presentation">
-              Visuals
-            </ActionLink>
-            <ActionLink href="/recruiter/analytics/snapshot-delivery" primary>
-              Send Snapshot
-            </ActionLink>
-          </div>
-        )}
-      </div>
-
-      {isMobile && (
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <ActionLink href="/recruiter/analytics/reports?report=funnel" orange>
             Report details
           </ActionLink>
@@ -156,30 +133,30 @@ export default function ExecutiveSnapshotCard({
             Send Snapshot
           </ActionLink>
         </div>
-      )}
 
-      <div style={{ display: "grid", gridTemplateColumns: compactStatColumns, gap: 8 }}>
-        <StatTile
-          label="Top source"
-          value={loading ? "…" : topSource?.name || "N/A"}
-          hint="Best-performing inbound channel"
-        />
-        <StatTile
-          label="Offer acceptance"
-          value={loading ? "…" : `${offerAcceptanceRate}%`}
-          hint="Close efficiency signal"
-        />
-        <StatTile
-          label="Apply-to-hire"
-          value={
-            loading
-              ? "…"
-              : totalApplies
-                ? `${((totalHires / totalApplies) * 100).toFixed(1)}%`
-                : "0%"
-          }
-          hint="Applications converting into hires"
-        />
+        <div style={{ display: "grid", gridTemplateColumns: compactStatColumns, gap: 8 }}>
+          <StatTile
+            label="Top source"
+            value={loading ? "…" : topSource?.name || "N/A"}
+            hint="Best-performing inbound channel"
+          />
+          <StatTile
+            label="Offer acceptance"
+            value={loading ? "…" : `${offerAcceptanceRate}%`}
+            hint="Close efficiency signal"
+          />
+          <StatTile
+            label="Apply-to-hire"
+            value={
+              loading
+                ? "…"
+                : totalApplies
+                  ? `${((totalHires / totalApplies) * 100).toFixed(1)}%`
+                  : "0%"
+            }
+            hint="Applications converting into hires"
+          />
+        </div>
       </div>
     </div>
   );
