@@ -364,6 +364,7 @@ const safeFilters = filters || {
                 width: "100%",
                 minWidth: 0,
                 maxWidth: "100%",
+                alignItems: "start",
               }}
             >
               <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
