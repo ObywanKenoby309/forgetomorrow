@@ -388,7 +388,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
   );
 
   const forgeInsightsCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 340, display: "flex", flexDirection: "column" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 400, display: "flex", flexDirection: "column" }}>
       <div
         style={{
           display: "flex",
@@ -531,7 +531,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
   );
 
   const reportGatewaysCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 400, display: "flex", flexDirection: "column" }}>
       <div
         style={{
           display: "flex",
@@ -539,6 +539,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           justifyContent: "space-between",
           gap: 12,
           marginBottom: 12,
+          flexShrink: 0,
         }}
       >
         <div
@@ -554,7 +555,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           Report Gateways
         </div>
       </div>
-      <div style={{ display: "grid", gap: 10 }}>
+      <div style={{ flex: 1, overflowY: "auto", display: "grid", gap: 10, alignContent: "start", scrollbarWidth: "none", msOverflowStyle: "none" }}>
         <ReportCard
           title="Time-to-Fill"
           description="See which roles close fastest and where delays build."
@@ -665,11 +666,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           marginRight: RIGHT_BLEED,
           marginTop: 12,
           display: "grid",
-          gridTemplateColumns: "240px minmax(0, 2fr) 240px",
-          gap: 12,
-        }}
-      >
-        {sourcePerformanceCard}
+          gridTemplateColumns: "240px minmax(0, 1.5fr) 240px",
         {applicationFunnelCard}
         {reportGatewaysCard}
       </div>

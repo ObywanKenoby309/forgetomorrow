@@ -76,7 +76,7 @@ export default function RecruiterActivity({ data = [] }) {
   }
 
   return (
-    <div style={{ width: "100%", height: isMobile ? 220 : "clamp(160px, 30vw, 260px)" }}>
+    <div style={{ width: "100%", height: isMobile ? 220 : "clamp(200px, 30vw, 340px)" }}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={isMobile ? { top: 8, right: 6, bottom: 8, left: -18 } : { top: 8, right: 12, bottom: 8, left: 0 }}>
           <defs>

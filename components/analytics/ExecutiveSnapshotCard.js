@@ -123,17 +123,18 @@ export default function ExecutiveSnapshotCard({
 
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <ActionLink href="/recruiter/analytics/reports?report=funnel" orange>
-            Report details
+            Details
           </ActionLink>
           <ActionLink href="/recruiter/analytics/presentation">
             Visuals
           </ActionLink>
           <ActionLink href="/recruiter/analytics/snapshot-delivery" primary>
-            Send Snapshot
+            Send
           </ActionLink>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: compactStatColumns, gap: 8 }}>
+        <div style={{ overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(80px, 1fr))", gap: 8, minWidth: 0 }}>
           <StatTile
             label="Top source"
             value={loading ? "…" : topSource?.name || "N/A"}
@@ -155,6 +156,8 @@ export default function ExecutiveSnapshotCard({
             }
             hint="Applications converting into hires"
           />
+          </div>
+        </div>
         </div>
       </div>
     </div>
