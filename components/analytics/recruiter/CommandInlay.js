@@ -649,7 +649,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           marginTop: DESKTOP_REPORT_DROP,
           display: "grid",
           gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
-          alignItems: "start",
+          alignItems: "end",
           gap: 12,
         }}
       >
