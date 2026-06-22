@@ -350,11 +350,11 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) 
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-          <ActionTile title="New Messages"    emptyText="No unread items."        items={buckets.messages}     href={`/action-center?scope=${scope}&tab=SOCIAL`}       withChrome={withChrome} style={glassStyle} />
-          <ActionTile title="Job Updates"     emptyText="No new job updates."     items={buckets.jobs}         href={`/action-center?scope=${scope}&tab=JOBS`}         withChrome={withChrome} style={glassStyle} />
-          <ActionTile title="Applications"    emptyText="No application updates." items={buckets.applications} href={`/action-center?scope=${scope}&tab=APPLICATIONS`}  withChrome={withChrome} style={glassStyle} />
-          <ActionTile title="Calendar"        emptyText="No calendar updates."    items={buckets.calendar}     href={`/action-center?scope=${scope}&tab=CALENDAR`}     withChrome={withChrome} style={glassStyle} />
-          <ActionTile title="Shared With Me"  emptyText="No shared documents."    items={buckets.shared}       href={`/action-center?scope=${scope}&tab=SHARED`}       withChrome={withChrome} style={glassStyle} />
+          <ActionTile title="New Messages"    emptyText="No new updates."        items={buckets.messages}     href={`/action-center?scope=${scope}&tab=SOCIAL`}       withChrome={withChrome} style={glassStyle} />
+          <ActionTile title="Job Updates"     emptyText="No new updates."     items={buckets.jobs}         href={`/action-center?scope=${scope}&tab=JOBS`}         withChrome={withChrome} style={glassStyle} />
+          <ActionTile title="Applications"    emptyText="No new updates." items={buckets.applications} href={`/action-center?scope=${scope}&tab=APPLICATIONS`}  withChrome={withChrome} style={glassStyle} />
+          <ActionTile title="Calendar"        emptyText="No new updates."    items={buckets.calendar}     href={`/action-center?scope=${scope}&tab=CALENDAR`}     withChrome={withChrome} style={glassStyle} />
+          <ActionTile title="Shared With Me"  emptyText="No new updates."    items={buckets.shared}       href={`/action-center?scope=${scope}&tab=SHARED`}       withChrome={withChrome} style={glassStyle} />
         </div>
       )}
     </section>
