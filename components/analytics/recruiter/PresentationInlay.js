@@ -316,9 +316,10 @@ function FocusModal({ item, periodLabel, resolution, onClose, exportRef }) {
 // Page body
 // ─────────────────────────────────────────
 export default function PresentationInlay({ filters, onFilterChange, isMobile }) {
-  const { data, loading, error }    = useAnalytics(filters);
+  const safeFilters = filters || {};
+  const { data, loading, error } = useAnalytics(safeFilters);
   const [resolution, setResolution] = useState("standard");
-  const [focusedIndex, setFocused]  = useState(null);
+  const [focusedIndex, setFocused] = useState(null);
 
   const exportRefs = useRef({});
   const getExportRef = (key) => {
@@ -326,10 +327,10 @@ export default function PresentationInlay({ filters, onFilterChange, isMobile })
     return exportRefs.current[key];
   };
 
-  const periodLabel =
-    filters.range === "custom" && (filters.from || filters.to)
-      ? `${filters.from || "Start"} → ${filters.to || "End"}`
-      : `Last ${String(filters.range || "30d").toUpperCase()}`;
+const periodLabel =
+  safeFilters.range === "custom" && (safeFilters.from || safeFilters.to)
+    ? `${safeFilters.from || "Start"} → ${safeFilters.to || "End"}`
+    : `Last ${String(safeFilters.range || "30d").toUpperCase()}`;
 
   // ─────────────────────────────────────────
   // Visual registry

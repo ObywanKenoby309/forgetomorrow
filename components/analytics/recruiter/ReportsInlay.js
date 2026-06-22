@@ -197,9 +197,10 @@ function BuildingVisual({ title, body }) {
 }
 
 export default function ReportsInlay({ filters, onFilterChange, isMobile }) {
+  const safeFilters = filters || {};
   const router = useRouter();
   const [activeReport, setActiveReport] = useState(getReportFromQuery(router.query));
-  const { data, error } = useAnalytics(filters);
+  const { data, error } = useAnalytics(safeFilters);
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [timeToFillData, setTimeToFillData] = useState(null);
   const [qohData, setQohData] = useState(null);
@@ -215,14 +216,14 @@ export default function ReportsInlay({ filters, onFilterChange, isMobile }) {
     const loadLeaderboard = async () => {
       try {
         const params = new URLSearchParams();
-        params.set("range", filters.range);
-        params.set("jobId", filters.jobId);
-        params.set("recruiterId", filters.recruiterId);
-        params.set("companyId", filters.companyId);
+        params.set("range", safeFilters.range);
+        params.set("jobId", safeFilters.jobId);
+        params.set("recruiterId", safeFilters.recruiterId);
+        params.set("companyId", safeFilters.companyId);
 
-        if (filters.range === "custom") {
-          if (filters.from) params.set("from", filters.from);
-          if (filters.to) params.set("to", filters.to);
+        if (safeFilters.range === "custom") {
+          if (safeFilters.from) params.set("from", safeFilters.from);
+          if (safeFilters.to) params.set("to", safeFilters.to);
         }
 
         const res = await fetch(`/api/analytics/recruiter/leaderboard?${params.toString()}`);
@@ -251,14 +252,14 @@ export default function ReportsInlay({ filters, onFilterChange, isMobile }) {
     const loadTimeToFill = async () => {
       try {
         const params = new URLSearchParams();
-        params.set("range", filters.range);
-        params.set("jobId", filters.jobId);
-        params.set("recruiterId", filters.recruiterId);
-        params.set("companyId", filters.companyId);
+        params.set("range", safeFilters.range);
+        params.set("jobId", safeFilters.jobId);
+        params.set("recruiterId", safeFilters.recruiterId);
+        params.set("companyId", safeFilters.companyId);
 
-        if (filters.range === "custom") {
-          if (filters.from) params.set("from", filters.from);
-          if (filters.to) params.set("to", filters.to);
+        if (safeFilters.range === "custom") {
+          if (safeFilters.from) params.set("from", safeFilters.from);
+          if (safeFilters.to) params.set("to", safeFilters.to);
         }
 
         const res = await fetch(`/api/analytics/recruiter/time-to-fill?${params.toString()}`);
@@ -296,14 +297,14 @@ export default function ReportsInlay({ filters, onFilterChange, isMobile }) {
     const loadQoH = async () => {
       try {
         const params = new URLSearchParams();
-        params.set("range", filters.range);
-        params.set("jobId", filters.jobId);
-        params.set("recruiterId", filters.recruiterId);
-        params.set("companyId", filters.companyId);
+        params.set("range", safeFilters.range);
+        params.set("jobId", safeFilters.jobId);
+        params.set("recruiterId", safeFilters.recruiterId);
+        params.set("companyId", safeFilters.companyId);
 
-        if (filters.range === "custom") {
-          if (filters.from) params.set("from", filters.from);
-          if (filters.to) params.set("to", filters.to);
+        if (safeFilters.range === "custom") {
+          if (safeFilters.from) params.set("from", safeFilters.from);
+          if (safeFilters.to) params.set("to", safeFilters.to);
         }
 
         const res = await fetch(`/api/analytics/recruiter/qoh?${params.toString()}`);
@@ -348,12 +349,12 @@ export default function ReportsInlay({ filters, onFilterChange, isMobile }) {
           ...router.query,
           tab: "reports",
           report: reportKey,
-          range: filters.range,
-          jobId: filters.jobId,
-          recruiterId: filters.recruiterId,
-          companyId: filters.companyId,
-          ...(filters.from ? { from: filters.from } : {}),
-          ...(filters.to ? { to: filters.to } : {}),
+          range: safeFilters.range,
+          jobId: safeFilters.jobId,
+          recruiterId: safeFilters.recruiterId,
+          companyId: safeFilters.companyId,
+          ...(safeFilters.from ? { from: safeFilters.from } : {}),
+          ...(safeFilters.to ? { to: safeFilters.to } : {}),
         },
       },
       undefined,
