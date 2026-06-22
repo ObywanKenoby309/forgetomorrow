@@ -22,18 +22,27 @@ import { classifySignals, overallVerdict, signalScoreToPercent } from "@/lib/int
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const GLASS = {
   border: "1px solid rgba(255,255,255,0.22)",
-  background: "rgba(255,255,255,0.28)",
+  background: "rgba(255,255,255,0.68)",
   boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
   backdropFilter: "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
 };
 
 const GLASS_SOFT = {
-  border: "1px solid rgba(255,255,255,0.18)",
-  background: "rgba(255,255,255,0.18)",
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(255,255,255,0.58)",
   boxShadow: "0 8px 22px rgba(15,23,42,0.10)",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
+};
+
+const CHART_WRAP = {
+  border: "1px solid rgba(255,255,255,0.18)",
+  background: "rgba(255,255,255,0.08)",
+  backdropFilter: "blur(4px)",
+  WebkitBackdropFilter: "blur(4px)",
+  borderRadius: 16,
+  padding: 14,
 };
 
 const ORANGE = "#FF7043";
@@ -971,9 +980,7 @@ export default function ProfileAnalyticsPage() {
         >
           <div
             style={{
-              ...GLASS_SOFT,
-              borderRadius: 16,
-              padding: 14,
+              ...CHART_WRAP,
               minHeight: isMobile ? 280 : COMMAND_CENTER_CHART_HEIGHT,
               overflow: "hidden",
               display: "grid",
@@ -985,9 +992,7 @@ export default function ProfileAnalyticsPage() {
 
           <div
             style={{
-              ...GLASS_SOFT,
-              borderRadius: 16,
-              padding: 14,
+              ...CHART_WRAP,
               minHeight: isMobile ? 280 : COMMAND_CENTER_CHART_HEIGHT,
               overflow: "hidden",
               display: "grid",
@@ -1363,7 +1368,7 @@ export default function ProfileAnalyticsPage() {
         Visibility Trend <span style={{ fontSize: 15, color: MUTED, textShadow: "none", fontWeight: 850 }}>(Last 7 Days)</span>
       </div>
 
-      <div style={{ ...GLASS_SOFT, borderRadius: 16, padding: 14, overflow: "hidden" }}>
+      <div style={{ ...CHART_WRAP, overflow: "hidden" }}>
         <div style={{ minHeight: 260, maxHeight: 325, overflow: "hidden" }}>
           <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
         </div>
@@ -1460,13 +1465,7 @@ export default function ProfileAnalyticsPage() {
 
   const connectionGrowthCompactCard = (
     <SectionCard title="Connection Growth">
-      <div style={{
-  ...GLASS_SOFT,
-  borderRadius: 14,
-  padding: 14,
-  minHeight: 210,
-  overflow: "hidden"
-}}>
+      <div style={{ ...CHART_WRAP, minHeight: 210, overflow: "hidden" }}>
         <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days || [0, 0, 0, 0, 0, 0, 0]} />
       </div>
     </SectionCard>
@@ -1521,9 +1520,7 @@ export default function ProfileAnalyticsPage() {
 
       <div
         style={{
-          ...GLASS_SOFT,
-          borderRadius: 16,
-          padding: 14,
+          ...CHART_WRAP,
           minHeight: COMMAND_CENTER_CHART_HEIGHT,
           overflow: "hidden",
           display: "grid",
