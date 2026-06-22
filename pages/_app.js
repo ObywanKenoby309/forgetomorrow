@@ -370,7 +370,7 @@ function AppShell({ Component, pageProps }) {
 
         {/* FOREGROUND CONTENT */}
         <div
-          className={`relative z-10 min-h-screen flex flex-col items-start justify-between ${
+          className={`relative z-10 min-h-screen flex flex-col items-start justify-between w-full ${
             shouldUseGrayInternalBg ? 'bg-[#ECEFF1]' : ''
           }`}
         >
