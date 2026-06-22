@@ -516,6 +516,10 @@ function DeviceTestPanel({ isMobile = false }) {
   const cameras = devices.filter((d) => d.kind === 'videoinput');
   const microphones = devices.filter((d) => d.kind === 'audioinput');
   const speakers = devices.filter((d) => d.kind === 'audiooutput');
+  const screenShareSupported =
+    typeof navigator !== 'undefined' &&
+    !!navigator.mediaDevices &&
+    typeof navigator.mediaDevices.getDisplayMedia === 'function';
 
   const stopScreenTest = () => {
     if (screenStreamRef.current) {
@@ -624,6 +628,12 @@ function DeviceTestPanel({ isMobile = false }) {
     setDeviceError('');
     stopScreenTest();
 
+    if (!screenShareSupported) {
+      setDeviceError('Screen sharing is not supported by this mobile browser. You can still test camera, microphone, and speaker here. Screen sharing should be tested from a supported desktop browser.');
+      setScreenTesting(false);
+      return;
+    }
+
     try {
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
@@ -692,7 +702,11 @@ function DeviceTestPanel({ isMobile = false }) {
 
           <div style={S.screenPreview}>
             <video ref={screenRef} style={S.screenVideo} autoPlay muted playsInline />
-            {!screenTesting && <div style={S.deviceEmpty}>Screen share preview</div>}
+            {!screenTesting && (
+              <div style={S.deviceEmpty}>
+                {screenShareSupported ? 'Screen share preview' : 'Screen sharing is not supported on this mobile browser.'}
+              </div>
+            )}
           </div>
         </div>
 
@@ -741,8 +755,17 @@ function DeviceTestPanel({ isMobile = false }) {
               Test speaker
             </button>
 
-            <button style={S.outlineBtn} onClick={screenTesting ? stopScreenTest : startScreenTest}>
-              {screenTesting ? 'Stop screen test' : 'Test screen share'}
+            <button
+              style={{
+                ...S.outlineBtn,
+                opacity: screenShareSupported ? 1 : 0.55,
+                cursor: screenShareSupported ? 'pointer' : 'not-allowed',
+              }}
+              onClick={screenTesting ? stopScreenTest : startScreenTest}
+              disabled={!screenShareSupported && !screenTesting}
+              title={screenShareSupported ? 'Test screen share' : 'Screen sharing is not supported on this mobile browser.'}
+            >
+              {screenTesting ? 'Stop screen test' : screenShareSupported ? 'Test screen share' : 'Screen share unavailable'}
             </button>
           </div>
         </div>
