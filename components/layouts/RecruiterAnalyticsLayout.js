@@ -237,13 +237,13 @@ export default function RecruiterAnalyticsLayout({
     ? {
         display: "grid",
         gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr)`,
-        gridTemplateRows: "1fr",
+        gridTemplateRows: "auto",
         gridTemplateAreas: `"left content"`,
       }
     : {
         display: "grid",
         gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr) ${RIGHT_W}px`,
-        gridTemplateRows: "1fr",
+        gridTemplateRows: "auto",
         gridTemplateAreas: `"left content right"`,
       };
 
