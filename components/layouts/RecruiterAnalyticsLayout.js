@@ -309,7 +309,7 @@ const safeFilters = filters || {
         <title>{title}</title>
       </Head>
 
-      <div style={backgroundStyle}>
+      <div style={{ ...backgroundStyle, alignSelf: "start", width: "100%" }}>
         <RecruiterHeader />
 
         <div
