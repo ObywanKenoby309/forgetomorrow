@@ -224,26 +224,26 @@ export default function RecruiterAnalyticsLayout({
 
   const backgroundStyle = wallpaperUrl
     ? {
-        minHeight: "auto",
+        minHeight: "100vh",
         backgroundImage: `url(${wallpaperUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center top",
         backgroundRepeat: "no-repeat",
         backgroundAttachment: isMobile ? "scroll" : "fixed",
       }
-    : { minHeight: "auto", backgroundColor: "#ECEFF1" };
+    : { minHeight: "100vh", backgroundColor: "#ECEFF1" };
 
   const desktopGrid = hideDesktopRightRail
     ? {
         display: "grid",
         gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr)`,
-        gridTemplateRows: "auto",
+        gridTemplateRows: "1fr",
         gridTemplateAreas: `"left content"`,
       }
     : {
         display: "grid",
         gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr) ${RIGHT_W}px`,
-        gridTemplateRows: "auto",
+        gridTemplateRows: "1fr",
         gridTemplateAreas: `"left content right"`,
       };
 
@@ -256,12 +256,6 @@ export default function RecruiterAnalyticsLayout({
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
   const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
-const safeFilters = filters || {
-  range: "30d",
-  jobId: "all",
-  recruiterId: "all",
-  companyId: "all",
-};
 
   function handleNavigate(pathname, extraQuery = {}) {
     const rawPath = String(pathname || "/recruiter/analytics");
@@ -278,12 +272,12 @@ const safeFilters = filters || {
         pathname: "/recruiter/analytics",
         query: {
           tab: nextTab,
-...(safeFilters?.range ? { range: safeFilters.range } : {}),
-...(safeFilters?.jobId ? { jobId: safeFilters.jobId } : {}),
-...(safeFilters?.recruiterId ? { recruiterId: safeFilters.recruiterId } : {}),
-...(safeFilters?.companyId ? { companyId: safeFilters.companyId } : {}),
-...(safeFilters?.from ? { from: safeFilters.from } : {}),
-...(safeFilters?.to ? { to: safeFilters.to } : {}),
+          ...(filters?.range ? { range: filters.range } : {}),
+          ...(filters?.jobId ? { jobId: filters.jobId } : {}),
+          ...(filters?.recruiterId ? { recruiterId: filters.recruiterId } : {}),
+          ...(filters?.companyId ? { companyId: filters.companyId } : {}),
+          ...(filters?.from ? { from: filters.from } : {}),
+          ...(filters?.to ? { to: filters.to } : {}),
           ...extraQuery,
         },
       },
@@ -309,7 +303,7 @@ const safeFilters = filters || {
         <title>{title}</title>
       </Head>
 
-      <div style={{ ...backgroundStyle, alignSelf: "start", width: "100%" }}>
+      <div style={backgroundStyle}>
         <RecruiterHeader />
 
         <div
@@ -364,7 +358,6 @@ const safeFilters = filters || {
                 width: "100%",
                 minWidth: 0,
                 maxWidth: "100%",
-                alignItems: "start",
               }}
             >
               <section style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
@@ -376,12 +369,12 @@ const safeFilters = filters || {
               </section>
 
               <AnalyticsFilterBar
-  activeTab={activeTab}
-  activeReport={activeReport}
-  filters={safeFilters}
-  onFilterChange={onFilterChange}
-  onNavigate={handleNavigate}
-/>
+                activeTab={activeTab}
+                activeReport={activeReport}
+                filters={filters}
+                onFilterChange={onFilterChange}
+                onNavigate={handleNavigate}
+              />
 
               {children}
             </div>
