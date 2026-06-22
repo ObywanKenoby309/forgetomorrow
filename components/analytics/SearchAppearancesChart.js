@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -16,14 +16,7 @@ function TooltipCard({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   const row = payload.find((p) => p.dataKey === "searchHits");
   return (
-    <div style={{
-      borderRadius: 10,
-      border: "1px solid #ECEFF1",
-      background: "#fff",
-      padding: "7px 10px",
-      fontSize: 12,
-      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-    }}>
+    <div style={{ borderRadius: 10, border: "1px solid #ECEFF1", background: "#fff", padding: "7px 10px", fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
       <div style={{ fontWeight: 800, marginBottom: 4 }}>{label}</div>
       <div style={{ color: "#475569" }}>Search hits: {Number(row?.value || 0).toLocaleString()}</div>
     </div>
@@ -32,6 +25,7 @@ function TooltipCard({ active, payload, label }) {
 
 export default function SearchAppearancesChart({ labels = [], data = [] }) {
   const [isMobile, setIsMobile] = useState(false);
+  const wrapRef = useRef(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -40,18 +34,26 @@ export default function SearchAppearancesChart({ labels = [], data = [] }) {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    const clear = () => {
+      const svgs = wrapRef.current.querySelectorAll("svg");
+      svgs.forEach((svg) => svg.style.setProperty("background", "transparent", "important"));
+    };
+    clear();
+    const observer = new MutationObserver(clear);
+    observer.observe(wrapRef.current, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
   const rows = useMemo(() => {
     const safeLabels = Array.isArray(labels) && labels.length ? labels : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const safeData = Array.isArray(data) ? data : [];
-    return safeLabels.map((day, index) => ({
-      day,
-      searchHits: Number(safeData[index] || 0),
-    }));
+    return safeLabels.map((day, index) => ({ day, searchHits: Number(safeData[index] || 0) }));
   }, [labels, data]);
 
   return (
-    <div className="ft-chart-wrap" style={{ width: "100%", height: isMobile ? 220 : "clamp(220px, 30vw, 320px)" }}>
-      <style>{`.ft-chart-wrap > div > div > svg { background: transparent !important; }`}</style>
+    <div ref={wrapRef} style={{ width: "100%", height: isMobile ? 220 : "clamp(220px, 30vw, 320px)" }}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={rows} margin={isMobile ? { top: 8, right: 6, bottom: 8, left: -18 } : { top: 8, right: 12, bottom: 8, left: 0 }}>
           <defs>
