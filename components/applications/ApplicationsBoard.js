@@ -59,57 +59,6 @@ const stageKey = (stage) =>
     'Closed Out': 'info',
   }[stage] || 'info');
 
-const MODERN_SCROLLBAR_CSS = `
-  html,
-  body,
-  .applications-board-modern-scrollbar,
-  .applications-board-modern-scrollbar * {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,112,67,0.72) rgba(255,255,255,0.22);
-  }
-
-  html::-webkit-scrollbar,
-  body::-webkit-scrollbar,
-  .applications-board-modern-scrollbar::-webkit-scrollbar,
-  .applications-board-modern-scrollbar *::-webkit-scrollbar {
-    width: 9px;
-    height: 9px;
-  }
-
-  html::-webkit-scrollbar-track,
-  body::-webkit-scrollbar-track,
-  .applications-board-modern-scrollbar::-webkit-scrollbar-track,
-  .applications-board-modern-scrollbar *::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.18);
-    border-radius: 999px;
-  }
-
-  html::-webkit-scrollbar-thumb,
-  body::-webkit-scrollbar-thumb,
-  .applications-board-modern-scrollbar::-webkit-scrollbar-thumb,
-  .applications-board-modern-scrollbar *::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, rgba(255,112,67,0.82), rgba(232,93,47,0.72));
-    border: 2px solid rgba(255,255,255,0.42);
-    border-radius: 999px;
-  }
-
-  html::-webkit-scrollbar-thumb:hover,
-  body::-webkit-scrollbar-thumb:hover,
-  .applications-board-modern-scrollbar::-webkit-scrollbar-thumb:hover,
-  .applications-board-modern-scrollbar *::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, rgba(255,112,67,0.95), rgba(232,93,47,0.88));
-  }
-
-  html::-webkit-scrollbar-button,
-  body::-webkit-scrollbar-button,
-  .applications-board-modern-scrollbar::-webkit-scrollbar-button,
-  .applications-board-modern-scrollbar *::-webkit-scrollbar-button {
-    display: none;
-    width: 0;
-    height: 0;
-  }
-`;
-
 // Mirrors the lock rule already enforced in ApplicationForm.js: any
 // application tied to a real job posting (jobId), once past Pinned, is
 // recruiter-controlled — the backend rejects manual status changes on it.
@@ -463,6 +412,10 @@ export default function ApplicationsBoard({
     padding: compact ? 6 : 8,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     minHeight: isMobile ? '220px' : '300px',
+    maxHeight: isMobile ? 'none' : '70vh',
+    overflowY: isMobile ? 'visible' : 'auto',
+    scrollbarWidth: 'thin',
+    scrollbarColor: 'rgba(255,112,67,0.3) transparent',
     position: 'relative',
     height: '100%',
     width: '100%',
@@ -544,8 +497,13 @@ export default function ApplicationsBoard({
   };
 
   return (
-    <section className="applications-board-modern-scrollbar" style={wrapStyle}>
-      <style jsx global>{MODERN_SCROLLBAR_CSS}</style>
+    <section style={wrapStyle}>
+      <style>{`
+        .ft-kanban-col::-webkit-scrollbar { width: 4px; }
+        .ft-kanban-col::-webkit-scrollbar-track { background: transparent; }
+        .ft-kanban-col::-webkit-scrollbar-thumb { background: rgba(255,112,67,0.3); border-radius: 999px; }
+        .ft-kanban-col::-webkit-scrollbar-thumb:hover { background: rgba(255,112,67,0.55); }
+      `}</style>
 
       {isMobile && (
         <div
@@ -724,7 +682,7 @@ export default function ApplicationsBoard({
                 const columnId = `${stage}-column`;
 
                 return (
-                  <div key={stage} style={columnStyle}>
+                  <div key={stage} className="ft-kanban-col" style={columnStyle}>
                     <div
                       style={{
                         display: 'inline-flex',
