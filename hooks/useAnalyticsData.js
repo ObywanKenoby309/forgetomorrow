@@ -209,11 +209,18 @@ function hasMeaningfulAnalyticsData(json) {
 // ─── Main recruiter analytics data ───────────────────────────────────────────
 // Polls every 30 seconds.
 export function useAnalytics(state) {
+  const safeState = state || {
+    range: "30d",
+    jobId: "all",
+    recruiterId: "all",
+    companyId: "all",
+  };
+
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState(null);
-  const qs = useMemo(() => buildQS(state), [state]);
-  const demoData = useMemo(() => buildDemoAnalytics(state), [state]);
+  const qs = useMemo(() => buildQS(safeState), [safeState]);
+  const demoData = useMemo(() => buildDemoAnalytics(safeState), [safeState]);
 
   useEffect(() => {
     let active = true;
@@ -244,9 +251,16 @@ export function useAnalytics(state) {
 // ─── Forge Insights ───────────────────────────────────────────────────────────
 // Polls every 60 seconds.
 export function useInsights(state) {
+  const safeState = state || {
+    range: "30d",
+    jobId: "all",
+    recruiterId: "all",
+    companyId: "all",
+  };
+
   const [insights, setInsights] = useState(null);
   const [loading, setLoading]   = useState(false);
-  const qs = useMemo(() => buildQS(state), [state]);
+  const qs = useMemo(() => buildQS(safeState), [safeState]);
 
   useEffect(() => {
     let active = true;
