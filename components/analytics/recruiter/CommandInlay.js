@@ -388,7 +388,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
   );
 
   const forgeInsightsCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 460, display: "flex", flexDirection: "column" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 420, display: "flex", flexDirection: "column" }}>
       <div
         style={{
           display: "flex",
