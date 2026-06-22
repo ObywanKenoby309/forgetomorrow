@@ -48,7 +48,7 @@ const ORANGE_HEADING_LIFT = {
 };
 
 // desktop bleed settings
-const LEFT_BLEED = -(240 + 12);
+const LEFT_BLEED = -(0);
 const RIGHT_BLEED = -(240 + 12);
 const DESKTOP_REPORT_DROP = 32;
 
