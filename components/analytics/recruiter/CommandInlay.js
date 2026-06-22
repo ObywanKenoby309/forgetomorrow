@@ -48,9 +48,9 @@ const ORANGE_HEADING_LIFT = {
 };
 
 // desktop bleed settings
-const LEFT_BLEED = -(240 + 12);
+const LEFT_BLEED = -(0);
 const RIGHT_BLEED = -(240 + 12);
-const DESKTOP_REPORT_DROP = -10;
+const DESKTOP_REPORT_DROP = -8;
 
 // ─── Insight config ───────────────────────────────────────────────────────────
 const INSIGHT_CONFIG = {
@@ -345,7 +345,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
   );
 
   const recruiterActivityCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, marginTop: -8 }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
       <div
         style={{
           display: "flex",
@@ -388,7 +388,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
   );
 
   const forgeInsightsCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 320, display: "flex", flexDirection: "column" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 360, display: "flex", flexDirection: "column" }}>
       <div
         style={{
           display: "flex",
@@ -399,11 +399,6 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           flexShrink: 0,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 18,
-              color: ORANGE,
               lineHeight: 1.25,
               letterSpacing: "-0.01em",
               margin: 0,
@@ -531,7 +526,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
   );
 
   const reportGatewaysCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 400, display: "flex", flexDirection: "column" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
       <div
         style={{
           display: "flex",
@@ -539,7 +534,6 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           justifyContent: "space-between",
           gap: 12,
           marginBottom: 12,
-          flexShrink: 0,
         }}
       >
         <div
@@ -555,7 +549,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           Report Gateways
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", display: "grid", gap: 10, alignContent: "start", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+      <div style={{ display: "grid", gap: 10 }}>
         <ReportCard
           title="Time-to-Fill"
           description="See which roles close fastest and where delays build."
