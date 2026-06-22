@@ -50,7 +50,7 @@ const ORANGE_HEADING_LIFT = {
 // desktop bleed settings
 const LEFT_BLEED = -(240 + 12);
 const RIGHT_BLEED = -(240 + 12);
-const DESKTOP_REPORT_DROP = -40;
+const DESKTOP_REPORT_DROP = -20;
 
 // ─── Insight config ───────────────────────────────────────────────────────────
 const INSIGHT_CONFIG = {
@@ -388,7 +388,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
   );
 
   const forgeInsightsCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 380, display: "flex", flexDirection: "column" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 320, display: "flex", flexDirection: "column" }}>
       <div
         style={{
           display: "flex",

@@ -1,4 +1,4 @@
-// pages/recruiter/analytics/snapshot-delivery.js
+// pages/recruiter/analytics/snapshot-deliveryInlay.js
 import { useEffect, useMemo, useState, useCallback } from "react";
 
 const GLASS = {
@@ -202,16 +202,16 @@ function ToggleRow({ checked, onChange, label, hint }) {
   return (
     <label
       style={{
-  ...GLASS_SOFT,
-  borderRadius: 14,
-  padding: "10px 12px",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  justifyContent: "space-between",
-  minHeight: 0,
-}}
+        ...GLASS_SOFT,
+        borderRadius: 14,
+        padding: "10px 12px",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        justifyContent: "space-between",
+        minHeight: 0,
+      }}
     >
       <div>
         <div style={{ fontSize: 13, fontWeight: 800, color: SLATE }}>{label}</div>
@@ -428,18 +428,18 @@ function AllOverview({ schedules, onSelectReport }) {
                 )}
               </div>
               <div
-  style={{
-    fontSize: 11,
-    color: MUTED,
-    lineHeight: 1.35,
-    display: "-webkit-box",
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: "vertical",
-    overflow: "hidden",
-  }}
->
-  {report.description}
-</div>
+                style={{
+                  fontSize: 11,
+                  color: MUTED,
+                  lineHeight: 1.35,
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}
+              >
+                {report.description}
+              </div>
               {hasSchedule && (
                 <div style={{ fontSize: 12, color: SLATE, marginTop: 6, fontWeight: 700 }}>
                   {s.cadence.charAt(0).toUpperCase() + s.cadence.slice(1)} · {s.timeOfDay} · {prettyTZ(s.timezone)} · {recipientCount} recipient{recipientCount !== 1 ? "s" : ""}
@@ -500,6 +500,8 @@ function ReportScheduleEditor({
     ? {
         display: "grid",
         gap: 14,
+        width: "100%",
+        minWidth: 0,
       }
     : {
         display: "grid",
@@ -512,6 +514,8 @@ function ReportScheduleEditor({
         `,
         gap: 14,
         alignItems: "start",
+        width: "100%",
+        minWidth: 0,
       };
 
   return (
@@ -684,7 +688,7 @@ function ReportScheduleEditor({
         </div>
       </div>
 
-      <div style={isMobile ? {} : { gridArea: "preview", alignSelf: "stretch" }}>
+      <div style={isMobile ? {} : { gridArea: "preview", alignSelf: "stretch", minWidth: 0 }}>
         <PreviewPanel report={report} previewData={previewData} loadingPreview={previewing} />
       </div>
 
@@ -721,7 +725,6 @@ export default function SnapshotDeliveryInlay({ isMobile = false }) {
   const [sendingTab, setSendingTab] = useState(null);
   const [previewingTab, setPreviewingTab] = useState(null);
   const [previewByTab, setPreviewByTab] = useState({});
-
 
   useEffect(() => {
     const loading = {};
@@ -901,19 +904,20 @@ export default function SnapshotDeliveryInlay({ isMobile = false }) {
         </div>
 
         {activeTab === "all" ? (
-          <section style={{ ...GLASS, borderRadius: 18, padding: 16,marginTop:22 }}>
+          <section style={{ ...GLASS, borderRadius: 18, padding: 16, marginTop: 22 }}>
             <AllOverview schedules={schedules} onSelectReport={(key) => setActiveTab(key)} />
           </section>
         ) : activeReport ? (
           <section
-  style={{
-    ...GLASS,
-    borderRadius: 18,
-    padding: 16,
-    marginTop: 22,
-    width: "100%",
-  }}
->
+            style={{
+              ...GLASS,
+              borderRadius: 18,
+              padding: 16,
+              marginTop: 22,
+              width: "100%",
+              minWidth: 0,
+            }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <button
                 type="button"
