@@ -667,6 +667,10 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           marginTop: 12,
           display: "grid",
           gridTemplateColumns: "240px minmax(0, 1.5fr) 240px",
+          gap: 12,
+        }}
+      >
+        {sourcePerformanceCard}
         {applicationFunnelCard}
         {reportGatewaysCard}
       </div>
