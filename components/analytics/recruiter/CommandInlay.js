@@ -399,6 +399,11 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           flexShrink: 0,
         }}
       >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 18,
+              color: ORANGE,
               lineHeight: 1.25,
               letterSpacing: "-0.01em",
               margin: 0,
