@@ -334,14 +334,16 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
   const compactStatColumns = isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))";
 
   const execSnapshotCard = (
-    <ExecutiveSnapshotCard
-      loading={loading}
-      topSource={topSource}
-      offerAcceptanceRate={offerAcceptanceRate}
-      totalHires={totalHires}
-      totalApplies={totalApplies}
-      compactStatColumns={compactStatColumns}
-    />
+    <div style={{ height: 460, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <ExecutiveSnapshotCard
+        loading={loading}
+        topSource={topSource}
+        offerAcceptanceRate={offerAcceptanceRate}
+        totalHires={totalHires}
+        totalApplies={totalApplies}
+        compactStatColumns={compactStatColumns}
+      />
+    </div>
   );
 
   const recruiterActivityCard = (
@@ -388,7 +390,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
   );
 
   const forgeInsightsCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 400, display: "flex", flexDirection: "column" }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 460, display: "flex", flexDirection: "column" }}>
       <div
         style={{
           display: "flex",
@@ -651,7 +653,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           marginTop: DESKTOP_REPORT_DROP,
           display: "grid",
           gridTemplateColumns: "240px minmax(0, 2fr) 240px",
-          alignItems: "end",
+          alignItems: "start",
           gap: 12,
         }}
       >
@@ -666,7 +668,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           marginRight: RIGHT_BLEED,
           marginTop: 12,
           display: "grid",
-          gridTemplateColumns: "240px minmax(0, 1.5fr) 240px",
+          gridTemplateColumns: "280px minmax(0, 1fr) 240px",
           gap: 12,
         }}
       >
