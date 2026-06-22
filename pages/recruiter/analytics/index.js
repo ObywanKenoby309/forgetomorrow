@@ -112,7 +112,7 @@ function Body() {
       isMobile={isMobile === true}
       isDesktop={isMobile === false}
       mobileShell={isMobile === null}
-      hideDesktopRightRail={activeTab === "snapshots"}
+      hideDesktopRightRail={false}
     >
       {isMobile === null ? null : inlay}
     </RecruiterAnalyticsLayout>

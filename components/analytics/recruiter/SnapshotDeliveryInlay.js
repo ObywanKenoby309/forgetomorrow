@@ -1,4 +1,4 @@
-// pages/recruiter/analytics/snapshot-deliveryInlay.js
+// pages/recruiter/analytics/SnapshotDeliveryInlay.js
 import { useEffect, useMemo, useState, useCallback } from "react";
 
 const GLASS = {
@@ -864,13 +864,6 @@ export default function SnapshotDeliveryInlay({ isMobile = false }) {
     <>
       <div style={{ display: "grid", gap: 14, paddingTop: isMobile ? 0 : 28, width: "100%", minWidth: 0 }}>
         <div style={{ display: "grid", gap: 14, width: "100%", minWidth: 0 }}>
-          <section style={{ ...GLASS, borderRadius: 18, padding: 16, textAlign: "center" }}>
-            <div style={{ fontSize: 24, fontWeight: 900, color: ORANGE }}>Snapshot Delivery Center</div>
-            <div style={{ fontSize: 14, color: MUTED, marginTop: 6, maxWidth: 560, margin: "8px auto 0" }}>
-              Each report has its own schedule. Set different recipients, timing, and cadence per report type — your settings never affect anyone else's.
-            </div>
-          </section>
-
           <div style={{ ...GLASS, borderRadius: 18, padding: "12px 16px" }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
               <PillButton active={activeTab === "all"} onClick={() => setActiveTab("all")}>All Reports</PillButton>
