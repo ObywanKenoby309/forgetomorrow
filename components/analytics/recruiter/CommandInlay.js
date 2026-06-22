@@ -50,7 +50,7 @@ const ORANGE_HEADING_LIFT = {
 // desktop bleed settings
 const LEFT_BLEED = -(240 + 12);
 const RIGHT_BLEED = -(240 + 12);
-const DESKTOP_REPORT_DROP = 32;
+const DESKTOP_REPORT_DROP = 8;
 
 // ─── Insight config ───────────────────────────────────────────────────────────
 const INSIGHT_CONFIG = {
@@ -388,7 +388,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
   );
 
   const forgeInsightsCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, height: 340, display: "flex", flexDirection: "column" }}>
       <div
         style={{
           display: "flex",
@@ -396,6 +396,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           justifyContent: "space-between",
           gap: 12,
           marginBottom: 12,
+          flexShrink: 0,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
@@ -425,21 +426,21 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
         </div>
       </div>
 
-      {insightsLoading && !insights ? (
-        <InsightsSkeleton />
-      ) : visibleInsights.length > 0 ? (
-        <div style={{ display: "grid", gap: 10 }}>
-          {visibleInsights.map((insight, i) => (
+      <div style={{ flex: 1, overflowY: "auto", display: "grid", gap: 10, alignContent: "start", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+        {insightsLoading && !insights ? (
+          <InsightsSkeleton />
+        ) : visibleInsights.length > 0 ? (
+          visibleInsights.map((insight, i) => (
             <InsightTile key={i} insight={insight} />
-          ))}
-        </div>
-      ) : (
-        <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-          <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
-            Insights will appear here as your pipeline data builds.
+          ))
+        ) : (
+          <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
+              Insights will appear here as your pipeline data builds.
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 
