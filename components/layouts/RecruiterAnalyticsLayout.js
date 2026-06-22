@@ -256,6 +256,12 @@ export default function RecruiterAnalyticsLayout({
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
   const activeReport = typeof router.query?.report === "string" ? router.query.report : "funnel";
+const safeFilters = filters || {
+  range: "30d",
+  jobId: "all",
+  recruiterId: "all",
+  companyId: "all",
+};
 
   function handleNavigate(pathname, extraQuery = {}) {
     const rawPath = String(pathname || "/recruiter/analytics");
@@ -272,12 +278,12 @@ export default function RecruiterAnalyticsLayout({
         pathname: "/recruiter/analytics",
         query: {
           tab: nextTab,
-          ...(filters?.range ? { range: filters.range } : {}),
-          ...(filters?.jobId ? { jobId: filters.jobId } : {}),
-          ...(filters?.recruiterId ? { recruiterId: filters.recruiterId } : {}),
-          ...(filters?.companyId ? { companyId: filters.companyId } : {}),
-          ...(filters?.from ? { from: filters.from } : {}),
-          ...(filters?.to ? { to: filters.to } : {}),
+...(safeFilters?.range ? { range: safeFilters.range } : {}),
+...(safeFilters?.jobId ? { jobId: safeFilters.jobId } : {}),
+...(safeFilters?.recruiterId ? { recruiterId: safeFilters.recruiterId } : {}),
+...(safeFilters?.companyId ? { companyId: safeFilters.companyId } : {}),
+...(safeFilters?.from ? { from: safeFilters.from } : {}),
+...(safeFilters?.to ? { to: safeFilters.to } : {}),
           ...extraQuery,
         },
       },
@@ -369,12 +375,12 @@ export default function RecruiterAnalyticsLayout({
               </section>
 
               <AnalyticsFilterBar
-                activeTab={activeTab}
-                activeReport={activeReport}
-                filters={filters}
-                onFilterChange={onFilterChange}
-                onNavigate={handleNavigate}
-              />
+  activeTab={activeTab}
+  activeReport={activeReport}
+  filters={safeFilters}
+  onFilterChange={onFilterChange}
+  onNavigate={handleNavigate}
+/>
 
               {children}
             </div>
