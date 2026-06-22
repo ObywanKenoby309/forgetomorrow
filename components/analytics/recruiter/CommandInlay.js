@@ -50,7 +50,7 @@ const ORANGE_HEADING_LIFT = {
 // desktop bleed settings
 const LEFT_BLEED = -(240 + 12);
 const RIGHT_BLEED = -(240 + 12);
-const DESKTOP_REPORT_DROP = -8;
+const DESKTOP_REPORT_DROP = 24;
 
 // ─── Insight config ───────────────────────────────────────────────────────────
 const INSIGHT_CONFIG = {
@@ -651,13 +651,13 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           marginTop: DESKTOP_REPORT_DROP,
           display: "grid",
           gridTemplateColumns: "240px minmax(0, 2fr) 240px",
-          alignItems: "start",
+          alignItems: "end",
           gap: 12,
         }}
       >
-        <div style={{ alignSelf: "end" }}>{execSnapshotCard}</div>
-        <div style={{ alignSelf: "start" }}>{recruiterActivityCard}</div>
-        <div style={{ alignSelf: "start" }}>{forgeInsightsCard}</div>
+        {execSnapshotCard}
+        {recruiterActivityCard}
+        {forgeInsightsCard}
       </div>
 
       <div
