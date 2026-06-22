@@ -24,21 +24,58 @@ const MUTED = "#475569";
 
 function StatTile({ label, value, hint }) {
   return (
-    <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: 14 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: MUTED }}>{label}</div>
+    <div style={{ ...GLASS_SOFT, borderRadius: 12, padding: "10px 11px", minWidth: 0 }}>
+      <div style={{ fontSize: 10, fontWeight: 800, color: MUTED, lineHeight: 1.2 }}>{label}</div>
       <div
         style={{
-          fontSize: 18,
+          fontSize: 16,
           fontWeight: 900,
           color: SLATE,
-          marginTop: 5,
-          lineHeight: 1.2,
+          marginTop: 4,
+          lineHeight: 1.15,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
         }}
       >
         {value}
       </div>
-      <div style={{ fontSize: 11, color: "#64748B", marginTop: 4, lineHeight: 1.45 }}>{hint}</div>
+      <div
+        style={{
+          fontSize: 10.5,
+          color: "#64748B",
+          marginTop: 3,
+          lineHeight: 1.3,
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}
+      >
+        {hint}
+      </div>
     </div>
+  );
+}
+
+function ActionLink({ href, children, primary = false, orange = false }) {
+  return (
+    <Link
+      href={href}
+      style={{
+        textDecoration: "none",
+        borderRadius: 999,
+        background: primary ? ORANGE : orange ? "rgba(255,112,67,0.14)" : "rgba(30,41,59,0.08)",
+        color: primary ? "#fff" : orange ? ORANGE : SLATE,
+        fontSize: 11,
+        fontWeight: 850,
+        padding: "6px 10px",
+        lineHeight: 1,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -53,64 +90,75 @@ export default function ExecutiveSnapshotCard({
   const compactStatColumns = isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))";
 
   return (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 18, fontWeight: 900, color: SLATE, letterSpacing: "-0.2px" }}>
-          Executive Snapshot
+    <div
+      style={{
+        ...GLASS,
+        borderRadius: 18,
+        padding: 12,
+        width: "100%",
+        minWidth: 0,
+        pointerEvents: "auto",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 10,
+          marginBottom: 10,
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 16, fontWeight: 900, color: SLATE, letterSpacing: "-0.2px", lineHeight: 1.15 }}>
+            Executive Snapshot
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: MUTED,
+              marginTop: 3,
+              lineHeight: 1.35,
+              display: "-webkit-box",
+              WebkitLineClamp: 1,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            Source quality, interview flow, and close efficiency.
+          </div>
         </div>
-        <div style={{ fontSize: 13, color: MUTED, marginTop: 4, lineHeight: 1.5 }}>
-          Source quality, interview flow, and close efficiency.
-        </div>
+
+        {!isMobile && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 0 }}>
+            <ActionLink href="/recruiter/analytics/reports?report=funnel" orange>
+              Report details
+            </ActionLink>
+            <ActionLink href="/recruiter/analytics/presentation">
+              Visuals
+            </ActionLink>
+            <ActionLink href="/recruiter/analytics/snapshot-delivery" primary>
+              Send Snapshot
+            </ActionLink>
+          </div>
+        )}
       </div>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-        <Link
-          href="/recruiter/analytics/reports?report=funnel"
-          style={{
-            textDecoration: "none",
-            borderRadius: 999,
-            background: "rgba(255,112,67,0.14)",
-            color: ORANGE,
-            fontSize: 12,
-            fontWeight: 800,
-            padding: "7px 12px",
-          }}
-        >
-          Report details
-        </Link>
+      {isMobile && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+          <ActionLink href="/recruiter/analytics/reports?report=funnel" orange>
+            Report details
+          </ActionLink>
+          <ActionLink href="/recruiter/analytics/presentation">
+            Visuals
+          </ActionLink>
+          <ActionLink href="/recruiter/analytics/snapshot-delivery" primary>
+            Send Snapshot
+          </ActionLink>
+        </div>
+      )}
 
-        <Link
-          href="/recruiter/analytics/presentation"
-          style={{
-            textDecoration: "none",
-            borderRadius: 999,
-            background: "rgba(30,41,59,0.08)",
-            color: SLATE,
-            fontSize: 12,
-            fontWeight: 800,
-            padding: "7px 12px",
-          }}
-        >
-          Visuals
-        </Link>
-
-        <Link
-          href="/recruiter/analytics/snapshot-delivery"
-          style={{
-            textDecoration: "none",
-            borderRadius: 999,
-            background: ORANGE,
-            color: "#fff",
-            fontSize: 12,
-            fontWeight: 800,
-            padding: "7px 12px",
-          }}
-        >
-          Send Snapshot
-        </Link>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: compactStatColumns, gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: compactStatColumns, gap: 8 }}>
         <StatTile
           label="Top source"
           value={loading ? "…" : topSource?.name || "N/A"}
@@ -119,7 +167,7 @@ export default function ExecutiveSnapshotCard({
         <StatTile
           label="Offer acceptance"
           value={loading ? "…" : `${offerAcceptanceRate}%`}
-          hint="High-trust close efficiency signal"
+          hint="Close efficiency signal"
         />
         <StatTile
           label="Apply-to-hire"
