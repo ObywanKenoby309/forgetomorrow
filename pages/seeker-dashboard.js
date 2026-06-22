@@ -296,11 +296,11 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) 
   }, [items]);
 
   const tiles = [
-    { key: 'messages',     title: 'New Messages',        emptyText: 'No unread items.',        href: withChrome(`/action-center?scope=${scope}&tab=SOCIAL`),       icon: '💬', items: buckets.messages     },
-    { key: 'applications', title: 'Application Updates', emptyText: 'No application updates.', href: withChrome(`/action-center?scope=${scope}&tab=APPLICATIONS`),  icon: '📋', items: buckets.applications },
-    { key: 'calendar',     title: 'Interview Invites',   emptyText: 'No calendar updates.',    href: withChrome(`/action-center?scope=${scope}&tab=CALENDAR`),     icon: '📅', items: buckets.calendar     },
-    { key: 'jobs',         title: 'Job Matches',         emptyText: 'No new job updates.',     href: withChrome(`/action-center?scope=${scope}&tab=JOBS`),         icon: '🎯', items: buckets.jobs         },
-    { key: 'shared',       title: 'Shared With Me',      emptyText: 'No shared documents.',    href: withChrome(`/action-center?scope=${scope}&tab=SHARED`),       icon: '📬', items: buckets.shared       },
+    { key: 'messages',     title: 'New Messages',        emptyText: 'No new updates.',        href: withChrome(`/action-center?scope=${scope}&tab=SOCIAL`),       icon: '💬', items: buckets.messages     },
+    { key: 'applications', title: 'Application Updates', emptyText: 'No new updates.', href: withChrome(`/action-center?scope=${scope}&tab=APPLICATIONS`),  icon: '📋', items: buckets.applications },
+    { key: 'calendar',     title: 'Interview Invites',   emptyText: 'No new updates.',    href: withChrome(`/action-center?scope=${scope}&tab=CALENDAR`),     icon: '📅', items: buckets.calendar     },
+    { key: 'jobs',         title: 'Job Matches',         emptyText: 'No new updates.',     href: withChrome(`/action-center?scope=${scope}&tab=JOBS`),         icon: '🎯', items: buckets.jobs         },
+    { key: 'shared',       title: 'Shared With Me',      emptyText: 'No new updates.',    href: withChrome(`/action-center?scope=${scope}&tab=SHARED`),       icon: '📬', items: buckets.shared       },
   ];
 
   // Desktop only — mobile uses the standalone ActionCenterTab edge drawer instead.
@@ -463,11 +463,11 @@ export default function SeekerDashboard() {
               withChrome={withChrome}
               pickBucket={pickSeekerBucket}
               tileDefs={[
-                { key: 'messages',     bucket: 'messages',     title: 'New Messages',        emptyText: 'No unread items.',        href: withChrome(`/action-center?scope=${scope}&tab=SOCIAL`),       icon: '💬' },
-                { key: 'applications', bucket: 'applications', title: 'Application Updates', emptyText: 'No application updates.', href: withChrome(`/action-center?scope=${scope}&tab=APPLICATIONS`), icon: '📋' },
-                { key: 'calendar',     bucket: 'calendar',     title: 'Interview Invites',   emptyText: 'No calendar updates.',    href: withChrome(`/action-center?scope=${scope}&tab=CALENDAR`),     icon: '📅' },
-                { key: 'jobs',         bucket: 'jobs',         title: 'Job Matches',         emptyText: 'No new job updates.',     href: withChrome(`/action-center?scope=${scope}&tab=JOBS`),         icon: '🎯' },
-                { key: 'shared',       bucket: 'shared',       title: 'Shared With Me',      emptyText: 'No shared documents.',    href: withChrome(`/action-center?scope=${scope}&tab=SHARED`),       icon: '📬' },
+                { key: 'messages',     bucket: 'messages',     title: 'New Messages',        emptyText: 'No new updates.',        href: withChrome(`/action-center?scope=${scope}&tab=SOCIAL`),       icon: '💬' },
+                { key: 'applications', bucket: 'applications', title: 'Application Updates', emptyText: 'No new updates.', href: withChrome(`/action-center?scope=${scope}&tab=APPLICATIONS`), icon: '📋' },
+                { key: 'calendar',     bucket: 'calendar',     title: 'Interview Invites',   emptyText: 'No new updates.',    href: withChrome(`/action-center?scope=${scope}&tab=CALENDAR`),     icon: '📅' },
+                { key: 'jobs',         bucket: 'jobs',         title: 'Job Matches',         emptyText: 'No new updates.',     href: withChrome(`/action-center?scope=${scope}&tab=JOBS`),         icon: '🎯' },
+                { key: 'shared',       bucket: 'shared',       title: 'Shared With Me',      emptyText: 'No new updates.',    href: withChrome(`/action-center?scope=${scope}&tab=SHARED`),       icon: '📬' },
               ]}
             />
 
