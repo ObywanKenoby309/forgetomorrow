@@ -224,14 +224,14 @@ export default function RecruiterAnalyticsLayout({
 
   const backgroundStyle = wallpaperUrl
     ? {
-        minHeight: "100vh",
+        minHeight: "auto",
         backgroundImage: `url(${wallpaperUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center top",
         backgroundRepeat: "no-repeat",
         backgroundAttachment: isMobile ? "scroll" : "fixed",
       }
-    : { minHeight: "100vh", backgroundColor: "#ECEFF1" };
+    : { minHeight: "auto", backgroundColor: "#ECEFF1" };
 
   const desktopGrid = hideDesktopRightRail
     ? {
