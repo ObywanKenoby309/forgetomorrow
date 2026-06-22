@@ -227,28 +227,22 @@ function ConnectedJobsPanel({ withChrome, isMobile = false, style = {} }) {
 function ActionTile({ title, emptyText, items, href, withChrome, style }) {
   const list = Array.isArray(items) ? items : [];
   return (
-    <div className="rounded-lg p-3 flex flex-col min-h-[112px]" style={style || {}}>
-      <div className="flex items-start justify-between gap-3">
+    <Link href={withChrome(href)} style={{ textDecoration: 'none' }}>
+      <div className="rounded-lg p-3 flex flex-col" style={{ ...style, minHeight: 80, cursor: 'pointer' }}>
         <div className="font-semibold text-slate-900 text-sm leading-5 whitespace-normal break-words">{title}</div>
-        <div className="shrink-0" />
+        <div className="mt-2 flex-1">
+          {list.length === 0 ? (
+            <div className="text-xs text-slate-500 leading-5">{emptyText}</div>
+          ) : (
+            <div className="space-y-1">
+              {list.slice(0, 1).map((n) => (
+                <div key={n.id} className="text-xs text-slate-700 leading-5">{n.title || 'Update'}</div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-      <div className="mt-2 flex-1">
-        {list.length === 0 ? (
-          <div className="text-xs text-slate-500 leading-5">{emptyText}</div>
-        ) : (
-          <div className="space-y-1">
-            {list.slice(0, 1).map((n) => (
-              <div key={n.id} className="text-xs text-slate-700 leading-5">{n.title || 'Update'}</div>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="mt-2 flex justify-end">
-        <Link href={withChrome(href)} className="rounded-md border px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-          View More
-        </Link>
-      </div>
-    </div>
+    </Link>
   );
 }
 
@@ -345,7 +339,7 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) 
       {initialLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           {Array.from({ length: 5 }).map((_, idx) => (
-            <div key={idx} className="rounded-lg p-3 min-h-[112px] animate-pulse"
+            <div key={idx} className="rounded-lg p-3 min-h-[80px] animate-pulse"
               style={{ ...glassStyle, borderRadius: 14 }}>
               <div className="h-4 w-40 bg-slate-200 rounded" />
               <div className="h-3 w-32 bg-slate-200 rounded mt-3" />
@@ -764,8 +758,8 @@ export default function SeekerDashboard() {
                 padding: 10,
                 boxSizing: 'border-box',
                 alignSelf: 'start',
-                height: 208,
-                maxHeight: 208,
+                height: 150,
+                maxHeight: 150,
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
