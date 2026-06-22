@@ -1,4 +1,4 @@
-// pages/recruiter/analytics/index.js
+// components/analytics/recruiter/CommandInlay.js
 //
 // Three-path render pattern:
 //   null  — measuring screen, render empty shell
@@ -649,6 +649,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           marginTop: DESKTOP_REPORT_DROP,
           display: "grid",
           gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
+          alignItems: "start",
           gap: 12,
         }}
       >
