@@ -48,7 +48,7 @@ const ORANGE_HEADING_LIFT = {
 };
 
 // desktop bleed settings
-const LEFT_BLEED = -(0);
+const LEFT_BLEED = -(240 + 12);
 const RIGHT_BLEED = -(240 + 12);
 const DESKTOP_REPORT_DROP = 32;
 
@@ -648,7 +648,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           marginRight: RIGHT_BLEED,
           marginTop: DESKTOP_REPORT_DROP,
           display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
+          gridTemplateColumns: "240px minmax(0, 2fr) 240px",
           alignItems: "end",
           gap: 12,
         }}
@@ -664,7 +664,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           marginRight: RIGHT_BLEED,
           marginTop: 12,
           display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
+          gridTemplateColumns: "240px minmax(0, 2fr) 240px",
           gap: 12,
         }}
       >
