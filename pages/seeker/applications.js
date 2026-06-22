@@ -495,26 +495,16 @@ const ApplicationsRightRail = (
   <div
     style={{
       width: '100%',
-      maxWidth: 218,
-      margin: '0 auto -72px',
-      padding: '8px',
-      borderRadius: 22,
-      border: '1px solid rgba(255,112,67,0.16)',
-      background:
-        'linear-gradient(180deg, rgba(255,244,238,0.56), rgba(255,255,255,0.28))',
-      boxShadow: '0 14px 34px rgba(15,23,42,0.10)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
+      maxWidth: 195,
+      margin: '0 auto -110px',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'flex-start',
-      boxSizing: 'border-box',
     }}
   >
     <div
       style={{
-        width: '100%',
-        transform: 'scale(0.68)',
+        transform: 'scale(0.66)',
         transformOrigin: 'top center',
       }}
     >
