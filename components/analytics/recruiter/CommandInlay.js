@@ -652,7 +652,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
           gap: 12,
         }}
       >
-        {execSnapshotCard}
+        <div style={{ alignSelf: "start" }}>{execSnapshotCard}</div>
         {recruiterActivityCard}
         {forgeInsightsCard}
       </div>
