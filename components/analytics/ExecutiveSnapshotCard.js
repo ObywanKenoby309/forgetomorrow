@@ -87,8 +87,6 @@ export default function ExecutiveSnapshotCard({
   totalApplies,
   isMobile,
 }) {
-  const compactStatColumns = isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))";
-
   return (
     <div
       style={{
@@ -135,29 +133,30 @@ export default function ExecutiveSnapshotCard({
 
         <div style={{ overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(80px, 1fr))", gap: 8, minWidth: 0 }}>
-          <StatTile
-            label="Top source"
-            value={loading ? "…" : topSource?.name || "N/A"}
-            hint="Best-performing inbound channel"
-          />
-          <StatTile
-            label="Offer acceptance"
-            value={loading ? "…" : `${offerAcceptanceRate}%`}
-            hint="Close efficiency signal"
-          />
-          <StatTile
-            label="Apply-to-hire"
-            value={
-              loading
-                ? "…"
-                : totalApplies
-                  ? `${((totalHires / totalApplies) * 100).toFixed(1)}%`
-                  : "0%"
-            }
-            hint="Applications converting into hires"
-          />
+            <StatTile
+              label="Top source"
+              value={loading ? "…" : topSource?.name || "N/A"}
+              hint="Best-performing inbound channel"
+            />
+            <StatTile
+              label="Offer acceptance"
+              value={loading ? "…" : `${offerAcceptanceRate}%`}
+              hint="Close efficiency signal"
+            />
+            <StatTile
+              label="Apply-to-hire"
+              value={
+                loading
+                  ? "…"
+                  : totalApplies
+                    ? `${((totalHires / totalApplies) * 100).toFixed(1)}%`
+                    : "0%"
+              }
+              hint="Applications converting into hires"
+            />
           </div>
         </div>
+      </div>
     </div>
   );
 }
