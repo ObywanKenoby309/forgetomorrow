@@ -50,7 +50,7 @@ const ORANGE_HEADING_LIFT = {
 // desktop bleed settings
 const LEFT_BLEED = -(240 + 12);
 const RIGHT_BLEED = -(240 + 12);
-const DESKTOP_REPORT_DROP = 24;
+const DESKTOP_REPORT_DROP = 12;
 
 // ─── Insight config ───────────────────────────────────────────────────────────
 const INSIGHT_CONFIG = {
@@ -345,7 +345,7 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
   );
 
   const recruiterActivityCard = (
-    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0 }}>
+    <div style={{ ...GLASS, borderRadius: 18, padding: 16, width: "100%", minWidth: 0, marginTop: -8 }}>
       <div
         style={{
           display: "flex",
