@@ -516,9 +516,16 @@ function DeviceTestPanel({ isMobile = false }) {
   const cameras = devices.filter((d) => d.kind === 'videoinput');
   const microphones = devices.filter((d) => d.kind === 'audioinput');
   const speakers = devices.filter((d) => d.kind === 'audiooutput');
-  const screenShareSupported =
+  const mediaDevicesSupported =
     typeof navigator !== 'undefined' &&
-    !!navigator.mediaDevices &&
+    !!navigator.mediaDevices;
+
+  const cameraMicSupported =
+    mediaDevicesSupported &&
+    typeof navigator.mediaDevices.getUserMedia === 'function';
+
+  const screenShareSupported =
+    mediaDevicesSupported &&
     typeof navigator.mediaDevices.getDisplayMedia === 'function';
 
   const stopScreenTest = () => {
@@ -559,6 +566,12 @@ function DeviceTestPanel({ isMobile = false }) {
   };
 
   const loadDevices = async () => {
+    if (!mediaDevicesSupported || typeof navigator.mediaDevices.enumerateDevices !== 'function') {
+      setDevices([]);
+      setDeviceError('Camera and microphone device testing is not available in this mobile browser. Open Foundry in Chrome, Safari, Edge, or Firefox for the best experience.');
+      return;
+    }
+
     try {
       const list = await navigator.mediaDevices.enumerateDevices();
       setDevices(list);
@@ -576,6 +589,12 @@ function DeviceTestPanel({ isMobile = false }) {
   const startTest = async () => {
     stopTest();
     setDeviceError('');
+
+    if (!cameraMicSupported) {
+      setDeviceError('Camera and microphone testing is not available in this mobile browser. Open Foundry in Chrome, Safari, Edge, or Firefox for the best experience.');
+      setTesting(false);
+      return;
+    }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -758,11 +777,10 @@ function DeviceTestPanel({ isMobile = false }) {
             <button
               style={{
                 ...S.outlineBtn,
-                opacity: screenShareSupported ? 1 : 0.55,
-                cursor: screenShareSupported ? 'pointer' : 'not-allowed',
+                opacity: screenShareSupported ? 1 : 0.65,
+                cursor: 'pointer',
               }}
               onClick={screenTesting ? stopScreenTest : startScreenTest}
-              disabled={!screenShareSupported && !screenTesting}
               title={screenShareSupported ? 'Test screen share' : 'Screen sharing is not supported on this mobile browser.'}
             >
               {screenTesting ? 'Stop screen test' : screenShareSupported ? 'Test screen share' : 'Screen share unavailable'}
