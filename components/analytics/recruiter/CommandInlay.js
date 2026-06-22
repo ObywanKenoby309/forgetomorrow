@@ -646,16 +646,18 @@ export default function CommandInlay({ filters, onFilterChange, isMobile }) {
     <>
       <div
         style={{
+          marginLeft: LEFT_BLEED,
+          marginRight: RIGHT_BLEED,
           marginTop: DESKTOP_REPORT_DROP,
           display: "grid",
           gridTemplateColumns: "240px minmax(0, 2fr) 240px",
-          alignItems: "end",
+          alignItems: "start",
           gap: 12,
         }}
       >
-        {execSnapshotCard}
-        {recruiterActivityCard}
-        {forgeInsightsCard}
+        <div style={{ alignSelf: "end" }}>{execSnapshotCard}</div>
+        <div style={{ alignSelf: "start" }}>{recruiterActivityCard}</div>
+        <div style={{ alignSelf: "start" }}>{forgeInsightsCard}</div>
       </div>
 
       <div
