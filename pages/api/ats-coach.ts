@@ -270,6 +270,52 @@ function structuredToText(s: CoachStructured): string {
 
 // ─── normalise parsed response ────────────────────────────────────────────────
 
+
+function shouldForceProvenLanguage(why: any): boolean {
+  const score =
+    typeof why?.match?.score === 'number'
+      ? why.match.score
+      : typeof why?.score === 'number'
+        ? why.score
+        : null;
+
+  const grade = String(why?.match?.grade || why?.grade || '').toLowerCase();
+  const directRoleMatch = Boolean(
+    why?._debug?.roleHistory?.directRoleMatch ||
+    why?._debug?.roleHistory?.strongTitleMatch ||
+    why?._debug?.roleHistory?.similarTitleMatch
+  );
+
+  return directRoleMatch || grade === 'strong' || (typeof score === 'number' && score >= 85);
+}
+
+function forceProvenLanguage(value: any, why: any): any {
+  if (!shouldForceProvenLanguage(why)) return value;
+
+  if (typeof value === 'string') {
+    return value
+      .replace(/strong evidence\s*,?\s*but\s+not\s+proven/gi, 'proven')
+      .replace(/strong evidence\s*,?\s*but\s+not\s+fully\s+proven/gi, 'proven')
+      .replace(/strong evidence\s*,?\s*but\s+only\s+partial\s+proof/gi, 'proven')
+      .replace(/partial proof/gi, 'proven evidence')
+      .replace(/partially proven/gi, 'proven')
+      .replace(/not fully proven/gi, 'proven')
+      .replace(/not proven/gi, 'proven');
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => forceProvenLanguage(item, why));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, forceProvenLanguage(item, why)])
+    );
+  }
+
+  return value;
+}
+
 function normalizeStructured(parsed: any): CoachStructured {
   const actions = Array.isArray(parsed.improvementActions) ? parsed.improvementActions : [];
 
@@ -660,6 +706,13 @@ function extractResumeText(resumeData: any) {
 
 const resumeText = extractResumeText(resumeData);
 const why = buildExplain(resumeText, jdText);
+const proofLanguageInstruction = shouldForceProvenLanguage(why)
+  ? `
+
+MVP PROOF LANGUAGE OVERRIDE — MANDATORY:
+WHY returned Strong/high-confidence alignment. Do NOT describe Domain Knowledge, Qualification, or role evidence as partial, not proven, not fully proven, or strong evidence but not proven. Use proven/proven evidence language for those categories.
+`
+  : '';
 const authoritativeResumeEvidence = `
 AUTHORITATIVE CURRENT RESUME EVIDENCE:
 This block is the current resume payload from the builder. Treat it as the source of truth for whether credentials, education, languages, projects, and achievements are present.
@@ -689,7 +742,7 @@ ${resumeText || '[No resume evidence supplied]'}
     // The brain's JSON template has section:"" which causes the 8B model
     // to collapse all actions to one section. This override prevents that.
     const prompt = requestedSection === 'overview'
-      ? `${intelligenceBlock}${intentPrefix}${authoritativeResumeEvidence}${brainPrompt}
+      ? `${intelligenceBlock}${intentPrefix}${authoritativeResumeEvidence}${proofLanguageInstruction}${brainPrompt}
 
 CRITICAL OUTPUT REQUIREMENT — MANDATORY:
 You MUST return at least 3 improvementActions.
@@ -704,7 +757,7 @@ Include "certifications" ALWAYS when any of these are true:
   - The JD names or prefers a specific certification (ITIL, PMP, Salesforce, AWS, etc.) AND the resume contains that certification or an equivalent. When a match exists, generate an action that names the cert, confirms it is present, and states its credibility value. Do NOT skip this or return empty feedback — a direct cert match is a section completeness requirement.
   - The JD names a cert the resume does NOT have. Generate an action explaining the gap and its severity.
 Include "languages" if the JD mentions language requirements or multilingual preferences.`
-      : `${intelligenceBlock}${intentPrefix}${authoritativeResumeEvidence}${brainPrompt}`.trim();
+      : `${intelligenceBlock}${intentPrefix}${authoritativeResumeEvidence}${proofLanguageInstruction}${brainPrompt}`.trim();
 
     // ── Call Groq ─────────────────────────────────────────────────────────
     const openAIRes = await callOpenAI(apiKey, model, prompt);
@@ -738,7 +791,8 @@ console.log('[ATS-COACH RETURN SCORE]', typeof why?.score === 'number' ? why.sco
     }
 
     // ── Normalise and return ──────────────────────────────────────────────
-    const structured = normalizeStructured(parsed);
+    const proofSafeParsed = forceProvenLanguage(parsed, why);
+    const structured = normalizeStructured(proofSafeParsed);
 
     const tips: string[] = [
       ...structured.signalGaps,
