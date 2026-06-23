@@ -332,6 +332,160 @@ function MobileListView({ stagesData, onView }) {
   );
 }
 
+function DesktopListView({ stagesData, onView, onEdit, onDelete, onMove, onOpenPrep }) {
+  const [collapsed, setCollapsed] = useState({});
+
+  const toggleCollapse = (stage) => setCollapsed((prev) => ({ ...prev, [stage]: !prev[stage] }));
+
+  const isEmpty = STAGES.every((s) => !(stagesData[s] || []).filter(Boolean).length);
+
+  if (isEmpty) {
+    return (
+      <div style={{ textAlign: 'center', color: '#90A4AE', fontSize: 14, padding: '80px 0' }}>
+        No applications yet. Add one to get started.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {STAGES.map((stage) => {
+        const items = (stagesData[stage] || []).filter(Boolean);
+        const c = colorFor(stageKey(stage));
+        const isCollapsed = collapsed[stage];
+
+        return (
+          <div key={stage} style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            {/* Stage header */}
+            <button
+              type="button"
+              onClick={() => toggleCollapse(stage)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 16px',
+                background: c.bg,
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.solid, flexShrink: 0 }} />
+              <span style={{ fontWeight: 800, fontSize: 13, color: c.text, flex: 1, textAlign: 'left' }}>{stage}</span>
+              <span style={{
+                minWidth: 20, height: 20, borderRadius: 10, background: c.solid,
+                color: '#fff', fontSize: 11, fontWeight: 900,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px',
+              }}>{items.length}</span>
+              <span style={{ fontSize: 11, color: c.text, opacity: 0.6, marginLeft: 4 }}>{isCollapsed ? '▶' : '▼'}</span>
+            </button>
+
+            {/* Rows */}
+            {!isCollapsed && items.length > 0 && (
+              <div style={{ background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+                {items.map((job, idx) => {
+                  const locked = isApplicationLocked(job, stage);
+                  return (
+                    <div
+                      key={job.id}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) 120px 120px auto',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '10px 16px',
+                        borderTop: idx === 0 ? 'none' : '1px solid rgba(0,0,0,0.04)',
+                        background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => onView && onView(job, stage)}
+                    >
+                      {/* Title */}
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#112033', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {job.title}
+                        </div>
+                        {job.company && (
+                          <div style={{ fontSize: 11, color: '#607D8B', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {job.company}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Location */}
+                      <div style={{ fontSize: 11.5, color: '#607D8B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {job.location || '—'}
+                      </div>
+
+                      {/* Stage badge */}
+                      <div>
+                        <span style={{
+                          fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 999,
+                          background: c.bg, color: c.text, border: `1px solid ${c.solid}44`,
+                          whiteSpace: 'nowrap',
+                        }}>{stage}</span>
+                      </div>
+
+                      {/* Date */}
+                      <div style={{ fontSize: 11, color: '#90A4AE', whiteSpace: 'nowrap' }}>
+                        {job.dateAdded || '—'}
+                      </div>
+
+                      {/* Lock indicator */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {locked && <LockIcon size={12} color="#90A4AE" />}
+                      </div>
+
+                      {/* Actions */}
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {onView && (
+                          <button type="button" onClick={() => onView(job, stage)} title="View"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#607D8B', fontSize: 14, padding: 4 }}>
+                            👁
+                          </button>
+                        )}
+                        {!locked && onEdit && (
+                          <button type="button" onClick={() => onEdit(job)} title="Edit"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#607D8B', fontSize: 14, padding: 4 }}>
+                            ✏️
+                          </button>
+                        )}
+                        {!locked && onDelete && (
+                          <button type="button" onClick={() => onDelete(job.id)} title="Delete"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: 14, padding: 4 }}>
+                            🗑
+                          </button>
+                        )}
+                        {job.jobId && onOpenPrep && (
+                          <button type="button" onClick={() => onOpenPrep(job)} title="Prep"
+                            style={{ background: 'none', border: '1px solid #FF7043', borderRadius: 999, cursor: 'pointer', color: '#FF7043', fontSize: 10, fontWeight: 800, padding: '3px 8px' }}>
+                            Prep
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!isCollapsed && items.length === 0 && (
+              <div style={{ padding: '16px', fontSize: 12, color: '#90A4AE', background: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>
+                No applications in this stage.
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ApplicationsBoard({
   stagesData = {
     Pinned: [],
@@ -360,6 +514,7 @@ export default function ApplicationsBoard({
   const [mobileStage, setMobileStage] = useState('Pinned');
   // 'board' = mini multi-lane glance, 'focus' = single-stage full cards, 'list' = flat grouped list
   const [mobileView, setMobileView] = useState('board');
+  const [desktopView, setDesktopView] = useState('board');
   const [touchStart, setTouchStart] = useState(null);
 
   const chipRailRef = useRef(null);
@@ -412,10 +567,6 @@ export default function ApplicationsBoard({
     padding: compact ? 6 : 8,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     minHeight: isMobile ? '220px' : '300px',
-    maxHeight: isMobile ? 'none' : '70vh',
-    overflowY: isMobile ? 'visible' : 'auto',
-    scrollbarWidth: 'thin',
-    scrollbarColor: 'rgba(255,112,67,0.3) transparent',
     position: 'relative',
     height: '100%',
     width: '100%',
@@ -504,6 +655,57 @@ export default function ApplicationsBoard({
         .ft-kanban-col::-webkit-scrollbar-thumb { background: rgba(255,112,67,0.3); border-radius: 999px; }
         .ft-kanban-col::-webkit-scrollbar-thumb:hover { background: rgba(255,112,67,0.55); }
       `}</style>
+
+      {/* Desktop view toggle */}
+      {!isMobile && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+          <div style={{
+            display: 'inline-flex',
+            background: 'rgba(255,255,255,0.55)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.6)',
+            borderRadius: 12,
+            padding: 4,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          }}>
+            {[{ key: 'board', label: '⊞  Board' }, { key: 'list', label: '☰  List' }].map((v) => (
+              <button
+                key={v.key}
+                type="button"
+                onClick={() => setDesktopView(v.key)}
+                style={{
+                  border: desktopView === v.key ? '1.5px solid #FF7043' : '1.5px solid transparent',
+                  borderRadius: 9,
+                  padding: '7px 28px',
+                  fontWeight: 800,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  background: desktopView === v.key ? '#1B2430' : 'transparent',
+                  color: desktopView === v.key ? '#FF8A5C' : '#5F6B7A',
+                  boxShadow: desktopView === v.key ? '0 0 0 3px rgba(255,112,67,0.18)' : 'none',
+                  transition: 'all .18s ease',
+                  fontFamily: 'inherit',
+                }}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop list view */}
+      {!isMobile && desktopView === 'list' && (
+        <DesktopListView
+          stagesData={stagesData}
+          onView={onView}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onMove={onMove}
+          onOpenPrep={onOpenPrep}
+        />
+      )}
 
       {isMobile && (
         <div
@@ -642,7 +844,7 @@ export default function ApplicationsBoard({
         <MobileListView stagesData={stagesData} onView={onView} />
       )}
 
-      {(!isMobile || mobileView !== 'list') && (
+      {(!isMobile || mobileView !== 'list') && (isMobile || desktopView === 'board') && (
         <DndContext
           sensors={sensors}
           collisionDetection={pointerWithin}
@@ -682,7 +884,7 @@ export default function ApplicationsBoard({
                 const columnId = `${stage}-column`;
 
                 return (
-                  <div key={stage} className="ft-kanban-col" style={columnStyle}>
+                  <div key={stage} style={columnStyle}>
                     <div
                       style={{
                         display: 'inline-flex',
