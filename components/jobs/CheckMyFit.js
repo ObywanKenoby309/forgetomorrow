@@ -53,8 +53,11 @@ export default function CheckMyFit({ job, onImproveResume, profileSignal }) {
       }
 
       const why = data?.why || {};
-	  console.log('[CheckMyFit] debug resumeText:', data?._debug_resumeText);
-      const score =
+
+console.log('[CheckMyFit] WHY RESULT', why);
+console.log('[CheckMyFit] debug resumeText:', data?._debug_resumeText);
+
+const score =
   typeof why?.match?.score === 'number'
     ? why.match.score
     : typeof why?.score === 'number'
