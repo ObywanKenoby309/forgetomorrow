@@ -224,11 +224,11 @@ function strengthenHammerSignalBreakdown({ jdText, resume, signalBreakdown }: { 
     const isQualification = label.includes('qualification') || label.includes('credential') || label.includes('education');
 
     if (isDomainKnowledge && (directTitle || domainHits >= 6)) {
-      return { ...item, status: 'strong' };
+      return { ...item, status: 'proven' };
     }
 
     if (isQualification && (directTitle || jdNoFormalEducation)) {
-      return { ...item, status: 'strong' };
+      return { ...item, status: 'proven' };
     }
 
     return item;
