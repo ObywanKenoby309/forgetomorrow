@@ -711,7 +711,7 @@ export default function GrowthEngine({ hideResumeBanner = false, onBack = null }
     }
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
-        <InputPanel />
+        { InputPanel() }
       </div>
     );
   }
@@ -763,7 +763,7 @@ export default function GrowthEngine({ hideResumeBanner = false, onBack = null }
   if (loading) {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,300px) minmax(0,1fr)', gap: 12, width: '100%' }}>
-        <InputPanel />
+        { InputPanel() }
         <div style={{ ...GLASS, padding: '48px 24px', textAlign: 'center' }}>
           <div style={{ fontSize: 32, marginBottom: 14 }}>🧠</div>
           <div style={{ fontWeight: 900, fontSize: 16, color: ORANGE, marginBottom: 6 }}>Building your roadmap…</div>
@@ -783,7 +783,7 @@ export default function GrowthEngine({ hideResumeBanner = false, onBack = null }
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,340px)', gap: 12, alignItems: 'start', width: '100%' }}>
       <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
-      <InputPanel />
+      { InputPanel() }
       {/* Right: preview of what is coming */}
       <div style={{ display: 'grid', gap: 10 }}>
         <div style={{ ...GLASS, padding: '16px 14px', background: 'rgba(30,41,59,0.88)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)' }}>
