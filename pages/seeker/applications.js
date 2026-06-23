@@ -20,8 +20,7 @@ const stageKey = (stage) =>
     'Closed Out': 'info',
   }[stage] || 'neutral');
 
-function StageStrip({ tracker, wrapperStyle }) {
-  // ✅ Matches the platform-wide mobile breakpoint (SeekerLayout, etc).
+function StageStrip({ tracker, wrapperStyle, desktopView, setDesktopView }) {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 1024 : false
   );
@@ -32,8 +31,6 @@ function StageStrip({ tracker, wrapperStyle }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Mobile stage counts now live inside ApplicationsBoard itself
-  // (Board lane headers + Focus tabs), so this strip is desktop-only.
   if (isMobile) return null;
 
   return (
@@ -73,6 +70,43 @@ function StageStrip({ tracker, wrapperStyle }) {
           );
         })}
       </div>
+
+      {/* Board / List toggle */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}>
+        <div style={{
+          display: 'inline-flex',
+          background: 'rgba(255,255,255,0.55)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.6)',
+          borderRadius: 12,
+          padding: 4,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        }}>
+          {[{ key: 'board', label: '⊞  Board' }, { key: 'list', label: '☰  List' }].map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              onClick={() => setDesktopView(v.key)}
+              style={{
+                border: desktopView === v.key ? '1.5px solid #FF7043' : '1.5px solid transparent',
+                borderRadius: 9,
+                padding: '7px 28px',
+                fontWeight: 800,
+                fontSize: 13,
+                cursor: 'pointer',
+                background: desktopView === v.key ? '#1B2430' : 'transparent',
+                color: desktopView === v.key ? '#FF8A5C' : '#5F6B7A',
+                boxShadow: desktopView === v.key ? '0 0 0 3px rgba(255,112,67,0.18)' : 'none',
+                transition: 'all .18s ease',
+                fontFamily: 'inherit',
+              }}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
@@ -95,6 +129,7 @@ export default function SeekerApplicationsPage() {
   const [prepOpen, setPrepOpen] = useState(false);
   const [prepApplication, setPrepApplication] = useState(null);
   const [addStage, setAddStage] = useState(null);
+  const [desktopView, setDesktopView] = useState('board');
 
   useEffect(() => {
     async function load() {
@@ -520,7 +555,7 @@ const HeaderBox = (
       subtitle="Track your job search across stages, keep notes, and move roles forward."
     />
 
-    <StageStrip tracker={tracker} wrapperStyle={{ ...GLASS_CARD, padding: '14px 16px' }} />
+    <StageStrip tracker={tracker} wrapperStyle={{ ...GLASS_CARD, padding: '14px 16px' }} desktopView={desktopView} setDesktopView={setDesktopView} />
   </div>
 );
 
@@ -575,13 +610,14 @@ const HeaderBox = (
   rightTopOnly
   activeNav="jobs"
 >
-      <div style={{ marginTop: -20 }}>
+      <div style={{ marginTop: 0 }}>
         <section style={{ padding: 0, marginTop: 0 }}>
           <ApplicationsBoard
             key={JSON.stringify(tracker)}
             stagesData={tracker}
             compact={false}
             columns={5}
+            desktopView={desktopView}
             onAdd={(stage) => {
               setAddStage(stage || null);
               setFormMode('add');

@@ -528,6 +528,7 @@ export default function ApplicationsBoard({
   onAdd,
   compact = false,
   columns = 5,
+  desktopView = 'board',
 }) {
   const [activeId, setActiveId] = useState(null);
   const [activeSize, setActiveSize] = useState(null);
@@ -540,7 +541,6 @@ export default function ApplicationsBoard({
   const [mobileStage, setMobileStage] = useState('Pinned');
   // 'board' = mini multi-lane glance, 'focus' = single-stage full cards, 'list' = flat grouped list
   const [mobileView, setMobileView] = useState('board');
-  const [desktopView, setDesktopView] = useState('board');
   const [touchStart, setTouchStart] = useState(null);
 
   const chipRailRef = useRef(null);
@@ -593,8 +593,11 @@ export default function ApplicationsBoard({
     padding: compact ? 6 : 8,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     minHeight: isMobile ? '220px' : '300px',
+    maxHeight: isMobile ? 'none' : '70vh',
+    overflowY: isMobile ? 'visible' : 'auto',
+    scrollbarWidth: 'thin',
+    scrollbarColor: 'rgba(255,112,67,0.3) transparent',
     position: 'relative',
-    height: '100%',
     width: '100%',
     minWidth: 0,
     boxSizing: 'border-box',
@@ -681,45 +684,6 @@ export default function ApplicationsBoard({
         .ft-kanban-col::-webkit-scrollbar-thumb { background: rgba(255,112,67,0.3); border-radius: 999px; }
         .ft-kanban-col::-webkit-scrollbar-thumb:hover { background: rgba(255,112,67,0.55); }
       `}</style>
-
-      {/* Desktop view toggle */}
-      {!isMobile && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-          <div style={{
-            display: 'inline-flex',
-            background: 'rgba(255,255,255,0.55)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.6)',
-            borderRadius: 12,
-            padding: 4,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-          }}>
-            {[{ key: 'board', label: '⊞  Board' }, { key: 'list', label: '☰  List' }].map((v) => (
-              <button
-                key={v.key}
-                type="button"
-                onClick={() => setDesktopView(v.key)}
-                style={{
-                  border: desktopView === v.key ? '1.5px solid #FF7043' : '1.5px solid transparent',
-                  borderRadius: 9,
-                  padding: '7px 28px',
-                  fontWeight: 800,
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  background: desktopView === v.key ? '#1B2430' : 'transparent',
-                  color: desktopView === v.key ? '#FF8A5C' : '#5F6B7A',
-                  boxShadow: desktopView === v.key ? '0 0 0 3px rgba(255,112,67,0.18)' : 'none',
-                  transition: 'all .18s ease',
-                  fontFamily: 'inherit',
-                }}
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Desktop list view */}
       {!isMobile && desktopView === 'list' && (
