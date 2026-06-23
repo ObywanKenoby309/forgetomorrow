@@ -168,7 +168,42 @@ export default async function handler(req, res) {
 
     // Call WHY engine directly — same engine as External Compare and recruiter packets
     // No HTTP overhead. No derived score. Real capability-based alignment.
-    const why = buildExplain(resumeText, jdText);
+    let why = buildExplain(resumeText, jdText);
+
+    // MVP normalization:
+    // If WHY matched every required Tier A and Tier B signal, align this endpoint
+    // with Hammer's full-match behavior so Check My Alignment does not show 71
+    // while Hammer shows 100 for the same resume/JD evidence.
+    const coverage = why?._debug || {};
+    const hasFullRequiredCoverage =
+      Number(coverage.tierATotal || 0) > 0 &&
+      Number(coverage.tierAHit || 0) === Number(coverage.tierATotal || 0) &&
+      Number(coverage.tierBHit || 0) === Number(coverage.tierBTotal || 0);
+
+    if (hasFullRequiredCoverage) {
+      const normalizedScore = 100;
+      const normalizedSummary = String(why?.summary || "")
+        .replace(/\((\d+)%\)/, `(${normalizedScore}%)`)
+        .replace(/^\w+ alignment/, "Strong alignment");
+
+      why = {
+        ...why,
+        score: normalizedScore,
+        grade: "Strong",
+        summary: normalizedSummary || `Strong alignment (${normalizedScore}%). Capability coverage: matched ${coverage.tierAHit}/${coverage.tierATotal} core (Tier A) and ${coverage.tierBHit}/${coverage.tierBTotal} supporting (Tier B).`,
+        match: {
+          ...(why?.match || {}),
+          score: normalizedScore,
+          grade: "Strong",
+          summary: normalizedSummary || why?.match?.summary || "",
+        },
+        _debug: {
+          ...(why?._debug || {}),
+          checkFitNormalizedFullCoverage: true,
+          checkFitOriginalScore: why?.score ?? why?.match?.score ?? null,
+        },
+      };
+    }
 
 const matchedSignals = Array.isArray(why?.signals?.matched) ? why.signals.matched : [];
 const notYetSignals = Array.isArray(why?.signals?.not_yet_demonstrated)
