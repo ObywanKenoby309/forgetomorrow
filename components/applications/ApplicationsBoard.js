@@ -348,14 +348,22 @@ function DesktopListView({ stagesData, onView, onEdit, onDelete, onMove, onOpenP
   }
 
   return (
-    <div style={{ display: 'grid', gap: 8 }}>
+    <div style={{ display: 'grid', gap: 10 }}>
       {STAGES.map((stage) => {
         const items = (stagesData[stage] || []).filter(Boolean);
         const c = colorFor(stageKey(stage));
         const isCollapsed = collapsed[stage];
 
         return (
-          <div key={stage} style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+          <div key={stage} style={{
+            borderRadius: 16,
+            overflow: 'hidden',
+            border: `1.5px solid ${c.solid}44`,
+            boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+            background: 'rgba(255,255,255,0.82)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}>
             {/* Stage header */}
             <button
               type="button"
@@ -365,105 +373,123 @@ function DesktopListView({ stagesData, onView, onEdit, onDelete, onMove, onOpenP
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
-                padding: '10px 16px',
+                padding: '12px 18px',
                 background: c.bg,
                 border: 'none',
+                borderBottom: isCollapsed ? 'none' : `1px solid ${c.solid}33`,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
               }}
             >
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.solid, flexShrink: 0 }} />
-              <span style={{ fontWeight: 800, fontSize: 13, color: c.text, flex: 1, textAlign: 'left' }}>{stage}</span>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: c.solid, flexShrink: 0 }} />
+              <span style={{ fontWeight: 900, fontSize: 14, color: c.text, flex: 1, textAlign: 'left' }}>{stage}</span>
               <span style={{
-                minWidth: 20, height: 20, borderRadius: 10, background: c.solid,
-                color: '#fff', fontSize: 11, fontWeight: 900,
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px',
+                minWidth: 24, height: 24, borderRadius: 12, background: c.solid,
+                color: '#fff', fontSize: 12, fontWeight: 900,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 7px',
               }}>{items.length}</span>
-              <span style={{ fontSize: 11, color: c.text, opacity: 0.6, marginLeft: 4 }}>{isCollapsed ? '▶' : '▼'}</span>
+              <span style={{ fontSize: 12, color: c.text, opacity: 0.5, marginLeft: 6 }}>{isCollapsed ? '▶' : '▼'}</span>
             </button>
+
+            {/* Column header row */}
+            {!isCollapsed && items.length > 0 && (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1.2fr) 130px 130px 60px 100px',
+                gap: 12,
+                padding: '7px 18px',
+                background: 'rgba(0,0,0,0.04)',
+                borderBottom: '1px solid rgba(0,0,0,0.06)',
+              }}>
+                {['Role', 'Location', 'Stage', 'Added', '', ''].map((h, i) => (
+                  <div key={i} style={{ fontSize: 10, fontWeight: 900, color: '#90A4AE', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</div>
+                ))}
+              </div>
+            )}
 
             {/* Rows */}
             {!isCollapsed && items.length > 0 && (
-              <div style={{ background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+              <div>
                 {items.map((job, idx) => {
                   const locked = isApplicationLocked(job, stage);
                   return (
                     <div
                       key={job.id}
+                      onClick={() => onView && onView(job, stage)}
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) 120px 120px auto',
+                        gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1.2fr) 130px 130px 60px 100px',
                         alignItems: 'center',
                         gap: 12,
-                        padding: '10px 16px',
-                        borderTop: idx === 0 ? 'none' : '1px solid rgba(0,0,0,0.04)',
-                        background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)',
+                        padding: '12px 18px',
+                        borderTop: idx === 0 ? 'none' : '1px solid rgba(0,0,0,0.05)',
+                        background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.025)',
                         cursor: 'pointer',
+                        transition: 'background 0.12s ease',
                       }}
-                      onClick={() => onView && onView(job, stage)}
+                      onMouseEnter={(e) => e.currentTarget.style.background = `${c.solid}12`}
+                      onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.025)'}
                     >
-                      {/* Title */}
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#112033', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {/* Title + company */}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {job.title}
                         </div>
-                        {job.company && (
-                          <div style={{ fontSize: 11, color: '#607D8B', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {job.company}
-                          </div>
-                        )}
+                        <div style={{ fontSize: 12, color: '#475569', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {job.company || '—'}
+                        </div>
                       </div>
 
                       {/* Location */}
-                      <div style={{ fontSize: 11.5, color: '#607D8B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 13, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {job.location || '—'}
                       </div>
 
                       {/* Stage badge */}
                       <div>
                         <span style={{
-                          fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 999,
-                          background: c.bg, color: c.text, border: `1px solid ${c.solid}44`,
-                          whiteSpace: 'nowrap',
+                          fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 999,
+                          background: c.bg, color: c.text, border: `1.5px solid ${c.solid}66`,
+                          whiteSpace: 'nowrap', display: 'inline-block',
                         }}>{stage}</span>
                       </div>
 
                       {/* Date */}
-                      <div style={{ fontSize: 11, color: '#90A4AE', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 12, color: '#64748B', whiteSpace: 'nowrap' }}>
                         {job.dateAdded || '—'}
                       </div>
 
-                      {/* Lock indicator */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {locked && <LockIcon size={12} color="#90A4AE" />}
+                      {/* Lock */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {locked && <LockIcon size={13} color="#94A3B8" />}
                       </div>
 
                       {/* Actions */}
                       <div
-                        style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         {onView && (
                           <button type="button" onClick={() => onView(job, stage)} title="View"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#607D8B', fontSize: 14, padding: 4 }}>
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', fontSize: 15, padding: '2px 4px', lineHeight: 1 }}>
                             👁
                           </button>
                         )}
                         {!locked && onEdit && (
                           <button type="button" onClick={() => onEdit(job)} title="Edit"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#607D8B', fontSize: 14, padding: 4 }}>
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', fontSize: 15, padding: '2px 4px', lineHeight: 1 }}>
                             ✏️
                           </button>
                         )}
                         {!locked && onDelete && (
                           <button type="button" onClick={() => onDelete(job.id)} title="Delete"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: 14, padding: 4 }}>
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: 15, padding: '2px 4px', lineHeight: 1 }}>
                             🗑
                           </button>
                         )}
                         {job.jobId && onOpenPrep && (
                           <button type="button" onClick={() => onOpenPrep(job)} title="Prep"
-                            style={{ background: 'none', border: '1px solid #FF7043', borderRadius: 999, cursor: 'pointer', color: '#FF7043', fontSize: 10, fontWeight: 800, padding: '3px 8px' }}>
+                            style={{ background: 'none', border: '1.5px solid #FF7043', borderRadius: 999, cursor: 'pointer', color: '#FF7043', fontSize: 10, fontWeight: 800, padding: '3px 8px', whiteSpace: 'nowrap' }}>
                             Prep
                           </button>
                         )}
@@ -475,7 +501,7 @@ function DesktopListView({ stagesData, onView, onEdit, onDelete, onMove, onOpenP
             )}
 
             {!isCollapsed && items.length === 0 && (
-              <div style={{ padding: '16px', fontSize: 12, color: '#90A4AE', background: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>
+              <div style={{ padding: '20px', fontSize: 13, color: '#94A3B8', textAlign: 'center' }}>
                 No applications in this stage.
               </div>
             )}
@@ -658,7 +684,7 @@ export default function ApplicationsBoard({
 
       {/* Desktop view toggle */}
       {!isMobile && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12, marginTop: -8 }}>
           <div style={{
             display: 'inline-flex',
             background: 'rgba(255,255,255,0.55)',
