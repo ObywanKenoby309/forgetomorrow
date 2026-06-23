@@ -587,6 +587,7 @@ export default function GrowthEngine({ hideResumeBanner = false, onBack = null }
           <a href={withChrome('/resume/create')} style={{ fontSize: 10, color: ORANGE, fontWeight: 800, textDecoration: 'underline', flexShrink: 0 }}>
             Open Resume Builder →
           </a>
+        )}
       </div>
 
       {/* Resume selector */}
