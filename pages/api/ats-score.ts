@@ -331,7 +331,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       throw new Error('Invalid JSON from AI');
     }
 
-    const score = typeof parsed.score === 'number' ? Math.max(0, Math.min(100, parsed.score)) : 0;
+    const rawScore = typeof parsed.score === 'number' ? Math.max(0, Math.min(100, parsed.score)) : 0;
+
+    const resumeForEvidence = {
+      ...resume,
+      summary,
+      skills,
+      workExperiences: experiences,
+      educationList: education,
+    };
+
+    const directTitleEvidence = hasDirectTitleOverlap(jd, resumeForEvidence);
+    const operationalDomainHits = countOperationalDomainHits(jd, resumeForEvidence);
+    const score =
+      directTitleEvidence || operationalDomainHits >= 6
+        ? Math.max(rawScore, 92)
+        : rawScore;
 
     const aiSummary = (parsed.summary && String(parsed.summary).trim()) || 'AI summary unavailable for this scan.';
 
@@ -371,13 +386,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       const signalWeights = deriveHammerSignalWeights({ jdText: jd });
       const deterministicResult = buildDeterministicHammerAnalysis({
         jdText: jd,
-        resume: {
-          ...resume,
-          summary,
-          skills,
-          workExperiences: experiences,
-          educationList: education,
-        },
+        resume: resumeForEvidence,
       });
       const evidenceMap = new Map(
         (deterministicResult?.evidenceSignals || []).map((sig: any) => [sig.signal.toLowerCase(), sig.status])
@@ -392,13 +401,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
       signalBreakdown = strengthenHammerSignalBreakdown({
         jdText: jd,
-        resume: {
-          ...resume,
-          summary,
-          skills,
-          workExperiences: experiences,
-          educationList: education,
-        },
+        resume: resumeForEvidence,
         signalBreakdown,
       });
     } catch (e) {
