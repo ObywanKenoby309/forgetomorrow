@@ -58,10 +58,10 @@ console.log('[CheckMyFit] WHY RESULT', why);
 console.log('[CheckMyFit] debug resumeText:', data?._debug_resumeText);
 
 const score =
-  typeof why?.match?.score === 'number'
-    ? why.match.score
-    : typeof why?.score === 'number'
-      ? why.score
+  typeof why?.score === 'number'
+    ? why.score
+    : typeof why?.match?.score === 'number'
+      ? why.match.score
       : null;
       const profileVsRole = typeof profileSignal?.score === 'number' ? profileSignal.score : null;
 
