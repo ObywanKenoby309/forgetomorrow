@@ -197,6 +197,43 @@ function guessJobTitle(jdText: string) {
 // Signal row type for the explainability modal
 type SigRow = { signal: string; status: string; required: boolean; weight: number; termCount: number };
 
+function normalizeProofStatus(status: string): string {
+  const s = String(status || '').trim().toLowerCase();
+
+  if (s === 'direct' || s === 'proven' || s === 'proof' || s === 'complete') return 'direct';
+  if (
+    s === 'adjacent_technical' ||
+    s === 'strong' ||
+    s === 'strong evidence' ||
+    s === 'strong_evidence' ||
+    s === 'strong-evidence'
+  ) return 'adjacent_technical';
+  if (
+    s === 'adjacent' ||
+    s === 'partial' ||
+    s === 'partial proof' ||
+    s === 'partial_proof' ||
+    s === 'partial-proof'
+  ) return 'adjacent';
+  if (
+    s === 'missing' ||
+    s === 'not demonstrated' ||
+    s === 'not_demonstrated' ||
+    s === 'not-demonstrated' ||
+    s === 'no proof'
+  ) return 'missing';
+
+  return s;
+}
+
+const STATUS_MULTIPLIER: Record<string, number> = {
+  direct: 1.0,
+  adjacent_technical: 0.8,
+  adjacent: 0.5,
+  missing: 0.0,
+};
+
+
 export default function AtsDepthPanel({
   jdText,
   resumeData: incomingResumeData = null,
@@ -363,13 +400,37 @@ export default function AtsDepthPanel({
     : aiScore !== null
     ? aiScore
     : 0;
+
+  const weightedSignalScore = useMemo(() => {
+    const weightedRows = Array.isArray(aiSignalBreakdown)
+      ? aiSignalBreakdown.filter((s: any) => Number(s?.weight) > 0)
+      : [];
+
+    if (!weightedRows.length) return null;
+
+    const totalWeight = weightedRows.reduce((sum: number, s: any) => sum + Number(s?.weight || 0), 0);
+    if (totalWeight <= 0) return null;
+
+    const earnedWeight = weightedRows.reduce((sum: number, s: any) => {
+      const normalizedStatus = normalizeProofStatus(String(s?.status || ''));
+      const multiplier = STATUS_MULTIPLIER[normalizedStatus] ?? 0;
+      return sum + (Number(s?.weight || 0) * multiplier);
+    }, 0);
+
+    return Math.max(0, Math.min(100, Math.round((earnedWeight / totalWeight) * 100)));
+  }, [aiSignalBreakdown]);
+
+  const displayedScore = weightedSignalScore !== null
+    ? Math.max(primaryScore, weightedSignalScore)
+    : primaryScore;
+
   const keywordScore = keywordCoverage;
 
   let statusText = '';
   let barColor = '#C62828';
-  if (primaryScore >= 85) { statusText = 'Excellent — ready to apply.'; barColor = '#2E7D32'; }
-  else if (primaryScore >= 70) { statusText = 'Good — tighten keywords & metrics to push higher.'; barColor = '#F59E0B'; }
-  else if (primaryScore >= 50) { statusText = 'Fair — add more high-impact terms before applying.'; barColor = '#EF6C00'; }
+  if (displayedScore >= 85) { statusText = 'Excellent — ready to apply.'; barColor = '#2E7D32'; }
+  else if (displayedScore >= 70) { statusText = 'Good — tighten keywords & metrics to push higher.'; barColor = '#F59E0B'; }
+  else if (displayedScore >= 50) { statusText = 'Fair — add more high-impact terms before applying.'; barColor = '#EF6C00'; }
   else { statusText = 'Low — add more high-impact terms (aim ≥85).'; barColor = '#C62828'; }
 
   // ─── Buckets for the Keywords tab ───────────────────────────────────────────
@@ -556,7 +617,7 @@ export default function AtsDepthPanel({
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
               <div style={{ fontSize: 28, fontWeight: 950, color: barColor, letterSpacing: -0.5, lineHeight: 1 }}>
-                {Number.isFinite(primaryScore) ? primaryScore : 0}
+                {Number.isFinite(displayedScore) ? displayedScore : 0}
                 <span style={{ fontSize: 13, color: '#B0BEC5', marginLeft: 2 }}>/100</span>
               </div>
               <button
@@ -588,7 +649,7 @@ export default function AtsDepthPanel({
         <div style={{ height: 7, borderRadius: 999, background: '#ECEFF1', overflow: 'hidden', marginTop: 9 }}>
           <div
             style={{
-              width: `${Math.max(0, Math.min(100, primaryScore))}%`,
+              width: `${Math.max(0, Math.min(100, displayedScore))}%`,
               height: '100%',
               background: barColor,
               transition: 'width 0.3s ease',
@@ -1020,7 +1081,7 @@ export default function AtsDepthPanel({
             }}>
               <div>
                 <div style={{ fontWeight: 950, fontSize: 15, color: '#263238' }}>
-                  Why {Number.isFinite(primaryScore) ? primaryScore : 0}/100?
+                  Why {Number.isFinite(displayedScore) ? displayedScore : 0}/100?
                 </div>
                 <div style={{ fontSize: 11, color: '#78909C', marginTop: 2 }}>
                   How Hammer weighted each signal for this role
@@ -1088,19 +1149,16 @@ export default function AtsDepthPanel({
                   adjacent: 'Partial proof',
                   missing: 'Not demonstrated',
                 };
-                const STATUS_MULTIPLIER: Record<string, number> = {
-                  direct: 1.0,
-                  adjacent_technical: 0.8,
-                  adjacent: 0.5,
-                  missing: 0.0,
-                };
-
-                const rows = rawSignals.map((sig: SigRow) => ({
-                  ...sig,
-                  barPct: Math.round((STATUS_MULTIPLIER[sig.status] ?? 0) * 100),
-                  label: STATUS_LABEL[sig.status] || sig.status,
-                  color: STATUS_COLOR[sig.status] || '#64748B',
-                }));
+                const rows = rawSignals.map((sig: SigRow) => {
+                  const normalizedStatus = normalizeProofStatus(sig.status);
+                  return {
+                    ...sig,
+                    status: normalizedStatus,
+                    barPct: Math.round((STATUS_MULTIPLIER[normalizedStatus] ?? 0) * 100),
+                    label: STATUS_LABEL[normalizedStatus] || sig.status,
+                    color: STATUS_COLOR[normalizedStatus] || '#64748B',
+                  };
+                });
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
