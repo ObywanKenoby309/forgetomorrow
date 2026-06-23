@@ -419,7 +419,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome, profile
 			</div>
 		  )}
           {activeModule === "onboarding" && (
-            <GrowthEngine />
+            <GrowthEngine onBack={() => setActiveModule(null)} hideResumeBanner={true} />
           )}
         </div>
       )}
@@ -681,16 +681,7 @@ export default function AnvilPage({ profileSlug = "" }) {
 
             {activeModule === "onboarding" && (
               <div style={MODULE_STAGE}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <button onClick={() => setActiveModule(null)}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6,
-                      padding: "6px 14px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
-                      background: "rgba(255,112,67,0.08)", color: "#FF7043",
-                      fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
-                    Anvil Main
-                  </button>
-                </div>
-                <GrowthEngine />
+                <GrowthEngine onBack={() => setActiveModule(null)} hideResumeBanner={true} />
               </div>
             )}
           </div>

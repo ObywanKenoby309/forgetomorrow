@@ -232,7 +232,7 @@ const RESULT_TABS = [
   { id: 'skills', label: 'Skills' },
 ];
 
-function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMobile, mobileTab, onMobileTabChange, roadmapId, pdfUrl, setPdfUrl, printingBrief, setPrintingBrief }) {
+function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMobile, mobileTab, onMobileTabChange, roadmapId, pdfUrl, setPdfUrl, printingBrief, setPrintingBrief, hideResumeBanner }) {
   const router = useRouter();
   const [tab, setTab] = useState('day30');
   const activeTab = mobileTab || tab;
@@ -402,7 +402,7 @@ function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMob
       <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
       {/* Resume connection banner */}
-      {hasResume ? (
+      {!hideResumeBanner && (hasResume ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 11px', borderRadius: 8,
           background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.20)', marginBottom: 8 }}>
           <span style={{ fontSize: 11 }}>✅</span>
@@ -414,7 +414,7 @@ function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMob
           <span style={{ fontSize: 11 }}>⚠️</span>
           <span style={{ fontSize: 10, fontWeight: 700, color: '#92400E' }}>Using self-reported inputs only. Connect your resume to strengthen roadmap accuracy.</span>
         </div>
-      )}
+      ))}
 
       {/* Sticky action + tab bar */}
       <div style={{ position: isMobile ? 'static' : 'sticky', top: 0, zIndex: 10, background: 'transparent', paddingBottom: 2 }}>
@@ -450,7 +450,7 @@ function ResultCockpit({ plan, direction, pivotTarget, onReset, hasResume, isMob
 }
 
 // ─── Main GrowthEngine ─────────────────────────────────────────────────────────
-export default function GrowthEngine() {
+export default function GrowthEngine({ hideResumeBanner = false, onBack = null }) {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) => chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
@@ -556,29 +556,38 @@ export default function GrowthEngine() {
   const InputPanel = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-      {/* Resume connection banner */}
-      {hasResume ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', borderRadius: 10,
-          background: 'rgba(22,163,74,0.10)', border: '1px solid rgba(22,163,74,0.25)' }}>
-          <span style={{ fontSize: 13, flexShrink: 0 }}>✅</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#15803D', lineHeight: 1.4 }}>
-            Roadmap grounded in verified experience and impact evidence.
-          </span>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 13px', borderRadius: 10,
-          background: 'rgba(234,179,8,0.10)', border: '1px solid rgba(234,179,8,0.30)' }}>
-          <span style={{ fontSize: 13, flexShrink: 0 }}>⚠️</span>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#92400E', lineHeight: 1.4 }}>
-              Using self-reported inputs only. Connect your resume for deeper roadmap intelligence.
-            </div>
-            <a href={withChrome('/resume/create')} style={{ fontSize: 10, color: ORANGE, fontWeight: 800, textDecoration: 'underline' }}>
-              Open Resume Builder →
-            </a>
-          </div>
-        </div>
-      )}
+      {/* Back button + resume banner — same glass row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '8px 12px', borderRadius: 10,
+        background: hasResume ? 'rgba(22,163,74,0.08)' : 'rgba(234,179,8,0.08)',
+        border: `1px solid ${hasResume ? 'rgba(22,163,74,0.22)' : 'rgba(234,179,8,0.28)'}`,
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}>
+        {onBack && (
+          <button onClick={onBack} type="button"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
+              padding: '5px 12px', borderRadius: 999,
+              border: '1px solid rgba(255,112,67,0.35)',
+              background: 'rgba(255,112,67,0.10)', color: '#FF7043',
+              fontWeight: 800, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+            ← Anvil
+          </button>
+        )}
+        <span style={{ fontSize: hasResume ? 13 : 13, flexShrink: 0 }}>{hasResume ? '✅' : '⚠️'}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: hasResume ? '#15803D' : '#92400E', lineHeight: 1.4, flex: 1 }}>
+          {hasResume
+            ? 'Roadmap grounded in verified experience and impact evidence.'
+            : 'Using self-reported inputs only. Connect your resume for deeper roadmap intelligence.'}
+        </span>
+        {!hasResume && (
+          <a href={withChrome('/resume/create')} style={{ fontSize: 10, color: ORANGE, fontWeight: 800, textDecoration: 'underline', flexShrink: 0 }}>
+            Open Resume Builder →
+          </a>
+      </div>
 
       {/* Resume selector */}
       <div style={{ ...GLASS, overflow: 'hidden' }}>
@@ -679,7 +688,8 @@ export default function GrowthEngine() {
             onReset={handleReset} hasResume={Boolean(selectedResumeId)}
             isMobile={true} mobileTab={mobileTab} onMobileTabChange={setMobileTab}
             roadmapId={roadmapId} pdfUrl={pdfUrl} setPdfUrl={setPdfUrl}
-            printingBrief={printingBrief} setPrintingBrief={setPrintingBrief} />
+            printingBrief={printingBrief} setPrintingBrief={setPrintingBrief}
+            hideResumeBanner={hideResumeBanner} />
           {/* Sticky bottom tab nav */}
           <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
             background: 'rgba(255,255,255,0.95)', borderTop: '1px solid rgba(0,0,0,0.10)',
@@ -747,7 +757,8 @@ export default function GrowthEngine() {
           <ResultCockpit plan={plan} direction={direction} pivotTarget={pivotTarget}
             onReset={handleReset} hasResume={Boolean(selectedResumeId)} isMobile={false}
             roadmapId={roadmapId} pdfUrl={pdfUrl} setPdfUrl={setPdfUrl}
-            printingBrief={printingBrief} setPrintingBrief={setPrintingBrief} />
+            printingBrief={printingBrief} setPrintingBrief={setPrintingBrief}
+            hideResumeBanner={hideResumeBanner} />
         </div>
       </div>
     );
