@@ -575,7 +575,7 @@ const HeaderBox = (
   rightTopOnly
   activeNav="jobs"
 >
-      <div style={{ marginTop: 0 }}>
+      <div style={{ marginTop: -20 }}>
         <section style={{ padding: 0, marginTop: 0 }}>
           <ApplicationsBoard
             key={JSON.stringify(tracker)}

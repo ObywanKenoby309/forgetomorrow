@@ -684,7 +684,7 @@ export default function ApplicationsBoard({
 
       {/* Desktop view toggle */}
       {!isMobile && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12, marginTop: -8 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
           <div style={{
             display: 'inline-flex',
             background: 'rgba(255,255,255,0.55)',
