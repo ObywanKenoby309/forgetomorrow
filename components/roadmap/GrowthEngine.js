@@ -670,13 +670,7 @@ export default function GrowthEngine({ hideResumeBanner = false, onBack = null }
         </div>
       )}
 
-      {/* What you get preview */}
-      <div style={{ ...WHITE_CARD, padding: '10px 12px' }}>
-        <div style={{ fontWeight: 800, fontSize: 10, color: SLATE, marginBottom: 7, letterSpacing: 0.3 }}>YOUR ROADMAP INCLUDES</div>
-        {['📅 30/60/90 day plan with objectives, actions, and metrics', '🏆 Quick wins for each phase', '⚠️ Risks to watch', '📈 Growth recommendations', '🧠 Skills to focus on', '🤝 Mentor escalation paths'].map((item, i) => (
-          <div key={i} style={{ fontSize: 10, color: '#64748B', padding: '3px 0', borderBottom: i < 5 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>{item}</div>
-        ))}
-      </div>
+      {/* What you get preview — shown in right panel on desktop */}
     </div>
   );
 
@@ -809,6 +803,12 @@ export default function GrowthEngine({ hideResumeBanner = false, onBack = null }
               <div style={{ fontWeight: 800, fontSize: 11, color: DARK, marginBottom: 3 }}>{label}</div>
               <div style={{ fontSize: 11, color: '#64748B', lineHeight: 1.4 }}>{desc}</div>
             </div>
+          ))}
+        </div>
+        <div style={{ ...WHITE_CARD, padding: '12px 14px' }}>
+          <div style={{ fontWeight: 800, fontSize: 10, color: SLATE, marginBottom: 8, letterSpacing: 0.3 }}>YOUR ROADMAP INCLUDES</div>
+          {['📅 30/60/90 day plan with objectives, actions, and metrics', '🏆 Quick wins for each phase', '⚠️ Risks to watch', '📈 Growth recommendations', '🧠 Skills to focus on', '🤝 Mentor escalation paths'].map((item, i) => (
+            <div key={i} style={{ fontSize: 11, color: '#64748B', padding: '4px 0', borderBottom: i < 5 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>{item}</div>
           ))}
         </div>
       </div>
