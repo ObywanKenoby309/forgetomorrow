@@ -178,23 +178,16 @@ function KPI({ label, value }) {
 function ActionLiteCard({ title, items, emptyText, href }) {
   const list = Array.isArray(items) ? items : [];
   return (
-    <Link href={href} style={{ textDecoration:'none', display:'block' }}>
-      <div style={{ ...WHITE_CARD, padding:16, minHeight:140, display:'grid', gap:10 }}>
-        <div style={{ fontWeight:700, color:'#112033', fontSize:13 }}>
-          {title}
+    <Link href={href} style={{ textDecoration: 'none', display: 'block' }}>
+      <div style={{ ...WHITE_CARD, padding: 12, minHeight: 80, cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: '#0F172A', lineHeight: 1.3 }}>{title}</div>
+        <div style={{ marginTop: 6, flex: 1 }}>
+          {list.length === 0 ? (
+            <div style={{ fontSize: 11, color: '#94A3B8' }}>{emptyText}</div>
+          ) : (
+            <div style={{ fontSize: 11, color: '#475569' }}>{list[0]?.title || 'View item'}</div>
+          )}
         </div>
-        {list.length===0 ? (
-          <div style={{ color:'#90A4AE', fontSize:13 }}>{emptyText}</div>
-        ) : (
-          <div style={{ display:'grid', gap:8 }}>
-            {list.map(n => (
-              <div key={n.id} style={{ ...WHITE_CARD, padding:'8px 10px' }}>
-                <div style={{ fontWeight:700, color:'#112033', fontSize:13 }}>{n.title||'Update'}</div>
-                {n.body&&<div style={{ color:'#607D8B', fontSize:12, marginTop:2 }}>{n.body}</div>}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </Link>
   );
@@ -248,6 +241,104 @@ function MobileActionTile({ title, items, emptyText, href, icon }) {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Follow-Ups Due Carousel ──────────────────────────────────────────────────
+function FollowUpsDueCard({ clients = [] }) {
+  const [slideIdx, setSlideIdx] = useState(0);
+  const timerRef = useRef(null);
+
+  const SLIDES = [
+    {
+      key: 'session',
+      label: 'Session Follow-ups',
+      description: 'Had a session — notes not yet submitted',
+      // Future: filter clients where lastSession exists but notes missing
+      items: [],
+    },
+    {
+      key: 'checkin',
+      label: 'Overdue Check-ins',
+      description: 'No contact in 30+ days',
+      // Future: filter clients where daysSinceContact >= 30
+      items: [],
+    },
+  ];
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setSlideIdx((prev) => (prev + 1) % SLIDES.length);
+    }, 4000);
+    return () => clearInterval(timerRef.current);
+  }, []);
+
+  const goTo = (i) => {
+    setSlideIdx(i);
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setSlideIdx((prev) => (prev + 1) % SLIDES.length);
+    }, 4000);
+  };
+
+  const slide = SLIDES[slideIdx];
+
+  return (
+    <section style={{ ...GLASS, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ fontSize: 15, fontWeight: 900, color: '#FF7043', lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>
+          Follow-Ups Due
+        </div>
+        <Link href="/dashboard/coaching/clients" style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
+          View all →
+        </Link>
+      </div>
+
+      {/* Slide content */}
+      <div style={{ ...WHITE_CARD, padding: 10, flex: 1 }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+          {slide.label}
+        </div>
+        {slide.items.length === 0 ? (
+          <div style={{ fontSize: 12, color: '#94A3B8', fontStyle: 'italic' }}>
+            No {slide.label.toLowerCase()} right now.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 6 }}>
+            {slide.items.slice(0, 3).map((client, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: '#334155' }}>
+                <span style={{ fontWeight: 600 }}>{client.name}</span>
+                <Link href={`/dashboard/coaching/clients/${client.id}`} style={{ fontSize: 11, color: '#FF7043', fontWeight: 700, textDecoration: 'none' }}>
+                  View →
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 6 }}>{slide.description}</div>
+      </div>
+
+      {/* Dot nav */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+        {SLIDES.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => goTo(i)}
+            style={{
+              width: i === slideIdx ? 20 : 6,
+              height: 6,
+              borderRadius: 999,
+              background: i === slideIdx ? '#FF7043' : 'rgba(255,112,67,0.25)',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              transition: 'width 220ms ease, background 220ms ease',
+            }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function CoachingDashboardPage() {
   const router = useRouter();
   const upcomingRailScrollRef = useRef(null);
@@ -638,29 +729,7 @@ export default function CoachingDashboardPage() {
           </section>
 
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:GAP }}>
-            <section style={{ ...GLASS, padding:12 }}>
-              <div style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', marginBottom:8, ...ORANGE_HEADING_LIFT }}>CSAT Pulse</div>
-              <div style={{ ...WHITE_CARD, padding:10 }}>
-                {csatError ? (
-                  <div style={{ fontSize:12, color:'#C62828' }}>{csatError}</div>
-                ) : (
-                  <div style={{ display:'grid', gap:6 }}>
-                    <div style={{ display:'flex', alignItems:'baseline', justifyContent:'center', gap:4 }}>
-                      <span style={{ fontSize:24, fontWeight:900, color:'#112033' }}>{avgScore}</span>
-                      <span style={{ fontSize:12, color:'#90A4AE' }}>/5</span>
-                    </div>
-                    <div style={{ fontSize:11, color:'#607D8B', textAlign:'center' }}>
-                      Based on {totalResponses} {totalResponses!==1?'responses':'response'}
-                    </div>
-                    <div style={{ textAlign:'right' }}>
-                      <Link href="/dashboard/coaching/feedback" style={{ color:'#FF7043', fontWeight:700, fontSize:12, textDecoration:'none' }}>
-                        Open feedback
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
+            <FollowUpsDueCard clients={clients} />
 
             <section style={{ padding:0 }}>
               <RightRailPlacementManager slot="right_rail_1" />
@@ -754,17 +823,17 @@ export default function CoachingDashboardPage() {
               </div>
             }
           >
-            <div style={{ minHeight:190 }}>
+            <div>
               {actionLoading && !actionBootstrapped ? (
                 <div style={{ color:'#90A4AE' }}>Loading updates…</div>
               ) : (
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(5,minmax(0,1fr))', gap:12 }}>
-                  <ActionLiteCard title="New Messages"     items={actionBuckets.messages} emptyText="No unread coach inbox items." href="/action-center?scope=COACH&chrome=coach&tab=SOCIAL" />
-                  <ActionLiteCard title="Session Requests" items={actionBuckets.requests} emptyText="No pending session requests."  href="/dashboard/coaching/client-hub-update?tab=requests" />
-                  <ActionLiteCard title="New Feedback"     items={actionBuckets.feedback} emptyText="No new feedback yet."          href="/dashboard/coaching/feedback" />
-                  <ActionLiteCard title="Calendar Updates" items={actionBuckets.calendar} emptyText="No calendar updates."         href="/action-center?scope=COACH&chrome=coach&tab=CALENDAR" />
-                  <ActionLiteCard title="Client Updates"   items={actionBuckets.clients}  emptyText="No new client activity."      href="/dashboard/coaching/clients" />
-                  <ActionLiteCard title="Shared With Me"   items={actionBuckets.shared}   emptyText="No shared documents."         href="/action-center?scope=COACH&chrome=coach&tab=SHARED" />
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(6,minmax(0,1fr))', gap:10 }}>
+                  <ActionLiteCard title="New Messages"     items={actionBuckets.messages} emptyText="No new updates." href="/action-center?scope=COACH&chrome=coach&tab=SOCIAL" />
+                  <ActionLiteCard title="Session Requests" items={actionBuckets.requests} emptyText="No new updates."  href="/dashboard/coaching/client-hub-update?tab=requests" />
+                  <ActionLiteCard title="New Feedback"     items={actionBuckets.feedback} emptyText="No new updates."          href="/dashboard/coaching/feedback" />
+                  <ActionLiteCard title="Calendar"         items={actionBuckets.calendar} emptyText="No new updates."         href="/action-center?scope=COACH&chrome=coach&tab=CALENDAR" />
+                  <ActionLiteCard title="Client Updates"   items={actionBuckets.clients}  emptyText="No new updates."      href="/dashboard/coaching/clients" />
+                  <ActionLiteCard title="Shared With Me"   items={actionBuckets.shared}   emptyText="No new updates."         href="/action-center?scope=COACH&chrome=coach&tab=SHARED" />
                 </div>
               )}
             </div>
