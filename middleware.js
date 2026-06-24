@@ -24,6 +24,8 @@ const ratelimit =
     prefix: "middleware:rl:",
   });
 
+const DEMO_SECRET = process.env.DEMO_SECRET || null;
+
 const PUBLIC_PATHS = new Set([
   "/",
   "/about",
@@ -124,6 +126,30 @@ function redirectToSignin(req, pathname) {
 
 export async function middleware(req) {
   const { pathname } = req.nextUrl;
+
+  // ── Demo pages — gated by DEMO_SECRET cookie or env var ──────────────────
+  if (pathname.startsWith("/demo")) {
+    if (!DEMO_SECRET) {
+      // No secret set — block entirely in production
+      const url = req.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url, 302);
+    }
+    // Check for demo session cookie
+    const demoCookie = req.cookies.get("demo_access")?.value;
+    const demoParam = req.nextUrl.searchParams.get("demo_key");
+    if (demoCookie === DEMO_SECRET || demoParam === DEMO_SECRET) {
+      const res = NextResponse.next();
+      if (demoParam === DEMO_SECRET) {
+        // Set cookie so they don't need to keep passing the param
+        res.cookies.set("demo_access", DEMO_SECRET, { httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 8 });
+      }
+      return res;
+    }
+    const url = req.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url, 302);
+  }
 
   if (pathname === "/roadmap") {
     const url = req.nextUrl.clone();

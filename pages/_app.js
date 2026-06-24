@@ -405,14 +405,16 @@ function AppShell({ Component, pageProps }) {
 }
 
 export default function App({ Component, pageProps: { session, ...pageProps } }) {
+  const router = useRouter();
   // If the page defines its own layout (e.g. FoundryRoom), use it.
-  // This bypasses AppShell's chrome entirely for that page.
+  // Demo pages — bypass AppShell entirely (no chrome, no wallpaper, no auth)
   const getLayout = Component.getLayout;
+  const isDemoPage = router.pathname.startsWith('/demo');
 
-  if (getLayout) {
+  if (getLayout || isDemoPage) {
     return (
       <SessionProvider session={session}>
-        {getLayout(<Component {...pageProps} />)}
+        {getLayout ? getLayout(<Component {...pageProps} />) : <Component {...pageProps} />}
       </SessionProvider>
     );
   }
