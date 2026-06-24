@@ -87,12 +87,12 @@ if (invalidField) {
       const created = await prisma.coachingCsatResponse.create({
         data: {
 		  coachId: coachIdStr,
-		  satisfaction: validatedScores.satisfaction,
-		  quality: validatedScores.quality,
-		  communication: validatedScores.communication,
-		  helpfulness: validatedScores.helpfulness,
-		  progress: validatedScores.progress,
-		  recommendation: validatedScores.recommendation,  
+		  satisfaction: validatedScores.satisfaction!,
+		  quality: validatedScores.quality!,
+		  communication: validatedScores.communication!,
+		  helpfulness: validatedScores.helpfulness!,
+		  progress: validatedScores.progress!,
+		  recommendation: validatedScores.recommendation!,  
 		  comment: (comment || '').trim() || null,
 		  anonymous: typeof anonymous === 'boolean' ? anonymous : true,
         },
