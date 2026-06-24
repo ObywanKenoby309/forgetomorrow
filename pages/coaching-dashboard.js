@@ -244,22 +244,32 @@ function MobileActionTile({ title, items, emptyText, href, icon }) {
 // ─── Follow-Ups Due Carousel ──────────────────────────────────────────────────
 function FollowUpsDueCard({ clients = [] }) {
   const [slideIdx, setSlideIdx] = useState(0);
+  const [data, setData] = useState({ sessionFollowups: [], overdueCheckins: [] });
+  const [loading, setLoading] = useState(true);
   const timerRef = useRef(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/coaching/followups', { credentials: 'include' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (alive && d) setData(d); })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
 
   const SLIDES = [
     {
       key: 'session',
       label: 'Session Follow-ups',
-      description: 'Had a session — notes not yet submitted',
-      // Future: filter clients where lastSession exists but notes missing
-      items: [],
+      description: 'Sessions with a follow-up past due',
+      items: data.sessionFollowups,
     },
     {
       key: 'checkin',
       label: 'Overdue Check-ins',
       description: 'No contact in 30+ days',
-      // Future: filter clients where daysSinceContact >= 30
-      items: [],
+      items: data.overdueCheckins,
     },
   ];
 
@@ -291,31 +301,43 @@ function FollowUpsDueCard({ clients = [] }) {
         </Link>
       </div>
 
-      {/* Slide content */}
       <div style={{ ...WHITE_CARD, padding: 10, flex: 1 }}>
         <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
           {slide.label}
         </div>
-        {slide.items.length === 0 ? (
+        {loading ? (
+          <div style={{ fontSize: 12, color: '#94A3B8' }}>Loading…</div>
+        ) : slide.items.length === 0 ? (
           <div style={{ fontSize: 12, color: '#94A3B8', fontStyle: 'italic' }}>
-            No {slide.label.toLowerCase()} right now.
+            All clear — no {slide.label.toLowerCase()}.
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: 6 }}>
-            {slide.items.slice(0, 3).map((client, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: '#334155' }}>
-                <span style={{ fontWeight: 600 }}>{client.name}</span>
-                <Link href={`/dashboard/coaching/clients/${client.id}`} style={{ fontSize: 11, color: '#FF7043', fontWeight: 700, textDecoration: 'none' }}>
+          <div style={{ display: 'grid', gap: 7 }}>
+            {slide.items.slice(0, 3).map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.name}
+                  </div>
+                  {slide.key === 'checkin' && item.daysSince != null && (
+                    <div style={{ fontSize: 10, color: '#94A3B8' }}>{item.daysSince}d ago</div>
+                  )}
+                  {slide.key === 'session' && item.dueAt && (
+                    <div style={{ fontSize: 10, color: '#94A3B8' }}>
+                      Due {new Date(item.dueAt).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+                <Link href={item.href} style={{ fontSize: 11, color: '#FF7043', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}>
                   View →
                 </Link>
               </div>
             ))}
           </div>
         )}
-        <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 6 }}>{slide.description}</div>
+        <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 8 }}>{slide.description}</div>
       </div>
 
-      {/* Dot nav */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
         {SLIDES.map((_, i) => (
           <button
