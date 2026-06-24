@@ -39,13 +39,12 @@ function getContactLine(data) {
 function getPositioningLine(data) {
   const info = data?.personalInfo || {};
   const summary = String(data?.summary || '').trim();
+  const firstSentence = summary.split('.')[0].trim();
+  const short = firstSentence.length > 100 ? firstSentence.slice(0, 97) + '…' : firstSentence;
 
-  if (info.targetedRole && summary) {
-    const shortSummary = summary.split('.').slice(0, 1).join('.').slice(0, 160);
-    return `${info.targetedRole} — ${shortSummary}`;
-  }
+  if (info.targetedRole && short) return `${info.targetedRole} — ${short}`;
   if (info.targetedRole) return info.targetedRole;
-  if (summary) return summary.split('.').slice(0, 1).join('.').slice(0, 160);
+  if (short) return short;
   return 'Positioning statement goes here';
 }
 

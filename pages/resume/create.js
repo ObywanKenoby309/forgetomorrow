@@ -1008,8 +1008,8 @@ export default function CreateResumePage() {
                   </DropdownMenu>
 
                   <DropdownMenu id="format" label={previewMode==='signal-test'?'ForgeFormat':isHybrid?'Hybrid':'Reverse'} openMenu={openMenu} setOpenMenu={setOpenMenu}>
-                      <button type="button" onClick={()=>router.push(buildResumeCreateHref('reverse'))} style={!isHybrid&&previewMode!=='signal-test'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>Reverse</button>
-                      <button type="button" onClick={()=>router.push(buildResumeCreateHref('hybrid'))} style={isHybrid&&previewMode!=='signal-test'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>Hybrid</button>
+                      <button type="button" onClick={()=>{setPreviewMode('standard');router.push(buildResumeCreateHref('reverse'));}} style={!isHybrid&&previewMode!=='signal-test'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>Reverse</button>
+                      <button type="button" onClick={()=>{setPreviewMode('standard');router.push(buildResumeCreateHref('hybrid'));}} style={isHybrid&&previewMode!=='signal-test'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>Hybrid</button>
                       <button type="button" onClick={()=>setPreviewMode('signal-test')} style={previewMode==='signal-test'?{color:'#C2410C',borderColor:'rgba(255,112,67,0.30)',background:'rgba(255,112,67,0.08)'}:{}}>ForgeFormat</button>
                   </DropdownMenu>
 
@@ -1020,12 +1020,20 @@ export default function CreateResumePage() {
                   </DropdownMenu>
 
                   <DropdownMenu id="export" label="Export / Import" align="right" openMenu={openMenu} setOpenMenu={setOpenMenu}>
-                      {isHybrid
-                        ? <HybridATSButton data={resumeData}><div className="ft-menu-action" style={{background:'#0F766E',color:'white',borderColor:'rgba(15,118,110,0.28)'}}>↓ Clean PDF</div></HybridATSButton>
-                        : <ReverseATSButton data={resumeData}><div className="ft-menu-action" style={{background:'#0F766E',color:'white',borderColor:'rgba(15,118,110,0.28)'}}>↓ Clean PDF</div></ReverseATSButton>}
-                      <DesignedPDFButton data={resumeData} template={isHybrid?'hybrid':'reverse'}>
-                        <div className="ft-menu-action" style={{background:ORANGE,color:'white',borderColor:'rgba(255,112,67,0.28)'}}>↓ Designed PDF</div>
-                      </DesignedPDFButton>
+                      {previewMode === 'signal-test' ? (
+                        <DesignedPDFButton data={resumeData} template="signal">
+                          <div className="ft-menu-action" style={{background:ORANGE,color:'white',borderColor:'rgba(255,112,67,0.28)'}}>↓ ForgeFormat PDF</div>
+                        </DesignedPDFButton>
+                      ) : (
+                        <>
+                          {isHybrid
+                            ? <HybridATSButton data={resumeData}><div className="ft-menu-action" style={{background:'#0F766E',color:'white',borderColor:'rgba(15,118,110,0.28)'}}>↓ Clean PDF</div></HybridATSButton>
+                            : <ReverseATSButton data={resumeData}><div className="ft-menu-action" style={{background:'#0F766E',color:'white',borderColor:'rgba(15,118,110,0.28)'}}>↓ Clean PDF</div></ReverseATSButton>}
+                          <DesignedPDFButton data={resumeData} template={isHybrid?'hybrid':'reverse'}>
+                            <div className="ft-menu-action" style={{background:ORANGE,color:'white',borderColor:'rgba(255,112,67,0.28)'}}>↓ Designed PDF</div>
+                          </DesignedPDFButton>
+                        </>
+                      )}
                       <button
                         type="button"
                         onClick={(e)=>{e.stopPropagation();if(resumeFileInputRef.current){resumeFileInputRef.current.value='';resumeFileInputRef.current.click();}}}
