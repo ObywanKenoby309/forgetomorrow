@@ -301,8 +301,8 @@ function FollowUpsDueCard({ clients = [] }) {
         </Link>
       </div>
 
-      <div style={{ ...WHITE_CARD, padding: 10, flex: 1 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+      <div style={{ ...WHITE_CARD, padding: 10, height: 120, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6, flexShrink: 0 }}>
           {slide.label}
         </div>
         {loading ? (
@@ -312,30 +312,27 @@ function FollowUpsDueCard({ clients = [] }) {
             All clear — no {slide.label.toLowerCase()}.
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: 7 }}>
+          <div style={{ display: 'grid', gap: 5, flex: 1, overflow: 'hidden' }}>
             {slide.items.slice(0, 3).map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <Link key={i} href={item.href} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '3px 6px', borderRadius: 6, background: 'rgba(0,0,0,0.03)' }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.name}
                   </div>
-                  {slide.key === 'checkin' && item.daysSince != null && (
-                    <div style={{ fontSize: 10, color: '#94A3B8' }}>{item.daysSince}d ago</div>
-                  )}
-                  {slide.key === 'session' && item.dueAt && (
-                    <div style={{ fontSize: 10, color: '#94A3B8' }}>
-                      Due {new Date(item.dueAt).toLocaleDateString()}
-                    </div>
-                  )}
                 </div>
-                <Link href={item.href} style={{ fontSize: 11, color: '#FF7043', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}>
-                  View →
-                </Link>
-              </div>
+                {slide.key === 'checkin' && item.daysSince != null && (
+                  <div style={{ fontSize: 10, color: '#94A3B8', flexShrink: 0 }}>{item.daysSince}d ago</div>
+                )}
+                {slide.key === 'session' && item.dueAt && (
+                  <div style={{ fontSize: 10, color: '#94A3B8', flexShrink: 0 }}>
+                    Due {new Date(item.dueAt).toLocaleDateString()}
+                  </div>
+                )}
+              </Link>
             ))}
           </div>
         )}
-        <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 8 }}>{slide.description}</div>
+        <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 6, flexShrink: 0 }}>{slide.description}</div>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
