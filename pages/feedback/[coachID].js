@@ -10,6 +10,7 @@ import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import SeekerTitleCard from '@/components/seeker/SeekerTitleCard';
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
+import { COACHING_CSAT_FIELDS } from '@/lib/coaching/coachingCsat';
 
 const ORANGE = '#FF7043';
 const MUTED  = '#64748B';
@@ -33,14 +34,7 @@ const WHITE_CARD = {
 };
 
 // The six CSAT questions
-const QUESTIONS = [
-  { key: 'satisfaction',    label: 'Overall satisfaction with your coaching' },
-  { key: 'communication',   label: 'Coach communication and responsiveness' },
-  { key: 'quality',         label: 'Quality of guidance provided' },
-  { key: 'helpfulness',     label: 'Helpfulness of resources or action steps' },
-  { key: 'progress',        label: 'Progress made toward your career goal' },
-  { key: 'recommendation',  label: 'Likelihood you would recommend this coach' },
-];
+const QUESTIONS = COACHING_CSAT_FIELDS;
 
 const DEFAULT_SCORES = QUESTIONS.reduce((acc, q) => ({ ...acc, [q.key]: 0 }), {});
 

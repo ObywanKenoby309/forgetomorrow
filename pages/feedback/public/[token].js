@@ -9,6 +9,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
+import { COACHING_CSAT_FIELDS } from '@/lib/coaching/coachingCsat';
 
 const ORANGE = '#FF7043';
 const SLATE  = '#334155';
@@ -17,14 +18,7 @@ const DEFAULT_WALLPAPER = '/images/profile-fallbacks/profile-default-wallpaper.p
 const THANK_YOU_SEAL = '/images/csat/thank-you-seal.png';
 const TOKEN_SECRET = process.env.CSAT_TOKEN_SECRET || process.env.NEXTAUTH_SECRET;
 
-const QUESTIONS = [
-  { key: 'satisfaction',   label: 'Overall satisfaction with your coaching',       hint: 'How satisfied were you overall?' },
-  { key: 'communication',  label: 'Coach communication and responsiveness',         hint: 'Were they easy to reach and responsive?' },
-  { key: 'quality',        label: 'Quality of guidance provided',                  hint: 'Was the coaching advice clear and actionable?' },
-  { key: 'helpfulness',    label: 'Helpfulness of resources or action steps',      hint: 'Did the resources or exercises help you move forward?' },
-  { key: 'progress',       label: 'Progress made toward your career goal',         hint: 'How much progress did you feel you made?' },
-  { key: 'recommendation', label: 'Likelihood you would recommend this coach',     hint: 'Would you refer this coach to someone you care about?' },
-];
+const QUESTIONS = COACHING_CSAT_FIELDS;
 
 const DEFAULT_SCORES = QUESTIONS.reduce((acc, q) => ({ ...acc, [q.key]: 0 }), {});
 

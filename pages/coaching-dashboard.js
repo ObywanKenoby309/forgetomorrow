@@ -25,6 +25,7 @@ import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingTitleCard from '@/components/coaching/CoachingTitleCard';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import ActionCenterTab from '@/components/dashboard/ActionCenterTab';
+import { getAverageCoachingCsatScore } from '@/lib/coaching/coachingCsat';
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 function localISODate(d = new Date()) {
@@ -518,10 +519,9 @@ export default function CoachingDashboardPage() {
   }, [sessions, currentTime]);
 
   const clientsPreview = useMemo(() => clients.slice(0,3), [clients]);
-
-  const avgScore = csat.length > 0
-    ? (csat.reduce((s,r) => s + (Number(r.satisfaction) + Number(r.timeliness) + Number(r.quality)) / 3, 0) / csat.length).toFixed(1)
-    : '—';
+  
+  const avgScoreValue = getAverageCoachingCsatScore(csat);
+  const avgScore = avgScoreValue !== null ? avgScoreValue.toFixed(1) : '—';
 
   const totalResponses = csat.length;
 

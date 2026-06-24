@@ -1,6 +1,7 @@
 // pages/api/coaching/csat.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
+import { COACHING_CSAT_SCORE_KEYS } from '@/lib/coaching/coachingCsat';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 
@@ -47,31 +48,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // ───────────── POST: public submission (no auth required) ─────────────
     if (req.method === 'POST') {
       const {
-        coachId,
-        satisfaction,
-        quality,
-        communication,
-        helpfulness,
-        progress,
-        recommendation,
-        comment,
-        anonymous,
-      } = (req.body || {}) as Record<string, any>;
+  coachId,
+  comment,
+  anonymous,
+} = (req.body || {}) as Record<string, any>;
 
       const coachIdStr = String(coachId || '').trim();
       if (!coachIdStr) return res.status(400).json({ error: 'Missing coachId' });
 
       // Required fields
-      const s  = clampInt(satisfaction,   1, 5);
-      const q  = clampInt(quality,        1, 5);
-      const co = clampInt(communication,  1, 5);
-      const h  = clampInt(helpfulness,    1, 5);
-      const p  = clampInt(progress,       1, 5);
-      const r  = clampInt(recommendation, 1, 5);
+      const validatedScores = Object.fromEntries(
+  COACHING_CSAT_SCORE_KEYS.map((key) => [
+    key,
+    clampInt(req.body?.[key], 1, 5),
+  ])
+);
 
-      if (!s || !q || !co || !h || !p || !r) {
-        return res.status(400).json({ error: 'All six scores must be rated 1–5' });
-      }
+const invalidField = COACHING_CSAT_SCORE_KEYS.find(
+  (key) => !validatedScores[key]
+);
+
+if (invalidField) {
+  return res.status(400).json({
+    error: `Missing or invalid score for ${invalidField}`,
+  });
+}
 
       // Validate coach exists
       const coach = await prisma.user.findUnique({
@@ -85,15 +86,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const created = await prisma.coachingCsatResponse.create({
         data: {
-          coachId:        coachIdStr,
-          satisfaction:   s,
-          quality:        q,
-          communication:  co,
-          helpfulness:    h,
-          progress:       p,
-          recommendation: r,
-          comment:        (comment || '').trim() || null,
-          anonymous:      typeof anonymous === 'boolean' ? anonymous : true,
+          coachId: coachIdStr,
+...validatedScores,
+comment: (comment || '').trim() || null,
+anonymous: typeof anonymous === 'boolean' ? anonymous : true,
         },
         select: {
           id:             true,

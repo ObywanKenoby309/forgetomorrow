@@ -7,6 +7,7 @@
 //   - pages/dashboard/coaching/feedback.js          (thin page wrapper)
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { COACHING_CSAT_FIELDS, getCoachingCsatScore, } from '@/lib/coaching/coachingCsat';
 
 const GLASS = {
   borderRadius: 14,
@@ -30,25 +31,10 @@ const ORANGE_HEADING_LIFT = {
   fontWeight: 900,
 };
 
-const METRIC_LABELS = {
-  satisfaction: 'Satisfaction',
-  quality: 'Quality',
-  communication: 'Communication',
-  helpfulness: 'Helpfulness',
-  progress: 'Progress',
-  recommendation: 'Recommendation',
-  timeliness: 'Timeliness',
-};
-
-const SCORE_FIELDS = [
-  'satisfaction',
-  'quality',
-  'communication',
-  'helpfulness',
-  'progress',
-  'recommendation',
-  'timeliness',
-];
+const METRIC_LABELS = COACHING_CSAT_FIELDS.reduce((acc, field) => {
+  acc[field.key] = field.shortLabel || field.label;
+  return acc;
+}, {});
 
 function formatDate(d) {
   if (!d) return '—';
@@ -62,9 +48,7 @@ function avg(arr, key) {
 }
 
 function overallScore(r) {
-  const vals = SCORE_FIELDS.map(f => r[f]).filter(v => typeof v === 'number' && Number.isFinite(v));
-  if (!vals.length) return 0;
-  return vals.reduce((s, v) => s + v, 0) / vals.length;
+  return getCoachingCsatScore(r) || 0;
 }
 
 function truncateText(text, max = 150) {
