@@ -25,21 +25,21 @@ const ACTION_TILES = [
   { title: 'Shared With Me', msg: '1 document shared' },
 ];
 const NEW_MATCHES = [
-  { title: 'Senior Product Manager', company: 'Stripe', location: 'Remote', salary: '$180K–$240K', match: 94, matchLabel: 'Strong Match' },
-  { title: 'VP of Product', company: 'Airbnb', location: 'San Francisco, CA', salary: '$260K–$320K', match: 91, matchLabel: 'Strong Match' },
-  { title: 'Principal PM', company: 'Anthropic', location: 'Remote', salary: '$200K–$280K', match: 78, matchLabel: 'Good Match' },
-  { title: 'Director of Product', company: 'Notion', location: 'New York, NY', salary: '$190K–$250K', match: 78, matchLabel: 'Good Match' },
+  { title: 'Senior Product Manager', location: 'Remote · US', salary: '$165K–$210K', match: 94, matchLabel: 'Strong Match' },
+  { title: 'VP of Product', location: 'Hybrid · West Coast', salary: '$240K–$300K', match: 91, matchLabel: 'Strong Match' },
+  { title: 'Principal PM', location: 'Remote · US', salary: '$185K–$250K', match: 78, matchLabel: 'Good Match' },
+  { title: 'Director of Product', location: 'Hybrid · East Coast', salary: '$175K–$230K', match: 78, matchLabel: 'Good Match' },
 ];
 const NEXT_YES = [
   { title: 'Technical Account Manager', company: 'Acme Co.', location: 'Remote', pinned: 'Pinned 6/20/2026' },
   { title: 'Director of Professional Button Pushing', company: 'Button Pushers Co.', location: 'Somewhere, USA', pinned: 'Pinned 6/23/2026' },
 ];
 const APP_WEEKS = [
-  { week: 'W1', applied: 5, interviews: 0 },
-  { week: 'W2', applied: 0, interviews: 0 },
-  { week: 'W3', applied: 0, interviews: 0 },
-  { week: 'W4', applied: 0, interviews: 0 },
-  { week: 'W5', applied: 0, interviews: 0 },
+  { week: 'W1', applied: 4, interviews: 0 },
+  { week: 'W2', applied: 7, interviews: 1 },
+  { week: 'W3', applied: 5, interviews: 2 },
+  { week: 'W4', applied: 9, interviews: 2 },
+  { week: 'W5', applied: 6, interviews: 3 },
 ];
 
 export default function DemoSeekerDashboard() {
@@ -127,7 +127,6 @@ export default function DemoSeekerDashboard() {
                         <div style={{ fontSize: 9, fontWeight: 700, color: job.match >= 90 ? ORANGE : '#D97706' }}>{job.matchLabel}</div>
                       </div>
                     </div>
-                    <div style={{ fontSize: 11, color: '#64748B' }}>{job.company}</div>
                     <div style={{ fontSize: 10, color: '#94A3B8' }}>{job.location} · {job.salary}</div>
                   </div>
                 ))}
