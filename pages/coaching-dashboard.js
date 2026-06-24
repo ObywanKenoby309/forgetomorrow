@@ -944,29 +944,7 @@ export default function CoachingDashboardPage() {
               </div>
             </Section>
 
-            <section style={{ ...GLASS, padding:12 }}>
-              <div style={{ fontSize:15, fontWeight:900, marginBottom:8, color:'#0F172A', lineHeight:1.25, letterSpacing:'-0.01em' }}>
-                CSAT Pulse
-              </div>
-              {csatError ? (
-                <div style={{ color:'#C62828', fontSize:12 }}>{csatError}</div>
-              ) : (
-                <div style={{ ...WHITE_CARD, padding:12, display:'grid', gap:6 }}>
-                  <div style={{ display:'flex', alignItems:'baseline', justifyContent:'center', gap:6 }}>
-                    <div style={{ fontSize:24, fontWeight:900, color:'#112033' }}>{avgScore}</div>
-                    <div style={{ color:'#90A4AE', fontSize:12 }}>/5</div>
-                  </div>
-                  <div style={{ color:'#607D8B', fontSize:12, textAlign:'center' }}>
-                    Based on {totalResponses} {totalResponses===1?'response':'responses'}
-                  </div>
-                  <div style={{ marginTop:4, textAlign:'right' }}>
-                    <Link href="/dashboard/coaching/feedback" style={{ color:'#FF7043', fontWeight:800, fontSize:13, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>
-                      Open feedback
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </section>
+            <FollowUpsDueCard clients={clients} />
 
           </div>
         </div>
