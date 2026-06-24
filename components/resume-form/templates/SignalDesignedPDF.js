@@ -22,8 +22,10 @@ function getName(data) {
 
 function getContactLine(data) {
   const info = data?.personalInfo || {};
-  return [info.email, info.phone, info.location, info.externalurl, info.github, info.portfolio, info.ftProfile]
+  const line1 = [info.email, info.phone, info.location, info.externalurl, info.github, info.portfolio]
     .filter(Boolean).join('  ·  ');
+  const line2 = info.ftProfile || '';
+  return { line1, line2 };
 }
 
 function getPositioningLine(data) {
@@ -109,38 +111,38 @@ function normalizeLanguages(langs) {
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
 const S = StyleSheet.create({
-  page: { padding: '40 48', fontFamily: 'Helvetica', fontSize: 11, color: DARK, lineHeight: 1.45 },
+  page: { padding: '32 44', fontFamily: 'Helvetica', fontSize: 11, color: DARK, lineHeight: 1.45 },
 
   // Header
-  name: { fontSize: 26, fontWeight: 'bold', color: DARK, letterSpacing: -0.5, marginBottom: 3 },
+  name: { fontSize: 26, fontWeight: 'bold', color: DARK, letterSpacing: -0.5, marginBottom: 8 },
   positioning: { fontSize: 11, fontWeight: 'bold', color: SLATE, marginBottom: 4 },
   contact: { fontSize: 9.5, color: MUTED, marginBottom: 0 },
-  orangeRule: { height: 2.5, backgroundColor: ORANGE, borderRadius: 1, marginTop: 10, marginBottom: 18 },
+  orangeRule: { height: 2.5, backgroundColor: ORANGE, borderRadius: 1, marginTop: 8, marginBottom: 12 },
 
   // Section labels
-  sectionLabel: { fontSize: 8.5, fontWeight: 'bold', letterSpacing: 1.2, textTransform: 'uppercase', color: ORANGE, marginBottom: 6, paddingBottom: 4, borderBottomWidth: 1.5, borderBottomColor: ORANGE, borderBottomStyle: 'solid' },
+  sectionLabel: { fontSize: 8.5, fontWeight: 'bold', letterSpacing: 1.2, textTransform: 'uppercase', color: ORANGE, marginBottom: 5, paddingBottom: 3, borderBottomWidth: 1.5, borderBottomColor: ORANGE, borderBottomStyle: 'solid' },
 
   // Impact Snapshot
-  impactRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 5, gap: 8 },
+  impactRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4, gap: 8 },
   impactDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: ORANGE, marginTop: 3.5, flexShrink: 0 },
-  impactText: { fontSize: 11, color: '#1E293B', flex: 1, lineHeight: 1.45 },
+  impactText: { fontSize: 10.5, color: '#1E293B', flex: 1, lineHeight: 1.4 },
 
   // Skills grid
-  skillsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  skillsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   skillBucket: { width: '47%' },
   skillBucketLabel: { fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.8, color: SLATE, marginBottom: 2 },
-  skillBucketItems: { fontSize: 10.5, color: '#374151', lineHeight: 1.5 },
+  skillBucketItems: { fontSize: 10, color: '#374151', lineHeight: 1.45 },
 
   // Employer spine table
-  spineHeader: { flexDirection: 'row', paddingBottom: 4, marginBottom: 5, borderBottomWidth: 1, borderBottomColor: RULE, borderBottomStyle: 'solid' },
+  spineHeader: { flexDirection: 'row', paddingBottom: 4, marginBottom: 4, borderBottomWidth: 1, borderBottomColor: RULE, borderBottomStyle: 'solid' },
   spineHeaderCell: { fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1, color: MUTED },
-  spineRow: { flexDirection: 'row', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: RULE, borderBottomStyle: 'solid', alignItems: 'baseline' },
+  spineRow: { flexDirection: 'row', paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: RULE, borderBottomStyle: 'solid', alignItems: 'baseline' },
   spineCompany: { fontSize: 11, fontWeight: 'bold', color: DARK },
   spineTitle: { fontSize: 11, color: SLATE },
   spineRange: { fontSize: 10, color: MUTED },
 
   // Divider / page break
-  dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 20, gap: 10 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 16, gap: 10 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#D1D5DB' },
   dividerText: { fontSize: 8, fontWeight: 'bold', letterSpacing: 1.2, textTransform: 'uppercase', color: '#9CA3AF' },
 
@@ -166,6 +168,7 @@ const S = StyleSheet.create({
 
   mb4: { marginBottom: 4 },
   mb8: { marginBottom: 8 },
+  mb12: { marginBottom: 12 },
   mb16: { marginBottom: 16 },
   mb20: { marginBottom: 20 },
 });
@@ -198,10 +201,19 @@ export default function SignalDesignedPDF({ data }) {
       <Page size="LETTER" style={S.page}>
 
         {/* Header */}
-        <View style={S.mb16}>
+        <View style={S.mb12}>
           <Text style={S.name}>{name}</Text>
           {positioningLine ? <Text style={S.positioning}>{positioningLine}</Text> : null}
-          {contactLine ? <Text style={S.contact}>{contactLine}</Text> : null}
+          {/* Contact line — each item wraps as a unit, never mid-word */}
+          {(contactLine.line1 || contactLine.line2) && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 0 }}>
+              {[...contactLine.line1.split('  ·  ').filter(Boolean), contactLine.line2].filter(Boolean).map((item, i, arr) => (
+                <Text key={i} style={S.contact}>
+                  {item}{i < arr.length - 1 ? '  ·  ' : ''}
+                </Text>
+              ))}
+            </View>
+          )}
           <View style={S.orangeRule} />
         </View>
 
