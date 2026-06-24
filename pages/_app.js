@@ -414,7 +414,9 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   if (getLayout || isDemoPage) {
     return (
       <SessionProvider session={session}>
-        {getLayout ? getLayout(<Component {...pageProps} />) : <Component {...pageProps} />}
+        <PlanProvider>
+          {getLayout ? getLayout(<Component {...pageProps} />) : <Component {...pageProps} />}
+        </PlanProvider>
       </SessionProvider>
     );
   }
