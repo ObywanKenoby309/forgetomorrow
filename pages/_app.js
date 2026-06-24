@@ -154,6 +154,7 @@ function AppShell({ Component, pageProps }) {
     router.pathname.startsWith('/apply') ||
     router.pathname.startsWith('/hearth') ||
     router.pathname.startsWith('/offer-negotiation') ||
+    router.pathname.startsWith('/demo') ||
     // Internal feedback pages (authenticated) — public/[token] is excluded below
     (router.pathname.startsWith('/feedback/') && !router.pathname.startsWith('/feedback/public/')) ||
     router.pathname === '/dashboard/forge-vault' ||
@@ -409,13 +410,12 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   // If the page defines its own layout (e.g. FoundryRoom), use it.
   // Demo pages — bypass AppShell entirely (no chrome, no wallpaper, no auth)
   const getLayout = Component.getLayout;
-  const isDemoPage = router.pathname.startsWith('/demo');
 
-  if (getLayout || isDemoPage) {
+  if (getLayout) {
     return (
       <SessionProvider session={session}>
         <PlanProvider>
-          {getLayout ? getLayout(<Component {...pageProps} />) : <Component {...pageProps} />}
+          {getLayout(<Component {...pageProps} />)}
         </PlanProvider>
       </SessionProvider>
     );
