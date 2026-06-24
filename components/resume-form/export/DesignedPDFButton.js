@@ -5,6 +5,7 @@ import { useContext, useState } from 'react';
 import { pdf } from '@react-pdf/renderer';
 import ReverseDesignedPDF from '@/components/resume-form/templates/ReverseDesignedPDF';
 import HybridDesignedPDF from '@/components/resume-form/templates/HybridDesignedPDF';
+import SignalDesignedPDF from '@/components/resume-form/templates/SignalDesignedPDF';
 import { ResumeContext } from '../../../context/ResumeContext';
 
 export default function DesignedPDFButton({ data, template, children }) {
@@ -14,13 +15,13 @@ export default function DesignedPDFButton({ data, template, children }) {
   const handleClick = async () => {
     setLoading(true);
     try {
-      const Component = template === 'hybrid' ? HybridDesignedPDF : ReverseDesignedPDF;
+      const Component = template === 'signal' ? SignalDesignedPDF : template === 'hybrid' ? HybridDesignedPDF : ReverseDesignedPDF;
       const doc = <Component data={data} />;
       const blob = await pdf(doc).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${data.personalInfo?.name || 'Resume'}_Designed.pdf`;
+      a.download = `${data.personalInfo?.name || 'Resume'}_ForgeFormat.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
