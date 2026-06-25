@@ -1,5 +1,5 @@
 // pages/demo/profile-strength.js
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
 import SeekerAnalyticsLayout from '@/components/layouts/SeekerAnalyticsLayout';
 
@@ -104,7 +104,86 @@ const RECRUITER_QUESTIONS = [
   },
 ];
 
-// ─── Right rail: Ad + Recruiter Readiness ─────────────────────────────────────
+// ─── Recruiter Readiness carousel slides ─────────────────────────────────────
+const READINESS_SLIDES = [
+  {
+    label: 'OVERALL SCORE',
+    value: '100%',
+    valueColor: '#16A34A',
+    detail: 'Strong',
+    detailColor: '#16A34A',
+    bg: 'rgba(15,23,42,0.94)',
+    valueStyle: { color: 'white' },
+    detailStyle: { color: 'rgba(255,255,255,0.80)' },
+    labelStyle: { color: ORANGE },
+  },
+  {
+    label: 'STRENGTHS',
+    value: '8 Proven Signals',
+    valueColor: '#166534',
+    detail: 'Active project + credential evidence visible',
+    detailColor: MUTED,
+    bg: 'rgba(22,163,74,0.08)',
+    border: '1px solid rgba(22,163,74,0.22)',
+  },
+  {
+    label: 'RECRUITER CONFIDENCE',
+    value: 'High',
+    valueColor: '#16A34A',
+    detail: 'Profile is advance-worthy for matched roles',
+    detailColor: MUTED,
+    bg: 'rgba(255,255,255,0.88)',
+  },
+];
+
+// ─── Right rail: Ad + Recruiter Readiness carousel ───────────────────────────
+
+function RecruiterReadinessCarousel() {
+  const [idx, setIdx] = useState(0);
+  const timerRef = useRef(null);
+  useEffect(() => {
+    timerRef.current = setInterval(() => setIdx(p => (p + 1) % READINESS_SLIDES.length), 3800);
+    return () => clearInterval(timerRef.current);
+  }, []);
+  const slide = READINESS_SLIDES[idx];
+
+  return (
+    <div style={{ ...GLASS, padding: 12 }}>
+      <div style={{ fontSize: 15, color: ORANGE, marginBottom: 10, ...ORANGE_LIFT }}>Recruiter Readiness</div>
+
+      {/* Slide */}
+      <div style={{
+        ...GLASS_SOFT,
+        padding: 14,
+        background: slide.bg,
+        border: slide.border || '1px solid rgba(0,0,0,0.06)',
+        textAlign: 'center',
+        minHeight: 80,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        marginBottom: 10,
+      }}>
+        <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.10em', textTransform: 'uppercase', marginBottom: 6, color: slide.labelStyle?.color || MUTED }}>{slide.label}</div>
+        <div style={{ fontSize: slide.value.length > 6 ? 16 : 28, fontWeight: 900, lineHeight: 1.15, color: slide.valueStyle?.color || slide.valueColor }}>{slide.value}</div>
+        <div style={{ fontSize: 11, fontWeight: 600, marginTop: 4, color: slide.detailStyle?.color || slide.detailColor, lineHeight: 1.4 }}>{slide.detail}</div>
+      </div>
+
+      {/* Dots */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+        {READINESS_SLIDES.map((_, i) => (
+          <button key={i} onClick={() => setIdx(i)} style={{
+            width: i === idx ? 20 : 6, height: 6, borderRadius: 999,
+            background: i === idx ? ORANGE : 'rgba(255,112,67,0.25)',
+            border: 'none', padding: 0, cursor: 'pointer',
+            transition: 'width 220ms ease',
+          }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DemoRightRail() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: GAP }}>
@@ -114,32 +193,7 @@ function DemoRightRail() {
         alt="Advertise with ForgeTomorrow"
         style={{ width: '100%', borderRadius: 14, display: 'block' }}
       />
-
-      {/* Recruiter Readiness */}
-      <div style={{ ...GLASS, padding: 14 }}>
-        <div style={{ fontSize: 18, color: ORANGE, marginBottom: 12, ...ORANGE_LIFT }}>Recruiter Readiness</div>
-
-        <div style={{ ...GLASS_SOFT, padding: 16, background: 'rgba(15,23,42,0.94)', color: 'white', textAlign: 'center', marginBottom: 10 }}>
-          <div style={{ fontSize: 9, fontWeight: 900, color: ORANGE, letterSpacing: '0.10em', textTransform: 'uppercase', marginBottom: 4 }}>Overall Score</div>
-          <div style={{ fontSize: 36, fontWeight: 900, lineHeight: 1 }}>100%</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.80)', marginTop: 4 }}>Strong</div>
-        </div>
-
-        <div style={{ ...GLASS_SOFT, padding: '10px 12px', marginBottom: 8, border: '1px solid rgba(22,163,74,0.22)', background: 'rgba(22,163,74,0.06)' }}>
-          <div style={{ fontSize: 9, fontWeight: 900, color: '#16A34A', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Strengths</div>
-          <div style={{ fontSize: 14, fontWeight: 900, color: '#166534' }}>8 Proven Signals</div>
-        </div>
-
-        <div style={{ ...GLASS_SOFT, padding: '10px 12px', marginBottom: 8 }}>
-          <div style={{ fontSize: 9, fontWeight: 900, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Biggest Risk</div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: ORANGE }}>Project ownership and outcomes</div>
-        </div>
-
-        <div style={{ ...GLASS_SOFT, padding: '10px 12px' }}>
-          <div style={{ fontSize: 9, fontWeight: 900, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Recruiter Confidence</div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#16A34A' }}>High</div>
-        </div>
-      </div>
+      <RecruiterReadinessCarousel />
     </div>
   );
 }
@@ -175,7 +229,7 @@ export default function DemoProfileStrength() {
             marginRight: RIGHT_BLEED,
             marginTop: 8,
             display: 'flex',
-            alignItems: 'stretch',
+            alignItems: 'flex-end',
             gap: GAP,
             width: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
             position: 'relative',
