@@ -1,5 +1,5 @@
 // pages/demo/profile-strength.js
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
 import SeekerAnalyticsLayout from '@/components/layouts/SeekerAnalyticsLayout';
 
@@ -107,9 +107,23 @@ const RECRUITER_QUESTIONS = [
 // ─── Recruiter Readiness carousel slides ─────────────────────────────────────
 // ─── Right rail: Ad + Recruiter Readiness ────────────────────────────────────
 
+const READINESS_SLIDES = [
+  { label: 'STRENGTHS',           value: '8 Proven Signals',              valueColor: '#166534', bg: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.22)' },
+  { label: 'BIGGEST RISK',        value: 'Project ownership and outcomes', valueColor: ORANGE,    bg: 'rgba(255,255,255,0.88)', border: '1px solid rgba(0,0,0,0.06)' },
+  { label: 'RECRUITER CONFIDENCE', value: 'High',                         valueColor: '#16A34A', bg: 'rgba(255,255,255,0.88)', border: '1px solid rgba(0,0,0,0.06)' },
+];
+
 function RecruiterReadinessCard() {
+  const [idx, setIdx] = useState(0);
+  const timerRef = useRef(null);
+  useEffect(() => {
+    timerRef.current = setInterval(() => setIdx(p => (p + 1) % READINESS_SLIDES.length), 3800);
+    return () => clearInterval(timerRef.current);
+  }, []);
+  const slide = READINESS_SLIDES[idx];
+
   return (
-    <div style={{ ...GLASS, padding: 12 }}>
+    <div style={{ ...GLASS, padding: 12, boxSizing: 'border-box' }}>
       <div style={{ fontSize: 15, color: ORANGE, marginBottom: 10, ...ORANGE_LIFT }}>Recruiter Readiness</div>
 
       {/* Score — always visible */}
@@ -119,20 +133,22 @@ function RecruiterReadinessCard() {
         <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.80)', marginTop: 4 }}>Strong</div>
       </div>
 
-      {/* Scrolling detail cards */}
-      <div style={{ overflowY: 'auto', maxHeight: 180, display: 'grid', gap: 8 }}>
-        <div style={{ ...GLASS_SOFT, padding: '10px 12px', border: '1px solid rgba(22,163,74,0.22)', background: 'rgba(22,163,74,0.06)' }}>
-          <div style={{ fontSize: 9, fontWeight: 900, color: '#16A34A', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Strengths</div>
-          <div style={{ fontSize: 13, fontWeight: 900, color: '#166534' }}>8 Proven Signals</div>
-        </div>
-        <div style={{ ...GLASS_SOFT, padding: '10px 12px' }}>
-          <div style={{ fontSize: 9, fontWeight: 900, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Biggest Risk</div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: ORANGE }}>Project ownership and outcomes</div>
-        </div>
-        <div style={{ ...GLASS_SOFT, padding: '10px 12px' }}>
-          <div style={{ fontSize: 9, fontWeight: 900, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Recruiter Confidence</div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#16A34A' }}>High</div>
-        </div>
+      {/* Carousel slide */}
+      <div style={{ ...GLASS_SOFT, padding: '12px 14px', background: slide.bg, border: slide.border, marginBottom: 10, minHeight: 60 }}>
+        <div style={{ fontSize: 9, fontWeight: 900, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>{slide.label}</div>
+        <div style={{ fontSize: 13, fontWeight: 900, color: slide.valueColor, lineHeight: 1.3 }}>{slide.value}</div>
+      </div>
+
+      {/* Dots */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+        {READINESS_SLIDES.map((_, i) => (
+          <button key={i} onClick={() => setIdx(i)} style={{
+            width: i === idx ? 20 : 6, height: 6, borderRadius: 999,
+            background: i === idx ? ORANGE : 'rgba(255,112,67,0.25)',
+            border: 'none', padding: 0, cursor: 'pointer',
+            transition: 'width 220ms ease',
+          }} />
+        ))}
       </div>
     </div>
   );
