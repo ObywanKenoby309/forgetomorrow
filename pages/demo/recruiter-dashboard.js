@@ -94,11 +94,13 @@ export default function DemoRecruiterDashboard() {
 
             {/* Right rail — Ad placeholder + Health Snapshot */}
             <aside style={{ gridColumn: '2/3', gridRow: '1/3', display: 'flex', flexDirection: 'column', gap: GAP, width: RIGHT_COL_WIDTH, boxSizing: 'border-box' }}>
-              {/* Ad slot placeholder */}
-              <div style={{ ...GLASS, padding: 20, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: ORANGE, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>ADVERTISE WITH FORGETOMORROW</div>
-                <div style={{ fontSize: 20, fontWeight: 900, color: '#0F172A', lineHeight: 1.3, textAlign: 'center', marginBottom: 12 }}>Reach decision-makers with intent.</div>
-                <div style={{ fontSize: 12, color: ORANGE, fontWeight: 700 }}>✉ sales@forgetomorrow.com</div>
+              {/* Right rail — House Ad */}
+              <div style={{ borderRadius: 18, overflow: 'hidden', boxShadow: '0 10px 28px rgba(15,23,42,0.12)' }}>
+                <img
+                  src="/ads/house/recruiter-house-ad.png"
+                  alt="Advertise with ForgeTomorrow"
+                  style={{ width: '100%', display: 'block', borderRadius: 18 }}
+                />
               </div>
             </aside>
 
