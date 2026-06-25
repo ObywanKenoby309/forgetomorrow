@@ -4,162 +4,303 @@ import Head from 'next/head';
 import Link from 'next/link';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 
+// ─── Design tokens (mirrors real page) ───────────────────────────────────────
 const ORANGE = '#FF7043';
+const SLATE  = '#1E293B';
+const MUTED  = '#475569';
+const GAP    = 12;
+
 const GLASS = {
-  borderRadius: 14,
-  border: '1px solid rgba(255,255,255,0.22)',
-  background: 'rgba(255,255,255,0.58)',
-  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  border: '1px solid rgba(0,0,0,0.08)',
+  background: 'rgba(255,255,255,0.78)',
+  boxShadow: '0 10px 28px rgba(15,23,42,0.12)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  borderRadius: 18,
+};
+const GLASS_SOFT = {
+  border: '1px solid rgba(0,0,0,0.06)',
+  background: 'rgba(255,255,255,0.88)',
+  boxShadow: '0 8px 22px rgba(15,23,42,0.10)',
   backdropFilter: 'blur(10px)',
   WebkitBackdropFilter: 'blur(10px)',
-};
-const WHITE_CARD = {
-  background: 'rgba(255,255,255,0.92)',
-  border: '1px solid rgba(0,0,0,0.08)',
   borderRadius: 12,
-  boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
 };
 const ORANGE_LIFT = {
   textShadow: '0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)',
   fontWeight: 900,
 };
 
-const DIMENSIONS = [
-  { label: 'Professional Signal', score: 92, status: 'Strong',     color: '#16A34A', desc: 'Your title, tenure, and progression tell a clear upward story. Recruiters can quickly identify your seniority level.',                          tips: ['Add 2 more quantified achievements to your most recent role', 'Ensure your current title matches market-standard terminology'] },
-  { label: 'Execution Visibility', score: 88, status: 'Strong',    color: '#16A34A', desc: 'Your profile shows concrete evidence of shipping and delivering outcomes, not just responsibilities.',                                           tips: ['Add metrics to your 3rd and 4th bullet points in current role', 'Consider adding a "Results" section to your portfolio'] },
-  { label: 'Validation Risk',      score: 76, status: 'Moderate',  color: '#D97706', desc: 'Some claims in your profile lack supporting evidence. Recruiters may hesitate without third-party validation.',                                  tips: ['Add 1–2 certifications or courses to support your AI/ML claims', 'Request a recommendation from a recent manager or peer'] },
-  { label: 'Portfolio Depth',      score: 84, status: 'Strong',    color: '#16A34A', desc: 'You have solid project evidence attached to your profile. The quality and specificity of your case studies is above average.',                  tips: ['Add outcome metrics to your ForgeTomorrow project description', 'Include a link to a live demo or case study document'] },
-  { label: 'Resume Access',        score: 100, status: 'Available', color: '#16A34A', desc: 'Your primary resume is attached, public, and ATS-optimized. Recruiters can access it with one click.',                                         tips: [] },
-  { label: 'Keyword Alignment',    score: 71, status: 'Needs Work', color: '#DC2626', desc: 'Your profile is missing several high-value keywords that recruiters in your target market search for frequently.',                             tips: ['Add "Product-Led Growth" to your skills or summary', 'Include "Cross-functional leadership" in your experience bullets', 'Add "OKRs" and "roadmap prioritization" to your summary'] },
+// Bleed constants — match real page exactly
+const LEFT_BLEED  = -(240 + 12);
+const RIGHT_BLEED = -(240 + 12);
+
+// ─── Demo data ────────────────────────────────────────────────────────────────
+const PROVEN_COUNT = 8;
+const OVERALL_SCORE = 100;
+
+const RECRUITER_ASSESSMENT = `Delivery leadership exposure with project execution, requirements translation, change/process coordination, and stakeholder alignment indicators. The strongest visible story is Operations / process improvement, Service delivery, IT service management. I would be comfortable moving this profile into a serious fit conversation if the role matches the direction shown here. The main things I would still validate are project ownership and outcomes.`;
+
+const STRONGEST_EVIDENCE = [
+  '18 years experience',
+  'Project evidence: ForgeTomorrow Career & Recruiting Platform',
+  'Credential/training: ITIL V4 Foundations',
+  'Skill: Customer Operations & Escalation Management',
+  '30 direct reports',
+  'Project evidence: EWJ Innovations Technology Archive',
+  'Skill: Client Success Leadership',
+  'Skill: Support Delivery & SLA Management',
+];
+
+const PROOF_PROJECTS = [
+  { label: 'Project Evidence', title: 'ForgeTomorrow Career & Recruiting Platform' },
+  { label: 'Project Evidence', title: 'EWJ Innovations Technology Archive' },
+];
+
+const STRENGTH_SIGNALS = [
+  { label: 'Professional Signal',  value: 'Strong' },
+  { label: 'Execution Visibility', value: 'Strong' },
+  { label: 'Validation Risk',      value: 'Low'    },
+  { label: 'Portfolio Depth',      value: 'Strong' },
+  { label: 'Resume Access',        value: 'Available' },
+];
+
+const WHY_MATCH = {
+  roleSignal: 'BEST-FIT ROLE SIGNAL',
+  role: 'Director of Customer Success Operations',
+  desc: 'Strong customer operations, service delivery, escalation, and support-leadership alignment.',
+  signals: [
+    '8 proven profile signals',
+    'Primary resume evidence available',
+    '2 portfolio projects listed',
+    '1 credential/training signal',
+    'Operations / process improvement',
+    'Service delivery',
+  ],
+};
+
+const PLACEMENT_ROLES = [
+  { title: 'Director of Customer Success Operations', pct: 94, desc: 'Strong customer operations, service delivery, escalation, and support-leadership alignment.' },
+  { title: 'Service Delivery Director',               pct: 91, desc: 'Visible delivery ownership, SLA/process discipline, and client-facing operations signals.' },
+  { title: 'Customer Success Leader',                 pct: 88, desc: 'Customer relationship, adoption, retention, and operational support signals are present.' },
+  { title: 'Operations Director',                     pct: 85, desc: 'Operational execution, process improvement, and cross-functional delivery signals are visible.' },
+  { title: 'Business Operations Lead',                pct: 82, desc: 'Process, reporting, workflow, and execution evidence supports business operations fit.' },
 ];
 
 const RECRUITER_QUESTIONS = [
-  'What does this person actually ship? I need proof of delivery.',
-  'Are they a strategic thinker or a feature factory?',
-  'Can they lead without authority across engineering and design?',
-  'Why are they looking? Is this a step up or a lateral escape?',
+  {
+    question: 'Walk me through ForgeTomorrow Career & Recruiting Platform. What did you personally own, what changed, and what result can you point to?',
+    context: 'Recruiters use project stories to separate participation from ownership. They are listening for scope, decisions, obstacles, and measurable outcome.',
+  },
+  {
+    question: 'Walk me through EWJ Innovations Technology Archive. What did you personally own, what changed, and what result can you point to?',
+    context: 'Recruiters use project stories to separate participation from ownership. They are listening for scope, decisions, obstacles, and measurable outcome.',
+  },
+  {
+    question: 'Tell me about a project or process improvement you personally owned from problem identification through implementation.',
+    context: 'This closes the biggest validation gap: direct ownership, stakeholder impact, and measurable outcome.',
+  },
+  {
+    question: 'Which role direction are you most intentionally targeting next, and what evidence from your background supports that move?',
+    context: 'Recruiters want to understand if the candidate has self-awareness about their positioning and transition story.',
+  },
 ];
 
-export default function DemoProfileStrength() {
-  const [expanded, setExpanded] = useState('Keyword Alignment');
-  const overall = Math.round(DIMENSIONS.reduce((s, d) => s + d.score, 0) / DIMENSIONS.length);
-  const overallColor = overall >= 85 ? '#16A34A' : overall >= 70 ? '#D97706' : '#DC2626';
-  const overallLabel = overall >= 85 ? 'Strong' : overall >= 70 ? 'Moderate' : 'Needs Work';
+// ─── Sub-components ───────────────────────────────────────────────────────────
+function KpiStrip() {
+  return (
+    <div style={{ ...GLASS, padding: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: GAP }}>
+        {STRENGTH_SIGNALS.map(s => (
+          <div key={s.label} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 11, color: MUTED, marginBottom: 4 }}>{s.label}</div>
+            <div style={{ fontSize: 16, fontWeight: 900, color: '#16A34A' }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
+function ExecutionProofCard() {
+  return (
+    <div style={{ ...GLASS, padding: 14, height: '100%', boxSizing: 'border-box' }}>
+      <div style={{ fontSize: 18, color: ORANGE, marginBottom: 12, ...ORANGE_LIFT }}>Execution Proof</div>
+      <div style={{ display: 'grid', gap: 10 }}>
+        {PROOF_PROJECTS.map((p, i) => (
+          <div key={i} style={{ ...GLASS_SOFT, padding: '10px 12px' }}>
+            <div style={{ fontSize: 9, fontWeight: 900, color: ORANGE, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>{p.label}</div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: SLATE, lineHeight: 1.3 }}>{p.title}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RecruiterLensHero() {
+  return (
+    <div style={{ ...GLASS, padding: 20, flex: '1 1 auto', minWidth: 0, height: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>Recruiter Lens</div>
+          <div style={{ fontSize: 22, color: ORANGE, fontWeight: 900, lineHeight: 1.2, ...ORANGE_LIFT }}>If We Were Recruiting You</div>
+        </div>
+        <div style={{ ...GLASS_SOFT, padding: '10px 14px', textAlign: 'center', flexShrink: 0 }}>
+          <div style={{ fontSize: 28, fontWeight: 900, color: ORANGE, lineHeight: 1 }}>{PROVEN_COUNT}</div>
+          <div style={{ fontSize: 9, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Proven Signals</div>
+        </div>
+      </div>
+
+      <div style={{ ...GLASS_SOFT, padding: 16, background: 'rgba(255,255,255,0.76)' }}>
+        <div style={{ fontSize: 9, fontWeight: 900, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Recruiter Assessment</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: SLATE, lineHeight: 1.65, marginBottom: 14 }}>{RECRUITER_ASSESSMENT}</div>
+
+        <div style={{ border: '1px solid rgba(255,112,67,0.18)', borderRadius: 12, padding: 14, background: 'rgba(255,255,255,0.60)' }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 10 }}>Strongest Evidence Found</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 24px' }}>
+            {STRONGEST_EVIDENCE.map((item, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span style={{ color: ORANGE, fontWeight: 900, flexShrink: 0 }}>•</span>
+                <span style={{ fontSize: 12, color: SLATE, lineHeight: 1.45, fontWeight: 600 }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecruiterReadinessCard() {
+  return (
+    <div style={{ ...GLASS, padding: 14, height: '100%', boxSizing: 'border-box' }}>
+      <div style={{ fontSize: 18, color: ORANGE, marginBottom: 12, ...ORANGE_LIFT }}>Recruiter Readiness</div>
+
+      {/* Score block */}
+      <div style={{ ...GLASS_SOFT, padding: 16, background: 'rgba(15,23,42,0.94)', color: 'white', textAlign: 'center', marginBottom: 10 }}>
+        <div style={{ fontSize: 9, fontWeight: 900, color: ORANGE, letterSpacing: '0.10em', textTransform: 'uppercase', marginBottom: 4 }}>Overall Score</div>
+        <div style={{ fontSize: 36, fontWeight: 900, lineHeight: 1 }}>{OVERALL_SCORE}%</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.80)', marginTop: 4 }}>Strong</div>
+      </div>
+
+      {/* Strengths */}
+      <div style={{ ...GLASS_SOFT, padding: '10px 12px', marginBottom: 8, border: '1px solid rgba(22,163,74,0.22)', background: 'rgba(22,163,74,0.06)' }}>
+        <div style={{ fontSize: 9, fontWeight: 900, color: '#16A34A', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Strengths</div>
+        <div style={{ fontSize: 14, fontWeight: 900, color: '#166534' }}>8 Proven Signals</div>
+      </div>
+
+      {/* Biggest Risk */}
+      <div style={{ ...GLASS_SOFT, padding: '10px 12px', marginBottom: 8 }}>
+        <div style={{ fontSize: 9, fontWeight: 900, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Biggest Risk</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: ORANGE }}>Project ownership and outcomes</div>
+      </div>
+
+      {/* Recruiter Confidence */}
+      <div style={{ ...GLASS_SOFT, padding: '10px 12px' }}>
+        <div style={{ fontSize: 9, fontWeight: 900, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Recruiter Confidence</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#16A34A' }}>High</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+export default function DemoProfileStrength() {
   return (
     <>
       <Head><title>Profile Strength — ForgeTomorrow</title></Head>
       <SeekerLayout activeNav="dashboard" contentFullBleed>
-        <div style={{ display: 'grid', gap: 16 }}>
+        <div style={{ display: 'grid', gap: GAP }}>
 
-          {/* Title card — content area, not header prop */}
-          <div style={{ ...GLASS, padding: '16px 20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-              <div>
-                <div style={{ fontSize: 26, fontWeight: 900, color: ORANGE, fontStyle: 'italic', lineHeight: 1.15, ...ORANGE_LIFT }}>Profile Strength</div>
-                <div style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>See your profile through a recruiter's eyes — understand what's working, what's missing, and how to fix it.</div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 24 }}>
-                <div style={{ fontSize: 48, fontWeight: 900, color: overallColor, lineHeight: 1 }}>{overall}</div>
-                <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>Overall Score</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: overallColor, marginTop: 1 }}>{overallLabel}</div>
-              </div>
-            </div>
-
-            {/* KPI strip */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
-              {DIMENSIONS.map(d => (
-                <div
-                  key={d.label}
-                  onClick={() => setExpanded(d.label)}
-                  style={{ ...WHITE_CARD, padding: 12, textAlign: 'center', borderColor: `${d.color}33`, cursor: 'pointer' }}
-                >
-                  <div style={{ fontSize: 10, fontWeight: 800, color: d.color, marginBottom: 4, lineHeight: 1.2 }}>{d.label}</div>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: d.color }}>{d.status}</div>
-                </div>
-              ))}
-            </div>
+          {/* Title card */}
+          <div style={{ ...GLASS, padding: '18px 24px', textAlign: 'center' }}>
+            <div style={{ fontSize: 26, fontWeight: 900, color: ORANGE, fontStyle: 'italic', ...ORANGE_LIFT }}>Profile Strength</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: SLATE, marginTop: 2 }}>Overview</div>
+            <div style={{ fontSize: 13, color: MUTED, marginTop: 6 }}>See how recruiters are likely to interpret your profile, evidence, and positioning.</div>
           </div>
 
-          {/* Main content: dimension list + right panel */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16 }}>
+          {/* KPI strip */}
+          <KpiStrip />
 
-            {/* Dimension breakdown */}
-            <div style={{ display: 'grid', gap: 10, alignContent: 'start' }}>
-              {DIMENSIONS.map(d => (
-                <div
-                  key={d.label}
-                  onClick={() => setExpanded(expanded === d.label ? null : d.label)}
-                  style={{
-                    ...GLASS,
-                    padding: 16,
-                    cursor: 'pointer',
-                    border: expanded === d.label ? `2px solid ${d.color}` : '1px solid rgba(255,255,255,0.22)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A' }}>{d.label}</div>
-                    <div style={{ fontWeight: 900, fontSize: 18, color: d.color }}>
-                      {d.score}<span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 500 }}>/100</span>
-                    </div>
-                  </div>
-                  <div style={{ height: 6, background: 'rgba(0,0,0,0.08)', borderRadius: 999 }}>
-                    <div style={{ height: '100%', width: `${d.score}%`, background: d.color, borderRadius: 999 }} />
-                  </div>
+          {/* Bleed row: Execution Proof | Recruiter Lens Hero | Recruiter Readiness */}
+          <div style={{
+            marginLeft: LEFT_BLEED,
+            marginRight: RIGHT_BLEED,
+            marginTop: 8,
+            display: 'flex',
+            alignItems: 'stretch',
+            gap: GAP,
+            width: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
+            position: 'relative',
+            zIndex: 2,
+          }}>
+            <div style={{ width: 240, flexShrink: 0 }}><ExecutionProofCard /></div>
+            <RecruiterLensHero />
+            <div style={{ width: 240, flexShrink: 0 }}><RecruiterReadinessCard /></div>
+          </div>
 
-                  {expanded === d.label && (
-                    <div style={{ marginTop: 14, borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: 14 }}>
-                      <div style={{ fontSize: 13, color: '#334155', lineHeight: 1.65, marginBottom: d.tips.length > 0 ? 12 : 0 }}>{d.desc}</div>
-                      {d.tips.length > 0 && (
-                        <div>
-                          <div style={{ fontSize: 11, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Recommended Actions</div>
-                          {d.tips.map((tip, i) => (
-                            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                              <span style={{ color: ORANGE, flexShrink: 0, fontWeight: 700 }}>→</span>
-                              <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{tip}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+          {/* Bottom bleed row: Why You Match | Where Recruiters Place You | What Recruiters May Ask */}
+          <div style={{
+            marginLeft: LEFT_BLEED,
+            marginRight: RIGHT_BLEED,
+            marginTop: 8,
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)',
+            gap: GAP,
+            width: `calc(100% + ${Math.abs(LEFT_BLEED)}px + ${Math.abs(RIGHT_BLEED)}px)`,
+            position: 'relative',
+            zIndex: 1,
+          }}>
+
+            {/* Why You Match */}
+            <div style={{ ...GLASS, padding: 18 }}>
+              <div style={{ fontSize: 22, color: ORANGE, marginBottom: 14, ...ORANGE_LIFT }}>Why You Match</div>
+              <div style={{ ...GLASS_SOFT, padding: 14, marginBottom: 14 }}>
+                <div style={{ fontSize: 9, fontWeight: 900, color: ORANGE, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>{WHY_MATCH.roleSignal}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: SLATE, lineHeight: 1.3, marginBottom: 6 }}>{WHY_MATCH.role}</div>
+                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55 }}>{WHY_MATCH.desc}</div>
+              </div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {WHY_MATCH.signals.map((sig, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={{ color: '#16A34A', fontWeight: 900, flexShrink: 0 }}>✓</span>
+                    <span style={{ fontSize: 13, color: SLATE, lineHeight: 1.35 }}>{sig}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Right panel */}
-            <div style={{ display: 'grid', gap: 14, alignContent: 'start' }}>
-
-              {/* Recruiter Lens */}
-              <div style={{ ...GLASS, padding: 16 }}>
-                <div style={{ fontWeight: 800, fontSize: 14, color: '#0F172A', marginBottom: 6 }}>Recruiter Lens 👁</div>
-                <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.6, marginBottom: 12 }}>Questions a recruiter asks when they land on your profile:</div>
-                {RECRUITER_QUESTIONS.map((q, i) => (
-                  <div key={i} style={{ ...WHITE_CARD, padding: 10, marginBottom: 8, fontSize: 12, color: '#334155', lineHeight: 1.55 }}>
-                    "{q}"
+            {/* Where Recruiters Place You */}
+            <div style={{ ...GLASS, padding: 18 }}>
+              <div style={{ fontSize: 22, color: ORANGE, marginBottom: 14, ...ORANGE_LIFT }}>Where Recruiters Are Most Likely To Place You</div>
+              <div style={{ display: 'grid', gap: 10, overflowY: 'auto', maxHeight: 380 }}>
+                {PLACEMENT_ROLES.map((role, i) => (
+                  <div key={i} style={{ ...GLASS_SOFT, padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: SLATE, lineHeight: 1.3 }}>{role.title}</div>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: ORANGE, flexShrink: 0 }}>{role.pct}%</div>
+                    </div>
+                    <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.45 }}>{role.desc}</div>
                   </div>
                 ))}
               </div>
-
-              {/* Quick Actions */}
-              <div style={{ ...GLASS, padding: 16 }}>
-                <div style={{ fontWeight: 800, fontSize: 14, color: '#0F172A', marginBottom: 12 }}>Quick Actions</div>
-                {[['Edit Profile', '#'], ['Update Resume', '#'], ['Add Certifications', '#'], ['View Analytics', '/demo/profile-analytics']].map(([label, href]) => (
-                  <Link key={label} href={href} style={{ display: 'block', textDecoration: 'none', marginBottom: 8 }}>
-                    <div style={{ ...WHITE_CARD, padding: 12, fontSize: 13, fontWeight: 700, color: ORANGE, cursor: 'pointer' }}>→ {label}</div>
-                  </Link>
-                ))}
-              </div>
-
-              {/* What's Working */}
-              <div style={{ ...GLASS, padding: 16, background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.2)' }}>
-                <div style={{ fontWeight: 800, fontSize: 13, color: '#15803D', marginBottom: 8 }}>✅ What's Working</div>
-                {['Clear upward career progression', 'Strong quantified achievements', 'Primary resume attached and ATS-ready', 'Portfolio projects with live links'].map((item, i) => (
-                  <div key={i} style={{ fontSize: 12, color: '#166534', marginBottom: 5 }}>• {item}</div>
-                ))}
-              </div>
-
             </div>
+
+            {/* What Recruiters May Ask */}
+            <div style={{ ...GLASS, padding: 18 }}>
+              <div style={{ fontSize: 22, color: ORANGE, marginBottom: 6, ...ORANGE_LIFT }}>What Recruiters May Ask</div>
+              <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginBottom: 14 }}>Based on your portfolio, these are the questions a recruiter is most likely to ask. Use these to prepare before any conversation.</div>
+              <div style={{ display: 'grid', gap: 10, overflowY: 'auto', maxHeight: 380 }}>
+                {RECRUITER_QUESTIONS.map((item, i) => (
+                  <div key={i} style={{ ...GLASS_SOFT, padding: 14, border: '1px solid rgba(100,116,139,0.14)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: SLATE, lineHeight: 1.35, marginBottom: 6 }}>{item.question}</div>
+                    <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>{item.context}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         </div>
       </SeekerLayout>
