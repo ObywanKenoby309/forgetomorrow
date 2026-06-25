@@ -88,8 +88,10 @@ export default function DemoMessaging() {
   const [activeThread, setActiveThread] = useState(THREADS[0]);
   const [input, setInput] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   function handleDeleteRequest() {
+    setMenuOpen(false);
     setConfirmDelete(true);
   }
 
@@ -110,9 +112,7 @@ export default function DemoMessaging() {
     </div>
   );
 
-  const [menuOpen, setMenuOpen] = useState(false);
-
-
+  const confirmModal = confirmDelete && (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}>
       <div style={{ background: 'rgba(255,255,255,0.96)', borderRadius: 18, padding: 28, maxWidth: 380, width: '90%', boxShadow: '0 24px 48px rgba(0,0,0,0.22)', textAlign: 'center' }}>
         <div style={{ fontSize: 20, fontWeight: 900, color: SLATE, marginBottom: 10 }}>Delete Conversation?</div>
