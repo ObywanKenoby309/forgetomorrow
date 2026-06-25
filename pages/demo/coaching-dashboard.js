@@ -58,9 +58,9 @@ const CLIENTS = [
 ];
 
 const UPCOMING = [
-  { name: 'Sarah Mitchell',  time: 'Tomorrow 2:00 PM',  type: 'Strategy',       avatar: '👩'   },
-  { name: 'Marcus Thompson', time: 'Friday 10:00 AM',   type: 'Resume Review',  avatar: '🧔'  },
-  { name: 'Jennifer Park',   time: 'Monday 3:00 PM',    type: 'Interview Prep', avatar: '👩‍💼' },
+  { name: 'Sarah Mitchell',  time: 'Tomorrow 2:00 PM',  type: 'Strategy',       avatar: '/profile-avatars/avatar-professional-path.png' },
+  { name: 'Marcus Thompson', time: 'Friday 10:00 AM',   type: 'Resume Review',  avatar: '/profile-avatars/avatar-tech-nexus.png'         },
+  { name: 'Jennifer Park',   time: 'Monday 3:00 PM',    type: 'Interview Prep', avatar: '/profile-avatars/demo-avatar.png'               },
 ];
 
 const FOLLOW_UP_SLIDES = [
@@ -199,7 +199,7 @@ export default function DemoCoachingDashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
                 {UPCOMING.map((s, i) => (
                   <div key={i} style={{ ...WHITE_CARD, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ fontSize: 18, flexShrink: 0 }}>{s.avatar}</div>
+                    <img src={s.avatar} alt={s.name} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</div>
                       <div style={{ fontSize: 10, color: '#64748B' }}>{s.type}</div>
