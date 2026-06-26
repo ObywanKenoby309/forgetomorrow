@@ -74,7 +74,7 @@ export default function DemoCoachingClients() {
         sidebarInitialOpen={{ coaching: true, seeker: false }}
         right={
           <img
-            src="/ads/house/coach-house-ad.png"
+            src="/ads/house/coaching-house-ad.png"
             alt="Advertise with ForgeTomorrow"
             style={{ width: '100%', borderRadius: 14, display: 'block' }}
           />
