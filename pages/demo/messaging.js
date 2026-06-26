@@ -36,8 +36,8 @@ const THREADS = [
     preview: "Eric... shouldn't you be working?",
     unread: 2,
     messages: [
-      { from: 'Jessica Chen', text: "Hi! I came across your ForgeTomorrow profile and was really impressed by your background.", time: 'Today 9:58 AM', mine: false },
-      { from: 'Me', text: "I read that asking interesting questions helps people make friends.", time: 'Today 10:27 AM', mine: true },
+      { from: 'Jessica Chen', text: "Good morning. Wanting to check if you read over the financials for the quarter.", time: 'Today 9:58 AM', mine: false },
+      { from: 'Me', text: "Not yet but I did read somewhere that asking interesting questions helps people make friends.", time: 'Today 10:27 AM', mine: true },
       { from: 'Jessica Chen', text: "That's usually true.", time: 'Today 10:30 AM', mine: false },
       { from: 'Me', text: "Would you rather fight one horse-sized duck or one hundred duck-sized horses?", time: 'Today 10:31 AM', mine: true },
       { from: 'Jessica Chen', text: "Eric... shouldn't you be working?", time: 'Today 10:34 AM', mine: false },
@@ -52,7 +52,7 @@ const THREADS = [
     preview: "That's not even funny.",
     unread: 1,
     messages: [
-      { from: 'Marcus Webb', text: "Hi! Your WHY score was 96/100 for our VP of Product role. That's one of the highest we've seen.", time: 'Yesterday 2:10 PM', mine: false },
+      { from: 'Marcus Webb', text: "Hi! I just wanted to say I like the many tools and community features on ForgeTomorrow.", time: 'Yesterday 2:10 PM', mine: false },
       { from: 'Me', text: "Is your refrigerator running?", time: 'Yesterday 4:44 PM', mine: true },
       { from: 'Marcus Webb', text: "No. It's a refrigerator.", time: 'Yesterday 4:48 PM', mine: false },
       { from: 'Me', text: "Then it should be easy to catch.", time: 'Yesterday 4:50 PM', mine: true },
@@ -65,13 +65,13 @@ const THREADS = [
     avatar: AVATARS.a,
     role: 'Head of UX Testing',
     time: 'Yesterday 4:30 PM',
-    preview: "Dangit Eric! I'm going to send you an email",
+    preview: "...I'm going to send you an email",
     unread: 4,
     messages: [
       { from: 'Ted Sitz', text: 'I really need a raise.', time: 'Yesterday 9:10 AM', mine: false },
       { from: 'Ted Sitz', text: 'Eric, I need to talk to you about getting a raise.', time: 'Yesterday 11:45 AM', mine: false },
       { from: 'Ted Sitz', text: "Eric are you even there? You better not be ignoring me.", time: 'Yesterday 2:08 PM', mine: false },
-      { from: 'Ted Sitz', text: "Dangit Eric! I'm going to send you an email", time: 'Yesterday 4:30 PM', mine: false },
+      { from: 'Ted Sitz', text: "Not sure if you're getting these. I'm going to send you an email", time: 'Yesterday 4:30 PM', mine: false },
     ],
   },
 ];
@@ -94,7 +94,6 @@ export default function DemoMessaging() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   function handleSelectThread(t) {
-    // Clear unread on click
     setThreads(prev => prev.map(th => th.id === t.id ? { ...th, unread: 0 } : th));
     setActiveThread({ ...t, unread: 0 });
     setMenuOpen(false);
@@ -156,7 +155,7 @@ export default function DemoMessaging() {
         rightVariant="light"
         activeNav="messages"
       >
-        <div style={{ ...GLASS, overflow: 'hidden', display: 'grid', gridTemplateColumns: '300px 1fr', height: 560, borderRadius: 18, padding: 0 }}>
+        <div style={{ ...GLASS, overflow: 'hidden', display: 'grid', gridTemplateColumns: '300px 1fr', height: 740, borderRadius: 18, padding: 0 }}>
 
           {/* Thread list */}
           <div style={{ borderRight: '1px solid rgba(0,0,0,0.07)', overflowY: 'auto', background: 'rgba(255,255,255,0.72)' }}>
