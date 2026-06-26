@@ -94,7 +94,7 @@ export default function DemoCoachingClients() {
             {/* Ad — col 2 rows 1–2 */}
             <aside style={{ gridColumn: '2/3', gridRow: '1/3', alignSelf: 'stretch' }}>
               <img
-                src="/ads/house/coach-house-ad.png"
+                src="/ads/house/coaching-house-ad.png"
                 alt="Advertise with ForgeTomorrow"
                 style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14, display: 'block' }}
               />
