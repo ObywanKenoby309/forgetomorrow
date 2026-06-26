@@ -1,5 +1,4 @@
 // pages/demo/recruiter-pools.js
-// Force Redeploy
 import React, { useState } from 'react';
 import Head from 'next/head';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
@@ -115,28 +114,35 @@ export default function DemoRecruiterPools() {
             <div style={{ display: 'grid', gridTemplateColumns: '240px 260px 1fr', minHeight: 480 }}>
 
               {/* Col 1: Pools list */}
-              <div style={{ borderRight: '1px solid #eee', padding: '12px 0', overflowY: 'auto' }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: MUTED, padding: '0 14px 10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Your pools</div>
+              <div style={{ borderRight: '1px solid #eee', padding: '14px 12px', overflowY: 'auto', background: 'white' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: SLATE, marginBottom: 12 }}>Your pools</div>
                 {POOLS.map((pool, i) => (
                   <div
                     key={i}
                     onClick={() => selectPool(pool)}
-                    style={{ padding: '12px 14px', cursor: 'pointer', background: selectedPool.name === pool.name ? 'rgba(255,112,67,0.06)' : 'transparent', borderLeft: selectedPool.name === pool.name ? `3px solid ${ORANGE}` : '3px solid transparent', marginBottom: 2 }}
+                    style={{
+                      padding: '12px 14px',
+                      cursor: 'pointer',
+                      borderRadius: 10,
+                      border: selectedPool.name === pool.name ? '1px solid rgba(255,112,67,0.3)' : '1px solid #eee',
+                      background: selectedPool.name === pool.name ? 'rgba(255,112,67,0.04)' : 'white',
+                      marginBottom: 8,
+                    }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: SLATE, flex: 1, marginRight: 8 }}>{pool.name}</div>
-                      <div style={{ fontSize: 14, fontWeight: 900, color: pool.color, flexShrink: 0 }}>{pool.count}</div>
+                      <div style={{ fontSize: 13, fontWeight: 900, color: SLATE, background: '#f1f5f9', borderRadius: 6, padding: '1px 7px', flexShrink: 0 }}>{pool.count}</div>
                     </div>
-                    <div style={{ fontSize: 11, color: MUTED, marginBottom: 6, lineHeight: 1.4 }}>{pool.desc}</div>
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 4 }}>
+                    <div style={{ fontSize: 11, color: MUTED, marginBottom: 8, lineHeight: 1.4 }}>{pool.desc}</div>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
                       {pool.tags.map(t => (
-                        <span key={t} style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: `${pool.color}18`, color: pool.color }}>{t}</span>
+                        <span key={t} style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: '#f1f5f9', color: MUTED }}>{t}</span>
                       ))}
                     </div>
                     <div style={{ fontSize: 10, color: '#94A3B8' }}>Updated: {pool.updated}</div>
                   </div>
                 ))}
-                <div style={{ padding: '14px', borderTop: '1px solid #eee', marginTop: 8 }}>
+                <div style={{ marginTop: 4, padding: '10px 2px' }}>
                   <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>
                     <strong style={{ color: ORANGE }}>ForgeTomorrow advantage:</strong> every saved candidate carries a "why saved" snapshot so you keep signal, not just names.
                   </div>
@@ -144,23 +150,30 @@ export default function DemoRecruiterPools() {
               </div>
 
               {/* Col 2: Candidate list */}
-              <div style={{ borderRight: '1px solid #eee', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '12px 14px', borderBottom: '1px solid #eee' }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: SLATE, marginBottom: 2 }}>{selectedPool.name}</div>
+              <div style={{ borderRight: '1px solid #eee', display: 'flex', flexDirection: 'column', background: 'white' }}>
+                <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid #eee' }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: SLATE, marginBottom: 2 }}>{selectedPool.name}</div>
                   <div style={{ fontSize: 11, color: MUTED, marginBottom: 10 }}>{candidates.length} candidate{candidates.length !== 1 ? 's' : ''} shown</div>
                   <input
                     placeholder="Search candidates..."
-                    style={{ width: '100%', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8, padding: '7px 12px', fontSize: 12, outline: 'none', background: 'rgba(0,0,0,0.02)', boxSizing: 'border-box', color: SLATE }}
+                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 12px', fontSize: 12, outline: 'none', background: 'white', boxSizing: 'border-box', color: SLATE }}
                   />
                 </div>
-                <div style={{ flex: 1, overflowY: 'auto' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
                   {candidates.length === 0 ? (
                     <div style={{ padding: 20, textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No candidates in this pool yet.</div>
                   ) : candidates.map((c, i) => (
                     <div
                       key={i}
                       onClick={() => setSelectedCandidate(c)}
-                      style={{ padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid #f0f0f0', background: selectedCandidate?.name === c.name ? 'rgba(255,112,67,0.06)' : 'transparent', borderLeft: selectedCandidate?.name === c.name ? `3px solid ${ORANGE}` : '3px solid transparent' }}
+                      style={{
+                        padding: '10px 14px',
+                        cursor: 'pointer',
+                        borderRadius: 8,
+                        marginBottom: 6,
+                        background: selectedCandidate?.name === c.name ? 'rgba(255,112,67,0.08)' : '#f8fafc',
+                        border: selectedCandidate?.name === c.name ? '1px solid rgba(255,112,67,0.25)' : '1px solid #f1f5f9',
+                      }}
                     >
                       <div style={{ fontSize: 13, fontWeight: 700, color: SLATE }}>{c.name}</div>
                       {c.title && <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{c.title}</div>}
@@ -170,31 +183,31 @@ export default function DemoRecruiterPools() {
               </div>
 
               {/* Col 3: At a glance detail */}
-              <div style={{ padding: '16px 18px', overflowY: 'auto' }}>
+              <div style={{ padding: '16px 20px', overflowY: 'auto', background: 'white' }}>
                 {selectedCandidate ? (
                   <>
                     <div style={{ fontSize: 13, fontWeight: 800, color: ORANGE, marginBottom: 10 }}>At a glance...</div>
-                    <div style={{ fontSize: 17, fontWeight: 900, color: SLATE, marginBottom: 4 }}>{selectedCandidate.name}</div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Professional Summary</div>
-                    <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: SLATE, marginBottom: 4 }}>{selectedCandidate.name}</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Professional Summary</div>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
                       <TypeTag label={selectedCandidate.type} />
                       {selectedCandidate.warm && <TypeTag label="Warm" />}
                     </div>
-                    <div style={{ fontSize: 12, color: MUTED, marginBottom: 4 }}>Email: <span style={{ color: SLATE }}>{selectedCandidate.email}</span></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, marginBottom: 8 }}>Email: <span style={{ color: MUTED, fontWeight: 400 }}>{selectedCandidate.email}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid #f1f5f9' }}>
                       <div style={{ fontSize: 12, color: MUTED }}>Fit: <span style={{ color: SLATE, fontWeight: 700 }}>{selectedCandidate.fit}</span></div>
                       <div style={{ fontSize: 11, color: '#94A3B8' }}>Last updated: {selectedCandidate.updated}</div>
                     </div>
 
                     <div style={{ fontSize: 12, fontWeight: 800, color: SLATE, marginBottom: 6 }}>Why saved</div>
-                    <div style={{ fontSize: 12, color: MUTED, marginBottom: 14, lineHeight: 1.5 }}>{selectedCandidate.whySaved}</div>
+                    <div style={{ fontSize: 12, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>{selectedCandidate.whySaved}</div>
 
-                    <div style={{ fontSize: 12, fontWeight: 800, color: SLATE, marginBottom: 6 }}>Notes</div>
-                    <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, marginBottom: 18, whiteSpace: 'pre-line' }}>{selectedCandidate.notes}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: SLATE, marginBottom: 8 }}>Notes</div>
+                    <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, marginBottom: 18, whiteSpace: 'pre-line', border: '1px solid #e2e8f0', borderRadius: 8, padding: '12px 14px', background: '#f8fafc' }}>{selectedCandidate.notes}</div>
 
                     <div style={{ display: 'flex', gap: 10 }}>
-                      <button style={{ background: 'rgba(255,112,67,0.1)', color: ORANGE, border: '1px solid rgba(255,112,67,0.3)', borderRadius: 8, padding: '8px 16px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Message</button>
-                      <button style={{ background: 'none', color: SLATE, border: '1px solid rgba(0,0,0,0.14)', borderRadius: 8, padding: '8px 16px', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>View Full Details</button>
+                      <button style={{ background: 'rgba(255,112,67,0.1)', color: ORANGE, border: '1px solid rgba(255,112,67,0.2)', borderRadius: 8, padding: '8px 18px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Message</button>
+                      <button style={{ background: 'none', color: SLATE, border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 16px', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>View Full Details</button>
                       <button style={{ background: 'none', color: ORANGE, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', padding: '8px 4px' }}>Edit</button>
                     </div>
                   </>
