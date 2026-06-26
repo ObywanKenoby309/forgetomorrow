@@ -96,16 +96,45 @@ export default function DemoCoachingCalendar() {
         activeNav="calendar"
         contentFullBleed
         sidebarInitialOpen={{ coaching: true, seeker: false }}
+        right={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: GAP }}>
+            {/* Ad — no glass, on wallpaper */}
+            <img src="/ads/house/coach-house-ad.png" alt="Advertise with ForgeTomorrow" style={{ width: '100%', borderRadius: 14, display: 'block' }} />
+
+            {/* Upcoming Sessions */}
+            <div style={{ ...GLASS, padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: 15, fontWeight: 900, color: SLATE }}>Upcoming Sessions</div>
+                <button style={{ background: ORANGE, color: '#fff', border: 'none', borderRadius: 999, padding: '5px 12px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>+ Schedule</button>
+              </div>
+              {UPCOMING.map((s, i) => (
+                <div key={i} style={{ ...WHITE_CARD, padding: '10px 12px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Avatar src={s.avatar} name={s.name} size={32} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: SLATE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</div>
+                    <div style={{ fontSize: 10, color: MUTED }}>{s.type} · {s.duration}</div>
+                    <div style={{ fontSize: 10, color: ORANGE, fontWeight: 700 }}>{s.date} at {s.time}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* This Week */}
+            <div style={{ ...GLASS, padding: 14 }}>
+              <div style={{ fontSize: 15, fontWeight: 900, color: SLATE, marginBottom: 10 }}>This Week</div>
+              {THIS_WEEK.map(([label, val]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                  <div style={{ fontSize: 13, color: MUTED }}>{label}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: SLATE }}>{val}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        }
+        rightVariant="light"
       >
-        <div style={{ width: '100%', paddingRight: 16, boxSizing: 'border-box' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: `minmax(0,1fr) ${RIGHT_COL_WIDTH}px`,
-            gridTemplateRows: 'auto auto',
-            gap: GAP,
-            width: '100%',
-            boxSizing: 'border-box',
-          }}>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'grid', gap: GAP, width: '100%', boxSizing: 'border-box' }}>
 
             {/* Title card — col 1 row 1 */}
             <div style={{ ...GLASS, padding: '18px 24px', textAlign: 'center', gridColumn: '1/2', gridRow: '1' }}>
@@ -114,15 +143,8 @@ export default function DemoCoachingCalendar() {
               <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Your command center for coaching time — scan your schedule at a glance.</div>
             </div>
 
-            {/* Ad — col 2 rows 1–2, no glass */}
-            <aside style={{ gridColumn: '2/3', gridRow: '1/3', display: 'flex', flexDirection: 'column', padding: 0, boxSizing: 'border-box', alignSelf: 'stretch' }}>
-              <div style={{ flex: 1, minHeight: 160 }}>
-                <img src="/ads/house/coaching-house-ad.png" alt="Advertise with ForgeTomorrow" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14, display: 'block' }} />
-              </div>
-            </aside>
-
-            {/* Calendar panel — col 1 row 2 */}
-            <div style={{ gridColumn: '1/2', gridRow: '2' }}>
+            {/* Calendar panel — full width */}
+            <div>
               <div style={{ ...GLASS, padding: 20 }}>
 
                 {/* Calendar header */}
@@ -213,41 +235,6 @@ export default function DemoCoachingCalendar() {
                   )}
                 </div>
               )}
-            </div>
-
-            {/* Right rail row 2 — Upcoming Sessions + This Week */}
-            {/* These sit below the ad naturally via row 2, col 2 */}
-            <div style={{ gridColumn: '2/3', gridRow: '2', display: 'grid', gap: GAP, alignContent: 'start' }}>
-
-              {/* Upcoming Sessions */}
-              <div style={{ ...GLASS, padding: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: SLATE }}>Upcoming Sessions</div>
-                  <button style={{ background: ORANGE, color: '#fff', border: 'none', borderRadius: 999, padding: '5px 12px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>+ Schedule</button>
-                </div>
-                {UPCOMING.map((s, i) => (
-                  <div key={i} style={{ ...WHITE_CARD, padding: '10px 12px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Avatar src={s.avatar} name={s.name} size={32} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: SLATE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</div>
-                      <div style={{ fontSize: 10, color: MUTED }}>{s.type} · {s.duration}</div>
-                      <div style={{ fontSize: 10, color: ORANGE, fontWeight: 700 }}>{s.date} at {s.time}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* This Week */}
-              <div style={{ ...GLASS, padding: 14 }}>
-                <div style={{ fontSize: 15, fontWeight: 900, color: SLATE, marginBottom: 10 }}>This Week</div>
-                {THIS_WEEK.map(([label, val]) => (
-                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                    <div style={{ fontSize: 13, color: MUTED }}>{label}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: SLATE }}>{val}</div>
-                  </div>
-                ))}
-              </div>
-
             </div>
 
           </div>
