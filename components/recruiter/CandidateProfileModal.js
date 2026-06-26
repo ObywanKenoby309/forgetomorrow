@@ -213,7 +213,7 @@ function buildCandidateSignalProfileData(candidate, skillsLocal, languageList, e
     languages: toSafeArray(languageList),
     education: toSafeArray(educationList),
     certifications: toSafeArray(candidate?.certifications || candidate?.certificationsJson),
-    projects: toSafeArray(candidate?.projects || candidate?.portfolioProjects || candidate?.projectHighlights),
+    projects: toSafeArray(candidate?.projects || candidate?.portfolioProjects || candidate?.projectHighlights || candidate?.portfolio?.projects || candidate?.profile?.projects || candidate?.publicProfile?.projects || candidate?.profileData?.projects),
     workPreferences: {
       ...workPreferences,
       workStatus: candidate?.workStatus || workPreferences.workStatus,
@@ -703,7 +703,7 @@ export default function CandidateProfileModal({
   const languageList = toSafeArray(candidate?.languages);
   const hasLanguages = languageList.length > 0;
 
-  const projectList = toSafeArray(candidate?.projects || candidate?.portfolioProjects || candidate?.projectHighlights);
+  const projectList = toSafeArray(candidate?.projects || candidate?.portfolioProjects || candidate?.projectHighlights || candidate?.portfolio?.projects || candidate?.profile?.projects || candidate?.publicProfile?.projects || candidate?.profileData?.projects);
   const hasProjects = projectList.length > 0;
 
   const isForgeCandidate = Boolean(
