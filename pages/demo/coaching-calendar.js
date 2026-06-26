@@ -117,7 +117,7 @@ export default function DemoCoachingCalendar() {
             {/* Ad — col 2 rows 1–2, no glass */}
             <aside style={{ gridColumn: '2/3', gridRow: '1/3', display: 'flex', flexDirection: 'column', padding: 0, boxSizing: 'border-box', alignSelf: 'stretch' }}>
               <div style={{ flex: 1, minHeight: 160 }}>
-                <img src="/ads/house/coach-house-ad.png" alt="Advertise with ForgeTomorrow" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14, display: 'block' }} />
+                <img src="/ads/house/coaching-house-ad.png" alt="Advertise with ForgeTomorrow" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14, display: 'block' }} />
               </div>
             </aside>
 
