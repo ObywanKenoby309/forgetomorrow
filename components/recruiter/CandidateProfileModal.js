@@ -155,6 +155,10 @@ function portfolioReviewCopy(sig) {
     return "Structured project proof is not yet visible. Resume history and interview examples should be used to validate execution depth.";
   }
 
+  if (sig.key === "portfolio" && sig.status === "adjacent") {
+    return "Project proof is visible, but recruiters should validate measurable outcomes, ownership, scope, and impact before treating it as fully proven.";
+  }
+
   if (sig.key === "identity" && sig.status !== "direct") {
     return "Professional identity is present, but role level, specialization, or impact signal could be clearer for faster recruiter interpretation.";
   }
