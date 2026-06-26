@@ -1,98 +1,206 @@
 // pages/demo/recruiter-pools.js
 import React, { useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 
 const ORANGE = '#FF7043';
-const GLASS = { background: 'rgba(255,255,255,0.78)', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 10px 28px rgba(15,23,42,0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 18, padding: 16 };
-const WHITE_CARD = { background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(0,0,0,0.07)', borderRadius: 12, padding: 12 };
+const SLATE  = '#1E293B';
+const MUTED  = '#64748B';
+const GAP    = 16;
+
+const GLASS = {
+  borderRadius: 18,
+  border: '1px solid rgba(255,255,255,0.28)',
+  background: 'rgba(255,255,255,0.74)',
+  boxShadow: '0 8px 22px rgba(15,23,42,0.10)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+const PANEL = {
+  background: 'white',
+  border: '1px solid #eee',
+  borderRadius: 14,
+  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+};
+const ORANGE_LIFT = {
+  textShadow: '0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)',
+  fontWeight: 900,
+};
 
 const POOLS = [
-  { name: 'Senior Product Leaders', count: 18, tags: ['Product', 'B2B', 'SaaS'], updated: '2 hours ago', color: '#7C3AED' },
-  { name: 'Engineering — Backend', count: 34, tags: ['Go', 'Rust', 'Distributed'], updated: 'Today', color: '#2563EB' },
-  { name: 'Design Systems Specialists', count: 12, tags: ['Figma', 'Tokens', 'Systems'], updated: 'Yesterday', color: '#D97706' },
-  { name: 'Enterprise Sales — SaaS', count: 27, tags: ['Enterprise', 'MEDDIC', 'SaaS'], updated: '3 days ago', color: '#16A34A' },
-  { name: 'AI/ML Engineers', count: 9, tags: ['PyTorch', 'LLM', 'Infra'], updated: 'Today', color: '#DC2626' },
+  { name: 'Uncategorized',           desc: 'Default intake pool for uncategorized external candidates.', count: 1,  tags: ['uncategorized', 'external'], updated: 'May 19', color: '#94A3B8' },
+  { name: 'Nashville Talent',        desc: 'Local candidates to the HQ',                                 count: 1,  tags: ['Local'],                     updated: 'Feb 9',  color: '#2563EB' },
+  { name: 'Silver Medalists',        desc: 'Top Candidates From Interviews',                             count: 2,  tags: ['silver'],                    updated: 'Feb 6',  color: '#D97706' },
+  { name: 'Senior Product Leaders',  desc: 'Strong senior IC and leadership PM pipeline',                count: 18, tags: ['Product', 'B2B', 'SaaS'],    updated: '2 hours ago', color: '#7C3AED' },
+  { name: 'Engineering — Backend',   desc: 'Systems and infrastructure engineers',                       count: 34, tags: ['Go', 'Rust', 'Distributed'], updated: 'Today',  color: '#16A34A' },
 ];
 
-const POOL_CANDIDATES = [
-  { name: 'Alexandra Chen', title: 'Senior PM', why: 94, avatar: '👩‍💼', added: '2 days ago' },
-  { name: 'Marcus Johnson', title: 'Director of Product', why: 89, avatar: '🧑‍💻', added: '1 week ago' },
-  { name: 'Priya Sharma', title: 'VP Product', why: 85, avatar: '👩‍🎨', added: '3 days ago' },
-  { name: 'James Rivera', title: 'Group PM', why: 81, avatar: '🧑‍💼', added: '5 days ago' },
-];
+const POOL_CANDIDATES = {
+  'Uncategorized':          [{ name: 'Eric James', title: 'Founder & CEO of ForgeTomorrow', type: 'External', warm: true, email: 'eric.james@forgetomorrow.com', fit: '-', whySaved: 'No snapshot yet.', notes: 'Alignment summary: Emerging alignment (20%). Capability coverage: matched 1/2 core (Tier A) and 3/6 supporting (Tier B). Supporting coverage: 2/19 skill clusters present.\n\nAlignment score: 20%\nStrengths: Governance, risk & compliance, Healthcare administration, Education / training, Public safety / security\nGaps: Employee benefits / workers compensation, Government / military environment, HR / people operations', updated: 'May 19' }],
+  'Nashville Talent':       [{ name: 'Jordan Lee', title: 'Operations Manager', type: 'Internal', warm: false, email: 'jordan.l@email.com', fit: '74%', whySaved: 'Strong local ops signal with team leadership experience.', notes: 'Solid match for Nashville HQ roles. Prefers hybrid. Has managed teams of 10+.', updated: 'Feb 9' }],
+  'Silver Medalists':       [{ name: 'Priya Sharma', title: 'Head of Design', type: 'Internal', warm: true, email: 'priya.s@email.com', fit: '91%', whySaved: 'Finalist for design lead role — strong systems background.', notes: 'Reached final round. Passed on offer due to comp gap. Worth revisiting in Q3.', updated: 'Feb 6' }, { name: 'Marcus Johnson', title: 'VP of Engineering', type: 'Internal', warm: false, email: 'marcus.j@email.com', fit: '88%', whySaved: 'Strong technical leadership signal.', notes: 'Second finalist for VP Eng. Accepted offer elsewhere. Keep warm for future roles.', updated: 'Feb 6' }],
+  'Senior Product Leaders': [{ name: 'Alexandra Chen', title: 'Senior Product Manager', type: 'Internal', warm: true, email: 'alex.c@email.com', fit: '94%', whySaved: 'Top WHY score for PM pipeline.', notes: 'Strong B2B SaaS background. Active seeker. Reach out before end of month.', updated: '2 hours ago' }, { name: 'James Rivera', title: 'Director of Sales', type: 'Internal', warm: false, email: 'james.r@email.com', fit: '88%', whySaved: 'Cross-functional leadership signal.', notes: 'Transitioning from sales to product. Interesting background worth watching.', updated: '3 days ago' }],
+  'Engineering — Backend':  [{ name: 'Taylor Kim', title: 'Principal Data Scientist', type: 'Internal', warm: true, email: 'taylor.k@email.com', fit: '85%', whySaved: 'Strong ML infra signal.', notes: 'PyTorch + LLM infra experience. Open to relocation. Follow up after Q2.', updated: 'Today' }],
+};
+
+function TypeTag({ label }) {
+  const colors = {
+    External: { bg: 'rgba(37,99,235,0.1)',  color: '#2563EB' },
+    Internal: { bg: 'rgba(22,163,74,0.1)',  color: '#16A34A' },
+    Warm:     { bg: 'rgba(217,119,6,0.1)',  color: '#D97706' },
+  };
+  const s = colors[label] || { bg: 'rgba(0,0,0,0.06)', color: MUTED };
+  return <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: s.bg, color: s.color }}>{label}</span>;
+}
 
 export default function DemoRecruiterPools() {
   const [selectedPool, setSelectedPool] = useState(POOLS[0]);
+  const [selectedCandidate, setSelectedCandidate] = useState(POOL_CANDIDATES['Uncategorized'][0]);
+  const candidates = POOL_CANDIDATES[selectedPool.name] || [];
+
+  function selectPool(pool) {
+    setSelectedPool(pool);
+    const poolCandidates = POOL_CANDIDATES[pool.name] || [];
+    setSelectedCandidate(poolCandidates[0] || null);
+  }
 
   return (
     <>
       <Head><title>Talent Pools — ForgeTomorrow</title></Head>
-      <RecruiterLayout>
-        <div style={{ display: 'grid', gap: 16 }}>
-          <div style={{ ...GLASS, textAlign: 'center' }}>
-            <div style={{ fontSize: 24, fontWeight: 900, color: ORANGE, fontStyle: 'italic' }}>Talent Pools</div>
-            <div style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>Curate, organize, and engage your best candidates by role, skill, and fit.</div>
+      <RecruiterLayout
+        title="Talent Pools | ForgeTomorrow"
+        activeNav="candidate-center"
+        right={
+          <img
+            src="/ads/house/recruiter-house-ad.png"
+            alt="Advertise with ForgeTomorrow"
+            style={{ width: '100%', borderRadius: 14, display: 'block' }}
+          />
+        }
+        rightVariant="light"
+      >
+        <div style={{ display: 'grid', gap: GAP }}>
+
+          {/* Title card */}
+          <div style={{ ...GLASS, padding: '18px 24px', textAlign: 'center' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: ORANGE, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>GOOD EVENING</div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: ORANGE, fontStyle: 'italic', ...ORANGE_LIFT }}>Candidate Center</div>
+            <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Choose the recruiter tool you want to open. Each workspace stays separate and loads inside Candidate Center.</div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16 }}>
-            {/* Pools list */}
-            <div style={{ ...GLASS, padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(0,0,0,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontWeight: 800, fontSize: 14, color: '#0F172A' }}>My Pools</div>
-                <button style={{ background: ORANGE, color: '#fff', border: 'none', borderRadius: 999, padding: '6px 14px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ New Pool</button>
+          {/* Section header */}
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: ORANGE, fontStyle: 'italic', ...ORANGE_LIFT, marginBottom: 2 }}>Talent Pools</div>
+            <div style={{ fontSize: 13, color: MUTED, marginBottom: 10 }}>Saved candidate pools for review, follow-up, and future hiring needs.</div>
+            <button style={{ background: 'none', color: ORANGE, border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0 }}>Candidate Center Main</button>
+          </div>
+
+          {/* Pools workspace */}
+          <div style={{ ...PANEL, padding: 0, overflow: 'hidden' }}>
+
+            {/* Workspace header */}
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: SLATE }}>Pools workspace</div>
+                <div style={{ fontSize: 12, color: MUTED }}>Pick a pool, scan candidates, and take action without jumping between pages.</div>
               </div>
-              {POOLS.map((pool, i) => (
-                <div key={i} onClick={() => setSelectedPool(pool)}
-                  style={{ padding: '14px 16px', borderBottom: '1px solid rgba(0,0,0,0.04)', cursor: 'pointer', background: selectedPool.name === pool.name ? 'rgba(255,112,67,0.06)' : 'transparent', borderLeft: selectedPool.name === pool.name ? `3px solid ${ORANGE}` : '3px solid transparent' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: pool.color, flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pool.name}</div>
-                      <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>{pool.count} candidates · {pool.updated}</div>
-                    </div>
-                    <div style={{ fontWeight: 900, fontSize: 16, color: pool.color }}>{pool.count}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
-                    {pool.tags.map(t => <span key={t} style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 999, background: `${pool.color}15`, color: pool.color }}>{t}</span>)}
-                  </div>
-                </div>
-              ))}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button style={{ background: 'white', color: SLATE, border: '1px solid rgba(0,0,0,0.15)', borderRadius: 8, padding: '8px 18px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>New pool</button>
+                <button style={{ background: ORANGE, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>Add candidates</button>
+              </div>
             </div>
 
-            {/* Pool detail */}
-            <div style={{ ...GLASS, padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(0,0,0,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 900, fontSize: 18, color: '#0F172A' }}>{selectedPool.name}</div>
-                  <div style={{ fontSize: 12, color: '#64748B' }}>{selectedPool.count} candidates · Updated {selectedPool.updated}</div>
-                </div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button style={{ background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 999, padding: '8px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', color: '#334155' }}>Add Candidates</button>
-                  <button style={{ background: ORANGE, color: '#fff', border: 'none', borderRadius: 999, padding: '8px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Bulk Message</button>
-                </div>
-              </div>
+            {/* 3-col layout */}
+            <div style={{ display: 'grid', gridTemplateColumns: '240px 260px 1fr', minHeight: 480 }}>
 
-              {/* Column headers */}
-              <div style={{ padding: '8px 18px', background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'grid', gridTemplateColumns: '1fr 80px 100px 80px', gap: 12 }}>
-                {['Candidate', 'WHY', 'Added', 'Actions'].map(h => <div key={h} style={{ fontSize: 10, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</div>)}
-              </div>
-
-              {POOL_CANDIDATES.map((c, i) => (
-                <div key={i} style={{ padding: '12px 18px', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'grid', gridTemplateColumns: '1fr 80px 100px 80px', gap: 12, alignItems: 'center', background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.01)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,112,67,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{c.avatar}</div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: '#0F172A' }}>{c.name}</div>
-                      <div style={{ fontSize: 11, color: '#64748B' }}>{c.title}</div>
+              {/* Col 1: Pools list */}
+              <div style={{ borderRight: '1px solid #eee', padding: '12px 0', overflowY: 'auto' }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: MUTED, padding: '0 14px 10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Your pools</div>
+                {POOLS.map((pool, i) => (
+                  <div
+                    key={i}
+                    onClick={() => selectPool(pool)}
+                    style={{ padding: '12px 14px', cursor: 'pointer', background: selectedPool.name === pool.name ? 'rgba(255,112,67,0.06)' : 'transparent', borderLeft: selectedPool.name === pool.name ? `3px solid ${ORANGE}` : '3px solid transparent', marginBottom: 2 }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: SLATE, flex: 1, marginRight: 8 }}>{pool.name}</div>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: pool.color, flexShrink: 0 }}>{pool.count}</div>
                     </div>
+                    <div style={{ fontSize: 11, color: MUTED, marginBottom: 6, lineHeight: 1.4 }}>{pool.desc}</div>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 4 }}>
+                      {pool.tags.map(t => (
+                        <span key={t} style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: `${pool.color}18`, color: pool.color }}>{t}</span>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#94A3B8' }}>Updated: {pool.updated}</div>
                   </div>
-                  <div style={{ fontWeight: 900, fontSize: 16, color: c.why >= 90 ? '#16A34A' : '#D97706' }}>{c.why}</div>
-                  <div style={{ fontSize: 11, color: '#94A3B8' }}>{c.added}</div>
-                  <button style={{ fontSize: 11, padding: '4px 10px', borderRadius: 999, border: `1px solid ${ORANGE}`, color: ORANGE, background: 'none', cursor: 'pointer', fontWeight: 700 }}>Message</button>
+                ))}
+                <div style={{ padding: '14px', borderTop: '1px solid #eee', marginTop: 8 }}>
+                  <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>
+                    <strong style={{ color: ORANGE }}>ForgeTomorrow advantage:</strong> every saved candidate carries a "why saved" snapshot so you keep signal, not just names.
+                  </div>
                 </div>
-              ))}
+              </div>
+
+              {/* Col 2: Candidate list */}
+              <div style={{ borderRight: '1px solid #eee', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '12px 14px', borderBottom: '1px solid #eee' }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: SLATE, marginBottom: 2 }}>{selectedPool.name}</div>
+                  <div style={{ fontSize: 11, color: MUTED, marginBottom: 10 }}>{candidates.length} candidate{candidates.length !== 1 ? 's' : ''} shown</div>
+                  <input
+                    placeholder="Search candidates..."
+                    style={{ width: '100%', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8, padding: '7px 12px', fontSize: 12, outline: 'none', background: 'rgba(0,0,0,0.02)', boxSizing: 'border-box', color: SLATE }}
+                  />
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                  {candidates.length === 0 ? (
+                    <div style={{ padding: 20, textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No candidates in this pool yet.</div>
+                  ) : candidates.map((c, i) => (
+                    <div
+                      key={i}
+                      onClick={() => setSelectedCandidate(c)}
+                      style={{ padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid #f0f0f0', background: selectedCandidate?.name === c.name ? 'rgba(255,112,67,0.06)' : 'transparent', borderLeft: selectedCandidate?.name === c.name ? `3px solid ${ORANGE}` : '3px solid transparent' }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 700, color: SLATE }}>{c.name}</div>
+                      {c.title && <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{c.title}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Col 3: At a glance detail */}
+              <div style={{ padding: '16px 18px', overflowY: 'auto' }}>
+                {selectedCandidate ? (
+                  <>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: ORANGE, marginBottom: 10 }}>At a glance...</div>
+                    <div style={{ fontSize: 17, fontWeight: 900, color: SLATE, marginBottom: 4 }}>{selectedCandidate.name}</div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Professional Summary</div>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                      <TypeTag label={selectedCandidate.type} />
+                      {selectedCandidate.warm && <TypeTag label="Warm" />}
+                    </div>
+                    <div style={{ fontSize: 12, color: MUTED, marginBottom: 4 }}>Email: <span style={{ color: SLATE }}>{selectedCandidate.email}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+                      <div style={{ fontSize: 12, color: MUTED }}>Fit: <span style={{ color: SLATE, fontWeight: 700 }}>{selectedCandidate.fit}</span></div>
+                      <div style={{ fontSize: 11, color: '#94A3B8' }}>Last updated: {selectedCandidate.updated}</div>
+                    </div>
+
+                    <div style={{ fontSize: 12, fontWeight: 800, color: SLATE, marginBottom: 6 }}>Why saved</div>
+                    <div style={{ fontSize: 12, color: MUTED, marginBottom: 14, lineHeight: 1.5 }}>{selectedCandidate.whySaved}</div>
+
+                    <div style={{ fontSize: 12, fontWeight: 800, color: SLATE, marginBottom: 6 }}>Notes</div>
+                    <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, marginBottom: 18, whiteSpace: 'pre-line' }}>{selectedCandidate.notes}</div>
+
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button style={{ background: 'rgba(255,112,67,0.1)', color: ORANGE, border: '1px solid rgba(255,112,67,0.3)', borderRadius: 8, padding: '8px 16px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Message</button>
+                      <button style={{ background: 'none', color: SLATE, border: '1px solid rgba(0,0,0,0.14)', borderRadius: 8, padding: '8px 16px', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>View Full Details</button>
+                      <button style={{ background: 'none', color: ORANGE, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', padding: '8px 4px' }}>Edit</button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center', marginTop: 40 }}>Select a candidate to see details.</div>
+                )}
+              </div>
             </div>
           </div>
         </div>
