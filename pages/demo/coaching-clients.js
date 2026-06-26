@@ -103,7 +103,7 @@ export default function DemoCoachingClients() {
             }}>
               <div style={{ flex: 1, minHeight: 160 }}>
                 <img
-                  src="/ads/house/coach-house-ad.png"
+                  src="/ads/house/coaching-house-ad.png"
                   alt="Advertise with ForgeTomorrow"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14, display: 'block' }}
                 />
