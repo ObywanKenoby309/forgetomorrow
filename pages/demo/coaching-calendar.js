@@ -99,7 +99,7 @@ export default function DemoCoachingCalendar() {
         right={
           <div style={{ display: 'flex', flexDirection: 'column', gap: GAP }}>
             {/* Ad — no glass, on wallpaper */}
-            <img src="/ads/house/coach-house-ad.png" alt="Advertise with ForgeTomorrow" style={{ width: '100%', borderRadius: 14, display: 'block' }} />
+            <img src="/ads/house/coaching-house-ad.png" alt="Advertise with ForgeTomorrow" style={{ width: '100%', borderRadius: 14, display: 'block' }} />
 
             {/* Upcoming Sessions */}
             <div style={{ ...GLASS, padding: 14 }}>
