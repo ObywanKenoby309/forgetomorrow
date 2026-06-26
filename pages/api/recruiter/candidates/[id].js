@@ -29,7 +29,13 @@ function readCookie(req, name) {
 }
 
 function toArrayJson(v) {
-  if (Array.isArray(v)) return v.map((x) => String(x || "").trim()).filter(Boolean);
+  if (Array.isArray(v)) return v.filter(Boolean);
+
+  if (typeof v === "string") {
+    const parsed = safeJsonParse(v);
+    if (Array.isArray(parsed)) return parsed.filter(Boolean);
+  }
+
   return [];
 }
 
