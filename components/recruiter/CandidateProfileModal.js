@@ -699,6 +699,8 @@ export default function CandidateProfileModal({
     (e) => e && typeof e === "object" && (e.school || e.degree || e.field)
   );
   const hasEducation = educationList.length > 0;
+  const certificationList = toSafeArray(candidate?.certifications || candidate?.certificationsJson);
+  const hasCertifications = certificationList.length > 0;
 
   const languageList = toSafeArray(candidate?.languages);
   const hasLanguages = languageList.length > 0;
@@ -1282,26 +1284,54 @@ export default function CandidateProfileModal({
 
                 <div className="grid gap-5 lg:grid-cols-2">
                   <GlassCard>
-                    <SectionTitle eyebrow="Education" title="Credential Context" />
-                    {hasEducation ? (
-                      <ul className="grid gap-2 text-sm">
-                        {educationList.map((edu, idx) => (
-                          <li key={idx} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <div className="font-black text-slate-900">
-                              {[edu.degree, edu.field].filter(Boolean).join(" in ") || "Degree"}
-                            </div>
-                            {edu.school ? <div className="text-slate-500">{edu.school}</div> : null}
-                            {(edu.startYear || edu.endYear) ? (
-                              <div className="text-xs text-slate-400">
-                                {[edu.startYear, edu.endYear].filter(Boolean).join(" – ")}
-                              </div>
-                            ) : null}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div className="text-sm text-slate-500">No education listed.</div>
-                    )}
+                    <SectionTitle eyebrow="Credentials" title="Education & Certifications" />
+                    {hasEducation || hasCertifications ? (
+  <div className="grid gap-2 text-sm">
+    {educationList.map((edu, idx) => (
+      <div key={`edu-${idx}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div className="font-black text-slate-900">
+          {[edu.degree, edu.field].filter(Boolean).join(" in ") || "Degree"}
+        </div>
+        {edu.school ? <div className="text-slate-500">{edu.school}</div> : null}
+        {(edu.startYear || edu.endYear) ? (
+          <div className="text-xs text-slate-400">
+            {[edu.startYear, edu.endYear].filter(Boolean).join(" – ")}
+          </div>
+        ) : null}
+      </div>
+    ))}
+
+    {certificationList.map((cert, idx) => {
+      const title =
+        typeof cert === "string"
+          ? cert
+          : cert?.name || cert?.title || cert?.certification || `Certification ${idx + 1}`;
+
+      const issuer =
+        typeof cert === "string"
+          ? ""
+          : cert?.issuer || cert?.organization || cert?.provider || "";
+
+      const year =
+        typeof cert === "string"
+          ? ""
+          : cert?.year || cert?.issuedYear || cert?.date || "";
+
+      return (
+        <div key={`cert-${idx}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="font-black text-slate-900">{title}</div>
+          {[issuer, year].filter(Boolean).length ? (
+            <div className="text-xs text-slate-400">
+              {[issuer, year].filter(Boolean).join(" • ")}
+            </div>
+          ) : null}
+        </div>
+      );
+    })}
+  </div>
+) : (
+  <div className="text-sm text-slate-500">No education or certifications listed.</div>
+)}
                   </GlassCard>
 
                   <GlassCard>
