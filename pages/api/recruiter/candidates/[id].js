@@ -293,6 +293,10 @@ export default async function handler(req, res) {
         educationJson: true,
         createdAt: true,
         slug: true,
+		certificationsJson: true,
+		projectsJson: true,
+		profileVisibility: true,
+		isProfilePublic: true,
       },
     });
 
@@ -353,6 +357,8 @@ export default async function handler(req, res) {
     const resolvedWorkStatus = getWorkStatusFromWorkPreferences(workPreferencesObj);
     const resolvedPreferredWorkType = getPreferredWorkTypeFromWorkPreferences(workPreferencesObj);
     const resolvedRelocate = getRelocateFromWorkPreferences(workPreferencesObj);
+	const certifications = toArrayJson(user.certificationsJson);
+	const projects = toArrayJson(user.projectsJson);
 
     const candidate = {
       id: user.id,
@@ -367,6 +373,7 @@ export default async function handler(req, res) {
       about: user.aboutMe || "",
       location: user.location || "",
       slug: user.slug || "",
+	  profileVisibility: user.profileVisibility || (user.isProfilePublic ? "PUBLIC" : ""),
 
       workPreferences: workPreferencesObj,
       preferredLocations,
@@ -390,6 +397,9 @@ export default async function handler(req, res) {
 
       education: toEducationObjects(user.educationJson),
       languages: toArrayJson(user.languagesJson),
+	  certifications,
+	  projects,
+	  portfolioProjects: projects,
       experience: bestResume?.content ? extractExperienceFromResumeContent(bestResume.content) : [],
 
       tags: meta?.tags ? toStringArray(meta.tags) : [],
