@@ -714,6 +714,16 @@ export default function CandidateProfileModal({
       candidate?.ftProfileUrl
   );
 
+console.log("[CandidateProfileModal] PROJECT DEBUG", {
+  projects: candidate?.projects,
+  portfolioProjects: candidate?.portfolioProjects,
+  projectHighlights: candidate?.projectHighlights,
+  portfolioProjectsNested: candidate?.portfolio?.projects,
+  profileProjects: candidate?.profile?.projects,
+  publicProfileProjects: candidate?.publicProfile?.projects,
+  profileDataProjects: candidate?.profileData?.projects,
+});
+
   const signalProfileData = buildCandidateSignalProfileData(
     candidate,
     skillsLocal,
