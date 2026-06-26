@@ -91,13 +91,23 @@ export default function DemoCoachingClients() {
               <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Your coaching workspace — clients, sessions, and feedback all in one place.</div>
             </div>
 
-            {/* Ad — col 2 rows 1–2 */}
-            <aside style={{ gridColumn: '2/3', gridRow: '1/3', alignSelf: 'stretch' }}>
-              <img
-                src="/ads/house/coaching-house-ad.png"
-                alt="Advertise with ForgeTomorrow"
-                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14, display: 'block' }}
-              />
+            {/* Ad — col 2 rows 1–2, no glass backing */}
+            <aside style={{
+              gridColumn: '2/3',
+              gridRow: '1/3',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 0,
+              boxSizing: 'border-box',
+              alignSelf: 'stretch',
+            }}>
+              <div style={{ flex: 1, minHeight: 160 }}>
+                <img
+                  src="/ads/house/coach-house-ad.png"
+                  alt="Advertise with ForgeTomorrow"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14, display: 'block' }}
+                />
+              </div>
             </aside>
 
             {/* Main content — col 1 row 2 */}
