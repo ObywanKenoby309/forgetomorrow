@@ -65,7 +65,12 @@ return (
         content="professional intelligence, career intelligence, recruiting platform, professional networking, coaching platform, career development, human-centered career intelligence, HCCI, hiring technology"
       />
 
-      <style>{`
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+	  <style>{`
           @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,900;1,9..40,300&display=swap');
 
           * { box-sizing: border-box; margin: 0; padding: 0; }
