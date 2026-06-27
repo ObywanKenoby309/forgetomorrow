@@ -50,15 +50,22 @@ export default function Home() {
     };
   }, [router]);
 
-  return (
-    <>
-      <Head>
-        <title>ForgeTomorrow — The career system after algorithms.</title>
-        <meta
-          name="description"
-          content="ForgeTomorrow is a career platform built for clarity, alignment, and human dignity. Proof over keywords. Clarity over guesswork."
-        />
-        <style>{`
+return (
+  <>
+    <Head>
+      <title>ForgeTomorrow | The Professional Intelligence Ecosystem</title>
+
+      <meta
+        name="description"
+        content="ForgeTomorrow is a professional intelligence ecosystem connecting job seekers, recruiters, coaches, hiring managers, and organizations through explainable career intelligence, professional networking, recruiting, coaching, and career development tools."
+      />
+
+      <meta
+        name="keywords"
+        content="professional intelligence, career intelligence, recruiting platform, professional networking, coaching platform, career development, human-centered career intelligence, HCCI, hiring technology"
+      />
+
+      <style>{`
           @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,900;1,9..40,300&display=swap');
 
           * { box-sizing: border-box; margin: 0; padding: 0; }
