@@ -70,6 +70,51 @@ return (
 		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
 		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+
+      name: "ForgeTomorrow",
+      alternateName: "ForgeTomorrow, Inc.",
+
+      url: "https://www.forgetomorrow.com",
+
+      logo:
+        "https://www.forgetomorrow.com/apple-touch-icon.png",
+
+      description:
+        "ForgeTomorrow is a professional intelligence ecosystem connecting job seekers, recruiters, coaches, hiring managers, and organizations through Human-Centered Career Intelligence (HCCI), explainable career intelligence, professional networking, recruiting, coaching, and career development tools.",
+
+      founder: {
+        "@type": "Person",
+        name: "Eric James",
+        jobTitle: "Founder & CEO"
+      },
+
+      sameAs: [
+        "https://www.linkedin.com/company/135134198/",
+        "https://www.facebook.com/people/ForgeTomorrow/61579627354284/",
+        "https://www.youtube.com/@ForgeTomorrow-h2z"
+      ],
+
+      knowsAbout: [
+        "Professional Intelligence",
+        "Human-Centered Career Intelligence",
+        "Career Intelligence",
+        "Professional Networking",
+        "Recruiting",
+        "Coaching",
+        "Career Development",
+        "Hiring Technology",
+        "Professional Ecosystems"
+      ]
+    })
+  }}
+/>
+
 	  <style>{`
           @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,900;1,9..40,300&display=swap');
 
