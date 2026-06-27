@@ -222,8 +222,9 @@ function normalizeProjectPromotions(results = []) {
     name: r.title || 'Project & Promotion Brief',
     subtitle: null,
     date: r.createdAt,
-    downloadUrl: null, hasPdf: false, raw: r,
-    sharePayload: { forgeDocType: 'projectPromotion', forgeDocId: r.id, fileName: r.title || 'Project & Promotion Brief' },
+    downloadUrl: `/api/anvil/project-promotion/export?id=${r.id}`,
+    hasPdf: false, raw: r,
+    sharePayload: { forgeDocType: 'projectPromotion', forgeDocId: r.id, fileName: r.title || 'Project & Promotion Brief', downloadUrl: `/api/anvil/project-promotion/export?id=${r.id}` },
   }));
 }
 
@@ -232,8 +233,10 @@ function normalizeStrategies(strategies = []) {
     id: `strategy-${s.id}`, type: 'strategy', workspace: 'coach', category: 'coaching',
     typeLabel: TYPE_META.strategy.label, name: safeText(s.title, 'Target Strategy'),
     subtitle: s.summary ? s.summary.slice(0, 72) + (s.summary.length > 72 ? '…' : '') : null,
-    date: s.updatedAt, downloadUrl: null, hasPdf: false, raw: s,
-    sharePayload: { forgeDocType: 'strategy', forgeDocId: s.id, fileName: safeText(s.title, 'Target Strategy') },
+    date: s.updatedAt,
+    downloadUrl: `/api/coaching/clients/strategy/export?clientId=${s.id}`,
+    hasPdf: false, raw: s,
+    sharePayload: { forgeDocType: 'strategy', forgeDocId: s.id, fileName: safeText(s.title, 'Target Strategy'), downloadUrl: `/api/coaching/clients/strategy/export?clientId=${s.id}` },
   }));
 }
 
