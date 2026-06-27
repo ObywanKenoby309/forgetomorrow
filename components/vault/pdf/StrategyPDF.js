@@ -30,7 +30,7 @@ const S = StyleSheet.create({
     color: ORANGE, marginBottom: 5, paddingBottom: 3,
     borderBottomWidth: 1.5, borderBottomColor: ORANGE, borderBottomStyle: 'solid',
   },
-  section: { marginBottom: 18 },
+  section: { marginBottom: 28 },
 
   // Highlight / warning boxes
   highlightBox: { backgroundColor: BG_HIGH, borderLeftWidth: 3, borderLeftColor: ORANGE, borderLeftStyle: 'solid', padding: '10 12', borderRadius: 3, marginBottom: 4 },
@@ -127,7 +127,7 @@ export default function StrategyPDF({ clientName, title, strategy, targetCompani
         {/* Header */}
         <Text style={S.brand}>ForgeTomorrow Coaching Intelligence</Text>
         <Text style={S.docTitle}>{safe(title)}</Text>
-        <Text style={S.docMeta}>Client: {safe(clientName)}  ·  Generated: {dateStr}</Text>
+        <Text style={S.docMeta}>Generated: {dateStr}</Text>
         {targetCompanies ? <Text style={S.docMeta}>Targets: {safe(targetCompanies)}</Text> : null}
         <View style={S.rule} />
 
@@ -231,7 +231,7 @@ export default function StrategyPDF({ clientName, title, strategy, targetCompani
 
         {/* Session Focus */}
         {s.sessionFocus ? (
-          <View style={S.section}>
+          <View style={[S.section, { breakBefore: 'page' }]}>
             <SectionLabel>Next Session Focus</SectionLabel>
             <Text style={S.listText}>{safe(s.sessionFocus)}</Text>
           </View>
@@ -239,7 +239,7 @@ export default function StrategyPDF({ clientName, title, strategy, targetCompani
 
         {/* Reasoning */}
         {arr(s.reasoning).length ? (
-          <View style={S.section}>
+          <View style={[S.section, { breakBefore: s.sessionFocus ? 'avoid' : 'page' }]}>
             <SectionLabel>Strategy Reasoning</SectionLabel>
             <BulletList items={arr(s.reasoning)} />
           </View>
