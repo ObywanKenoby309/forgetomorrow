@@ -52,6 +52,7 @@ export default function FoundryRoom() {
   const [sidebarHidden, setSidebarHidden] = useState(false);
   const [compact, setCompact] = useState(false);
   const [activePanel, setActivePanel] = useState('People');
+  const [stageMode, setStageMode] = useState(false);
 
   // Edge recommendation toast
   const [showEdgeToast, setShowEdgeToast] = useState(false);
@@ -745,16 +746,20 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
     setActivePanel(tab);
   };
 
+  const isHost = room?.hostId === session?.user?.id;
+  const isCoHost = room?.coHostUserId === session?.user?.id;
+  const canManage = isHost || isCoHost;
+
+  useEffect(() => {
+    if (!canManage && stageMode) setStageMode(false);
+  }, [canManage, stageMode]);
+
   // All hooks above — safe to early return here
   if (loading) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
       Opening Foundry…
     </div>
   );
-
-  const isHost = room?.hostId === session?.user?.id;
-  const isCoHost = room?.coHostUserId === session?.user?.id;
-  const canManage = isHost || isCoHost;
 
   if (isMobile) {
     return (
@@ -839,6 +844,7 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
           onRoomEmpty={handleRoomEmpty}
           onScheduledEnd={handleScheduledEnd}
           initialBackground={selectedBackground}
+          stageMode={stageMode && canManage}
         />
       </FoundryMobileLayout>
     );
@@ -860,9 +866,20 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
         selectedBackground={selectedBackground}
         onBackgroundChange={setSelectedBackground}
         isFounder={isFounder}
+        canUseStage={canManage}
+        stageMode={stageMode}
+        onToggleStage={() => setStageMode(v => !v)}
       />
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div
+        style={{
+          display: 'flex',
+          flex: 1,
+          overflow: 'hidden',
+          background: stageMode ? '#F6F4F1' : 'transparent',
+          transition: 'background 180ms ease',
+        }}
+      >
         <FoundryVideoGrid
           roomId={roomId}
           compact={compact}
@@ -878,9 +895,10 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
           onRoomEmpty={handleRoomEmpty}
           onScheduledEnd={handleScheduledEnd}
           initialBackground={selectedBackground}
+          stageMode={stageMode && canManage}
         />
 
-        {!sidebarHidden && (
+        {!stageMode && !sidebarHidden && (
           <FoundryRightPanel
             roomId={roomId}
             guestToken={room?.guestToken || null}

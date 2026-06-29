@@ -105,6 +105,44 @@ const S = {
     display: 'flex', flexDirection: 'column', alignItems: 'center',
     justifyContent: 'center', gap: 3, color: 'rgba(255,255,255,0.2)', fontSize: 9,
   },
+  stageArea: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '34px 48px 42px',
+    gap: 18,
+    minWidth: 0,
+    background: 'radial-gradient(circle at 50% 10%, rgba(255,112,67,0.10), transparent 30%), #F6F4F1',
+  },
+  stageShell: {
+    width: 'min(78vw, 920px)',
+    aspectRatio: '16 / 9',
+    borderRadius: 22,
+    padding: 10,
+    background: '#FFFFFF',
+    border: '1px solid rgba(17,24,39,0.10)',
+    boxShadow: '0 28px 80px rgba(17,24,39,0.18)',
+  },
+  stageMainTile: {
+    height: '100%',
+    borderRadius: 16,
+    background: '#F7F7F7',
+    border: '1px solid rgba(17,24,39,0.10)',
+    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.6)',
+  },
+  stageLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    color: '#30343B',
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+  },
   stateMsg: {
     position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
     justifyContent: 'center', color: '#555', fontSize: 13,
@@ -273,7 +311,7 @@ function ScreenShareTile({ track, sharerName, isLocal, onStopShare }) {
   );
 }
 
-function VideoTile({ participant, isMain = false }) {
+function VideoTile({ participant, isMain = false, stageMode = false }) {
   const videoRef = useRef(null);
   const audioRef = useRef(null);
 
@@ -312,7 +350,7 @@ function VideoTile({ participant, isMain = false }) {
 
   if (isMain) {
     return (
-      <div style={S.mainTile}>
+      <div style={{ ...S.mainTile, ...(stageMode ? S.stageMainTile : {}) }}>
         <div style={S.inner}>
           <div style={S.ambient} />
           <div style={S.floor} />
@@ -400,6 +438,7 @@ export default function FoundryVideoGrid({
   initialBackground = 'none',
   onRemoteMute = null,
   onRemoteStopCamera = null,
+  stageMode = false,
 }) {
   const callRef = useRef(null);
   const localUserDataRef = useRef(guestUserData || null);
@@ -854,6 +893,26 @@ if (selectedBackground) {
       </div>
     </div>
   );
+
+
+  // ── STAGE MODE — host-only recording view, centered and clean ─────────────
+  if (stageMode && joinState === 'joined') {
+    const stageParticipant = local || mainParticipant;
+
+    return (
+      <div style={S.stageArea}>
+        <div style={S.stageLabel}>
+          <span style={{ color: '#FF7043', fontSize: 14 }}>◆</span>
+          <span>Foundry Stage</span>
+        </div>
+        <div style={S.stageShell}>
+          {stageParticipant ? (
+            <VideoTile participant={stageParticipant} isMain stageMode />
+          ) : waitingTile}
+        </div>
+      </div>
+    );
+  }
 
   // ── GRID VIEW — everyone equal size in a responsive grid ─────────────────
   if (effectiveView === 'grid' && joinState === 'joined') {

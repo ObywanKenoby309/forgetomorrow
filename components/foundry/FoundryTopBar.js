@@ -190,6 +190,9 @@ export default function FoundryTopBar({
   selectedBackground = 'none',
   onBackgroundChange,
   isFounder = false,
+  canUseStage = false,
+  stageMode = false,
+  onToggleStage,
 }) {
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -364,6 +367,24 @@ export default function FoundryTopBar({
       </div>
 
       <div style={S.right} ref={ref}>
+        {canUseStage && (
+          <button
+            style={{
+              ...S.viewBtn,
+              color: stageMode ? '#111' : '#ddd',
+              background: stageMode ? '#F6F4F1' : 'rgba(255,112,67,0.08)',
+              borderColor: stageMode ? 'rgba(255,112,67,0.55)' : 'rgba(255,112,67,0.22)',
+            }}
+            onClick={onToggleStage}
+            aria-pressed={stageMode}
+            aria-label={stageMode ? 'Exit Foundry stage mode' : 'Enter Foundry stage mode'}
+            title={stageMode ? 'Return to normal Foundry' : 'Stage mode'}
+          >
+            <span style={{ fontSize: 13 }}>{stageMode ? '🎬' : '◉'}</span>
+            <span>{stageMode ? 'Stage On' : 'Stage'}</span>
+          </button>
+        )}
+
         <button
           style={S.viewBtn}
           onClick={() => setOpen((v) => !v)}
