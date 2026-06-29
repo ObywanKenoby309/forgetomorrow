@@ -885,24 +885,25 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
           <FoundryVideoGrid
             roomId={roomId}
             compact={compact}
-            activeView={activeView}
-            micMuted={micMuted}
-            camOff={camOff}
-            onRemoteMute={() => setMicMuted(true)}
-            onRemoteStopCamera={() => setCamOff(true)}
-            onCallReady={handleCallReady}
-            onParticipantsChange={handleParticipantsChange}
-            onScreenShareChange={handleScreenShareChange}
-            onInvite={() => togglePanel('People')}
-            onRoomEmpty={handleRoomEmpty}
-            onScheduledEnd={handleScheduledEnd}
-            initialBackground={selectedBackground}
-            stageMode={stageMode && canManage}
+		  activeView={activeView}
+          micMuted={micMuted}
+          camOff={camOff}
+		  onRemoteMute={() => setMicMuted(true)}
+		  onRemoteStopCamera={() => setCamOff(true)}
+          onCallReady={handleCallReady}
+          onParticipantsChange={handleParticipantsChange}
+          onScreenShareChange={handleScreenShareChange}
+          onInvite={() => togglePanel('People')}
+          onRoomEmpty={handleRoomEmpty}
+          onScheduledEnd={handleScheduledEnd}
+          initialBackground={selectedBackground}
+          stageMode={stageMode && canManage}
           />
           {stageMode && canManage && (
             <FoundryStageOverlay
-              isRecording={isRecording}
-              onRecordToggle={handleRecordToggle}
+              callObject={callObject}
+              presenterName={session?.user?.name || ''}
+              presenterTitle={session?.user?.role === 'RECRUITER' ? 'Recruiter, ForgeTomorrow' : session?.user?.role === 'COACH' ? 'Career Coach, ForgeTomorrow' : 'ForgeTomorrow'}
               onExitStage={() => setStageMode(false)}
             />
           )}
