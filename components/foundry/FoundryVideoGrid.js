@@ -157,10 +157,6 @@ const S = {
 
 
 
-const STUDIO_WHITE_BACKGROUND_SRC = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="#F7F7F7"/></svg>'
-)}`;
-
 const BACKGROUND_IMAGES = {
   'forge-office': '/backgrounds/foundry/forge-office.jpg',
   'coaching-library': '/backgrounds/foundry/coaching-library.jpg',
@@ -168,7 +164,7 @@ const BACKGROUND_IMAGES = {
   'forge-floor': '/backgrounds/foundry/forge-floor.jpg',
   'neutral-professional': '/backgrounds/foundry/neutral-professional.jpg',
   'founder-office': '/backgrounds/foundry/founder-office.jpg',
-  'studio-white': STUDIO_WHITE_BACKGROUND_SRC,
+  'studio-white': '/backgrounds/foundry/studio-white.png',
 };
 
 function backgroundSource(path) {
@@ -747,8 +743,10 @@ await call.join({
   startAudioOff: !micOn,
 });
 
-const selectedBackground =
+const savedBackground =
   sessionStorage.getItem('foundry_background') || initialBackground || 'none';
+
+const selectedBackground = stageMode ? 'studio-white' : savedBackground;
 
 if (selectedBackground) {
   try {
@@ -786,15 +784,17 @@ if (selectedBackground) {
   useEffect(() => {
     if (!callRef.current || joinState !== 'joined') return;
 
-    const effectiveBackground =
+    const savedBackground =
       (typeof window !== 'undefined' ? sessionStorage.getItem('foundry_background') : null) ||
       initialBackground ||
       'none';
 
+    const effectiveBackground = stageMode ? 'studio-white' : savedBackground;
+
     applyFoundryBackground(callRef.current, effectiveBackground).catch((err) => {
       console.error('[foundry] background update failed:', err);
     });
-  }, [initialBackground, joinState]);
+  }, [initialBackground, joinState, stageMode]);
 
   useEffect(() => {
     onParticipantsChangeRef.current?.(Object.values(participants));
@@ -846,7 +846,7 @@ if (selectedBackground) {
           }
         }
 
-        await applyFoundryBackground(callRef.current, background);
+        await applyFoundryBackground(callRef.current, stageMode ? 'studio-white' : background);
       } catch (err) {
         console.error('[foundry] mobile settings apply failed:', err);
       }
@@ -854,7 +854,7 @@ if (selectedBackground) {
 
     window.addEventListener('foundry-mobile-device-settings', handleMobileDeviceSettings);
     return () => window.removeEventListener('foundry-mobile-device-settings', handleMobileDeviceSettings);
-  }, []);
+  }, [stageMode]);
 
   const participantList = Object.values(participants);
   const local = participantList.find(p => p.local);
