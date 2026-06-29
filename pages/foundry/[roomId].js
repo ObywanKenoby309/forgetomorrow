@@ -876,7 +876,7 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
           display: 'flex',
           flex: 1,
           overflow: 'hidden',
-          background: stageMode ? '#F6F4F1' : 'transparent',
+          background: 'transparent',
           transition: 'background 180ms ease',
         }}
       >

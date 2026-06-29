@@ -114,29 +114,29 @@ const S = {
     padding: '34px 48px 42px',
     gap: 18,
     minWidth: 0,
-    background: 'radial-gradient(circle at 50% 10%, rgba(255,112,67,0.10), transparent 30%), #F6F4F1',
+    background: 'transparent',
   },
   stageShell: {
     width: 'min(78vw, 920px)',
     aspectRatio: '16 / 9',
     borderRadius: 22,
     padding: 10,
-    background: '#FFFFFF',
-    border: '1px solid rgba(17,24,39,0.10)',
-    boxShadow: '0 28px 80px rgba(17,24,39,0.18)',
+    background: 'transparent',
+    border: '1px solid rgba(255,255,255,0.08)',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.30)',
   },
   stageMainTile: {
     height: '100%',
     borderRadius: 16,
-    background: '#F7F7F7',
-    border: '1px solid rgba(17,24,39,0.10)',
-    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.6)',
+    background: '#070910',
+    border: '1px solid rgba(255,255,255,0.10)',
+    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04)',
   },
   stageLabel: {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    color: '#30343B',
+    color: '#E6E8EC',
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 12,
     fontWeight: 800,
@@ -156,6 +156,11 @@ const S = {
 };
 
 
+
+const STUDIO_WHITE_BACKGROUND_SRC = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="#F7F7F7"/></svg>'
+)}`;
+
 const BACKGROUND_IMAGES = {
   'forge-office': '/backgrounds/foundry/forge-office.jpg',
   'coaching-library': '/backgrounds/foundry/coaching-library.jpg',
@@ -163,6 +168,7 @@ const BACKGROUND_IMAGES = {
   'forge-floor': '/backgrounds/foundry/forge-floor.jpg',
   'neutral-professional': '/backgrounds/foundry/neutral-professional.jpg',
   'founder-office': '/backgrounds/foundry/founder-office.jpg',
+  'studio-white': STUDIO_WHITE_BACKGROUND_SRC,
 };
 
 function backgroundSource(path) {

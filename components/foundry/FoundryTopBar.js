@@ -116,9 +116,15 @@ const VIEW_OPTIONS = [
 const FOUNDER_USER_ID = 'cmivpwcf90009bvz0xnck0acv';
 const FOUNDER_EMAIL = 'eric.james@forgetomorrow.com';
 
+
+const STUDIO_WHITE_BACKGROUND_SRC = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="#F7F7F7"/></svg>'
+)}`;
+
 const PUBLIC_BACKGROUND_OPTIONS = [
   { id: 'none', label: 'None', type: 'none' },
   { id: 'blur', label: 'Blur', type: 'blur' },
+  { id: 'studio-white', label: 'Studio White', type: 'image', src: STUDIO_WHITE_BACKGROUND_SRC },
   { id: 'forge-office', label: 'Forge Office', type: 'image', src: '/backgrounds/foundry/forge-office.jpg' },
   { id: 'coaching-library', label: 'Coaching Library', type: 'image', src: '/backgrounds/foundry/coaching-library.jpg' },
   { id: 'coaching-strategy-room', label: 'Coaching Strategy Room', type: 'image', src: '/backgrounds/foundry/coaching-strategy-room.jpg' },
@@ -139,6 +145,7 @@ function isFounderSession(user) {
 
 function backgroundSource(path) {
   if (!path) return '';
+  if (path.startsWith('data:')) return path;
   if (typeof window === 'undefined') return path;
   return `${window.location.origin}${path}`;
 }
