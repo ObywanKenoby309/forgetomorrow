@@ -8,6 +8,7 @@ import FoundryVideoGrid from '@/components/foundry/FoundryVideoGrid';
 import FoundryRightPanel from '@/components/foundry/FoundryRightPanel';
 import FoundryBottomBar from '@/components/foundry/FoundryBottomBar';
 import FoundryMobileLayout from '@/components/foundry/FoundryMobileLayout';
+import FoundryStageOverlay from '@/components/foundry/FoundryStageOverlay';
 
 const ORANGE = '#FF7043';
 
@@ -880,23 +881,32 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
           transition: 'background 180ms ease',
         }}
       >
-        <FoundryVideoGrid
-          roomId={roomId}
-          compact={compact}
-		  activeView={activeView}
-          micMuted={micMuted}
-          camOff={camOff}
-		  onRemoteMute={() => setMicMuted(true)}
-		  onRemoteStopCamera={() => setCamOff(true)}
-          onCallReady={handleCallReady}
-          onParticipantsChange={handleParticipantsChange}
-          onScreenShareChange={handleScreenShareChange}
-          onInvite={() => togglePanel('People')}
-          onRoomEmpty={handleRoomEmpty}
-          onScheduledEnd={handleScheduledEnd}
-          initialBackground={selectedBackground}
-          stageMode={stageMode && canManage}
-        />
+        <div style={{ position: 'relative', flex: 1, display: 'flex', minWidth: 0, overflow: 'hidden' }}>
+          <FoundryVideoGrid
+            roomId={roomId}
+            compact={compact}
+            activeView={activeView}
+            micMuted={micMuted}
+            camOff={camOff}
+            onRemoteMute={() => setMicMuted(true)}
+            onRemoteStopCamera={() => setCamOff(true)}
+            onCallReady={handleCallReady}
+            onParticipantsChange={handleParticipantsChange}
+            onScreenShareChange={handleScreenShareChange}
+            onInvite={() => togglePanel('People')}
+            onRoomEmpty={handleRoomEmpty}
+            onScheduledEnd={handleScheduledEnd}
+            initialBackground={selectedBackground}
+            stageMode={stageMode && canManage}
+          />
+          {stageMode && canManage && (
+            <FoundryStageOverlay
+              isRecording={isRecording}
+              onRecordToggle={handleRecordToggle}
+              onExitStage={() => setStageMode(false)}
+            />
+          )}
+        </div>
 
         {!stageMode && !sidebarHidden && (
           <FoundryRightPanel
