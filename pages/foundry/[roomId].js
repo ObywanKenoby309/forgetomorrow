@@ -829,6 +829,8 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
         onNotesChange={handleNotesChange}
         guestCode={null}
         isGuest={false}
+        activeView={activeView}
+        onViewChange={setActiveView}
       >
         <FoundryVideoGrid
           roomId={roomId}
@@ -883,8 +885,8 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
       >
         <div style={{ position: 'relative', flex: 1, display: 'flex', minWidth: 0, overflow: 'hidden' }}>
           <FoundryVideoGrid
-            roomId={roomId}
-            compact={compact}
+          roomId={roomId}
+          compact={compact}
 		  activeView={activeView}
           micMuted={micMuted}
           camOff={camOff}

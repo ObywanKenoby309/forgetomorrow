@@ -224,6 +224,22 @@ const S = {
     display: 'flex', gap: 8, alignItems: 'flex-start',
   },
 
+  // View switcher row
+  viewRow: {
+    display: 'flex', alignItems: 'center', gap: 6, marginTop: 6,
+  },
+  viewBtn: (active) => ({
+    display: 'flex', alignItems: 'center', gap: 4,
+    background: active ? 'rgba(255,112,67,0.22)' : 'rgba(255,255,255,0.10)',
+    border: `1px solid ${active ? 'rgba(255,112,67,0.5)' : 'rgba(255,255,255,0.12)'}`,
+    borderRadius: 20, padding: '4px 10px',
+    fontSize: 11, fontWeight: active ? 700 : 500,
+    color: active ? ORANGE : 'rgba(255,255,255,0.7)',
+    cursor: 'pointer', fontFamily: 'inherit',
+    backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+    whiteSpace: 'nowrap',
+  }),
+
   // More menu
   moreMenu: { display: 'flex', flexDirection: 'column', gap: 2, paddingBottom: 8 },
   moreItem: {
@@ -350,6 +366,8 @@ export default function FoundryMobileLayout({
   isFounder = false,
   guestFileSharingAllowed = false,
   onToggleGuestFileSharing,
+  activeView = 'grid',
+  onViewChange,
 }) {
   const [activeSheet, setActiveSheet] = useState(null);
   const [chatMode, setChatMode] = useState('meeting');
@@ -670,6 +688,24 @@ export default function FoundryMobileLayout({
           <div style={S.timer}>
             <Timer startTime={startTime} />
             {isRecording && ' · REC'}
+          </div>
+          {/* View switcher */}
+          <div style={S.viewRow}>
+            {[
+              { id: 'grid',         label: '⊞ Grid' },
+              { id: 'speaker',      label: '▣ Speaker' },
+              { id: 'focus',        label: '⛶ Focus' },
+              { id: 'presentation', label: '▤ Present' },
+            ].map(opt => (
+              <button
+                key={opt.id}
+                style={S.viewBtn(activeView === opt.id)}
+                onClick={() => onViewChange?.(opt.id)}
+                aria-pressed={activeView === opt.id}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
         <button style={S.endBtn} onClick={onEnd}>{isHost ? 'End' : 'Leave'}</button>
