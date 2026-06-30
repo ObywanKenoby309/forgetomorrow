@@ -831,6 +831,8 @@ const sendFoundryControl = useCallback((action, targetSessionId = '*', payload =
         isGuest={false}
         activeView={activeView}
         onViewChange={setActiveView}
+        stageMode={stageMode && canManage}
+        onToggleStage={() => setStageMode(v => !v)}
       >
         <FoundryVideoGrid
           roomId={roomId}

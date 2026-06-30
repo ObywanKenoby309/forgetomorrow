@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import FoundryLobbyPanel from './FoundryLobbyPanel';
 import FoundryBrowserHelp from './FoundryBrowserHelp';
+import FoundryStageOverlay from './FoundryStageOverlay';
 
 const ORANGE = '#FF7043';
 const DARK = '#141720';
@@ -368,6 +369,8 @@ export default function FoundryMobileLayout({
   onToggleGuestFileSharing,
   activeView = 'grid',
   onViewChange,
+  stageMode = false,
+  onToggleStage,
 }) {
   const [activeSheet, setActiveSheet] = useState(null);
   const [chatMode, setChatMode] = useState('meeting');
@@ -681,6 +684,18 @@ export default function FoundryMobileLayout({
       {/* Video — full screen */}
       <div style={S.videoWrap}>{children}</div>
 
+      {/* Stage overlay — mounts over video when Stage is active */}
+      {stageMode && isHost && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 15 }}>
+          <FoundryStageOverlay
+            callObject={callObject}
+            presenterName=""
+            presenterTitle=""
+            onExitStage={onToggleStage}
+          />
+        </div>
+      )}
+
       {/* Top bar */}
       <div style={S.topBar}>
         <div style={S.topLeft}>
@@ -732,6 +747,14 @@ export default function FoundryMobileLayout({
           <span style={S.ctrlIcon}>{camOff ? '📵' : '📹'}</span>
           <span style={S.ctrlLabel}>Camera</span>
         </button>
+
+        {/* Stage — hosts only */}
+        {isHost && (
+          <button style={S.ctrlBtn(stageMode, false)} onClick={onToggleStage}>
+            <span style={S.ctrlIcon}>◉</span>
+            <span style={S.ctrlLabel}>{stageMode ? 'Stage On' : 'Stage'}</span>
+          </button>
+        )}
 
         {/* Chat — with unread badge */}
         <button style={S.ctrlBtn(activeSheet === 'chat', false)} onClick={() => setActiveSheet(activeSheet === 'chat' ? null : 'chat')}>
