@@ -257,7 +257,7 @@ function AppShell({ Component, pageProps }) {
   const useForgeBackground =
     !isUniversalPage &&
     isPublicEffective &&
-    ['/', '/about', '/features', '/press', '/status', '/company', '/product', '/legal'].includes(router.pathname) && router.pathname !== '/advertise';
+    ['/', '/about', '/features', '/press', '/status', '/company', '/product', '/investor-relations', '/legal'].includes(router.pathname) && router.pathname !== '/advertise';
 
   const forgeBgPosition = router.pathname === '/' ? '35% center' : 'center';
   const renderLandingHeader = isPublicEffective && !isUniversalPage && router.pathname !== '/advertise';

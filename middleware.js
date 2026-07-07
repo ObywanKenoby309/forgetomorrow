@@ -44,6 +44,7 @@ const PUBLIC_PATHS = new Set([
   "/tracking-policy",
   "/company",
   "/product",
+  "/investor-relations",
   "/legal",
   "/login",
   "/auth/signin",
