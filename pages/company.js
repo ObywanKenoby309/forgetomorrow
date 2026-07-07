@@ -162,6 +162,7 @@ export default function CompanyHub() {
                 If you want the thinking behind the build.
               </div>
             </Link>
+		  </div>
 
             {/* Investors */}
           <div className="mt-6 flex justify-center">
