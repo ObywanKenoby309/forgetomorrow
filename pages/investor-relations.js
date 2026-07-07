@@ -13,61 +13,66 @@ export default function InvestorRelations() {
       </Head>
 
       <main className="min-h-screen overflow-hidden bg-[#070B12] text-white">
-        <section className="relative">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(232,93,47,0.22),transparent_34%),radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.08),transparent_28%)]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#070B12]/70 to-[#070B12]" />
+        <section className="relative overflow-hidden">
+  <div className="absolute inset-0 bg-gradient-to-br from-[#120C0A] via-[#070B12] to-[#070B12]" />
+  <div className="absolute inset-0 bg-black/35" />
 
-          <div className="relative mx-auto flex min-h-[78vh] max-w-7xl items-center px-6 py-24 sm:px-8 lg:px-10">
-            <div className="max-w-4xl">
-              <span className="inline-flex rounded-full border border-[#E85D2F]/40 bg-[#E85D2F]/10 px-4 py-2 text-sm font-semibold tracking-wide text-[#FFB199] shadow-[0_0_30px_rgba(232,93,47,0.18)]">
-                Investor Relations
-              </span>
+  <div className="relative mx-auto flex min-h-[82vh] max-w-7xl items-center px-6 py-24 sm:px-8 lg:px-10">
+    <div className="max-w-5xl">
 
-              <h1 className="mt-8 max-w-5xl text-4xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl">
-                Investing in the Future of Professional Intelligence
-              </h1>
+      <h1 className="text-5xl font-bold leading-[0.95] tracking-tight text-white sm:text-7xl lg:text-8xl">
+        The market called for
+        <br />
+        <span className="text-[#F07F52]">
+          explainability.
+        </span>
+      </h1>
 
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-                ForgeTomorrow is currently raising its pre-seed round. This page
-                provides direct access to investment resources and investor
-                contact information.
-              </p>
+      <h2 className="mt-6 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
+        ForgeTomorrow answered.
+      </h2>
 
-              <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-                <a
-                  href="/FT_Investor_Walkthrough.pdf"
-                  className="inline-flex items-center justify-center rounded-xl bg-[#E85D2F] px-6 py-3 text-sm font-bold text-white shadow-[0_18px_50px_rgba(232,93,47,0.32)] transition hover:bg-[#ff7043] focus:outline-none focus:ring-2 focus:ring-[#FFB199] focus:ring-offset-2 focus:ring-offset-[#070B12]"
-                >
-                  View Investor Deck
-                </a>
+      <p className="mt-10 max-w-3xl text-lg leading-9 text-slate-300 sm:text-xl">
+  ForgeTomorrow is building the professional intelligence infrastructure behind the future of hiring.
+</p>
 
-                <a
-                  href="mailto:investors@forgetomorrow.com"
-                  className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/8 px-6 py-3 text-sm font-bold text-white backdrop-blur transition hover:border-[#E85D2F]/50 hover:bg-white/12 focus:outline-none focus:ring-2 focus:ring-[#FFB199] focus:ring-offset-2 focus:ring-offset-[#070B12]"
-                >
-                  Contact Investors
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
+<p className="mt-6 max-w-3xl text-lg leading-9 text-slate-300 sm:text-xl">
+  We are currently raising our pre-seed round and are looking for partners who believe professional opportunity should be earned through verified career evidence, not keyword matching, social signaling, or hidden algorithms.
+</p>
+
+      <div className="mt-12 flex flex-col gap-4 sm:flex-row">
+        <a
+          href="/FT_Investor_Walkthrough.pdf"
+          className="inline-flex items-center justify-center rounded-xl bg-[#E85D2F] px-7 py-4 text-base font-bold text-white shadow-[0_18px_50px_rgba(232,93,47,0.30)] transition hover:bg-[#ff7043]"
+        >
+          View Investor Deck
+        </a>
+
+        <a
+          href="mailto:investors@forgetomorrow.com"
+          className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-7 py-4 text-base font-bold text-white transition hover:border-[#E85D2F]/50 hover:bg-white/10"
+        >
+          Contact Investors
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
 
         <section className="relative mx-auto max-w-7xl px-6 pb-20 sm:px-8 lg:px-10">
           <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-10">
             <div className="max-w-3xl">
               <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#FFB199]">
-                Investment Overview
+                Why We Built ForgeTomorrow
               </p>
 
               <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                A focused resource for investors.
+                Building the professional intelligence layer.
               </h2>
 
               <p className="mt-5 text-base leading-7 text-slate-300">
-                The investor deck contains ForgeTomorrow&apos;s vision, market
-                opportunity, product strategy, business model, and funding
-                information. This page keeps the overview simple and directs
-                investors to the complete materials.
+                The investor deck explores the vision, strategy, market opportunity, and execution behind ForgeTomorrow in greater detail. We believe the future of hiring will be built on trusted career evidence, explainable evaluation, and professional intelligence that benefits the entire hiring ecosystem.
               </p>
             </div>
           </div>
@@ -138,6 +143,24 @@ export default function InvestorRelations() {
             </a>
           </div>
         </section>
+
+<section className="px-6 pb-20">
+  <div className="mx-auto max-w-5xl text-center">
+    <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#FFB199]">
+      The Future
+    </p>
+
+    <h2 className="mt-6 text-4xl font-bold leading-tight text-white sm:text-6xl">
+      Hiring is moving from
+      <br />
+      keyword-matching
+      <br />
+      <span className="text-[#F07F52]">
+        to capability-verification.
+      </span>
+    </h2>
+  </div>
+</section>
 
         <section className="mx-auto max-w-7xl px-6 pb-24 sm:px-8 lg:px-10">
           <div className="relative overflow-hidden rounded-3xl border border-[#E85D2F]/25 bg-gradient-to-br from-[#E85D2F]/18 via-white/[0.06] to-white/[0.03] p-8 shadow-[0_30px_90px_rgba(232,93,47,0.16)] backdrop-blur-xl sm:p-10">
