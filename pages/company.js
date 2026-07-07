@@ -158,7 +158,38 @@ export default function CompanyHub() {
                 </span>
               </div>
               <div className="mt-4 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-              <div className="mt-4 text-xs text-gray-400">If you want the thinking behind the build.</div>
+              <div className="mt-4 text-xs text-gray-400">
+                If you want the thinking behind the build.
+              </div>
+            </Link>
+
+            {/* Investors */}
+          <div className="mt-6 flex justify-center">
+            <Link
+              href="/investor-relations"
+              className="group w-full max-w-[31rem] rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition transform hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-[#FF7043]/20 focus:ring-offset-2 focus:ring-offset-black"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-semibold mb-2 text-white">
+                    Investors
+                  </h3>
+
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    Investment resources and information for current and prospective investors.
+                  </p>
+                </div>
+
+                <span className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-[#FF7043] group-hover:border-[#FF7043]/30 transition">
+                  →
+                </span>
+              </div>
+
+              <div className="mt-4 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+              <div className="mt-4 text-xs text-gray-400">
+                Pre-seed investment information.
+              </div>
             </Link>
           </div>
         </section>

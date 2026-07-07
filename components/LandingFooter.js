@@ -18,6 +18,7 @@ export default function LandingFooter() {
           { href: '/careers', label: 'Careers' },
           { href: '/press', label: 'Press Kit' },
           { href: '/blog', label: 'Blog' },
+		  { href: '/investor-relations', label: 'Investors' },
         ],
       },
       {
@@ -98,6 +99,11 @@ export default function LandingFooter() {
                   Careers
                 </Link>
               </li>
+			  <li>
+				<Link href="/investor-relations" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
+				  Investors
+				</Link>
+			  </li>
             </ul>
           </div>
 
