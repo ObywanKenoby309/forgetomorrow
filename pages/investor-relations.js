@@ -33,6 +33,9 @@ export default function InvestorRelations() {
 
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/45 to-[#070B12]" />
 
+          <div className="relative mx-auto flex min-h-[82vh] max-w-7xl items-center px-6 py-24 sm:px-8 lg:px-10">
+            <div className="max-w-5xl">
+
               <h1 className="text-5xl font-bold leading-[0.95] tracking-tight text-white sm:text-7xl lg:text-8xl">
                 The market called for
                 <br />
