@@ -1,7 +1,9 @@
+import { useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
 
 export default function InvestorRelations() {
+	const [showVideo, setShowVideo] = useState(false);
   return (
     <>
       <Head>
@@ -98,11 +100,27 @@ export default function InvestorRelations() {
             </a>
 
             <div className="rounded-3xl border border-white/10 bg-white/[0.055] p-7 shadow-[0_20px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-              <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/15 bg-white/8 text-xl">▶</div>
-              <h3 className="text-xl font-bold text-white">Founder Video</h3>
-              <p className="mt-3 text-sm leading-6 text-slate-300">Coming Soon</p>
-              <p className="mt-6 text-sm font-semibold text-slate-400">Video placeholder</p>
-            </div>
+
+  <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/15 bg-white/8 text-xl">
+    ▶
+  </div>
+
+  <h3 className="text-xl font-bold text-white">
+    Why
+  </h3>
+
+  <p className="mt-3 text-sm leading-6 text-slate-300">
+    The story behind ForgeTomorrow.
+  </p>
+
+  <button
+    onClick={() => setShowVideo(true)}
+    className="mt-6 text-sm font-semibold text-[#FFB199] transition hover:text-white"
+  >
+    Watch →
+  </button>
+
+</div>
 
             <a href="mailto:investors@forgetomorrow.com" className="group rounded-3xl border border-white/10 bg-white/[0.055] p-7 shadow-[0_20px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl transition hover:-translate-y-1 hover:border-[#E85D2F]/45 hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-[#FFB199] focus:ring-offset-2 focus:ring-offset-[#070B12]">
               <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E85D2F]/35 bg-[#E85D2F]/12 text-xl">✉</div>
@@ -128,6 +146,38 @@ export default function InvestorRelations() {
             </h2>
           </div>
         </section>
+		{showVideo && (
+  <div
+    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 p-6"
+    onClick={() => setShowVideo(false)}
+  >
+    <div
+      className="relative w-full max-w-6xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+
+      <button
+        onClick={() => setShowVideo(false)}
+        className="absolute -top-12 right-0 text-3xl text-white transition hover:text-[#F07F52]"
+      >
+        ×
+      </button>
+
+      <div className="overflow-hidden rounded-3xl border border-white/10 bg-black shadow-[0_30px_100px_rgba(0,0,0,.45)]">
+
+<iframe
+  className="aspect-video w-full"
+  src="https://www.youtube.com/embed/EXT1gvjllHY?autoplay=1&rel=0&modestbranding=1"
+  title="Why | The Story Behind ForgeTomorrow"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  allowFullScreen
+/>
+
+      </div>
+
+    </div>
+  </div>
+)}
       </main>
     </>
   );
