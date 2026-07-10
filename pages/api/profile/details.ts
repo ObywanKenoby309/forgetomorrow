@@ -60,6 +60,17 @@ function normalizeProfileVisibility(value: any): "PUBLIC" | "PRIVATE" | "RECRUIT
   return null;
 }
 
+function sanitizeProfileSlug(value: any): string {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50);
+}
+
 function normalizeWorkPreferences(input: any) {
   if (!input || typeof input !== "object") {
     return {
@@ -221,6 +232,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const body = (req.body || {}) as Partial<ProfileDetails>;
       const data: any = {};
+
+if (body.slug !== undefined) {
+  const slug = sanitizeProfileSlug(body.slug);
+
+  if (slug.length < 3) {
+    return res.status(400).json({
+      error: "Profile URL must be at least 3 characters.",
+    });
+  }
+
+  const existing = await prisma.user.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+
+  if (existing && existing.id !== userId) {
+    return res.status(409).json({
+      error: "That profile URL is already in use.",
+    });
+  }
+
+  data.slug = slug;
+}
 
       if (body.name !== undefined) data.name = body.name;
       if (body.headline !== undefined) data.headline = body.headline;

@@ -150,6 +150,16 @@ function parseEducationField(raw, fallback = []) {
 }
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+function sanitizeProfileSlug(value) {
+  return String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50);
+}
 
 function normalizeWorkPreferences(raw) {
   const wp = raw && typeof raw === 'object' ? raw : {};
@@ -365,7 +375,11 @@ const [profileVisibility,        setProfileVisibility]        = useState(
   const mobileProjectsRef = useRef(null);
   const customSectionRef = useRef(null);
   const [saveState,  setSaveState]  = useState('idle');
-  const saveTimerRef = useRef(null);
+const saveTimerRef = useRef(null);
+
+const [profileSlug, setProfileSlug] = useState(slug || '');
+const [savedProfileSlug, setSavedProfileSlug] = useState(slug || '');
+const [slugError, setSlugError] = useState('');
 
   // Derived
   const fullName = useMemo(() => {
@@ -380,7 +394,7 @@ const [profileVisibility,        setProfileVisibility]        = useState(
     return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || 'FT';
   }, [fullName]);
 
-  const profileUrl         = `https://forgetomorrow.com/u/${slug}`;
+  const profileUrl = `https://forgetomorrow.com/u/${profileSlug || savedProfileSlug}`;
   const effectiveWallpaper = wallpaperUrl || DEFAULT_WALLPAPER;
 
   let bannerImage;
@@ -434,6 +448,16 @@ const [profileVisibility,        setProfileVisibility]        = useState(
 const flushPendingSave = useCallback(async (force = false) => {
   if (!force && !editMode) return true;
 
+  const cleanedSlug = sanitizeProfileSlug(profileSlug);
+
+  if (cleanedSlug.length < 3) {
+    setSlugError('Your profile URL must contain at least 3 characters.');
+    setSaveState('error');
+    return false;
+  }
+
+  setSlugError('');
+
   if (saveTimerRef.current) {
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = null;
@@ -460,8 +484,9 @@ const flushPendingSave = useCallback(async (force = false) => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pronouns,
-          headline,
+		  slug: sanitizeProfileSlug(profileSlug),
+		  pronouns,
+		  headline,
           location,
           status,
           avatarUrl: avatarUrl || null,
@@ -488,27 +513,41 @@ const flushPendingSave = useCallback(async (force = false) => {
       }),
     ]);
 
-    if (hRes.ok && dRes.ok) {
-      setSaveState('saved');
-      setTimeout(() => setSaveState('idle'), 2500);
+if (hRes.ok && dRes.ok) {
+  const detailsJson = await dRes.json().catch(() => ({}));
+  const savedSlug = detailsJson?.slug || sanitizeProfileSlug(profileSlug);
 
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('profileHeaderUpdated', {
-            detail: { wallpaperUrl: wallpaperUrl || null },
-          })
-        );
-      }
+  setProfileSlug(savedSlug);
+  setSavedProfileSlug(savedSlug);
+  setSlugError('');
+  setSaveState('saved');
 
-      return true;
-    }
+  setTimeout(() => setSaveState('idle'), 2500);
 
-    setSaveState('error');
-    return false;
-  } catch {
-    setSaveState('error');
-    return false;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('profileHeaderUpdated', {
+        detail: { wallpaperUrl: wallpaperUrl || null },
+      })
+    );
   }
+
+  return true;
+}
+
+const detailsJson = await dRes.json().catch(() => ({}));
+
+if (dRes.status === 409) {
+  setSlugError(detailsJson?.error || 'That profile URL is already in use.');
+}
+
+setSaveState('error');
+return false;
+
+} catch {
+  setSaveState('error');
+  return false;
+}
 }, [
   editMode,
   avatarUrl,
@@ -868,7 +907,13 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-meta-chip { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:500; color:rgba(248,244,239,0.86); background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); border-radius:999px; padding:5px 11px; }
           .ft-actions-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px; }
           .ft-url-pill { font-size:12px; font-weight:500; color:rgba(248,244,239,0.70); background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); border-radius:var(--radius-sm); padding:7px 12px; word-break:break-all; flex:1; min-width:220px; }
-          .ft-copy-btn, .ft-resume-top-btn, .ft-edit-portfolio-btn { flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; gap:7px; border-radius:var(--radius-sm); cursor:pointer; font-family:var(--font-body); font-size:13px; font-weight:600; letter-spacing:0.02em; transition:transform 0.15s, box-shadow 0.15s, background 0.15s; text-decoration:none; min-height:38px; white-space:nowrap; padding:8px 16px; }
+          .ft-url-editor { display: flex; align-items: center; width: 100%; max-width: 420px; padding: 0; overflow: hidden; }
+		  .ft-url-prefix { flex-shrink: 0; padding: 8px 0 8px 12px; color: rgba(248,244,239,.45); white-space: nowrap; user-select: none; }
+		  .ft-url-slug-input { flex: 1; min-width: 0; padding: 8px 12px 8px 4px; border: 0; outline: none; background: transparent; color: var(--white); font: inherit; font-size: 12px; font-weight: 700; }
+		  .ft-url-slug-input::placeholder { color: rgba(255,255,255,.25); }
+		  .ft-url-slug-input:focus { background: rgba(255,112,67,.08); }
+		  .ft-inline-error { margin-top: 6px; font-size: 12px; font-weight: 600; color: #ff8c8c; }
+		  .ft-copy-btn, .ft-resume-top-btn, .ft-edit-portfolio-btn { flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; gap:7px; border-radius:var(--radius-sm); cursor:pointer; font-family:var(--font-body); font-size:13px; font-weight:600; letter-spacing:0.02em; transition:transform 0.15s, box-shadow 0.15s, background 0.15s; text-decoration:none; min-height:38px; white-space:nowrap; padding:8px 16px; }
           .ft-copy-btn { background:var(--orange); color:#fff; border:none; box-shadow:0 6px 18px rgba(255,112,67,0.38); }
           .ft-copy-btn:hover { transform:translateY(-1px); box-shadow:0 10px 24px rgba(255,112,67,0.5); background:#FF8A65; }
           .ft-resume-top-btn, .ft-edit-portfolio-btn { background:rgba(255,112,67,0.14); color:var(--orange); border:1px solid rgba(255,112,67,0.38); box-shadow:0 6px 18px rgba(0,0,0,0.14); }
@@ -1266,8 +1311,10 @@ flushPendingSaveRef.current = flushPendingSave;
                   headline={headline} setHeadline={setHeadline}
                   location={location} setLocation={setLocation}
                   status={status} setStatus={setStatus}
-                  slug={slug} profileUrl={profileUrl}
-                  copied={copied} handleCopyProfileUrl={handleCopyProfileUrl}
+                  slug={slug} profileSlug={profileSlug}
+				  setProfileSlug={setProfileSlug} savedProfileSlug={savedProfileSlug}
+				  profileUrl={profileUrl} slugError={slugError}
+				  copied={copied} handleCopyProfileUrl={handleCopyProfileUrl}
                   primaryResume={primaryResume} effectiveVisibility={effectiveVisibility}
                   profileVisibility={profileVisibility} setProfileVisibility={setProfileVisibility}
                   isOwner={isOwner} onEditClick={() => setEditMode(true)}
@@ -2540,7 +2587,7 @@ function BannerSection({ editMode, bannerImage, bannerPos, resolvedBannerHeight,
   );
 }
 
-function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullName, pronouns, setPronouns, headline, setHeadline, location, setLocation, status, setStatus, slug, profileUrl, copied, handleCopyProfileUrl, primaryResume, effectiveVisibility, profileVisibility, setProfileVisibility, isOwner, onEditClick, fileInputRef, handleAvatarFileChange, handleAvatarRemove, setAvatarUrl, AvatarWrap, socialLinks, updateSocial, openResumeModal }) {
+function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullName, pronouns, setPronouns, headline, setHeadline, location, setLocation, status, setStatus, slug, profileSlug, setProfileSlug, savedProfileSlug, profileUrl, slugError, copied, handleCopyProfileUrl, primaryResume, effectiveVisibility, profileVisibility, setProfileVisibility, isOwner, onEditClick, fileInputRef, handleAvatarFileChange, handleAvatarRemove, setAvatarUrl, AvatarWrap, socialLinks, updateSocial, openResumeModal }) {
   const [showAvatarPanel, setShowAvatarPanel] = useState(false);
   useEffect(() => { if (!editMode) setShowAvatarPanel(false); }, [editMode]);
   return (
@@ -2620,8 +2667,41 @@ function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullN
           </div>
         )}
         <div className="ft-actions-row">
-          {/* URL pill — shrinks to fit, doesn't flex-grow */}
-          <span className="ft-url-pill" style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 280 }}>{profileUrl}</span>
+          {/* Editable Profile URL */}
+{editMode ? (
+  <div style={{ flex: '0 1 420px', minWidth: 260 }}>
+    <div className="ft-url-pill ft-url-editor">
+      <span className="ft-url-prefix">
+        https://forgetomorrow.com/u/
+      </span>
+
+      <input
+        type="text"
+        className="ft-url-slug-input"
+        value={profileSlug}
+        onChange={(e) => setProfileSlug(sanitizeProfileSlug(e.target.value))}
+        placeholder="your-profile-url"
+        spellCheck={false}
+        autoCorrect="off"
+        autoCapitalize="none"
+        maxLength={50}
+      />
+    </div>
+
+    {slugError && (
+      <div className="ft-inline-error">
+        {slugError}
+      </div>
+    )}
+  </div>
+) : (
+  <span
+    className="ft-url-pill"
+    style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 340 }}
+  >
+    {profileUrl}
+  </span>
+)}
 
           {/* Copy Link — compact, fixed width */}
           <button className="ft-copy-btn" type="button" onClick={handleCopyProfileUrl} style={{ flexShrink: 0 }}>
