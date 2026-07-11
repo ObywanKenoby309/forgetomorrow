@@ -2073,6 +2073,33 @@ flushPendingSaveRef.current = flushPendingSave;
                       <label className="ft-dark-label">Location</label>
                       <input className="ft-dark-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="City, state, country, or Remote" />
                     </div>
+					<div className="ft-dark-field">
+  <label className="ft-dark-label">Public Profile URL</label>
+
+  <div className="ft-url-pill ft-url-editor">
+    <span className="ft-url-prefix">
+      https://forgetomorrow.com/u/
+    </span>
+
+    <input
+      type="text"
+      className="ft-url-slug-input"
+      value={profileSlug}
+      onChange={(e) => setProfileSlug(sanitizeProfileSlug(e.target.value))}
+      placeholder="your-profile-url"
+      spellCheck={false}
+      autoCorrect="off"
+      autoCapitalize="none"
+      maxLength={50}
+    />
+  </div>
+
+  {slugError && (
+    <div className="ft-inline-error">
+      {slugError}
+    </div>
+  )}
+</div>
                     {SOCIAL_FIELDS.map(f => (
                       <div key={f.key} className="ft-dark-field">
                         <label className="ft-dark-label">{f.label}</label>
