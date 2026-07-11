@@ -161,6 +161,16 @@ function sanitizeProfileSlug(value) {
     .slice(0, 50);
 }
 
+function sanitizeProfileSlugInput(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+/g, '')
+    .slice(0, 50);
+}
+
 function normalizeWorkPreferences(raw) {
   const wp = raw && typeof raw === 'object' ? raw : {};
 
@@ -2085,7 +2095,7 @@ flushPendingSaveRef.current = flushPendingSave;
       type="text"
       className="ft-url-slug-input"
       value={profileSlug}
-      onChange={(e) => setProfileSlug(sanitizeProfileSlug(e.target.value))}
+      onChange={(e) => setProfileSlug(sanitizeProfileSlugInput(e.target.value))}
       placeholder="your-profile-url"
       spellCheck={false}
       autoCorrect="off"
@@ -2706,7 +2716,7 @@ function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullN
         type="text"
         className="ft-url-slug-input"
         value={profileSlug}
-        onChange={(e) => setProfileSlug(sanitizeProfileSlug(e.target.value))}
+        onChange={(e) => setProfileSlug(sanitizeProfileSlugInput(e.target.value))}
         placeholder="your-profile-url"
         spellCheck={false}
         autoCorrect="off"
