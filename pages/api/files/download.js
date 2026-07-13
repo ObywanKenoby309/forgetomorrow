@@ -6,7 +6,7 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import prisma from '@/lib/prisma';
-import { downloadFile, fromR2Reference } from '@/lib/storage';
+import { getSignedUrl, fromR2Reference } from '@/lib/storage';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -69,7 +69,7 @@ if (!hasAccess) {
 
     // ── Stream file from Cloudflare R2 ─────────────────────────────────────
     const storagePath = fromR2Reference(file.fileUrl) || file.fileUrl;
-    const { buffer, contentType: storedContentType } = await downloadFile(storagePath);
+    const { buffer, contentType: storedContentType } = await getSignedUrl(path);
 
     // Determine content type from file extension
     const ext = file.fileUrl.split('.').pop()?.toLowerCase() || '';
