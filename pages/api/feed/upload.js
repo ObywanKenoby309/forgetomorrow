@@ -1,7 +1,7 @@
 // pages/api/feed/upload.js
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
-import { supabase } from '@/lib/supabaseClient';
+import { getMediaUrl, uploadFile } from '@/lib/storage';
 
 export const config = {
   api: {
@@ -15,7 +15,7 @@ import path from 'path';
 
 function parseForm(req) {
   return new Promise((resolve, reject) => {
-    const form = formidable({ maxFileSize: 50 * 1024 * 1024 }); // 50mb max per file
+    const form = formidable({ maxFileSize: 50 * 1024 * 1024 }); // 50 MB max per file
     form.parse(req, (err, fields, files) => {
       if (err) reject(err);
       else resolve({ fields, files });
@@ -37,7 +37,6 @@ export default async function handler(req, res) {
   try {
     const { files } = await parseForm(req);
 
-    // formidable gives us either an array or single file
     const fileArray = files.file
       ? Array.isArray(files.file)
         ? files.file
@@ -49,7 +48,7 @@ export default async function handler(req, res) {
     }
 
     const uploaded = await Promise.all(
-      fileArray.map(async (file) => {
+      fileArray.map(async (file, index) => {
         const ext = path.extname(file.originalFilename || file.newFilename || '').toLowerCase();
         const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.webm'];
 
@@ -60,26 +59,18 @@ export default async function handler(req, res) {
         const type = ['.mp4', '.webm'].includes(ext) ? 'video' : 'image';
         const userId = session.user.id;
         const timestamp = Date.now();
-        const storagePath = `posts/${userId}/${timestamp}${ext}`;
-
+        const storagePath = `feed-media/posts/${userId}/${timestamp}-${index}${ext}`;
         const fileBuffer = fs.readFileSync(file.filepath);
 
-        const { error: uploadError } = await supabase.storage
-          .from('feed-media')
-          .upload(storagePath, fileBuffer, {
-            contentType: file.mimetype,
-            upsert: false,
-          });
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from('feed-media')
-          .getPublicUrl(storagePath);
+        await uploadFile({
+          buffer: fileBuffer,
+          path: storagePath,
+          contentType: file.mimetype || 'application/octet-stream',
+        });
 
         return {
           type,
-          url: urlData.publicUrl,
+          url: getMediaUrl(storagePath),
           name: file.originalFilename || file.newFilename || storagePath,
         };
       })

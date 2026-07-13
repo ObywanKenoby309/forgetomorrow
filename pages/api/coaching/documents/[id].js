@@ -1,14 +1,12 @@
 // pages/api/coaching/documents/[id].js
 //
-// DELETE — removes the CoachingDocument record AND the file
-//           from Supabase Storage. Scoped to authed coach.
+// DELETE — removes the CoachingDocument record and its Cloudflare R2 object.
+//          Scoped to the authenticated coach.
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import prisma from '@/lib/prisma';
-import { supabase } from '@/lib/supabaseClient';
-
-const BUCKET = 'coaching-documents';
+import { deleteFile, fromR2Reference } from '@/lib/storage';
 
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
@@ -27,22 +25,13 @@ export default async function handler(req, res) {
     });
     if (!doc) return res.status(404).json({ error: 'Document not found' });
 
-    // Remove from Supabase Storage if a file was uploaded
-    // Path convention: {coachId}/{docId}/{filename}
-    if (doc.url) {
-      // Extract the storage path from the public URL
-      // Public URLs look like: {SUPABASE_URL}/storage/v1/object/public/{bucket}/{path}
-      const marker = `/object/public/${BUCKET}/`;
-      const markerIdx = doc.url.indexOf(marker);
-      if (markerIdx !== -1) {
-        const storagePath = doc.url.slice(markerIdx + marker.length);
-        const { error: removeError } = await supabase.storage
-          .from(BUCKET)
-          .remove([storagePath]);
-        if (removeError) {
-          // Log but don't block — DB record cleanup is more important
-          console.error('[coaching/documents DELETE] storage remove', removeError);
-        }
+    const storagePath = fromR2Reference(doc.url);
+    if (storagePath) {
+      try {
+        await deleteFile(storagePath);
+      } catch (removeError) {
+        // Log but do not block DB cleanup.
+        console.error('[coaching/documents DELETE] storage remove', removeError);
       }
     }
 
