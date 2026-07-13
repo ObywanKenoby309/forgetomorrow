@@ -877,11 +877,12 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-asset-popover-title { font-size:14px; font-weight:900; color:var(--white); }
           .ft-asset-popover-sub { margin-top:3px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.42); }
           .ft-asset-popover-close { width:30px; height:30px; border-radius:999px; border:none; background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.62); cursor:pointer; font-family:inherit; font-size:16px; }
-          .ft-asset-popover-body{ flex:1; overflow-y:auto; min-height:0; }
+          .ft-asset-popover-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 14px; padding: 0 18px 16px; }
           .ft-asset-search { width:100%; min-width:0; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16); border-radius:10px; color:var(--white); font-family:inherit; font-size:13px; outline:none; padding:9px 12px; }
           .ft-asset-search:focus { border-color:rgba(255,112,67,0.55); box-shadow:0 0 0 3px rgba(255,112,67,0.12); }
           .ft-asset-search::placeholder { color:rgba(255,255,255,0.28); }
-          .ft-asset-categories { display:flex; gap:8px; flex-wrap:wrap; max-height:72px; overflow-y:auto; padding-right:3px; }
+		  .ft-asset-categories { display: flex; gap: 8px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding: 0 36px;      /* leaves room for arrows later */ scrollbar-width: none; -ms-overflow-style: none; }
+		  .ft-asset-categories::-webkit-scrollbar { display: none; }
           .ft-asset-category-btn { padding:9px 11px; border-radius:999px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.58); font-family:inherit; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s; }
           .ft-asset-category-btn:hover { border-color:rgba(255,112,67,0.38); color:${ORANGE}; background:rgba(255,112,67,0.10); }
           .ft-asset-category-btn.active { border-color:rgba(255,112,67,0.55); color:${ORANGE}; background:rgba(255,112,67,0.16); }
@@ -900,6 +901,10 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-slider-row { display:grid; gap:6px; margin-top:12px; }
           .ft-slider-label { font-size:11px; font-weight:600; color:rgba(255,255,255,0.60); }
           .ft-slider { width:100%; accent-color:${ORANGE}; }
+		  .ft-asset-categories-wrap{ display:flex; align-items:center; gap:10px; }
+		  .ft-asset-categories{ flex:1; }
+		  .ft-asset-cat-arrow{ width:34px; height:34px; border:none; border-radius:50%; background:#ff7043; color:#fff; font-size:18px; font-weight:700; cursor:pointer; flex-shrink:0; }
+		  .ft-asset-cat-arrow:hover{ background:#ff875d; }
 
           /* ─── Identity ─── */
           .ft-identity { display:flex; gap:22px; align-items:center; margin-top:18px; position:relative; z-index:10; padding:18px 20px; border:1px solid rgba(255,255,255,0.18); border-radius:18px; background:rgba(13,27,42,0.58); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow:var(--shadow-lg); transition:border-color 0.2s; }
@@ -2365,25 +2370,42 @@ function AssetPicker({ type, items = [], selectedSrc, onSelect, noneLabel, noneS
               />
 <div className="ft-asset-selected-label" style={{flex:1}}>Selected: {pendingAsset?.name || noneLabel}</div></div>
 
-              <div className="ft-asset-categories" aria-label={`${type} categories`}>
-                <button
-                  type="button"
-                  className={`ft-asset-category-btn${activeCategory === 'All' ? ' active' : ''}`}
-                  onClick={() => setActiveCategory('All')}
-                >
-                  All
-                </button>
-                {categories.map(category => (
-                  <button
-                    key={category}
-                    type="button"
-                    className={`ft-asset-category-btn${activeCategory === category ? ' active' : ''}`}
-                    onClick={() => setActiveCategory(category)}
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
+              <div className="ft-asset-categories-wrap">
+
+    <button
+        type="button"
+        className="ft-asset-cat-arrow left"
+        onClick={() =>
+            document
+                .querySelector(".ft-asset-categories")
+                ?.scrollBy({ left: -220, behavior: "smooth" })
+        }
+        aria-label="Previous categories"
+    >
+        ❮
+    </button>
+
+    <div
+        className="ft-asset-categories"
+        aria-label={`${type} categories`}
+    >
+        ...
+    </div>
+
+    <button
+        type="button"
+        className="ft-asset-cat-arrow right"
+        onClick={() =>
+            document
+                .querySelector(".ft-asset-categories")
+                ?.scrollBy({ left: 220, behavior: "smooth" })
+        }
+        aria-label="Next categories"
+    >
+        ❯
+    </button>
+
+</div>
 
               <div className="ft-asset-grid">
                 <button
