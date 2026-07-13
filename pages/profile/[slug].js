@@ -881,7 +881,7 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-asset-search { width:100%; min-width:0; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16); border-radius:10px; color:var(--white); font-family:inherit; font-size:13px; outline:none; padding:9px 12px; }
           .ft-asset-search:focus { border-color:rgba(255,112,67,0.55); box-shadow:0 0 0 3px rgba(255,112,67,0.12); }
           .ft-asset-search::placeholder { color:rgba(255,255,255,0.28); }
-		  .ft-asset-categories { display: flex; gap: 8px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding: 0 36px;      /* leaves room for arrows later */ scrollbar-width: none; -ms-overflow-style: none; }
+		  .ft-asset-categories{ flex:1; display:flex; gap:8px; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; -ms-overflow-style:none; scroll-behavior:smooth; }
 		  .ft-asset-categories::-webkit-scrollbar { display: none; }
           .ft-asset-category-btn { padding:9px 11px; border-radius:999px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.58); font-family:inherit; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s; }
           .ft-asset-category-btn:hover { border-color:rgba(255,112,67,0.38); color:${ORANGE}; background:rgba(255,112,67,0.10); }
@@ -901,8 +901,7 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-slider-row { display:grid; gap:6px; margin-top:12px; }
           .ft-slider-label { font-size:11px; font-weight:600; color:rgba(255,255,255,0.60); }
           .ft-slider { width:100%; accent-color:${ORANGE}; }
-		  .ft-asset-categories-wrap{ display:flex; align-items:center; gap:10px; }
-		  .ft-asset-categories{ flex:1; }
+		  .ft-asset-categories-wrap{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
 		  .ft-asset-cat-arrow{ width:34px; height:34px; border:none; border-radius:50%; background:#ff7043; color:#fff; font-size:18px; font-weight:700; cursor:pointer; flex-shrink:0; }
 		  .ft-asset-cat-arrow:hover{ background:#ff875d; }
 
@@ -2385,12 +2384,28 @@ function AssetPicker({ type, items = [], selectedSrc, onSelect, noneLabel, noneS
         ❮
     </button>
 
-    <div
-        className="ft-asset-categories"
-        aria-label={`${type} categories`}
+    <div className="ft-asset-categories" aria-label={`${type} categories`}>
+
+  <button
+    type="button"
+    className={`ft-asset-category-btn${activeCategory === 'All' ? ' active' : ''}`}
+    onClick={() => setActiveCategory('All')}
+  >
+    All
+  </button>
+
+  {categories.map(category => (
+    <button
+      key={category}
+      type="button"
+      className={`ft-asset-category-btn${activeCategory === category ? ' active' : ''}`}
+      onClick={() => setActiveCategory(category)}
     >
-        ...
-    </div>
+      {category}
+    </button>
+  ))}
+
+</div>
 
     <button
         type="button"
