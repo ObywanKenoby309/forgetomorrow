@@ -886,7 +886,7 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-asset-category-btn { padding:9px 11px; border-radius:999px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.58); font-family:inherit; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s; }
           .ft-asset-category-btn:hover { border-color:rgba(255,112,67,0.38); color:${ORANGE}; background:rgba(255,112,67,0.10); }
           .ft-asset-category-btn.active { border-color:rgba(255,112,67,0.55); color:${ORANGE}; background:rgba(255,112,67,0.16); }
-          .ft-asset-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(136px, 1fr)); gap:10px; overflow-y:auto; min-height:0; max-height:42vh; padding-right:4px; scrollbar-width:thin; scrollbar-color:rgba(255,112,67,0.3) transparent; }
+          .ft-asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 10px; height: 250px; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 4px; align-content: start; scrollbar-width: thin; scrollbar-color: rgba(255,112,67,0.3) transparent; }
           .ft-asset-card { border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.05); cursor:pointer; padding:0; text-align:left; font-family:inherit; overflow:hidden; transition:border-color 0.15s, transform 0.15s, background 0.15s; }
           .ft-asset-card:hover { transform:translateY(-1px); border-color:rgba(255,112,67,0.42); background:rgba(255,112,67,0.08); }
           .ft-asset-card.selected { border-color:${ORANGE}; box-shadow:0 0 0 2px rgba(255,112,67,0.22); }
