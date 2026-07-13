@@ -1,12 +1,12 @@
 // pages/api/files/download.js
-// Verifies access then streams the file directly from Supabase Storage.
+// Verifies access then streams the file directly from Cloudflare R2.
 // Streaming keeps the URL same-origin so the browser's download attribute works —
 // the file saves without opening a new tab, same as Teams/Drive behavior.
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import prisma from '@/lib/prisma';
-import { supabaseAdmin, BUCKET } from '@/lib/storage';
+import { downloadFile, fromR2Reference } from '@/lib/storage';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -67,18 +67,9 @@ if (!hasAccess) {
   return res.status(403).json({ error: 'You do not have access to this file' });
 }
 
-    // ── Stream file from Supabase Storage ──────────────────────────────────
-    const { data, error } = await supabaseAdmin.storage
-      .from(BUCKET)
-      .download(file.fileUrl);
-
-    if (error || !data) {
-      console.error('[files/download] storage error:', error);
-      return res.status(500).json({ error: 'Could not retrieve file' });
-    }
-
-    // Convert Blob to Buffer
-    const buffer = Buffer.from(await data.arrayBuffer());
+    // ── Stream file from Cloudflare R2 ─────────────────────────────────────
+    const storagePath = fromR2Reference(file.fileUrl) || file.fileUrl;
+    const { buffer, contentType: storedContentType } = await downloadFile(storagePath);
 
     // Determine content type from file extension
     const ext = file.fileUrl.split('.').pop()?.toLowerCase() || '';
@@ -98,7 +89,7 @@ if (!hasAccess) {
       gif: 'image/gif',
       webp: 'image/webp',
     };
-    const contentType = mimeMap[ext] || 'application/octet-stream';
+    const contentType = storedContentType || mimeMap[ext] || 'application/octet-stream';
 
     // Safe filename for Content-Disposition
     const safeFileName = encodeURIComponent(file.fileName || 'download');

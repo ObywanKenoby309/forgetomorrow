@@ -1,12 +1,12 @@
 // pages/api/vault/file.js
-// Streams a vault file from Supabase Storage.
+// Streams a vault file from Cloudflare R2.
 // Access: sender, recipient of a VaultShare, or owner of a VaultUpload.
 // Same streaming pattern as /api/files/download.
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
-import { supabaseAdmin, BUCKET } from '@/lib/storage';
+import { downloadFile, fromR2Reference } from '@/lib/storage';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -48,17 +48,9 @@ export default async function handler(req, res) {
 
     const fileName = shareAccess?.fileName || uploadAccess?.fileName || 'document.pdf';
 
-    // ── Stream from Supabase Storage ──────────────────────────────────────────
-    const { data, error } = await supabaseAdmin.storage
-      .from(BUCKET)
-      .download(resolvedPath);
-
-    if (error || !data) {
-      console.error('[vault/file] storage error:', error);
-      return res.status(404).json({ error: 'File not found in storage' });
-    }
-
-    const buffer = Buffer.from(await data.arrayBuffer());
+    // ── Stream from Cloudflare R2 ─────────────────────────────────────────────
+    const objectPath = fromR2Reference(resolvedPath) || resolvedPath;
+    const { buffer, contentType: storedContentType } = await downloadFile(objectPath);
 
     const ext = resolvedPath.split('.').pop()?.toLowerCase() || 'pdf';
     const blockedImageTypes = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg']);
@@ -74,7 +66,7 @@ export default async function handler(req, res) {
       doc: 'application/msword',
       docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     };
-    const contentType = mimeMap[ext] || 'application/octet-stream';
+    const contentType = storedContentType || mimeMap[ext] || 'application/octet-stream';
     const safeFileName = encodeURIComponent(fileName);
 
     res.setHeader('Content-Type', contentType);

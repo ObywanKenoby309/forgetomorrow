@@ -1,12 +1,12 @@
 // pages/api/profile/avatar.ts
-// Uploads avatar to Supabase Storage (forge-docs bucket) and saves the public URL.
+// Uploads avatar to Cloudflare R2 and saves a same-origin media URL.
 // Replaces the Phase 1 base64-in-DB approach which caused JWT bloat and session failures.
 
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
-import { supabaseAdmin } from "@/lib/storage";
+import { deleteFile, getMediaUrl, uploadFile } from "@/lib/storage";
 
 export const config = {
   api: {
@@ -18,7 +18,6 @@ type AvatarResponse = {
   avatarUrl: string | null;
 };
 
-const BUCKET = "forge-avatars";
 const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/jpg":  "jpg",
@@ -92,31 +91,16 @@ export default async function handler(
         return res.status(400).json({ error: "Image too large. Maximum 4MB." });
       }
 
-      // Dedicated bucket - simple path, upsert replaces on re-upload
-      const storagePath = `${user.id}.${ext}`;
+      // Stable R2 path. PutObject replaces the existing object at this key.
+      const storagePath = `avatars/${user.id}.${ext}`;
 
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from(BUCKET)
-        .upload(storagePath, buffer, {
-          contentType: mimeType,
-          upsert: true,
-        });
+      await uploadFile({
+        buffer,
+        path: storagePath,
+        contentType: mimeType,
+      });
 
-      if (uploadError) {
-        console.error("[profile/avatar] Supabase upload error", uploadError);
-        return res.status(500).json({ error: "Failed to upload avatar" });
-      }
-
-      // Get the public URL
-      const { data: publicUrlData } = supabaseAdmin.storage
-        .from(BUCKET)
-        .getPublicUrl(storagePath);
-
-      const avatarUrl = publicUrlData?.publicUrl || null;
-
-      if (!avatarUrl) {
-        return res.status(500).json({ error: "Could not resolve public URL" });
-      }
+      const avatarUrl = getMediaUrl(storagePath);
 
       // Save the short public URL (not base64) to the DB
       await prisma.user.update({
@@ -137,11 +121,7 @@ export default async function handler(
       // Best-effort delete from storage (try all common extensions)
       const exts = ["jpg", "png", "webp", "gif"];
       await Promise.allSettled(
-        exts.map((ext) =>
-          supabaseAdmin.storage
-            .from(BUCKET)
-            .remove([`${user.id}.${ext}`])
-        )
+        exts.map((ext) => deleteFile(`avatars/${user.id}.${ext}`))
       );
 
       // Clear the DB field
