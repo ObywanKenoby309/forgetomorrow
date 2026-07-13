@@ -13,11 +13,15 @@ export default async function handler(req, res) {
   const rawKey = Array.isArray(req.query.key) ? req.query.key.join('/') : req.query.key;
   const key = String(rawKey || '').replace(/^\/+/, '');
 
-  // This route is intentionally limited to feed media. Private documents use
-  // signed URLs generated server-side and never pass through this public route.
-  if (!key.startsWith('feed-media/')) {
-    return res.status(403).end('Forbidden');
-  }
+// Allow public media stored in R2.
+const allowedPrefixes = [
+  'avatars/',
+  'feed-media/',
+];
+
+if (!allowedPrefixes.some(prefix => key.startsWith(prefix))) {
+  return res.status(403).end('Forbidden');
+}
 
   try {
     const object = await r2.send(
