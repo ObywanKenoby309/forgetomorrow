@@ -2344,20 +2344,26 @@ function AssetPicker({ type, items = [], selectedSrc, onSelect, noneLabel, noneS
                   Choose {type === 'banner' ? 'Banner' : 'Wallpaper'}
                 </div>
                 <div className="ft-asset-popover-sub">
-                  Search, filter by category, select one, then save.
+                  Search, filter by category, select one, save.
                 </div>
               </div>
-              <button type="button" className="ft-asset-popover-close" onClick={() => setOpen(false)}>×</button>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <button type="button" className="ft-asset-save-btn" onClick={handleSave}>Save Selection</button>
+                <button type="button" className="ft-btn-secondary" onClick={()=>setOpen(false)}>Cancel</button>
+                <button type="button" className="ft-asset-popover-close" onClick={() => setOpen(false)}>×</button>
+              </div>
             </div>
 
             <div className="ft-asset-popover-body">
+              <div style={{display:'flex',gap:16,alignItems:'center',marginBottom:16}}>
               <input
                 className="ft-asset-search"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder={`Search ${type === 'banner' ? 'banners' : 'wallpapers'}…`}
-                aria-label={`Search ${type === 'banner' ? 'banners' : 'wallpapers'}`}
+                aria-label={`Search ${type === 'banner' ? 'banners' : 'wallpapers'}`} style={{flex:"0 0 60%"}}
               />
+<div className="ft-asset-selected-label" style={{flex:1}}>Selected: {pendingAsset?.name || noneLabel}</div></div>
 
               <div className="ft-asset-categories" aria-label={`${type} categories`}>
                 <button
@@ -2415,16 +2421,7 @@ function AssetPicker({ type, items = [], selectedSrc, onSelect, noneLabel, noneS
                 <div className="ft-asset-empty">No {type === 'banner' ? 'banners' : 'wallpapers'} match that search.</div>
               )}
             </div>
-
-            <div className="ft-asset-popover-foot">
-              <div className="ft-asset-selected-label">
-                Selected: {pendingAsset?.name || noneLabel}
-              </div>
-              <button type="button" className="ft-asset-save-btn" onClick={handleSave}>
-                Save Selection
-              </button>
             </div>
-          </div>
         </>
       )}
     </div>
