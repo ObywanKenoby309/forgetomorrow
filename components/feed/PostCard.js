@@ -1217,42 +1217,47 @@ export default function PostCard({
       document.body
     )}
 
-    {lightboxIndex !== null && mediaAttachments[lightboxIndex] && (
-      <div
-        className="fixed inset-0 z-[80] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+{lightboxIndex !== null &&
+  mediaAttachments[lightboxIndex] &&
+  typeof document !== "undefined" &&
+  createPortal(
+<div
+  className="fixed inset-0 z-[100001] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+  onClick={closeLightbox}
+  onMouseDown={(e) => e.stopPropagation()}
+  role="dialog"
+  aria-modal="true"
+>
+      <button
+        type="button"
         onClick={closeLightbox}
-        role="dialog"
-        aria-modal="true"
+        className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white hover:bg-white/20"
+        aria-label="Close media viewer"
       >
-        <button
-          type="button"
-          onClick={closeLightbox}
-          className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white hover:bg-white/20"
-          aria-label="Close media viewer"
-        >
-          ✕
-        </button>
+        ✕
+      </button>
 
-        {mediaAttachments[lightboxIndex].type === 'image' && (
-          <img
-            src={mediaAttachments[lightboxIndex].url}
-            alt={mediaAttachments[lightboxIndex].name || 'Post image'}
-            className="max-h-[88vh] max-w-[94vw] rounded-2xl object-contain shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-        )}
+      {mediaAttachments[lightboxIndex].type === 'image' && (
+        <img
+          src={mediaAttachments[lightboxIndex].url}
+          alt={mediaAttachments[lightboxIndex].name || 'Post image'}
+          className="max-h-[88vh] max-w-[94vw] rounded-2xl object-contain shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        />
+      )}
 
-        {mediaAttachments[lightboxIndex].type === 'video' && (
-          <video
-            src={mediaAttachments[lightboxIndex].url}
-            controls
-            autoPlay
-            className="max-h-[88vh] max-w-[94vw] rounded-2xl bg-black shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-        )}
-      </div>
-    )}
+      {mediaAttachments[lightboxIndex].type === 'video' && (
+        <video
+          src={mediaAttachments[lightboxIndex].url}
+          controls
+          autoPlay
+          className="max-h-[88vh] max-w-[94vw] rounded-2xl bg-black shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        />
+      )}
+    </div>,
+    document.body
+  )}
     </>
   );
 }
