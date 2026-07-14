@@ -887,7 +887,7 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-asset-category-btn:hover { border-color:rgba(255,112,67,0.38); color:${ORANGE}; background:rgba(255,112,67,0.10); }
           .ft-asset-category-btn.active { border-color:rgba(255,112,67,0.55); color:${ORANGE}; background:rgba(255,112,67,0.16); }
           .ft-asset-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(136px,1fr)); grid-auto-rows:max-content; align-content:start; gap:10px; height:100%; overflow-y:auto; overflow-x:hidden; padding-right:8px; padding-bottom:18px; scrollbar-width:thin; scrollbar-color:rgba(255,112,67,.3) transparent; }
-		  .ft-asset-grid-wrap{ flex:1; min-height:320px; max-height:420px; overflow:hidden; }
+		  .ft-asset-grid-wrap{ flex:1; overflow:hidden; }
           .ft-asset-card { border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.05); cursor:pointer; padding:0; text-align:left; font-family:inherit; overflow:hidden; transition:border-color 0.15s, transform 0.15s, background 0.15s; }
           .ft-asset-card:hover { transform:translateY(-1px); border-color:rgba(255,112,67,0.42); background:rgba(255,112,67,0.08); }
           .ft-asset-card.selected { border-color:${ORANGE}; box-shadow:0 0 0 2px rgba(255,112,67,0.22); }
