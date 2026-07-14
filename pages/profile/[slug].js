@@ -891,7 +891,7 @@ flushPendingSaveRef.current = flushPendingSave;
           .ft-asset-card { border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.05); cursor:pointer; padding:0; text-align:left; font-family:inherit; overflow:hidden; transition:border-color 0.15s, transform 0.15s, background 0.15s; }
           .ft-asset-card:hover { transform:translateY(-1px); border-color:rgba(255,112,67,0.42); background:rgba(255,112,67,0.08); }
           .ft-asset-card.selected { border-color:${ORANGE}; box-shadow:0 0 0 2px rgba(255,112,67,0.22); }
-          .ft-asset-card-img { width:100%; height:48px; object-fit:cover; display:block; background:rgba(255,255,255,0.06); }
+          .ft-asset-card-img { width:100%; height:56px; object-fit:cover; display:block; background:rgba(255,255,255,0.06); }
           .ft-asset-card-body { padding:7px 8px 8px; }
           .ft-asset-card-name { font-size:11px; font-weight:800; color:rgba(255,255,255,0.86); line-height:1.22; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
           .ft-asset-card-meta { font-size:9px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,112,67,0.72); margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -1264,6 +1264,44 @@ flushPendingSaveRef.current = flushPendingSave;
             .ft-resume-row > div { min-width:0; }
             .ft-resume-name { white-space:normal; overflow-wrap:anywhere; }
             .ft-resume-set-btn, .ft-resume-primary-badge { max-width:100%; }
+
+            .ft-mobile-avatar-picker,
+            .ft-mobile-compact-asset-picker { display:grid; gap:10px; margin-bottom:22px; }
+            .ft-mobile-asset-rail-wrap { display:flex; align-items:center; gap:7px; width:100%; min-width:0; }
+            .ft-mobile-asset-arrow { width:30px; height:30px; flex:0 0 30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:999px; background:${ORANGE}; color:#fff; font-family:inherit; font-size:22px; font-weight:800; line-height:1; cursor:pointer; box-shadow:0 4px 12px rgba(255,112,67,0.28); }
+            .ft-mobile-avatar-rail,
+            .ft-mobile-asset-thumb-rail { flex:1; min-width:0; display:flex; align-items:center; gap:7px; overflow-x:auto; overflow-y:hidden; scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none; -webkit-overflow-scrolling:touch; }
+            .ft-mobile-avatar-rail::-webkit-scrollbar,
+            .ft-mobile-asset-thumb-rail::-webkit-scrollbar { display:none; }
+            .ft-mobile-avatar-thumb { width:48px; height:48px; flex:0 0 48px; padding:2px; border:2px solid transparent; border-radius:999px; background:transparent; cursor:pointer; }
+            .ft-mobile-avatar-thumb.selected { border-color:${ORANGE}; box-shadow:0 0 0 2px rgba(255,112,67,0.18); }
+            .ft-mobile-avatar-thumb img { width:100%; height:100%; display:block; object-fit:cover; border-radius:999px; }
+            .ft-mobile-avatar-actions,
+            .ft-mobile-asset-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+            .ft-mobile-avatar-action,
+            .ft-mobile-asset-actions .ft-asset-none,
+            .ft-mobile-asset-actions .ft-asset-more-btn { width:100%; height:38px; display:flex; align-items:center; justify-content:center; border-radius:10px; font-family:inherit; font-size:12px; font-weight:800; cursor:pointer; }
+            .ft-mobile-avatar-action.remove { border:1px solid rgba(239,83,80,0.38); background:rgba(239,83,80,0.10); color:#EF9A9A; }
+            .ft-mobile-avatar-action.upload { border:1px solid rgba(255,112,67,0.40); background:rgba(255,112,67,0.16); color:${ORANGE}; }
+            .ft-mobile-avatar-action:disabled { opacity:0.45; cursor:not-allowed; }
+            .ft-mobile-asset-thumb-rail .ft-asset-basic-thumb { width:48px; height:38px; flex:0 0 48px; border-radius:9px; }
+            .ft-mobile-asset-thumb-rail .ft-asset-basic-thumb img { border-radius:6px; }
+            .ft-mobile-asset-actions .ft-asset-none,
+            .ft-mobile-asset-actions .ft-asset-more-btn { padding:0 12px; }
+            .ft-asset-popover { inset:10px; max-height:calc(100vh - 20px); }
+            .ft-asset-popover-head { padding:12px; gap:8px; }
+            .ft-asset-popover-head > div:last-child { gap:6px !important; }
+            .ft-asset-save-btn { padding:8px 10px; font-size:11px; }
+            .ft-asset-popover-head .ft-btn-secondary { padding:8px 10px; font-size:11px; }
+            .ft-asset-popover-body { padding:0 12px 12px; gap:10px; }
+            .ft-asset-popover-body > div:first-child { gap:8px !important; margin-bottom:4px !important; }
+            .ft-asset-search { flex:1 1 auto !important; width:100%; }
+            .ft-asset-selected-label { display:none; }
+            .ft-asset-categories-wrap { gap:6px; }
+            .ft-asset-cat-arrow { width:30px; height:30px; flex:0 0 30px; }
+            .ft-asset-category-btn { flex-shrink:0; padding:8px 10px; }
+            .ft-asset-grid-wrap { flex:1; min-height:0; overflow:hidden; }
+            .ft-asset-grid { height:100%; grid-template-columns:repeat(2,minmax(0,1fr)); padding-right:5px; padding-bottom:18px; }
           }
           ::-webkit-scrollbar { width:6px; }
           ::-webkit-scrollbar-track { background:var(--navy); }
@@ -2023,20 +2061,61 @@ flushPendingSaveRef.current = flushPendingSave;
                   <div className="ft-dark-chips" style={{ marginBottom:22 }}>{hobbies.map((h,i) => <span key={h+i} className="ft-dark-chip">{h}<button type="button" className="ft-dark-chip-x" onClick={() => setHobbies(p => p.filter((_,idx) => idx !== i))}>×</button></span>)}</div>
 
                   <div className="ft-dark-section-label" style={{ marginBottom:10 }}>Profile Photo</div>
-                  <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap', marginBottom:22 }}>
-                    <button type="button" onClick={() => fileInputRef.current?.click()} style={{ width:52, height:52, borderRadius:'50%', border:'2px dashed rgba(255,112,67,0.55)', background:'rgba(255,112,67,0.08)', color:ORANGE, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
-                      <span style={{ fontSize:16, lineHeight:1 }}>{avatarUploading ? '◌' : '↑'}</span><span style={{ fontSize:8, fontWeight:800 }}>Upload</span>
-                    </button>
-                    {PRESET_AVATARS.map(opt => (
-                      <button key={opt.url} type="button" onClick={() => setAvatarUrl(opt.url)} style={{ width:52, height:52, borderRadius:'50%', padding:2, border:`2px solid ${avatarUrl === opt.url ? ORANGE : 'transparent'}`, background:'transparent', cursor:'pointer', flexShrink:0 }}>
-                        <img src={opt.url} alt={opt.label} style={{ width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover', display:'block' }} />
+                  <div className="ft-mobile-avatar-picker">
+                    <div className="ft-mobile-asset-rail-wrap">
+                      <button
+                        type="button"
+                        className="ft-mobile-asset-arrow"
+                        aria-label="Previous profile photos"
+                        onClick={e => e.currentTarget.nextElementSibling?.scrollBy({ left: -220, behavior: 'smooth' })}
+                      >
+                        ‹
                       </button>
-                    ))}
-                    {avatarUrl && (
-                      <button type="button" onClick={handleAvatarRemove} style={{ width:52, height:52, borderRadius:'50%', border:'2px solid rgba(211,47,47,0.35)', background:'rgba(211,47,47,0.08)', color:'#EF9A9A', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
-                        <span style={{ fontSize:16, lineHeight:1 }}>×</span><span style={{ fontSize:8, fontWeight:800 }}>Remove</span>
+
+                      <div className="ft-mobile-avatar-rail">
+                        {PRESET_AVATARS.map(opt => (
+                          <button
+                            key={opt.url}
+                            type="button"
+                            className={`ft-mobile-avatar-thumb${avatarUrl === opt.url ? ' selected' : ''}`}
+                            onClick={() => setAvatarUrl(opt.url)}
+                            aria-label={`Select ${opt.label} profile photo`}
+                          >
+                            <img src={opt.url} alt={opt.label} />
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        className="ft-mobile-asset-arrow"
+                        aria-label="Next profile photos"
+                        onClick={e => e.currentTarget.previousElementSibling?.scrollBy({ left: 220, behavior: 'smooth' })}
+                      >
+                        ›
                       </button>
-                    )}
+                    </div>
+
+                    <div className="ft-mobile-avatar-actions">
+                      <button
+                        type="button"
+                        className="ft-mobile-avatar-action remove"
+                        onClick={handleAvatarRemove}
+                        disabled={!avatarUrl}
+                      >
+                        Remove
+                      </button>
+
+                      <button
+                        type="button"
+                        className="ft-mobile-avatar-action upload"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={avatarUploading}
+                      >
+                        {avatarUploading ? 'Uploading…' : 'Upload'}
+                      </button>
+                    </div>
+
                     <input ref={fileInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleAvatarFileChange} />
                   </div>
 
@@ -2049,6 +2128,7 @@ flushPendingSaveRef.current = flushPendingSave;
                     noneLabel="None"
                     noneSelected={!coverUrl}
                     onNone={() => setCoverUrl('')}
+                    mobileCompact
                   />
                   {coverUrl && (
                     <div style={{ display:'grid', gap:10, marginBottom:22 }}>
@@ -2075,6 +2155,7 @@ flushPendingSaveRef.current = flushPendingSave;
                     noneLabel="Default"
                     noneSelected={!wallpaperUrl}
                     onNone={() => setWallpaperUrl('')}
+                    mobileCompact
                   />
                 </div>
                 <div className="ft-sheet-save-row"><button type="button" className="ft-sheet-save-btn" onClick={async () => { await flushPendingSaveRef.current(true); setMobileSheet(null); }}>Done</button></div></>
@@ -2265,7 +2346,7 @@ flushPendingSaveRef.current = flushPendingSave;
 }
 
 
-function AssetPicker({ type, items = [], selectedSrc, onSelect, noneLabel, noneSelected, onNone }) {
+function AssetPicker({ type, items = [], selectedSrc, onSelect, noneLabel, noneSelected, onNone, mobileCompact = false }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -2312,32 +2393,85 @@ function AssetPicker({ type, items = [], selectedSrc, onSelect, noneLabel, noneS
 
   return (
     <div className="ft-asset-picker-wrap">
-      <div className="ft-asset-basic-row">
-        <button
-          type="button"
-          className={`ft-asset-none${noneSelected ? ' selected' : ''}`}
-          onClick={handleDefaultSelect}
-        >
-          {noneLabel}
-        </button>
+      {mobileCompact ? (
+        <div className="ft-mobile-compact-asset-picker">
+          <div className="ft-mobile-asset-rail-wrap">
+            <button
+              type="button"
+              className="ft-mobile-asset-arrow"
+              aria-label={`Previous ${type === 'banner' ? 'banners' : 'wallpapers'}`}
+              onClick={e => e.currentTarget.nextElementSibling?.scrollBy({ left: -260, behavior: 'smooth' })}
+            >
+              ‹
+            </button>
 
-        {defaultItems.map(asset => (
+            <div className="ft-mobile-asset-thumb-rail">
+              {defaultItems.map(asset => (
+                <button
+                  key={asset.key}
+                  type="button"
+                  className={`ft-asset-basic-thumb${selectedSrc === asset.src ? ' selected' : ''}`}
+                  onClick={() => onSelect(asset.src)}
+                  title={asset.desc || asset.name}
+                  aria-label={`Select ${asset.name}`}
+                >
+                  <img src={asset.src} alt={asset.name} loading="lazy" />
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="ft-mobile-asset-arrow"
+              aria-label={`Next ${type === 'banner' ? 'banners' : 'wallpapers'}`}
+              onClick={e => e.currentTarget.previousElementSibling?.scrollBy({ left: 260, behavior: 'smooth' })}
+            >
+              ›
+            </button>
+          </div>
+
+          <div className="ft-mobile-asset-actions">
+            <button
+              type="button"
+              className={`ft-asset-none${noneSelected ? ' selected' : ''}`}
+              onClick={handleDefaultSelect}
+            >
+              {noneLabel}
+            </button>
+
+            <button type="button" className="ft-asset-more-btn" onClick={() => setOpen(true)}>
+              More
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="ft-asset-basic-row">
           <button
-            key={asset.key}
             type="button"
-            className={`ft-asset-basic-thumb${selectedSrc === asset.src ? ' selected' : ''}`}
-            onClick={() => onSelect(asset.src)}
-            title={asset.desc || asset.name}
-            aria-label={`Select ${asset.name}`}
+            className={`ft-asset-none${noneSelected ? ' selected' : ''}`}
+            onClick={handleDefaultSelect}
           >
-            <img src={asset.src} alt={asset.name} loading="lazy" />
+            {noneLabel}
           </button>
-        ))}
 
-        <button type="button" className="ft-asset-more-btn" onClick={() => setOpen(true)}>
-          More…
-        </button>
-      </div>
+          {defaultItems.map(asset => (
+            <button
+              key={asset.key}
+              type="button"
+              className={`ft-asset-basic-thumb${selectedSrc === asset.src ? ' selected' : ''}`}
+              onClick={() => onSelect(asset.src)}
+              title={asset.desc || asset.name}
+              aria-label={`Select ${asset.name}`}
+            >
+              <img src={asset.src} alt={asset.name} loading="lazy" />
+            </button>
+          ))}
+
+          <button type="button" className="ft-asset-more-btn" onClick={() => setOpen(true)}>
+            More…
+          </button>
+        </div>
+      )}
 
       {open && (
         <>
