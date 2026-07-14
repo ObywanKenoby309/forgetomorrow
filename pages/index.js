@@ -683,12 +683,12 @@ return (
 
           <div className="hero-content">
             <h1 className="hero-h1">
-              The career system after algorithms.
+              The career platform built for people, not algorithms.
               <span className="hero-h1-accent">This is where futures are forged.</span>
             </h1>
 
             <p className="hero-sub">
-              We built the platform we wish existed when we needed it. Professional networking, career intelligence, coaching, and hiring — connected in one place.
+              We built the platform we wish existed when we needed it. Build your professional network, find jobs, get coaching, hire great people, and manage your career in one place.
             </p>
 
             <div className="hero-ctas">
@@ -709,20 +709,20 @@ return (
         <section className="problem-section">
           <div className="max-container">
             <h2 className="problem-heading">
-              The current career system is misaligned with human outcomes.
+              Today's hiring system isn't working for people.
             </h2>
             <p className="problem-sub">
-              Most platforms optimize for engagement metrics instead of career outcomes — creating noise, delays, and real career damage.
+              Most career websites make money by keeping you clicking instead of helping you get hired.
             </p>
 
             <div className="problem-grid">
               <div className="problem-col">
                 <div className="problem-col-label bad">What's happening right now</div>
                 {[
-                  'Keyword filters that discard real capability and real potential',
-                  'Opaque decisions — rejected with zero explanation and no path forward',
+                  'Good people get rejected because their resume doesn't use the right words.',
+                  'You get rejected without knowing why or what to improve.',
                   'Platforms engineered to keep you scrolling, not to get you hired',
-                  'Guesswork around fit, expectations, culture, and compensation',
+                  'You have to guess if the job is really right for you.',
                 ].map((t, i) => (
                   <div className="problem-item" key={i}>
                     <div className="problem-icon bad">✕</div>
@@ -734,9 +734,9 @@ return (
               <div className="problem-col">
                 <div className="problem-col-label good">What ForgeTomorrow replaces it with</div>
                 {[
-                  'Proof-based signals that show what people have actually built and delivered',
-                  "Transparent alignment — why something fits (or doesn't) and what to do next",
-                  'Tools designed for outcomes: prepare, align, act, and move forward',
+                  'Show employers what you've actually done, not just what's on your resume.',
+                  "We show you why you're a good fit—and how to become a better one.",
+                  'Tools that help you prepare, apply, interview, and get hired.',
                   'One complete system for seekers, recruiters, and coaches',
                 ].map((t, i) => (
                   <div className="problem-item" key={i}>
@@ -779,9 +779,9 @@ return (
         <section className="capability-section">
           <div className="capability-grid">
             {[
-              { icon: '🤝', title: 'Professional Networking', desc: 'Build meaningful professional relationships without algorithmic gatekeeping.' },
-              { icon: '🎯', title: 'Career Intelligence', desc: 'Understand fit, strengths, opportunities, and next steps through transparent, explainable insights..' },
-              { icon: '🔍', title: 'Recruiter Intelligence', desc: 'Evaluate candidates with evidence-based matching, transparent reasoning, and deeper hiring context.' },
+              { icon: '🤝', title: 'Professional Networking', desc: 'Meet professionals based on your goals and experience instead of fighting social media algorithms.' },
+              { icon: '🎯', title: 'Career Guidance', desc: 'Learn what jobs match your experience, what you\'re good at, and what to work on next.' },
+              { icon: '🔍', title: 'Recruiter Tools', desc: 'Compare candidates using real experience instead of guesswork.' },
               { icon: '🎥', title: 'Foundry Meetings', desc: 'Meet, interview, coach, and collaborate inside the platform.' },
               { icon: '📄', title: 'Career Tools', desc: 'Build resumes and portfolios, negotiate offers, plan career moves, and prepare for what\'s next.' },
               { icon: '📊', title: 'Coaching Workspace', desc: 'Manage sessions, feedback, calendars, and client growth.' },
@@ -814,7 +814,7 @@ return (
                 </div>
                 <div className="audience-card-title" style={{ color: '#FF7043' }}>Job Seekers</div>
                 <p className="audience-card-desc">
-                  Build your career signal, understand fit before you apply, and move forward without guessing what hidden systems want.
+                  Build a profile that shows employers what you can do, understand your job matches before you apply, and move forward with confidence.
                 </p>
                 <Link href="/features" className="audience-link" style={{ color: '#FF7043' }}>
                   Explore Seeker Tools →
@@ -831,7 +831,7 @@ return (
                 </div>
                 <div className="audience-card-title" style={{ color: '#34d399' }}>Recruiters & Employers</div>
                 <p className="audience-card-desc">
-                  Hire with clarity and accountability. Review candidates with visible reasoning and communicate without opaque filters.
+                  Hire with confidence. Review candidates with clear explanations and communicate directly without hidden filters.
                 </p>
                 <Link href="/features" className="audience-link" style={{ color: '#34d399' }}>
                   Explore Recruiter Tools →
