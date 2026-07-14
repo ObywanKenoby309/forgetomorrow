@@ -719,7 +719,7 @@ return (
               <div className="problem-col">
                 <div className="problem-col-label bad">What's happening right now</div>
                 {[
-                  'Good people get rejected because their resume doesn't use the right words.',
+                  "Good people get rejected because their resume doesn't use the right words.",
                   'You get rejected without knowing why or what to improve.',
                   'Platforms engineered to keep you scrolling, not to get you hired',
                   'You have to guess if the job is really right for you.',
@@ -734,7 +734,7 @@ return (
               <div className="problem-col">
                 <div className="problem-col-label good">What ForgeTomorrow replaces it with</div>
                 {[
-                  'Show employers what you've actually done, not just what's on your resume.',
+                  "Show employers what you've actually done, not just what's on your resume.",
                   "We show you why you're a good fit—and how to become a better one.",
                   'Tools that help you prepare, apply, interview, and get hired.',
                   'One complete system for seekers, recruiters, and coaches',
