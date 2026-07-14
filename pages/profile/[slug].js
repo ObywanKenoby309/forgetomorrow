@@ -1301,7 +1301,7 @@ flushPendingSaveRef.current = flushPendingSave;
             .ft-asset-cat-arrow { width:30px; height:30px; flex:0 0 30px; }
             .ft-asset-category-btn { flex-shrink:0; padding:8px 10px; }
             .ft-asset-grid-wrap { flex:1; min-height:0; overflow:hidden; }
-            .ft-asset-grid { height:100%; grid-template-columns:repeat(2,minmax(0,1fr)); padding-right:5px; padding-bottom:30px; }
+            .ft-asset-grid { height:100%; grid-template-columns:repeat(2,minmax(0,1fr)); padding-right:5px; padding-bottom:45px; }
           }
           ::-webkit-scrollbar { width:6px; }
           ::-webkit-scrollbar-track { background:var(--navy); }
