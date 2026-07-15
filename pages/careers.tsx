@@ -24,7 +24,7 @@ export default function Careers() {
 
         <div className="relative z-10 max-w-5xl mx-auto text-white">
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-tight drop-shadow-2xl">
-            We hire from the forge first.
+            We hire from the Forge first.
             <br />
             <span className="text-[#FF7043]">Then we open the doors.</span>
           </h1>
@@ -85,7 +85,7 @@ export default function Careers() {
             <div className="text-center space-y-4">
               <h3 className="text-2xl font-bold text-gray-900">People Before Profit</h3>
               <p className="text-gray-700">
-                We earn revenue so the job seeker never has to pay when they’re down. That’s the business model — not a side effect.
+                We earn revenue so people don't lose access to opportunity when they're down.
               </p>
             </div>
             <div className="text-center space-y-4">
@@ -114,31 +114,23 @@ export default function Careers() {
             When revenue says “go,” the next hammer drops here first.
           </p>
 
-          <div className="mt-12">
-            <p className="text-xl mb-6 text-gray-300">Want first notice when we hire?</p>
-            <form
-              action="https://formspree.io/f/YOUR_FORM_ID_HERE"   // ← put your real Formspree ID here
-              method="POST"
-              className="max-w-md mx-auto flex flex-col sm:flex-row gap-4"
-            >
-              <input
-                type="email"
-                name="email"
-                placeholder="you@forge.com"
-                required
-                className="px-6 py-4 rounded-full text-gray-900 flex-1 focus:outline-none focus:ring-4 focus:ring-[#FF7043]"
-              />
-              <button
-                type="submit"
-                className="bg-[#FF7043] hover:bg-[#f46036] text-white font-bold px-8 py-4 rounded-full transition"
-              >
-                Tell Me When the Bell Rings
-              </button>
-            </form>
-            <p className="mt-8 text-sm text-gray-500">
-              Every submission lands instantly in <strong>careers@forgetomorrow.com</strong>
-            </p>
-          </div>
+<div className="mt-12">
+  <p className="text-xl mb-6 text-gray-300">
+    Want first notice when we hire?
+  </p>
+
+  <a
+    href="mailto:careers@forgetomorrow.com?subject=Career%20Notification%20Request"
+    className="inline-flex items-center justify-center bg-[#FF7043] hover:bg-[#f46036] text-white font-bold px-8 py-4 rounded-full transition"
+  >
+    Tell Me When the Bell Rings
+  </a>
+
+  <p className="mt-8 text-sm text-gray-500">
+    We'll add you to our hiring notification list through{" "}
+    <strong>careers@forgetomorrow.com</strong>.
+  </p>
+</div>
         </div>
       </section>
     </>

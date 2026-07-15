@@ -22,23 +22,19 @@ export default function ProductHub() {
           />
 
           <div className="relative z-10 max-w-3xl mx-auto">
-            <div className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-200">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#FF7043]" />
-              Built with clarity · Humans first
-            </div>
 
-            <h1 className="mt-6 text-4xl md:text-5xl font-semibold tracking-tight">
-              Product
-            </h1>
+		  <h1 className="mt-6 text-6xl md:text-7xl font-black tracking-tight text-white">
+			Product
+		  </h1>
 
-            <p className="mt-4 text-lg md:text-xl text-gray-200 leading-relaxed">
-              Everything you need to manage your career in one place.
-            </p>
+		  <p className="mt-8 text-2xl md:text-4xl font-semibold text-[#FF7043]">
+			Everything you need to manage your career in one place.
+		  </p>
           </div>
         </section>
 
         {/* PHILOSOPHY */}
-        <section className="px-6 pb-10">
+        <section className="-mt-4 px-6 pb-10">
           <div className="max-w-3xl mx-auto text-left text-gray-200 leading-relaxed">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 md:p-7">
               <p className="text-base md:text-[17px]">
