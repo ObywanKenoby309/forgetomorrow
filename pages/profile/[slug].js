@@ -2329,6 +2329,11 @@ flushPendingSaveRef.current = flushPendingSave;
   );
 
 return (
+console.log('PROFILE PAGE SLUG', {
+  slug,
+  profileSlug,
+  savedProfileSlug,
+});
   <InternalLayout
     title={`${fullName} — ForgeTomorrow`}
     activeNav="profile"
