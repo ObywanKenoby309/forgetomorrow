@@ -137,11 +137,12 @@ export default function Signup() {
 
   return (
     <>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <Head>
         <title>Sign up — ForgeTomorrow</title>
-      </Head>
+      <style>{`.skip-link{position:absolute;left:16px;top:-48px;background:#FF7043;color:#fff;padding:12px 16px;border-radius:8px;z-index:9999;text-decoration:none;font-weight:700}.skip-link:focus{top:16px}*:focus-visible{outline:3px solid #FFB199;outline-offset:3px}@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}`}</style></Head>
 
-      <main className="min-h-screen bg-[#0B1724] text-slate-900 flex items-center justify-center px-4 py-10">
+      <main id="main-content" className="min-h-screen bg-[#0B1724] text-slate-900 flex items-center justify-center px-4 py-10">
         <div className="max-w-5xl w-full grid md:grid-cols-2 gap-8 items-stretch">
           {/* Left side – hero / message */}
           <div className="flex flex-col justify-center space-y-4 text-white">

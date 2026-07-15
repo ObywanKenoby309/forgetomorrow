@@ -4,15 +4,16 @@ import Link from "next/link";
 export default function TrackingPolicy() {
   return (
     <>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <Head>
         <title>Tracking & Cookies Policy | Forge Tomorrow</title>
         <meta
           name="description"
           content="How Forge Tomorrow uses cookies and tracking technologies to improve user experience."
         />
-      </Head>
+      <style>{`.skip-link{position:absolute;left:16px;top:-48px;background:#FF7043;color:#fff;padding:12px 16px;border-radius:8px;z-index:9999;text-decoration:none;font-weight:700}.skip-link:focus{top:16px}*:focus-visible{outline:3px solid #FFB199;outline-offset:3px}@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}`}</style></Head>
 
-      <main
+      <main id="main-content"
         className="min-h-screen bg-gray-50 py-12 px-4"
         aria-labelledby="tracking-cookies-heading"
       >

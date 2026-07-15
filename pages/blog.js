@@ -16,7 +16,7 @@ export default function Blog() {
         />
       </Head>
 
-      <main id="main-content" aria-labelledby="blog-heading">
+      <main id="main-content" id="main-content" aria-labelledby="blog-heading">
         {/* HERO — FULLY ACCESSIBLE */}
         <section className="relative min-h-screen flex items-center justify-center px-6 text-center">
           <div

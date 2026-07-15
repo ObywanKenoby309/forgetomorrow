@@ -3,9 +3,10 @@ import Head from "next/head";
 export default function Help() {
   return (
     <>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <Head>
         <title>Help & Support — ForgeTomorrow</title>
-      </Head>
+      <style>{`.skip-link{position:absolute;left:16px;top:-48px;background:#FF7043;color:#fff;padding:12px 16px;border-radius:8px;z-index:9999;text-decoration:none;font-weight:700}.skip-link:focus{top:16px}*:focus-visible{outline:3px solid #FFB199;outline-offset:3px}@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}`}</style></Head>
 
       <div className="relative min-h-[80vh] py-10">
         {/* Decorative background layer — not announced */}
@@ -20,7 +21,7 @@ export default function Help() {
         />
 
         {/* Foreground */}
-        <main
+        <main id="main-content"
           className="relative max-w-4xl mx-auto px-6 text-slate-900"
           aria-labelledby="help-center-heading"
         >

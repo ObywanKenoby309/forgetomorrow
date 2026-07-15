@@ -162,6 +162,7 @@ function AutoCarousel({
         {/* Controls */}
         {count > 1 && (
           <>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
             <button
               type="button"
               onClick={() => go(-1)}
@@ -308,9 +309,9 @@ export default function Features() {
           name="description"
           content="See how ForgeTomorrow's tools work together to help professionals, recruiters, and coaches make better career and hiring decisions."
         />
-      </Head>
+      <style>{`.skip-link{position:absolute;left:16px;top:-48px;background:#FF7043;color:#fff;padding:12px 16px;border-radius:8px;z-index:9999;text-decoration:none;font-weight:700}.skip-link:focus{top:16px}*:focus-visible{outline:3px solid #FFB199;outline-offset:3px}@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}`}</style></Head>
 
-      <main className="mx-auto max-w-6xl px-6 py-20 text-gray-100">
+      <main id="main-content" className="mx-auto max-w-6xl px-6 py-20 text-gray-100">
         {/* HERO */}
 <section className="relative overflow-hidden -mt-20 mb-24">
   <div

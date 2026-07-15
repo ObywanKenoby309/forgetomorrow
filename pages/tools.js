@@ -7,13 +7,14 @@ export default function Tools() {
 
   return (
     <>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <Head>
         <title>ForgeTomorrow - Tools</title>
-      </Head>
+      <style>{`.skip-link{position:absolute;left:16px;top:-48px;background:#FF7043;color:#fff;padding:12px 16px;border-radius:8px;z-index:9999;text-decoration:none;font-weight:700}.skip-link:focus{top:16px}*:focus-visible{outline:3px solid #FFB199;outline-offset:3px}@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}`}</style></Head>
 
       <Header />
 
-      <main className="max-w-7xl mx-auto p-6 min-h-[80vh] bg-[#ECEFF1] text-[#212121] space-y-8 pt-20">
+      <main id="main-content" className="max-w-7xl mx-auto p-6 min-h-[80vh] bg-[#ECEFF1] text-[#212121] space-y-8 pt-20">
         <section>
           <h1 className="text-4xl font-bold text-[#FF7043] mb-2">Your Tools</h1>
           <p className="text-gray-700 max-w-3xl mb-6">
