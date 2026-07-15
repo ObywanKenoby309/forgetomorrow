@@ -15,9 +15,12 @@ export default function PressKit() {
 
       <main
         id="main-content"
-        className="min-h-screen bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] text-gray-100"
+        className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-gray-100"
         aria-labelledby="press-kit-heading"
       >
+        <div aria-hidden="true" className="absolute inset-0 bg-center bg-cover opacity-20" style={{backgroundImage:"url('/images/forge-bg-bw.png')"}} />
+        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,112,67,0.08),transparent_65%),linear-gradient(to_bottom,transparent_60%,#0a0a0a_100%)]" />
+        <div className="relative z-10">
         <div className="max-w-5xl mx-auto text-center px-6 py-24">
           <h1
             id="press-kit-heading"
@@ -46,7 +49,7 @@ export default function PressKit() {
 
           <div className="grid md:grid-cols-3 gap-12">
             {/* Color logo */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-8 shadow flex flex-col items-center">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 shadow flex flex-col items-center">
               <Image
                 src="/press/Brand/logo-color.png"
                 width={350}
@@ -80,7 +83,7 @@ export default function PressKit() {
             </div>
 
             {/* Black logo on light background */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-8 shadow flex flex-col items-center">
+            <div className="bg-white backdrop-blur-sm backdrop-blur-sm border border-white/10 rounded-2xl p-8 shadow flex flex-col items-center">
               <Image
                 src="/press/Brand/logo-black.png"
                 width={350}
@@ -119,6 +122,7 @@ export default function PressKit() {
             </div>
           </div>
         </div>
+              </div>
       </main>
     </>
   )
