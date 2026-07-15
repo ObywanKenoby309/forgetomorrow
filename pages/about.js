@@ -86,7 +86,7 @@ export default function About() {
           </p>
 
           <p className="mt-8">
-            I built ForgeTomorrow alone. Front stack to API. Seven months.
+            I built the first version of ForgeTomorrow alone. Front end to API. In 5 months, we were live.
             Because I couldn't bring a child into a world where people are discarded like this.
             Where good people trying to survive get broken by systems that claim to help them.
           </p>
@@ -124,10 +124,10 @@ export default function About() {
 
           <div className="text-center mt-20 space-y-8">
             <p className="text-3xl md:text-4xl font-extrabold text-white">
-              ForgeTomorrow is not a company trying to help you.
+              ForgeTomorrow isn't a company looking down at people.
             </p>
             <p className="text-3xl md:text-4xl font-extrabold text-[#FF7043]">
-              We are one of you. And we built the answer.
+              We're people who lived it and built the answer we wish we'd had.
             </p>
           </div>
         </div>
@@ -166,7 +166,7 @@ export default function About() {
           <p className="font-semibold text-2xl text-gray-900">We do not sell user data.</p>
           <p className="font-semibold text-2xl text-gray-900">We do not trade people for ad revenue.</p>
           <p className="font-semibold text-2xl text-gray-900">
-            We do not hide how decisions are made behind opaque scores or rankings.
+            We do not hide how decisions are made behind hidden scores or rankings.
           </p>
 
           <p className="mt-8">
@@ -217,7 +217,7 @@ export default function About() {
           <p className="text-lg text-gray-600 mt-1">Founder & CEO, ForgeTomorrow</p>
 
           <p className="mt-10 text-lg md:text-xl text-gray-700 leading-relaxed">
-            I have lived the same story you have.
+            I've lived this too.
             I will never let this place become another wall someone cannot climb.
             If it does, it will have lost its reason to exist.
           </p>

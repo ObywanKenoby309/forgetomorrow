@@ -32,7 +32,7 @@ export default function ProductHub() {
             </h1>
 
             <p className="mt-4 text-lg md:text-xl text-gray-200 leading-relaxed">
-              A complete career system — designed to explain itself.
+              Everything you need to manage your career in one place.
             </p>
           </div>
         </section>
@@ -42,10 +42,7 @@ export default function ProductHub() {
           <div className="max-w-3xl mx-auto text-left text-gray-200 leading-relaxed">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 md:p-7">
               <p className="text-base md:text-[17px]">
-                ForgeTomorrow is not a feature set or a marketplace.
-                It is a connected system designed to reduce guesswork,
-                surface alignment, and make career decisions explainable —
-                for job seekers, recruiters, and coaches alike.
+                ForgeTomorrow brings networking, job searching, hiring, coaching, and career tools together in one place. We show you why you’re a good fit for a job, what you can improve, and what to do next.
               </p>
             </div>
           </div>
@@ -60,7 +57,7 @@ export default function ProductHub() {
             >
               <h3 className="text-xl font-semibold mb-2">Features Overview</h3>
               <p className="text-gray-300 text-sm">
-                A high-level view of the tools and systems inside ForgeTomorrow.
+                Explore the tools available for job seekers, recruiters, and coaches.
               </p>
             </Link>
 

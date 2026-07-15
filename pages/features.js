@@ -306,7 +306,7 @@ export default function Features() {
         <title>ForgeTomorrow - How the Forge Works</title>
         <meta
           name="description"
-          content="ForgeTomorrow is a connected system of capabilities designed to help people build clarity, understand alignment, and move forward with intent."
+          content="See how ForgeTomorrow's tools work together to help professionals, recruiters, and coaches make better career and hiring decisions."
         />
       </Head>
 
@@ -314,25 +314,23 @@ export default function Features() {
         {/* INTRO */}
         <section className="max-w-3xl mx-auto mb-24 text-center">
           <h1 className="text-4xl md:text-5xl font-extrabold mb-6">
-            How the Forge works as a system
+            How ForgeTomorrow works
           </h1>
           <p className="text-lg text-gray-300 leading-relaxed">
-            ForgeTomorrow is not a collection of disconnected tools. It is a system
-            built to help people create clarity, understand alignment, and move
-            forward with intent.
+            Every tool in ForgeTomorrow works together to help you build your
+            career, find opportunities, hire great people, and make better decisions.
           </p>
         </section>
 
         {/* ANVIL */}
         <section className="mb-32 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Building and refining your career{" "}
-            <span className="text-[#FF7043]">signal</span>
+            Show employers <span className="text-[#FF7043]">what you can do</span>
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto mb-10">
-            <strong className="text-[#FF7043]">The Anvil</strong> is where
-            professionals prepare before pressure is applied—through profile
-            development, negotiation readiness, and growth planning.
+            <strong className="text-[#FF7043]">The Anvil</strong> helps you build
+            your profile, prepare to negotiate job offers, and plan your next
+            career move.
           </p>
 
           <AutoCarousel
@@ -350,12 +348,12 @@ export default function Features() {
         {/* HAMMER */}
         <section className="mb-32 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Understanding fit and <span className="text-[#FF7043]">alignment</span>
+            See how well you <span className="text-[#FF7043]">match a job</span>
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto mb-10">
-            <strong className="text-[#FF7043]">The Forge Hammer</strong> helps
-            users understand alignment with opportunities—without keyword theater
-            or guessing what systems want to see.
+            <strong className="text-[#FF7043]">The Forge Hammer</strong> shows how
+            well you match a job, explains why, and suggests ways to improve your
+            match—without guessing which words to put on your resume.
           </p>
 
           {/* Slightly smaller for consistency */}
@@ -373,8 +371,8 @@ export default function Features() {
             Human support and <span className="text-[#FF7043]">guidance</span>
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto mb-10">
-            Coaches operate inside ForgeTomorrow with transparency, accountability,
-            and real tooling focused on outcomes.
+            Coaches can schedule sessions, give feedback, track progress, and help
+            clients reach their goals—all in one place.
           </p>
 
           <AutoCarousel
@@ -393,12 +391,11 @@ export default function Features() {
         {/* RECRUITERS */}
         <section className="mb-32 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Recruiter interaction and{" "}
-            <span className="text-[#FF7043]">transparency</span>
+            Hiring with <span className="text-[#FF7043]">confidence</span>
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto mb-10">
-            Recruiters work with explainable tools—not opaque scores or hidden
-            filters.
+            Recruiters can see why a candidate is a good fit instead of relying
+            on hidden scores or keyword matching.
           </p>
 
           <AutoCarousel
@@ -419,9 +416,9 @@ export default function Features() {
             <span className="text-[#FF7043]">knowledge</span>
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto mb-10">
-            <strong className="text-[#FF7043]">The Hearth</strong> is where
-            discussion, resources, and collaboration live without algorithmic
-            distortion.
+            <strong className="text-[#FF7043]">The Hearth</strong> is a place to
+            ask questions, share ideas, and learn from other professionals—without
+            endless scrolling or social media distractions.
           </p>
 
           {/* Smaller to match Hammer */}
@@ -439,9 +436,9 @@ export default function Features() {
             Direct <span className="text-[#FF7043]">communication</span>
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto mb-10">
-            <strong className="text-[#FF7043]">The Signal</strong> supports
-            intentional, professional one-to-one communication, separate from
-            feeds or engagement metrics.
+            <strong className="text-[#FF7043]">The Signal</strong> lets you send
+            private messages to coaches, recruiters, and other professionals
+            without social media noise.
           </p>
 
           <AutoCarousel
@@ -460,9 +457,9 @@ export default function Features() {
           <h2 className="text-3xl font-bold mb-6">What this is not</h2>
           <ul className="space-y-3 text-gray-300 text-lg flex flex-col items-center">
             <li>• Not a feed</li>
-            <li>• Not an ATS clone</li>
+            <li>• Not another hiring system that hides how decisions are made</li>
             <li>• Not a data marketplace</li>
-            <li>• Not engagement-driven software</li>
+            <li>• Not built to keep you scrolling</li>
           </ul>
         </section>
 
