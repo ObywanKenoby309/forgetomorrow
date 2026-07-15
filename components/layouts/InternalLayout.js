@@ -183,10 +183,6 @@ export default function InternalLayout({
   onToggleSiderails = null,
 }) {
   const router = useRouter();
-  const profileSlug =
-  typeof router.query.slug === 'string'
-    ? router.query.slug
-    : '';
   const counts = useSidebarCounts();
   const { isLoaded: planLoaded, plan, role } = usePlan();
 
@@ -258,24 +254,24 @@ export default function InternalLayout({
         return {
           HeaderComp: CoachingHeader,
           SidebarComp: CoachingSidebar,
-          sidebarProps: { active: activeNav, counts, profileSlug, },
+          sidebarProps: { active: activeNav, counts, },
         };
       case 'recruiter-smb':
       case 'recruiter-ent':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { active: activeNav, variant: chromeMode === 'recruiter-ent' ? 'enterprise' : 'smb', counts, profileSlug, },
+          sidebarProps: { active: activeNav, variant: chromeMode === 'recruiter-ent' ? 'enterprise' : 'smb', counts, },
         };
       case 'seeker':
       default:
         return {
           HeaderComp: SeekerHeader,
           SidebarComp: SeekerSidebar,
-          sidebarProps: { active: activeNav, counts, profileSlug, },
+          sidebarProps: { active: activeNav, counts, },
         };
     }
-  }, [chromeMode, activeNav, counts, profileSlug]);
+  }, [chromeMode, activeNav, counts]);
 
   const { wallpaperUrl } = useUserWallpaper();
   const effectiveLayoutWallpaper = backgroundOverrideUrl || wallpaperUrl;

@@ -79,18 +79,8 @@ function NavItem({ href, label, active, badge, dot }) {
     boxShadow: active ? ACTIVE_SHADOW : 'none',
   };
 
-  return (
-    <Link
-      href={href}
-      aria-current={active ? 'page' : undefined}
-      style={base}
-      onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.background = HOVER_BG;
-      }}
-      onMouseLeave={(e) => {
-        if (!active) e.currentTarget.style.background = 'transparent';
-      }}
-    >
+  const content = (
+    <>
       {active && (
         <span
           aria-hidden="true"
@@ -109,6 +99,29 @@ function NavItem({ href, label, active, badge, dot }) {
       <span style={{ marginLeft: active ? 6 : 0 }}>{label}</span>
       <Dot show={dot} />
       <Badge value={badge} />
+    </>
+  );
+
+  if (active) {
+    return (
+      <span aria-current="page" style={{ ...base, cursor: 'default' }}>
+        {content}
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      style={base}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = HOVER_BG;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent';
+      }}
+    >
+      {content}
     </Link>
   );
 }
