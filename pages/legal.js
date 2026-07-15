@@ -15,27 +15,40 @@ export default function LegalHub() {
 
       <main className="min-h-screen bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] text-gray-100">
         {/* HERO */}
-        <section className="relative px-6 pt-28 pb-16 text-center overflow-hidden">
-          <div
-            className="absolute inset-0 bg-[url('/images/forge-bg-bw.png')] bg-cover bg-center opacity-10"
-            aria-hidden="true"
-          />
+<section className="relative overflow-hidden -mt-20 mb-24">
+  <div
+    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+    style={{
+      backgroundImage: "url('/images/forge-bg-bw.png')",
+    }}
+  />
 
-          <div className="relative z-10 max-w-3xl mx-auto">
-            <div className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-200">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#FF7043]" />
-              Transparency · Accountability · Safety
-            </div>
+  <div className="absolute inset-0 bg-black/65" />
 
-            <h1 className="mt-6 text-4xl md:text-5xl font-semibold tracking-tight">
-              Legal
-            </h1>
+  <div
+    className="absolute inset-0"
+    style={{
+      background:
+        "radial-gradient(circle at 50% 20%, rgba(255,112,67,.12), transparent 60%)",
+    }}
+  />
 
-            <p className="mt-4 text-lg md:text-xl text-gray-200 leading-relaxed">
-              Clear policies. No hidden clauses. Respect for users and data.
-            </p>
-          </div>
-        </section>
+  <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/45 to-[#070B12]" />
+
+  <div className="relative mx-auto flex min-h-[60vh] max-w-7xl items-center justify-center px-6 py-24 sm:px-8 lg:px-10">
+    <div className="max-w-5xl text-center">
+
+      <h1 className="text-6xl font-black tracking-tight text-white sm:text-7xl lg:text-8xl">
+        Legal
+      </h1>
+
+      <p className="mt-10 max-w-3xl mx-auto text-xl leading-9 text-slate-300">
+        Clear policies. No hidden clauses. Respect for users and data.
+      </p>
+
+    </div>
+  </div>
+</section>
 
         {/* PHILOSOPHY */}
         <section className="px-6 pb-10">
