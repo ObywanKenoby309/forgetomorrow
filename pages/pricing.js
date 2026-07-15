@@ -156,7 +156,6 @@ return (
       {/* HERO */}
       <section
         className="relative overflow-hidden"
-        style={{ marginTop: "-40px", marginBottom: "64px" }}
       >
         <div
           style={{
@@ -200,21 +199,21 @@ return (
           style={{
             position: "relative",
             maxWidth: 1280,
-            minHeight: "60vh",
+            minHeight: "100vh",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             margin: "0 auto",
-            padding: "96px 24px",
+            padding: "0 24px",
             textAlign: "center",
           }}
         >
           <div style={{ maxWidth: 900 }}>
             <h1
               style={{
-                fontSize: "clamp(64px,8vw,120px)",
+                fontSize: "clamp(42px,7vw,80px)",
                 fontWeight: 900,
-                lineHeight: ".95",
+                lineHeight: "1.02",
                 margin: 0,
               }}
             >
@@ -223,10 +222,11 @@ return (
 
             <p
               style={{
-                marginTop: 32,
-                fontSize: "clamp(20px,2vw,36px)",
-                color: "#FF7043",
-                fontWeight: 700,
+                marginTop: 12,
+fontSize: "clamp(34px,5.5vw,64px)",
+fontWeight: 800,
+color: "#FF7043",
+lineHeight: 1.02,
               }}
             >
               Simple, transparent pricing.
@@ -234,10 +234,10 @@ return (
 
             <p
               style={{
-                margin: "22px auto 0",
-                maxWidth: 620,
-                fontSize: "clamp(16px,2vw,20px)",
-                lineHeight: 1.6,
+                margin: "24px auto 48px",
+maxWidth: 560,
+fontSize: "clamp(16px,2vw,20px)",
+lineHeight: 1.6,
                 color: "rgba(255,255,255,.75)",
               }}
             >
