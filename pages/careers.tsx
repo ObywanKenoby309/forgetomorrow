@@ -107,7 +107,7 @@ export default function Careers() {
       </section>
 
       {/* NO OPEN ROLES + TALENT FORM */}
-      <section className="py-24 bg-[#1a1a1a] text-gray- 100 text-center">
+      <section className="py-24 bg-[#1a1a1a] text-gray-100 text-center">
         <div className="max-w-4xl mx-auto px-6 space-y-12">
           <h2 className="text-4xl md:text-5xl font-black text-[#FF7043]">
             No open roles right now.
