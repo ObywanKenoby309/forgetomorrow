@@ -34,6 +34,8 @@ export const authOptions: NextAuthOptions = {
               avatarUrl: true,
 			  headline: true,
               foundryBackground: true,
+			  
+			  slug: true,
             },
           });
 
@@ -71,6 +73,7 @@ export const authOptions: NextAuthOptions = {
             avatarUrl: user.avatarUrl ?? null,
 			headline: user.headline ?? null,
             foundryBackground: user.foundryBackground ?? null,
+			slug: user.slug,
           };
         } catch (err) {
           console.error("[nextauth][credentials][authorize] error:", err);
