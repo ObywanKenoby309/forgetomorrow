@@ -185,18 +185,19 @@ function AdvertiseContent({ isInternal }) {
 </h1>
 
           <p
-            style={{
-              margin: '36 auto 28px',
-              maxWidth: isInternal ? 700 : 600,
-              fontSize: isInternal ? 'clamp(13px, 1.35vw, 17px)' : 'clamp(16px, 2.2vw, 20px)',
-              lineHeight: 1.5,
-              color: 'rgba(255,255,255,0.78)',
-              fontWeight: 400,
-            }}
-          >
-            ForgeTomorrow places your brand inside real career moments - not passive scrolling, not
-            surveillance, just intent.
-          </p>
+  style={{
+    margin: '24px auto 48px',
+    maxWidth: 560,
+    fontSize: 'clamp(16px, 2vw, 20px)',
+    lineHeight: 1.6,
+    color: 'rgba(255,255,255,0.72)',
+    fontWeight: 400,
+    letterSpacing: '0.01em',
+  }}
+>
+  ForgeTomorrow places your brand inside real career moments—not passive
+  scrolling, not surveillance, just intent.
+</p>
 
           <a
             href="#inquire"
