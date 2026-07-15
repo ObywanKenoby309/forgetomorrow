@@ -662,13 +662,24 @@ return (
             justify-content: center;
           }
 
+          
+          .skip-link{position:absolute;left:16px;top:-48px;background:#FF7043;color:#fff;padding:12px 16px;border-radius:8px;z-index:10000;text-decoration:none;font-weight:700;}
+          .skip-link:focus{top:16px;}
+          *:focus-visible{outline:3px solid #FFB199;outline-offset:3px;}
+          @media (prefers-reduced-motion: reduce){
+            *,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important;}
+          }
+
           /* Util */
+
           .max-container { max-width: 1100px; margin: 0 auto; }
           .text-center { text-align: center; }
         `}</style>
       </Head>
 
-      <main>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
+
+      <main id="main-content">
 
         {checkingSession && (
           <div aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(10,10,11,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FF7043', fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12 }}>
@@ -725,7 +736,7 @@ return (
                   'You have to guess if the job is really right for you.',
                 ].map((t, i) => (
                   <div className="problem-item" key={i}>
-                    <div className="problem-icon bad">✕</div>
+                    <div className="problem-icon bad" aria-hidden="true">✕</div>
                     <div className="problem-text">{t}</div>
                   </div>
                 ))}
@@ -740,7 +751,7 @@ return (
                   'One complete system for seekers, recruiters, and coaches',
                 ].map((t, i) => (
                   <div className="problem-item" key={i}>
-                    <div className="problem-icon good">✓</div>
+                    <div className="problem-icon good" aria-hidden="true">✓</div>
                     <div className="problem-text">{t}</div>
                   </div>
                 ))}
@@ -762,7 +773,7 @@ return (
             <div className="showcase-img-wrap">
               <img
                 src="/images/forge-platform-overview-v1.png"
-                alt="ForgeTomorrow platform overview"
+                alt="Screenshot of the ForgeTomorrow platform showing networking, career tools, recruiting, and coaching workspaces."
                 loading="lazy"
               />
             </div>
@@ -787,7 +798,7 @@ return (
               { icon: '📊', title: 'Coaching Workspace', desc: 'Manage sessions, feedback, calendars, and client growth.' },
             ].map((c, i) => (
               <div className="cap-card" key={i}>
-                <div className="cap-icon">{c.icon}</div>
+                <div className="cap-icon" aria-hidden="true">{c.icon}</div>
                 <div className="cap-title">{c.title}</div>
                 <div className="cap-desc">{c.desc}</div>
               </div>
