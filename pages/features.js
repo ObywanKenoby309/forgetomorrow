@@ -311,16 +311,46 @@ export default function Features() {
       </Head>
 
       <main className="mx-auto max-w-6xl px-6 py-20 text-gray-100">
-        {/* INTRO */}
-        <section className="max-w-3xl mx-auto mb-24 text-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-6">
-            How ForgeTomorrow works
-          </h1>
-          <p className="text-lg text-gray-300 leading-relaxed">
-            Every tool in ForgeTomorrow works together to help you build your
-            career, find opportunities, hire great people, and make better decisions.
-          </p>
-        </section>
+        {/* HERO */}
+<section className="relative overflow-hidden -mt-20 mb-24">
+  <div
+    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+    style={{
+      backgroundImage: "url('/images/forge-bg-bw.png')",
+    }}
+  />
+
+  <div className="absolute inset-0 bg-black/65" />
+
+  <div
+    className="absolute inset-0"
+    style={{
+      background:
+        "radial-gradient(circle at 50% 20%, rgba(255,112,67,.12), transparent 60%)",
+    }}
+  />
+
+  <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/45 to-[#070B12]" />
+
+  <div className="relative mx-auto flex min-h-[60vh] max-w-7xl items-center justify-center px-6 py-24 sm:px-8 lg:px-10">
+    <div className="max-w-5xl text-center">
+
+      <h1 className="text-6xl font-black tracking-tight text-white sm:text-7xl lg:text-8xl">
+        How ForgeTomorrow
+        <br />
+        <span className="text-[#F07F52]">
+          works.
+        </span>
+      </h1>
+
+      <p className="mt-10 max-w-3xl mx-auto text-xl leading-9 text-slate-300">
+        Every tool works together to help you build your career,
+        find opportunities, hire great people, and make better decisions.
+      </p>
+
+    </div>
+  </div>
+</section>
 
         {/* ANVIL */}
         <section className="mb-32 text-center">

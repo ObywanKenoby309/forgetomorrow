@@ -165,43 +165,28 @@ function AdvertiseContent({ isInternal }) {
             padding: isInternal ? '16px 20px' : '0 24px',
           }}
         >
-          <div
-            style={{
-              display: 'inline-block',
-              marginBottom: isInternal ? 14 : 20,
-              padding: isInternal ? '5px 12px' : '6px 14px',
-              borderRadius: 999,
-              border: '1px solid rgba(255,112,67,0.40)',
-              background: 'rgba(255,112,67,0.12)',
-              color: ORANGE,
-              fontSize: isInternal ? 10 : 11,
-              fontWeight: 700,
-              letterSpacing: '0.10em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Advertise with ForgeTomorrow
-          </div>
 
           <h1
-            style={{
-              margin: '0 0 12px',
-              fontSize: isInternal ? 'clamp(26px, 3.7vw, 46px)' : 'clamp(38px, 7vw, 80px)',
-              fontWeight: 900,
-              lineHeight: 1.02,
-              letterSpacing: '-0.04em',
-              color: '#ffffff',
-              textShadow: '0 8px 40px rgba(0,0,0,0.50)',
-            }}
-          >
-            Be seen where
-            <br />
-            <span style={{ color: ORANGE }}>decisions are made.</span>
-          </h1>
+  style={{
+    margin: 0,
+    fontSize: isInternal ? 'clamp(34px,4vw,52px)' : 'clamp(64px,8vw,96px)',
+    fontWeight: 900,
+    lineHeight: 0.95,
+    letterSpacing: '-0.04em',
+    color: '#ffffff',
+    textShadow: '0 8px 40px rgba(0,0,0,0.50)',
+  }}
+>
+  Reach people
+  <br />
+  <span style={{ color: ORANGE }}>
+    when they're ready to act.
+  </span>
+</h1>
 
           <p
             style={{
-              margin: '0 auto 20px',
+              margin: '36 auto 28px',
               maxWidth: isInternal ? 700 : 600,
               fontSize: isInternal ? 'clamp(13px, 1.35vw, 17px)' : 'clamp(16px, 2.2vw, 20px)',
               lineHeight: 1.5,
@@ -237,7 +222,7 @@ function AdvertiseContent({ isInternal }) {
               e.currentTarget.style.boxShadow = '0 8px 28px rgba(255,112,67,0.40)';
             }}
           >
-            Claim Your Place →
+            Start the Conversation
           </a>
         </div>
       </section>
