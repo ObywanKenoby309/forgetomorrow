@@ -9,7 +9,7 @@ export default function PressKit() {
       <Head>
         <title>ForgeTomorrow • Press Kit</title>
         <meta name="robots" content="noindex" />
-      </Head>
+      <style>{`.skip-link{position:absolute;left:16px;top:-48px;background:#FF7043;color:#fff;padding:12px 16px;border-radius:8px;z-index:10000;text-decoration:none;font-weight:700}.skip-link:focus{top:16px}*:focus-visible{outline:3px solid #FFB199;outline-offset:3px}@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}`}</style></Head>
 
       <main
         className="min-h-screen bg-gray-100 py-24 px-8"

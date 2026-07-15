@@ -6,6 +6,7 @@ export default function InvestorRelations() {
 	const [showVideo, setShowVideo] = useState(false);
   return (
     <>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <Head>
         <title>Investor Relations | ForgeTomorrow</title>
         <meta
@@ -14,7 +15,7 @@ export default function InvestorRelations() {
         />
       </Head>
 
-      <main className="min-h-screen overflow-hidden bg-[#070B12] text-white">
+      <main id="main-content" className="min-h-screen overflow-hidden bg-[#070B12] text-white">
         <section className="relative overflow-hidden">
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -93,7 +94,7 @@ export default function InvestorRelations() {
 
           <div className="grid gap-6 md:grid-cols-3">
             <a href="/FT_Investor_Walkthrough.pdf" className="group rounded-3xl border border-white/10 bg-white/[0.055] p-7 shadow-[0_20px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl transition hover:-translate-y-1 hover:border-[#E85D2F]/45 hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-[#FFB199] focus:ring-offset-2 focus:ring-offset-[#070B12]">
-              <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E85D2F]/35 bg-[#E85D2F]/12 text-xl">📄</div>
+              <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E85D2F]/35 bg-[#E85D2F]/12 text-xl" aria-hidden="true">📄</div>
               <h3 className="text-xl font-bold text-white">Investor Deck</h3>
               <p className="mt-3 text-sm leading-6 text-slate-300">Review the complete ForgeTomorrow investor walkthrough.</p>
               <p className="mt-6 text-sm font-semibold text-[#FFB199]">Open deck →</p>
@@ -123,7 +124,7 @@ export default function InvestorRelations() {
 </div>
 
             <a href="mailto:investors@forgetomorrow.com" className="group rounded-3xl border border-white/10 bg-white/[0.055] p-7 shadow-[0_20px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl transition hover:-translate-y-1 hover:border-[#E85D2F]/45 hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-[#FFB199] focus:ring-offset-2 focus:ring-offset-[#070B12]">
-              <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E85D2F]/35 bg-[#E85D2F]/12 text-xl">✉</div>
+              <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E85D2F]/35 bg-[#E85D2F]/12 text-xl" aria-hidden="true">✉</div>
               <h3 className="text-xl font-bold text-white">Contact Investors</h3>
               <p className="mt-3 text-sm leading-6 text-slate-300">Reach the ForgeTomorrow investor inbox directly.</p>
               <p className="mt-6 break-all text-sm font-semibold text-[#FFB199]">investors@forgetomorrow.com</p>
@@ -157,6 +158,7 @@ export default function InvestorRelations() {
     >
 
       <button
+        aria-label="Close video"
         onClick={() => setShowVideo(false)}
         className="absolute -top-12 right-0 text-3xl text-white transition hover:text-[#F07F52]"
       >
@@ -179,6 +181,32 @@ export default function InvestorRelations() {
   </div>
 )}
       </main>
+      <style jsx>{`
+        .skip-link{
+          position:absolute;
+          left:16px;
+          top:-48px;
+          background:#FF7043;
+          color:#fff;
+          padding:12px 16px;
+          border-radius:8px;
+          z-index:10000;
+          text-decoration:none;
+          font-weight:700;
+        }
+        .skip-link:focus{top:16px;}
+        *:focus-visible{
+          outline:3px solid #FFB199;
+          outline-offset:3px;
+        }
+        @media (prefers-reduced-motion: reduce){
+          *,*::before,*::after{
+            animation:none!important;
+            transition:none!important;
+            scroll-behavior:auto!important;
+          }
+        }
+      `}</style>
     </>
   );
 }
