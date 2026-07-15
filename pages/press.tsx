@@ -39,7 +39,7 @@ export default function PressKit() {
             >
               Download Full Press Kit (ZIP)
             </Link>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-400">
               Includes logos, brand assets, founder + company info, and product screenshots.
             </p>
           </div>
