@@ -2328,12 +2328,12 @@ flushPendingSaveRef.current = flushPendingSave;
     </div>
   );
 
-return (
 console.log('PROFILE PAGE SLUG', {
   slug,
   profileSlug,
   savedProfileSlug,
 });
+return (
   <InternalLayout
     title={`${fullName} — ForgeTomorrow`}
     activeNav="profile"
