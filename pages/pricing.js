@@ -112,14 +112,17 @@ export default function PricingPage() {
     boxSizing: "border-box",
   };
 
-  const asideStyle = {
-    backgroundColor: "#0b0b0b",
-    borderRadius: 12,
-    padding: 24,
-    color: "white",
-    height: "fit-content",
-    marginTop: isMobile ? 24 : 0,
-  };
+ const asideStyle = {
+  background: "rgba(255,255,255,.055)",
+  border: "1px solid rgba(255,255,255,.10)",
+  borderRadius: 18,
+  padding: 24,
+  color: "#fff",
+  height: "fit-content",
+  marginTop: isMobile ? 24 : 0,
+  boxShadow: "0 20px 70px rgba(0,0,0,.28)",
+  backdropFilter: "blur(18px)",
+};
 
   // ✅ Group definitions (3 / 2 / 2)
   const groups = [
@@ -137,30 +140,133 @@ export default function PricingPage() {
     },
   ];
 
-  return (
-    <>
-      <Head>
-        <title>ForgeTomorrow — Choose Your Plan</title>
-      </Head>
+return (
+  <>
+    <Head>
+      <title>ForgeTomorrow — Choose Your Plan</title>
+    </Head>
 
-      <div style={containerStyle}>
-        <main
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "#070B12",
+        color: "#ffffff",
+      }}
+    >
+      {/* HERO */}
+      <section
+        className="relative overflow-hidden"
+        style={{ marginTop: "-40px", marginBottom: "64px" }}
+      >
+        <div
           style={{
-            display: "block",
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "url('/images/forge-bg-bw.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+			backgroundRepeat: "no-repeat",
+			opacity: 1,
+          }}
+        />
+
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(0,0,0,.65)",
+          }}
+        />
+
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "radial-gradient(circle at 50% 20%, rgba(255,112,67,.12), transparent 60%)",
+          }}
+        />
+
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(to bottom, rgba(0,0,0,.20), rgba(0,0,0,.45), #070B12)",
+          }}
+        />
+
+        <div
+          style={{
+            position: "relative",
+            maxWidth: 1280,
+            minHeight: "60vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto",
+            padding: "96px 24px",
+            textAlign: "center",
           }}
         >
+          <div style={{ maxWidth: 900 }}>
+            <h1
+              style={{
+                fontSize: "clamp(64px,8vw,120px)",
+                fontWeight: 900,
+                lineHeight: ".95",
+                margin: 0,
+              }}
+            >
+              Pricing
+            </h1>
+
+            <p
+              style={{
+                marginTop: 32,
+                fontSize: "clamp(20px,2vw,36px)",
+                color: "#FF7043",
+                fontWeight: 700,
+              }}
+            >
+              Simple, transparent pricing.
+            </p>
+
+            <p
+              style={{
+                margin: "22px auto 0",
+                maxWidth: 620,
+                fontSize: "clamp(16px,2vw,20px)",
+                lineHeight: 1.6,
+                color: "rgba(255,255,255,.75)",
+              }}
+            >
+              No hidden fees. No surprise upgrades.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div style={containerStyle}>
+<div
+  style={{
+    display: "block",
+  }}
+>
           {groups.map((group, idx) => {
             const isTwoCol = !isMobile && group.keys.length === 2;
 
             return (
-              <section key={idx} style={{ marginBottom: 28 }}>
+              <section key={idx} style={{ marginBottom: 56 }}>
                 <div
   style={{
     fontSize: "0.95rem",
     fontWeight: 700,
-    color: "#222",
-    marginBottom: 12,
-    textAlign: "center", // ✅ always centered
+color: "#FFB199",
+marginBottom: 18,
+textAlign: "center",
+textTransform: "uppercase",
+letterSpacing: ".20em",
   }}
 >
   {group.title}
@@ -194,49 +300,50 @@ export default function PricingPage() {
                         role="region"
                         aria-label={`${plan.name} plan`}
                         style={{
-                          border: "2px solid #111",
-                          borderRadius: 12,
-                          padding: 24,
-                          textAlign: "left",
-                          background: "#ffffff",
-                          color: "#111",
-                          boxShadow: "0 6px 20px rgba(0,0,0,0.04)",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "space-between",
-                          minHeight: 260,
-                        }}
+  border: "1px solid rgba(255,255,255,.10)",
+  borderRadius: 18,
+  padding: 24,
+  textAlign: "left",
+  background: "rgba(255,255,255,.055)",
+  color: "#fff",
+  boxShadow: "0 20px 70px rgba(0,0,0,.28)",
+  backdropFilter: "blur(18px)",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "space-between",
+  minHeight: 260,
+}}
                       >
                         <div>
                           <h2
-                            style={{
-                              fontSize: "1.25rem",
-                              marginBottom: 6,
-                              color: "#111",
-                              fontWeight: 700,
-                            }}
-                          >
+  style={{
+    fontSize: "1.25rem",
+    marginBottom: 6,
+    color: "#ffffff",
+    fontWeight: 700,
+  }}
+>
                             {plan.name}
                           </h2>
                           <p
-                            style={{
-                              fontSize: "1.6rem",
-                              fontWeight: 700,
-                              margin: "8px 0 18px",
-                              color: "#111",
-                            }}
-                          >
+  style={{
+    fontSize: "1.6rem",
+    fontWeight: 700,
+    margin: "8px 0 18px",
+    color: "#ffffff",
+  }}
+>
                             {plan.price}
                           </p>
 
                           <div
-                            style={{
-                              fontSize: "0.95rem",
-                              lineHeight: "1.5",
-                              color: "#222",
-                              marginBottom: 18,
-                            }}
-                          >
+  style={{
+    fontSize: "0.95rem",
+    lineHeight: "1.5",
+    color: "#CBD5E1",
+    marginBottom: 18,
+  }}
+>
                             {key === "job-seeker-free" && (
                               <>
                                 <p style={{ margin: "6px 0" }}>
@@ -358,7 +465,7 @@ export default function PricingPage() {
                                 display: "block",
                                 marginTop: 12,
                                 textAlign: "center",
-                                color: "#111",
+                                color: "#FFB199",
                                 textDecoration: "underline",
 
                                 maxWidth: "100%",
@@ -378,7 +485,7 @@ export default function PricingPage() {
                                 display: "block",
                                 marginTop: 12,
                                 textAlign: "center",
-                                color: "#111",
+                                color: "#FFB199",
                                 textDecoration: "underline",
                                 maxWidth: "100%",
                                 overflowWrap: "anywhere",
@@ -397,7 +504,7 @@ export default function PricingPage() {
               </section>
             );
           })}
-        </main>
+        </div>
 
         <aside style={asideStyle}>
           <h3 style={{ fontSize: "1.25rem", marginBottom: 12 }}>Need Help?</h3>
@@ -405,7 +512,7 @@ export default function PricingPage() {
             style={{
               marginBottom: 16,
               fontSize: "0.95rem",
-              color: "#ddd",
+              color: "#CBD5E1",
             }}
           >
             Our team is here to guide you in choosing the right plan.
@@ -428,7 +535,7 @@ export default function PricingPage() {
             style={{
               marginTop: 18,
               fontSize: "0.85rem",
-              color: "#bbb",
+              color: "#CBD5E1",
             }}
           >
             <p style={{ marginBottom: 6 }}>
@@ -438,9 +545,10 @@ export default function PricingPage() {
               Free accounts activate instantly. Paid plans proceed to secure
               checkout.
             </p>
-          </div>
-        </aside>
-      </div>
+           </div>
+         </aside>
+        </div>
+	  </main>
     </>
   );
 }
