@@ -4,6 +4,8 @@ import Image from "next/image";
 export default function About() {
   return (
     <>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
+      <main id="main-content">
       {/* HERO */}
       <section
         className="relative min-h-screen flex items-center justify-center bg-cover bg-center"
@@ -206,7 +208,7 @@ export default function About() {
           <div className="flex justify-center mb-8">
             <Image
               src="/images/headshot-eric.jpg"
-              alt="Eric James"
+              alt="Portrait of Eric James, Founder and CEO of ForgeTomorrow."
               width={140}
               height={140}
               className="rounded-full"
@@ -225,6 +227,14 @@ export default function About() {
           <p className="mt-6 font-semibold text-gray-900">That is my word.</p>
         </div>
       </section>
+      </main>
+
+      <style jsx>{`
+.skip-link{position:absolute;left:16px;top:-48px;background:#FF7043;color:#fff;padding:12px 16px;border-radius:8px;z-index:9999;text-decoration:none;font-weight:700;}
+.skip-link:focus{top:16px;}
+*:focus-visible{outline:3px solid #FFB199;outline-offset:3px;}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+`}</style>
     </>
   );
 }

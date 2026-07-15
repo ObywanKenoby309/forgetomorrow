@@ -13,7 +13,9 @@ export default function CompanyHub() {
         />
       </Head>
 
-      <main className="min-h-screen bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] text-gray-100">
+      <a href="#main-content" className="skip-link">Skip to main content</a>
+
+      <main id="main-content" className="min-h-screen bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] text-gray-100">
         {/* HERO / ORIENTATION */}
         <section className="relative px-6 pt-28 pb-16 text-center overflow-hidden">
           {/* Forge background */}
@@ -30,54 +32,29 @@ export default function CompanyHub() {
           </div>
 
           <div className="relative z-10 max-w-3xl mx-auto">
-            <div className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-200">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#FF7043]" />
-              Built with clarity • Humans first
-            </div>
-
-            <h1 className="mt-6 text-4xl md:text-5xl font-semibold tracking-tight">
+<h1 className="text-5xl font-bold leading-[0.95] tracking-tight text-white sm:text-7xl lg:text-8xl">
               Company
             </h1>
 
-            <p className="mt-4 text-lg md:text-xl text-gray-200 leading-relaxed">
-              Who we are, how we operate, and what we stand for.
-              <span className="text-[#FF7043] font-semibold"> Less noise. More truth.</span>
+            <p className="mt-10 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
+              Everything you need to know
+              <br />
+              <span className="text-[#F07F52]">about ForgeTomorrow.</span>
             </p>
 
-            {/* Micro-actions (quiet, not salesy) */}
-            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center items-center">
-              <Link
-                href="/contact"
-                className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-gray-100 hover:bg-white/10 hover:border-white/25 transition focus:outline-none focus:ring-4 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-black"
-              >
-                Contact us
-              </Link>
-              <span className="text-xs text-gray-400">
-                Prefer details? Use the links below. No fluff.
-              </span>
-            </div>
+            <p className="mt-8 max-w-3xl mx-auto text-lg leading-9 text-slate-300 sm:text-xl">
+              Learn who we are, why we built ForgeTomorrow, how we operate, and where we're headed.
+            </p>
           </div>
-        </section>
+</section>
 
         {/* PHILOSOPHY */}
         <section className="px-6 pb-10">
           <div className="max-w-3xl mx-auto text-left text-gray-200 leading-relaxed">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 md:p-7 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
               <p className="text-base md:text-[17px]">
-                ForgeTomorrow is built by people who believe careers should be guided by clarity, not guesswork.
-                We operate with transparency, accountability, and respect for the people who trust us with their futures.
+                ForgeTomorrow exists to build a hiring system that treats people with dignity. We believe careers should be guided by evidence, transparency, and opportunity—not hidden algorithms or guesswork. Everything we build is intended to help professionals, recruiters, and coaches make better decisions together.
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-gray-300">
-                  Proof over keywords
-                </span>
-                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-gray-300">
-                  Explain decisions
-                </span>
-                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-gray-300">
-                  Protect dignity
-                </span>
-              </div>
             </div>
           </div>
         </section>
@@ -197,6 +174,14 @@ export default function CompanyHub() {
 
         {/* Local-only styles (keeps changes contained to this page) */}
         <style jsx>{`
+
+          .skip-link{position:absolute;left:16px;top:-48px;background:#FF7043;color:#fff;padding:12px 16px;border-radius:8px;z-index:9999;text-decoration:none;font-weight:700;}
+          .skip-link:focus{top:16px;}
+          *:focus-visible{outline:3px solid #FFB199;outline-offset:3px;}
+          @media (prefers-reduced-motion: reduce){
+            *,*::before,*::after{animation:none!important;transition:none!important;}
+          }
+
           @keyframes ftGlow {
             0% {
               transform: translate(-50%, 0) scale(1);
