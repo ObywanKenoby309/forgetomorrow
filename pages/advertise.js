@@ -195,8 +195,7 @@ function AdvertiseContent({ isInternal }) {
     letterSpacing: '0.01em',
   }}
 >
-  ForgeTomorrow places your brand inside real career moments—not passive
-  scrolling, not surveillance, just intent.
+  ForgeTomorrow places your brand inside real career moments. Not passive scrolling. Not surveillance. Just intent.
 </p>
 
           <a
