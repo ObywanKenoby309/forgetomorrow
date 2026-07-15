@@ -2328,23 +2328,33 @@ flushPendingSaveRef.current = flushPendingSave;
     </div>
   );
 
-  return (
-    <InternalLayout
-      title={`${fullName} — ForgeTomorrow`} activeNav="profile" header={null}
-      right={editMode
-        ? <ProfileSignalEngine profileData={liveProfileData} onApply={handleApplyField} />
-        : <RightRailPlacementManager />
-      }
-      rightVariant="dark"
-      backgroundOverrideUrl={effectiveWallpaper}
-      collapseSiderails={siderailsCollapsed}
-      onToggleSiderails={() => setSiderailsCollapsed(s => !s)}
-    >
-      {pageContent}
-    </InternalLayout>
-  );
+return (
+  <InternalLayout
+    title={`${fullName} — ForgeTomorrow`}
+    activeNav="profile"
+    profileSlug={profileSlug || savedProfileSlug}
+    header={null}
+    right={
+      editMode
+        ? (
+            <ProfileSignalEngine
+              profileData={liveProfileData}
+              onApply={handleApplyField}
+            />
+          )
+        : (
+            <RightRailPlacementManager />
+          )
+    }
+    rightVariant="dark"
+    backgroundOverrideUrl={effectiveWallpaper}
+    collapseSiderails={siderailsCollapsed}
+    onToggleSiderails={() => setSiderailsCollapsed(s => !s)}
+  >
+    {pageContent}
+  </InternalLayout>
+);
 }
-
 
 function AssetPicker({ type, items = [], selectedSrc, onSelect, noneLabel, noneSelected, onNone, mobileCompact = false }) {
   const [open, setOpen] = useState(false);

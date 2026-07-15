@@ -168,6 +168,7 @@ export default function InternalLayout({
   right,
   children,
   activeNav,
+  profileSlug = '',
 
   forceChrome,
   chrome,
@@ -254,21 +255,21 @@ export default function InternalLayout({
         return {
           HeaderComp: CoachingHeader,
           SidebarComp: CoachingSidebar,
-          sidebarProps: { active: activeNav, counts, },
+          sidebarProps: { active: activeNav, counts, profileSlug },
         };
       case 'recruiter-smb':
       case 'recruiter-ent':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { active: activeNav, variant: chromeMode === 'recruiter-ent' ? 'enterprise' : 'smb', counts, },
+          sidebarProps: { active: activeNav, variant: chromeMode === 'recruiter-ent' ? 'enterprise' : 'smb', counts, profileSlug, },
         };
       case 'seeker':
       default:
         return {
           HeaderComp: SeekerHeader,
           SidebarComp: SeekerSidebar,
-          sidebarProps: { active: activeNav, counts, },
+          sidebarProps: { active: activeNav, counts, profileSlug },
         };
     }
   }, [chromeMode, activeNav, counts]);
