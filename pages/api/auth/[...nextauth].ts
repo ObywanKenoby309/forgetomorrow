@@ -118,6 +118,7 @@ export const authOptions: NextAuthOptions = {
         (token as any).avatarUrl = (user as any).avatarUrl ?? null;
 		(token as any).headline = (user as any).headline ?? null;
         (token as any).foundryBackground = (user as any).foundryBackground ?? null;
+		(token as any).slug = (user as any).slug ?? null;
       }
       return token;
     },
@@ -133,6 +134,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).avatarUrl = (token as any).avatarUrl ?? null;
 		(session.user as any).headline = (token as any).headline ?? null;
         (session.user as any).foundryBackground = (token as any).foundryBackground ?? null;
+		(session.user as any).slug = (token as any).slug ?? null;
         (session.user as any).image =
           (token as any).avatarUrl ?? (session.user as any).image ?? null;
       }
