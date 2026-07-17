@@ -18,6 +18,7 @@ import CoachInbox from "@/components/coaching/CoachInbox";
 import SeekerInbox from "@/components/seeker/SeekerInbox";
 import CoachCalendar from "@/components/coaching/CoachCalendar";
 import CoachResources from "@/components/coaching/CoachResources";
+import CoachFeedback from "@/components/coaching/CoachFeedback";
 
 const DEFAULT_SUB_TABS = {
   dashboard: "dashboard",
@@ -111,7 +112,10 @@ export default function CoachingWorkspaceMock() {
 				  activeSubTab === "calendar" && <CoachCalendar />}
 				  
 				{activeWorkspace === "resources" &&
-				  activeSubTab === "resources" && <CoachResources />}				  
+				  activeSubTab === "resources" && <CoachResources />}
+
+				{activeWorkspace === "feedback" &&
+				  activeSubTab === "feedback" && <CoachFeedback />}				  
               </div>
             </>
           ) : null}
