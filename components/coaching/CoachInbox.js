@@ -640,154 +640,40 @@ function CoachInboxContainer() {
     }
   };
 
-  const greeting = getTimeGreeting();
-
-  const HeaderBox = (
-    <CoachingTitleCard
-      greeting={greeting}
-      title="Messaging"
-      subtitle="Manage coach conversations, saved replies, and group outreach in one place."
-      compact
-    />
-  );
-
   if (loadingUser) {
-    return (
-      <PlanProvider>
-        <CoachingLayout
-          title="Messaging — ForgeTomorrow"
-          header={HeaderBox}
-          headerCard={false}
-          right={<RightToolsCard />}
-          rightVariant="light"
-          activeNav="coach-messages"
-          footer={null}
-        >
-          <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
-            <div
-              style={{
-                ...WHITE_CARD,
-                minHeight: 256,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                color: MUTED,
-                fontSize: 14,
-                fontWeight: 600,
-              }}
-            >
-              <div>Loading…</div>
-              {slowSession ? (
-                <div style={{ marginTop: 8, fontSize: 11, color: "#94A3B8", fontWeight: 500 }}>
-                  Session is taking longer than expected. This usually resolves within a few seconds.
-                </div>
-              ) : null}
-            </div>
-          </section>
-        </CoachingLayout>
-      </PlanProvider>
-    );
+    return <div>Loading...</div>;
   }
 
   if (!currentUserId) {
-    return (
-      <PlanProvider>
-        <CoachingLayout
-          title="Messaging — ForgeTomorrow"
-          header={HeaderBox}
-          headerCard={false}
-          right={<RightToolsCard />}
-          rightVariant="light"
-          activeNav="coach-messages"
-          footer={null}
-        >
-          <section style={{ ...GLASS, ...GLASS_OVERLAY, padding: 16 }}>
-            <div style={{ ...WHITE_CARD, padding: 16 }}>
-              <div style={{ fontWeight: 800, fontSize: 16, color: "#0F172A" }}>
-                Session failed to load
-              </div>
-              <p style={{ marginTop: 6, fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
-                {sessionError || "We could not resolve your session."}
-              </p>
-              <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
-                <button
-                  style={{
-                    borderRadius: 10,
-                    background: "#0F172A",
-                    color: "white",
-                    padding: "10px 14px",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => window.location.reload()}
-                >
-                  Retry
-                </button>
-                <button
-                  style={{
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    background: "white",
-                    color: "#0F172A",
-                    padding: "10px 14px",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                  onClick={() => router.push("/auth/signin")}
-                >
-                  Sign in
-                </button>
-              </div>
-            </div>
-          </section>
-        </CoachingLayout>
-      </PlanProvider>
-    );
+    return <div>Session failed to load.</div>;
   }
 
   return (
-    <PlanProvider>
-      <CoachingLayout
-        title="Messaging — ForgeTomorrow"
-        header={HeaderBox}
-        headerCard={false}
-        right={<RightToolsCard />}
-          rightVariant="light"
-        activeNav="coach-messages"
-        footer={null}
-      >
-        <CoachInbox
-          threads={threads}
-          threadRef={threadRef}
-          onSend={onSend}
-          recipients={recipients}
-          bulkOpen={bulkOpen}
-          setBulkOpen={setBulkOpen}
-          savedRepliesOpen={savedRepliesOpen}
-          setSavedRepliesOpen={setSavedRepliesOpen}
-          initialThreadId={initialThreadId}
-          prefillText={prefillText}
-          onBulkSendDb={onBulkSendDb}
-          onActiveThreadChange={(t) => {
-            setActiveThread(t);
-            setIsBlocked(false);
-            setActiveHomeLocation(t?.homeLocation || "coach");
-          }}
-          isBlocked={isBlocked}
-          onDelete={handleDelete}
-          onReport={handleReport}
-          onBlock={handleBlock}
-          onSetHome={handleSetHome}
-          activeHomeLocation={activeHomeLocation}
-          movingHome={movingHome}
-        />
-      </CoachingLayout>
-    </PlanProvider>
+    <CoachInbox
+      threads={threads}
+      threadRef={threadRef}
+      onSend={onSend}
+      recipients={recipients}
+      bulkOpen={bulkOpen}
+      setBulkOpen={setBulkOpen}
+      savedRepliesOpen={savedRepliesOpen}
+      setSavedRepliesOpen={setSavedRepliesOpen}
+      initialThreadId={initialThreadId}
+      prefillText={prefillText}
+      onBulkSendDb={onBulkSendDb}
+      onActiveThreadChange={(t) => {
+        setActiveThread(t);
+        setIsBlocked(false);
+        setActiveHomeLocation(t?.homeLocation || "coach");
+      }}
+      isBlocked={isBlocked}
+      onDelete={handleDelete}
+      onReport={handleReport}
+      onBlock={handleBlock}
+      onSetHome={handleSetHome}
+      activeHomeLocation={activeHomeLocation}
+      movingHome={movingHome}
+    />
   );
 }
-
 export default CoachInboxContainer;
