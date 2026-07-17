@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import Head from "next/head";
 import CoachingHeader from "@/components/coaching/CoachingHeader";
 import CoachWorkspaceToolbar from "@/components/coaching/CoachWorkspaceToolbar";
+import CoachInbox from "@/components/coaching/CoachInbox";
 
 const DEFAULT_SUB_TABS = {
   clients: "overview",
@@ -25,8 +26,8 @@ const DEFAULT_SUB_TABS = {
 };
 
 export default function CoachingWorkspaceMock() {
-  const [activeWorkspace, setActiveWorkspace] = useState("clients");
-  const [activeSubTab, setActiveSubTab] = useState("overview");
+  const [activeWorkspace, setActiveWorkspace] = useState("dashboard");
+  const [activeSubTab, setActiveSubTab] = useState("dashboard");
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -64,13 +65,27 @@ export default function CoachingWorkspaceMock() {
           }}
         >
           {isReady ? (
-            <CoachWorkspaceToolbar
-              activeWorkspace={activeWorkspace}
-              activeSubTab={activeSubTab}
-              onWorkspaceChange={handleWorkspaceChange}
-              onSubTabChange={setActiveSubTab}
-            />
-          ) : null}
+  <>
+    <CoachWorkspaceToolbar
+      activeWorkspace={activeWorkspace}
+      activeSubTab={activeSubTab}
+      onWorkspaceChange={handleWorkspaceChange}
+      onSubTabChange={setActiveSubTab}
+    />
+
+    <div
+      style={{
+        marginTop: 24,
+        width: "100%",
+      }}
+    >
+      {activeWorkspace === "messaging" &&
+        activeSubTab === "coaching" && (
+          <CoachInbox />
+        )}
+    </div>
+  </>
+) : null}
         </div>
       </main>
     </>
