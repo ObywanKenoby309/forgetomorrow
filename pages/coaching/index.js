@@ -14,9 +14,11 @@ import { useEffect, useState } from "react";
 import Head from "next/head";
 import CoachingHeader from "@/components/coaching/CoachingHeader";
 import CoachWorkspaceToolbar from "@/components/coaching/CoachWorkspaceToolbar";
+import { useUserWallpaper } from "@/hooks/useUserWallpaper";
 import CoachInbox from "@/components/coaching/CoachInbox";
 
 const DEFAULT_SUB_TABS = {
+  dashboard: "dashboard",
   clients: "overview",
   messaging: "",
   calendar: "calendar",
@@ -29,6 +31,8 @@ export default function CoachingWorkspaceMock() {
   const [activeWorkspace, setActiveWorkspace] = useState("dashboard");
   const [activeSubTab, setActiveSubTab] = useState("dashboard");
   const [isReady, setIsReady] = useState(false);
+  
+  const { wallpaperUrl } = useUserWallpaper();
 
   useEffect(() => {
     setIsReady(true);
@@ -40,7 +44,23 @@ export default function CoachingWorkspaceMock() {
   };
 
   return (
-    <>
+  <div
+    style={
+      wallpaperUrl
+        ? {
+            minHeight: "100vh",
+            backgroundImage: `url(${wallpaperUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center top",
+            backgroundRepeat: "no-repeat",
+            backgroundAttachment: "fixed",
+          }
+        : {
+            minHeight: "100vh",
+            backgroundColor: "#ECEFF1",
+          }
+    }
+  >
       <Head>
         <title>Coaching Workspace Mock | ForgeTomorrow</title>
       </Head>
@@ -88,6 +108,6 @@ export default function CoachingWorkspaceMock() {
 ) : null}
         </div>
       </main>
-    </>
+	</div>
   );
 }

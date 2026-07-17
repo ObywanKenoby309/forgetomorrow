@@ -1,5 +1,6 @@
 // components/layouts/CoachingLayout.js
 import React, { useEffect, useState, useCallback } from 'react';
+import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 import Head from 'next/head';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import CoachingSidebar from '@/components/coaching/CoachingSidebar';
@@ -57,6 +58,7 @@ export default function CoachingLayout({
   const [isMobile, setIsMobile] = useState(null);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
   const [profileSlug, setProfileSlug] = useState('');
+  const { wallpaperUrl } = useUserWallpaper();
 
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
@@ -108,6 +110,19 @@ export default function CoachingLayout({
 
   const isMobileReady = isMobile !== null;
   const isMobileBool = isMobile === true;
+  const backgroundStyle = wallpaperUrl
+  ? {
+      minHeight: '100vh',
+      backgroundImage: `url(${wallpaperUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center top',
+      backgroundRepeat: 'no-repeat',
+      backgroundAttachment: isMobileBool ? 'scroll' : 'fixed',
+    }
+  : {
+      minHeight: '100vh',
+      backgroundColor: '#ECEFF1',
+    };
 
   const desktopGrid = (!hasHeader && !hasRight)
     ? {
@@ -174,7 +189,7 @@ export default function CoachingLayout({
   };
 
   return (
-    <>
+  <div style={backgroundStyle}>
       <Head>
         <title>{title}</title>
       </Head>
@@ -325,6 +340,6 @@ export default function CoachingLayout({
     </div>
   </div>
 )}
-    </>
+    </div>
   );
 }
