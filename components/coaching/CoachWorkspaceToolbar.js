@@ -1,4 +1,4 @@
-components/coaching/CoachWorkspaceToolbar.js
+// components/coaching/CoachWorkspaceToolbar.js
 import React from "react";
 // Minimal first-pass mock toolbar for Coach ecosystem.
 // Replace with wiring later.
