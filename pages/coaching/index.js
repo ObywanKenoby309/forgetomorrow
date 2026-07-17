@@ -17,13 +17,14 @@ import { useUserWallpaper } from "@/hooks/useUserWallpaper";
 import CoachInbox from "@/components/coaching/CoachInbox";
 import SeekerInbox from "@/components/seeker/SeekerInbox";
 import CoachCalendar from "@/components/coaching/CoachCalendar";
+import CoachResources from "@/components/coaching/CoachResources";
 
 const DEFAULT_SUB_TABS = {
   dashboard: "dashboard",
   clients: "overview",
-  messaging: "",
+  messaging: "coaching",
   calendar: "calendar",
-  resources: "vault",
+  resources: "resources",
   feedback: "feedback",
   analytics: "overview",
 };

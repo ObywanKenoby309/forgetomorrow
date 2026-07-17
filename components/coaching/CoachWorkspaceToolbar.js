@@ -23,7 +23,7 @@ dashboard:[["dashboard","Coach Dashboard"]],
 clients:[["overview","Overview"],["plan","Coaching Plan"],["goals","Goals"],["homework","Homework"],["activity","Activity"],["notes","Notes"]],
 messaging:[["coaching","Coaching Inbox"],["seeker","Seeker Inbox"]],
 calendar:[["calendar","Calendar"],["sessions","Sessions"]],
-resources:[["vault","Vault"],["resources","Resources"],["spotlights","Spotlights"]],
+resources:[["resources","Resources"],["vault","Vault"],["spotlights","Spotlights"]],
 feedback:[["feedback","Client Feedback"]],
 analytics:[["overview","Overview"],["progress","Client Progress"],["sessions","Session Trends"],["outcomes","Outcomes"],["reports","Reports"]],
 };
