@@ -108,6 +108,9 @@ export default function CoachingWorkspaceMock() {
 
 				{activeWorkspace === "calendar" &&
 				  activeSubTab === "calendar" && <CoachCalendar />}
+				  
+				{activeWorkspace === "resources" &&
+				  activeSubTab === "resources" && <CoachResources />}				  
               </div>
             </>
           ) : null}
