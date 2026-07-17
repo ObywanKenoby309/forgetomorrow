@@ -4,11 +4,10 @@
 // First pass only:
 // - Existing Coaching header
 // - Existing global footer from pages/_app.js
-// - Existing user wallpaper/background from pages/_app.js
+// - Existing user wallpaper/background
 // - CoachWorkspaceToolbar centered in the page
-// - Local mock tab state only
-//
-// No page modules, APIs, database calls, or routing are wired yet.
+// - Local workspace tab state
+// - Coaching Inbox and Calendar workspace views
 
 import { useEffect, useState } from "react";
 import Head from "next/head";
@@ -16,6 +15,7 @@ import CoachingHeader from "@/components/coaching/CoachingHeader";
 import CoachWorkspaceToolbar from "@/components/coaching/CoachWorkspaceToolbar";
 import { useUserWallpaper } from "@/hooks/useUserWallpaper";
 import CoachInbox from "@/components/coaching/CoachInbox";
+import CoachCalendar from "@/components/coaching/CoachCalendar";
 
 const DEFAULT_SUB_TABS = {
   dashboard: "dashboard",
@@ -31,7 +31,7 @@ export default function CoachingWorkspaceMock() {
   const [activeWorkspace, setActiveWorkspace] = useState("dashboard");
   const [activeSubTab, setActiveSubTab] = useState("dashboard");
   const [isReady, setIsReady] = useState(false);
-  
+
   const { wallpaperUrl } = useUserWallpaper();
 
   useEffect(() => {
@@ -44,23 +44,23 @@ export default function CoachingWorkspaceMock() {
   };
 
   return (
-  <div
-    style={
-      wallpaperUrl
-        ? {
-            minHeight: "100vh",
-            backgroundImage: `url(${wallpaperUrl})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center top",
-            backgroundRepeat: "no-repeat",
-            backgroundAttachment: "fixed",
-          }
-        : {
-            minHeight: "100vh",
-            backgroundColor: "#ECEFF1",
-          }
-    }
-  >
+    <div
+      style={
+        wallpaperUrl
+          ? {
+              minHeight: "100vh",
+              backgroundImage: `url(${wallpaperUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center top",
+              backgroundRepeat: "no-repeat",
+              backgroundAttachment: "fixed",
+            }
+          : {
+              minHeight: "100vh",
+              backgroundColor: "#ECEFF1",
+            }
+      }
+    >
       <Head>
         <title>Coaching Workspace Mock | ForgeTomorrow</title>
       </Head>
@@ -85,29 +85,30 @@ export default function CoachingWorkspaceMock() {
           }}
         >
           {isReady ? (
-  <>
-    <CoachWorkspaceToolbar
-      activeWorkspace={activeWorkspace}
-      activeSubTab={activeSubTab}
-      onWorkspaceChange={handleWorkspaceChange}
-      onSubTabChange={setActiveSubTab}
-    />
+            <>
+              <CoachWorkspaceToolbar
+                activeWorkspace={activeWorkspace}
+                activeSubTab={activeSubTab}
+                onWorkspaceChange={handleWorkspaceChange}
+                onSubTabChange={setActiveSubTab}
+              />
 
-    <div
-      style={{
-        marginTop: 24,
-        width: "100%",
-      }}
-    >
-      {activeWorkspace === "messaging" &&
-        activeSubTab === "coaching" && (
-          <CoachInbox />
-        )}
-    </div>
-  </>
-) : null}
+              <div
+                style={{
+                  marginTop: 24,
+                  width: "100%",
+                }}
+              >
+                {activeWorkspace === "messaging" &&
+                  activeSubTab === "coaching" && <CoachInbox />}
+
+                {activeWorkspace === "calendar" &&
+                  activeSubTab === "calendar" && <CoachCalendar />}
+              </div>
+            </>
+          ) : null}
         </div>
       </main>
-	</div>
+    </div>
   );
 }
