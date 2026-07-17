@@ -18,7 +18,7 @@ import CoachInbox from "@/components/coaching/CoachInbox";
 
 const DEFAULT_SUB_TABS = {
   clients: "overview",
-  messaging: "coaching",
+  messaging: "",
   calendar: "calendar",
   resources: "vault",
   feedback: "feedback",
