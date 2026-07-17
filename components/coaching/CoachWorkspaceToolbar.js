@@ -1,3 +1,4 @@
+// components/coaching/CoachWorkspaceToolbar.js
 import React from "react";
 
 export default function CoachWorkspaceToolbar({
@@ -80,11 +81,12 @@ paddingBottom:8
 
 <div style={{
 display:"flex",
-justifyContent:"space-between",
+justifyContent:"center",
 alignItems:"center",
-gap:10,
+gap:28,
 paddingTop:8,
-flexWrap:"wrap"
+flexWrap:"wrap",
+width:"100%"
 }}>
 {(sub[activeWorkspace]||[]).map(([k,l])=>(
 <button key={k} onClick={()=>onSubTabChange?.(k)} style={subStyle(activeSubTab===k)}>{l}</button>
