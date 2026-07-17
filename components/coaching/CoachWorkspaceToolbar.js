@@ -61,10 +61,10 @@ margin:"0 auto",
 border:"1px solid rgba(255,255,255,.10)",
 borderRadius:20,
 padding:"10px 18px 12px",
-background:"rgba(12,18,28,.18)",
-backdropFilter:"blur(26px)",
-WebkitBackdropFilter:"blur(26px)",
-boxShadow:"0 10px 30px rgba(0,0,0,.14)"
+background:"rgba(255,255,255,.05)",
+backdropFilter:"blur(14px)",
+WebkitBackdropFilter:"blur(14px)",
+boxShadow:"0 8px 24px rgba(0,0,0,.10)"
 }}>
 <div style={{
 display:"flex",
