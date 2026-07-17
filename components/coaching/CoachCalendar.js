@@ -127,7 +127,6 @@ export default function CoachCalendar() {
       <div style={{ minWidth: 0 }}>
         <CoachingSessionsCalendarInterface
           ref={calendarRef}
-          title={loading ? "Sessions Calendar (loading…)" : "Sessions Calendar"}
           events={sessions}
           onRefresh={loadSessions}
           onDaySelect={handleDaySelect}
