@@ -15,6 +15,7 @@ import CoachingHeader from "@/components/coaching/CoachingHeader";
 import CoachWorkspaceToolbar from "@/components/coaching/CoachWorkspaceToolbar";
 import { useUserWallpaper } from "@/hooks/useUserWallpaper";
 import CoachInbox from "@/components/coaching/CoachInbox";
+import SeekerInbox from "@/components/seeker/SeekerInbox";
 import CoachCalendar from "@/components/coaching/CoachCalendar";
 
 const DEFAULT_SUB_TABS = {
@@ -100,10 +101,13 @@ export default function CoachingWorkspaceMock() {
                 }}
               >
                 {activeWorkspace === "messaging" &&
-                  activeSubTab === "coaching" && <CoachInbox />}
+				  activeSubTab === "coaching" && <CoachInbox />}
 
-                {activeWorkspace === "calendar" &&
-                  activeSubTab === "calendar" && <CoachCalendar />}
+				{activeWorkspace === "messaging" &&
+				  activeSubTab === "seeker" && <SeekerInbox />}
+
+				{activeWorkspace === "calendar" &&
+				  activeSubTab === "calendar" && <CoachCalendar />}
               </div>
             </>
           ) : null}
