@@ -109,7 +109,7 @@ export default function CoachingWorkspaceMock() {
 				  activeSubTab === "dashboard" && <CoachDashboard />}
 				  
 				{activeWorkspace === "clients" &&
-				  activeSubTab === "overview" && <ClientOverview />)
+				activeSubTab === "overview" && <ClientOverview />}
 			  
                 {activeWorkspace === "messaging" &&
 				  activeSubTab === "coaching" && <CoachInbox />}
