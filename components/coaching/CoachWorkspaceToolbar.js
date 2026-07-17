@@ -27,67 +27,69 @@ feedback:[["feedback","Client Feedback"]],
 analytics:[["overview","Overview"],["progress","Client Progress"],["sessions","Session Trends"],["outcomes","Outcomes"],["reports","Reports"]],
 };
 
-return(
-<div style={{
-border:"1px solid rgba(255,255,255,.14)",
-borderRadius:22,
-padding:10,
-background:"rgba(255,255,255,.18)",
-backdropFilter:"blur(20px)",
-WebkitBackdropFilter:"blur(20px)",
-boxShadow:"0 18px 45px rgba(0,0,0,.18)"
-}}>
-
-<div style={{
-display:"grid",
-gridTemplateColumns:"repeat(7,minmax(0,1fr))",
-gap:8
-}}>
-{workspaces.map(([k,l])=>(
-<button
-key={k}
-onClick={()=>onWorkspaceChange?.(k)}
-style={{
-padding:"9px 10px",
-borderRadius:12,
-fontSize:13,
-fontWeight:700,
-border:activeWorkspace===k?"1px solid rgba(255,112,67,.55)":"1px solid rgba(255,255,255,.12)",
-background:activeWorkspace===k?"rgba(255,112,67,.18)":"rgba(255,255,255,.08)",
-color:"#fff",
-backdropFilter:"blur(12px)",
-transition:"all .18s ease",
-cursor:"pointer"
-}}
->{l}</button>
-))}
-</div>
-
-<div style={{
-display:"grid",
-gridTemplateColumns:`repeat(${Math.max((sub[activeWorkspace]||[]).length,1)},minmax(0,1fr))`,
-gap:8,
-marginTop:12
-}}>
-{(sub[activeWorkspace]||[]).map(([k,l])=>(
-<button
-key={k}
-onClick={()=>onSubTabChange?.(k)}
-style={{
+const topStyle=(active)=>({
 padding:"8px 8px",
-borderRadius:999,
+border:"none",
+borderBottom:active?"3px solid #FF7043":"3px solid transparent",
+background:"transparent",
+color:"#fff",
+fontSize:14,
+fontWeight:700,
+cursor:"pointer",
+transition:"all .18s ease",
+textShadow:"0 1px 2px rgba(0,0,0,.45)"
+});
+
+const subStyle=(active)=>({
+padding:"6px 8px",
+border:"none",
+borderBottom:active?"2px solid #FF7043":"2px solid transparent",
+background:"transparent",
+color:active?"#fff":"rgba(255,255,255,.88)",
 fontSize:12,
 fontWeight:600,
-border:activeSubTab===k?"1px solid rgba(255,112,67,.55)":"1px solid rgba(255,255,255,.10)",
-background:activeSubTab===k?"rgba(255,112,67,.22)":"rgba(255,255,255,.05)",
-color:"#fff",
 cursor:"pointer",
-whiteSpace:"nowrap"
-}}
->{l}</button>
+transition:"all .18s ease",
+textShadow:"0 1px 2px rgba(0,0,0,.45)"
+});
+
+return (
+<div style={{
+maxWidth:1520,
+margin:"0 auto",
+border:"1px solid rgba(255,255,255,.10)",
+borderRadius:20,
+padding:"10px 18px 12px",
+background:"rgba(12,18,28,.18)",
+backdropFilter:"blur(26px)",
+WebkitBackdropFilter:"blur(26px)",
+boxShadow:"0 10px 30px rgba(0,0,0,.14)"
+}}>
+<div style={{
+display:"flex",
+justifyContent:"space-between",
+alignItems:"center",
+gap:12,
+borderBottom:"1px solid rgba(255,255,255,.08)",
+paddingBottom:8
+}}>
+{workspaces.map(([k,l])=>(
+<button key={k} onClick={()=>onWorkspaceChange?.(k)} style={topStyle(activeWorkspace===k)}>{l}</button>
 ))}
 </div>
 
+<div style={{
+display:"flex",
+justifyContent:"space-between",
+alignItems:"center",
+gap:10,
+paddingTop:8,
+flexWrap:"wrap"
+}}>
+{(sub[activeWorkspace]||[]).map(([k,l])=>(
+<button key={k} onClick={()=>onSubTabChange?.(k)} style={subStyle(activeSubTab===k)}>{l}</button>
+))}
+</div>
 </div>
 );
 }
