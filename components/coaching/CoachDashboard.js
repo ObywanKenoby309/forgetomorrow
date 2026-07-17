@@ -1,0 +1,974 @@
+// components/coaching/CoachDeashboard.js
+// Layout strategy — identical blueprint to Seeker and Recruiter dashboards:
+//   - CoachingLayout receives NO header prop, NO right prop
+//   - contentFullBleed passed so main overflowX clipping removed for this page only
+//   - DashboardBody owns the full internal grid
+//   - Right rail now holds Sponsored + Upcoming Sessions
+//   - Bottom 3 cards use marginLeft: -252 to extend under sidebar
+//
+// Visual structure:
+// ┌─────────────────────────────┬──────────────┐
+// │ Title Card       (row 1)    │  Sponsored   │
+// ├─────────────────────────────│──────────────│
+// │ KPI Row          (row 2)    │ Upcoming     │
+// ├─────────────────────────────│ Sessions     │
+// │ Action Center    (row 3)    │              │
+// ├─────────────────────────────┴──────────────┤
+// │ Clients       │ Docs & Tools │ CSAT Pulse  │
+// └────────────────────────────────────────────┘
+
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import ActionCenterTab from '@/components/dashboard/ActionCenterTab';
+import { getAverageCoachingCsatScore } from '@/lib/coaching/coachingCsat';
+
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+function localISODate(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function toLocalDateTime(dateStr, timeStr = '00:00') {
+  const [y,m,d] = String(dateStr||'').split('-').map(Number);
+  const [hh,mm] = String(timeStr||'00:00').split(':').map(Number);
+  return new Date(y||1970,(m||1)-1,d||1,hh||0,mm||0);
+}
+function getStatusStyles(status) {
+  if (status === 'At Risk')    return { background:'#FDECEA', color:'#C62828' };
+  if (status === 'New Intake') return { background:'#E3F2FD', color:'#1565C0' };
+  return                              { background:'#E8F5E9', color:'#2E7D32' };
+}
+function safeText(v) { return typeof v==='string' ? v : v==null ? '' : String(v); }
+function pickActionBucket(n) {
+  const category = safeText(n?.category).toUpperCase();
+  const entityType = safeText(n?.entityType).toUpperCase();
+  const haystack = `${safeText(n?.title)} ${safeText(n?.body)} ${safeText(n?.metadata?.type||n?.metadata?.event||n?.metadata?.kind||'')}`.toLowerCase();
+  // Vault shares — own bucket so they're never mixed with messages
+  if (category === 'VAULT' || entityType === 'VAULT_SHARE' ||
+      haystack.includes('shared a document') || haystack.includes('shared with you')) return 'shared';
+  if (haystack.includes('feedback')||haystack.includes('csat')||haystack.includes('rating')||haystack.includes('survey')) return 'feedback';
+  if (haystack.includes('session request')||haystack.includes('appointment')||haystack.includes('booking')||haystack.includes('book')) return 'requests';
+  if (haystack.includes('calendar')||haystack.includes('invite')||haystack.includes('session')||haystack.includes('resched')||haystack.includes('schedule')||haystack.includes('foundry')) return 'calendar';
+  if (haystack.includes('message')||haystack.includes('inbox')||haystack.includes('dm')||haystack.includes('signal')) return 'messages';
+  return 'messages';
+}
+
+// ─── Shared styles ────────────────────────────────────────────────────────────
+const GLASS = {
+  borderRadius:14, border:'1px solid rgba(255,255,255,0.22)',
+  background:'rgba(255,255,255,0.58)', boxShadow:'0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
+};
+const KPI_GLASS = {
+  ...GLASS,
+  background:'rgba(255,255,255,0.68)',
+  boxShadow:'0 12px 28px rgba(0,0,0,0.14)',
+};
+const WHITE_CARD = {
+  background:'rgba(255,255,255,0.92)', border:'1px solid rgba(0,0,0,0.08)',
+  borderRadius:12, boxShadow:'0 2px 10px rgba(0,0,0,0.08)', boxSizing:'border-box',
+};
+const ORANGE_HEADING_LIFT = {
+  textShadow:'0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)',
+  fontWeight:900,
+};
+const GAP = 16;
+const RIGHT_COL_WIDTH = 280;
+
+// ─── Desktop helpers ──────────────────────────────────────────────────────────
+function Section({ title, children, action=null, helperText=null, isMobile=false, style={} }) {
+  return (
+    <section style={{ ...GLASS, padding:20, ...style }}>
+      <div
+        style={{
+          marginBottom: isMobile && helperText ? 6 : 12,
+          display:'grid',
+          gridTemplateColumns: isMobile ? '1fr auto' : '1fr auto 1fr',
+          alignItems:'center',
+          gap:10,
+        }}
+      >
+        <div style={{ fontSize:18, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', ...ORANGE_HEADING_LIFT }}>
+          {title}
+        </div>
+
+        {!isMobile && helperText ? (
+          <div style={{ textAlign:'center', fontSize:12, color:'#64748B', fontWeight:500 }}>
+            {helperText}
+          </div>
+        ) : !isMobile ? (
+          <div />
+        ) : null}
+
+        <div style={{ textAlign:'right' }}>
+          {action}
+        </div>
+      </div>
+
+      {isMobile && helperText && (
+        <div style={{ fontSize:12, color:'#64748B', fontWeight:500, marginBottom:10 }}>
+          {helperText}
+        </div>
+      )}
+
+      <div>{children}</div>
+    </section>
+  );
+}
+
+function Card({ title, children }) {
+  return (
+    <div style={{
+      ...WHITE_CARD,
+      padding:16,
+      minHeight:120,
+      display:'flex',
+      flexDirection:'column',
+      justifyContent:'center',
+      alignItems:'center',
+      textAlign:'center'
+    }}>
+      <div style={{ fontWeight:700, marginBottom:8, color:'#112033', fontSize:13 }}>{title}</div>
+      {children||<div style={{ color:'#90A4AE', fontSize:13 }}>Coming soon…</div>}
+    </div>
+  );
+}
+
+function KPI({ label, value }) {
+  return (
+    <div style={{
+      ...WHITE_CARD,
+      padding:'14px 16px',
+      minHeight:108,
+      display:'flex',
+      flexDirection:'column',
+      justifyContent:'center',
+      cursor:'pointer'
+    }}>
+      <div style={{
+        fontSize:10,
+        fontWeight:800,
+        color:'#FF7043',
+        textTransform:'uppercase',
+        letterSpacing:'0.08em',
+        lineHeight:1.2,
+        whiteSpace:'nowrap',
+        overflow:'hidden',
+        textOverflow:'ellipsis'
+      }}>
+        {label}
+      </div>
+      <div style={{
+        fontSize:24,
+        fontWeight:900,
+        color:'#0F172A',
+        lineHeight:1.05,
+        letterSpacing:'-0.02em',
+        marginTop:8,
+        textAlign:'center'
+      }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function ActionLiteCard({ title, items, emptyText, href }) {
+  const list = Array.isArray(items) ? items : [];
+  return (
+    <Link href={href} style={{ textDecoration: 'none', display: 'block' }}>
+      <div style={{ ...WHITE_CARD, padding: 12, minHeight: 80, cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: '#0F172A', lineHeight: 1.3 }}>{title}</div>
+        <div style={{ marginTop: 6, flex: 1 }}>
+          {list.length === 0 ? (
+            <div style={{ fontSize: 11, color: '#94A3B8' }}>{emptyText}</div>
+          ) : (
+            <div style={{ fontSize: 11, color: '#475569' }}>{list[0]?.title || 'View item'}</div>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function Th({ children }) {
+  return <th style={{ textAlign:'left', padding:'10px 12px', fontSize:13, color:'#546E7A', borderBottom:'1px solid #eee' }}>{children}</th>;
+}
+function Td({ children, strong=false }) {
+  return <td style={{ padding:'10px 12px', fontSize:14, color:'#37474F', fontWeight:strong?600:400, background:'white' }}>{children}</td>;
+}
+
+const grid3 = { display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', gap:12 };
+
+// ─── Mobile Action tile ───────────────────────────────────────────────────────
+function MobileActionTile({ title, items, emptyText, href, icon }) {
+  const hasItems = items.length > 0;
+  return (
+    <Link href={href} style={{
+      display:'flex', alignItems:'center', gap:12, padding:'12px 14px',
+      borderRadius:12, textDecoration:'none',
+      background: hasItems ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)',
+      border: hasItems ? '1px solid rgba(255,112,67,0.22)' : '1px solid rgba(0,0,0,0.06)',
+      boxShadow: hasItems ? '0 4px 12px rgba(0,0,0,0.08)' : 'none',
+    }}>
+      <div style={{ width:40, height:40, borderRadius:10, flexShrink:0,
+        background: hasItems ? 'rgba(255,112,67,0.10)' : 'rgba(0,0,0,0.04)',
+        display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>
+        {icon}
+      </div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:13, fontWeight:800, color: hasItems ? '#112033' : '#90A4AE' }}>{title}</div>
+        <div style={{ fontSize:12, marginTop:2, color: hasItems ? '#546E7A' : '#B0BEC5',
+          overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+          {hasItems ? (items[0].title||'View item') : emptyText}
+        </div>
+      </div>
+      {hasItems ? (
+        <div style={{ minWidth:28, height:28, borderRadius:999, flexShrink:0, background:'#FF7043',
+          color:'white', display:'flex', alignItems:'center', justifyContent:'center',
+          fontSize:13, fontWeight:900, boxShadow:'0 4px 10px rgba(255,112,67,0.40)' }}>
+          {items.length}
+        </div>
+      ) : (
+        <div style={{ width:24, height:24, borderRadius:999, flexShrink:0,
+          background:'rgba(0,0,0,0.04)', display:'flex', alignItems:'center',
+          justifyContent:'center', fontSize:14, color:'#B0BEC5' }}>✓</div>
+      )}
+    </Link>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Follow-Ups Due Carousel ──────────────────────────────────────────────────
+function FollowUpsDueCard({ clients = [] }) {
+  const [slideIdx, setSlideIdx] = useState(0);
+  const [data, setData] = useState({ sessionFollowups: [], overdueCheckins: [] });
+  const [loading, setLoading] = useState(true);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/coaching/followups', { credentials: 'include' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (alive && d) setData(d); })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
+
+  const SLIDES = [
+    {
+      key: 'session',
+      label: 'Session Follow-ups',
+      description: 'Sessions with a follow-up past due',
+      items: data.sessionFollowups,
+    },
+    {
+      key: 'checkin',
+      label: 'Overdue Check-ins',
+      description: 'No contact in 30+ days',
+      items: data.overdueCheckins,
+    },
+  ];
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setSlideIdx((prev) => (prev + 1) % SLIDES.length);
+    }, 4000);
+    return () => clearInterval(timerRef.current);
+  }, []);
+
+  const goTo = (i) => {
+    setSlideIdx(i);
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setSlideIdx((prev) => (prev + 1) % SLIDES.length);
+    }, 4000);
+  };
+
+  const slide = SLIDES[slideIdx];
+
+  return (
+    <section style={{ ...GLASS, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ fontSize: 15, fontWeight: 900, color: '#FF7043', lineHeight: 1.25, letterSpacing: '-0.01em', ...ORANGE_HEADING_LIFT }}>
+          Follow-Ups Due
+        </div>
+        <Link href="/dashboard/coaching/clients" style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
+          View all →
+        </Link>
+      </div>
+
+      <div style={{ ...WHITE_CARD, padding: 10, height: 120, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6, flexShrink: 0 }}>
+          {slide.label}
+        </div>
+        {loading ? (
+          <div style={{ fontSize: 12, color: '#94A3B8' }}>Loading…</div>
+        ) : slide.items.length === 0 ? (
+          <div style={{ fontSize: 12, color: '#94A3B8', fontStyle: 'italic' }}>
+            All clear — no {slide.label.toLowerCase()}.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 5, flex: 1, overflow: 'hidden' }}>
+            {slide.items.slice(0, 3).map((item, i) => (
+              <Link key={i} href={item.href} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '3px 6px', borderRadius: 6, background: 'rgba(0,0,0,0.03)' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.name}
+                  </div>
+                </div>
+                {slide.key === 'checkin' && item.daysSince != null && (
+                  <div style={{ fontSize: 10, color: '#94A3B8', flexShrink: 0 }}>{item.daysSince}d ago</div>
+                )}
+                {slide.key === 'session' && item.dueAt && (
+                  <div style={{ fontSize: 10, color: '#94A3B8', flexShrink: 0 }}>
+                    Due {new Date(item.dueAt).toLocaleDateString()}
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+        <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 6, flexShrink: 0 }}>{slide.description}</div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+        {SLIDES.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => goTo(i)}
+            style={{
+              width: i === slideIdx ? 20 : 6,
+              height: 6,
+              borderRadius: 999,
+              background: i === slideIdx ? '#FF7043' : 'rgba(255,112,67,0.25)',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              transition: 'width 220ms ease, background 220ms ease',
+            }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default function CoachDashboard() {
+  const router = useRouter();
+  const upcomingRailScrollRef = useRef(null);
+
+  const [isMobile, setIsMobile] = useState(null);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Sessions
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [sessions, setSessions] = useState([]);
+
+  const loadSessions = useCallback(async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/coaching/sessions', { method:'GET', headers:{'Content-Type':'application/json'} });
+      if (res.status===401) { router.push('/login'); return; }
+      if (!res.ok) throw new Error('Failed to load');
+      const data = await res.json();
+      setSessions(Array.isArray(data?.sessions) ? data.sessions : []);
+    } catch(err) {
+      setError('Unable to load your coaching dashboard right now.');
+      setSessions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => { loadSessions(); }, [loadSessions]);
+
+  // Action Center
+  const [actionLoading, setActionLoading] = useState(true);
+  const [actionRefreshing, setActionRefreshing] = useState(false);
+  const [actionBootstrapped, setActionBootstrapped] = useState(false);
+  const [actionItems, setActionItems] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      if (!actionBootstrapped) setActionLoading(true);
+      else setActionRefreshing(true);
+
+      try {
+        const res = await fetch('/api/notifications/list?scope=COACH&limit=12&includeRead=0', {
+          method:'GET',
+          headers:{'Content-Type':'application/json'},
+          credentials:'include'
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setActionItems(Array.isArray(data?.items) ? data.items : []);
+        setActionBootstrapped(true);
+      } catch(e) {
+      } finally {
+        if (!cancelled) {
+          setActionLoading(false);
+          setActionRefreshing(false);
+        }
+      }
+    }
+
+    load();
+    const t = setInterval(load, 25000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [actionBootstrapped]);
+
+  // CSAT
+  const [csat, setCsat] = useState([]);
+  const [csatError, setCsatError] = useState('');
+
+  const loadCsat = useCallback(async () => {
+    setCsatError('');
+    try {
+      const res = await fetch('/api/coaching/csat', { method:'GET', headers:{'Content-Type':'application/json'} });
+      if (res.status===401) return;
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      setCsat(
+        (Array.isArray(data?.csat) && data.csat) ||
+        (Array.isArray(data?.responses) && data.responses) ||
+        (Array.isArray(data?.items) && data.items) ||
+        []
+      );
+    } catch(err) {
+      setCsat([]);
+      setCsatError('CSAT data unavailable.');
+    }
+  }, []);
+
+  useEffect(() => { loadCsat(); }, [loadCsat]);
+
+  // Derived values
+  const todayISO = localISODate(currentTime);
+
+  const sessionsToday = useMemo(() => {
+    return sessions
+      .filter(s => s?.date === todayISO)
+      .sort((a, b) => toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time));
+  }, [sessions, todayISO]);
+
+  const sessionsRemainingToday = useMemo(() => {
+    return sessionsToday.filter(s => {
+      if (!s?.date || !s?.time) return false;
+      return toLocalDateTime(s.date, s.time) >= currentTime;
+    });
+  }, [sessionsToday, currentTime]);
+
+  const activeClients = useMemo(() => {
+    return new Set(sessions.map(s => (s?.client || '').trim()).filter(Boolean)).size;
+  }, [sessions]);
+
+  const clients = useMemo(() => {
+    const byClient = new Map();
+
+    for (const s of sessions) {
+      const name = (s?.client || '').trim();
+      if (!name) continue;
+
+      const dt = s?.date && s?.time ? toLocalDateTime(s.date, s.time) : null;
+      const ex = byClient.get(name);
+
+      if (!ex) {
+        byClient.set(name, {
+          id:s?.clientId || name,
+          name,
+          status:s?.status || 'Active',
+          nextSession:dt && dt >= currentTime ? dt : null
+        });
+        continue;
+      }
+
+      ex.status = s?.status || ex.status;
+      if (dt && dt >= currentTime && (!ex.nextSession || dt < ex.nextSession)) ex.nextSession = dt;
+      byClient.set(name, ex);
+    }
+
+    return Array.from(byClient.values()).sort((a,b) => (a.nextSession?.getTime() ?? Infinity) - (b.nextSession?.getTime() ?? Infinity));
+  }, [sessions, currentTime]);
+
+  const clientsPreview = useMemo(() => clients.slice(0,3), [clients]);
+  
+  const avgScoreValue = getAverageCoachingCsatScore(csat);
+  const avgScore = avgScoreValue !== null ? avgScoreValue.toFixed(1) : '—';
+
+  const totalResponses = csat.length;
+
+  const actionBuckets = useMemo(() => {
+    const b = { messages:[], feedback:[], calendar:[], clients:[], requests:[], shared:[] };
+    for (const n of Array.isArray(actionItems) ? actionItems : []) {
+      const k = pickActionBucket(n);
+      if (b[k]) b[k].push(n);
+    }
+    return {
+      messages:b.messages.slice(0,3),
+      feedback:b.feedback.slice(0,3),
+      calendar:b.calendar.slice(0,3),
+      clients:b.clients.slice(0,3),
+      requests:b.requests.slice(0,3),
+      shared:b.shared.slice(0,3),
+    };
+  }, [actionItems]);
+
+  const kpis = [
+    { label:'Sessions Today',     value:loading ? '—' : sessionsToday.length, href:'/dashboard/coaching/sessions' },
+    { label:'Active Clients',     value:loading ? '—' : activeClients,        href:'/dashboard/coaching/clients' },
+    { label:'Follow-ups Due',     value:0,                                     href:'/action-center?scope=COACH' },
+    { label:'Avg Session Rating', value:avgScore === '—' ? '—' : `${avgScore}/5`, href:'/dashboard/coaching/feedback' },
+  ];
+
+  const withCoachChrome = (path) => path.includes('?') ? `${path}&chrome=coach` : `${path}?chrome=coach`;
+
+  const mobileTiles = [
+    { key:'messages', title:'New Messages',     emptyText:'No unread coach inbox items.', href:'/action-center?scope=COACH&chrome=coach&tab=SOCIAL',   icon:'💬', items:actionBuckets.messages },
+    { key:'requests', title:'Session Requests', emptyText:'No pending session requests.',  href:'/dashboard/coaching/client-hub-update?tab=requests',    icon:'📋', items:actionBuckets.requests },
+    { key:'calendar', title:'Session Updates',  emptyText:'No calendar updates.',          href:'/action-center?scope=COACH&chrome=coach&tab=CALENDAR',  icon:'📅', items:actionBuckets.calendar },
+    { key:'feedback', title:'New Feedback',     emptyText:'No new feedback yet.',          href:'/dashboard/coaching/feedback',                          icon:'⭐', items:actionBuckets.feedback },
+    { key:'clients',  title:'Client Updates',   emptyText:'No new client activity.',       href:'/dashboard/coaching/clients',                           icon:'👤', items:actionBuckets.clients },
+    { key:'shared',   title:'Shared With Me',   emptyText:'No shared documents.',          href:'/action-center?scope=COACH&chrome=coach&tab=SHARED',   icon:'📬', items:actionBuckets.shared  },
+  ];
+
+  const sortedMobileTiles = [...mobileTiles].sort((a,b) => (b.items.length > 0 ? 1 : 0) - (a.items.length > 0 ? 1 : 0));
+  const totalActions = mobileTiles.reduce((s,t) => s + t.items.length, 0);
+
+  useEffect(() => {
+    if (isMobile || loading || sessionsRemainingToday.length <= 1) return;
+
+    const el = upcomingRailScrollRef.current;
+    if (!el) return;
+
+    let timeoutId = null;
+    let intervalId = null;
+    let cancelled = false;
+
+    const clearAll = () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      if (intervalId) window.clearInterval(intervalId);
+      timeoutId = null;
+      intervalId = null;
+    };
+
+    const resetToTop = () => {
+      if (!el) return;
+      el.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const startSlowScroll = () => {
+      if (cancelled || !el) return;
+
+      const maxScrollTop = el.scrollHeight - el.clientHeight;
+      if (maxScrollTop <= 8) {
+        timeoutId = window.setTimeout(startLoop, 5000);
+        return;
+      }
+
+      intervalId = window.setInterval(() => {
+        if (!el) return;
+        const nextTop = el.scrollTop + 1;
+        const atBottom = nextTop >= (el.scrollHeight - el.clientHeight - 1);
+
+        if (atBottom) {
+          clearAll();
+          timeoutId = window.setTimeout(() => {
+            resetToTop();
+            timeoutId = window.setTimeout(startLoop, 5000);
+          }, 1800);
+          return;
+        }
+
+        el.scrollTop = nextTop;
+      }, 28);
+    };
+
+    const startLoop = () => {
+      if (cancelled) return;
+      clearAll();
+      timeoutId = window.setTimeout(startSlowScroll, 5000);
+    };
+
+    el.scrollTop = 0;
+    startLoop();
+
+    return () => {
+      cancelled = true;
+      clearAll();
+    };
+  }, [isMobile, loading, sessionsRemainingToday]);
+
+if (isMobile === null) {
+  return <div style={{ minHeight: 200 }} />;
+}
+
+  // ── MOBILE ────────────────────────────────────────────────────────────────
+  if (isMobile) {
+
+    return (
+  <div style={{ display:'grid', gap:GAP, width:'100%' }}>
+
+          <ActionCenterTab
+            scope="COACH"
+            withChrome={withCoachChrome}
+            pickBucket={pickActionBucket}
+            allHref="/action-center?scope=COACH&chrome=coach"
+            tileDefs={[
+              { key:'messages', bucket:'messages', title:'New Messages', emptyText:'No unread coach inbox items.', href:'/action-center?scope=COACH&chrome=coach&tab=SOCIAL', icon:'💬' },
+              { key:'requests', bucket:'requests', title:'Session Requests', emptyText:'No pending session requests.', href:'/dashboard/coaching/client-hub-update?tab=requests', icon:'📋' },
+              { key:'calendar', bucket:'calendar', title:'Session Updates', emptyText:'No calendar updates.', href:'/action-center?scope=COACH&chrome=coach&tab=CALENDAR', icon:'📅' },
+              { key:'feedback', bucket:'feedback', title:'New Feedback', emptyText:'No new feedback yet.', href:'/dashboard/coaching/feedback', icon:'⭐' },
+              { key:'clients', bucket:'clients', title:'Client Updates', emptyText:'No new client activity.', href:'/dashboard/coaching/clients', icon:'👤' },
+              { key:'shared', bucket:'shared', title:'Shared With Me', emptyText:'No shared documents.', href:'/action-center?scope=COACH&chrome=coach&tab=SHARED', icon:'📬' },
+            ]}
+          />
+
+          <section style={{ ...GLASS, padding:'12px 0 12px 12px', overflow:'hidden' }}>
+            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', paddingRight:12, marginBottom:10 }}>
+              <div>
+                <div style={{ fontSize:13, fontWeight:800, color:'#112033' }}>Your Numbers</div>
+                <div style={{ fontSize:12, color:'#64748B', fontWeight:500, marginTop:4 }}>Click a card to view more</div>
+              </div>
+              <Link href="/dashboard/coaching/feedback" style={{ fontSize:12, fontWeight:700, color:'#FF7043', textDecoration:'none' }}>
+                Full analytics →
+              </Link>
+            </div>
+
+            <div style={{ display:'flex', gap:8, overflowX:'auto', paddingRight:12, paddingBottom:4, scrollbarWidth:'none', msOverflowStyle:'none' }}>
+              {kpis.map(k => (
+                <Link key={k.label} href={k.href} style={{ flexShrink:0, width:110, textDecoration:'none', display:'block' }}>
+                  <KPI label={k.label} value={k.value} />
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <section style={{ ...GLASS, padding:16 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+              <span style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', ...ORANGE_HEADING_LIFT }}>Upcoming Sessions</span>
+              <Link href="/dashboard/coaching/sessions" style={{ fontSize:12, fontWeight:700, color:'#FF7043', textDecoration:'none', padding:'5px 10px', borderRadius:999, border:'1px solid rgba(255,112,67,0.25)', background:'rgba(255,112,67,0.08)' }}>
+                Schedule →
+              </Link>
+            </div>
+
+            <div style={{ ...WHITE_CARD, padding:12 }}>
+              {loading ? (
+                <div style={{ color:'#90A4AE', fontSize:13 }}>Loading sessions…</div>
+              ) : sessionsRemainingToday.length===0 ? (
+                <div style={{ color:'#607D8B', fontSize:13, fontWeight:600 }}>No more sessions today.</div>
+              ) : (
+                <div style={{ display:'grid', gap:8 }}>
+                  {sessionsRemainingToday.map(s => {
+                    const { background, color } = getStatusStyles(s.status);
+                    return (
+                      <div key={s.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:10, border:'1px solid rgba(0,0,0,0.07)', background:'white' }}>
+                        <div style={{ width:4, borderRadius:999, alignSelf:'stretch', background:'#FF7043', flexShrink:0 }} />
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:800, color:'#112033', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.client||'Client'}</div>
+                          <div style={{ fontSize:11, color:'#607D8B' }}>{s.time||'—'} · {s.type||'Session'}</div>
+                        </div>
+                        <span style={{ fontSize:11, background, color, padding:'2px 8px', borderRadius:999, fontWeight:700, flexShrink:0 }}>{s.status||'Scheduled'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section style={{ ...GLASS, padding:16 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+              <span style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', ...ORANGE_HEADING_LIFT }}>Clients</span>
+              <Link href="/dashboard/coaching/clients" style={{ fontSize:12, fontWeight:700, color:'#FF7043', textDecoration:'none', padding:'5px 10px', borderRadius:999, border:'1px solid rgba(255,112,67,0.25)', background:'rgba(255,112,67,0.08)' }}>
+                View all →
+              </Link>
+            </div>
+
+            <div style={{ display:'grid', gap:8 }}>
+              {loading ? (
+                <div style={{ ...WHITE_CARD, padding:12, color:'#90A4AE', fontSize:13 }}>Loading clients…</div>
+              ) : clientsPreview.length===0 ? (
+                <div style={{ ...WHITE_CARD, padding:12, color:'#90A4AE', fontSize:13 }}>No clients yet.</div>
+              ) : clientsPreview.map(c => {
+                const { background, color } = getStatusStyles(c.status);
+                return (
+                  <div key={c.id} style={{ ...WHITE_CARD, padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:800, color:'#112033', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name}</div>
+                      <div style={{ fontSize:11, color:'#607D8B', marginTop:2 }}>
+                        {c.nextSession ? c.nextSession.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : 'No upcoming session'}
+                      </div>
+                    </div>
+                    <span style={{ fontSize:11, background, color, padding:'2px 8px', borderRadius:999, fontWeight:700, flexShrink:0 }}>{c.status}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:GAP }}>
+            <FollowUpsDueCard clients={clients} />
+
+            <section style={{ padding:0 }}>
+              <RightRailPlacementManager slot="right_rail_1" />
+            </section>
+          </div>
+
+          <section style={{ ...GLASS, padding:16 }}>
+            <div style={{ fontSize:18, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', marginBottom:10, ...ORANGE_HEADING_LIFT }}>Docs & Tools</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              {['Templates & Guides','Resource Library','Announcements','Coming Soon'].map(t => (
+                <div key={t} style={{
+                  ...WHITE_CARD,
+                  padding:12,
+                  minHeight:60,
+                  display:'flex',
+                  flexDirection:'column',
+                  justifyContent:'center',
+                  alignItems:'center',
+                  textAlign:'center'
+                }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#37474F' }}>{t}</div>
+                  <div style={{ fontSize:11, color:'#90A4AE', marginTop:4 }}>Coming soon…</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+        </div>
+    );
+  }
+
+  // ── DESKTOP ───────────────────────────────────────────────────────────────
+
+  return (
+  <div
+    style={{
+      width: '100%',
+      padding: 0,
+      margin: 0,
+      boxSizing: 'border-box',
+    }}
+  >
+        {error && (
+          <div style={{ background:'#FDECEA', borderRadius:8, padding:10, border:'1px solid #FFCDD2', color:'#C62828', fontSize:13, marginBottom:16 }}>
+            {error}
+          </div>
+        )}
+
+        <div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: `minmax(0,1fr) ${RIGHT_COL_WIDTH}px`,
+    gridTemplateRows: 'auto auto auto',
+    gap: GAP,
+    width: '100%',
+    minWidth: 0,
+    boxSizing: 'border-box',
+  }}
+>
+
+          <section style={{ ...KPI_GLASS, padding:'12px 16px 16px 16px', gridColumn:'1/2', gridRow:'1' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr auto 1fr', alignItems:'center', gap:10, marginBottom:12 }}>
+              <h2 style={{ fontSize:18, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', margin:0, ...ORANGE_HEADING_LIFT }}>
+                KPIs
+              </h2>
+
+              <div style={{ textAlign:'center', fontSize:12, color:'#64748B', fontWeight:500 }}>
+                Click a card to view more
+              </div>
+
+              <div style={{ textAlign:'right' }}>
+                <Link href="/dashboard/coaching/feedback" style={{ color:'#FF7043', fontWeight:800, fontSize:13, lineHeight:1.2, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>
+                  Full analytics →
+                </Link>
+              </div>
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:12 }}>
+              {kpis.map(k => (
+                <Link key={k.label} href={k.href} style={{ textDecoration:'none' }}>
+                  <KPI label={k.label} value={k.value} />
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <Section
+            title="Action Center"
+            helperText="Click a card to open"
+            isMobile={false}
+            style={{ gridColumn:'1/2', gridRow:'2' }}
+            action={
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:10 }}>
+                {actionRefreshing && <span style={{ fontSize:12, color:'#90A4AE', fontWeight:600 }}>Updating…</span>}
+                <Link href="/action-center?scope=COACH&chrome=coach" style={{ color:'#FF7043', fontWeight:800, fontSize:13, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>
+                  View all
+                </Link>
+              </div>
+            }
+          >
+            <div>
+              {actionLoading && !actionBootstrapped ? (
+                <div style={{ color:'#90A4AE' }}>Loading updates…</div>
+              ) : (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(6,minmax(0,1fr))', gap:10 }}>
+                  <ActionLiteCard title="New Messages"     items={actionBuckets.messages} emptyText="No new updates." href="/action-center?scope=COACH&chrome=coach&tab=SOCIAL" />
+                  <ActionLiteCard title="Session Requests" items={actionBuckets.requests} emptyText="No new updates."  href="/dashboard/coaching/client-hub-update?tab=requests" />
+                  <ActionLiteCard title="New Feedback"     items={actionBuckets.feedback} emptyText="No new updates."          href="/dashboard/coaching/feedback" />
+                  <ActionLiteCard title="Calendar"         items={actionBuckets.calendar} emptyText="No new updates."         href="/action-center?scope=COACH&chrome=coach&tab=CALENDAR" />
+                  <ActionLiteCard title="Client Updates"   items={actionBuckets.clients}  emptyText="No new updates."      href="/dashboard/coaching/clients" />
+                  <ActionLiteCard title="Shared With Me"   items={actionBuckets.shared}   emptyText="No new updates."         href="/action-center?scope=COACH&chrome=coach&tab=SHARED" />
+                </div>
+              )}
+            </div>
+          </Section>
+
+          <aside style={{ gridColumn:'2/3', gridRow:'1/3', display:'flex', flexDirection:'column', gap:GAP, alignSelf:'stretch', padding:0, boxSizing:'border-box' }}>
+            <div style={{ flex:'0 0 auto', minHeight:180 }}>
+              <RightRailPlacementManager slot="right_rail_1" />
+            </div>
+
+            <section style={{ ...GLASS, padding:12, flex:'1 1 auto', minHeight:176 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                <div style={{ fontSize:15, fontWeight:900, color:'#FF7043', lineHeight:1.25, letterSpacing:'-0.01em', ...ORANGE_HEADING_LIFT }}>
+                  Upcoming Sessions
+                </div>
+                <Link href="/dashboard/coaching/sessions" style={{ color:'#FF7043', fontWeight:800, fontSize:12, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>
+                  View all
+                </Link>
+              </div>
+
+              {loading ? (
+                <div style={{ ...WHITE_CARD, padding:12, color:'#90A4AE', fontSize:13 }}>Loading sessions…</div>
+              ) : sessionsRemainingToday.length===0 ? (
+                <div style={{ ...WHITE_CARD, padding:12, color:'#90A4AE', fontSize:13 }}>No more sessions today.</div>
+              ) : (
+                <div
+                  ref={upcomingRailScrollRef}
+                  style={{
+                    ...WHITE_CARD,
+                    padding:10,
+                    maxHeight:112,
+                    overflowY:'auto',
+                    display:'grid',
+                    gap:8,
+                    scrollBehavior:'smooth',
+                    scrollbarWidth:'none',
+                    msOverflowStyle:'none'
+                  }}
+                >
+                  {sessionsRemainingToday.map(s => {
+                    const { background, color } = getStatusStyles(s.status);
+                    return (
+                      <div key={s.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', border:'1px solid #eee', borderRadius:8, padding:'8px 10px', background:'white', gap:10 }}>
+                        <span style={{ fontWeight:700, minWidth:48, color:'#112033', fontSize:12 }}>{s.time||'—'}</span>
+                        <div style={{ display:'grid', gap:2, flex:1, minWidth:0 }}>
+                          <span style={{ color:'#455A64', fontSize:12, fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.client||'Client'}</span>
+                          <span style={{ color:'#90A4AE', fontSize:11, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.type||'Session'}</span>
+                        </div>
+                        <span style={{ fontSize:11, background, color, padding:'4px 8px', borderRadius:999, whiteSpace:'nowrap' }}>{s.status||'Scheduled'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </aside>
+
+          <div
+  style={{
+    gridColumn: '1/-1',
+    gridRow: '3',
+    display: 'grid',
+    gridTemplateColumns:
+      'minmax(0,6fr) minmax(0,4fr) minmax(0,2fr)',
+    gap: GAP,
+    boxSizing: 'border-box',
+    minWidth: 0,
+  }}
+>
+
+            <Section
+              title="Clients"
+              action={
+                <Link href="/dashboard/coaching/clients" style={{ color:'#FF7043', fontWeight:800, fontSize:13, textDecoration:'none', ...ORANGE_HEADING_LIFT }}>
+                  View all
+                </Link>
+              }
+            >
+              {loading ? (
+                <div style={{ color:'#90A4AE', fontSize:14, padding:16, background:'white', borderRadius:10, border:'1px solid #eee' }}>
+                  Loading clients…
+                </div>
+              ) : clientsPreview.length===0 ? (
+                <div style={{ padding:16, background:'white', borderRadius:10, border:'1px solid #eee', color:'#90A4AE', fontSize:14 }}>
+                  No clients yet.
+                </div>
+              ) : (
+                <div style={{ overflowX:'auto' }}>
+                  <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:0, background:'white', border:'1px solid #eee', borderRadius:10, overflow:'hidden' }}>
+                    <thead>
+                      <tr style={{ background:'#FAFAFA' }}>
+                        <Th>Name</Th>
+                        <Th>Status</Th>
+                        <Th>Next Session</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clientsPreview.map(c => {
+                        const { background, color } = getStatusStyles(c.status);
+                        return (
+                          <tr key={c.id} style={{ borderTop:'1px solid #eee' }}>
+                            <Td strong>{c.name}</Td>
+                            <Td><span style={{ fontSize:12, background, color, padding:'4px 8px', borderRadius:999 }}>{c.status}</span></Td>
+                            <Td>{c.nextSession ? c.nextSession.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—'}</Td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Section>
+
+            <Section title="Docs & Tools">
+              <div style={grid3}>
+                <Card title="Templates & Guides" />
+                <Card title="Resource Library" />
+                <Card title="Announcements" />
+              </div>
+            </Section>
+
+            <FollowUpsDueCard clients={clients} />
+
+          </div>
+        </div>
+      </div>
+  );
+}

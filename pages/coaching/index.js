@@ -14,6 +14,7 @@ import Head from "next/head";
 import CoachingHeader from "@/components/coaching/CoachingHeader";
 import CoachWorkspaceToolbar from "@/components/coaching/CoachWorkspaceToolbar";
 import { useUserWallpaper } from "@/hooks/useUserWallpaper";
+import CoachDashboard from "@/components/coaching/CoachDashboard";
 import CoachInbox from "@/components/coaching/CoachInbox";
 import SeekerInbox from "@/components/seeker/SeekerInbox";
 import CoachCalendar from "@/components/coaching/CoachCalendar";
@@ -103,6 +104,9 @@ export default function CoachingWorkspaceMock() {
                   width: "100%",
                 }}
               >
+				{activeWorkspace === "dashboard" &&
+				  activeSubTab === "dashboard" && <CoachDashboard />}
+			  
                 {activeWorkspace === "messaging" &&
 				  activeSubTab === "coaching" && <CoachInbox />}
 
