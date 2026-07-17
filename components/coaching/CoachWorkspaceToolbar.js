@@ -83,7 +83,7 @@ paddingBottom:8
 display:"flex",
 justifyContent:"center",
 alignItems:"center",
-gap:28,
+gap:36,
 paddingTop:8,
 flexWrap:"wrap",
 width:"100%"
