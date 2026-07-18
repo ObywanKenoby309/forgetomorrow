@@ -654,6 +654,7 @@ export default function ClientSelector({ selectedClient, onSelectClient, embedde
   >
     +
   </button>
+ </div>
 </div>
 
         <div style={{ ...GLASS, padding: embeddedMobile ? '14px 12px' : '18px 20px', overflow: 'visible', backdropFilter: 'none', WebkitBackdropFilter: 'none', background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(255,255,255,0.55)', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
