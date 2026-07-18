@@ -586,7 +586,7 @@ export default function ClientSelector({ selectedClient, onSelectClient, embedde
       `}</style>
 
       <div style={{ display: 'grid', gap: embeddedMobile ? 10 : 14, width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'hidden', boxSizing: 'border-box' }}>
-        <div style={{ ...GLASS, padding: embeddedMobile ? '12px' : '14px 16px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'hidden' }}>
+        <div style={{ ...GLASS, padding: embeddedMobile ? '12px' : '14px 16px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflow: 'visible' }}>
 <div
   style={{
     display: "grid",
