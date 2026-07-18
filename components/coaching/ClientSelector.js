@@ -589,7 +589,7 @@ export default function ClientSelector({ selectedClient, onSelectClient, embedde
 <div
   style={{
     display: "grid",
-    gridTemplateColumns: "minmax(0,1fr) 42px 42px"
+    gridTemplateColumns: "minmax(0,1fr) 42px 42px",
     gap: 8,
     alignItems: "center",
   }}
