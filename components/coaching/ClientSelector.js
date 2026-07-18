@@ -586,19 +586,75 @@ export default function ClientSelector({ selectedClient, onSelectClient, embedde
 
       <div style={{ display: 'grid', gap: embeddedMobile ? 10 : 14, width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'hidden', boxSizing: 'border-box' }}>
         <div style={{ ...GLASS, padding: embeddedMobile ? '12px' : '14px 16px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'hidden' }}>
-          <div className="cm-filter-grid">
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email…" style={inputStyle} />
-            <select value={status} onChange={(e) => setStatus(e.target.value)} style={inputStyle}>
-              <option value="All">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="At Risk">At Risk</option>
-              <option value="New Intake">New Intake</option>
-            </select>
-            <button type="button" onClick={openAddClientModal} className="cm-add-btn" style={primaryBtn}>
-              + Add Client
-            </button>
-          </div>
-        </div>
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "minmax(0,1fr) 42px 42px"
+    gap: 8,
+    alignItems: "center",
+  }}
+>
+  <input
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    placeholder="Search clients..."
+    aria-label="Search clients"
+    style={inputStyle}
+  />
+
+  <button
+    type="button"
+    aria-label="Filter clients"
+    title="Filter"
+    onClick={() => {
+      // we'll wire the popup next
+    }}
+    style={{
+      ...primaryBtn,
+      padding: "10px",
+      width: 42,
+      height: 42,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
+    <svg
+  width="18"
+  height="18"
+  viewBox="0 0 24 24"
+  fill="none"
+>
+  <path
+    d="M4 5h16l-6 7v6l-4 2v-8L4 5z"
+    stroke="white"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />
+</svg>
+  </button>
+
+  <button
+    type="button"
+    aria-label="Add client"
+    title="Add Client"
+    onClick={openAddClientModal}
+    style={{
+      ...primaryBtn,
+      padding: "10px",
+      width: 42,
+      height: 42,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 22,
+      lineHeight: 1,
+    }}
+  >
+    +
+  </button>
+</div>
 
         <div style={{ ...GLASS, padding: embeddedMobile ? '14px 12px' : '18px 20px', overflow: 'visible', backdropFilter: 'none', WebkitBackdropFilter: 'none', background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(255,255,255,0.55)', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: embeddedMobile ? 'flex-end' : 'space-between', marginBottom: embeddedMobile ? 10 : 14 }}>
