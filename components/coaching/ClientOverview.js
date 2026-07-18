@@ -1,50 +1,166 @@
 // components/coaching/ClientOverview.js
 
-import React from "react";
-import { useRouter } from "next/router";
-import {
-  MetaRow,
-  SectionCard,
-} from "@/components/coaching/clients/ClientProfilePrimitives";
-import {
-  initials,
-  fmtDateTime,
-} from "@/lib/coaching/clientProfileHelpers";
+import React from 'react';
+import { useRouter } from 'next/router';
+import { profileWallpapers } from '@/lib/profileWallpapers';
+import { MetaRow, SectionCard } from '@/components/coaching/clients/ClientProfilePrimitives';
+import { useClientProfile } from '@/hooks/useClientProfile';
+import { avatarColor, initials, fmtDateTime, toStringArray, toEducationObjects, getExperienceList, STATUS, defaultStatus } from '@/lib/coaching/clientProfileHelpers';
 
-export default function ClientOverview({
-  client,
-  form,
-  profileSubTabs,
-  profileSubTab,
-  setProfileSubTab,
-  isMobile,
-  profileWallpaperSrc,
-  avatarUrl,
-  avatarBg,
-  avatarDark,
-  cfg,
-  isFTUser,
-  profileHref,
-  sessions,
-  notes,
-  docs,
-  summaryText,
-  onChange,
-  experienceList,
-  projectsList,
-  educationList,
-  certificationsList,
-  skillsList,
-  hasWorkPrefs,
-  workStatus,
-  preferredWorkType,
-  willingToRelocate,
-  preferredLocations,
-  onViewSessions,
-  onMessage,
-  onOpenProfile,
-}) {
+function resolveProfileWallpaperSrc(source = {}) {
+  const directCandidates = [
+    source.wallpaperUrl,
+    source.profileWallpaperUrl,
+    source.profileWallpaperSrc,
+    source.wallpaperSrc,
+    source.wallpaperImage,
+    source.backgroundUrl,
+    source.backgroundImage,
+    source.coverWallpaperUrl,
+    source.portfolioWallpaperUrl,
+    source.selectedWallpaperUrl,
+    source.wallpaper?.src,
+    source.wallpaper?.url,
+    source.profileWallpaper?.src,
+    source.profileWallpaper?.url,
+    source.background?.src,
+    source.background?.url,
+  ];
+
+  for (const value of directCandidates) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+
+  const wallpaperKeyCandidates = [
+    source.wallpaperKey,
+    source.profileWallpaperKey,
+    source.selectedWallpaperKey,
+    source.backgroundKey,
+    source.wallpaper,
+    source.profileWallpaper,
+  ];
+
+  for (const value of wallpaperKeyCandidates) {
+    if (typeof value !== 'string' || !value.trim()) continue;
+    const trimmed = value.trim();
+    if (trimmed.startsWith('/') || trimmed.startsWith('http')) return trimmed;
+    const found = profileWallpapers.find((item) => item.key === trimmed);
+    if (found?.src) return found.src;
+  }
+
+  return '';
+}
+
+export default function ClientOverview() {
   const router = useRouter();
+
+  const {
+    client,
+    profileData,
+    form,
+    loading,
+    error,
+    sessions,
+    notes,
+    docs,
+    avatarUrl,
+    onChange,
+  } = useClientProfile();
+  
+  const [profileSubTab, setProfileSubTab] = React.useState("overview");
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  React.useEffect(() => {
+  const check = () => setIsMobile(window.innerWidth < 768);
+  check();
+  window.addEventListener("resize", check);
+  return () => window.removeEventListener("resize", check);
+}, []);
+
+React.useEffect(() => {
+  setProfileSubTab("overview");
+}, [client?.id]);
+
+if (loading) {
+  return <div>Loading client...</div>;
+}
+
+if (error || !client || !form) {
+  return <div>Client not found.</div>;
+}
+
+// ── Derived render values ──────────────────────────────────────────────────
+  const source = { ...(client || {}), ...(profileData || {}) };
+  const isFTUser = Boolean(profileData);
+  const profileWallpaperSrc = isFTUser ? resolveProfileWallpaperSrc(source) : '';
+  const [avatarBg, avatarDark] = avatarColor(client.name);
+  const cfg = STATUS[form.status] || defaultStatus;
+
+  const profileHref =
+    (typeof source.profileUrl === 'string' && source.profileUrl.trim()) ||
+    (typeof form.profileUrl === 'string' && form.profileUrl.trim()) ||
+    (typeof client.profileUrl === 'string' && client.profileUrl.trim()) ||
+    (typeof source.slug === 'string' && source.slug.trim() ? `/profile/${source.slug.trim()}` : '') ||
+    (typeof client.profileSlug === 'string' && client.profileSlug.trim()
+      ? `/profile/${client.profileSlug.trim()}`
+      : '') ||
+    (client.clientId ? `/member-profile?userId=${client.clientId}` : '');
+
+  const summaryText = isFTUser
+    ? source.summary?.trim?.() || source.aboutMe?.trim?.() || source.profileSummary?.trim?.() || source.headline?.trim?.() || ''
+    : form.manualSummary?.trim() || '';
+
+  const skillsList = isFTUser
+    ? toStringArray(source.skills || source.skillsJson || source.skillsProfile || source.topSkills || source.resumeSkills)
+    : toStringArray(form.manualSkills || '');
+
+  const experienceList = isFTUser
+    ? getExperienceList(source.experience || source.workHistory || source.profileExperience || source.resumeExperience)
+    : [];
+
+  const educationList = isFTUser
+    ? toEducationObjects(source.education || source.educationJson || source.profileEducation)
+    : [];
+
+  const preferredLocations = isFTUser
+    ? toStringArray(source.preferredLocations || source.workPreferences?.preferredLocations || source.workPreferences?.locations)
+    : toStringArray(form.manualPreferredLocations || '');
+
+  const workStatus = isFTUser
+    ? source.workStatus || source.workPreferences?.workStatus || source.workPreferences?.status || ''
+    : form.manualWorkStatus || '';
+
+  const preferredWorkType = isFTUser
+    ? source.preferredWorkType || source.workPreferences?.preferredWorkType || source.workPreferences?.workType || ''
+    : form.manualPreferredWorkType || '';
+
+  const willingToRelocate = isFTUser
+    ? source.willingToRelocate ?? source.workPreferences?.willingToRelocate ?? source.workPreferences?.relocate ?? ''
+    : form.manualWillingToRelocate || '';
+
+  const hasWorkPrefs = Boolean(
+    workStatus || preferredWorkType || preferredLocations.length || String(willingToRelocate || '').trim()
+  );
+
+  const openProfile = () => {
+    if (!profileHref) return;
+    if (/^https?:\/\//i.test(profileHref)) {
+      window.open(profileHref, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    router.push(profileHref);
+  };
+
+  const certificationsList = isFTUser && Array.isArray(source.certifications) ? source.certifications : [];
+  const projectsList = isFTUser && Array.isArray(source.projects) ? source.projects : [];
+
+  const profileSubTabs = [
+    { id: 'overview',         label: 'Overview' },
+    { id: 'experience',       label: 'Experience' },
+    { id: 'education',        label: 'Education' },
+    { id: 'skills',           label: 'Skills' },
+    { id: 'preferences',      label: 'Preferences' },
+  ];
 
   return (
                 <div className="space-y-3">
@@ -124,10 +240,10 @@ export default function ClientOverview({
                                 <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide shadow-sm ${isFTUser ? 'border-orange-200/60 bg-orange-500/82 text-white' : 'border-white/30 bg-slate-950/42 text-white/92 backdrop-blur-sm'}`}>{isFTUser ? 'ForgeTomorrow User' : 'External Client'}</span>
                               </div>
                               <div className="grid w-full grid-cols-1 gap-2 pt-1">
-                                <button type="button" onClick={onViewSessions} className="rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] hover:bg-white transition">View Sessions</button>
-                                <button type="button" onClick={onMessage} className="rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] hover:bg-white transition">Message</button>
+                                <button type="button" onClick={() => router.push('/dashboard/coaching/sessions')} className="rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] hover:bg-white transition">View Sessions</button>
+                                <button type="button" onClick={() => router.push('/coaching/messaging')} className="rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] hover:bg-white transition">Message</button>
                                 {profileHref ? (
-                                  <button type="button" onClick={onOpenProfile} className="rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] hover:bg-white transition">View Profile</button>
+                                  <button type="button" onClick={openProfile} className="rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] hover:bg-white transition">View Profile</button>
                                 ) : null}
                               </div>
                             </div>
