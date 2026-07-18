@@ -268,6 +268,7 @@ function ActionsDropdown({ client, onDelete, onMessage, onSendCsat }) {
 export default function ClientSelector({ selectedClient, onSelectClient, embeddedMobile = false,} = {}) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [coachId, setCoachId] = useState('');
@@ -602,13 +603,12 @@ export default function ClientSelector({ selectedClient, onSelectClient, embedde
     style={inputStyle}
   />
 
+<div style={{ position: "relative" }}>
   <button
     type="button"
     aria-label="Filter clients"
     title="Filter"
-    onClick={() => {
-      // we'll wire the popup next
-    }}
+    onClick={() => setShowFilterMenu((v) => !v)}
     style={{
       ...primaryBtn,
       padding: "10px",
@@ -620,20 +620,55 @@ export default function ClientSelector({ selectedClient, onSelectClient, embedde
     }}
   >
     <svg
-  width="18"
-  height="18"
-  viewBox="0 0 24 24"
-  fill="none"
->
-  <path
-    d="M4 5h16l-6 7v6l-4 2v-8L4 5z"
-    stroke="white"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  />
-</svg>
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <path
+        d="M4 5h16l-6 7v6l-4 2v-8L4 5z"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   </button>
+
+  {showFilterMenu && (
+    <div
+      style={{
+        position: "absolute",
+        top: 48,
+        right: 0,
+        width: 180,
+        background: "#fff",
+        border: "1px solid rgba(0,0,0,.1)",
+        borderRadius: 10,
+        boxShadow: "0 10px 30px rgba(0,0,0,.18)",
+        padding: 10,
+        zIndex: 100,
+      }}
+    >
+      <select
+        value={status}
+        onChange={(e) => {
+          setStatus(e.target.value);
+          setShowFilterMenu(false);
+        }}
+        style={{
+          ...inputStyle,
+          width: "100%",
+        }}
+      >
+        <option>All</option>
+        <option>Active</option>
+        <option>New Intake</option>
+        <option>At Risk</option>
+      </select>
+    </div>
+  )}
+</div>
 
   <button
     type="button"
