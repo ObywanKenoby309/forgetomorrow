@@ -652,26 +652,48 @@ export default function ClientSelector({ selectedClient, onSelectClient, embedde
         border: "1px solid rgba(0,0,0,.1)",
         borderRadius: 10,
         boxShadow: "0 10px 30px rgba(0,0,0,.18)",
-        padding: 10,
+        overflow: "hidden",
         zIndex: 100,
       }}
     >
-      <select
-        value={status}
-        onChange={(e) => {
-          setStatus(e.target.value);
-          setShowFilterMenu(false);
-        }}
-        style={{
-          ...inputStyle,
-          width: "100%",
-        }}
-      >
-        <option>All</option>
-        <option>Active</option>
-        <option>New Intake</option>
-        <option>At Risk</option>
-      </select>
+      {["All", "Active", "New Intake", "At Risk"].map((option) => (
+        <button
+          key={option}
+          type="button"
+          onClick={() => {
+            setStatus(option);
+            setShowFilterMenu(false);
+          }}
+          style={{
+            width: "100%",
+            padding: "10px 14px",
+            border: "none",
+            borderBottom:
+              option !== "At Risk"
+                ? "1px solid rgba(0,0,0,.06)"
+                : "none",
+            background:
+              status === option
+                ? "rgba(255,112,67,.12)"
+                : "#fff",
+            color: "#37474F",
+            fontSize: 13,
+            fontWeight: status === option ? 700 : 500,
+            textAlign: "left",
+            cursor: "pointer",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span>{option}</span>
+          {status === option && (
+            <span style={{ color: "#FF7043", fontWeight: 800 }}>
+              ✓
+            </span>
+          )}
+        </button>
+      ))}
     </div>
   )}
 </div>
