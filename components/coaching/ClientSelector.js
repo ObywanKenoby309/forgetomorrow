@@ -603,7 +603,13 @@ export default function ClientSelector({ selectedClient, onSelectClient, embedde
     style={inputStyle}
   />
 
-<div style={{ position: "relative" }}>
+<div
+  style={{
+    position: "relative",
+    overflow: "visible",
+    zIndex: 20,
+  }}
+>
   <button
     type="button"
     aria-label="Filter clients"
@@ -639,7 +645,7 @@ export default function ClientSelector({ selectedClient, onSelectClient, embedde
     <div
       style={{
         position: "absolute",
-        top: 48,
+        top: "calc(100% + 6px)",
         right: 0,
         width: 180,
         background: "#fff",
