@@ -15,6 +15,7 @@ import CoachingHeader from "@/components/coaching/CoachingHeader";
 import CoachWorkspaceToolbar from "@/components/coaching/CoachWorkspaceToolbar";
 import { useUserWallpaper } from "@/hooks/useUserWallpaper";
 import CoachDashboard from "@/components/coaching/CoachDashboard";
+import ClientSelector from "@/components/coaching/ClientSelector";
 import ClientOverview from "@/components/coaching/ClientOverview";
 import CoachInbox from "@/components/coaching/CoachInbox";
 import SeekerInbox from "@/components/seeker/SeekerInbox";
@@ -37,6 +38,7 @@ export default function CoachingWorkspaceMock() {
   const [activeWorkspace, setActiveWorkspace] = useState("dashboard");
   const [activeSubTab, setActiveSubTab] = useState("dashboard");
   const [isReady, setIsReady] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
 
   const { wallpaperUrl } = useUserWallpaper();
 
@@ -108,8 +110,44 @@ export default function CoachingWorkspaceMock() {
 				{activeWorkspace === "dashboard" &&
 				  activeSubTab === "dashboard" && <CoachDashboard />}
 				  
-				{activeWorkspace === "clients" &&
-				activeSubTab === "overview" && <ClientOverview />}
+				{activeWorkspace === "clients" && (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "320px minmax(0,1fr)",
+      gap: 24,
+      alignItems: "start",
+    }}
+  >
+    <ClientSelector
+      selectedClient={selectedClient}
+      onSelectClient={setSelectedClient}
+    />
+
+    {selectedClient ? (
+      activeSubTab === "overview" ? (
+        <ClientOverview client={selectedClient} />
+      ) : null
+    ) : (
+      <div
+        style={{
+          minHeight: 500,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          border: "1px dashed rgba(255,255,255,.25)",
+          borderRadius: 18,
+          background: "rgba(255,255,255,.05)",
+          color: "#fff",
+          fontSize: 18,
+          fontWeight: 700,
+        }}
+      >
+        Select a client to begin.
+      </div>
+    )}
+  </div>
+)}
 			  
                 {activeWorkspace === "messaging" &&
 				  activeSubTab === "coaching" && <CoachInbox />}
