@@ -125,8 +125,8 @@ if (error || !client || !form) {
   }) || experienceList[0];
 
 const currentRole =
-  source.headline ||
   currentExperience?.title ||
+  source.headline ||
   "Not available";
 
 const latestEmployer =
