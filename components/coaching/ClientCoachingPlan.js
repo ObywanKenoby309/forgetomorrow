@@ -40,20 +40,21 @@ export default function ClientCoachingPlan({ client }) {
 	
 	{view === "strategy" ? (
 	  <ClientTargetStrategy client={client} />
-	) : (
-	
-	<pre className="text-xs overflow-auto max-h-[400px]">
-	  {JSON.stringify(client, null, 2)}
-	</pre>
-	
-<CommandBrief
-  clientId={client?.id}
-  clientName={client?.name}
-  generatedAt={client?.strategyGeneratedAt}
-  strategyBrief={client?.strategyJson}
-  onEditInputs={() => setView("strategy")}
-/>
-    )}
+) : (
+  <>
+    <pre className="text-xs overflow-auto max-h-[400px]">
+      {JSON.stringify(client, null, 2)}
+    </pre>
+
+    <CommandBrief
+      clientId={client?.id}
+      clientName={client?.name}
+      generatedAt={client?.strategyGeneratedAt}
+      strategyBrief={client?.strategyJson}
+      onEditInputs={() => setView("strategy")}
+    />
+  </>
+)}
   </>
 );
 }
