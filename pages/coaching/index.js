@@ -17,6 +17,8 @@ import { useUserWallpaper } from "@/hooks/useUserWallpaper";
 import CoachDashboard from "@/components/coaching/CoachDashboard";
 import ClientSelector from "@/components/coaching/ClientSelector";
 import ClientOverview from "@/components/coaching/ClientOverview";
+import ClientCoachingPlan from "@/components/coaching/ClientCoachingPlan";
+import ClientTargetStrategy from "@/components/coaching/ClientTargetStrategy";
 import CoachInbox from "@/components/coaching/CoachInbox";
 import SeekerInbox from "@/components/seeker/SeekerInbox";
 import CoachCalendar from "@/components/coaching/CoachCalendar";
@@ -119,15 +121,26 @@ export default function CoachingWorkspaceMock() {
       alignItems: "start",
     }}
   >
-    <ClientSelector
-      selectedClient={selectedClient}
-      onSelectClient={setSelectedClient}
-    />
+<ClientSelector
+  selectedClient={selectedClient}
+  onSelectClient={setSelectedClient}
+/>
 
-    {selectedClient ? (
-      activeSubTab === "overview" ? (
-        <ClientOverview client={selectedClient} />
-      ) : null
+{selectedClient ? (
+  <>
+    {activeSubTab === "overview" && (
+      <ClientOverview client={selectedClient} />
+    )}
+
+    {activeSubTab === "plan" && (
+      <ClientCoachingPlan client={selectedClient} />
+    )}
+
+    {activeSubTab === "strategy" && (
+      <ClientTargetStrategy client={selectedClient} />
+    )}
+  </>
+	 
     ) : (
       <div
         style={{
