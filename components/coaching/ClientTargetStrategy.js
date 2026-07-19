@@ -1,33 +1,44 @@
-// components/coaching/ClientTargetStrategy.js
+import { SectionCard } from "@/components/coaching/clients/ClientProfilePrimitives";
 
-import CommandBrief from '@/components/coaching/clients/CommandBrief';
-
-export default function ClientTargetStrategy({
-  client,
-  form,
-  strategyView,
-  setStrategyView,
-  handleGenerateStrategy,
-  generatingStrategy,
-  handleFeedback,
-  onChange,
-}) {
-  if (strategyView === 'results' && form?.strategyBrief) {
-    return (
-      <CommandBrief
-        clientId={client?.id}
-        clientName={client?.name}
-        generatedAt={form.strategyBrief?.generatedAt || client?.updatedAt}
-        strategyBrief={form.strategyBrief}
-        onEditInputs={() => setStrategyView('input')}
-        onFeedback={handleFeedback}
-      />
-    );
-  }
-
+export default function ClientTargetStrategy() {
   return (
-    <div>
-      Target Strategy generation overlay will go here.
-    </div>
+    <SectionCard
+      title="Target Strategy"
+      helperText="AI Recommendation"
+    >
+      <div className="space-y-3">
+
+        <div>
+          <label className="block text-sm font-bold mb-2">
+            Target Companies
+          </label>
+
+          <textarea
+            className="w-full min-h-[120px] rounded-xl border border-slate-200 p-3"
+            placeholder="Enter target companies..."
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold mb-2">
+            Coaching Context
+          </label>
+
+          <textarea
+            className="w-full min-h-[180px] rounded-xl border border-slate-200 p-3"
+            placeholder="Describe what the AI should know..."
+          />
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            className="rounded-xl bg-[#FF7043] px-5 py-2 text-white font-bold"
+          >
+            Generate Strategy
+          </button>
+        </div>
+
+      </div>
+    </SectionCard>
   );
 }
