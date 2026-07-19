@@ -18,7 +18,6 @@ import CoachDashboard from "@/components/coaching/CoachDashboard";
 import ClientSelector from "@/components/coaching/ClientSelector";
 import ClientOverview from "@/components/coaching/ClientOverview";
 import ClientCoachingPlan from "@/components/coaching/ClientCoachingPlan";
-import ClientTargetStrategy from "@/components/coaching/ClientTargetStrategy";
 import CoachInbox from "@/components/coaching/CoachInbox";
 import SeekerInbox from "@/components/seeker/SeekerInbox";
 import CoachCalendar from "@/components/coaching/CoachCalendar";
@@ -134,10 +133,6 @@ export default function CoachingWorkspaceMock() {
 
     {activeSubTab === "plan" && (
       <ClientCoachingPlan client={selectedClient} />
-    )}
-
-    {activeSubTab === "strategy" && (
-      <ClientTargetStrategy client={selectedClient} />
     )}
   </>
 	 

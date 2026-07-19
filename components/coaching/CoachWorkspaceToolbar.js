@@ -20,7 +20,7 @@ const workspaces=[
 
 const sub={
 dashboard:[["dashboard","Coach Dashboard"]],
-clients:[["overview","Overview"],["plan","Coaching Plan"],["strategy","Target Strategy"],["goals","Goals"],["homework","Homework"],["activity","Activity"],["notes","Notes"]],
+clients:[["overview","Overview"],["plan","Coaching Plan"],["goals","Goals"],["homework","Homework"],["activity","Activity"],["notes","Notes"]],
 messaging:[["coaching","Coaching Inbox"],["seeker","Seeker Inbox"]],
 calendar:[["calendar","Calendar"],["sessions","Sessions"]],
 resources:[["resources","Resources"],["vault","Vault"],["spotlights","Spotlights"]],
