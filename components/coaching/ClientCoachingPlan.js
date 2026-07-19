@@ -45,7 +45,7 @@ export default function ClientCoachingPlan({ client }) {
   clientId={client?.id}
   clientName={client?.name}
   generatedAt={client?.strategyGeneratedAt}
-  strategyBrief={client?.strategyBrief}
+  strategyBrief={client?.strategyJson}
   onEditInputs={() => setView("strategy")}
 />
     )}
