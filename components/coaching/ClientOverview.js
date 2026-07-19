@@ -322,17 +322,7 @@ if (error || !client || !form) {
                           </div>
                         </SectionCard>
                         )}
-
-                        <SectionCard title="Command Snapshot">
-                          <div className="divide-y divide-slate-100">
-                            <MetaRow label="Status"       value={form.status} />
-                            <MetaRow label="Next session" value={form.nextSession ? fmtDateTime(form.nextSession) : ''} />
-                            <MetaRow label="Last contact" value={form.lastContact ? fmtDateTime(form.lastContact) : ''} />
-                            <MetaRow label="Sessions"     value={sessions.length} />
-                            <MetaRow label="Notes"        value={notes.length} />
-                            <MetaRow label="Documents"    value={docs.length} />
-                          </div>
-                        </SectionCard>
+						
                       </div>
 
                       <div className="space-y-3">
@@ -349,6 +339,21 @@ if (error || !client || !form) {
                         </SectionCard>
                       </div>
                     </div>
+					
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-3">
+  <SectionCard title="Career Snapshot">
+    Placeholder
+  </SectionCard>
+
+  <SectionCard title="Coaching Snapshot">
+    Placeholder
+  </SectionCard>
+
+  <SectionCard title="Progress Snapshot">
+    Placeholder
+  </SectionCard>
+</div>
+
                   ) : null}
 
                   {profileSubTab === 'experience' ? (
