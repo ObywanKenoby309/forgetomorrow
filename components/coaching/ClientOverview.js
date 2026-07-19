@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/router';
 import { profileWallpapers } from '@/lib/profileWallpapers';
 import { MetaRow, SectionCard } from '@/components/coaching/clients/ClientProfilePrimitives';
-import { useClientProfile } from '@/hooks/useClientProfile';
+import { useClientProfile, useClientWorkspaceProfile } from '@/hooks/useClientProfile';
 import { avatarColor, initials, fmtDateTime, toStringArray, toEducationObjects, getExperienceList, STATUS, defaultStatus } from '@/lib/coaching/clientProfileHelpers';
 
 function resolveProfileWallpaperSrc(source = {}) {
@@ -51,21 +51,21 @@ function resolveProfileWallpaperSrc(source = {}) {
   return '';
 }
 
-export default function ClientOverview() {
+export default function ClientOverview({ client: selectedClient }) {
   const router = useRouter();
 
-  const {
-    client,
-    profileData,
-    form,
-    loading,
-    error,
-    sessions,
-    notes,
-    docs,
-    avatarUrl,
-    onChange,
-  } = useClientProfile();
+const {
+  client,
+  profileData,
+  form,
+  loading,
+  error,
+  sessions,
+  notes,
+  docs,
+  avatarUrl,
+  onChange,
+} = useClientWorkspaceProfile(selectedClient);
   
   const [profileSubTab, setProfileSubTab] = React.useState("overview");
   const [isMobile, setIsMobile] = React.useState(false);
