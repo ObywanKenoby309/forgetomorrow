@@ -124,14 +124,14 @@ export default function CoachingWorkspaceMock() {
   selectedClient={selectedClient}
   onSelectClient={async (client) => {
     const res = await fetch(
-      `/api/coaching/clients/profile?email=${encodeURIComponent(client.email)}`
+      `/api/coaching/clients/${encodeURIComponent(client.id)}`
     );
 
     if (!res.ok) return;
 
     const { client: full } = await res.json();
 
-	setSelectedClient(full);
+    setSelectedClient(full);
   }}
 />
 
