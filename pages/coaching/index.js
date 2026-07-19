@@ -129,9 +129,9 @@ export default function CoachingWorkspaceMock() {
 
     if (!res.ok) return;
 
-    const full = await res.json();
+    const { client: full } = await res.json();
 
-    setSelectedClient(full);
+	setSelectedClient(full);
   }}
 />
 
