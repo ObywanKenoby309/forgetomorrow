@@ -117,6 +117,36 @@ if (error || !client || !form) {
   const experienceList = isFTUser
     ? getExperienceList(source.experience || source.workHistory || source.profileExperience || source.resumeExperience)
     : [];
+	
+	const currentExperience =
+  experienceList.find((exp) => {
+    const range = `${exp.range || ""}`.toLowerCase();
+    return range.includes("present") || range.includes("current");
+  }) || experienceList[0];
+
+const currentRole =
+  source.headline ||
+  currentExperience?.title ||
+  "Not available";
+
+const latestEmployer =
+  currentExperience?.company ||
+  "Not available";
+
+const employmentStatus =
+  currentExperience
+    ? (
+        `${currentExperience.range || ""}`
+          .toLowerCase()
+          .includes("present")
+          ? "Employed"
+          : "Seeking"
+      )
+    : "Unknown";
+
+const currentIndustry =
+  source.industry ||
+  "Not available";
 
   const educationList = isFTUser
     ? toEducationObjects(source.education || source.educationJson || source.profileEducation)
@@ -342,7 +372,10 @@ if (error || !client || !form) {
 					
 					<div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-3">
   <SectionCard title="Career Snapshot">
-    Placeholder
+	<MetaRow label="Current Industry" value={currentIndustry} />
+	<MetaRow label="Current Role" value={currentRole} />
+	<MetaRow label="Latest Employer" value={latestEmployer} />
+	<MetaRow label="Employment Status" value={employmentStatus} />
   </SectionCard>
 
   <SectionCard title="Coaching Snapshot">
