@@ -1,6 +1,6 @@
 // components/coaching/ClientCoachingPlan.js
 
-import SectionCard from "./SectionCard";
+import { SectionCard } from "@/components/coaching/clients/ClientProfilePrimitives";
 
 export default function ClientCoachingPlan({ client }) {
   return (
