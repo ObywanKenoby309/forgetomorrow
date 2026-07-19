@@ -198,8 +198,9 @@ if (error || !client || !form) {
                   </div>
 
                   {profileSubTab === 'overview' ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-3">
-                      <div className="space-y-3">
+					<>
+					  <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-3">
+						<div className="space-y-3">
                         {isMobile ? (
                           <div
                             className="relative overflow-hidden rounded-[20px] border border-white/45 shadow-[0_16px_34px_rgba(15,23,42,0.22)]"
@@ -322,7 +323,6 @@ if (error || !client || !form) {
                           </div>
                         </SectionCard>
                         )}
-						
                       </div>
 
                       <div className="space-y-3">
@@ -353,7 +353,7 @@ if (error || !client || !form) {
     Placeholder
   </SectionCard>
 </div>
-
+</>
                   ) : null}
 
                   {profileSubTab === 'experience' ? (
