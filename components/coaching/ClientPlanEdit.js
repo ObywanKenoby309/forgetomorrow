@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import CommandBrief from "@/components/coaching/clients/CommandBrief";
+import ClientTargetStrategy from "@/components/coaching/ClientTargetStrategy";
 
 export default function ClientPlanEdit({ client }) {
   const [mode, setMode] = useState(null);
@@ -24,16 +25,8 @@ export default function ClientPlanEdit({ client }) {
 
       {/* Intelligence Panel */}
       {mode === "intelligence" && (
-        <div className="rounded-2xl border border-slate-200 p-6">
-          <h3 className="font-bold mb-4">
-            Update Intelligence Data
-          </h3>
-
-          <p className="text-sm text-slate-500">
-            Existing Target Strategy inputs will be moved here.
-          </p>
-        </div>
-      )}
+  <ClientTargetStrategy client={client} />
+)}
 
       {/* Free Edit Mode */}
       {mode === "edit" && (
