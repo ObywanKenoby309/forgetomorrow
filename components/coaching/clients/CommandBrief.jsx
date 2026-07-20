@@ -391,37 +391,66 @@ const handleSaveStrategy = async () => {
           {b.transferabilitySignals?.length > 0 && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-4 py-4">
               <div className="text-[10px] font-black tracking-[0.10em] text-emerald-700 uppercase mb-2.5">What Carries Over</div>
-              <ul className="space-y-2.5">
-                {b.transferabilitySignals.map((s, i) => (
-                  <li key={i} className="text-sm text-emerald-900 leading-5 flex gap-2.5">
-                    <span className="text-emerald-500 shrink-0 mt-0.5 font-bold">✓</span>
-                    <span>{s}</span>
-                  </li>
-                ))}
-              </ul>
+              {isEditing ? (
+  <textarea
+    value={(draft.transferabilitySignals || []).join("\n")}
+    onChange={(e) =>
+      updateListField("transferabilitySignals", e.target.value)
+    }
+    className="w-full min-h-[220px] rounded-xl border border-emerald-200 bg-white p-3 text-sm text-slate-800"
+  />
+) : (
+  <ul className="space-y-2.5">
+    {b.transferabilitySignals.map((s, i) => (
+      <li key={i} className="text-sm text-emerald-900 leading-5 flex gap-2.5">
+        <span className="text-emerald-500 shrink-0 mt-0.5 font-bold">✓</span>
+        <span>{s}</span>
+      </li>
+    ))}
+  </ul>
+)}
             </div>
           )}
           {b.roleLanes?.length > 0 && (
             <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-4">
               <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2.5">Role Lanes</div>
-              <ul className="space-y-2">
-                {b.roleLanes.map((r, i) => (
-  <li key={i} className="text-sm text-slate-700 leading-5">
-    {typeof r === 'string' ? r : (
-      <>
-        <div className="font-semibold text-slate-800">
-          {r.title || r.name || 'Role Direction'}
-        </div>
-        {r.description && (
-          <div className="text-xs text-slate-600">
-            {r.description}
-          </div>
+              {isEditing ? (
+  <textarea
+    value={(draft.roleLanes || [])
+      .map((r) =>
+        typeof r === "string"
+          ? r
+          : `${r.title || r.name || ""}${r.description ? " — " + r.description : ""}`
+      )
+      .join("\n")}
+    onChange={(e) =>
+      updateListField("roleLanes", e.target.value)
+    }
+    className="w-full min-h-[220px] rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-800"
+  />
+) : (
+  <ul className="space-y-2">
+    {b.roleLanes.map((r, i) => (
+      <li key={i} className="text-sm text-slate-700 leading-5">
+        {typeof r === "string" ? (
+          r
+        ) : (
+          <>
+            <div className="font-semibold text-slate-800">
+              {r.title || r.name || "Role Direction"}
+            </div>
+
+            {r.description && (
+              <div className="text-xs text-slate-600">
+                {r.description}
+              </div>
+            )}
+          </>
         )}
-      </>
-    )}
-  </li>
-))}
-              </ul>
+      </li>
+    ))}
+  </ul>
+)}
             </div>
           )}
         </div>
@@ -433,14 +462,25 @@ const handleSaveStrategy = async () => {
           {b.narrativeGaps?.length > 0 ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
               <div className="text-[10px] font-black tracking-[0.10em] text-amber-700 uppercase mb-2.5">Narrative Gaps</div>
-              <ul className="space-y-2.5">
-                {b.narrativeGaps.map((g, i) => (
-                  <li key={i} className="text-sm text-amber-900 leading-5 flex gap-2.5">
-                    <span className="text-amber-500 shrink-0 mt-0.5">△</span>
-                    <span>{g}</span>
-                  </li>
-                ))}
-              </ul>
+              {isEditing ? (
+                <textarea
+                  value={(draft.narrativeGaps || []).join("\n")}
+                  onChange={(e) =>
+                    updateListField("narrativeGaps", e.target.value)
+                  }
+                  className="w-full min-h-[220px] rounded-xl border border-amber-200 bg-white p-3 text-sm text-slate-800"
+                  placeholder="Enter one narrative gap per line."
+                />
+              ) : (
+                <ul className="space-y-2.5">
+                  {b.narrativeGaps.map((g, i) => (
+                    <li key={i} className="text-sm text-amber-900 leading-5 flex gap-2.5">
+                      <span className="text-amber-500 shrink-0 mt-0.5">△</span>
+                      <span>{g}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           ) : (
             <div className="text-sm text-slate-500 py-4">No narrative gaps identified.</div>
@@ -454,45 +494,67 @@ const handleSaveStrategy = async () => {
           {b.safeHarborTargets?.length > 0 && (
             <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-4">
               <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2.5">Safe Harbor Targets</div>
-              <ul className="space-y-2.5">
-                {b.safeHarborTargets.map((t, i) => (
-                  <li key={i} className="text-sm text-slate-700 leading-5 flex gap-2">
-                    <span className="text-emerald-500 shrink-0 mt-0.5">→</span>
-                    <div className="min-w-0">
-  <div className="font-semibold text-slate-800">
-    {t.name}
-  </div>
-  {t.reason && (
-    <div className="text-xs text-slate-600">
-      {t.reason}
-    </div>
-  )}
-</div>
-                  </li>
-                ))}
-              </ul>
+              {isEditing ? (
+                <textarea
+                  value={targetsToText(draft.safeHarborTargets)}
+                  onChange={(e) =>
+                    updateTargetField("safeHarborTargets", e.target.value)
+                  }
+                  className="w-full min-h-[220px] rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-800"
+                  placeholder="One target per line: Target name | Reason"
+                />
+              ) : (
+                <ul className="space-y-2.5">
+                  {b.safeHarborTargets.map((t, i) => (
+                    <li key={i} className="text-sm text-slate-700 leading-5 flex gap-2">
+                      <span className="text-emerald-500 shrink-0 mt-0.5">→</span>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-slate-800">
+                          {t.name}
+                        </div>
+                        {t.reason && (
+                          <div className="text-xs text-slate-600">
+                            {t.reason}
+                          </div>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
           {b.stretchTargets?.length > 0 && (
             <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-4">
               <div className="text-[10px] font-black tracking-[0.10em] text-slate-400 uppercase mb-2.5">Stretch Targets</div>
-              <ul className="space-y-2.5">
-                {b.stretchTargets.map((t, i) => (
-                  <li key={i} className="text-sm text-slate-700 leading-5 flex gap-2">
-                    <span className="text-[#FF7043] shrink-0 mt-0.5">↑</span>
-                    <div className="min-w-0">
-  <div className="font-semibold text-slate-800">
-    {t.name}
-  </div>
-  {t.reason && (
-    <div className="text-xs text-slate-600">
-      {t.reason}
-    </div>
-  )}
-</div>
-                  </li>
-                ))}
-              </ul>
+              {isEditing ? (
+                <textarea
+                  value={targetsToText(draft.stretchTargets)}
+                  onChange={(e) =>
+                    updateTargetField("stretchTargets", e.target.value)
+                  }
+                  className="w-full min-h-[220px] rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-800"
+                  placeholder="One target per line: Target name | Reason"
+                />
+              ) : (
+                <ul className="space-y-2.5">
+                  {b.stretchTargets.map((t, i) => (
+                    <li key={i} className="text-sm text-slate-700 leading-5 flex gap-2">
+                      <span className="text-[#FF7043] shrink-0 mt-0.5">↑</span>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-slate-800">
+                          {t.name}
+                        </div>
+                        {t.reason && (
+                          <div className="text-xs text-slate-600">
+                            {t.reason}
+                          </div>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </div>
@@ -504,14 +566,25 @@ const handleSaveStrategy = async () => {
           {b.executionPlan?.length > 0 && (
             <div className="rounded-2xl border border-[rgba(255,112,67,0.25)] bg-[rgba(255,112,67,0.06)] px-5 py-5">
               <div className="text-[10px] font-black tracking-[0.10em] text-[#FF7043] uppercase mb-3">This Week's Execution Plan</div>
-              <div className="space-y-3">
-                {b.executionPlan.map((step, i) => (
-                  <div key={i} className="flex gap-3">
-                    <div className="text-[#FF7043] font-black text-sm shrink-0 w-5">{i + 1}.</div>
-                    <div className="text-sm text-slate-800 leading-5">{step}</div>
-                  </div>
-                ))}
-              </div>
+              {isEditing ? (
+                <textarea
+                  value={(draft.executionPlan || []).join("\n")}
+                  onChange={(e) =>
+                    updateListField("executionPlan", e.target.value)
+                  }
+                  className="w-full min-h-[220px] rounded-xl border border-[rgba(255,112,67,0.25)] bg-white p-3 text-sm text-slate-800"
+                  placeholder="Enter one execution step per line."
+                />
+              ) : (
+                <div className="space-y-3">
+                  {b.executionPlan.map((step, i) => (
+                    <div key={i} className="flex gap-3">
+                      <div className="text-[#FF7043] font-black text-sm shrink-0 w-5">{i + 1}.</div>
+                      <div className="text-sm text-slate-800 leading-5">{step}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {(b.nextStep || b.sessionFocus) && (
@@ -519,13 +592,33 @@ const handleSaveStrategy = async () => {
               {b.nextStep && (
                 <div className="rounded-2xl border border-[rgba(255,112,67,0.25)] bg-[rgba(255,112,67,0.06)] px-4 py-4">
                   <div className="text-[10px] font-black tracking-[0.10em] text-[#FF7043] uppercase mb-1.5">Next Step</div>
-                  <div className="text-[13px] font-semibold text-slate-900 leading-5">{b.nextStep}</div>
+                  <div className="text-[13px] font-semibold text-slate-900 leading-5">
+                  {isEditing ? (
+                    <textarea
+                      value={draft.nextStep || ""}
+                      onChange={(e) => updateTextField("nextStep", e.target.value)}
+                      className="w-full min-h-[110px] rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-800"
+                    />
+                  ) : (
+                    b.nextStep
+                  )}
+                </div>
                 </div>
               )}
               {b.sessionFocus && (
                 <div className="rounded-2xl border border-slate-200 bg-[rgba(51,65,85,0.05)] px-4 py-4">
                   <div className="text-[10px] font-black tracking-[0.10em] text-slate-500 uppercase mb-1.5">Session Focus</div>
-                  <div className="text-[13px] font-semibold text-slate-800 leading-5">{b.sessionFocus}</div>
+                  <div className="text-[13px] font-semibold text-slate-800 leading-5">
+                  {isEditing ? (
+                    <textarea
+                      value={draft.sessionFocus || ""}
+                      onChange={(e) => updateTextField("sessionFocus", e.target.value)}
+                      className="w-full min-h-[110px] rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-800"
+                    />
+                  ) : (
+                    b.sessionFocus
+                  )}
+                </div>
                 </div>
               )}
             </div>
@@ -542,14 +635,23 @@ const handleSaveStrategy = async () => {
           </button>
           {reasoningOpen && (
             <div className="px-4 pb-4">
-              <ul className="space-y-2">
-                {b.reasoning.map((r, i) => (
-                  <li key={i} className="text-[12px] text-slate-600 leading-5 flex gap-2">
-                    <span className="text-slate-400 shrink-0 font-black">{i + 1}.</span>
-                    <span>{r}</span>
-                  </li>
-                ))}
-              </ul>
+              {isEditing ? (
+                <textarea
+                  value={(draft.reasoning || []).join("\n")}
+                  onChange={(e) => updateListField("reasoning", e.target.value)}
+                  className="w-full min-h-[220px] rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-800"
+                  placeholder="Enter one reasoning point per line."
+                />
+              ) : (
+                <ul className="space-y-2">
+                  {b.reasoning.map((r, i) => (
+                    <li key={i} className="text-[12px] text-slate-600 leading-5 flex gap-2">
+                      <span className="text-slate-400 shrink-0 font-black">{i + 1}.</span>
+                      <span>{r}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </div>

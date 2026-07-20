@@ -144,7 +144,6 @@ export default async function handler(req, res) {
         nextSession,
         lastContact,
         notes,
-		strategyJson,
         manualSummary,
         manualExperience,
         manualEducation,
@@ -153,6 +152,7 @@ export default async function handler(req, res) {
         manualPreferredWorkType,
         manualPreferredLocations,
         manualWillingToRelocate,
+        strategyJson,
       } = body;
 
       const updated = await prisma.coachingClient.update({
@@ -170,9 +170,6 @@ export default async function handler(req, res) {
           ...(lastContact !== undefined && {
             lastContact: lastContact ? new Date(lastContact) : null,
           }),
-		  ...(strategyJson !== undefined && {
-			strategyJson,
-		  }),
           ...(manualSummary !== undefined && {
             manualSummary: manualSummary ? String(manualSummary).trim() : null,
           }),
@@ -203,6 +200,9 @@ export default async function handler(req, res) {
               ? String(manualWillingToRelocate).trim()
               : null,
           }),
+          ...(strategyJson !== undefined && {
+            strategyJson,
+          }),
         },
       });
 
@@ -223,6 +223,7 @@ export default async function handler(req, res) {
           manualPreferredWorkType: updated.manualPreferredWorkType ?? '',
           manualPreferredLocations: updated.manualPreferredLocations ?? '',
           manualWillingToRelocate: updated.manualWillingToRelocate ?? '',
+          strategyJson: updated.strategyJson ?? null,
         },
       });
     } catch (err) {
