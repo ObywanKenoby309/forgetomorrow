@@ -9,8 +9,9 @@ export default function ClientCoachingPlan({ client }) {
 	const [view, setView] = useState("plan");
 	
   return (
-  <>
-    <div className="flex justify-center mb-4">
+  <div className="space-y-3">
+
+    <div className="flex justify-center">
       <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden">
         <button
           type="button"
@@ -37,14 +38,19 @@ export default function ClientCoachingPlan({ client }) {
         </button>
       </div>
     </div>
-	
-<CommandBrief
-  clientId={client?.id}
-  clientName={client?.name}
-  generatedAt={client?.strategyGeneratedAt}
-  strategyBrief={client?.strategyJson}
-  onEditInputs={() => setView("strategy")}
-/>
-  </>
+
+    {view === "plan" ? (
+      <CommandBrief
+        clientId={client?.id}
+        clientName={client?.name}
+        generatedAt={client?.strategyGeneratedAt}
+        strategyBrief={client?.strategyJson}
+        onEditInputs={() => setView("strategy")}
+      />
+    ) : (
+      <ClientTargetStrategy client={client} />
+    )}
+
+  </div>
 );
 }
