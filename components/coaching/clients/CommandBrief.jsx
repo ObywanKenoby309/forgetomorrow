@@ -21,16 +21,16 @@ function fmtBriefDate(iso) {
 }
 
 export default function CommandBrief({ clientId, clientName, generatedAt, strategyBrief, onEditInputs, onFeedback, mode = "plan", onGenerateStrategy, onUpdateIntelligence, onEditAllFields,}) {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [reasoningOpen, setReasoningOpen] = useState(false);
-  const [feedbackSent, setFeedbackSent] = useState(null);
-  const [sharing, setSharing] = useState(false);
-  const [exporting, setExporting] = useState(false);
-
-  if (!strategyBrief) return null;
-  const b = strategyBrief;
-
+const [activeTab, setActiveTab] = useState('overview');
+const [reasoningOpen, setReasoningOpen] = useState(false);
+const [feedbackSent, setFeedbackSent] = useState(null);
+const [sharing, setSharing] = useState(false);
+const [exporting, setExporting] = useState(false);
+const [isEditing, setIsEditing] = useState(false);
 const [draft, setDraft] = useState(strategyBrief);
+
+if (!strategyBrief) return null;
+const b = strategyBrief;
 
   const handleUp = async () => {
     await onFeedback?.({ score: 'up' });
@@ -141,13 +141,17 @@ const [draft, setDraft] = useState(strategyBrief);
       Update Intelligence
     </button>
 
-    <button
-      type="button"
-      onClick={onEditAllFields}
-      className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition"
-    >
-      Edit All Fields
-    </button>
+<button
+  type="button"
+  onClick={() => {
+    setDraft(strategyBrief);
+    setIsEditing(true);
+    onEditAllFields?.();
+  }}
+  className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition"
+>
+  Edit All Fields
+</button>
   </>
 )}
 </div>
@@ -182,7 +186,7 @@ const [draft, setDraft] = useState(strategyBrief);
               Who This Person Is
             </div>
             <div className="text-[17px] font-bold text-slate-900 leading-6 mb-4">
-              {mode === "edit" ? (
+              {isEditing ? (
     <textarea
         value={draft.positioningInsight || ""}
         onChange={(e) =>
