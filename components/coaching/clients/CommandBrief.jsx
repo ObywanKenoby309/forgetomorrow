@@ -101,27 +101,27 @@ export default function CommandBrief({ clientId, clientName, generatedAt, strate
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-  {mode === "plan" ? (
-    <>
-      <button
-        type="button"
-        onClick={downloadPdf}
-        disabled={exporting}
-        className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition disabled:opacity-60"
-      >
-        {exporting ? "Exporting…" : "Download PDF"}
-      </button>
+{mode === "plan" && (
+  <>
+    <button
+      type="button"
+      onClick={downloadPdf}
+      disabled={exporting}
+      className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition disabled:opacity-60"
+    >
+      {exporting ? "Exporting…" : "Download PDF"}
+    </button>
 
-      <button
-        type="button"
-        onClick={shareToFoundry}
-        disabled={sharing}
-        className="self-start sm:self-auto rounded-xl border border-[#FF7043] bg-[rgba(255,112,67,0.10)] px-3 py-1.5 text-[12px] font-semibold text-[#FF7043] hover:bg-[rgba(255,112,67,0.16)] shadow-sm transition disabled:opacity-60"
-      >
-        {sharing ? "Sharing…" : "Share to Foundry"}
-      </button>
-    </>
-  )}
+    <button
+      type="button"
+      onClick={shareToFoundry}
+      disabled={sharing}
+      className="self-start sm:self-auto rounded-xl border border-[#FF7043] bg-[rgba(255,112,67,0.10)] px-3 py-1.5 text-[12px] font-semibold text-[#FF7043] hover:bg-[rgba(255,112,67,0.16)] shadow-sm transition disabled:opacity-60"
+    >
+      {sharing ? "Sharing…" : "Share to Foundry"}
+    </button>
+  </>
+)}
 </div>
 </div>
 
