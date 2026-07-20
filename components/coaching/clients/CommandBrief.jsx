@@ -28,9 +28,93 @@ const [sharing, setSharing] = useState(false);
 const [exporting, setExporting] = useState(false);
 const [isEditing, setIsEditing] = useState(false);
 const [draft, setDraft] = useState(strategyBrief);
+const [savingStrategy, setSavingStrategy] = useState(false);
 
 if (!strategyBrief) return null;
-const b = strategyBrief;
+const updateTextField = (field, value) => {
+  setDraft((current) => ({
+    ...current,
+    [field]: value,
+  }));
+};
+
+const updateListField = (field, value) => {
+  setDraft((current) => ({
+    ...current,
+    [field]: value
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  }));
+};
+
+const targetsToText = (targets) =>
+  (targets || [])
+    .map((target) => {
+      if (typeof target === "string") return target;
+
+      return [target?.name || "", target?.reason || ""]
+        .filter(Boolean)
+        .join(" | ");
+    })
+    .join("\n");
+
+const updateTargetField = (field, value) => {
+  setDraft((current) => ({
+    ...current,
+    [field]: value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const separatorIndex = line.indexOf("|");
+
+        if (separatorIndex === -1) {
+          return {
+            name: line,
+            reason: "",
+          };
+        }
+
+        return {
+          name: line.slice(0, separatorIndex).trim(),
+          reason: line.slice(separatorIndex + 1).trim(),
+        };
+      })
+      .filter((target) => target.name),
+  }));
+};
+
+const handleSaveStrategy = async () => {
+  if (!clientId || !draft) return;
+
+  setSavingStrategy(true);
+
+  try {
+    const res = await fetch(`/api/coaching/clients/${clientId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        strategyJson: draft,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data?.error || "Could not save the coaching strategy.");
+    }
+
+    setIsEditing(false);
+    window.location.reload();
+  } catch (err) {
+    alert(err?.message || "Could not save the coaching strategy.");
+  } finally {
+    setSavingStrategy(false);
+  }
+};
 
   const handleUp = async () => {
     await onFeedback?.({ score: 'up' });
@@ -157,11 +241,13 @@ const b = strategyBrief;
 ) : (
   <>
     <button
-      type="button"
-      className="self-start sm:self-auto rounded-xl bg-[#FF7043] px-3 py-1.5 text-[12px] font-semibold text-white hover:opacity-90 transition"
-    >
-      Save Strategy
-    </button>
+  type="button"
+  onClick={handleSaveStrategy}
+  disabled={savingStrategy}
+  className="self-start sm:self-auto rounded-xl bg-[#FF7043] px-3 py-1.5 text-[12px] font-semibold text-white hover:opacity-90 transition disabled:cursor-not-allowed disabled:opacity-60"
+>
+  {savingStrategy ? "Saving…" : "Save Strategy"}
+</button>
 
     <button
       type="button"
@@ -213,11 +299,11 @@ const b = strategyBrief;
     <textarea
         value={draft.positioningInsight || ""}
         onChange={(e) =>
-            setDraft({
-                ...draft,
-                positioningInsight: e.target.value,
-            })
-        }
+  updateTextField(
+    "positioningInsight",
+    e.target.value
+  )
+}
         className="w-full rounded-xl border border-slate-200 p-3"
     />
 ) : (
@@ -237,11 +323,11 @@ const b = strategyBrief;
     <textarea
       value={draft.marketPositionWarning || ""}
       onChange={(e) =>
-        setDraft({
-          ...draft,
-          marketPositionWarning: e.target.value,
-        })
-      }
+  updateTextField(
+    "marketPositionWarning",
+    e.target.value
+  )
+}
       className="w-full rounded-xl border border-slate-200 p-3"
     />
   ) : (
@@ -257,7 +343,20 @@ const b = strategyBrief;
               ⚠️ Hidden Signal Gap Detected
             </div>
             <div className="text-[13px] text-amber-900 mt-1 leading-5">
-              {b.hiddenSignalGap}
+              {isEditing ? (
+  <textarea
+    value={draft.hiddenSignalGap || ""}
+    onChange={(e) =>
+  updateTextField(
+    "hiddenSignalGap",
+    e.target.value
+  )
+}
+    className="w-full rounded-xl border border-amber-200 bg-white p-3"
+  />
+) : (
+  b.hiddenSignalGap
+)}
             </div>
           </div>
         )}
