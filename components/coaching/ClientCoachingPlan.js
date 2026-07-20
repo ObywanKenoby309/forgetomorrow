@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { SectionCard } from "@/components/coaching/clients/ClientProfilePrimitives";
-import ClientTargetStrategy from "@/components/coaching/ClientTargetStrategy";
+import ClientPlanEdit from "@/components/coaching/ClientPlanEdit";
 import CommandBrief from "@/components/coaching/clients/CommandBrief";
 
 export default function ClientCoachingPlan({ client }) {
