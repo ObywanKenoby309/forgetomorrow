@@ -121,31 +121,26 @@ export default function CommandBrief({ clientId, clientName, generatedAt, strate
         {sharing ? "Sharing…" : "Share to Foundry"}
       </button>
     </>
-  ) : (
-    <>
-      <button
-        type="button"
-        className="self-start sm:self-auto rounded-xl bg-[#FF7043] px-3 py-1.5 text-[12px] font-semibold text-white"
-      >
-        New Strategy
-      </button>
-
-      <button
-        type="button"
-        className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition"
-      >
-        Update Intelligence
-      </button>
-
-      <button
-        type="button"
-        className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition"
-      >
-        Edit Plan
-      </button>
-    </>
   )}
 </div>
+</div>
+
+{/* Tab bar */}
+<div className="flex gap-2 border-b border-slate-200 pb-2">
+  {TABS.map((tab) => (
+    <button
+      key={tab}
+      type="button"
+      onClick={() => setActiveTab(tab)}
+      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+        activeTab === tab
+          ? "bg-[rgba(255,112,67,0.14)] text-[#FF7043]"
+          : "text-slate-600 hover:text-slate-800"
+      }`}
+    >
+      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+    </button>
+  ))}
 </div>
 
       {/* OVERVIEW */}
@@ -390,7 +385,15 @@ export default function CommandBrief({ clientId, clientName, generatedAt, strate
             </>
           )}
         </div>
-        <button type="button" onClick={onEditInputs} className="text-[12px] font-semibold text-slate-400 hover:text-[#FF7043] transition">← Edit inputs & regenerate</button>
+        {mode === "plan" && (
+  <button
+    type="button"
+    onClick={onEditInputs}
+    className="text-[12px] font-semibold text-slate-400 hover:text-[#FF7043] transition"
+  >
+    ← Edit inputs & regenerate
+  </button>
+)}
       </div>
 
     </div>
