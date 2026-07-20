@@ -5,38 +5,10 @@ import CommandBrief from "@/components/coaching/clients/CommandBrief";
 
 export default function ClientPlanEdit({ client }) {
   const [mode, setMode] = useState(null);
-  // null | "intelligence" | "edit"
+  // null | "regenerate" | "intelligence" | "edit"
 
   return (
     <div className="space-y-4">
-
-      {/* Editor Actions */}
-      <div className="flex flex-wrap items-center justify-end gap-2">
-
-        <button
-          type="button"
-          className="rounded-xl bg-[#FF7043] px-3 py-1.5 text-[12px] font-semibold text-white hover:opacity-90 transition"
-        >
-          Generate New Strategy
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setMode("intelligence")}
-          className="rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition"
-        >
-          Update Intelligence Data
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setMode("edit")}
-          className="rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition"
-        >
-          Edit All Fields
-        </button>
-
-      </div>
 
       {/* Current Draft */}
       <CommandBrief
@@ -45,6 +17,9 @@ export default function ClientPlanEdit({ client }) {
         clientName={client?.name}
         generatedAt={client?.strategyGeneratedAt}
         strategyBrief={client?.strategyJson}
+		onGenerateStrategy={() => setMode("regenerate")}
+		onUpdateIntelligence={() => setMode("intelligence")}
+		onEditAllFields={() => setMode("edit")}
       />
 
       {/* Intelligence Panel */}

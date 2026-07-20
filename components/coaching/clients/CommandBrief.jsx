@@ -20,7 +20,7 @@ function fmtBriefDate(iso) {
   } catch { return ''; }
 }
 
-export default function CommandBrief({ clientId, clientName, generatedAt, strategyBrief, onEditInputs, onFeedback, mode = "plan",}) {
+export default function CommandBrief({ clientId, clientName, generatedAt, strategyBrief, onEditInputs, onFeedback, mode = "plan", onGenerateStrategy, onUpdateIntelligence, onEditAllFields,}) {
   const [activeTab, setActiveTab] = useState('overview');
   const [reasoningOpen, setReasoningOpen] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(null);
@@ -101,7 +101,7 @@ export default function CommandBrief({ clientId, clientName, generatedAt, strate
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-{mode === "plan" && (
+{mode === "plan" ? (
   <>
     <button
       type="button"
@@ -119,6 +119,32 @@ export default function CommandBrief({ clientId, clientName, generatedAt, strate
       className="self-start sm:self-auto rounded-xl border border-[#FF7043] bg-[rgba(255,112,67,0.10)] px-3 py-1.5 text-[12px] font-semibold text-[#FF7043] hover:bg-[rgba(255,112,67,0.16)] shadow-sm transition disabled:opacity-60"
     >
       {sharing ? "Sharing…" : "Share to Foundry"}
+    </button>
+  </>
+) : (
+  <>
+    <button
+      type="button"
+      onClick={onGenerateStrategy}
+      className="self-start sm:self-auto rounded-xl bg-[#FF7043] px-3 py-1.5 text-[12px] font-semibold text-white hover:opacity-90 transition"
+    >
+      Regenerate Strategy
+    </button>
+
+    <button
+      type="button"
+      onClick={onUpdateIntelligence}
+      className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition"
+    >
+      Update Intelligence
+    </button>
+
+    <button
+      type="button"
+      onClick={onEditAllFields}
+      className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition"
+    >
+      Edit All Fields
     </button>
   </>
 )}
