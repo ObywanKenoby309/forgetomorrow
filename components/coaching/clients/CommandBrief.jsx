@@ -30,6 +30,8 @@ export default function CommandBrief({ clientId, clientName, generatedAt, strate
   if (!strategyBrief) return null;
   const b = strategyBrief;
 
+const [draft, setDraft] = useState(strategyBrief);
+
   const handleUp = async () => {
     await onFeedback?.({ score: 'up' });
     setFeedbackSent('up');
@@ -180,7 +182,20 @@ export default function CommandBrief({ clientId, clientName, generatedAt, strate
               Who This Person Is
             </div>
             <div className="text-[17px] font-bold text-slate-900 leading-6 mb-4">
-              {b.positioningInsight}
+              {mode === "edit" ? (
+    <textarea
+        value={draft.positioningInsight || ""}
+        onChange={(e) =>
+            setDraft({
+                ...draft,
+                positioningInsight: e.target.value,
+            })
+        }
+        className="w-full rounded-xl border border-slate-200 p-3"
+    />
+) : (
+    b.positioningInsight
+)}
             </div>
           </>
         )}

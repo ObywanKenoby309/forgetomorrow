@@ -144,6 +144,7 @@ export default async function handler(req, res) {
         nextSession,
         lastContact,
         notes,
+		strategyJson,
         manualSummary,
         manualExperience,
         manualEducation,
@@ -169,6 +170,9 @@ export default async function handler(req, res) {
           ...(lastContact !== undefined && {
             lastContact: lastContact ? new Date(lastContact) : null,
           }),
+		  ...(strategyJson !== undefined && {
+			strategyJson,
+		  }),
           ...(manualSummary !== undefined && {
             manualSummary: manualSummary ? String(manualSummary).trim() : null,
           }),
