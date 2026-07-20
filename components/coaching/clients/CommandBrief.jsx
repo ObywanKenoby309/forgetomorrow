@@ -31,6 +31,9 @@ const [draft, setDraft] = useState(strategyBrief);
 const [savingStrategy, setSavingStrategy] = useState(false);
 
 if (!strategyBrief) return null;
+
+const b = strategyBrief;
+
 const updateTextField = (field, value) => {
   setDraft((current) => ({
     ...current,
