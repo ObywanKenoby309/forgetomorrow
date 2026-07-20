@@ -233,8 +233,21 @@ const b = strategyBrief;
               Market Reality — How They're Being Seen Right Now
             </div>
             <div className="text-[13px] font-medium text-red-800 leading-5">
-              {b.marketPositionWarning}
-            </div>
+  {isEditing ? (
+    <textarea
+      value={draft.marketPositionWarning || ""}
+      onChange={(e) =>
+        setDraft({
+          ...draft,
+          marketPositionWarning: e.target.value,
+        })
+      }
+      className="w-full rounded-xl border border-slate-200 p-3"
+    />
+  ) : (
+    b.marketPositionWarning
+  )}
+</div>
           </>
         )}
 
