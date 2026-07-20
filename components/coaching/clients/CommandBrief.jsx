@@ -146,6 +146,7 @@ export default function CommandBrief({ clientId, clientName, generatedAt, strate
     </>
   )}
 </div>
+</div>
 
       {/* OVERVIEW */}
 {activeTab === 'overview' && (
