@@ -49,7 +49,7 @@ export default function ClientCoachingPlan({ client }) {
         onEditInputs={() => setView("strategy")}
       />
     ) : (
-      <ClientTargetStrategy client={client} />
+      <ClientPlanEdit client={client} />
     )}
 
   </div>
