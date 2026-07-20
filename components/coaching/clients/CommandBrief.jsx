@@ -125,6 +125,8 @@ const b = strategyBrief;
   </>
 ) : (
   <>
+{!isEditing ? (
+  <>
     <button
       type="button"
       onClick={onGenerateStrategy}
@@ -141,17 +143,38 @@ const b = strategyBrief;
       Update Intelligence
     </button>
 
-<button
-  type="button"
-  onClick={() => {
-    setDraft(strategyBrief);
-    setIsEditing(true);
-    onEditAllFields?.();
-  }}
-  className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition"
->
-  Edit All Fields
-</button>
+    <button
+      type="button"
+      onClick={() => {
+        setDraft(strategyBrief);
+        setIsEditing(true);
+      }}
+      className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition"
+    >
+      Edit All Fields
+    </button>
+  </>
+) : (
+  <>
+    <button
+      type="button"
+      className="self-start sm:self-auto rounded-xl bg-[#FF7043] px-3 py-1.5 text-[12px] font-semibold text-white hover:opacity-90 transition"
+    >
+      Save Strategy
+    </button>
+
+    <button
+      type="button"
+      onClick={() => {
+        setDraft(strategyBrief);
+        setIsEditing(false);
+      }}
+      className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-white shadow-sm transition"
+    >
+      Cancel
+    </button>
+  </>
+)}
   </>
 )}
 </div>
