@@ -3,24 +3,43 @@
 import { useEffect, useState } from "react";
 
 export default function ClientNotes({ client }) {
-  const [note, setNote] = useState("");
+	const [note, setNote] = useState("");
+	const [savedNote, setSavedNote] = useState("");
+	const [notes, setNotes] = useState([]);
+	const [selectedNoteId, setSelectedNoteId] = useState(null);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [isSaving, setIsSaving] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const [message, setMessage] = useState("");
 
-  const [notes, setNotes] = useState([]);
-  const [selectedNoteId, setSelectedNoteId] = useState(null);
+useEffect(() => {
+  if (!client?.coachingNotes) return;
 
-  useEffect(() => {
-    if (!client?.coachingNotes) return;
+  const sorted = [...client.coachingNotes].sort(
+    (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
+  );
 
-    setNotes(client.coachingNotes);
+  setNotes(sorted);
 
-    if (client.coachingNotes.length > 0) {
-      setSelectedNoteId(client.coachingNotes[0].id);
-      setNote(client.coachingNotes[0].body || "");
-    } else {
-      setSelectedNoteId(null);
-      setNote("");
-    }
-  }, [client]);
+  if (sorted.length > 0) {
+    setSelectedNoteId(sorted[0].id);
+    setNote(sorted[0].body || "");
+    setSavedNote(sorted[0].body || "");
+  } else {
+    setSelectedNoteId(null);
+    setNote("");
+    setSavedNote("");
+  }
+}, [client]);
+
+const hasUnsavedChanges = note !== savedNote;
+
+const handleNewNote = () => {
+  setSelectedNoteId(null);
+  setNote("");
+  setSavedNote("");
+  setMessage("");
+};
 
   return (
     <div className="space-y-4">
@@ -32,10 +51,11 @@ export default function ClientNotes({ client }) {
         <div className="flex flex-wrap items-center gap-3">
 
           <button
-            className="rounded-xl bg-[#FF7043] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition"
-          >
-            + New Note
-          </button>
+  onClick={handleNewNote}
+  className="rounded-xl bg-[#FF7043] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition"
+>
+  + New Note
+</button>
 
           <input
             type="text"
