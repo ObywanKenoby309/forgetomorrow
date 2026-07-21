@@ -23,7 +23,7 @@ export default function ClientCoachingPlan({ client }) {
               : "bg-white text-slate-700"
           }`}
         >
-          Plan
+          Coaching Plan
         </button>
 
         <button
@@ -35,7 +35,7 @@ export default function ClientCoachingPlan({ client }) {
               : "bg-white text-slate-700"
           }`}
         >
-          Target Strategy
+          Strategy Workspace
         </button>
       </div>
     </div>

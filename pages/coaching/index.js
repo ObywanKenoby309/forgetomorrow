@@ -18,6 +18,10 @@ import CoachDashboard from "@/components/coaching/CoachDashboard";
 import ClientSelector from "@/components/coaching/ClientSelector";
 import ClientOverview from "@/components/coaching/ClientOverview";
 import ClientCoachingPlan from "@/components/coaching/ClientCoachingPlan";
+import ClientGoals from "@/components/coaching/ClientGoals";
+import ClientHomework from "@/components/coaching/ClientHomework";
+import ClientActivity from "@/components/coaching/ClientActivity";
+import ClientNotes from "@/components/coaching/ClientNotes";
 import CoachInbox from "@/components/coaching/CoachInbox";
 import SeekerInbox from "@/components/seeker/SeekerInbox";
 import CoachCalendar from "@/components/coaching/CoachCalendar";
@@ -145,7 +149,23 @@ export default function CoachingWorkspaceMock() {
       <ClientCoachingPlan client={selectedClient} />
     )}
   </>
-	 
+
+{activeSubTab === "goals" && (
+  <ClientGoals client={selectedClient} />
+)}
+
+{activeSubTab === "homework" && (
+  <ClientHomework client={selectedClient} />
+)}
+
+{activeSubTab === "activity" && (
+  <ClientActivity client={selectedClient} />
+)}
+
+{activeSubTab === "notes" && (
+  <ClientNotes client={selectedClient} />
+)}
+
     ) : (
       <div
         style={{
