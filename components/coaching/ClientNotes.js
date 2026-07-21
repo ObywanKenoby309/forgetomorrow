@@ -1,10 +1,24 @@
 // components/coaching/ClientNotes.js
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function ClientNotes({ client }) {
   const [selectedNotebook, setSelectedNotebook] = useState("Sessions");
   const [note, setNote] = useState("");
+
+  const [notes, setNotes] = useState([]);
+  const [selectedNoteId, setSelectedNoteId] = useState(null);
+
+  useEffect(() => {
+    if (!client?.coachingNotes) return;
+
+    setNotes(client.coachingNotes);
+
+    if (client.coachingNotes.length > 0) {
+      setSelectedNoteId(client.coachingNotes[0].id);
+      setNote(client.coachingNotes[0].body || "");
+    }
+  }, [client]);
 
   const notebooks = [
     "Sessions",
@@ -14,12 +28,6 @@ export default function ClientNotes({ client }) {
     "Shared",
   ];
 
-  const recentNotes = [
-    "Session 5",
-    "Resume Review",
-    "Promotion Discussion",
-    "Interview Prep",
-  ];
 
   return (
     <div className="space-y-4">
@@ -96,16 +104,24 @@ export default function ClientNotes({ client }) {
 
             <div className="space-y-2">
 
-              {recentNotes.map((item) => (
+              {notes.map((item) => (
 
-                <button
-                  key={item}
-                  className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100 transition"
-                >
-                  {item}
-                </button>
+  <button
+    key={item.id}
+    onClick={() => {
+      setSelectedNoteId(item.id);
+      setNote(item.body || "");
+    }}
+    className={`block w-full rounded-lg px-3 py-2 text-left text-sm transition ${
+      selectedNoteId === item.id
+        ? "bg-[rgba(255,112,67,0.12)] text-[#FF7043] font-semibold"
+        : "hover:bg-slate-100"
+    }`}
+  >
+    {(item.body || "Untitled Note").slice(0, 40)}
+  </button>
 
-              ))}
+))}
 
             </div>
 
