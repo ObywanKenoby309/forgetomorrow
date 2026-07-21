@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 
 export default function ClientNotes({ client }) {
-  const [selectedNotebook, setSelectedNotebook] = useState("Sessions");
   const [note, setNote] = useState("");
 
   const [notes, setNotes] = useState([]);
@@ -17,17 +16,11 @@ export default function ClientNotes({ client }) {
     if (client.coachingNotes.length > 0) {
       setSelectedNoteId(client.coachingNotes[0].id);
       setNote(client.coachingNotes[0].body || "");
+    } else {
+      setSelectedNoteId(null);
+      setNote("");
     }
   }, [client]);
-
-  const notebooks = [
-    "Sessions",
-    "Career",
-    "Private",
-    "AI",
-    "Shared",
-  ];
-
 
   return (
     <div className="space-y-4">
@@ -62,66 +55,45 @@ export default function ClientNotes({ client }) {
 
       {/* Workspace */}
 
-      <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-4">
+      <div className="grid grid-cols-[280px_minmax(0,1fr)] gap-4">
 
         {/* LEFT */}
 
-        <div className="space-y-4">
+        <div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
 
             <h3 className="mb-4 font-black text-[#FF7043]">
-              Notebooks
-            </h3>
-
-            <div className="space-y-2">
-
-              {notebooks.map((folder) => (
-
-                <button
-                  key={folder}
-                  onClick={() => setSelectedNotebook(folder)}
-                  className={`w-full rounded-lg px-3 py-2 text-left transition ${
-                    selectedNotebook === folder
-                      ? "bg-[rgba(255,112,67,0.12)] font-semibold text-[#FF7043]"
-                      : "hover:bg-slate-100"
-                  }`}
-                >
-                  📁 {folder}
-                </button>
-
-              ))}
-
-            </div>
-
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
-
-            <h3 className="mb-4 font-black text-[#FF7043]">
-              Recent Notes
+              Notes
             </h3>
 
             <div className="space-y-2">
 
               {notes.map((item) => (
 
-  <button
-    key={item.id}
-    onClick={() => {
-      setSelectedNoteId(item.id);
-      setNote(item.body || "");
-    }}
-    className={`block w-full rounded-lg px-3 py-2 text-left text-sm transition ${
-      selectedNoteId === item.id
-        ? "bg-[rgba(255,112,67,0.12)] text-[#FF7043] font-semibold"
-        : "hover:bg-slate-100"
-    }`}
-  >
-    {(item.body || "Untitled Note").slice(0, 40)}
-  </button>
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setSelectedNoteId(item.id);
+                    setNote(item.body || "");
+                  }}
+                  className={`block w-full rounded-xl px-3 py-3 text-left text-sm transition ${
+                    selectedNoteId === item.id
+                      ? "bg-[rgba(255,112,67,0.12)] text-[#FF7043] font-semibold"
+                      : "hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="truncate">
+                    {(item.body || "Untitled Note").slice(0, 50)}
+                  </div>
 
-))}
+                  <div className="mt-1 text-[11px] text-slate-400">
+                    {new Date(item.updatedAt).toLocaleDateString()}
+                  </div>
+
+                </button>
+
+              ))}
 
             </div>
 
@@ -133,14 +105,14 @@ export default function ClientNotes({ client }) {
 
         <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
 
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-5 flex items-center justify-between">
 
             <h2 className="text-lg font-black text-slate-800">
-              {selectedNotebook} Notes
+              Coaching Notes
             </h2>
 
             <div className="text-xs text-slate-500">
-              Auto Saved (placeholder)
+              Unsaved Changes
             </div>
 
           </div>
@@ -171,7 +143,3 @@ export default function ClientNotes({ client }) {
         </div>
 
       </div>
-
-    </div>
-  );
-}
