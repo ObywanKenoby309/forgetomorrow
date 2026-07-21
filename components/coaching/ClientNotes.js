@@ -4,9 +4,6 @@ import { useEffect, useState } from "react";
 
 export default function ClientNotes({ client }) {
 	const [note, setNote] = useState("");
-	useEffect(() => {
-  console.log("NOTES:", notes);
-}, [notes]);
 	const [savedNote, setSavedNote] = useState("");
 	const [notes, setNotes] = useState([]);
 	const [selectedNoteId, setSelectedNoteId] = useState(null);
@@ -14,6 +11,10 @@ export default function ClientNotes({ client }) {
 	const [isSaving, setIsSaving] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [message, setMessage] = useState("");
+	
+	useEffect(() => {
+  console.log("NOTES:", notes);
+}, [notes]);
 
 useEffect(() => {
   if (!client?.coachingNotes) return;
