@@ -41,6 +41,11 @@ const handleNewNote = () => {
   setMessage("");
 };
 
+const handleCancel = () => {
+  setNote(savedNote);
+  setMessage("");
+};
+
   return (
     <div className="space-y-4">
 
@@ -94,9 +99,11 @@ const handleNewNote = () => {
                 <button
                   key={item.id}
                   onClick={() => {
-                    setSelectedNoteId(item.id);
-                    setNote(item.body || "");
-                  }}
+  setSelectedNoteId(item.id);
+  setNote(item.body || "");
+  setSavedNote(item.body || "");
+  setMessage("");
+}}
                   className={`block w-full rounded-xl px-3 py-3 text-left text-sm transition ${
                     selectedNoteId === item.id
                       ? "bg-[rgba(255,112,67,0.12)] text-[#FF7043] font-semibold"
@@ -146,11 +153,13 @@ const handleNewNote = () => {
 
           <div className="mt-5 flex justify-end gap-3">
 
-            <button
-              className="rounded-xl border border-slate-200 bg-white px-5 py-2 font-semibold text-slate-700 hover:bg-slate-50 transition"
-            >
-              Cancel
-            </button>
+<button
+  onClick={handleCancel}
+  disabled={!hasUnsavedChanges}
+  className="rounded-xl border border-slate-200 bg-white px-5 py-2 font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+>
+  Cancel
+</button>
 
             <button
               className="rounded-xl bg-[#FF7043] px-5 py-2 font-semibold text-white hover:opacity-90 transition"
