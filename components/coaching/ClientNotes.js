@@ -138,8 +138,10 @@ export default function ClientNotes({ client }) {
               Save Notes
             </button>
 
-          </div>
-
         </div>
 
       </div>
+
+    </div>
+  );
+}
