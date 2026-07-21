@@ -148,25 +148,24 @@ export default function CoachingWorkspaceMock() {
     {activeSubTab === "plan" && (
       <ClientCoachingPlan client={selectedClient} />
     )}
+
+    {activeSubTab === "goals" && (
+      <ClientGoals client={selectedClient} />
+    )}
+
+    {activeSubTab === "homework" && (
+      <ClientHomework client={selectedClient} />
+    )}
+
+    {activeSubTab === "activity" && (
+      <ClientActivity client={selectedClient} />
+    )}
+
+    {activeSubTab === "notes" && (
+      <ClientNotes client={selectedClient} />
+    )}
   </>
-
-{activeSubTab === "goals" && (
-  <ClientGoals client={selectedClient} />
-)}
-
-{activeSubTab === "homework" && (
-  <ClientHomework client={selectedClient} />
-)}
-
-{activeSubTab === "activity" && (
-  <ClientActivity client={selectedClient} />
-)}
-
-{activeSubTab === "notes" && (
-  <ClientNotes client={selectedClient} />
-)}
-
-    ) : (
+) : (
       <div
         style={{
           minHeight: 500,
