@@ -1,247 +1,65 @@
+// pages/api/coaching/clients/[id]/notes.ts
+// Create this file at: pages/api/coaching/clients/[id]/notes.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]';
+import { authOptions } from '../../../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
-  if (!session?.user?.id) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
+  if (!session?.user?.id) return res.status(401).json({ error: 'Not authenticated' });
 
-  const coachId = String(session.user.id || '');
-  const { id } = req.query || {};
+  const coachId = session.user.id as string;
+  const { id } = req.query as { id: string };
 
-  if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'Invalid client id' });
-  }
+  // Verify ownership
+  const client = await prisma.coachingClient.findFirst({ where: { id, coachId } });
+  if (!client) return res.status(404).json({ error: 'Client not found' });
 
-  const client = await prisma.coachingClient.findFirst({
-    where: { id, coachId },
-  });
+  // ── POST: add a note ──────────────────────────────────────────────────────
+  if (req.method === 'POST') {
+    const { body } = req.body as { body?: string };
+    if (!body?.trim()) return res.status(400).json({ error: 'Note body is required' });
 
-  if (!client) {
-    return res.status(404).json({ error: 'Client not found' });
-  }
-
-  if (req.method === 'GET') {
     try {
-      const full = await prisma.coachingClient.findUnique({
-        where: { id },
-        include: {
-          coachingNotes: {
-            orderBy: { createdAt: 'desc' },
-          },
-          coachingDocuments: {
-            orderBy: { uploadedAt: 'desc' },
-          },
-          sessions: {
-            orderBy: { startAt: 'desc' },
-            take: 20,
-          },
-        },
-      });
-
-      if (!full) {
-        return res.status(404).json({ error: 'Client not found' });
-      }
-
-      let displayName = full.name;
-      let displayEmail = full.email;
-      let displayAvatarUrl = '';
-      let displaySlug = '';
-
-      if (full.clientId) {
-        const user = await prisma.user.findUnique({
-          where: { id: full.clientId },
-          select: {
-            id: true,
-            name: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            slug: true,
-            avatarUrl: true,
-            image: true,
-          },
-        });
-
-        if (user) {
-          displayName =
-            user.name ||
-            `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-            full.name;
-
-          displayEmail = user.email || full.email;
-          displayAvatarUrl = user.avatarUrl || user.image || '';
-          displaySlug = user.slug || '';
-        }
-      }
-
-      return res.status(200).json({
-        client: {
-          id: full.id,
-          coachId: full.coachId,
-          clientId: full.clientId,
-		  strategyJson: full.strategyJson ?? null,
-		  targetCompanies: full.targetCompanies ?? '',
-		  strategyBackground: full.strategyBackground ?? '',
-          slug: displaySlug,
-          avatarUrl: displayAvatarUrl,
-          name: displayName,
-          email: displayEmail,
-          status: full.status,
-          nextSession: full.nextSession?.toISOString() ?? null,
-          lastContact: full.lastContact?.toISOString() ?? null,
-          notes: full.notes ?? '',
-          manualSummary: full.manualSummary ?? '',
-          manualExperience: full.manualExperience ?? '',
-          manualEducation: full.manualEducation ?? '',
-          manualSkills: full.manualSkills ?? '',
-          manualWorkStatus: full.manualWorkStatus ?? '',
-          manualPreferredWorkType: full.manualPreferredWorkType ?? '',
-          manualPreferredLocations: full.manualPreferredLocations ?? '',
-          manualWillingToRelocate: full.manualWillingToRelocate ?? '',
-          createdAt: full.createdAt.toISOString(),
-          updatedAt: full.updatedAt.toISOString(),
-          coachingNotes: (full.coachingNotes || []).map((n) => ({
-            id: n.id,
-            body: n.body,
-            createdAt: n.createdAt.toISOString(),
-            updatedAt: n.updatedAt.toISOString(),
-          })),
-          coachingDocuments: (full.coachingDocuments || []).map((d) => ({
-            id: d.id,
-            title: d.title,
-            url: d.url,
-            type: d.type,
-            uploadedAt: d.uploadedAt.toISOString(),
-          })),
-          sessions: (full.sessions || []).map((s) => ({
-            id: s.id,
-            startAt: s.startAt.toISOString(),
-            durationMin: s.durationMin,
-            type: s.type,
-            status: s.status,
-            notes: s.notes ?? '',
-            followUpDueAt: s.followUpDueAt?.toISOString() ?? null,
-            followUpDone: s.followUpDone,
-          })),
-        },
-      });
-    } catch (err) {
-      console.error('GET client error:', err);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-
-  if (req.method === 'PUT') {
-    try {
-      const body = req.body || {};
-      const {
-        name,
-        email,
-        status,
-        nextSession,
-        lastContact,
-        notes,
-        manualSummary,
-        manualExperience,
-        manualEducation,
-        manualSkills,
-        manualWorkStatus,
-        manualPreferredWorkType,
-        manualPreferredLocations,
-        manualWillingToRelocate,
-        strategyJson,
-      } = body;
-
-      const updated = await prisma.coachingClient.update({
-        where: { id },
+      const note = await prisma.coachingNote.create({
         data: {
-          ...(name !== undefined && typeof name === 'string' && { name: name.trim() }),
-          ...(email !== undefined && {
-            email: email ? String(email).trim() : null,
-          }),
-          ...(status !== undefined && { status }),
-          ...(notes !== undefined && { notes }),
-          ...(nextSession !== undefined && {
-            nextSession: nextSession ? new Date(nextSession) : null,
-          }),
-          ...(lastContact !== undefined && {
-            lastContact: lastContact ? new Date(lastContact) : null,
-          }),
-          ...(manualSummary !== undefined && {
-            manualSummary: manualSummary ? String(manualSummary).trim() : null,
-          }),
-          ...(manualExperience !== undefined && {
-            manualExperience: manualExperience ? String(manualExperience).trim() : null,
-          }),
-          ...(manualEducation !== undefined && {
-            manualEducation: manualEducation ? String(manualEducation).trim() : null,
-          }),
-          ...(manualSkills !== undefined && {
-            manualSkills: manualSkills ? String(manualSkills).trim() : null,
-          }),
-          ...(manualWorkStatus !== undefined && {
-            manualWorkStatus: manualWorkStatus ? String(manualWorkStatus).trim() : null,
-          }),
-          ...(manualPreferredWorkType !== undefined && {
-            manualPreferredWorkType: manualPreferredWorkType
-              ? String(manualPreferredWorkType).trim()
-              : null,
-          }),
-          ...(manualPreferredLocations !== undefined && {
-            manualPreferredLocations: manualPreferredLocations
-              ? String(manualPreferredLocations).trim()
-              : null,
-          }),
-          ...(manualWillingToRelocate !== undefined && {
-            manualWillingToRelocate: manualWillingToRelocate
-              ? String(manualWillingToRelocate).trim()
-              : null,
-          }),
-          ...(strategyJson !== undefined && {
-            strategyJson,
-          }),
+          coachingClientId: id,
+          coachId,
+          body: body.trim(),
         },
       });
 
-      return res.status(200).json({
-        client: {
-          id: updated.id,
-          name: updated.name,
-          email: updated.email,
-          status: updated.status,
-          nextSession: updated.nextSession?.toISOString() ?? null,
-          lastContact: updated.lastContact?.toISOString() ?? null,
-          notes: updated.notes ?? '',
-          manualSummary: updated.manualSummary ?? '',
-          manualExperience: updated.manualExperience ?? '',
-          manualEducation: updated.manualEducation ?? '',
-          manualSkills: updated.manualSkills ?? '',
-          manualWorkStatus: updated.manualWorkStatus ?? '',
-          manualPreferredWorkType: updated.manualPreferredWorkType ?? '',
-          manualPreferredLocations: updated.manualPreferredLocations ?? '',
-          manualWillingToRelocate: updated.manualWillingToRelocate ?? '',
-          strategyJson: updated.strategyJson ?? null,
+      return res.status(201).json({
+        note: {
+          id: note.id,
+          body: note.body,
+          createdAt: note.createdAt.toISOString(),
+          updatedAt: note.updatedAt.toISOString(),
         },
       });
     } catch (err) {
-      console.error('PUT client error:', err);
+      console.error('POST note error:', err);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
 
+  // ── DELETE: remove a note (pass noteId in body) ───────────────────────────
   if (req.method === 'DELETE') {
+    const { noteId } = req.body as { noteId?: string };
+    if (!noteId) return res.status(400).json({ error: 'noteId is required' });
+
     try {
-      await prisma.coachingClient.delete({ where: { id } });
+      await prisma.coachingNote.deleteMany({
+        where: { id: noteId, coachId },
+      });
       return res.status(204).end();
     } catch (err) {
-      console.error('DELETE client error:', err);
+      console.error('DELETE note error:', err);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
 
-  res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
+  res.setHeader('Allow', ['POST', 'DELETE']);
   return res.status(405).json({ error: 'Method not allowed' });
 }
