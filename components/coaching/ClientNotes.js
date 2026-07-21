@@ -46,6 +46,67 @@ const handleCancel = () => {
   setMessage("");
 };
 
+const handleSave = async () => {
+  if (!note.trim()) return;
+
+  setIsSaving(true);
+  setMessage("");
+
+  try {
+
+const isEditing = !!selectedNoteId;
+
+const res = await fetch(
+  `/api/coaching/clients/${encodeURIComponent(client.id)}/notes`,
+  {
+    method: isEditing ? "PUT" : "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(
+      isEditing
+        ? {
+            noteId: selectedNoteId,
+            body: note,
+          }
+        : {
+            body: note,
+          }
+    ),
+  }
+);
+
+if (!res.ok) {
+  throw new Error("Save failed.");
+}
+
+const { note: saved } = await res.json();
+
+const updatedNotes = isEditing
+  ? notes.map((item) => (item.id === saved.id ? saved : item))
+  : [saved, ...notes];
+
+updatedNotes.sort(
+  (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
+);
+
+setNotes(updatedNotes);
+
+setSelectedNoteId(saved.id);
+
+setNote(saved.body || "");
+setSavedNote(saved.body || "");
+
+setMessage("Note saved.");
+
+  } catch (err) {
+    console.error(err);
+    setMessage("Unable to save note.");
+  } finally {
+    setIsSaving(false);
+  }
+};
+
   return (
     <div className="space-y-4">
 
@@ -162,10 +223,12 @@ const handleCancel = () => {
 </button>
 
             <button
-              className="rounded-xl bg-[#FF7043] px-5 py-2 font-semibold text-white hover:opacity-90 transition"
-            >
-              Save Notes
-            </button>
+  onClick={handleSave}
+  disabled={isSaving || !note.trim() || !hasUnsavedChanges}
+  className="rounded-xl bg-[#FF7043] px-5 py-2 font-semibold text-white hover:opacity-90 transition disabled:opacity-50"
+>
+  {isSaving ? "Saving..." : "Save Notes"}
+</button>
 
            </div>
 

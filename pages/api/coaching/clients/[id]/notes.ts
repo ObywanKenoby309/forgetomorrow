@@ -43,6 +43,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
+  
+// ── PUT: update an existing note ──────────────────────────────────────────
+if (req.method === 'PUT') {
+  const { noteId, body } = req.body as {
+    noteId?: string;
+    body?: string;
+  };
+
+  if (!noteId) {
+    return res.status(400).json({ error: 'noteId is required' });
+  }
+
+  if (!body?.trim()) {
+    return res.status(400).json({ error: 'Note body is required' });
+  }
+
+  try {
+    const existing = await prisma.coachingNote.findFirst({
+      where: {
+        id: noteId,
+        coachId,
+        coachingClientId: id,
+      },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+
+    const note = await prisma.coachingNote.update({
+      where: { id: noteId },
+      data: {
+        body: body.trim(),
+      },
+    });
+
+    return res.status(200).json({
+      note: {
+        id: note.id,
+        body: note.body,
+        createdAt: note.createdAt.toISOString(),
+        updatedAt: note.updatedAt.toISOString(),
+      },
+    });
+  } catch (err) {
+    console.error('PUT note error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}  
 
   // ── DELETE: remove a note (pass noteId in body) ───────────────────────────
   if (req.method === 'DELETE') {
@@ -60,6 +109,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  res.setHeader('Allow', ['POST', 'DELETE']);
+  res.setHeader('Allow', ['POST', 'PUT', 'DELETE']);
   return res.status(405).json({ error: 'Method not allowed' });
 }
