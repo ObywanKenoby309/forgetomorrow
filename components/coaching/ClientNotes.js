@@ -11,10 +11,6 @@ export default function ClientNotes({ client }) {
 	const [isSaving, setIsSaving] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [message, setMessage] = useState("");
-	
-	useEffect(() => {
-  console.log("NOTES:", notes);
-}, [notes]);
 
 useEffect(() => {
   if (!client?.coachingNotes) return;
@@ -143,13 +139,15 @@ setMessage("Note saved.");
 
       </div>
 
-      {/* Workspace */}
+       {/* Workspace */}
 
       <div className="grid grid-cols-[280px_minmax(0,1fr)] gap-4">
 
-        {/* LEFT */}
+        {/* LEFT COLUMN */}
 
-        <div>
+        <div className="flex flex-col gap-4">
+
+          {/* Notes / Folders */}
 
           <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
 
@@ -157,26 +155,61 @@ setMessage("Note saved.");
               Notes
             </h3>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
+
+              <button className="w-full rounded-xl px-3 py-2 text-left transition hover:bg-slate-100">
+                📁 All Notes
+              </button>
+
+              <button className="w-full rounded-xl px-3 py-2 text-left transition hover:bg-slate-100">
+                📁 Resume Reviews
+              </button>
+
+              <button className="w-full rounded-xl px-3 py-2 text-left transition hover:bg-slate-100">
+                📁 Interview Prep
+              </button>
+
+              <button className="w-full rounded-xl px-3 py-2 text-left transition hover:bg-slate-100">
+                📁 Sessions
+              </button>
+
+              <button className="w-full rounded-xl px-3 py-2 text-left transition hover:bg-slate-100">
+                📁 Career Strategy
+              </button>
+
+            </div>
+
+          </div>
+
+          {/* Recent Notes */}
+
+          <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm flex-1">
+
+            <h3 className="mb-4 font-black text-[#FF7043]">
+              Recent Notes
+            </h3>
+
+            <div className="space-y-2 max-h-[360px] overflow-y-auto">
 
               {notes.map((item) => (
 
                 <button
                   key={item.id}
                   onClick={() => {
-  setSelectedNoteId(item.id);
-  setNote(item.body || "");
-  setSavedNote(item.body || "");
-  setMessage("");
-}}
+                    setSelectedNoteId(item.id);
+                    setNote(item.body || "");
+                    setSavedNote(item.body || "");
+                    setMessage("");
+                  }}
                   className={`block w-full rounded-xl px-3 py-3 text-left text-sm transition ${
                     selectedNoteId === item.id
-                      ? "bg-[rgba(255,112,67,0.12)] text-[#FF7043] font-semibold"
+                      ? "bg-[rgba(255,112,67,0.12)] font-semibold text-[#FF7043]"
                       : "hover:bg-slate-100"
                   }`}
                 >
+
                   <div className="truncate">
-                    {(item.body || "Untitled Note").slice(0, 50)}
+                    {(item.body || "Untitled Note").split("\n")[0]}
                   </div>
 
                   <div className="mt-1 text-[11px] text-slate-400">
@@ -193,9 +226,9 @@ setMessage("Note saved.");
 
         </div>
 
-        {/* RIGHT */}
+        {/* RIGHT COLUMN */}
 
-        <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm flex flex-col">
 
           <div className="mb-5 flex items-center justify-between">
 
@@ -204,7 +237,13 @@ setMessage("Note saved.");
             </h2>
 
             <div className="text-xs text-slate-500">
-              Unsaved Changes
+              {isSaving
+                ? "Saving..."
+                : message
+                ? message
+                : hasUnsavedChanges
+                ? "Unsaved Changes"
+                : "Saved"}
             </div>
 
           </div>
@@ -213,33 +252,29 @@ setMessage("Note saved.");
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Write coaching notes..."
-            className="min-h-[600px] w-full resize-none rounded-2xl border border-slate-200 bg-white p-4 text-sm outline-none"
+            className="min-h-[600px] w-full flex-1 resize-none rounded-2xl border border-slate-200 bg-white p-4 text-sm outline-none"
           />
 
           <div className="mt-5 flex justify-end gap-3">
 
-<button
-  onClick={handleCancel}
-  disabled={!hasUnsavedChanges}
-  className="rounded-xl border border-slate-200 bg-white px-5 py-2 font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
->
-  Cancel
-</button>
+            <button
+              onClick={handleCancel}
+              disabled={!hasUnsavedChanges}
+              className="rounded-xl border border-slate-200 bg-white px-5 py-2 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
 
             <button
-  onClick={handleSave}
-  disabled={isSaving || !note.trim() || !hasUnsavedChanges}
-  className="rounded-xl bg-[#FF7043] px-5 py-2 font-semibold text-white hover:opacity-90 transition disabled:opacity-50"
->
-  {isSaving ? "Saving..." : "Save Notes"}
-</button>
+              onClick={handleSave}
+              disabled={isSaving || !note.trim() || !hasUnsavedChanges}
+              className="rounded-xl bg-[#FF7043] px-5 py-2 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            >
+              {isSaving ? "Saving..." : "Save Notes"}
+            </button>
 
-           </div>
+          </div>
 
         </div>
 
       </div>
-
-    </div>
-  );
-}
