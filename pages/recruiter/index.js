@@ -181,30 +181,21 @@ export default function RecruiterWorkspace() {
   </div>
 )}
 			  
-				{activeWorkspace === "messaging" &&
-				  activeSubTab === "recruiter" && <RecruiterInbox />}
+                {activeWorkspace === "messaging" &&
+                  activeSubTab === "recruiter" && <RecruiterInbox />}
 
-				{activeWorkspace === "messaging" &&
-				  activeSubTab === "seeker" && <SeekerInbox />}
+                {activeWorkspace === "messaging" &&
+                  activeSubTab === "seeker" && <SeekerInbox />}
 
-				{activeWorkspace === "calendar" &&
-				  activeSubTab === "calendar" && <RecruiterCalendar />}
-				  
-				//{activeWorkspace === "jobs" &&
-				  //activeSubTab === "jobs" && <RecruiterJobPostings />}
-				  
-				//{activeWorkspace === "resources" &&
-				  //activeSubTab === "resources" && <RecruiterResources />}
+                {activeWorkspace === "calendar" &&
+                  activeSubTab === "calendar" && <RecruiterCalendar />}
 
-				//{activeWorkspace === "resources" &&
-				 // activeSubTab === "compare" && <ExternalCompare />}
+                {/* Jobs placeholder */}
 
-				//{activeWorkspace === "resources" &&
-				  //activeSubTab === "vault" && <RecruiterVault />}
+                {/* Resources placeholder */}
 
-				//{activeWorkspace === "analytics" &&
-				  //activeSubTab === "overview" && <RecruiterAnalytics />}				  
-              </div>
+                {/* Analytics placeholder */}
+				</div>
             </>
           ) : null}
         </div>
