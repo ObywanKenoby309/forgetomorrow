@@ -608,9 +608,16 @@ export default function RecruiterDashboard() {
           </div>
         </section>
 
-        <div style={{ gridColumn: "1 / 2", gridRow: "2" }}>
-          <RecruiterActionCenterSection chromeQuery={chromeQuery} isMobile={false} />
-        </div>
+        <div
+  style={{
+    gridColumn: "1 / 2",
+    gridRow: "2",
+    ...GLASS,
+    padding: 20,
+  }}
+>
+  Recruiter Action Center coming here...
+</div>
 
         <aside
           style={{
@@ -636,45 +643,36 @@ export default function RecruiterDashboard() {
         </aside>
 
         <div
-          style={{
-            gridColumn: "2 / 3",
-            gridRow: "2",
-            ...GLASS,
-            padding: 16,
-            boxSizing: "border-box",
-          }}
-        >
-          <div style={{ fontSize: 15, fontWeight: 900, marginBottom: 8, color: "#0F172A", lineHeight: 1.25, letterSpacing: "-0.01em" }}>
-            Health Snapshot
-          </div>
-            {isEnterprise ? (
-              analyticsSnapshot ? (
-                <div style={{ ...WHITE_CARD, padding: 14, fontSize: 13, display: "grid", gap: 8, color: "#334155", lineHeight: 1.55 }}>
-                  <div>Time-to-Hire: {analyticsSnapshot.timeToHireDays} days</div>
-                  <div>Top Apply Source: {analyticsSnapshot.topApplySourceLabel} ({analyticsSnapshot.topApplySourcePercent}%)</div>
-                  <div>Conversion (View→Apply): {analyticsSnapshot.conversionViewToApply}%</div>
-                  <div style={{ paddingTop: 2, fontSize: 11, color: "#64748B", lineHeight: 1.5 }}>
-                    Open Analytics for breakdowns by range, role, recruiter, and funnel stage.
-                  </div>
-                  <div style={{ paddingTop: 4 }}>
-                    <Link href="/recruiter/analytics" style={{ color: "#FF7043", fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>
-                      Open Analytics
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ ...WHITE_CARD, padding: 14, fontSize: 13, color: "#64748B", lineHeight: 1.6 }}>
-                  Analytics will appear once your roles start receiving views and applications.
-                </div>
-              )
-            ) : (
-              <FeatureLock label="Analytics Snapshot">
-                <div style={{ ...WHITE_CARD, padding: 14, fontSize: 13, color: "#64748B", lineHeight: 1.6 }}>
-                  Upgrade to Enterprise to see detailed analytics for your roles.
-                </div>
-              </FeatureLock>
-            )}
-        </div>
+  style={{
+    gridColumn: "2 / 3",
+    gridRow: "2",
+    ...GLASS,
+    padding: 16,
+    boxSizing: "border-box",
+  }}
+>
+  <div
+    style={{
+      fontSize: 15,
+      fontWeight: 900,
+      marginBottom: 8,
+      color: "#0F172A",
+    }}
+  >
+    Health Snapshot
+  </div>
+
+  <div
+    style={{
+      ...WHITE_CARD,
+      padding: 14,
+      fontSize: 13,
+      color: "#64748B",
+    }}
+  >
+    Health Snapshot coming soon...
+  </div>
+</div>
 
         <div
           style={{
