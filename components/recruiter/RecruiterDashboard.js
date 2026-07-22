@@ -679,9 +679,8 @@ export default function RecruiterDashboard() {
             gridColumn: "1 / -1",
             gridRow: "3",
             display: "grid",
-            gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
+            gridTemplateColumns: "minmax(0,6fr) minmax(0,4fr) minmax(0,2fr)",
             gap: GAP,
-            marginLeft: -252,
             boxSizing: "border-box",
             minWidth: 0,
           }}
