@@ -526,6 +526,7 @@ export default function RecruiterDashboard() {
                     </div>
                   </Link>
                 ))}
+			</div>
           </div>
         </section>
 

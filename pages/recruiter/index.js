@@ -11,12 +11,12 @@ import { useUserWallpaper } from "@/hooks/useUserWallpaper";
 import RecruiterDashboard from "@/components/recruiter/RecruiterDashboard";
 
 // Candidates
-import CandidateSelector from "@/components/recruiter/CandidateSelector";
-import TalentPools from "@/components/recruiter/TalentPools";
-import InternalCandidateSearch from "@/components/recruiter/InternalCandidateSearch";
+//import CandidateSelector from "@/components/recruiter/CandidateSelector";
+//import TalentPools from "@/components/recruiter/TalentPools";
+//import InternalCandidateSearch from "@/components/recruiter/InternalCandidateSearch";
 
 // Jobs
-import RecruiterJobPostings from "@/components/recruiter/RecruiterJobPostings";
+//import RecruiterJobPostings from "@/components/recruiter/RecruiterJobPostings";
 
 // Messaging
 import RecruiterInbox from "@/components/recruiter/RecruiterInbox";
@@ -26,15 +26,15 @@ import SeekerInbox from "@/components/seeker/SeekerInbox";
 import RecruiterCalendar from "@/components/recruiter/RecruiterCalendar";
 
 // Resources
-import RecruiterResources from "@/components/recruiter/RecruiterResources";
-import ExternalCompare from "@/components/recruiter/ExternalCompare";
-import RecruiterVault from "@/components/recruiter/RecruiterVault";
+//import RecruiterResources from "@/components/recruiter/RecruiterResources";
+//import ExternalCompare from "@/components/recruiter/ExternalCompare";
+//import RecruiterVault from "@/components/recruiter/RecruiterVault";
 
 // Feedback
-import RecruiterFeedback from "@/components/recruiter/RecruiterFeedback";
+//import RecruiterFeedback from "@/components/recruiter/RecruiterFeedback";
 
 // Analytics
-import RecruiterAnalytics from "@/components/recruiter/RecruiterAnalytics";
+//import RecruiterAnalytics from "@/components/recruiter/RecruiterAnalytics";
 
 const DEFAULT_SUB_TABS = {
   dashboard: "dashboard",
@@ -51,7 +51,7 @@ export default function RecruiterWorkspace() {
   const [activeWorkspace, setActiveWorkspace] = useState("dashboard");
   const [activeSubTab, setActiveSubTab] = useState("dashboard");
   const [isReady, setIsReady] = useState(false);
-  const [selectedCandidate, setSelectedClient] = useState(null);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
 
   const { wallpaperUrl } = useUserWallpaper();
 
@@ -132,20 +132,18 @@ export default function RecruiterWorkspace() {
       alignItems: "start",
     }}
   >
-<CandidateSelector
-  selectedCandidate={selectedCandidate}
-  onSelectClient={async (client) => {
-    const res = await fetch(
-      `/api/recruiter/candidates/${encodeURIComponent(client.id)}`
-    );
-
-    if (!res.ok) return;
-
-    const { candidate: full } = await res.json();
-
-    setSelectedClient(full);
+<div
+  style={{
+    minHeight: 500,
+    borderRadius: 18,
+    background: "rgba(255,255,255,.05)",
+    border: "1px solid rgba(255,255,255,.15)",
+    padding: 24,
+    color: "#fff",
   }}
-/>
+>
+  Candidate Selector coming here...
+</div>
 
 {selectedCandidate ? (
   <div
@@ -192,20 +190,20 @@ export default function RecruiterWorkspace() {
 				{activeWorkspace === "calendar" &&
 				  activeSubTab === "calendar" && <RecruiterCalendar />}
 				  
-				{activeWorkspace === "jobs" &&
-				  activeSubTab === "jobs" && <RecruiterJobPostings />}
+				//{activeWorkspace === "jobs" &&
+				  //activeSubTab === "jobs" && <RecruiterJobPostings />}
 				  
-				{activeWorkspace === "resources" &&
-				  activeSubTab === "resources" && <RecruiterResources />}
+				//{activeWorkspace === "resources" &&
+				  //activeSubTab === "resources" && <RecruiterResources />}
 
-				{activeWorkspace === "resources" &&
-				  activeSubTab === "compare" && <ExternalCompare />}
+				//{activeWorkspace === "resources" &&
+				 // activeSubTab === "compare" && <ExternalCompare />}
 
-				{activeWorkspace === "resources" &&
-				  activeSubTab === "vault" && <RecruiterVault />}
+				//{activeWorkspace === "resources" &&
+				  //activeSubTab === "vault" && <RecruiterVault />}
 
-				{activeWorkspace === "analytics" &&
-				  activeSubTab === "overview" && <RecruiterAnalytics />}				  
+				//{activeWorkspace === "analytics" &&
+				  //activeSubTab === "overview" && <RecruiterAnalytics />}				  
               </div>
             </>
           ) : null}
