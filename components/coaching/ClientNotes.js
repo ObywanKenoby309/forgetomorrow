@@ -278,3 +278,7 @@ setMessage("Note saved.");
         </div>
 
       </div>
+
+    </div>
+  );
+}
