@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import FeatureLock from "@/components/recruiter/FeatureLock";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
-import ActionCenterTab from "@/components/dashboard/ActionCenterTab";
+import RecruiterQuickActions from "@/components/recruiter/RecruiterQuickActions";
 import { usePlan } from "@/context/PlanContext";
 
 function normalizeRecruiterChrome(input) {
@@ -18,24 +18,6 @@ function normalizeRecruiterChrome(input) {
     return "recruiter-smb";
   }
   return "";
-}
-
-function safeText(v) {
-  return typeof v === "string" ? v : v == null ? "" : String(v);
-}
-
-function pickRecruiterBucket(n) {
-  const title = safeText(n?.title).toLowerCase();
-  const body = safeText(n?.body).toLowerCase();
-  const meta = n?.metadata || {};
-  const metaStr = safeText(meta?.bucket || meta?.tab || meta?.queue || meta?.type || meta?.event || meta?.kind || "").toLowerCase();
-  const catStr = safeText(n?.category || "").toLowerCase();
-  const haystack = `${title} ${body} ${metaStr} ${catStr}`;
-  if (haystack.includes("stalled") || haystack.includes("stale") || haystack.includes("no movement") || haystack.includes("stuck") || haystack.includes("aging")) return "stalled";
-  if (haystack.includes("awaiting") || haystack.includes("feedback") || haystack.includes("hiring mgr") || haystack.includes("hiring manager")) return "awaiting_feedback";
-  if (haystack.includes("unread") || haystack.includes("reply") || haystack.includes("replies") || haystack.includes("message") || haystack.includes("inbox") || haystack.includes("dm") || haystack.includes("chat")) return "unread_replies";
-  if (haystack.includes("upcoming") || haystack.includes("interview") || haystack.includes("conflict") || haystack.includes("schedule") || haystack.includes("invite") || haystack.includes("resched")) return "upcoming";
-  return "unread_replies";
 }
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -88,7 +70,6 @@ const RIGHT_COL_WIDTH = 280;
 export default function RecruiterDashboard() {
   const router = useRouter();
   const chromeQuery = normalizeRecruiterChrome(router?.query?.chrome) || "recruiter-smb";
-  const withRecruiterChrome = (path) => chromeQuery ? `${path}${path.includes("?") ? "&" : "?"}chrome=${chromeQuery}` : path;
   const { isEnterprise } = usePlan();
   const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -165,18 +146,10 @@ export default function RecruiterDashboard() {
           </div>
         )}
         <div style={{ display: "grid", gap: GAP }}>
-<ActionCenterTab
-            scope="RECRUITER"
-            withChrome={withRecruiterChrome}
-            pickBucket={pickRecruiterBucket}
-            allHref={`/action-center?scope=RECRUITER&chrome=${chromeQuery}`}
-            tileDefs={[
-              { key: "unread_replies", bucket: "unread_replies", title: "Unread Replies", emptyText: "No unread candidate replies.", href: `/action-center?scope=RECRUITER&tab=UNREAD_REPLIES&chrome=${chromeQuery}`, icon: "💬" },
-              { key: "upcoming", bucket: "upcoming", title: "Upcoming Interviews", emptyText: "No upcoming interviews or conflicts.", href: `/action-center?scope=RECRUITER&tab=UPCOMING&chrome=${chromeQuery}`, icon: "📅" },
-              { key: "stalled", bucket: "stalled", title: "Stalled Candidates", emptyText: "No stalled candidates right now.", href: `/action-center?scope=RECRUITER&tab=STALLED&chrome=${chromeQuery}`, icon: "⚠️" },
-              { key: "awaiting_feedback", bucket: "awaiting_feedback", title: "Awaiting Feedback", emptyText: "No hiring manager feedback pending.", href: `/action-center?scope=RECRUITER&tab=AWAITING_FEEDBACK&chrome=${chromeQuery}`, icon: "🔄" },
-            ]}
-          />
+<RecruiterQuickActions
+  chromeQuery={chromeQuery}
+  isMobile
+/>
           <section style={{ ...GLASS, padding: "12px 0 12px 12px", overflow: "hidden" }}>
             <div
               style={{
@@ -608,15 +581,16 @@ export default function RecruiterDashboard() {
           </div>
         </section>
 
-        <div
+<div
   style={{
     gridColumn: "1 / 2",
     gridRow: "2",
-    ...GLASS,
-    padding: 20,
   }}
 >
-  Recruiter Action Center coming here...
+  <RecruiterQuickActions
+    chromeQuery={chromeQuery}
+    isMobile={false}
+  />
 </div>
 
         <aside
