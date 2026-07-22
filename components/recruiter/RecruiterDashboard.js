@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import FeatureLock from "@/components/recruiter/FeatureLock";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
-import RecruiterQuickActions from "@/components/recruiter/RecruiterQuickActions";
+import RecruiterQuickActions from "@/components/recruiter/RecruiterActionCenterPreview";
 import { usePlan } from "@/context/PlanContext";
 
 function normalizeRecruiterChrome(input) {
