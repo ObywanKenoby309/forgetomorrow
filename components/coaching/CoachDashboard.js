@@ -1,21 +1,4 @@
 // components/coaching/CoachDeashboard.js
-// Layout strategy — identical blueprint to Seeker and Recruiter dashboards:
-//   - CoachingLayout receives NO header prop, NO right prop
-//   - contentFullBleed passed so main overflowX clipping removed for this page only
-//   - DashboardBody owns the full internal grid
-//   - Right rail now holds Sponsored + Upcoming Sessions
-//   - Bottom 3 cards use marginLeft: -252 to extend under sidebar
-//
-// Visual structure:
-// ┌─────────────────────────────┬──────────────┐
-// │ Title Card       (row 1)    │  Sponsored   │
-// ├─────────────────────────────│──────────────│
-// │ KPI Row          (row 2)    │ Upcoming     │
-// ├─────────────────────────────│ Sessions     │
-// │ Action Center    (row 3)    │              │
-// ├─────────────────────────────┴──────────────┤
-// │ Clients       │ Docs & Tools │ CSAT Pulse  │
-// └────────────────────────────────────────────┘
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
