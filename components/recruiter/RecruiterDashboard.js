@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 import FeatureLock from "@/components/recruiter/FeatureLock";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import ActionCenterTab from "@/components/dashboard/ActionCenterTab";
+import { usePlan } from "@/context/PlanContext";
 
 function normalizeRecruiterChrome(input) {
   const raw = String(input || "").toLowerCase().trim();
