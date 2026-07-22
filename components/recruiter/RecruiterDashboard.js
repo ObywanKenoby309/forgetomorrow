@@ -7,6 +7,18 @@ import FeatureLock from "@/components/recruiter/FeatureLock";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import ActionCenterTab from "@/components/dashboard/ActionCenterTab";
 
+function normalizeRecruiterChrome(input) {
+  const raw = String(input || "").toLowerCase().trim();
+  if (!raw) return "";
+  if (raw === "recruiter-ent" || raw === "ent" || raw === "enterprise") return "recruiter-ent";
+  if (raw === "recruiter-smb" || raw === "smb" || raw === "recruiter") return "recruiter-smb";
+  if (raw.startsWith("recruiter")) {
+    if (raw.includes("ent") || raw.includes("enterprise")) return "recruiter-ent";
+    return "recruiter-smb";
+  }
+  return "";
+}
+
 export default function RecruiterDashboard() {
   const router = useRouter();
   const chromeQuery = normalizeRecruiterChrome(router?.query?.chrome) || "recruiter-smb";
