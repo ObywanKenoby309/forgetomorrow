@@ -189,7 +189,7 @@ setMessage("Note saved.");
               Recent Notes
             </h3>
 
-            <div className="space-y-2 max-h-[360px] overflow-y-auto">
+            <div className="space-y-2 max-h-[190px] overflow-y-auto">
 
               {notes.map((item) => (
 
@@ -252,7 +252,7 @@ setMessage("Note saved.");
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Write coaching notes..."
-            className="min-h-[600px] w-full flex-1 resize-none rounded-2xl border border-slate-200 bg-white p-4 text-sm outline-none"
+            className="min-h-[430px] w-full flex-1 resize-none rounded-2xl border border-slate-200 bg-white p-4 text-sm outline-none"
           />
 
           <div className="mt-5 flex justify-end gap-3">
