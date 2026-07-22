@@ -20,6 +20,71 @@ function normalizeRecruiterChrome(input) {
   return "";
 }
 
+function safeText(v) {
+  return typeof v === "string" ? v : v == null ? "" : String(v);
+}
+
+function pickRecruiterBucket(n) {
+  const title = safeText(n?.title).toLowerCase();
+  const body = safeText(n?.body).toLowerCase();
+  const meta = n?.metadata || {};
+  const metaStr = safeText(meta?.bucket || meta?.tab || meta?.queue || meta?.type || meta?.event || meta?.kind || "").toLowerCase();
+  const catStr = safeText(n?.category || "").toLowerCase();
+  const haystack = `${title} ${body} ${metaStr} ${catStr}`;
+  if (haystack.includes("stalled") || haystack.includes("stale") || haystack.includes("no movement") || haystack.includes("stuck") || haystack.includes("aging")) return "stalled";
+  if (haystack.includes("awaiting") || haystack.includes("feedback") || haystack.includes("hiring mgr") || haystack.includes("hiring manager")) return "awaiting_feedback";
+  if (haystack.includes("unread") || haystack.includes("reply") || haystack.includes("replies") || haystack.includes("message") || haystack.includes("inbox") || haystack.includes("dm") || haystack.includes("chat")) return "unread_replies";
+  if (haystack.includes("upcoming") || haystack.includes("interview") || haystack.includes("conflict") || haystack.includes("schedule") || haystack.includes("invite") || haystack.includes("resched")) return "upcoming";
+  return "unread_replies";
+}
+
+// ─── Shared styles ────────────────────────────────────────────────────────────
+const GLASS = {
+  borderRadius: 18,
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(255,255,255,0.68)",
+  boxShadow: "0 10px 28px rgba(15,23,42,0.12)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+};
+
+// NEW: Targeted overlay for better glass readability (very light dark tint)
+const GLASS_OVERLAY = {
+  position: "relative",
+  overflow: "hidden",
+};
+
+// NEW: Inner tint layer (placed behind content, inside blur)
+const GLASS_TINT = {
+  position: "absolute",
+  inset: 0,
+  borderRadius: 18,
+  background: "rgba(15, 23, 42, 0.28)", // subtle dark stabilizer — keeps glass look
+  pointerEvents: "none",
+  zIndex: 0,
+};
+
+// NEW: Orange text lift — only for the specific headings you want improved
+const ORANGE_HEADING_LIFT = {
+  textShadow: "0 2px 4px rgba(15,23,42,0.65), 0 1px 2px rgba(0,0,0,0.4)",
+  fontWeight: 900, // already 900 in most places, but forces it
+  position: "relative",
+  zIndex: 1,
+};
+
+const WHITE_CARD = {
+  background: "rgba(255,255,255,0.97)",
+  border: "1px solid rgba(255,255,255,0.60)",
+  borderRadius: 14,
+  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+  boxSizing: "border-box",
+  position: "relative",
+  zIndex: 1,
+};
+
+const GAP = 16;
+const RIGHT_COL_WIDTH = 280;
+
 export default function RecruiterDashboard() {
   const router = useRouter();
   const chromeQuery = normalizeRecruiterChrome(router?.query?.chrome) || "recruiter-smb";
