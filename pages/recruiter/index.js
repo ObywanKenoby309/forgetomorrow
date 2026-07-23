@@ -17,6 +17,7 @@ import RecruiterDashboard from "@/components/recruiter/RecruiterDashboard";
 
 // Jobs
 //import RecruiterJobPostings from "@/components/recruiter/RecruiterJobPostings";
+import RecruiterJobSelector from "@/components/recruiter/RecruiterJobSelector";
 
 // Messaging
 import RecruiterInbox from "@/components/recruiter/RecruiterInbox";
@@ -52,6 +53,7 @@ export default function RecruiterWorkspace() {
   const [activeSubTab, setActiveSubTab] = useState("dashboard");
   const [isReady, setIsReady] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [selectedJob, setSelectedJob] = useState(null);
 
   const { wallpaperUrl } = useUserWallpaper();
 
@@ -190,7 +192,59 @@ export default function RecruiterWorkspace() {
                 {activeWorkspace === "calendar" &&
                   activeSubTab === "calendar" && <RecruiterCalendar />}
 
-                {/* Jobs placeholder */}
+                {activeWorkspace === "jobs" && (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "320px minmax(0,1fr)",
+      gap: 24,
+      alignItems: "start",
+    }}
+  >
+    <RecruiterJobSelector
+      selectedJob={selectedJob}
+      onSelectJob={setSelectedJob}
+    />
+
+    {selectedJob ? (
+      <div
+        style={{
+          minHeight: 500,
+          borderRadius: 18,
+          background: "rgba(255,255,255,.05)",
+          border: "1px solid rgba(255,255,255,.15)",
+          padding: 24,
+          color: "#fff",
+        }}
+      >
+        Recruiter Job Workspace
+        <br />
+        Current tab: {activeSubTab}
+        <br />
+        Selected Job:
+        <br />
+        {selectedJob.title}
+      </div>
+    ) : (
+      <div
+        style={{
+          minHeight: 500,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          border: "1px dashed rgba(255,255,255,.25)",
+          borderRadius: 18,
+          background: "rgba(255,255,255,.05)",
+          color: "#fff",
+          fontSize: 18,
+          fontWeight: 700,
+        }}
+      >
+        Select a job to begin.
+      </div>
+    )}
+  </div>
+)}
 
                 {/* Resources placeholder */}
 

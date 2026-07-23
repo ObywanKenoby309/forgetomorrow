@@ -19,15 +19,15 @@ const workspaces=[
 ["analytics","Analytics"],
 ];
 
-const sub={
-dashboard:[["dashboard","Recruiter Dashboard"]],
-candidates:[["selection","Candidate Selection"],["pools","Talent Pools"],["search","Internal Candidate Search"]],
-jobs:[["jobs","Job Postings"]],
-messaging:[["recruiter","Recruiter Inbox"],["seeker","Seeker Inbox"],["foundry","Foundries"]],
-calendar:[["calendar","Calendar"]],
-resources:[["resources","Resources"],["compare","External Compare"],["vault","Vault"]],
-feedback:[["feedback","Feedback"]],
-analytics:[["overview","Executive Overview"],["details","Report Details"],["presentation","Presentation Visuals"],["snapshot","Snapshot Delivery"]],
+const sub = {
+  dashboard: [["dashboard", "Recruiter Dashboard"]],
+  candidates: [["overview", "Overview"],["pipeline", "Pipeline"],["applicants", "Applicants"],["documents", "Documents"],["activity", "Activity"],["notes", "Notes"]],
+  jobs: [["overview", "Overview"],["pipeline", "Pipeline"],["applicants", "Applicants"],["posting", "Posting"],["insights", "Insights"]],
+  messaging: [["recruiter", "Recruiter Inbox"],["seeker", "Seeker Inbox"]],
+  calendar: [["calendar", "Calendar"],["interviews", "Interviews"]],
+  resources: [["resources", "Resources"],["vault", "Vault"],["spotlights", "Spotlights"]],
+  feedback: [["feedback", "Feedback"]],
+  analytics: [["overview", "Overview"],["pipeline", "Pipeline"],["sources", "Sources"],["performance", "Performance"],["reports", "Reports"]],
 };
 
 const topStyle=(active)=>({
