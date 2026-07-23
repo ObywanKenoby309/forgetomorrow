@@ -18,6 +18,7 @@ import RecruiterDashboard from "@/components/recruiter/RecruiterDashboard";
 // Jobs
 //import RecruiterJobPostings from "@/components/recruiter/RecruiterJobPostings";
 import RecruiterJobSelector from "@/components/recruiter/RecruiterJobSelector";
+import JobOverview from "@/components/recruiter/jobs/JobOverview";
 
 // Messaging
 import RecruiterInbox from "@/components/recruiter/RecruiterInbox";
@@ -206,26 +207,31 @@ export default function RecruiterWorkspace() {
       onSelectJob={setSelectedJob}
     />
 
-    {selectedJob ? (
-      <div
-        style={{
-          minHeight: 500,
-          borderRadius: 18,
-          background: "rgba(255,255,255,.05)",
-          border: "1px solid rgba(255,255,255,.15)",
-          padding: 24,
-          color: "#fff",
-        }}
-      >
-        Recruiter Job Workspace
-        <br />
-        Current tab: {activeSubTab}
-        <br />
-        Selected Job:
-        <br />
-        {selectedJob.title}
-      </div>
-    ) : (
+{selectedJob ? (
+  <>
+    {activeSubTab === "overview" && (
+      <JobOverview
+        job={selectedJob}
+      />
+    )}
+
+    {activeSubTab === "pipeline" && (
+      <div>Pipeline Placeholder</div>
+    )}
+
+    {activeSubTab === "applicants" && (
+      <div>Applicants Placeholder</div>
+    )}
+
+    {activeSubTab === "posting" && (
+      <div>Posting Placeholder</div>
+    )}
+
+    {activeSubTab === "insights" && (
+      <div>Insights Placeholder</div>
+    )}
+  </>
+) : (
       <div
         style={{
           minHeight: 500,
