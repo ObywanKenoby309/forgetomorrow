@@ -396,6 +396,8 @@ export default function RecruiterJobSelector({
 }) {
   const [jobs, setJobs] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -451,28 +453,33 @@ export default function RecruiterJobSelector({
   }, []);
 
   const filteredJobs = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+  const query = searchQuery.trim().toLowerCase();
 
-    if (!query) {
-      return jobs;
-    }
+  return jobs.filter((job) => {
+    const group = getJobGroup(job);
 
-    return jobs.filter((job) => {
-      const searchableText = [
-        job?.title,
-        job?.company,
-        job?.location,
-        job?.worksite,
-        job?.status,
-        job?.type,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+    const matchesStatus =
+      statusFilter === "all" ||
+      statusFilter === group;
 
-      return searchableText.includes(query);
-    });
-  }, [jobs, searchQuery]);
+    const searchableText = [
+      job?.title,
+      job?.company,
+      job?.location,
+      job?.worksite,
+      job?.status,
+      job?.type,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    const matchesSearch =
+      !query || searchableText.includes(query);
+
+    return matchesStatus && matchesSearch;
+  });
+}, [jobs, searchQuery, statusFilter]);
 
   const groupedJobs = useMemo(() => {
     const groups = {
@@ -494,6 +501,175 @@ export default function RecruiterJobSelector({
   }, [filteredJobs]);
 
   return (
+  <div
+    style={{
+      display: "grid",
+      gap: 14,
+      width: "100%",
+      minWidth: 0,
+      boxSizing: "border-box",
+    }}
+  >
+    {/* Selector controls */}
+    <div
+      style={{
+        ...GLASS,
+        padding: "14px 16px",
+        width: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        overflow: "visible",
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0,1fr) 42px 42px",
+          gap: 8,
+          alignItems: "center",
+        }}
+      >
+        <input
+          id="job-selector-search"
+          type="search"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search jobs..."
+          aria-label="Search jobs"
+          style={INPUT_STYLE}
+        />
+
+        <div
+          style={{
+            position: "relative",
+            overflow: "visible",
+            zIndex: 20,
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Filter jobs"
+            title="Filter"
+            onClick={() => setShowFilterMenu((current) => !current)}
+            style={{
+              ...PRIMARY_BUTTON,
+              padding: 10,
+              width: 42,
+              height: 42,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <path
+                d="M4 5h16l-6 7v6l-4 2v-8L4 5z"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+
+          {showFilterMenu && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% + 6px)",
+                right: 0,
+                width: 180,
+                background: "#FFFFFF",
+                border: "1px solid rgba(0,0,0,0.10)",
+                borderRadius: 10,
+                boxShadow: "0 10px 30px rgba(0,0,0,0.18)",
+                overflow: "hidden",
+                zIndex: 100,
+              }}
+            >
+              {[
+                ["all", "All Jobs"],
+                ["active", "Active Jobs"],
+                ["drafts", "Drafts"],
+                ["past", "Past Postings"],
+              ].map(([value, label], index, options) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter(value);
+                    setShowFilterMenu(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    border: "none",
+                    borderBottom:
+                      index < options.length - 1
+                        ? "1px solid rgba(0,0,0,0.06)"
+                        : "none",
+                    background:
+                      statusFilter === value
+                        ? "rgba(255,112,67,0.12)"
+                        : "#FFFFFF",
+                    color: "#37474F",
+                    fontSize: 13,
+                    fontWeight:
+                      statusFilter === value ? 700 : 500,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <span>{label}</span>
+
+                  {statusFilter === value && (
+                    <span
+                      style={{
+                        color: "#FF7043",
+                        fontWeight: 800,
+                      }}
+                    >
+                      ✓
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          aria-label="Create new job"
+          title="New Job"
+          onClick={() => onCreateJob?.()}
+          style={{
+            ...PRIMARY_BUTTON,
+            padding: 10,
+            width: 42,
+            height: 42,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 22,
+            lineHeight: 1,
+          }}
+        >
+          +
+        </button>
+      </div>
+    </div>
+
+    {/* Job list */}
     <aside
       aria-label="Job selector"
       style={{
@@ -501,103 +677,52 @@ export default function RecruiterJobSelector({
         width: "100%",
         minWidth: 0,
         boxSizing: "border-box",
-        padding: 14,
-        display: "flex",
-        flexDirection: "column",
-        minHeight: 560,
-        maxHeight: "calc(100vh - 220px)",
-        overflow: "hidden",
+        padding: "18px 20px",
+        background: "rgba(255,255,255,0.82)",
+        border: "1px solid rgba(255,255,255,0.55)",
+        backdropFilter: "none",
+        WebkitBackdropFilter: "none",
+        overflow: "visible",
       }}
     >
       <div
         style={{
-          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          marginBottom: 14,
         }}
       >
-        <div
+        <h2
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 10,
-            marginBottom: 12,
+            margin: 0,
+            color: "#FF7043",
+            fontSize: 18,
+            lineHeight: 1.25,
+            letterSpacing: "-0.01em",
+            ...ORANGE_HEADING_LIFT,
           }}
         >
-          <h2
-            style={{
-              margin: 0,
-              color: "#FF7043",
-              fontSize: 18,
-              lineHeight: 1.25,
-              letterSpacing: "-0.01em",
-              ...ORANGE_HEADING_LIFT,
-            }}
-          >
-            Jobs
-          </h2>
+          Jobs
+        </h2>
 
-          <span
-            style={{
-              color: "rgba(255,255,255,0.86)",
-              fontSize: 11,
-              fontWeight: 700,
-              textShadow: "0 1px 2px rgba(0,0,0,0.45)",
-            }}
-          >
-            {jobs.length} total
-          </span>
-        </div>
-
-        <label
-          htmlFor="job-selector-search"
+        <span
           style={{
-            display: "block",
-            color: "rgba(255,255,255,0.88)",
-            fontSize: 11,
-            fontWeight: 700,
-            marginBottom: 6,
-            textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+            color: "#90A4AE",
+            fontSize: 12,
           }}
         >
-          Search jobs
-        </label>
-
-        <input
-          id="job-selector-search"
-          type="search"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Title, company, or location..."
-          style={INPUT_STYLE}
-        />
-
-        <button
-          type="button"
-          onClick={() => onCreateJob?.()}
-          style={{
-            ...PRIMARY_BUTTON,
-            marginTop: 10,
-          }}
-        >
-          + New Job
-        </button>
+          {filteredJobs.length}{" "}
+          {filteredJobs.length === 1 ? "job" : "jobs"}
+        </span>
       </div>
 
       <div
         style={{
-          height: 1,
-          flexShrink: 0,
-          margin: "14px 0",
-          background: "rgba(255,255,255,0.10)",
-        }}
-      />
-
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
+          maxHeight: "calc(100vh - 330px)",
           overflowY: "auto",
-          paddingRight: 3,
+          paddingRight: 2,
           display: "grid",
           alignContent: "start",
           gap: 18,
@@ -617,8 +742,8 @@ export default function RecruiterJobSelector({
                 style={{
                   height: 92,
                   borderRadius: 12,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  background: "rgba(255,255,255,0.68)",
                 }}
               />
             ))}
@@ -659,48 +784,57 @@ export default function RecruiterJobSelector({
         ) : filteredJobs.length === 0 ? (
           <div
             style={{
-              padding: 16,
-              borderRadius: 12,
-              border: "1px dashed rgba(255,255,255,0.18)",
-              background: "rgba(255,255,255,0.05)",
-              color: "rgba(255,255,255,0.78)",
-              fontSize: 12,
-              lineHeight: 1.6,
-              textAlign: "center",
+              padding: 14,
+              color: "#90A4AE",
+              background: "rgba(255,255,255,0.60)",
+              borderRadius: 10,
+              border: "1px dashed rgba(0,0,0,0.10)",
+              fontSize: 13,
+              lineHeight: 1.5,
             }}
           >
             {searchQuery.trim()
               ? "No jobs match your search."
-              : "Your recruiter team has not created any jobs yet."}
+              : "No jobs are available in this category."}
           </div>
         ) : (
           <>
-            <JobGroup
-              title="Active Jobs"
-              jobs={groupedJobs.active}
-              selectedJobId={selectedJob?.id}
-              onSelectJob={onSelectJob}
-              emptyText="No active jobs."
-            />
+            {(statusFilter === "all" ||
+              statusFilter === "active") && (
+              <JobGroup
+                title="Active Jobs"
+                jobs={groupedJobs.active}
+                selectedJobId={selectedJob?.id}
+                onSelectJob={onSelectJob}
+                emptyText="No active jobs."
+              />
+            )}
 
-            <JobGroup
-              title="Drafts"
-              jobs={groupedJobs.drafts}
-              selectedJobId={selectedJob?.id}
-              onSelectJob={onSelectJob}
-              emptyText="No draft jobs."
-            />
+            {(statusFilter === "all" ||
+              statusFilter === "drafts") && (
+              <JobGroup
+                title="Drafts"
+                jobs={groupedJobs.drafts}
+                selectedJobId={selectedJob?.id}
+                onSelectJob={onSelectJob}
+                emptyText="No draft jobs."
+              />
+            )}
 
-            <JobGroup
-              title="Past Postings"
-              jobs={groupedJobs.past}
-              selectedJobId={selectedJob?.id}
-              onSelectJob={onSelectJob}
-              emptyText="No past postings."
-            />
+            {(statusFilter === "all" ||
+              statusFilter === "past") && (
+              <JobGroup
+                title="Past Postings"
+                jobs={groupedJobs.past}
+                selectedJobId={selectedJob?.id}
+                onSelectJob={onSelectJob}
+                emptyText="No past postings."
+              />
+            )}
           </>
         )}
       </div>
     </aside>
-  );
+  </div>
+);
 }
