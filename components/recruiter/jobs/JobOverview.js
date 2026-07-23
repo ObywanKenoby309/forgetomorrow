@@ -52,6 +52,7 @@ const Metric = ({ title, value }) => (
 );
 
 export default function JobOverview({ job }) {
+console.log("JOB", job);	
   const [jobSubTab, setJobSubTab] = React.useState("overview");
   const companyAssetKey =
   job?.companyId ||
