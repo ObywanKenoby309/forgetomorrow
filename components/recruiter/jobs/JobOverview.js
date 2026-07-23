@@ -10,23 +10,7 @@ const CARD = {
   boxShadow: "0 10px 24px rgba(0,0,0,.08)",
 };
 
-const Pill = ({ active, label }) => (
-  <button
-    style={{
-      padding: "8px 14px",
-      border: "none",
-      borderBottom: active
-        ? "3px solid #FF7043"
-        : "3px solid transparent",
-      background: "transparent",
-      fontWeight: 700,
-      cursor: "pointer",
-      color: active ? "#FF7043" : "#64748B",
-    }}
-  >
-    {label}
-  </button>
-);
+
 
 const Metric = ({ title, value }) => (
   <div
@@ -68,6 +52,16 @@ const Metric = ({ title, value }) => (
 );
 
 export default function JobOverview({ job }) {
+	const [jobSubTab, setJobSubTab] = React.useState("overview");
+
+const jobSubTabs = [
+  { id: "overview", label: "Overview" },
+  { id: "hiring", label: "Hiring" },
+  { id: "posting", label: "Posting" },
+  { id: "metrics", label: "Metrics" },
+  { id: "activity", label: "Activity" },
+];
+	
   return (
     <div
       style={{
@@ -76,20 +70,44 @@ export default function JobOverview({ job }) {
       }}
     >
       {/* Top Navigation */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          gap: 28,
-          flexWrap: "wrap",
-        }}
+<div className="space-y-3">
+  <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
+    {jobSubTabs.map((tab) => (
+      <button
+        key={tab.id}
+        type="button"
+        onClick={() => setJobSubTab(tab.id)}
+        className={`shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-black transition ${
+          jobSubTab === tab.id
+            ? "border-[#FF7043] bg-[#FF7043] text-white shadow-sm"
+            : "border-slate-200 bg-white/85 text-slate-700 hover:bg-white"
+        }`}
       >
-        <Pill active label="Overview" />
-        <Pill label="Hiring" />
-        <Pill label="Posting" />
-        <Pill label="Metrics" />
-        <Pill label="Activity" />
-      </div>
+        {tab.label}
+      </button>
+    ))}
+  </div>
+
+  <div
+    className="flex justify-center gap-1.5 -mt-1 pb-1"
+    aria-label="Profile section position"
+  >
+    {jobSubTabs.map((tab) => (
+      <button
+        key={`dot-${tab.id}`}
+        type="button"
+        onClick={() => setJobSubTab(tab.id)}
+        className={`h-1.5 rounded-full border-0 p-0 transition-all ${
+          {jobSubTab === "overview" && (
+  <>
+            ? "w-5 bg-[#FF7043]"
+            : "w-1.5 bg-slate-300/75"
+        }`}
+        aria-label={`Go to ${tab.label}`}
+      />
+    ))}
+  </div>
+</div>
 
       {/* Main Layout */}
       <div
@@ -214,6 +232,8 @@ export default function JobOverview({ job }) {
           value="Timeline"
         />
       </div>
+	  </>
+)}
     </div>
   );
 }
