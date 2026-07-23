@@ -40,8 +40,8 @@ import RecruiterCalendar from "@/components/recruiter/RecruiterCalendar";
 
 const DEFAULT_SUB_TABS = {
   dashboard: "dashboard",
-  candidates: "selection",
-  jobs: "jobs",
+  candidates: "overview",
+  jobs: "overview",
   messaging: "recruiter",
   calendar: "calendar",
   resources: "resources",
