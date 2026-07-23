@@ -93,24 +93,26 @@ const jobSubTabs = [
     aria-label="Profile section position"
   >
     {jobSubTabs.map((tab) => (
-      <button
-        key={`dot-${tab.id}`}
-        type="button"
-        onClick={() => setJobSubTab(tab.id)}
-        className={`h-1.5 rounded-full border-0 p-0 transition-all ${
-          {jobSubTab === "overview" && (
-  <>
-            ? "w-5 bg-[#FF7043]"
-            : "w-1.5 bg-slate-300/75"
-        }`}
-        aria-label={`Go to ${tab.label}`}
-      />
+ <button
+  key={`dot-${tab.id}`}
+  type="button"
+  onClick={() => setJobSubTab(tab.id)}
+  className={`h-1.5 rounded-full border-0 p-0 transition-all ${
+    jobSubTab === tab.id
+      ? "w-5 bg-[#FF7043]"
+      : "w-1.5 bg-slate-300/75"
+  }`}
+  aria-label={`Go to ${tab.label}`}
+/>
     ))}
   </div>
 </div>
 
-      {/* Main Layout */}
-      <div
+{jobSubTab === "overview" && (
+  <>
+
+    {/* Main Layout */}
+    <div
         style={{
           display: "grid",
           gridTemplateColumns: "340px minmax(0,1fr)",
