@@ -1,5 +1,4 @@
 // components/recruiter/RecruiterJobSelector.js
-// pushing script
 
 import React, { useEffect, useMemo, useState } from "react";
 
@@ -440,7 +439,7 @@ export default function RecruiterJobSelector({
   const [showFilterMenu, setShowFilterMenu] = useState(false);
 
 const [expandedGroups, setExpandedGroups] = useState({
-  active: false,
+  active: true,
   drafts: false,
   past: false,
 });
@@ -483,14 +482,6 @@ const [isLoading, setIsLoading] = useState(true);
 
       setJobs(nextJobs);
 
-      if (!selectedJob && nextJobs.length > 0 && onSelectJob) {
-        const firstActiveJob =
-          nextJobs.find((job) => getJobGroup(job) === "active") ||
-          nextJobs.find((job) => getJobGroup(job) === "drafts") ||
-          nextJobs[0];
-
-        onSelectJob(firstActiveJob);
-      }
     } catch (loadError) {
       setJobs([]);
       setError(loadError?.message || "Unable to load recruiter jobs.");
