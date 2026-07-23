@@ -304,34 +304,70 @@ function JobCard({ job, isSelected, onSelect }) {
 }
 
 function JobGroup({
+  groupKey,
   title,
   jobs,
   selectedJobId,
   onSelectJob,
   emptyText,
+  isExpanded,
+  onToggle,
+  forceExpanded = false,
 }) {
+  const showJobs = forceExpanded || isExpanded;
+
   return (
     <section>
-      <div
+      <button
+        type="button"
+        onClick={() => onToggle(groupKey)}
+        aria-expanded={showJobs}
         style={{
+          width: "100%",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 8,
-          marginBottom: 8,
+          padding: "8px 0",
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          textAlign: "left",
         }}
       >
         <div
           style={{
-            color: "rgba(255,255,255,0.92)",
-            fontSize: 11,
-            fontWeight: 900,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            minWidth: 0,
           }}
         >
-          {title}
+          <span
+            aria-hidden="true"
+            style={{
+              color: "#FF7043",
+              fontSize: 12,
+              fontWeight: 900,
+              transform: showJobs ? "rotate(90deg)" : "rotate(0deg)",
+              transition: "transform 150ms ease",
+            }}
+          >
+            ▶
+          </span>
+
+          <span
+            style={{
+              color: "#475569",
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            {title}
+          </span>
         </div>
 
         <span
@@ -344,47 +380,50 @@ function JobGroup({
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "rgba(255,255,255,0.12)",
-            color: "#FFFFFF",
+            background: "rgba(15,23,42,0.07)",
+            color: "#64748B",
             fontSize: 11,
             fontWeight: 800,
           }}
         >
           {jobs.length}
         </span>
-      </div>
+      </button>
 
-      {jobs.length > 0 ? (
-        <div
-          style={{
-            display: "grid",
-            gap: 8,
-          }}
-        >
-          {jobs.map((job) => (
-            <JobCard
-              key={job.id}
-              job={job}
-              isSelected={String(selectedJobId) === String(job.id)}
-              onSelect={onSelectJob}
-            />
-          ))}
-        </div>
-      ) : (
-        <div
-          style={{
-            padding: "12px",
-            borderRadius: 10,
-            border: "1px dashed rgba(255,255,255,0.16)",
-            background: "rgba(255,255,255,0.05)",
-            color: "rgba(255,255,255,0.72)",
-            fontSize: 12,
-            lineHeight: 1.5,
-          }}
-        >
-          {emptyText}
-        </div>
-      )}
+      {showJobs ? (
+        jobs.length > 0 ? (
+          <div
+            style={{
+              display: "grid",
+              gap: 8,
+              paddingTop: 4,
+            }}
+          >
+            {jobs.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                isSelected={String(selectedJobId) === String(job.id)}
+                onSelect={onSelectJob}
+              />
+            ))}
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              border: "1px dashed rgba(15,23,42,0.12)",
+              background: "rgba(255,255,255,0.48)",
+              color: "#90A4AE",
+              fontSize: 12,
+              lineHeight: 1.5,
+            }}
+          >
+            {emptyText}
+          </div>
+        )
+      ) : null}
     </section>
   );
 }
@@ -398,8 +437,21 @@ export default function RecruiterJobSelector({
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+
+const [expandedGroups, setExpandedGroups] = useState({
+  active: false,
+  drafts: false,
+  past: false,
+});
+
+const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const toggleGroup = (groupKey) => {
+  setExpandedGroups((current) => ({
+    ...current,
+    [groupKey]: !current[groupKey],
+  }));
+};
 
   async function loadJobs() {
     setIsLoading(true);
@@ -499,6 +551,8 @@ export default function RecruiterJobSelector({
       past: sortNewestFirst(groups.past),
     };
   }, [filteredJobs]);
+
+const hasSearchQuery = searchQuery.trim().length > 0;
 
   return (
   <div
@@ -802,34 +856,46 @@ export default function RecruiterJobSelector({
             {(statusFilter === "all" ||
               statusFilter === "active") && (
               <JobGroup
-                title="Active Jobs"
-                jobs={groupedJobs.active}
-                selectedJobId={selectedJob?.id}
-                onSelectJob={onSelectJob}
-                emptyText="No active jobs."
-              />
+  groupKey="active"
+  title="Active Jobs"
+  jobs={groupedJobs.active}
+  selectedJobId={selectedJob?.id}
+  onSelectJob={onSelectJob}
+  emptyText="No active jobs."
+  isExpanded={expandedGroups.active}
+  onToggle={toggleGroup}
+  forceExpanded={hasSearchQuery && groupedJobs.active.length > 0}
+/>
             )}
 
             {(statusFilter === "all" ||
               statusFilter === "drafts") && (
               <JobGroup
-                title="Drafts"
-                jobs={groupedJobs.drafts}
-                selectedJobId={selectedJob?.id}
-                onSelectJob={onSelectJob}
-                emptyText="No draft jobs."
-              />
+  groupKey="drafts"
+  title="Drafts"
+  jobs={groupedJobs.drafts}
+  selectedJobId={selectedJob?.id}
+  onSelectJob={onSelectJob}
+  emptyText="No draft jobs."
+  isExpanded={expandedGroups.drafts}
+  onToggle={toggleGroup}
+  forceExpanded={hasSearchQuery && groupedJobs.drafts.length > 0}
+/>
             )}
 
             {(statusFilter === "all" ||
               statusFilter === "past") && (
               <JobGroup
-                title="Past Postings"
-                jobs={groupedJobs.past}
-                selectedJobId={selectedJob?.id}
-                onSelectJob={onSelectJob}
-                emptyText="No past postings."
-              />
+  groupKey="past"
+  title="Past Postings"
+  jobs={groupedJobs.past}
+  selectedJobId={selectedJob?.id}
+  onSelectJob={onSelectJob}
+  emptyText="No past postings."
+  isExpanded={expandedGroups.past}
+  onToggle={toggleGroup}
+  forceExpanded={hasSearchQuery && groupedJobs.past.length > 0}
+/>
             )}
           </>
         )}
