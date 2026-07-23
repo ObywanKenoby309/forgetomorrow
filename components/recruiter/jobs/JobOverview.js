@@ -52,9 +52,9 @@ const Metric = ({ title, value }) => (
 );
 
 export default function JobOverview({ job }) {
-	const [jobSubTab, setJobSubTab] = React.useState("overview");
+  const [jobSubTab, setJobSubTab] = React.useState("overview");
 
-const jobSubTabs = [
+  const jobSubTabs = [
   { id: "overview", label: "Overview" },
   { id: "hiring", label: "Hiring" },
   { id: "posting", label: "Posting" },
@@ -111,103 +111,124 @@ const jobSubTabs = [
 {jobSubTab === "overview" && (
   <>
 
-    {/* Main Layout */}
-    <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "340px minmax(0,1fr)",
-          gap: 20,
-        }}
-      >
+      {/* Main Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-3">
         {/* Job Snapshot */}
-        <div style={CARD}>
-          <div
-            style={{
-              height: 180,
-              borderRadius: 14,
-              background: "linear-gradient(135deg,#ECEFF1,#CFD8DC)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 800,
-              color: "#546E7A",
-              marginBottom: 18,
-            }}
-          >
-            Company Image Placeholder
-          </div>
+        <div className="space-y-3">
 
-          <h2>{job?.title || "Job Title"}</h2>
+  <h2
+    style={{
+      fontSize: 18,
+      fontWeight: 900,
+      color: "#FF7043",
+      margin: "0 0 8px",
+    }}
+  >
+    Job Snapshot
+  </h2>
 
-          <div
-            style={{
-              color: "#64748B",
-            }}
-          >
-            {job?.company || "Company Name"}
-          </div>
+  <div style={CARD}>
+            <div
+              className="relative overflow-hidden rounded-[20px] border border-white/45 shadow-[0_16px_34px_rgba(15,23,42,0.22)]"
+              style={{
+  minHeight: 326,
+  backgroundImage: `linear-gradient(180deg, rgba(2,6,23,0.18), rgba(2,6,23,0.48)), url("/assets/companies/${job?.companyId || "ft"}/banner.png")`,
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+}}
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,112,67,0.18),transparent_42%)]" />
 
-          <div
-            style={{
-              display: "grid",
-              gap: 10,
-              marginTop: 18,
-            }}
-          >
-            <div>
-              <b>Status:</b> Open
+              <div className="relative z-[1] flex min-h-[326px] flex-col items-center justify-end gap-2 px-3 pb-3 pt-7 text-center">
+                <img
+  src={`/assets/companies/${job?.companyId || "ft"}/logo.png`}
+  alt={job?.company || "Company Logo"}
+  style={{
+    width: 74,
+    height: 74,
+    borderRadius: 18,
+    objectFit: "cover",
+    boxShadow: "0 14px 34px rgba(2,6,23,0.42)",
+    outline: "3px solid rgba(255,255,255,0.70)",
+    outlineOffset: 3,
+    background: "white",
+  }}
+/>
+
+                <div className="w-full px-2 text-white [text-shadow:_0_2px_8px_rgba(2,6,23,0.90)]">
+                  <div className="text-[17px] font-black tracking-tight leading-tight">
+                    {job?.title || "Job Title"}
+                  </div>
+
+                  <div className="mt-1 text-[12px] font-bold text-white/90 break-words">
+                    {job?.company || "Company Name"}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <span className="rounded-full border border-white/35 bg-white/92 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-green-700 shadow-sm">
+                    {job?.status || "Open"}
+                  </span>
+
+                  <span className="rounded-full border border-white/30 bg-slate-950/42 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white/92 shadow-sm backdrop-blur-sm">
+                    {job?.worksite || "Worksite"}
+                  </span>
+                </div>
+
+                <div className="grid w-full grid-cols-1 gap-2 pt-1">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/60 bg-white/90 px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] backdrop-blur-sm transition hover:bg-white"
+                  >
+                    Edit Posting
+                  </button>
+
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/60 bg-white/90 px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] backdrop-blur-sm transition hover:bg-white"
+                  >
+                    View Public Posting
+                  </button>
+
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/60 bg-white/90 px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] backdrop-blur-sm transition hover:bg-white"
+                  >
+                    Duplicate Job
+                  </button>
+                </div>
+              </div>
             </div>
-
-            <div>
-              <b>Department:</b> Operations
-            </div>
-
-            <div>
-              <b>Worksite:</b> Remote
-            </div>
-
-            <div>
-              <b>Employment:</b> Full Time
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gap: 10,
-              marginTop: 24,
-            }}
-          >
-            <button>Edit Posting</button>
-            <button>View Public Posting</button>
-            <button>Duplicate Job</button>
           </div>
         </div>
 
         {/* Job Summary */}
-        <div style={CARD}>
-          <h2
-            style={{
-              color: "#FF7043",
-            }}
-          >
-            Job Summary
-          </h2>
+        <div className="space-y-3">
+          <div style={CARD}>
+            <h2
+              style={{
+                marginTop: 0,
+                color: "#FF7043",
+                fontSize: 18,
+                fontWeight: 900,
+              }}
+            >
+              Job Summary
+            </h2>
 
-          <p>
-            This placeholder mirrors the Coaching overview layout and will later
-            be wired to recruiter job data.
-          </p>
-
-          <h3>Hiring Objectives</h3>
-
-          <ul>
-            <li>Responsibilities</li>
-            <li>Ideal Candidate</li>
-            <li>Hiring Notes</li>
-            <li>Priority Skills</li>
-            <li>Milestones</li>
-          </ul>
+            <div
+              style={{
+                color: "#475569",
+                fontSize: 13,
+                lineHeight: 1.7,
+                whiteSpace: "pre-line",
+              }}
+            >
+              {job?.description ||
+				job?.summary ||
+                "No job summary is available yet."}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -219,22 +240,71 @@ const jobSubTabs = [
           gap: 20,
         }}
       >
-        <Metric
-          title="Hiring Snapshot"
-          value="Overview"
-        />
+        <div style={CARD}>
+  <h2
+    style={{
+      marginTop: 0,
+      color: "#FF7043",
+      fontSize: 18,
+      fontWeight: 900,
+    }}
+  >
+    Hiring Snapshot
+  </h2>
 
-        <Metric
-          title="Candidate Snapshot"
-          value="Applicants"
-        />
+  <div style={{ display: "grid", gap: 12 }}>
+    <div><strong>Hiring Manager:</strong> Placeholder</div>
+    <div><strong>Department:</strong> Placeholder</div>
+    <div><strong>Employment Type:</strong> Placeholder</div>
+    <div><strong>Open Since:</strong> Placeholder</div>
+    <div><strong>Target Fill:</strong> Placeholder</div>
+  </div>
+</div>
 
-        <Metric
-          title="Activity Snapshot"
-          value="Timeline"
-        />
+<div style={CARD}>
+  <h2
+    style={{
+      marginTop: 0,
+      color: "#FF7043",
+      fontSize: 18,
+      fontWeight: 900,
+    }}
+  >
+    Candidate Snapshot
+  </h2>
+
+  <div style={{ display: "grid", gap: 12 }}>
+    <div><strong>Total Applicants:</strong> Placeholder</div>
+    <div><strong>Screening:</strong> Placeholder</div>
+    <div><strong>Interviewing:</strong> Placeholder</div>
+    <div><strong>Offers:</strong> Placeholder</div>
+    <div><strong>Hired:</strong> Placeholder</div>
+  </div>
+</div>
+
+<div style={CARD}>
+  <h2
+    style={{
+      marginTop: 0,
+      color: "#FF7043",
+      fontSize: 18,
+      fontWeight: 900,
+    }}
+  >
+    Activity Snapshot
+  </h2>
+
+  <div style={{ display: "grid", gap: 12 }}>
+    <div><strong>Last Updated:</strong> Placeholder</div>
+    <div><strong>Newest Applicant:</strong> Placeholder</div>
+    <div><strong>Last Interview:</strong> Placeholder</div>
+    <div><strong>Recent Activity:</strong> Placeholder</div>
+    <div><strong>Upcoming Tasks:</strong> Placeholder</div>
+  </div>
+</div>
+
       </div>
-	  </>
+  </>
 )}
     </div>
   );
