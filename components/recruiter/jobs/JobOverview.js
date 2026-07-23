@@ -53,6 +53,11 @@ const Metric = ({ title, value }) => (
 
 export default function JobOverview({ job }) {
   const [jobSubTab, setJobSubTab] = React.useState("overview");
+  const companyAssetKey =
+  job?.companyId ||
+  job?.organizationId ||
+  job?.accountKey ||
+  "default";
 
   const jobSubTabs = [
   { id: "overview", label: "Overview" },
@@ -132,7 +137,7 @@ export default function JobOverview({ job }) {
               className="relative overflow-hidden rounded-[20px] border border-white/45 shadow-[0_16px_34px_rgba(15,23,42,0.22)]"
               style={{
   minHeight: 326,
-  backgroundImage: `linear-gradient(180deg, rgba(2,6,23,0.18), rgba(2,6,23,0.48)), url("/assets/companies/${job?.companyId || "ft"}/banner.png")`,
+  backgroundImage: `linear-gradient(180deg, rgba(2,6,23,0.18), rgba(2,6,23,0.48)), url("/assets/companies/${companyAssetKey}/banner.png")`,
   backgroundSize: "cover",
   backgroundPosition: "center",
 }}
@@ -141,11 +146,11 @@ export default function JobOverview({ job }) {
 
               <div className="relative z-[1] flex min-h-[326px] flex-col items-center justify-end gap-2 px-3 pb-3 pt-7 text-center">
                 <img
-  src={`/assets/companies/${job?.companyId || "ft"}/logo.png`}
+  src={`/assets/companies/${companyAssetKey}/logo.png`}
   alt={job?.company || "Company Logo"}
   style={{
-    width: 74,
-    height: 74,
+    width: 60,
+    height: 60,
     borderRadius: 18,
     objectFit: "cover",
     boxShadow: "0 14px 34px rgba(2,6,23,0.42)",
@@ -217,13 +222,16 @@ export default function JobOverview({ job }) {
             </h2>
 
             <div
-              style={{
-                color: "#475569",
-                fontSize: 13,
-                lineHeight: 1.7,
-                whiteSpace: "pre-line",
-              }}
-            >
+  style={{
+    color: "#475569",
+    fontSize: 13,
+    lineHeight: 1.7,
+    whiteSpace: "pre-line",
+    maxHeight: 326,
+    overflowY: "auto",
+    paddingRight: 8,
+  }}
+>
               {job?.description ||
 				job?.summary ||
                 "No job summary is available yet."}
