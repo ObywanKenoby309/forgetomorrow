@@ -1,6 +1,9 @@
 // components/recruiter/jobs/RecruiterJobsPosting.js
 
 import React from "react";
+import { usePlan } from "@/context/PlanContext";
+import JDOptimizer from "@/components/ai/JDOptimizer";
+import ATSAdvisor from "@/components/ai/ATSAdvisor";
 import { SectionCard } from "./JobProfilePrimitives";
 
 const CARD = {
@@ -53,19 +56,48 @@ const Metric = ({ title, value }) => (
 );
 
 export default function JobOverview({ job }) {
-  const [jobSubTab, setJobSubTab] = React.useState("overview");
+  const { isEnterprise } = usePlan();
+
+  const [jobSubTab, setJobSubTab] = React.useState("details");
+
+  const [isView, setIsView] = React.useState(true);
+
+  const [data, setData] = React.useState({
+    company: job?.company || "",
+    title: job?.title || "",
+    worksite: job?.worksite || "Remote",
+    location: job?.location || "",
+    type: job?.type || "Full-time",
+    compensation: job?.compensation || "",
+    description: job?.description || job?.summary || "",
+    companyUrl: job?.companyUrl || "",
+    status: job?.status || "Draft",
+  });
+
   const companyAssetKey =
-  job?.companyId ||
-  job?.organizationId ||
-  job?.accountKey ||
-  "default";
+    job?.companyId ||
+    job?.organizationId ||
+    job?.accountKey ||
+    "default";
+
+const descWords = data.description.trim()
+  ? data.description.trim().split(/\s+/).length
+  : 0;
+
+const missing = [];
+
+if (!data.company) missing.push("Company");
+if (!data.title) missing.push("Job Title");
+if (!data.location) missing.push("Location");
+if (!data.description) missing.push("Description");
+
+const valid = missing.length === 0;
 
   const jobSubTabs = [
-  { id: "overview", label: "Overview" },
-  { id: "hiring", label: "Hiring" },
-  { id: "details", label: "Job Details" },
-  { id: "metrics", label: "Metrics" },
-  { id: "activity", label: "Activity" },
+  { id: "details", label: "Details" },
+  { id: "questions", label: "Questions" },
+  { id: "templates", label: "Templates" },
+  { id: "publishing", label: "Publishing" },
 ];
 	
   return (
@@ -114,24 +146,21 @@ export default function JobOverview({ job }) {
   </div>
 </div>
 
-{jobSubTab === "overview" && (
+{jobSubTab === "details" && (
   <>
 
       {/* Main Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-3">
-        {/* Job Snapshot */}
-        <div className="space-y-3">
+        {/* Job Details */}
+<div className="space-y-3">
 
-<SectionCard title="Job Snapshot">
+<SectionCard title="Job Details">
             <div
-              className="relative overflow-hidden rounded-[20px] border border-white/45 shadow-[0_16px_34px_rgba(15,23,42,0.22)]"
-              style={{
-  minHeight: 326,
-  backgroundImage: `linear-gradient(180deg, rgba(2,6,23,0.18), rgba(2,6,23,0.48)), url("/assets/companies/${companyAssetKey}/banner.png")`,
-  backgroundSize: "cover",
-  backgroundPosition: "center",
-}}
-            >
+  style={{
+    display: "grid",
+    gap: 14,
+  }}
+>
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,112,67,0.18),transparent_42%)]" />
 			  <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-slate-950/70 via-slate-950/24 to-transparent" />
 
@@ -198,102 +227,196 @@ export default function JobOverview({ job }) {
           </SectionCard>
         </div>
 
-        {/* Job Summary */}
-        <div className="space-y-3">
-  <SectionCard title="Job Summary">
+        <div className="p-5 text-sm">
+          <div className="flex flex-col md:flex-row gap-5">
+            {/* LEFT: Job form */}
+            <div className="flex-1 space-y-5 min-w-0">
+              {/* Row: quick “completion” pulse */}
+              {!isView && (
+                <div className="rounded-xl border border-slate-200 bg-white/70 backdrop-blur p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs text-slate-700">
+                      <span className="font-medium">Posting readiness:</span>{" "}
+                      {valid ? (
+                        <span className="text-slate-800">
+                          Ready to save - required fields complete.
+                        </span>
+                      ) : (
+                        <span className="text-slate-600">
+                          Missing:{" "}
+                          <span className="font-medium text-slate-800">
+                            {missing.join(", ")}
+                          </span>
+                        </span>
+                      )}
+                    </div>
 
-    <div
-      style={{
-        color: "#475569",
-        fontSize: 13,
-        lineHeight: 1.7,
-        whiteSpace: "pre-line",
-        maxHeight: 326,
-        overflowY: "auto",
-        paddingRight: 8,
-      }}
-    >
-      {job?.description ||
-        job?.summary ||
-        "No job summary is available yet."}
+                    <div className="text-[11px] text-slate-500">
+                      Description: <span className="font-medium">{descWords}</span> words
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ROW 1 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Company" required>
+                  <input
+                    className="border border-slate-200 rounded-xl px-3 py-2 w-full bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#FF7043]/35"
+                    value={data.company}
+                    onChange={(e) => setData((p) => ({ ...p, company: e.target.value }))}
+                    disabled={isView}
+                    placeholder="e.g., ForgeTomorrow"
+                  />
+                </Field>
+                <Field label="Job Title" required>
+                  <input
+                    className="border border-slate-200 rounded-xl px-3 py-2 w-full bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#FF7043]/35"
+                    value={data.title}
+                    onChange={(e) => setData((p) => ({ ...p, title: e.target.value }))}
+                    disabled={isView}
+                    placeholder="e.g., Senior Recruiter"
+                  />
+                </Field>
+              </div>
+
+              {/* ROW 2 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Worksite" required>
+                  <select
+                    className="border border-slate-200 rounded-xl px-3 py-2 w-full bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#FF7043]/35"
+                    value={data.worksite}
+                    onChange={(e) => setData((p) => ({ ...p, worksite: e.target.value }))}
+                    disabled={isView}
+                  >
+                    <option>Remote</option>
+                    <option>Hybrid</option>
+                    <option>Onsite</option>
+                  </select>
+                </Field>
+                <Field label="Location" required>
+                  <input
+                    className="border border-slate-200 rounded-xl px-3 py-2 w-full bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#FF7043]/35"
+                    value={data.location}
+                    onChange={(e) => setData((p) => ({ ...p, location: e.target.value }))}
+                    disabled={isView}
+                    placeholder="e.g., Nashville, TN"
+                  />
+                </Field>
+              </div>
+
+              {/* ROW 3 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Employment Type">
+                  <select
+                    className="border border-slate-200 rounded-xl px-3 py-2 w-full bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#FF7043]/35"
+                    value={data.type}
+                    onChange={(e) => setData((p) => ({ ...p, type: e.target.value }))}
+                    disabled={isView}
+                  >
+                    <option>Full-time</option>
+                    <option>Part-time</option>
+                    <option>Contract</option>
+                    <option>Internship</option>
+                  </select>
+                </Field>
+                <Field label="Compensation">
+                  <input
+                    className="border border-slate-200 rounded-xl px-3 py-2 w-full bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#FF7043]/35"
+                    value={data.compensation}
+                    onChange={(e) => setData((p) => ({ ...p, compensation: e.target.value }))}
+                    disabled={isView}
+                    placeholder="e.g., $70-90k base + bonus"
+                  />
+                </Field>
+              </div>
+
+              {/* DESCRIPTION + AI */}
+              <Field label="Description" required>
+                <div className="rounded-xl border border-slate-200 bg-white/70 backdrop-blur p-3">
+                  <textarea
+                    className="border border-slate-200 rounded-xl px-3 py-2 w-full min-h-[160px] font-mono text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#FF7043]/35"
+                    value={data.description}
+                    onChange={(e) => setData((p) => ({ ...p, description: e.target.value }))}
+                    disabled={isView}
+                    placeholder="Write the role clearly. Keep it human. You can optimize it with AI after you draft."
+                  />
+
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-[11px] text-slate-500">
+                      Pro tip: strong postings reduce back-and-forth and attract better-fit applicants.
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      {descWords} words
+                    </div>
+                  </div>
+
+                  {data.description.trim() && isEnterprise && !isView && (
+                    <>
+                      <div className="mt-4">
+                        <JDOptimizer
+                          draft={data.description}
+                          title={data.title}
+                          company={data.company}
+                          onOptimize={(text) => setData((p) => ({ ...p, description: text }))}
+                        />
+                      </div>
+                      <div className="mt-4">
+                        <ATSAdvisor draft={data.description} title={data.title} company={data.company} />
+                      </div>
+                    </>
+                  )}
+
+                  {data.description.trim() && !isEnterprise && !isView && (
+                    <div className="mt-4 rounded-xl border border-slate-200 bg-white/80 p-3 text-xs text-slate-600">
+                      <span className="font-medium text-slate-800">AI Optimizer</span> is locked on your plan.
+                      When enabled, it rewrites for clarity + ATS alignment and gives quick guidance.
+                    </div>
+                  )}
+                </div>
+              </Field>
+
+<Field label="Company / About Us URL">
+  <input
+    type="url"
+    className="border border-slate-200 rounded-xl px-3 py-2 w-full bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#FF7043]/35"
+    value={data.companyUrl}
+    onChange={(e) =>
+      setData((p) => ({ ...p, companyUrl: e.target.value }))
+    }
+    disabled={isView}
+    placeholder="https://company.com/about"
+  />
+
+  {!isView && (
+    <div className="mt-2 text-[11px] text-slate-500">
+      Keep the job description focused on the role. Add your company website or About Us page here for candidates who want additional background.
     </div>
+  )}
+</Field>
 
-  </SectionCard>
-</div>
-      </div>
+              <Field label="Status">
+                <select
+                  className="border border-slate-200 rounded-xl px-3 py-2 w-full bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#FF7043]/35"
+                  value={data.status}
+                  onChange={(e) => setData((p) => ({ ...p, status: e.target.value }))}
+                  disabled={isView}
+                >
+                  <option value="Draft">Draft</option>
+                  <option value="Open">Open</option>
+                  <option value="Reviewing">Reviewing applicants</option>
+                  <option value="Closed">Closed</option>
+                </select>
 
-      {/* Bottom Snapshot Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3,minmax(0,1fr))",
-          gap: 20,
-        }}
-      >
-        <div style={CARD}>
-  <h2
-    style={{
-      marginTop: 0,
-      color: "#FF7043",
-      fontSize: 18,
-      fontWeight: 900,
-    }}
-  >
-    Hiring Snapshot
-  </h2>
-
-  <div style={{ display: "grid", gap: 12 }}>
-    <div><strong>Hiring Manager:</strong> Placeholder</div>
-    <div><strong>Department:</strong> Placeholder</div>
-    <div><strong>Employment Type:</strong> Placeholder</div>
-    <div><strong>Open Since:</strong> Placeholder</div>
-    <div><strong>Target Fill:</strong> Placeholder</div>
-  </div>
-</div>
-
-<div style={CARD}>
-  <h2
-    style={{
-      marginTop: 0,
-      color: "#FF7043",
-      fontSize: 18,
-      fontWeight: 900,
-    }}
-  >
-    Candidate Snapshot
-  </h2>
-
-  <div style={{ display: "grid", gap: 12 }}>
-    <div><strong>Total Applicants:</strong> Placeholder</div>
-    <div><strong>Screening:</strong> Placeholder</div>
-    <div><strong>Interviewing:</strong> Placeholder</div>
-    <div><strong>Offers:</strong> Placeholder</div>
-    <div><strong>Hired:</strong> Placeholder</div>
-  </div>
-</div>
-
-<div style={CARD}>
-  <h2
-    style={{
-      marginTop: 0,
-      color: "#FF7043",
-      fontSize: 18,
-      fontWeight: 900,
-    }}
-  >
-    Activity Snapshot
-  </h2>
-
-  <div style={{ display: "grid", gap: 12 }}>
-    <div><strong>Last Updated:</strong> Placeholder</div>
-    <div><strong>Newest Applicant:</strong> Placeholder</div>
-    <div><strong>Last Interview:</strong> Placeholder</div>
-    <div><strong>Recent Activity:</strong> Placeholder</div>
-    <div><strong>Upcoming Tasks:</strong> Placeholder</div>
-  </div>
-</div>
-
-      </div>
+                {!isView && (
+                  <div className="mt-2 text-[11px] text-slate-500">
+                    “Open” makes it visible to seekers. “Reviewing” keeps it visible but pauses new applications.
+                  </div>
+                )}
+              </Field>
+            </div>
+          </div>
+        </div>
   </>
 )}
     </div>
