@@ -155,8 +155,6 @@ const valid = missing.length === 0;
 <div className="space-y-3">
 
 <SectionCard title="Job Details">
-        </div>
-
         <div className="p-5 text-sm">
           <div className="flex flex-col md:flex-row gap-5">
             {/* LEFT: Job form */}
