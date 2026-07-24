@@ -19,6 +19,7 @@ import RecruiterDashboard from "@/components/recruiter/RecruiterDashboard";
 //import RecruiterJobPostings from "@/components/recruiter/RecruiterJobPostings";
 import RecruiterJobSelector from "@/components/recruiter/RecruiterJobSelector";
 import JobOverview from "@/components/recruiter/jobs/JobOverview";
+import RecruiterJobsPosting from "@/components/recruiter/jobs/RecruiterJobsPosting";
 
 // Messaging
 import RecruiterInbox from "@/components/recruiter/RecruiterInbox";
@@ -223,9 +224,11 @@ export default function RecruiterWorkspace() {
       <div>Applicants Placeholder</div>
     )}
 
-    {activeSubTab === "posting" && (
-      <div>Posting Placeholder</div>
-    )}
+{activeSubTab === "posting" && (
+  <RecruiterJobsPosting
+    job={selectedJob}
+  />
+)}
 
     {activeSubTab === "insights" && (
       <div>Insights Placeholder</div>
