@@ -155,76 +155,6 @@ const valid = missing.length === 0;
 <div className="space-y-3">
 
 <SectionCard title="Job Details">
-            <div
-  style={{
-    display: "grid",
-    gap: 14,
-  }}
->
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,112,67,0.18),transparent_42%)]" />
-			  <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-slate-950/70 via-slate-950/24 to-transparent" />
-
-              <div className="relative z-[1] flex min-h-[326px] flex-col items-center justify-end gap-2 px-3 pb-3 pt-7 text-center">
-                <img
-  src={`/assets/companies/${companyAssetKey}/logo.png`}
-  alt={job?.company || "Company Logo"}
-  style={{
-    width: 74,
-    height: 74,
-    borderRadius: 18,
-    objectFit: "cover",
-    boxShadow: "0 14px 34px rgba(2,6,23,0.42)",
-    outline: "3px solid rgba(255,255,255,0.70)",
-    outlineOffset: 3,
-    background: "white",
-  }}
-/>
-
-                <div className="w-full px-2 text-white [text-shadow:_0_2px_8px_rgba(2,6,23,0.90)]">
-                  <div className="text-[17px] font-black tracking-tight leading-tight">
-                    {job?.title || "Job Title"}
-                  </div>
-
-                  <div className="mt-1 text-[12px] font-bold text-white/90 break-words">
-                    {job?.company || "Company Name"}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <span className="rounded-full border border-white/35 bg-white/92 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-green-700 shadow-sm">
-                    {job?.status || "Open"}
-                  </span>
-
-                  <span className="rounded-full border border-white/30 bg-slate-950/42 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white/92 shadow-sm backdrop-blur-sm">
-                    {job?.worksite || "Worksite"}
-                  </span>
-                </div>
-
-                <div className="grid w-full grid-cols-1 gap-2 pt-1">
-                  <button
-                    type="button"
-                    className="rounded-xl border border-white/60 bg-white/90 px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] backdrop-blur-sm transition hover:bg-white"
-                  >
-                    Edit Posting
-                  </button>
-
-                  <button
-                    type="button"
-                    className="rounded-xl border border-white/60 bg-white/90 px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] backdrop-blur-sm transition hover:bg-white"
-                  >
-                    View Public Posting
-                  </button>
-
-                  <button
-                    type="button"
-                    className="rounded-xl border border-white/60 bg-white/90 px-2.5 py-1.5 text-[13px] font-black text-black shadow-[0_8px_18px_rgba(2,6,23,0.18)] backdrop-blur-sm transition hover:bg-white"
-                  >
-                    Duplicate Job
-                  </button>
-                </div>
-              </div>
-            </div>
-          </SectionCard>
         </div>
 
         <div className="p-5 text-sm">
@@ -417,6 +347,10 @@ const valid = missing.length === 0;
             </div>
           </div>
         </div>
+      </SectionCard>
+    </div>
+  </div>
+
   </>
 )}
     </div>
