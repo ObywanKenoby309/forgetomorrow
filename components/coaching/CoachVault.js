@@ -1564,8 +1564,6 @@ export default function CoachVault() {
     return rows;
   }, [docs, viewFilter, catFilter, searchTerm, sortMode]);
 
-  const greeting = getTimeGreeting();
-
   const TAB_CONFIG = [
     { key: 'forge',   label: 'Forge Documents',    mobileLabel: 'Forge',    icon: '⚒️'  },
     { key: 'uploads', label: 'Uploaded Documents',  mobileLabel: 'Uploads',  icon: '📁'  },
