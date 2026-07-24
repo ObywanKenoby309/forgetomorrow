@@ -1,4 +1,4 @@
-// components/recruiter/jobs/JobOverview.js
+// components/recruiter/jobs/RecruiterJobsPosting.js
 
 import React from "react";
 import { SectionCard } from "./JobProfilePrimitives";
