@@ -27,6 +27,7 @@ import SeekerInbox from "@/components/seeker/SeekerInbox";
 import CoachCalendar from "@/components/coaching/CoachCalendar";
 import CoachSessions from "@/components/coaching/CoachSessions";
 import CoachResources from "@/components/coaching/CoachResources";
+import CoachVault from "@/components/coaching/CoachVault";
 import CoachFeedback from "@/components/coaching/CoachFeedback";
 
 const DEFAULT_SUB_TABS = {
@@ -198,8 +199,51 @@ export default function CoachingWorkspaceMock() {
 				{activeWorkspace === "calendar" &&
 				  activeSubTab === "sessions" && <CoachSessions />}
 				  
-				{activeWorkspace === "resources" &&
-				  activeSubTab === "resources" && <CoachResources />}
+				{activeWorkspace === "resources" && (
+  <>
+    {activeSubTab === "resources" && (
+      <div
+        style={{
+          minHeight: 500,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          border: "1px dashed rgba(255,255,255,.25)",
+          borderRadius: 18,
+          background: "rgba(255,255,255,.05)",
+          color: "#fff",
+          fontSize: 18,
+          fontWeight: 700,
+        }}
+      >
+        Recruiter Resources
+      </div>
+    )}
+
+    {activeSubTab === "vault" && (
+      <RecruiterVault />
+    )}
+
+    {activeSubTab === "spotlights" && (
+      <div
+        style={{
+          minHeight: 500,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          border: "1px dashed rgba(255,255,255,.25)",
+          borderRadius: 18,
+          background: "rgba(255,255,255,.05)",
+          color: "#fff",
+          fontSize: 18,
+          fontWeight: 700,
+        }}
+      >
+        Recruiter Spotlights
+      </div>
+    )}
+  </>
+)}
 
 				{activeWorkspace === "feedback" &&
 				  activeSubTab === "feedback" && <CoachFeedback />}				  

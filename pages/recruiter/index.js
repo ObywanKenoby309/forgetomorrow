@@ -30,7 +30,7 @@ import RecruiterCalendar from "@/components/recruiter/RecruiterCalendar";
 // Resources
 //import RecruiterResources from "@/components/recruiter/RecruiterResources";
 //import ExternalCompare from "@/components/recruiter/ExternalCompare";
-//import RecruiterVault from "@/components/recruiter/RecruiterVault";
+import RecruiterVault from "@/components/recruiter/RecruiterVault";
 
 // Feedback
 //import RecruiterFeedback from "@/components/recruiter/RecruiterFeedback";
@@ -252,7 +252,51 @@ export default function RecruiterWorkspace() {
   </div>
 )}
 
-                {/* Resources placeholder */}
+                {activeWorkspace === "resources" && (
+  <>
+    {activeSubTab === "resources" && (
+      <div
+        style={{
+          minHeight: 500,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          border: "1px dashed rgba(255,255,255,.25)",
+          borderRadius: 18,
+          background: "rgba(255,255,255,.05)",
+          color: "#fff",
+          fontSize: 18,
+          fontWeight: 700,
+        }}
+      >
+        Recruiter Resources
+      </div>
+    )}
+
+    {activeSubTab === "vault" && (
+      <RecruiterVault />
+    )}
+
+    {activeSubTab === "spotlights" && (
+      <div
+        style={{
+          minHeight: 500,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          border: "1px dashed rgba(255,255,255,.25)",
+          borderRadius: 18,
+          background: "rgba(255,255,255,.05)",
+          color: "#fff",
+          fontSize: 18,
+          fontWeight: 700,
+        }}
+      >
+        Recruiter Spotlights
+      </div>
+    )}
+  </>
+)}
 
                 {/* Analytics placeholder */}
 				</div>
