@@ -226,13 +226,13 @@ export async function middleware(req) {
     }
   }
 
-  if (ratelimit) {
-    const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
-    const { success } = await ratelimit.limit(ip);
-    if (!success) {
-      return new NextResponse("Too many requests", { status: 429 });
-    }
-  }
+//  if (ratelimit) {
+//    const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
+//    const { success } = await ratelimit.limit(ip);
+//    if (!success) {
+//      return new NextResponse("Too many requests", { status: 429 });
+//   }
+//  }
 
   return NextResponse.next();
 }
