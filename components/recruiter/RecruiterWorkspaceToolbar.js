@@ -25,7 +25,7 @@ const sub = {
   jobs: [["overview", "Overview"],["pipeline", "Pipeline"],["applicants", "Applicants"],["posting", "Posting"],["insights", "Insights"]],
   messaging: [["recruiter", "Recruiter Inbox"],["seeker", "Seeker Inbox"]],
   calendar: [["calendar", "Calendar"],["interviews", "Interviews"]],
-  resources: [["resources", "Resources"],["vault", "Vault"],["spotlights", "Spotlights"]],
+  resources: [["resources", "Resources"],["vault", "Vault"]],
   feedback: [["feedback", "Feedback"]],
   analytics: [["overview", "Overview"],["pipeline", "Pipeline"],["sources", "Sources"],["performance", "Performance"],["reports", "Reports"]],
 };
