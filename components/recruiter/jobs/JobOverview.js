@@ -1,6 +1,7 @@
 // components/recruiter/jobs/JobOverview.js
 
 import React from "react";
+import { SectionCard } from "./JobProfilePrimitives";
 
 const CARD = {
   borderRadius: 18,
@@ -117,22 +118,11 @@ export default function JobOverview({ job }) {
   <>
 
       {/* Main Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-3">
         {/* Job Snapshot */}
         <div className="space-y-3">
 
-  <h2
-    style={{
-      fontSize: 18,
-      fontWeight: 900,
-      color: "#FF7043",
-      margin: "0 0 8px",
-    }}
-  >
-    Job Snapshot
-  </h2>
-
-  <div style={CARD}>
+<SectionCard title="Job Snapshot">
             <div
               className="relative overflow-hidden rounded-[20px] border border-white/45 shadow-[0_16px_34px_rgba(15,23,42,0.22)]"
               style={{
@@ -143,14 +133,15 @@ export default function JobOverview({ job }) {
 }}
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,112,67,0.18),transparent_42%)]" />
+			  <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-slate-950/70 via-slate-950/24 to-transparent" />
 
               <div className="relative z-[1] flex min-h-[326px] flex-col items-center justify-end gap-2 px-3 pb-3 pt-7 text-center">
                 <img
   src={`/assets/companies/${companyAssetKey}/logo.png`}
   alt={job?.company || "Company Logo"}
   style={{
-    width: 60,
-    height: 60,
+    width: 74,
+    height: 74,
     borderRadius: 18,
     objectFit: "cover",
     boxShadow: "0 14px 34px rgba(2,6,23,0.42)",
@@ -204,40 +195,31 @@ export default function JobOverview({ job }) {
                 </div>
               </div>
             </div>
-          </div>
+          </SectionCard>
         </div>
 
         {/* Job Summary */}
         <div className="space-y-3">
-          <div style={CARD}>
-            <h2
-              style={{
-                marginTop: 0,
-                color: "#FF7043",
-                fontSize: 18,
-                fontWeight: 900,
-              }}
-            >
-              Job Summary
-            </h2>
+  <SectionCard title="Job Summary">
 
-            <div
-  style={{
-    color: "#475569",
-    fontSize: 13,
-    lineHeight: 1.7,
-    whiteSpace: "pre-line",
-    maxHeight: 326,
-    overflowY: "auto",
-    paddingRight: 8,
-  }}
->
-              {job?.description ||
-				job?.summary ||
-                "No job summary is available yet."}
-            </div>
-          </div>
-        </div>
+    <div
+      style={{
+        color: "#475569",
+        fontSize: 13,
+        lineHeight: 1.7,
+        whiteSpace: "pre-line",
+        maxHeight: 326,
+        overflowY: "auto",
+        paddingRight: 8,
+      }}
+    >
+      {job?.description ||
+        job?.summary ||
+        "No job summary is available yet."}
+    </div>
+
+  </SectionCard>
+</div>
       </div>
 
       {/* Bottom Snapshot Cards */}
